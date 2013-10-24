@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for gathering disk information on Windows
 
@@ -9,27 +10,33 @@ import ctypes
 import string
 
 # Import salt libs
+import salt.utils
+
 try:
     import win32api
-    IS_WINDOWS = True
 except ImportError:
-    IS_WINDOWS = False
+    pass
+
+# Define the module's virtual name
+__virtualname__ = 'disk'
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if not IS_WINDOWS:
-        return False
-    return 'disk'
+    if salt.utils.is_windows():
+        return __virtualname__
+    return False
 
 
 def usage():
     '''
     Return usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.usage
     '''

@@ -34,12 +34,12 @@ Here's a list of features enabled by this renderer.
       #!stateconf yaml . jinja
 
       .vim:
-        package.installed
+        pkg.installed
 
   Above will be translated into::
 
       some.file::vim:
-        package.installed:
+        pkg.installed:
           - name: vim
   
   Notice how that if a state under a dot-prefixed state id has no ``name``

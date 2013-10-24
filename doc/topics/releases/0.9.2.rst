@@ -15,7 +15,7 @@ helping us clean up the states interface and make it ready for the world!
 Download!
 ---------
 
-The Salt source can be downloaded from the salt github site:
+The Salt source can be downloaded from the salt GitHub site:
 
 :download:`salt-0.9.2.tar.gz`
 
@@ -50,7 +50,7 @@ State System Fixes
 The state system has been tested and better refined. As of this release the
 state system is ready for early testers to start playing with. If you are
 interested in working with the state system please check out the (still very
-small) salt-states github repo:
+small) salt-states GitHub repo:
 
 https://github.com/thatch45/salt-states
 

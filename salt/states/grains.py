@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage grains on the minion.
 ============================
@@ -16,6 +17,7 @@ Note: This does NOT override any grains set in the minion file.
       grains.present:
         - value: edam
 '''
+
 
 def present(name, value):
     '''

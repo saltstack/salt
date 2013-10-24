@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """For running command line executables with a timeout"""
 
 import subprocess
 import threading
 import salt.exceptions
+
 
 class TimedProc(object):
     '''
@@ -11,6 +13,14 @@ class TimedProc(object):
     def __init__(self, args, **kwargs):
 
         self.command = args
+        self.stdin = kwargs.pop('stdin', None)
+        if self.stdin is not None:
+            # Translate a newline submitted as '\n' on the CLI to an actual
+            # newline character.
+            self.stdin = self.stdin.replace('\\n', '\n')
+            kwargs['stdin'] = subprocess.PIPE
+        self.with_communicate = kwargs.pop('with_communicate', True)
+
         self.process = subprocess.Popen(args, **kwargs)
 
     def wait(self, timeout=None):
@@ -19,7 +29,11 @@ class TimedProc(object):
         If timeout is reached, throw TimedProcTimeoutError
         '''
         def receive():
-            (self.stdout, self.stderr) = self.process.communicate()
+            if self.with_communicate:
+                (self.stdout, self.stderr) = self.process.communicate(input=self.stdin)
+            else:
+                self.process.wait()
+                (self.stdout, self.stderr) = (None, None)
 
         if timeout:
             if not isinstance(timeout, (int, float)):

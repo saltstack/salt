@@ -5,9 +5,13 @@ Test the hosts module
 import os
 import shutil
 
-# Import Salt libs
-import salt.utils
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
+import salt.utils
 
 HFN = os.path.join(integration.TMP, 'hosts')
 
@@ -158,7 +162,7 @@ class HostsModuleTest(integration.ModuleCase):
         Ensure that hosts.add_host isn't adding duplicates and that
         it's formatting the output correctly
         '''
-        # instead of using the "clean" hosts file we're going to
+        # instead of using the 'clean' hosts file we're going to
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
@@ -204,13 +208,8 @@ class HostsModuleTest(integration.ModuleCase):
         lines = salt.utils.fopen(HFN, 'r').read().splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',
-            '192.168.1.1\t\thost1.fqdn.com',
-            '192.168.1.1\t\thost1',
-            '192.168.1.1\t\thost1-reorder',
-            '192.168.1.2\t\thost2.fqdn.com',
-            '192.168.1.2\t\thost2',
-            '192.168.1.2\t\toldhost2',
-            '192.168.1.2\t\thost2-reorder'
+            '192.168.1.1\t\thost1.fqdn.com\t\thost1\t\thost1-reorder',
+            '192.168.1.2\t\thost2.fqdn.com\t\thost2\t\toldhost2\t\thost2-reorder',
         ])
 
 

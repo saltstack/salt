@@ -18,3 +18,14 @@ Using the new `master_tops` option is simple:
 
     master_tops:
       ext_nodes: cobbler-external-nodes
+
+for :doc:`Cobbler <../../ref/tops/all/salt.tops.cobbler>` or:
+
+.. code-block:: yaml
+
+    master_tops:
+      reclass:
+        inventory_base_uri: /etc/reclass
+        classes_uri: roles
+
+for :doc:`Reclass <../../ref/tops/all/salt.tops.reclass_adapter>`.

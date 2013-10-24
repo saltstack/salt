@@ -1,6 +1,6 @@
 publish_port: 54505
 ret_port: 54506
-worker_threads: 10
+worker_threads: 3
 root_dir: /tmp/saltsyndictest
 pidfile: syndicmasterpid
 pki_dir: pki

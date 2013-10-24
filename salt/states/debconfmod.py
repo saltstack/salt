@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of debconf selections.
 =================================
@@ -29,7 +30,16 @@ set_file
         - name: ferm
         - data:
             'ferm/enable': {'type': 'boolean', 'value': True}
+
+.. note::
+    Due to how PyYAML imports nested dicts (see :doc:`here
+    </topics/troubleshooting/yaml_idiosyncrasies>`), the values in the ``data``
+    dict must be indented four spaces instead of two.
 '''
+
+
+# Define the module's virtual name
+__virtualname__ = 'debconf'
 
 
 def __virtual__():
@@ -42,7 +52,8 @@ def __virtual__():
     if 'debconf.show' not in __salt__:
         return False
 
-    return 'debconf'
+    return __virtualname__
+
 
 def set_file(name, source, **kwargs):
     '''
@@ -78,6 +89,7 @@ def set_file(name, source, **kwargs):
         ret['comment'] = 'Unable to set debconf selections from file.'
 
     return ret
+
 
 def set(name, data):
     '''
@@ -143,7 +155,10 @@ def set(name, data):
                 ret['changes'][key] = ('New value: {0}').format(args['value'])
             else:
                 if __salt__['debconf.set'](name, key, args['type'], args['value']):
-                    ret['changes'][key] = ('{0}').format(args['value'])
+                    if args['type'] == 'password':
+                        ret['changes'][key] = '(password hidden)'
+                    else:
+                        ret['changes'][key] = ('{0}').format(args['value'])
                 else:
                     ret['result'] = False
                     ret['comment'] = 'Some settings failed to be applied.'

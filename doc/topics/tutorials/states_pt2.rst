@@ -4,8 +4,8 @@ States tutorial, part 2
 
 .. note:: 
 
-  This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`.
-  It is recommended that you begin there.
+  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
+  recommended that you begin there.
 
 In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered
 the basics of installing a package. We will now modify our ``webserver.sls``
@@ -40,9 +40,7 @@ As you have seen, SLS modules are appended with the file extension ``.sls`` and
 are referenced by name starting at the root of the state tree. An SLS module
 can be also defined as a directory. Demonstrate that now by creating a
 directory named ``webserver`` and moving and renaming ``webserver.sls`` to
-``webserver/init.sls``. Your state directory should now resemble:
-
-::
+``webserver/init.sls``. Your state directory should now look like this::
 
     |- top.sls
     `- webserver/
@@ -123,7 +121,9 @@ directory:
 
 Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
 minion will fetch and execute the highstate as well as our HTML file from the
-master using Salt's File Server::
+master using Salt's File Server:
+
+.. code-block:: bash
 
     salt '*' state.highstate
 

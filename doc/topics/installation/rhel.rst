@@ -3,7 +3,7 @@ RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 ==========================================================================
 
 Beginning with version 0.9.4, Salt has been available in `EPEL`_. It is installable using yum. Salt should work properly with all mainstream derivatives
-of RHEL, including CentOS, Scientific Linux, Oracle Linux and Amazon Linux. Report any bugs or issues to the salt github project.
+of RHEL, including CentOS, Scientific Linux, Oracle Linux and Amazon Linux. Report any bugs or issues to the salt GitHub project.
 
 Installation
 ============

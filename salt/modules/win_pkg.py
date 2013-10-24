@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A module to manage software on Windows
 
@@ -25,12 +26,15 @@ import logging
 import msgpack
 import os
 import locale
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
 
 
 def __virtual__():
@@ -38,7 +42,7 @@ def __virtual__():
     Set the virtual pkg module if the os is Windows
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
-        return 'pkg'
+        return __virtualname__
     return False
 
 
@@ -51,7 +55,9 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
@@ -60,11 +66,15 @@ def latest_version(*names, **kwargs):
     if len(names) == 0:
         return ''
 
+    # Initialize the return dict with empty strings
+    ret = {}
+    for name in names:
+        ret[name] = ''
+
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    ret = {}
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
@@ -79,20 +89,23 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
             if full_name in pkgs:
                 version_num = pkgs[full_name]
-            if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
-                                       pkg2=str(version_num)):
+            if salt.utils.compare_versions(ver1=str(candidate),
+                                           oper='>',
+                                           ver2=str(version_num)):
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
-            if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
-                                       pkg2=str(candidate)):
+            if salt.utils.compare_versions(ver1=str(ver),
+                                           oper='>',
+                                           ver2=str(candidate)):
                 candidate = ver
         full_name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if full_name in pkgs:
             version_num = pkgs[full_name]
-        if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
-                                   pkg2=str(version_num)):
+        if salt.utils.compare_versions(ver1=str(candidate),
+                                       oper='>',
+                                       ver2=str(version_num)):
             ret[name] = candidate
     if len(names) == 1:
         return ret[names[0]]
@@ -106,7 +119,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -117,7 +132,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -137,7 +154,9 @@ def list_available(*names):
     '''
     Return a list of available versions of the specified package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_available <package name>
         salt '*' pkg.list_available <package name01> <package name02>
@@ -163,21 +182,16 @@ def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
     '''
     win_names = []
     ret = {}
     if len(names) == 1:
-        versions = _get_package_info(names[0])
-        if versions:
-            for val in versions.itervalues():
-                if 'full_name' in val and len(val.get('full_name', '')) > 0:
-                    win_names.append(val.get('full_name', ''))
-        else:
-            win_names.append(names[0])
-        val = __salt__['pkg_resource.version'](win_names[0], **kwargs)
+        val = __salt__['pkg_resource.version'](*names, **kwargs)
         if len(val):
             return val
         return ''
@@ -208,14 +222,16 @@ def version(*names, **kwargs):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-        List the packages currently installed in a dict::
+    List the packages currently installed in a dict::
 
-            {'<package_name>': '<version>'}
+        {'<package_name>': '<version>'}
 
-        CLI Example::
+    CLI Example:
 
-            salt '*' pkg.list_pkgs
-            salt '*' pkg.list_pkgs versions_as_list=True
+    .. code-block:: bash
+
+        salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     # 'removed' not yet implemented or not applicable
@@ -335,10 +351,15 @@ def _get_reg_software():
                 pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
-                if name[0] == '{':
-                    break
                 prd_uninst_key = "\\".join([reg_key, name])
                 #These reg values aren't guaranteed to exist
+                windows_installer = _get_reg_value(
+                    reg_hive,
+                    prd_uninst_key,
+                    'WindowsInstaller')
+                if windows_installer != 'Not Found' and windows_installer:
+                    continue
+
                 prd_name = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,
@@ -428,7 +449,9 @@ def refresh_db():
 
         {'<database name>': Bool}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -454,7 +477,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
     '''
@@ -532,7 +557,9 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -568,7 +595,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -640,7 +669,9 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -653,7 +684,9 @@ def get_repo_data():
     '''
     Returns the cached winrepo data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_repo_data
     '''
@@ -709,29 +742,3 @@ def _get_latest_pkg_version(pkginfo):
         return pkginfo.keys().pop()
     pkgkeys = pkginfo.keys()
     return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to set up a minion
 '''
@@ -25,6 +26,7 @@ def _create_loader(
         opts,
         ext_type,
         tag,
+        int_type=None,
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
@@ -39,10 +41,7 @@ def _create_loader(
         extension types,
         base types.
     '''
-    if base_path:
-        sys_types = os.path.join(base_path, ext_type)
-    else:
-        sys_types = os.path.join(SALT_BASE_PATH, ext_type)
+    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
@@ -98,19 +97,11 @@ def minion_mods(opts, context=None, whitelist=None):
         whitelist = opts.get('whitelist_modules', None)
     functions = load.gen_functions(
         pack,
-        whitelist=whitelist
+        whitelist=whitelist,
+        provider_overrides=True
     )
-    # Enforce dependancies of module functions from "functions"
-    Depends.enforce_dependancies(functions)
-
-    if opts.get('providers', False):
-        if isinstance(opts['providers'], dict):
-            for mod, provider in opts['providers'].items():
-                funcs = raw_mod(opts, provider, functions)
-                if funcs:
-                    for func in funcs:
-                        f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
-                        functions[f_key] = funcs[func]
+    # Enforce dependencies of module functions from "functions"
+    Depends.enforce_dependencies(functions)
     return functions
 
 
@@ -190,6 +181,15 @@ def fileserver(opts, backends):
     return ret
 
 
+def roster(opts, whitelist=None):
+    '''
+    Returns the roster modules
+    '''
+    load = _create_loader(opts, 'roster', 'roster')
+    ret = load.gen_functions(whitelist=whitelist)
+    return ret
+
+
 def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
@@ -208,6 +208,39 @@ def search(opts, returners, whitelist=None):
     pack = {'name': '__ret__',
             'value': returners}
     return load.gen_functions(pack, whitelist=whitelist)
+
+
+def log_handlers(opts):
+    '''
+    Returns the custom logging handler modules
+    '''
+    load = _create_loader(
+        opts,
+        'log_handlers',
+        'log_handlers',
+        int_type='handlers',
+        base_path=os.path.join(SALT_BASE_PATH, 'log')
+    )
+    return load.filter_func('setup_handlers')
+
+
+def ssh_wrapper(opts, functions=None):
+    '''
+    Returns the custom logging handler modules
+    '''
+    if functions is None:
+        functions = {}
+    load = _create_loader(
+        opts,
+        'wrapper',
+        'wrapper',
+        base_path=os.path.join(SALT_BASE_PATH, os.path.join(
+            'client',
+            'ssh'))
+    )
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.gen_functions(pack)
 
 
 def render(opts, functions):
@@ -236,7 +269,8 @@ def grains(opts):
     if 'conf_file' in opts:
         pre_opts = {}
         pre_opts.update(salt.config.load_config(
-            opts['conf_file'], 'SALT_MINION_CONFIG'
+            opts['conf_file'], 'SALT_MINION_CONFIG',
+            salt.config.DEFAULT_MINION_OPTS['conf_file']
         ))
         default_include = pre_opts.get(
             'default_include', opts['default_include']
@@ -326,13 +360,15 @@ class Loader(object):
     also be used to only load specific functions from a directory, or to
     call modules in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=None, tag='module',
-                 loaded_base_name=None, mod_type_check=None):
+    def __init__(self,
+                 module_dirs,
+                 opts=None,
+                 tag='module',
+                 loaded_base_name=None,
+                 mod_type_check=None):
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
-        if '_' in tag:
-            raise LoaderError('Cannot tag loader with an "_"')
         self.tag = tag
         if 'grains' in opts:
             self.grains = opts['grains']
@@ -517,7 +553,8 @@ class Loader(object):
         mod.__context__ = context
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
+                      provider_overrides=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -727,7 +764,25 @@ class Loader(object):
                                         module_name, virtual
                                     )
                                 )
+
+                                if not hasattr(mod, '__virtualname__'):
+                                    salt.utils.warn_until(
+                                        'Hydrogen',
+                                        'The {0!r} module is renaming itself '
+                                        'in it\'s __virtual__() function ({1} '
+                                        '=> {2}). Please set it\'s virtual '
+                                        'name as the \'__virtualname__\' '
+                                        'module attribute. Example: '
+                                        '"__virtualname__ = {2!r}"'.format(
+                                            mod.__name__,
+                                            module_name,
+                                            virtual
+                                        )
+                                    )
                                 module_name = virtual
+
+                            elif virtual and hasattr(mod, '__virtualname__'):
+                                module_name = mod.__virtualname__
 
                 except KeyError:
                     # Key errors come out of the virtual function when passing
@@ -799,6 +854,18 @@ class Loader(object):
                         'Added {0} to {1}'.format(module_func_name, self.tag)
                     )
                     self._apply_outputter(func, mod)
+
+        # Handle provider overrides
+        if provider_overrides and self.opts.get('providers', False):
+            if isinstance(self.opts['providers'], dict):
+                for mod, provider in self.opts['providers'].items():
+                    newfuncs = raw_mod(self.opts, provider, funcs)
+                    if newfuncs:
+                        for newfunc in newfuncs:
+                            f_key = '{0}{1}'.format(
+                                mod, newfunc[newfunc.rindex('.'):]
+                            )
+                            funcs[f_key] = newfuncs[newfunc]
 
         # now that all the functions have been collected, iterate back over
         # the available modules and inject the special __salt__ namespace that

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Runner to manage Windows software repo
 '''
@@ -14,6 +15,7 @@ import salt.output
 import salt.utils
 import logging
 import salt.minion
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +23,12 @@ log = logging.getLogger(__name__)
 def genrepo():
     '''
     Generate win_repo_cachefile based on sls files in the win_repo
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.genrepo
     '''
     ret = {}
     repo = __opts__['win_repo']
@@ -41,11 +49,14 @@ def genrepo():
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
                         print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
                 if config:
-                    ret.setdefault('repo', {}).update(config)
                     revmap = {}
                     for pkgname, versions in config.iteritems():
-                        for repodata in versions.values():
+                        for version, repodata in versions.iteritems():
+                            if not isinstance(version, string_types):
+                                config[pkgname][str(version)] = \
+                                    config[pkgname].pop(version)
                             revmap[repodata['full_name']] = pkgname
+                    ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
         repo.write(msgpack.dumps(ret))
@@ -56,6 +67,12 @@ def genrepo():
 def update_git_repos():
     '''
     Checkout git repos containing Windows Software Package Definitions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.update_git_repos
     '''
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)

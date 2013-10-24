@@ -2,12 +2,16 @@
 Test the grains module
 '''
 # Import python libs
-import time
 import os
+import time
+
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from saltunittest import skipIf
 
 
 class TestModulesGrains(integration.ModuleCase):
@@ -76,11 +80,12 @@ class TestModulesGrains(integration.ModuleCase):
                     ['setgrain', 'grainval']),
                 {'setgrain': 'grainval'})
         time.sleep(1)
-        self.assertTrue(
-                self.run_function(
-                    'grains.item', ['setgrain']
-                    )
-                )
+        ret = self.run_function('grains.item', ['setgrain'])
+        if not ret:
+            # Sleep longer, sometimes test systems get bogged down
+            time.sleep(20)
+            ret = self.run_function('grains.item', ['setgrain'])
+        self.assertTrue(ret)
 
     def test_get(self):
         '''
@@ -91,7 +96,6 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
-
 
 
 if __name__ == '__main__':

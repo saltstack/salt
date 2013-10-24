@@ -71,9 +71,25 @@ Require
 
 The most basic requisite statement is ``require``. The behavior of require is
 simple. Make sure that the dependent state is executed before the depending
-state, and it the dependent state fails, don't run the depending state. So in
+state, and if the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
+
+Require an entire sls file
+--------------------------
+
+As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first including
+the sls file and then setting a state to ``require`` the included sls file.
+
+.. code-block:: yaml
+
+    include:
+      - foo
+
+    bar:
+      pkg.installed:
+        - require:
+          - sls: foo
 
 Watch
 -----
@@ -85,9 +101,17 @@ state module, then watch does the same thing as require. If the ``mod_watch``
 function is in the state module, then the watched state is checked to see if
 it made any changes to the system, if it has, then ``mod_watch`` is called.
 
-Perhaps the best example of using watch is with a service, when a service
-watches other states, then when the other states make changes on the system
-the service is reloaded or restarted.
+Perhaps the best example of using watch is with a :mod:`service.running
+<salt.states.service.running>` state. When a service watches a state, then
+the service is reloaded/restarted when the watched state changes::
+
+    ntpd:
+      service.running:
+        - watch:
+          - file: /etc/ntp.conf
+      file.managed:
+        - name: /etc/ntp.conf
+        - source: salt://ntp/files/ntp.conf
 
 Prereq
 ------
@@ -129,10 +153,29 @@ Use
 The ``use`` requisite is used to inherit the arguments passed in another
 id declaration. This is useful when many files need to have the same defaults.
 
+.. code-block:: yaml
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf
+        - template: jinja
+        - mkdirs: True
+        - user: apache
+        - group: apache
+        - mode: 755
+
+    /etc/bar.conf
+      file.managed:
+        - source: salt://bar.conf
+        - use:
+          - file: /etc/foo.conf
+
 The ``use`` statement was developed primarily for the networking states but
 can be used on any states in Salt. This made sense for the networking state
 because it can define a long list of options that need to be applied to
 multiple network interfaces.
+
+.. _requisites-require-in:
 
 Require In
 ----------
@@ -212,10 +255,12 @@ mod_python.sls
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
+.. _requisites-watch-in:
+
 Watch In
 --------
 
-Watch in functions the same was as require in, but applies a watch statement
+Watch in functions the same as require in, but applies a watch statement
 rather than a require statement to the external state declaration.
 
 Prereq In

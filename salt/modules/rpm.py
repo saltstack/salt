@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for rpm
 '''
@@ -9,6 +10,9 @@ import logging
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
 
 
 def __virtual__():
@@ -28,13 +32,13 @@ def __virtual__():
         os_major = 0
 
     if os_grain == 'Amazon':
-        return 'lowpkg'
+        return __virtualname__
     elif os_grain == 'Fedora':
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
-            return 'lowpkg'
+            return __virtualname__
     elif os_family == 'RedHat' and os_major >= 6:
-        return 'lowpkg'
+        return __virtualname__
     return False
 
 
@@ -44,7 +48,9 @@ def list_pkgs(*packages):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
     '''
@@ -69,7 +75,9 @@ def verify(*package):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.verify
     '''
@@ -121,7 +129,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's rpm database (not generally
     recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -141,7 +151,9 @@ def file_dict(*packages):
     any packages will return a list of _every_ file on the system's rpm
     database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix

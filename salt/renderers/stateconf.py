@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A flexible renderer that takes a templating engine and a data format
 
@@ -242,7 +243,7 @@ def has_names_decls(data):
             return sid
 
 
-def rewrite_single_shorthand_state_decl(data):  # pylint: disable-msg=C0103
+def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
     '''
     Rewrite all state declarations that look like this::
 
@@ -387,7 +388,6 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-
 REQUIRE = set(['require', 'watch'])
 REQUIRE_IN = set(['require_in', 'watch_in'])
 EXTENDED_REQUIRE = {}
@@ -401,7 +401,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
 
-    def T(sid, state):  # pylint: disable-msg=C0103
+    def T(sid, state):  # pylint: disable=C0103
         return '{0}:{1}'.format(sid, state_name(state))
 
     states_before = set()

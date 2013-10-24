@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage libvirt certs. This state uses the external pillar in the master to call
 for the generation and signing of certificates for systems running libvirt:
@@ -10,6 +11,9 @@ for the generation and signing of certificates for systems running libvirt:
 
 # Import python libs
 import os
+
+# Import salt libs
+import salt.utils
 
 
 def keys(name, basepath='/etc/pki'):
@@ -64,7 +68,7 @@ def keys(name, basepath='/etc/pki'):
         if not os.path.isdir(os.path.dirname(paths[key])):
             os.makedirs(os.path.dirname(paths[key]))
         if os.path.isfile(paths[key]):
-            with open(paths[key], 'r') as fp_:
+            with salt.utils.fopen(paths[key], 'r') as fp_:
                 if fp_.read() != pillar[p_key]:
                     ret['changes'][key] = 'update'
         else:
@@ -78,7 +82,7 @@ def keys(name, basepath='/etc/pki'):
         ret['changes'] = {}
         return ret
     for key in ret['changes']:
-        with open(paths[key], 'w+') as fp_:
+        with salt.utils.fopen(paths[key], 'w+') as fp_:
             fp_.write(pillar['libvirt.{0}.pem'.format(key)])
     ret['comment'] = 'Updated libvirt certs and keys'
     return ret

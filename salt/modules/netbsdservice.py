@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The service module for NetBSD
 '''
@@ -10,12 +11,16 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
+
 def __virtual__():
     '''
     Only work on NetBSD
     '''
     if __grains__['os'] == 'NetBSD' and os.path.exists('/etc/rc.subr'):
-        return 'service'
+        return __virtualname__
     return False
 
 
@@ -23,7 +28,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -35,7 +42,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -43,11 +52,13 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -55,11 +66,13 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload_(name, **kwargs):
+def reload_(name):
     '''
     Reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -71,7 +84,9 @@ def force_reload(name):
     '''
     Force-reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.force_reload <service name>
     '''
@@ -84,7 +99,9 @@ def status(name, sig=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -99,8 +116,8 @@ def _get_svc(rcd, service_status):
     Returns a unique service status
     '''
     ena = None
-    for rcvar in __salt__['cmd.run']('{0} rcvar'.format(rcd)
-                                    ).splitlines():
+    lines = __salt__['cmd.run']('{0} rcvar'.format(rcd)).splitlines()
+    for rcvar in lines:
         if rcvar.startswith('$') and '={0}'.format(service_status) in rcvar:
             ena = 'yes'
         elif rcvar.startswith('#'):
@@ -132,7 +149,9 @@ def get_enabled():
     '''
     Return a list of service that are enabled on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -143,22 +162,41 @@ def get_disabled():
     '''
     Return a set of services that are installed but disabled
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
     return _get_svc_list('NO')
 
 
+def available(name):
+    '''
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.available sshd
+    '''
+    return name in get_all()
+
+
 def get_all():
     '''
     Return all available boot services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
     return _get_svc_list('')
+
 
 def _rcconf_status(name, service_status):
     '''
@@ -169,7 +207,7 @@ def _rcconf_status(name, service_status):
     rxname = '^{0}=.*'.format(name)
     newstatus = '{0}={1}'.format(name, service_status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
-    if ret == 0: # service found in rc.conf, modify its status
+    if ret == 0:  # service found in rc.conf, modify its status
         # NetBSD sed does not support -i flag, call sed by hand
         cmd = 'cp -f {0} {0}.bak && sed -E -e s/{1}/{2}/g {0}.bak > {0}'
         ret = __salt__['cmd.run'](cmd.format(rcconf, rxname, newstatus))
@@ -183,7 +221,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -194,7 +234,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -205,7 +247,9 @@ def enabled(name):
     '''
     Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -216,7 +260,9 @@ def disabled(name):
     '''
     Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.integration.shell.cp
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
-import sys
 import yaml
 import pipes
+import shutil
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-import salt.utils
 import integration
-from saltunittest import TestLoader, TextTestRunner
+import salt.utils
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -104,10 +108,45 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CopyTest)
-    print('Setting up Salt daemons to execute tests')
-    with integration.TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    def test_issue_7754(self):
+        try:
+            old_cwd = os.getcwd()
+        except OSError:
+            # Jenkins throws an OSError from os.getcwd()??? Let's not worry
+            # about it
+            old_cwd = None
+
+        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        config = yaml.load(
+            open(self.get_config_file_path(config_file_name), 'r').read()
+        )
+        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        open(os.path.join(config_dir, config_file_name), 'w').write(
+            yaml.dump(config, default_flow_style=False)
+        )
+
+        self.run_script(
+            self._call_binary_,
+            '--config-dir {0} \'*\' test.ping'.format(
+                config_dir
+            ),
+            timeout=15
+        )
+        try:
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            if old_cwd is not None:
+                os.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CopyTest)

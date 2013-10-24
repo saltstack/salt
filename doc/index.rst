@@ -2,6 +2,9 @@
 
 .. _contents:
 
+.. image:: _static/images/saltconf.jpg
+    :target: http://saltconf.com/
+
 What is Salt Stack?
 ===================
 
@@ -18,12 +21,9 @@ for orchestration, remote execution, configuration management and much more.
 
     * `PDF`_
     * `ePub`_
-    * Dash `Docset`_ (`feed`_)
 
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
-.. _`Docset`: https://media.readthedocs.org/dash/salt/latest/Salt.tgz
-.. _`feed`: dash-feed://http%3A//media.readthedocs.org/dash/salt/latest/Salt.xml
 
 Download
 ========
@@ -57,6 +57,7 @@ States - Configuration Management with Salt:
     - :doc:`Basic config management <topics/tutorials/states_pt1>`
     - :doc:`Less basic config management <topics/tutorials/states_pt2>`
     - :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+    - :doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`
 
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
@@ -100,11 +101,11 @@ arbitrary commands on remote hosts.
         databases can be supported or custom interfaces can be easily
         communicated with.
 
-:doc:`Targeting </topics/targeting/index>`
-------------------------------------------
+Targeting
+---------
 
-Targeting is specifying which minions should execute commands or manage server
-configuration.
+:doc:`Targeting </topics/targeting/index>` is specifying which minions
+should execute commands or manage server configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
     Match minions using globbing and regular expressions.
@@ -204,7 +205,7 @@ Salt is many splendid things.
 :doc:`Testing Salt <topics/tests/index>`
     A howto for writing unit tests and integration tests.
 
-:doc:`Python API interface <ref/python-api>`
+:ref:`Python API interface <python-api>`
     Use Salt programmatically from scripts and programs easily and
     simply via ``import salt``.
 
@@ -214,7 +215,7 @@ Salt is many splendid things.
     builds.
 
 :doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
-    Looking for an easy way to manage software on Windows machines? 
+    Looking for an easy way to manage software on Windows machines?
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
     network, or any HTTP, HTTPS, or ftp server.
@@ -234,17 +235,25 @@ Reference
 :doc:`Full table of contents </contents>`
     Dense but complete.
 
+FAQ
+===
+
+See :doc:`here <faq>` for a list of Frequently Asked Questions.
+
 More information about the project
-----------------------------------
+==================================
 
 :doc:`Release notes </topics/releases/index>`
     Living history of Salt Stack.
 
 :doc:`Community </topics/community>`
-    How to can get involved.
+    How to get involved.
 
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt
+
+:doc:`Translate Documentation </topics/translating>`
+    How to help out translating Salt to your language.
 
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states

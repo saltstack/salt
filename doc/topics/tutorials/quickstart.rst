@@ -11,7 +11,9 @@ for a single machine. It is also useful for testing out state trees before
 deploying to a production setup.
 
 The only real difference in using a standalone minion is that instead of issuing 
-commands with ``salt``, we use the ``salt-call`` command, like this::
+commands with ``salt``, we use the ``salt-call`` command, like this:
+
+.. code-block:: bash
 
     salt-call --local state.highstate
 
@@ -19,7 +21,9 @@ Bootstrap Salt Minion
 =====================
 
 First we need to install the salt minion. The `salt-bootstrap`_ script makes
-this incredibly easy for any OS with a Bourne shell. You can use it like this::
+this incredibly easy for any OS with a Bourne shell. You can use it like this:
+
+.. code-block:: bash
 
     wget -O - http://bootstrap.saltstack.org | sudo sh
 
@@ -30,33 +34,39 @@ provision the VM for you.
 Create State Tree
 =================
 
-Now we build an example state tree. This is where the configuration 
-is defined. For more in depth directions, see the `tutorial <http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_. 
+Now we build an example state tree. This is where the configuration is defined.
+For more in depth directions, see the `tutorial
+<http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_. 
 
-1. Create the top.sls file
-::
+1. Create the top.sls file:
 
-  # /srv/salt/top.sls
-  base:
-    '*':
-      - webserver
+``/srv/salt/top.sls:``
 
-2. Create our webserver state tree
-::
+.. code-block:: yaml
 
-  # /srv/salt/webserver.sls
-  apache:                 # ID declaration
-    pkg:                  # state declaration
-      - installed         # function declaration
+    base:
+      '*':
+        - webserver
+
+2. Create our webserver state tree:
+
+``/srv/salt/webserver.sls:``
+
+.. code-block:: yaml
+
+    apache:               # ID declaration
+      pkg:                # state declaration
+        - installed       # function declaration
 
 The only thing left is to provision our minion using the highstate command.
-Salt-call also gives us an easy way to give us verbose output::
+Salt-call also gives us an easy way to give us verbose output:
+
+.. code-block:: bash
 
     salt-call --local state.highstate -l debug
 
-The ``--local`` flag tells the salt-minion to look for the state tree in the local file system.
-Normally the minion copies the state tree from the master and executes it from there.
+The ``--local`` flag tells the salt-minion to look for the state tree in the
+local file system.  Normally the minion copies the state tree from the master
+and executes it from there.
 
 That's it, good luck!
-
-

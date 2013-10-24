@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for DEB packages
 '''
@@ -5,15 +6,17 @@ Support for DEB packages
 # Import python libs
 import logging
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
 
 
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'lowpkg' if __grains__['os_family'] == 'Debian' else False
+    return __virtualname__ if __grains__['os_family'] == 'Debian' else False
 
 
 def list_pkgs(*packages):
@@ -27,7 +30,9 @@ def list_pkgs(*packages):
         Virtual package resolution requires aptitude. Because this function
         uses dpkg, virtual packages will be reported as not installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
         salt '*' lowpkg.list_pkgs httpd
@@ -54,7 +59,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -94,7 +101,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix

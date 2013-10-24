@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Manage the shadow file
+Manage the password database on Solaris systems
 '''
 
 # Import python libs
@@ -10,24 +11,47 @@ try:
 except ImportError:
     # SmartOS joyent_20130322T181205Z does not have spwd
     HAS_SPWD = False
-    import pwd
+    try:
+        import pwd
+    except ImportError:
+        pass  # We're most likely on a Windows machine.
 
 # Import salt libs
 import salt.utils
+
+# Define the module's virtual name
+__virtualname__ = 'shadow'
 
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return 'shadow' if __grains__['kernel'] == 'SunOS' else False
+    if __grains__.get('kernel', '') == 'SunOS':
+        return __virtualname__
+    return False
+
+
+def default_hash():
+    '''
+    Returns the default hash used for unset passwords
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.default_hash
+    '''
+    return '!'
 
 
 def info(name):
     '''
     Return information for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
@@ -36,7 +60,7 @@ def info(name):
             data = spwd.getspnam(name)
             ret = {
                 'name': data.sp_nam,
-                'pwd': data.sp_pwd,
+                'passwd': data.sp_pwd,
                 'lstchg': data.sp_lstchg,
                 'min': data.sp_min,
                 'max': data.sp_max,
@@ -46,7 +70,7 @@ def info(name):
         except KeyError:
             ret = {
                 'name': '',
-                'pwd': '',
+                'passwd': '',
                 'lstchg': '',
                 'min': '',
                 'max': '',
@@ -59,7 +83,7 @@ def info(name):
     # Return what we can know
     ret = {
         'name': '',
-        'pwd': '',
+        'passwd': '',
         'lstchg': '',
         'min': '',
         'max': '',
@@ -71,7 +95,7 @@ def info(name):
         data = pwd.getpwnam(name)
         ret.update({
             'name': name,
-            'pwd': data.pw_dir
+            'passwd': data.pw_dir
         })
     except KeyError:
         return ret
@@ -104,7 +128,7 @@ def info(name):
     #   buildbot L 05/09/2013 0 99999 7
     ret.update({
         'name': data.pw_name,
-        'pwd': data.pw_dir,
+        'passwd': data.pw_dir,
         'lstchg': fields[2],
         'min': int(fields[3]),
         'max': int(fields[4]),
@@ -120,7 +144,9 @@ def set_maxdays(name, maxdays):
     Set the maximum number of days during which a password is valid. See man
     passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_maxdays username 90
     '''
@@ -138,7 +164,9 @@ def set_mindays(name, mindays):
     '''
     Set the minimum number of days between password changes. See man passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_mindays username 7
     '''
@@ -159,7 +187,9 @@ def set_password(name, password):
     hash, the password hash can be generated with this command:
     ``openssl passwd -1 <plaintext password>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
     '''
@@ -180,7 +210,7 @@ def set_password(name, password):
     with salt.utils.fopen(s_file, 'w+') as ofile:
         ofile.writelines(lines)
     uinfo = info(name)
-    return uinfo['pwd'] == password
+    return uinfo['passwd'] == password
 
 
 def set_warndays(name, warndays):
@@ -188,7 +218,9 @@ def set_warndays(name, warndays):
     Set the number of days of warning before a password change is required.
     See man passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_warndays username 7
     '''

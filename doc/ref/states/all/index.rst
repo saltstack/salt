@@ -12,10 +12,14 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
+    augeas
     cmd
     cron
+    ddns
     debconfmod
     disk
+    dockerio
     eselect
     file
     gem
@@ -24,7 +28,9 @@ Full list of builtin state modules
     group
     hg
     host
+    iptables
     keyboard
+    keystone
     kmod
     layman
     libvirt
@@ -32,6 +38,7 @@ Full list of builtin state modules
     lvm
     makeconf
     mdadm
+    modjk_worker
     module
     mongodb_database
     mongodb_user
@@ -41,19 +48,30 @@ Full list of builtin state modules
     mysql_user
     network
     npm
+    ntp
     pecl
-    pip
-    pkgng
+    pip_state
     pkg
+    pkgng
     pkgrepo
+    portage_config
+    ports
     postgres_database
     postgres_group
     postgres_user
+    powerpath
+    process
     quota
+    rabbitmq_cluster
+    rabbitmq_plugin
+    rabbitmq_policy
     rabbitmq_user
     rabbitmq_vhost
     rbenv
+    rdp
+    reg
     rvm
+    saltmod
     selinux
     service
     ssh_auth
@@ -65,4 +83,9 @@ Full list of builtin state modules
     timezone
     tomcat
     user
-    virtualenv
+    virtualenv_mod
+    win_dns_client
+    win_firewall
+    win_path
+    win_servermanager
+    win_system

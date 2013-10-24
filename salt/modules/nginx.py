@@ -1,17 +1,20 @@
+# -*- coding: utf-8 -*-
 '''
 Support for nginx
 '''
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
 # for nginx over and over and over for each function herein
-@salt.utils.memoize
+@decorators.memoize
 def __detect_os():
     return salt.utils.which('nginx')
+
 
 def __virtual__():
     '''
@@ -21,11 +24,14 @@ def __virtual__():
         return 'nginx'
     return False
 
+
 def version():
     '''
     Return server version from nginx -v
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.version
     '''
@@ -34,11 +40,14 @@ def version():
     ret = out[0].split(': ')
     return ret[-1]
 
+
 def configtest():
     '''
     test configuration and exit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.configtest
     '''
@@ -53,7 +62,9 @@ def signal(signal=None):
     '''
     Signals nginx to start, reload, reopen or stop.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.signal reload
     '''

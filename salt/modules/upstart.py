@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
@@ -22,15 +23,19 @@ about this, at least.
 
 [1] http://upstart.ubuntu.com/cookbook/#disabling-a-job-from-automatically-starting
 
-[2] lightdm
-  emits login-session-start
-  emits desktop-session-start
-  emits desktop-shutdown
-  start on ((((filesystem and runlevel [!06]) and started dbus) and (drm-device-added card0 PRIMARY_DEVICE_FOR_DISPLAY=1 or stopped udev-fallback-graphics)) or runlevel PREVLEVEL=S)
-  stop on runlevel [016]
+[2] example upstart configuration file::
 
-DO NOT use this module on Red Hat systems, as Red Hat systems should use the
-rh_service module, since red hat systems support chkconfig
+    lightdm
+    emits login-session-start
+    emits desktop-session-start
+    emits desktop-shutdown
+    start on ((((filesystem and runlevel [!06]) and started dbus) and (drm-device-added card0 PRIMARY_DEVICE_FOR_DISPLAY=1 or stopped udev-fallback-graphics)) or runlevel PREVLEVEL=S)
+    stop on runlevel [016]
+
+.. warning::
+    This module should not be used on Red Hat systems. For these, the
+    :mod:`rh_service <salt.modules.rh_service>` module should be used, as it
+    supports the hybrid upstart/sysvinit system used in RHEL/CentOS 6.
 '''
 
 # Import python libs
@@ -44,14 +49,23 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'Ubuntu':
-        return 'service'
+    if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS'):
+        return __virtualname__
+    elif __grains__['os'] in ('Debian', 'Raspbian'):
+        debian_initctl = '/sbin/initctl'
+        if os.path.isfile(debian_initctl):
+            initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
+            if 'upstart' in initctl_version:
+                return 'service'
     return False
 
 
@@ -210,7 +224,9 @@ def get_enabled():
     '''
     Return the enabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -230,7 +246,9 @@ def get_disabled():
     '''
     Return the disabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -246,11 +264,27 @@ def get_disabled():
     return sorted(ret)
 
 
+def available(name):
+    '''
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.available sshd
+    '''
+    return name in get_all()
+
+
 def get_all():
     '''
     Return all installed services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -261,7 +295,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -273,7 +309,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -281,11 +319,13 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -293,11 +333,13 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def full_restart(name, **kwargs):
+def full_restart(name):
     '''
     Do a full restart (stop/start) of the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.full_restart <service name>
     '''
@@ -309,7 +351,9 @@ def reload_(name):
     '''
     Reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -321,7 +365,9 @@ def force_reload(name):
     '''
     Force-reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.force_reload <service name>
     '''
@@ -334,7 +380,9 @@ def status(name, sig=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -380,7 +428,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -395,7 +445,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service from starting on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -410,7 +462,9 @@ def enabled(name):
     '''
     Check to see if the named service is enabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -426,7 +480,9 @@ def disabled(name):
     '''
     Check to see if the named service is disabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

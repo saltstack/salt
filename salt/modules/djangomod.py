@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Django sites
 '''
@@ -5,9 +6,16 @@ Manage Django sites
 # Import python libs
 import os
 
+# Import Salt libs
+import salt.utils
+import salt.exceptions
+
+# Define the module's virtual name
+__virtualname__ = 'django'
+
 
 def __virtual__():
-    return 'django'
+    return __virtualname__
 
 
 def _get_django_admin(bin_env):
@@ -15,7 +23,13 @@ def _get_django_admin(bin_env):
     Return the django admin
     '''
     if not bin_env:
-        return 'django-admin.py'
+        if salt.utils.which('django-admin.py'):
+            return 'django-admin.py'
+        elif salt.utils.which('django-admin'):
+            return 'django-admin'
+        else:
+            raise salt.exceptions.CommandExecutionError(
+                    "django-admin or django-admin.py not found on PATH")
 
     # try to get django-admin.py bin from env
     if os.path.exists(os.path.join(bin_env, 'bin', 'django-admin.py')):
@@ -32,7 +46,9 @@ def command(settings_module,
     '''
     Run arbitrary django management command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.command <settings_module> <command>
     '''
@@ -65,7 +81,9 @@ def syncdb(settings_module,
     minion the ``migrate`` option can be passed as ``True`` calling the
     migrations to run after the syncdb completes
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.syncdb <settings_module>
     '''
@@ -98,7 +116,9 @@ def createsuperuser(settings_module,
     This function defaults to use the ``--noinput`` flag which prevents the
     creation of a password for the superuser.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.createsuperuser <settings_module> user user@example.com
     '''
@@ -129,12 +149,13 @@ def loaddata(settings_module,
     Fixtures:
         comma separated list of fixtures to load
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.loaddata <settings_module> <comma delimited list of fixtures>
 
     '''
-
 
     kwargs = {}
     if database:
@@ -147,6 +168,7 @@ def loaddata(settings_module,
                    env,
                    *fixtures.split(','),
                    **kwargs)
+
 
 def collectstatic(settings_module,
                   bin_env=None,
@@ -162,7 +184,9 @@ def collectstatic(settings_module,
     Collect static files from each of your applications into a single location
     that can easily be served in production.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.collectstatic <settings_module>
     '''

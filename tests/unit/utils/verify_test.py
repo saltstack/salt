@@ -12,10 +12,18 @@ import resource
 import tempfile
 import socket
 
-# Import Salt libs
-import salt.utils
-from saltunittest import skipIf, TestCase, TestsLoggingHandler
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+    TestsLoggingHandler
+)
+ensure_in_syspath('../../')
 
+# Import salt libs
+import salt.utils
+import integration
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -63,7 +71,7 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp()
+        root_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         verify_env([var_dir], getpass.getuser())
         self.assertTrue(os.path.exists(var_dir))
@@ -74,6 +82,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
+    @requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
         if socket.has_ipv6:
@@ -184,3 +193,8 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestVerify, needs_daemon=False)

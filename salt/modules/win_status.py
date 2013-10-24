@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
@@ -26,13 +27,16 @@ except ImportError:
 
 __opts__ = {}
 
+# Define the module's virtual name
+__virtualname__ = 'status'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and has_required_packages:
-        return 'status'
+        return __virtualname__
     return False
 
 
@@ -40,7 +44,9 @@ def procs():
     '''
     Return the process data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.procs
     '''

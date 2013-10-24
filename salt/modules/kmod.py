@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to manage Linux kernel modules
 '''
@@ -5,6 +6,10 @@ Module to manage Linux kernel modules
 # Import python libs
 import os
 import re
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -109,7 +114,9 @@ def available():
     '''
     Return a list of all available kernel modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.available
     '''
@@ -126,7 +133,9 @@ def check_available(mod):
     '''
     Check to see if the specified kernel module is available
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.check_available kvm
     '''
@@ -137,7 +146,9 @@ def lsmod():
     '''
     Return a dict containing information about currently loaded modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.lsmod
     '''
@@ -165,13 +176,15 @@ def mod_list(only_persist=False):
     '''
     Return a list of the loaded module names
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.mod_list
     '''
     mods = set()
     if only_persist:
-        with open(_get_modules_conf(), 'r') as modules_file:
+        with salt.utils.fopen(_get_modules_conf(), 'r') as modules_file:
             for line in modules_file:
                 line = line.strip()
                 mod_name = _strip_module_name(line)
@@ -193,7 +206,9 @@ def load(mod, persist=False):
     persist
         Write module to /etc/modules to make it load on system reboot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.load kvm
     '''
@@ -210,6 +225,19 @@ def load(mod, persist=False):
         return 'Module {0} not found'.format(mod)
 
 
+def is_loaded(mod):
+    '''
+    Check to see if the specified kernel module is loaded
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kmod.is_loaded kvm
+    '''
+    return mod in mod_list()
+
+
 def remove(mod, persist=False, comment=True):
     '''
     Remove the specified kernel module
@@ -224,7 +252,9 @@ def remove(mod, persist=False, comment=True):
         If persist is set don't remove line from /etc/modules but only
         comment it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.remove kvm
     '''

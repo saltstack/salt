@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Read in files from the file_root and save files to the file root
 '''

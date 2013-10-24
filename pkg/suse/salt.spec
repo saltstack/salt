@@ -15,9 +15,8 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
-
 Name:           salt
-Version:        0.15.3
+Version:        0.17.1
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -31,37 +30,46 @@ Source4:        %{name}-master.service
 Source5:        %{name}-syndic.service
 Source6:        %{name}-minion.service
 Source7:        %{name}.logrotate
-Source8:        %{name}-daemon.conf
+Source8:        %{name}.SuSEfirewall2
+
+#for building
+BuildRequires:  python-devel
 BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
-BuildRequires:  python-pyzmq >= 2.1.9
-Requires:       logrotate
-Requires:       python-Jinja2
-Requires:       python-M2Crypto
-Requires:       python-PyYAML
-Requires:       python-msgpack-python
-Requires:       python-pycrypto
-Requires:       python-pyzmq >= 2.1.9
-Requires(pre): %fillup_prereq
-Requires(pre): %insserv_prereq
-Requires(pre): /usr/sbin/groupadd
-Requires(pre): /usr/sbin/useradd
-Requires(pre): /usr/sbin/userdel
+BuildRequires:  python-pyzmq
+%if 0%{?sles_version}
+BuildRequires:  python
+Requires:       python
+%endif
 %if 0%{?suse_version} >= 1210
 BuildRequires:  systemd
 %{?systemd_requires}
 %endif
-%ifarch %{ix86} x86_64
-%if 0%{?suse_version} && 0%{?sles_version} == 0
-Requires:       dmidecode
+
+#for testing
+BuildRequires:  python-xml
+BuildRequires:  python-unittest2
+BuildRequires:  python-salt-testing
+BuildRequires:  python-mock
+BuildRequires:  python-pip
+
+Requires:       logrotate
+Requires:       python-Jinja2
+Requires:       python-PyYAML
+Requires:       python-xml
+Requires(pre): %fillup_prereq
+%if 0%{?suse_version} < 1210
+Requires(pre): %insserv_prereq
 %endif
-%endif
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-%if 0%{?suse_version} && 0%{?suse_version} > 1110
+%if 0%{?suse_version} && 0%{?suse_version} <= 1110
+%{!?python_sitelib: %global python_sitelib %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%else
 BuildArch:      noarch
 %endif
 
@@ -77,8 +85,23 @@ servers, handle them quickly and through a simple and manageable interface.
 Summary:        Management component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires(pre):  %fillup_prereq
+Requires:       python-pyzmq
+Requires:       python-M2Crypto
+Requires:       python-msgpack-python
+Requires:       python-pycrypto
+Requires:		python-GitPython
+Requires:		git
+%ifarch %{ix86} x86_64
+%if 0%{?suse_version} && 0%{?sles_version} == 0
+Requires:       dmidecode
+%endif
+%endif
+Recommends:		python-halite
+%if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
+%endif
+Requires(pre):  %fillup_prereq
+
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -89,8 +112,14 @@ than serially.
 Summary:        Client component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires(pre):  %fillup_prereq
+Requires:       python-pyzmq
+Requires:       python-M2Crypto
+Requires:       python-msgpack-python
+Requires:       python-pycrypto
+%if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
+%endif
+Requires(pre):  %fillup_prereq
 
 %description minion
 Salt minion is queried and controlled from the master.
@@ -100,13 +129,32 @@ Listens to the salt master and execute the commands.
 Summary:        Syndic component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires(pre):  %fillup_prereq
+Requires:       %{name}-master = %{version}
+%if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
+%endif
+Requires(pre):  %fillup_prereq
 
 %description syndic
 Salt syndic is the master-of-masters for salt
 The master of masters for salt-- it enables
 the management of multiple masters at a time..
+
+%package ssh
+Summary:        Ssh component for salt, a parallel remote execution system
+Group:          System/Monitoring
+Requires:       %{name} = %{version}
+BuildRequires:  python-markupsafe
+Requires:       python-markupsafe
+Recommends:		sshpass
+%if 0%{?suse_version} < 1210
+Requires(pre):  %insserv_prereq
+%endif
+Requires(pre):  %fillup_prereq
+
+%description ssh
+Salt ssh is a master running without zmq.
+it enables the management of minions over a ssh connection.
 
 %prep
 %setup -q
@@ -117,123 +165,143 @@ python setup.py build
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 
-##missing directories
+## create missing directories
 mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
-mkdir -p %{buildroot}%{_sysconfdir}/salt/syndic.d
 mkdir -p %{buildroot}%{_sysconfdir}/salt/minion.d
+%if 0%{?suse_version} < 1210
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
+%endif
 mkdir -p %{buildroot}%{_localstatedir}/log/salt
 mkdir -p %{buildroot}/%{_sysconfdir}/logrotate.d/
 mkdir -p %{buildroot}/%{_sbindir}
+mkdir -p %{buildroot}/var/log/salt
+mkdir -p %{buildroot}/srv/salt
+mkdir -p %{buildroot}/srv/pillar
 #
-##init scripts
+## install init scripts
+%if 0%{?_unitdir:1}
+install -Dpm 0644  %{SOURCE4} %{buildroot}%_unitdir/salt-master.service
+install -Dpm 0644  %{SOURCE5} %{buildroot}%_unitdir/salt-syndic.service
+install -Dpm 0644  %{SOURCE6} %{buildroot}%_unitdir/salt-minion.service
+%else
 install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-master
 install -Dpm 0755 %{SOURCE2} %{buildroot}%{_initddir}/salt-syndic
 install -Dpm 0755 %{SOURCE3} %{buildroot}%{_initddir}/salt-minion
 ln -sf %{_initddir}/salt-master %{buildroot}%{_sbindir}/rcsalt-master
 ln -sf %{_initddir}/salt-syndic %{buildroot}%{_sbindir}/rcsalt-syndic
 ln -sf %{_initddir}/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
-
-%if 0%{?_unitdir:1}
-install -Dpm 644  %{SOURCE4} %{buildroot}%_unitdir/salt-master.service
-install -Dpm 644  %{SOURCE5} %{buildroot}%_unitdir/salt-syndic.service
-install -Dpm 644  %{SOURCE6} %{buildroot}%_unitdir/salt-minion.service
 %endif
+
 #
-##config files
-install -Dpm 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -Dpm 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
+## install config files
+install -Dpm 0644 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
+install -Dpm 0644 conf/master %{buildroot}%{_sysconfdir}/salt/master
 #
-##logrotate file
-install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
+## install logrotate file
+install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 #
-##Salt-master daemon user
-install -Dpm 644  %{SOURCE8} %{buildroot}%{_sysconfdir}/salt/master.d/salt-daemon.conf
+## install SuSEfirewall2 rules
+install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+
+%check
+%{__python} setup.py test --runtests-opts=-u
 
 %preun -n salt-syndic
-%stop_on_removal salt-syndic
 %if 0%{?_unitdir:1}
 %service_del_preun salt-syndic.service
+%else
+%stop_on_removal salt-syndic
 %endif
 
 %post -n salt-syndic
-%fillup_and_insserv
 %if 0%{?_unitdir:1}
 %service_add_post salt-syndic.service
+%fillup_only
+%else
+%fillup_and_insserv
 %endif
 
 %postun -n salt-syndic
-%restart_on_update salt-syndic
 %if 0%{?_unitdir:1}
 %service_del_postun salt-syndic.service
-%endif
+%else
 %insserv_cleanup
-
-%pre -n salt-master
-getent group salt >/dev/null || /usr/sbin/groupadd -r salt
-getent passwd salt >/dev/null || /usr/sbin/useradd -r -g salt -d /srv/salt -s /bin/false -c "salt-master daemon" salt
+%restart_on_update salt-syndic
+%endif
 
 %preun -n salt-master
-%stop_on_removal salt-master
 %if 0%{?_unitdir:1}
 %service_del_preun salt-master.service
+%else
+%stop_on_removal salt-master
 %endif
 
 %post -n salt-master
-%fillup_and_insserv
 %if 0%{?_unitdir:1}
 %service_add_post salt-master.service
+%fillup_only
+%else
+%fillup_and_insserv
 %endif
 
 %postun -n salt-master
-%restart_on_update salt-master
 %if 0%{?_unitdir:1}
 %service_del_postun salt-master.service
-%endif
+%else
+%restart_on_update salt-master
 %insserv_cleanup
+%endif
 
 %preun -n salt-minion
-%stop_on_removal salt-minion
 %if 0%{?_unitdir:1}
 %service_del_preun salt-minion.service
+%else
+%stop_on_removal salt-minion
 %endif
 
 %post -n salt-minion
-%fillup_and_insserv
 %if 0%{?_unitdir:1}
 %service_add_post salt-minion.service
+%fillup_only
+%else
+%fillup_and_insserv
 %endif
 
 %postun -n salt-minion
-%restart_on_update salt-minion
 %if 0%{?_unitdir:1}
 %service_del_postun salt-minion.service
-%endif
+%else
 %insserv_cleanup
+%restart_on_update salt-minion
+%endif
+
+%files -n salt-ssh
+%defattr(-,root,root)
+%{_bindir}/salt-ssh
+%{_mandir}/man1/salt-ssh.1.gz
 
 %files -n salt-syndic
 %defattr(-,root,root)
 %{_bindir}/salt-syndic
-%{_mandir}/man1/salt-syndic.1.*
-%{_sbindir}/rcsalt-syndic
-%{_sysconfdir}/init.d/salt-syndic
-%{_sysconfdir}/salt/syndic.d
+%{_mandir}/man1/salt-syndic.1.gz
 %if 0%{?_unitdir:1}
 %_unitdir/salt-syndic.service
+%else
+%{_sbindir}/rcsalt-syndic
+%{_sysconfdir}/init.d/salt-syndic
 %endif
 
 %files -n salt-minion
 %defattr(-,root,root)
 %{_bindir}/salt-minion
-%{_bindir}/salt-call
-%{_mandir}/man1/salt-call.1.*
-%{_mandir}/man1/salt-minion.1.*
-%{_sbindir}/rcsalt-minion
-%config(noreplace) %{_sysconfdir}/init.d/salt-minion
-%config(noreplace) %{_sysconfdir}/salt/minion
+%{_mandir}/man1/salt-minion.1.gz
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/minion
 %{_sysconfdir}/salt/minion.d
 %if 0%{?_unitdir:1}
 %_unitdir/salt-minion.service
+%else
+%{_sbindir}/rcsalt-minion
+%config(noreplace) %{_sysconfdir}/init.d/salt-minion
 %endif
 
 %files -n salt-master
@@ -243,25 +311,31 @@ getent passwd salt >/dev/null || /usr/sbin/useradd -r -g salt -d /srv/salt -s /b
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-run
-%{_mandir}/man1/salt-master.1.*
-%{_mandir}/man1/salt.1.*
-%{_mandir}/man1/salt-cp.1.*
-%{_mandir}/man1/salt-key.1.*
-%{_mandir}/man1/salt-run.1.*
-%{_sbindir}/rcsalt-master
-%config(noreplace) %{_sysconfdir}/init.d/salt-master
-%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master
-%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master.d/salt-daemon.conf
+%{_mandir}/man1/salt-master.1.gz
+%{_mandir}/man1/salt.1.gz
+%{_mandir}/man1/salt-cp.1.gz
+%{_mandir}/man1/salt-key.1.gz
+%{_mandir}/man1/salt-run.1.gz
+%config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
 %{_sysconfdir}/salt/master.d
+%dir /srv/salt
+%dir /srv/pillar
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
+%else
+%{_sbindir}/rcsalt-master
+%config(noreplace) %{_sysconfdir}/init.d/salt-master
 %endif
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE
+%doc LICENSE AUTHORS README.rst HACKING.rst
 %dir %{_sysconfdir}/salt
-%{_mandir}/man7/salt.7.*
+%dir /var/log/salt
+%{_bindir}/salt-call
+%{_mandir}/man1/salt-call.1.gz
+%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %{python_sitelib}/*
 

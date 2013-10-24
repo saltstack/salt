@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module is a central location for all salt exceptions
 '''
@@ -58,7 +59,7 @@ class MinionError(SaltException):
     '''
 
 
-class SaltInvocationError(SaltException):
+class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
     arguments are specified on the command line
@@ -83,11 +84,13 @@ class SaltReqTimeoutError(SaltException):
     Thrown when a salt master request call fails to return within the timeout
     '''
 
+
 class TimedProcTimeoutError(SaltException):
     '''
     Thrown when a timed subprocess does not terminate within the timeout,
     or if the specified timeout is not an int or a float
     '''
+
 
 class EauthAuthenticationError(SaltException):
     '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Read pillar data from a mongodb collection.
 
@@ -80,8 +81,13 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
-               re_replace='', fields=None):
+def ext_pillar(minion_id,
+               pillar,
+               collection='pillar',
+               id_field='_id',
+               re_pattern=None,
+               re_replace='',
+               fields=None):
     '''
     Connect to a mongo database and read per-node pillar information.
 
@@ -121,7 +127,6 @@ def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
-    minion_id = __opts__['id']
     if re_pattern:
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 

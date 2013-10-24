@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 Run munin plugins/checks from salt and format the output as data.
 '''
@@ -13,6 +13,7 @@ from salt._compat import string_types
 
 PLUGINDIR = '/etc/munin/plugins/'
 
+
 def __virtual__():
     '''
     Only load the module if munin-node is installed
@@ -21,15 +22,19 @@ def __virtual__():
         return 'munin'
     return False
 
+
 def _get_conf(fname='/etc/munin/munin-node.cfg'):
     fp = salt.utils.fopen(fname, 'r')
     return fp.read()
+
 
 def run(plugins):
     '''
     Run one or more named munin plugins
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' munin.run uptime
         salt '*' munin.run uptime,cpu,load,memory
@@ -46,7 +51,7 @@ def run(plugins):
         data[plugin] = {}
         muninout = __salt__['cmd.run']('munin-run ' + plugin)
         for line in muninout.split('\n'):
-            if 'value' in line: # This skips multigraph lines, etc
+            if 'value' in line:  # This skips multigraph lines, etc
                 key, val = line.split(' ')
                 key = key.split('.')[0]
                 try:
@@ -60,11 +65,14 @@ def run(plugins):
                     pass
     return data
 
+
 def run_all():
     '''
     Run all the munin plugins
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' munin.run_all
     '''
@@ -74,11 +82,14 @@ def run_all():
         ret.update(run(plugin))
     return ret
 
+
 def list_plugins():
     '''
     List all the munin plugins
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' munin.list_plugins
     '''

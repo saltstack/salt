@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control virtual machines via Salt
 '''
@@ -5,6 +6,7 @@ Control virtual machines via Salt
 # Import Salt libs
 import salt.client
 import salt.output
+import salt.utils.virt
 
 
 def _determine_hyper(data, omit=''):
@@ -76,6 +78,43 @@ def query(hyper=None, quiet=False):
     return ret
 
 
+def list(hyper=None, quiet=False):
+    '''
+    List the virtual machines on each hyper
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    for info in client.cmd_iter('virtual:physical',
+                                'virt.vm_info', expr_form='grain'):
+        if not info:
+            continue
+        if not isinstance(info, dict):
+            continue
+        chunk = {}
+        id_ = info.keys()[0]
+        if hyper:
+            if hyper != id_:
+                continue
+        if not isinstance(info[id_], dict):
+            continue
+        if 'ret' not in info[id_]:
+            continue
+        if not isinstance(info[id_]['ret'], dict):
+            continue
+        data = {}
+        for k, v in info[id_]['ret'].items():
+            if v['state'] in data:
+                data[v['state']].append(k)
+            else:
+                data[v['state']] = [k]
+        chunk[id_] = data
+        ret.update(chunk)
+        if not quiet:
+            salt.output.display_output(chunk, 'virt_list', __opts__)
+
+    return ret
+
+
 def next_hyper():
     '''
     Return the hypervisor to use for the next autodeployed vm
@@ -97,7 +136,7 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
+def init(name, cpu, mem, image, hyper=None, seed=True, nic='default', install=True):
     '''
     Initialize a new vm
     '''
@@ -116,6 +155,11 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
     else:
         hyper = _determine_hyper(data)
 
+    if seed:
+        print('Minion will be preseeded')
+        kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
+        kv.authorize()
+
     client = salt.client.LocalClient(__opts__['conf_file'])
 
     print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
@@ -128,7 +172,8 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
                 mem,
                 image,
                 'seed={0}'.format(seed),
-                'nic={0}'.format(nic)
+                'nic={0}'.format(nic),
+                'install={0}'.format(install)
             ],
             timeout=600)
 

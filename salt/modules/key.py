@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Functions to view the minion's public key information
 '''
@@ -8,11 +9,14 @@ import os
 # Import Salt libs
 import salt.utils
 
+
 def finger():
     '''
     Return the minion's public key fingerprint
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' key.finger
     '''

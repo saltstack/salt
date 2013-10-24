@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This pillar module parses a config file (specified in the salt master config),
 and executes a series of LDAP searches based on that config.  Data returned by
@@ -145,7 +146,7 @@ def _do_search(conf):
     return result
 
 
-def ext_pillar(pillar, config_file):
+def ext_pillar(minion_id, pillar, config_file):
     '''
     Execute LDAP searches and return the aggregated data
     '''

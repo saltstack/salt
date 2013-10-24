@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Set up the correct search system
 '''
@@ -47,7 +48,7 @@ def _iter_dir(dir_, env):
         if os.path.isdir(path):
             yield _iter_dir(path, env)
         elif os.path.isfile(path):
-            with open(path) as fp_:
+            with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
                         {'path': unicode(path),
@@ -76,6 +77,7 @@ def iter_roots(roots):
                 continue
             for ret in _iter_dir(dir_, env):
                 yield ret
+
 
 class Search(object):
     '''

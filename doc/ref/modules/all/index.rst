@@ -9,7 +9,6 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.sys
 
 .. currentmodule:: salt.modules
 
@@ -27,7 +26,9 @@ Full list of builtin execution modules
     bluez
     brew
     bridge
+    bsd_shadow
     cassandra
+    chocolatey
     cmdmod
     config
     cp
@@ -35,6 +36,7 @@ Full list of builtin execution modules
     daemontools
     darwin_sysctl
     data
+    ddns
     debconfmod
     debian_service
     dig
@@ -42,6 +44,7 @@ Full list of builtin execution modules
     djangomod
     dnsmasq
     dnsutil
+    dockerio
     dpkg
     ebuild
     eix
@@ -49,14 +52,15 @@ Full list of builtin execution modules
     event
     extfs
     file
+    freebsd_sysctl
     freebsdjail
     freebsdkmod
     freebsdpkg
+    freebsdports
     freebsdservice
-    freebsd_sysctl
     gem
-    gentoolkitmod
     gentoo_service
+    gentoolkitmod
     git
     glance
     grains
@@ -67,8 +71,8 @@ Full list of builtin execution modules
     hosts
     img
     iptables
-    keyboard
     key
+    keyboard
     keystone
     kmod
     launchctl
@@ -80,24 +84,29 @@ Full list of builtin execution modules
     localemod
     locate
     logrotate
+    lxc
+    mac_group
+    mac_user
     makeconf
     match
     mdadm
     mine
+    modjk
     mongodb
     monit
     moosefs
     mount
     munin
     mysql
-    netbsdservice
     netbsd_sysctl
+    netbsdservice
     network
     nfs3
     nginx
     nova
     npm
     nzbget
+    omapi
     openbsdpkg
     openbsdservice
     osxdesktop
@@ -107,12 +116,14 @@ Full list of builtin execution modules
     pecl
     pillar
     pip
+    pkg_resource
     pkgin
     pkgng
-    pkg_resource
     pkgutil
+    portage_config
     postgres
     poudriere
+    powerpath
     ps
     publish
     puppet
@@ -123,14 +134,18 @@ Full list of builtin execution modules
     quota
     rabbitmq
     rbenv
+    rdp
     reg
     ret
     rh_ip
     rh_service
+    riak
     rpm
     rvm
     s3
+    saltcloudmod
     saltutil
+    seed
     selinux
     service
     shadow
@@ -138,9 +153,9 @@ Full list of builtin execution modules
     smartos_vmadm
     smf
     solaris_group
-    solarispkg
     solaris_shadow
     solaris_user
+    solarispkg
     solr
     sqlite3
     ssh
@@ -150,8 +165,8 @@ Full list of builtin execution modules
     svn
     sysbench
     sysmod
-    systemd
     system
+    systemd
     test
     timezone
     tls
@@ -159,20 +174,29 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
+    win_autoruns
     win_disk
+    win_dns_client
     win_file
+    win_firewall
     win_groupadd
+    win_ip
     win_network
+    win_ntp
+    win_path
     win_pkg
+    win_repo
+    win_servermanager
     win_service
     win_shadow
     win_status
     win_system
+    win_timezone
     win_useradd
     xapi
-    yumpkg5
     yumpkg
+    yumpkg5
     zfs
     zpool
     zypper

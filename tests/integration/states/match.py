@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.integration.states.match
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
 
-# Import salt libs
-import salt.utils
-import integration
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
-from saltunittest import skipIf
+# Import salt libs
+import integration
+import salt.utils
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
@@ -28,7 +32,8 @@ class StateMatchTest(integration.ModuleCase):
     def test_issue_2167_exsel_no_AttributeError(self):
         ret = self.run_function('state.top', ['issue-2167-exsel-match.sls'])
         self.assertNotIn(
-            "AttributeError: 'Matcher' object has no attribute 'functions'",
+            'AttributeError: \'Matcher\' object has no '
+            'attribute \'functions\'',
             ret
         )
 
@@ -53,3 +58,8 @@ class StateMatchTest(integration.ModuleCase):
             )
         finally:
             os.remove(top_file)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StateMatchTest)

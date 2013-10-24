@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package support for openSUSE via the zypper package manager
 '''
@@ -12,6 +13,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -22,14 +26,16 @@ def __virtual__():
     # Not all versions of Suse use zypper, check that it is available
     if not salt.utils.which('zypper'):
         return False
-    return 'pkg'
+    return __virtualname__
 
 
 def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -64,11 +70,15 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if len(names) == 0:
         return ''
 
@@ -77,13 +87,18 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
-    cmd = 'zypper info -t package {0}'.format(' '.join(names))
-    output = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    output = re.split('Information for package \\S+:\n', output)
-    for package in output:
+    restpackages = names
+    outputs = []
+    # Split call to zypper into batches of 500 packages
+    while restpackages:
+        cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
+        output = __salt__['cmd.run_all'](cmd).get('stdout', '')
+        outputs.extend(re.split('Information for package \\S+:\n', output))
+        restpackages = restpackages[500:]
+    for package in outputs:
         pkginfo = {}
         for line in package.splitlines():
             try:
@@ -116,7 +131,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -129,7 +146,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -143,7 +162,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -160,7 +181,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
         name, pkgver, rel = line.split('_|-')
@@ -181,7 +202,9 @@ def refresh_db():
 
         {'<database name>': Bool}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -218,7 +241,10 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -239,7 +265,10 @@ def install(name=None,
         version. As with the ``version`` parameter above, comparison operators
         can be used to target a specific version of a package.
 
-        CLI Examples::
+        CLI Examples:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4"}]'
             salt '*' pkg.install pkgs='["foo", {"bar": "<1.2.3-4"}]'
@@ -249,7 +278,10 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
 
 
@@ -294,8 +326,8 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                     log.debug(targets)
                 else:
-                    msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version_num, name)
+                    msg = ('Invalid version string {0!r} for package '
+                           '{1!r}'.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -305,19 +337,35 @@ def install(name=None,
         targets = pkg_params
 
     old = list_pkgs()
-    # Quotes needed around package targets because of the possibility of output
-    # redirection characters "<" or ">" in zypper command.
-    cmd = 'zypper -n install -l "{0}"'.format('" "'.join(targets))
-    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
     downgrades = []
-    for line in stdout.splitlines():
-        match = re.match("^The selected package '([^']+)'.+has lower version",
-                         line)
-        if match:
-            downgrades.append(match.group(1))
-    if downgrades:
-        cmd = 'zypper -n install -l --force {0}'.format(' '.join(downgrades))
+    # Split the targets into batches of 500 packages each, so that
+    # the maximal length of the command line is not broken
+    while targets:
+        # Quotes needed around package targets because of the possibility of
+        # output redirection characters "<" or ">" in zypper command.
+        cmd = (
+            'zypper --non-interactive install --name '
+            '--auto-agree-with-licenses "{0}"'
+            .format('" "'.join(targets[:500]))
+        )
+        targets = targets[500:]
+        stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+        for line in stdout.splitlines():
+            match = re.match(
+                "^The selected package '([^']+)'.+has lower version",
+                line
+            )
+            if match:
+                downgrades.append(match.group(1))
+
+    while downgrades:
+        cmd = (
+            'zypper --non-interactive install --name '
+            '--auto-agree-with-licenses --force {0}'
+            .format(' '.join(downgrades[:500]))
+        )
         __salt__['cmd.run_all'](cmd)
+        downgrades = downgrades[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -332,14 +380,16 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
     old = list_pkgs()
-    cmd = 'zypper -n up -l'
+    cmd = 'zypper --non-interactive update --auto-agree-with-licenses'
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -357,8 +407,13 @@ def _uninstall(action='remove', name=None, pkgs=None):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = 'zypper -n remove {0} {1}'.format(purge_arg, ' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    while targets:
+        cmd = (
+            'zypper --non-interactive remove {0} {1}'
+            .format(purge_arg, ' '.join(targets[:500]))
+        )
+        __salt__['cmd.run_all'](cmd)
+        targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -383,7 +438,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -412,36 +469,12 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return _uninstall(action='purge', name=name, pkgs=pkgs)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

@@ -1,12 +1,18 @@
 '''
 Tests for the supervisord state
 '''
-import os
-import tempfile
-import integration
-import subprocess
-import time
 
+# Import python lins
+import os
+import time
+import subprocess
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
 
 
 class SupervisordTest(integration.ModuleCase,
@@ -27,7 +33,8 @@ class SupervisordTest(integration.ModuleCase,
         if not os.path.exists(self.venv_dir):
             os.makedirs(self.venv_test_dir)
             self.run_function('virtualenv.create', [self.venv_dir])
-            self.run_function('pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
+            self.run_function(
+                'pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
 
         self.supervisord = os.path.join(self.venv_dir, 'bin', 'supervisord')
         if not os.path.exists(self.supervisord):
@@ -36,32 +43,39 @@ class SupervisordTest(integration.ModuleCase,
         self.supervisor_conf = os.path.join(self.venv_dir, 'supervisor.conf')
 
     def start_supervisord(self, autostart=True):
-        ret = self.run_state(
-            'file.managed', name=self.supervisor_conf, source='salt://supervisor.conf',
-            template='jinja',
+        self.run_state(
+            'file.managed', name=self.supervisor_conf,
+            source='salt://supervisor.conf', template='jinja',
             context={
-                'supervisor_sock' : self.supervisor_sock,
+                'supervisor_sock': self.supervisor_sock,
                 'virtual_env': self.venv_dir,
                 'autostart': autostart
             }
         )
         if not os.path.exists(self.supervisor_conf):
             self.skipTest('failed to create supervisor config file')
-        self.supervisor_proc = subprocess.Popen([self.supervisord, '-c', self.supervisor_conf])
+        self.supervisor_proc = subprocess.Popen(
+            [self.supervisord, '-c', self.supervisor_conf]
+        )
         if self.supervisor_proc.poll() is not None:
             self.skipTest('failed to start supervisord')
         timeout = 10
         while not os.path.exists(self.supervisor_sock):
             if timeout == 0:
-                self.skipTest('supervisor socket not found - failed to start supervisord')
+                self.skipTest(
+                    'supervisor socket not found - failed to start supervisord'
+                )
                 break
             else:
                 time.sleep(1)
                 timeout -= 1
 
     def tearDown(self):
-        if hasattr(self, 'supervisor_proc') and self.supervisor_proc.poll() is not None:
-            self.run_function('supervisord.custom', ['shutdown'], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
+        if hasattr(self, 'supervisor_proc') and \
+                self.supervisor_proc.poll() is not None:
+            self.run_function(
+                'supervisord.custom', ['shutdown'],
+                conf_file=self.supervisor_conf, bin_env=self.venv_dir)
             self.supervisor_proc.wait()
 
     def test_running_stopped(self):
@@ -75,7 +89,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_started(self):
         '''
@@ -88,7 +102,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertNotInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertNotInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_needsupdate(self):
         '''
@@ -107,7 +121,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_notexists(self):
         '''
@@ -133,7 +147,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_stopped(self):
         '''
@@ -147,7 +161,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_needsupdate(self):
         '''
@@ -167,7 +181,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_notexists(self):
         '''
@@ -181,7 +195,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltFalseReturn(ret)
-        self.assertNotInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertNotInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_dead_started(self):
         '''
@@ -236,3 +250,8 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(SupervisordTest)

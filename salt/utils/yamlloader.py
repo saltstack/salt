@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 from __future__ import absolute_import
 import warnings
@@ -16,7 +17,7 @@ except Exception:
 # accepts a custom loader, and every time this function is used in Salt
 # the custom loader defined below is used. This should be altered though to
 # not require the custom loader to be explicitly added.
-load = yaml.load  # pylint: disable-msg=C0103
+load = yaml.load  # pylint: disable=C0103
 
 
 class DuplicateKeyWarning(RuntimeWarning):
@@ -27,7 +28,7 @@ class DuplicateKeyWarning(RuntimeWarning):
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
-# with code integrated form https://gist.github.com/844388
+# with code integrated from https://gist.github.com/844388
 class CustomLoader(yaml.SafeLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
@@ -37,7 +38,7 @@ class CustomLoader(yaml.SafeLoader):
     def __init__(self, stream, dictclass=dict):
         yaml.SafeLoader.__init__(self, stream)
         if dictclass is not dict:
-            # then assume ordred dict and use it for both !map and !omap
+            # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(
                 u'tag:yaml.org,2002:map',
                 type(self).construct_yaml_map)
@@ -57,9 +58,11 @@ class CustomLoader(yaml.SafeLoader):
         Build the mapping for YAML
         '''
         if not isinstance(node, MappingNode):
-            raise ConstructorError(None, None,
-                    'expected a mapping node, but found {0}'.format(node.id),
-                    node.start_mark)
+            raise ConstructorError(
+                None,
+                None,
+                'expected a mapping node, but found {0}'.format(node.id),
+                node.start_mark)
 
         self.flatten_mapping(node)
 
@@ -90,4 +93,8 @@ class CustomLoader(yaml.SafeLoader):
             elif node.value.startswith('0') \
                     and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
+                # If value was all zeros, node.value would have been reduced to
+                # an empty string. Change it to '0'.
+                if node.value == '':
+                    node.value = '0'
         return yaml.constructor.SafeConstructor.construct_scalar(self, node)

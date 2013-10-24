@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for GRUB Legacy
 '''
@@ -7,7 +8,11 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
+
+# Define the module's virtual name
+__virtualname__ = 'grub'
 
 
 def __virtual__():
@@ -15,11 +20,11 @@ def __virtual__():
     Only load the module if grub is installed
     '''
     if os.path.exists(_detect_conf()):
-        return 'grub'
+        return __virtualname__
     return False
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _detect_conf():
     '''
     GRUB conf location differs depending on distro
@@ -34,7 +39,9 @@ def version():
     '''
     Return server version from grub --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grub.version
     '''
@@ -47,7 +54,9 @@ def conf():
     '''
     Parse GRUB conf file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grub.conf
     '''

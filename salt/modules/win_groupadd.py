@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage groups on Windows
 '''
@@ -5,19 +6,24 @@ Manage groups on Windows
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    return 'group' if salt.utils.is_windows() else False
+    return __virtualname__ if salt.utils.is_windows() else False
 
 
 def add(name, gid=None, system=False):
     '''
     Add the specified group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.add foo
     '''
@@ -32,7 +38,9 @@ def delete(name):
     '''
     Remove the named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.delete foo
     '''
@@ -45,7 +53,9 @@ def info(name):
     '''
     Return information about a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.info foo
     '''
@@ -76,7 +86,9 @@ def getent(refresh=False):
     '''
     Return info on all groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.getent
     '''

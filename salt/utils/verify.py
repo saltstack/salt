@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A few checks to make sure the environment is sane
 '''
@@ -31,7 +32,11 @@ def zmq_version():
     '''
     ZeroMQ python bindings >= 2.1.9 are required
     '''
-    import zmq
+    try:
+        import zmq
+    except Exception:
+        # Return True for local mode
+        return True
     ver = zmq.__version__
     # The last matched group can be None if the version
     # is something like 3.1 and that will work properly
@@ -83,6 +88,7 @@ def zmq_version():
             sys.stderr.write('CRITICAL {0}\n'.format(msg))
     return False
 
+
 def lookup_family(hostname):
     '''
     Lookup a hostname and determine its address family. The first address returned
@@ -91,14 +97,16 @@ def lookup_family(hostname):
     # If lookups fail, fall back to AF_INET sockets (and v4 addresses).
     fallback = socket.AF_INET
     try:
-        hostnames = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC,
-                                       socket.SOCK_STREAM)
+        hostnames = socket.getaddrinfo(
+            hostname or None, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
         if not hostnames:
             return fallback
         h = hostnames[0]
         return h[0]
     except socket.gaierror:
         return fallback
+
 
 def verify_socket(interface, pub_port, ret_port):
     '''
@@ -277,11 +285,18 @@ def check_user(user):
     if user == getpass.getuser():
         return True
     import pwd  # after confirming not running Windows
+    import grp
     try:
         pwuser = pwd.getpwnam(user)
         try:
+            if hasattr(os, 'initgroups'):
+                os.initgroups(user, pwuser.pw_gid)
+            else:
+                os.setgroups([e.gr_gid for e in grp.getgrall()
+                              if user in e.gr_mem] + [pwuser.pw_gid])
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
+
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
@@ -301,7 +316,7 @@ def check_user(user):
 
 
 def list_path_traversal(path):
-    """
+    '''
     Returns a full list of directories leading up to, and including, a path.
 
     So list_path_traversal('/path/to/salt') would return:
@@ -311,7 +326,7 @@ def list_path_traversal(path):
     This routine has been tested on Windows systems as well.
     list_path_traversal('c:\\path\\to\\salt') on Windows would return:
         ['c:\\', 'c:\\path', 'c:\\path\\to', 'c:\\path\\to\\salt']
-    """
+    '''
     out = [path]
     (head, tail) = os.path.split(path)
     if tail == '':
@@ -431,8 +446,8 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
-def valid_id(id_):
+def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
-    return bool(clean_path('/etc/pki/salt/master', id_))
+    return bool(clean_path(opts['pki_dir'], id_))

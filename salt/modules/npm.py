@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage and query NPM packages.
 '''
@@ -5,7 +6,7 @@ Manage and query NPM packages.
 # Import python libs
 import json
 import logging
-import distutils.version
+import distutils.version  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'list_': 'list'
 }
+
 
 def __virtual__():
     '''
@@ -59,7 +61,9 @@ def install(pkg=None,
     runas
         The user to run NPM with
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.install coffee-script
 
@@ -73,7 +77,7 @@ def install(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -92,7 +96,7 @@ def install(pkg=None,
     log.error(lines)
 
     # Strip all lines until JSON output starts
-    while not lines[0].startswith("{") and not lines[0].startswith("["):
+    while not lines[0].startswith('{') and not lines[0].startswith('['):
         lines = lines[1:]
 
     try:
@@ -120,7 +124,9 @@ def uninstall(pkg,
     runas
         The user to run NPM with
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.uninstall coffee-script
 
@@ -134,7 +140,7 @@ def uninstall(pkg,
     if dir is None:
         cmd += ' --global'
 
-    cmd += ' ' + pkg
+    cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -144,8 +150,7 @@ def uninstall(pkg,
     return True
 
 
-def list_(pkg=None,
-         dir=None):
+def list_(pkg=None, dir=None):
     '''
     List installed NPM packages.
 
@@ -159,7 +164,9 @@ def list_(pkg=None,
         The directory whose packages will be listed, or None for global
         installation
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.list
 
@@ -173,7 +180,7 @@ def list_(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir)
 

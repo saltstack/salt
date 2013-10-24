@@ -37,8 +37,8 @@ Restart the Salt master in order to pick up this change:
 
 .. code-block:: bash
 
-    % pkill salt-master
-    % salt-master -d
+    pkill salt-master
+    salt-master -d
 
 Preparing the Top File
 ======================
@@ -57,11 +57,14 @@ The :term:`top file` is separated into environments (discussed later). The
 default environment is ``base``. Under the ``base`` environment a collection of
 minion matches is defined; for now simply specify all hosts (``*``).
 
+.. _targeting-minions:
 .. admonition:: Targeting minions
 
     The expressions can use any of the targeting mechanisms used by Salt —
     minions can be matched by glob, PCRE regular expression, or by :doc:`grains
-    </topics/targeting/grains>`. For example::
+    </topics/targeting/grains>`. For example:
+
+    .. code-block:: yaml
 
         base:
           'os:Fedora':
@@ -71,12 +74,10 @@ minion matches is defined; for now simply specify all hosts (``*``).
 Create an ``sls`` module
 ========================
 
-In the same directory as the :term:`top file`, create an empty file, called an
-:term:`SLS module`, named ``webserver.sls``. Type the following and save the
-file:
+In the same directory as the :term:`top file`, create an empty file named
+``webserver.sls``, containing the following:
 
 .. code-block:: yaml
-    :linenos:
 
     apache:                 # ID declaration
       pkg:                  # state declaration
@@ -129,6 +130,26 @@ compiled, and executed.
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
 
+.. _sls-file-namespace:
+.. admonition:: SLS File Namespace
+
+    Note that in the :ref:`example <targeting-minions>` above, the SLS file
+    ``webserver.sls`` was referred to simply as ``webserver``. The namespace
+    for SLS files follows a few simple rules:
+
+    1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
+       ``webserver``).
+    2. Subdirectories can be used for better organization.
+        a. Each subdirectory is represented by a dot.
+        b. ``webserver/dev.sls`` is referred to as ``webserver.dev``.
+    3. A file called ``init.sls`` in a subdirectory is referred to by the path
+       of the directory. So, ``webserver/init.sls`` is referred to as
+       ``webserver``.
+    4. If both ``webserver.sls`` and ``webserver/init.sls`` happen to exist,
+       ``webserver/init.sls`` will be ignored and ``webserver.sls`` will be the
+       file referred to as ``webserver``.
+
+
 .. admonition:: Troubleshooting Salt
 
     If the expected output isn't seen, the following tips can help to
@@ -136,22 +157,30 @@ and all changes made.
 
     Turn up logging
         Salt can be quite chatty when you change the logging setting to
-        ``debug``::
+        ``debug``:
+
+        .. code-block:: bash
 
             salt-minion -l debug
 
     Run the minion in the foreground
         By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) one can view any output from the minion as it works::
+        -d>`) one can view any output from the minion as it works:
+
+        .. code-block:: bash
 
             salt-minion &
 
     Increase the default timeout value when running :command:`salt`. For
-    example, to change the default timeout to 60 seconds::
+    example, to change the default timeout to 60 seconds:
+
+    .. code-block:: bash
 
         salt -t 60
 
-    For best results, combine all three::
+    For best results, combine all three:
+
+    .. code-block:: bash
 
         salt-minion -l debug &          # On the minion
         salt '*' state.highstate -t 60  # On the master

@@ -1,10 +1,14 @@
+# -*- coding: utf-8 -*-
 '''
 Manages configuration files via augeas
 
-:depends:   - Augeas Python adapter
+:strong:`NOTE:` This state requires the ``augeas`` Python module.
 '''
 
-# Load third party libs
+# Import python libs
+import os
+
+# Make sure augeas python interface is installed
 HAS_AUGEAS = False
 try:
     from augeas import Augeas
@@ -12,13 +16,19 @@ try:
 except ImportError:
     pass
 
+# Import salt libs
+from salt.exceptions import SaltInvocationError
+
+# Define the module's virtual name
+__virtualname__ = 'augeas'
+
 
 def __virtual__():
     '''
     Only run this module if the augeas python module is installed
     '''
     if HAS_AUGEAS:
-        return 'augeas'
+        return __virtualname__
     return False
 
 
@@ -41,22 +51,24 @@ def _recurmatch(path, aug):
                 yield _match
 
 
-def _lstrip_word(string, prefix):
+def _lstrip_word(word, prefix):
     '''
     Return a copy of the string after the specified prefix was removed
     from the beginning of the string
     '''
 
-    if string.startswith(prefix):
-        return string[len(prefix):]
-    return string
+    if str(word).startswith(prefix):
+        return str(word)[len(prefix):]
+    return word
 
 
 def get(path, value=''):
     '''
     Get a value for a specific augeas path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.get /files/etc/hosts/1/ ipaddr
     '''
@@ -84,20 +96,26 @@ def setvalue(*args):
     '''
     Set a value for a specific augeas path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue /files/etc/hosts/1/canonical localhost
 
     This will set the first entry in /etc/hosts to localhost
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue /files/etc/hosts/01/ipaddr 192.168.1.1 \\
                                  /files/etc/hosts/01/canonical test
 
     Adds a new host to /etc/hosts the ip address 192.168.1.1 and hostname test
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue prefix=/files/etc/sudoers/ \\
                  "spec[user = '%wheel']/user" "%wheel" \\
@@ -114,24 +132,28 @@ def setvalue(*args):
     aug = Augeas()
     ret = {'retval': False}
 
-    tuples = filter(lambda x: not x.startswith('prefix='), args)
-    prefix = filter(lambda x: x.startswith('prefix='), args)
+    tuples = filter(lambda x: not str(x).startswith('prefix='), args)
+    prefix = filter(lambda x: str(x).startswith('prefix='), args)
     if prefix:
-        prefix = prefix[0].split('=', 1)[1]
+        if len(prefix) > 1:
+            raise SaltInvocationError(
+                'Only one \'prefix=\' value is permitted'
+            )
+        else:
+            prefix = prefix[0].split('=', 1)[1]
 
     if len(tuples) % 2 != 0:
-        return ret  # ensure we have multiple of twos
+        raise SaltInvocationError('Uneven number of path/value arguments')
 
     tuple_iter = iter(tuples)
-
     for path, value in zip(tuple_iter, tuple_iter):
         target_path = path
         if prefix:
-            target_path = "{0}/{1}".format(prefix.rstrip('/'), path.lstrip('/'))
+            target_path = os.path.join(prefix.rstrip('/'), path.lstrip('/'))
         try:
             aug.set(target_path, str(value))
         except ValueError as err:
-            ret['error'] = "Multiple values: " + str(err)
+            ret['error'] = 'Multiple values: {0}'.format(err)
 
     try:
         aug.save()
@@ -145,7 +167,9 @@ def match(path, value=''):
     '''
     Get matches for path expression
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.match /files/etc/services/service-name ssh
     '''
@@ -169,7 +193,9 @@ def remove(path):
     '''
     Get matches for path expression
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.remove /files/etc/sysctl.conf/net.ipv4.conf.all.log_martians
     '''
@@ -190,11 +216,13 @@ def remove(path):
     return ret
 
 
-def ls(path):  # pylint: disable-msg=C0103
+def ls(path):  # pylint: disable=C0103
     '''
     List the direct children of a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.ls /files/etc/passwd
     '''
@@ -231,7 +259,9 @@ def tree(path):
     '''
     Returns recursively the complete tree of a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.tree /files/etc/
     '''

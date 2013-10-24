@@ -23,7 +23,7 @@ Windows is First Class!
 A new Salt Windows installer is now available! Much work has been put in to
 improve Windows support. With this much easier method of getting Salt on your
 Windows machines, we hope even more development and progress will occur. Please
-file bug reports on the Salt github repo issue tracker so we can continue
+file bug reports on the Salt GitHub repo issue tracker so we can continue
 improving.
 
 One thing that is missing on Windows that Salt uses extensively is a software

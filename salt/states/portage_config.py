@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Portage package configuration on Gentoo
 =====================================================
@@ -12,11 +13,13 @@ A state module to manage Portage configuration on Gentoo
                 - openssl
 '''
 
+
 def __virtual__():
     '''
     Only load if the portage_config module is available in __salt__
     '''
     return 'portage_config' if 'portage_config.get_missing_flags' in __salt__ else False
+
 
 def mod_init(low):
     '''
@@ -28,11 +31,12 @@ def mod_init(low):
         return False
     return True
 
+
 def _flags_helper(conf, atom, new_flags, test=False):
-    import traceback
     try:
         new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
     except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if new_flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
@@ -41,17 +45,19 @@ def _flags_helper(conf, atom, new_flags, test=False):
         return {'result': True, 'changes': {'old': old_flags, 'new': new_flags}}
     return {'result': None}
 
+
 def _mask_helper(conf, atom, test=False):
-    import traceback
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
     except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
             __salt__['portage_config.append_to_package_conf'](conf, string=atom)
         return {'result': True}
     return {'result': None}
+
 
 def flags(name,
           use=None,
@@ -93,7 +99,7 @@ def flags(name,
         result = _flags_helper('use', name, use, __opts__['test'])
         if result['result']:
             ret['changes']['use'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -102,7 +108,7 @@ def flags(name,
         result = _flags_helper('accept_keywords', name, accept_keywords, __opts__['test'])
         if result['result']:
             ret['changes']['accept_keywords'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -111,7 +117,7 @@ def flags(name,
         result = _flags_helper('env', name, env, __opts__['test'])
         if result['result']:
             ret['changes']['env'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -120,7 +126,7 @@ def flags(name,
         result = _flags_helper('license', name, license, __opts__['test'])
         if result['result']:
             ret['changes']['license'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -129,7 +135,7 @@ def flags(name,
         result = _flags_helper('properties', name, properties, __opts__['test'])
         if result['result']:
             ret['changes']['properties'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -138,7 +144,7 @@ def flags(name,
         result = _mask_helper('mask', name, __opts__['test'])
         if result['result']:
             ret['changes']['mask'] = 'masked'
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -147,12 +153,12 @@ def flags(name,
         result = _mask_helper('unmask', name, __opts__['test'])
         if result['result']:
             ret['changes']['unmask'] = 'unmasked'
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and not ret['result']:
         ret['result'] = None
 
     return ret

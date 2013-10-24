@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
 '''
@@ -5,13 +6,16 @@ Support for Linux File Access Control Lists
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'acl'
+
 
 def __virtual__():
     '''
     Only load the module if getfacl is installed
     '''
     if salt.utils.which('getfacl'):
-        return 'acl'
+        return __virtualname__
     return False
 
 
@@ -19,7 +23,9 @@ def version():
     '''
     Return facl version from getfacl --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' acl.version
     '''
@@ -32,7 +38,10 @@ def version():
 def getfacl(*args):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
@@ -136,7 +145,10 @@ def _parse_acl(acl, user, group):
 def wipefacls(*args):
     '''
     Remove all FACLs from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
@@ -151,7 +163,10 @@ def wipefacls(*args):
 def modfacl(acl_type, acl_name, perms, *args):
     '''
     Add or modify a FACL for the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
         salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
@@ -180,7 +195,10 @@ def modfacl(acl_type, acl_name, perms, *args):
 def delfacl(acl_type, acl_name, *args):
     '''
     Remove specific FACL from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.delfacl user myuser /tmp/house/kitchen
         salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing timezone on POSIX-like systems.
 '''
@@ -5,8 +6,10 @@ Module for managing timezone on POSIX-like systems.
 # Import python libs
 import os
 import hashlib
-import salt.utils
 import logging
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +27,9 @@ def get_zone():
     '''
     Get current timezone (i.e. America/Denver)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zone
     '''
@@ -37,9 +42,11 @@ def get_zone():
     elif 'Suse' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
-        return open('/etc/timezone', 'r').read()
+        with salt.utils.fopen('/etc/timezone', 'r') as ofh:
+            return ofh.read()
     elif 'Gentoo' in __grains__['os_family']:
-        return open('/etc/timezone', 'r').read()
+        with salt.utils.fopen('/etc/timezone', 'r') as ofh:
+            return ofh.read()
     elif 'FreeBSD' in __grains__['os_family']:
         return ('FreeBSD does not store a human-readable timezone. Please'
                 'consider using timezone.get_zonecode or timezone.zonecompare')
@@ -54,7 +61,9 @@ def get_zonecode():
     '''
     Get current timezone (i.e. PST, MDT, etc)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zonecode
     '''
@@ -67,7 +76,9 @@ def get_offset():
     '''
     Get current numeric timezone offset from UCT (i.e. -0700)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_offset
     '''
@@ -84,7 +95,9 @@ def set_zone(timezone):
     be restarted (for instance, whatever you system uses as its cron and
     syslog daemons). This will not be magically done for you!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
@@ -99,20 +112,26 @@ def set_zone(timezone):
         os.unlink('/etc/localtime')
 
     if 'Solaris' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
     else:
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
-        open('/etc/timezone', 'w').write(timezone)
+        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
+            ofh.write(timezone)
     elif 'Gentoo' in __grains__['os_family']:
-        open('/etc/timezone', 'w').write(timezone)
+        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
+            ofh.write(timezone)
 
     return True
 
@@ -123,7 +142,9 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
@@ -151,7 +172,9 @@ def get_hwclock():
     '''
     Get current hardware clock setting (UTC or localtime)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_hwclock
     '''
@@ -198,7 +221,9 @@ def set_hwclock(clock):
     '''
     Sets the hardware clock to be either UTC or localtime
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_hwclock UTC
     '''
@@ -226,17 +251,22 @@ def set_hwclock(clock):
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
+        __salt__['file.sed'](
+            '/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(
+                clock))
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         if clock == 'UTC':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
         elif clock == 'localtime':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
     elif 'Gentoo' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
+        __salt__['file.sed'](
+            '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 
     return True

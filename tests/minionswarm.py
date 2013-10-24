@@ -105,7 +105,7 @@ class Swarm(object):
         print('Creating shared pki keys for the swarm on: {0}'.format(path))
         subprocess.call(
             'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
-            '--key-logfile {1}'.format(
+            '--log-file {1}'.format(
                 path, os.path.join(path, 'keys.log')
             ), shell=True
         )
@@ -217,8 +217,7 @@ class Swarm(object):
     def shutdown(self):
         print('Killing any remaining running minions')
         subprocess.call(
-            'kill -KILL $(ps aux | grep python | grep "salt-minion" '
-            '| awk \'{print $2}\')',
+            'pkill -KILL -f "python.*salt-minion"',
             shell=True
         )
         if not self.opts['no_clean']:

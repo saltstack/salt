@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing logrotate.
 '''
@@ -89,7 +90,9 @@ def show_conf(conf_file=default_conf):
     '''
     Show parsed configuration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' logrotate.show_conf
     '''
@@ -100,7 +103,9 @@ def set_(key, value, setting=None, conf_file=default_conf):
     '''
     Set a new value for a specific configuration line
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' logrotate.set rotate 2
 
@@ -113,7 +118,9 @@ def set_(key, value, setting=None, conf_file=default_conf):
             rotate 1
         }
 
-    Use the following command::
+    Use the following command:
+
+    .. code-block:: bash
 
         salt '*' logrotate.set /var/log/wtmp rotate 2
 

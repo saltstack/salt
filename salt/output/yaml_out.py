@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Output data in YAML, this outputter defaults to printing in YAML block mode
 for better readability.
@@ -6,9 +7,12 @@ for better readability.
 # Import third party libs
 import yaml
 
+# Define the module's virtual name
+__virtualname__ = 'yaml'
+
 
 def __virtual__():
-    return 'yaml'
+    return __virtualname__
 
 
 def output(data):

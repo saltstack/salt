@@ -1,43 +1,63 @@
+# -*- coding: utf-8 -*-
 '''
-The backend for a fileserver based on Amazon S3 - see
-http://docs.saltstack.com/ref/file_server/index.html
+The backend for a fileserver based on Amazon S3
 
-This backend exposes directories in S3 buckets as salt environments.  This
-feature is managed by the fileserver_backend option in the salt master
-config.
+.. seealso:: :doc:`/ref/file_server/index`
 
-:configuration: S3 credentials can be either set in the master file using:
+This backend exposes directories in S3 buckets as Salt environments.  This
+feature is managed by the :conf_master:`fileserver_backend` option in the Salt
+Master config.
 
-    S3 credentials can be set in the master config file with:
 
-        s3.keyid: GKTADJGHEIQSXMKKRBJ08H
-        s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+S3 credentials can be set in the master config file like so:
 
-    Alternatively, if on EC2 these credentials can be automatically loaded from
-    instance metadata.
+.. code-block:: yaml
 
-    This fileserver supports two modes of operation for the buckets:
+    s3.keyid: GKTADJGHEIQSXMKKRBJ08H
+    s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    - A single bucket per environment:
-    eg.
-        s3.buckets:
-            production:
-                - bucket1
-                - bucket2
-            staging:
-                - bucket3
-                - bucket4
+Alternatively, if on EC2 these credentials can be automatically loaded from
+instance metadata.
 
-    - Or multiple environments per bucket
-    eg.
-        s3.buckets:
-            - bucket1
-            - bucket2
-            - bucket3
-            - bucket4
+Additionally, ``s3fs`` must be included in the
+:conf_master:`fileserver_backend` config parameter in the master config file:
 
-    A multiple environment bucket must adhere to the following root directory structure:
-        s3://<bucket name>/<environment>/<files>
+.. code-block:: yaml
+
+    fileserver_backend:
+      - s3fs
+
+This fileserver supports two modes of operation for the buckets:
+
+1. :strong:`A single bucket per environment`
+
+   .. code-block:: yaml
+
+    s3.buckets:
+      production:
+        - bucket1
+        - bucket2
+      staging:
+        - bucket3
+        - bucket4
+
+2. :strong:`Multiple environments per bucket`
+
+   .. code-block:: yaml
+
+    s3.buckets:
+      - bucket1
+      - bucket2
+      - bucket3
+      - bucket4
+
+Note that bucket names must be all lowercase both in the AWS console and in
+Salt, otherwise you may encounter ``SignatureDoesNotMatch`` errors.
+
+A multiple-environment bucket must adhere to the following root directory
+structure::
+
+    s3://<bucket name>/<environment>/<files>
 '''
 
 # Import python libs
@@ -56,8 +76,9 @@ import salt.utils.s3 as s3
 
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 30 # cache for 30 seconds
+_s3_cache_expire = 30  # cache for 30 seconds
 _s3_sync_on_update = True  # sync cache on update rather than jit
+
 
 def envs():
     '''
@@ -68,6 +89,7 @@ def envs():
     # update and grab the envs from the metadata keys
     metadata = _init()
     return metadata.keys()
+
 
 def update():
     '''
@@ -92,6 +114,7 @@ def update():
 
         log.info('Sync local cache from S3 completed.')
 
+
 def find_file(path, env='base', **kwargs):
     '''
     Look through the buckets cache file for a match.
@@ -100,7 +123,7 @@ def find_file(path, env='base', **kwargs):
     '''
 
     fnd = {'bucket': None,
-            'path' : None}
+           'path': None}
 
     metadata = _init()
     if not metadata or env not in metadata:
@@ -127,6 +150,7 @@ def find_file(path, env='base', **kwargs):
 
     return fnd
 
+
 def file_hash(load, fnd):
     '''
     Return an MD5 file hash
@@ -150,6 +174,7 @@ def file_hash(load, fnd):
         ret['hash_type'] = 'md5'
 
     return ret
+
 
 def serve_file(load, fnd):
     '''
@@ -184,6 +209,7 @@ def serve_file(load, fnd):
         ret['data'] = data
     return ret
 
+
 def file_list(load):
     '''
     Return a list of all files on the file server in a specified environment
@@ -206,6 +232,7 @@ def file_list(load):
 
     return ret
 
+
 def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
@@ -214,6 +241,7 @@ def file_list_emptydirs(load):
     _init()
 
     return []
+
 
 def dir_list(load):
     '''
@@ -240,6 +268,7 @@ def dir_list(load):
 
     return ret
 
+
 def _get_s3_key():
     '''
     Get AWS keys from pillar or config
@@ -249,6 +278,7 @@ def _get_s3_key():
     keyid = __opts__['s3.keyid'] if 's3.keyid' in __opts__ else None
 
     return key, keyid
+
 
 def _init():
     '''
@@ -266,6 +296,7 @@ def _init():
         # bucket files cache expired
         return _refresh_buckets_cache_file(cache_file)
 
+
 def _get_cache_dir():
     '''
     Return the path to the s3cache dir
@@ -273,6 +304,7 @@ def _get_cache_dir():
 
     # Or is that making too many assumptions?
     return os.path.join(__opts__['cachedir'], 's3cache')
+
 
 def _get_cached_file_name(bucket_name, env, path):
     '''
@@ -287,6 +319,7 @@ def _get_cached_file_name(bucket_name, env, path):
 
     return file_path
 
+
 def _get_buckets_cache_filename():
     '''
     Return the filename of the cache for bucket contents.
@@ -298,6 +331,7 @@ def _get_buckets_cache_filename():
         os.makedirs(cache_dir)
 
     return os.path.join(cache_dir, 'buckets_files.cache')
+
 
 def _refresh_buckets_cache_file(cache_file):
     '''
@@ -372,6 +406,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     return metadata
 
+
 def _read_buckets_cache_file(cache_file):
     '''
     Return the contents of the buckets cache file
@@ -383,6 +418,7 @@ def _read_buckets_cache_file(cache_file):
         data = pickle.load(fp_)
 
     return data
+
 
 def _find_files(metadata, dirs_only=False):
     '''
@@ -402,6 +438,7 @@ def _find_files(metadata, dirs_only=False):
 
     return ret
 
+
 def _find_file_meta(metadata, bucket_name, env, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
@@ -415,12 +452,14 @@ def _find_file_meta(metadata, bucket_name, env, path):
         if 'Key' in item_meta and item_meta['Key'] == path:
             return item_meta
 
+
 def _get_buckets():
     '''
     Return the configuration buckets
     '''
 
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
+
 
 def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
     '''
@@ -450,6 +489,7 @@ def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
             path=urllib.quote(path),
             local_file=cached_file_path)
 
+
 def _trim_env_off_path(paths, env, trim_slash=False):
     '''
     Return a list of file paths with the env directory removed
@@ -458,6 +498,7 @@ def _trim_env_off_path(paths, env, trim_slash=False):
     slash_len = -1 if trim_slash else None
 
     return map(lambda d: d[env_len:slash_len], paths)
+
 
 def _is_env_per_bucket():
     '''

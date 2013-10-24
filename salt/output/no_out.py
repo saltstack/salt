@@ -1,9 +1,15 @@
+# -*- coding: utf-8 -*-
 '''
 Display no output.
 '''
 
+# Define the module's virtual name
+__virtualname__ = 'quiet'
+
+
 def __virtual__():
-    return 'quiet'
+    return __virtualname__
+
 
 def output(ret):
     '''
