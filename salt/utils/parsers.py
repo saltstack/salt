@@ -1643,6 +1643,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='By default ssh host keys are honored and connections will '
                  'ask for approval')
         self.add_option(
+            '-v', '--verbose',
+            default=False,
+            action='store_true',
+            help=('Turn on command verbosity, display jid')
+        )
+        self.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
