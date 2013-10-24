@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 __VALID_PROTO = ('static', 'dhcp')
 
 # Define the module's virtual name
-__virtualname__ = 'ip'
+__virtualname__ = 'network'
 
 
 def __virtual__():
