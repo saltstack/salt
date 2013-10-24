@@ -20,6 +20,8 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.utils
 import salt.utils.thin
+import salt.utils.verify
+import salt.utils.event
 import salt.roster
 import salt.state
 import salt.loader
@@ -118,10 +120,13 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
-        opts['master_running'] = salt.utils.verify.verify_socket(
+        if salt.utils.verify.verify_socket(
                 self.opts['interface'],
                 self.opts['publish_port'],
-                self.opts['ret_port'])
+                self.opts['ret_port']):
+            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        else:
+            self.event = None
         self.opts = opts
         tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
