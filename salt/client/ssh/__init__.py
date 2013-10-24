@@ -60,13 +60,21 @@ SSH_SHIM = '''/bin/sh << 'EOF'
       done
       SALT=/tmp/.salt/salt-call
 
-      if ( ( [ ! -f {{2}} ] ) && ([ {{2}} == 'md5' ]) )
+      if [ {{2}} == 'md5' ]
       then
-        SUMCHECK='md5'
+         for md5_candidate in \\
+            md5sum            \\
+            md5               ;
+         do
+            if [ $(which $md5_candidate 2>/dev/null) ]
+            then
+                SUMCHECK=$(which $md5_candidate)
+                break
+            fi
+         done
       else
-        SUMCHECK={{2}}sum
+         SUMCHECK={{2}}
       fi
-
 
       if [ -f $SALT ]
       then
