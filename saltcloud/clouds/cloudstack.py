@@ -63,20 +63,6 @@ def __virtual__():
         )
         return False
 
-    verify_ssl_cert = config.get_config_value(
-            'verify_ssl_cert', get_configured_provider(), __opts__, default=True, search_global=False
-        )
-    if not verify_ssl_cert:
-      try:
-        import libcloud.security
-        libcloud.security.VERIFY_SSL_CERT = False
-      except:
-        log.debug(
-            'Could not disable SSL certificate verification. '
-            'Not loading module.'
-        )
-        return False
-
     log.debug('Loading CloudStack cloud module')
     return True
 
@@ -97,6 +83,24 @@ def get_conn():
     Return a conn object for the passed VM data
     '''
     driver = get_driver(Provider.CLOUDSTACK)
+
+    verify_ssl_cert = config.get_config_value('verify_ssl_cert',
+            get_configured_provider(),
+            __opts__,
+            default=True,
+            search_global=False)
+
+    if verify_ssl_cert == False:
+      try:
+        import libcloud.security
+        libcloud.security.VERIFY_SSL_CERT = False
+      except:
+        log.debug(
+            'Could not disable SSL certificate verification. '
+            'Not loading module.'
+        )
+        return False
+
     return driver(
         key=config.get_config_value(
             'apikey', get_configured_provider(), __opts__, search_global=False
