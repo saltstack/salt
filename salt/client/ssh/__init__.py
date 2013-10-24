@@ -118,6 +118,10 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
+        opts['master_running'] = salt.utils.verify.verify_socket(
+                self.opts['interface'],
+                self.opts['publish_port'],
+                self.opts['ret_port'])
         self.opts = opts
         tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
@@ -143,6 +147,7 @@ class SSH(object):
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
+        self.serial = salt.payload.Serial(opts)
 
     def verify_env(self):
         '''
