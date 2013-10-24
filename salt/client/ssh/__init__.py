@@ -321,10 +321,54 @@ class SSH(object):
         for ret in self.handle_ssh():
             yield ret
 
+    def cache_job(self, jid, id_, ret):
+        '''
+        Cache the job information
+        '''
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: {0}'.format(jid)
+            )
+            return False
+        if os.path.exists(os.path.join(jid_dir, 'nocache')):
+            return
+        hn_dir = os.path.join(jid_dir, id_)
+        if not os.path.isdir(hn_dir):
+            os.makedirs(hn_dir)
+        # Otherwise the minion has already returned this jid and it should
+        # be dropped
+        else:
+            log.error(
+                'An extra return was detected from minion {0}, please verify '
+                'the minion, this could be a replay attack'.format(
+                    id_
+                )
+            )
+            return False
+
+        self.serial.dump(
+            ret,
+            # Use atomic open here to avoid the file being read before it's
+            # completely written to. Refs #1935
+            salt.utils.atomicfile.atomic_open(
+                os.path.join(hn_dir, 'return.p'), 'w+'
+            )
+        )
+
     def run(self):
         '''
         Execute the overall routine
         '''
+        jid = salt.utils.prep_jid(
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                self.opts['user'])
         for ret in self.handle_ssh():
             host = ret.keys()[0]
             ret = self.key_deploy(host, ret)
@@ -332,6 +376,7 @@ class SSH(object):
                     ret,
                     self.opts.get('output', 'nested'),
                     self.opts)
+            #self.cache_job(jid, host, ret)
 
 
 class Single(object):
