@@ -442,12 +442,15 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ data }}').render(data="foo")
         self.assertEquals(rendered, u"foo")
 
-        rendered = env.from_string('{{ data }}').render(data=OrderedDict(
-                                                            foo=OrderedDict(
-                                                                bar='baz',
-                                                                qux=42,
-                                                            )
-                                                        ))
+        data = OrderedDict([
+            ('foo', OrderedDict([
+                        ('bar', 'baz'),
+                        ('qux', 42)
+                    ])
+            )
+        ])
+
+        rendered = env.from_string('{{ data }}').render(data=data)
         self.assertEquals(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
 
         rendered = env.from_string('{{ data }}').render(data=[
@@ -458,7 +461,7 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEquals(rendered, u"[{'foo': 'bar'}, {'baz': 2}]")
+        self.assertEquals(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
