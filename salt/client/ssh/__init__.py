@@ -59,6 +59,15 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
       done
       SALT=/tmp/.salt/salt-call
+
+      if ( ( [ ! -f {{2}} ] ) && ([ {{2}} == 'md5' ]) )
+      then
+        SUMCHECK='md5'
+      else
+        SUMCHECK={{2}}sum
+      fi
+
+
       if [ -f $SALT ]
       then
          if [ $(cat /tmp/.salt/version) != {0} ]
@@ -80,7 +89,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             [ $($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
              install -m 0700 -d /tmp/.salt
              echo "{1}"
