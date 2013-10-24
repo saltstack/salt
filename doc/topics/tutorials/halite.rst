@@ -195,6 +195,10 @@ cert. If the web application page has been cached with a non https version of
 the app then the browser cache will have to be cleared before it will
 recognize and prompt to accept the self signed certificate.
 
+
+Starting halite
+===============
+
 Once you've configured the halite section of your /etc/salt/master, you can
 restart the salt-master service, and your halite instance will be available.
 Depending on your configuration the instance will be available either at
@@ -207,3 +211,14 @@ http://123.456.789.012:8080/app depending on how your system is configured.
 
 
 All logs relating to halite are logged to the default /var/log/salt/master file.
+
+
+Running your halite instance through nginx
+==========================================
+
+
+
+Running your halite instance through apache
+===========================================
+
+
