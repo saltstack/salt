@@ -60,7 +60,11 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
                 'set to \'static\'.'
             )
     else:
-        if not isinstance(dns_servers, list):
+        if not dns_servers:
+            errors.append(
+                'The dns_servers param is required to set static DNS servers.'
+            )
+        elif not isinstance(dns_servers, list):
             errors.append(
                 'The dns_servers param must be formatted as a list.'
             )
@@ -68,8 +72,8 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             bad_ips = [x for x in dns_servers
                        if not salt.utils.network.valid_ipv4(x)]
             if bad_ips:
-                errors.append('The following DNS server IPs are invalid: '
-                              '{0}'.format(', '.format(bad_ips)))
+                errors.append('Invalid DNS server IPs: {0}.'
+                              .format(', '.join(bad_ips)))
 
     # Validate IP configuration
     if ip_proto == 'dhcp':
@@ -84,23 +88,38 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
                 '\'static\'.'
             )
     else:
-        if not isinstance(dns_servers, list):
+        if not ip_addrs:
+            errors.append(
+                'The ip_addrs param is required to set static IPs.'
+            )
+        elif not isinstance(ip_addrs, list):
             errors.append(
                 'The ip_addrs param must be formatted as a list.'
             )
         else:
-            bad_ips = [x for x in dns_servers
+            bad_ips = [x for x in ip_addrs
                        if not salt.utils.network.valid_ipv4(x)]
             if bad_ips:
                 errors.append('The following static IPs are invalid: '
-                              '{0}'.format(', '.format(bad_ips)))
+                              '{0}.'.format(', '.join(bad_ips)))
 
             # Validate default gateway
             if gateway is not None:
                 if not salt.utils.network.valid_ipv4(gateway):
-                    errors.append('Gateway IP {0} is invalid'.format(gateway))
+                    errors.append('Gateway IP {0} is invalid.'.format(gateway))
 
     return errors
+
+
+def _addrdict_to_ip_addrs(addrs):
+    '''
+    Extracts a list of IP/CIDR expressions from a list of addrdicts, as
+    retrieved from ip.get_interface
+    '''
+    return [
+        '{0}/{1}'.format(x['IP Address'], x['Subnet'].rsplit('/', 1)[-1])
+        for x in addrs
+    ]
 
 
 def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
@@ -109,20 +128,22 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     returns a dictionary describing the changes that need to be made.
     '''
     changes = {}
-    cur_dns_proto = ('static' if 'Statically Configured DNS Servers' in cur
-                     else 'dhcp')
-    cur_dns_servers = cur.get('Statically Configured DNS Servers', [])
+    cur_dns_proto = (
+        'dhcp' if cur['Statically Configured DNS Servers'] == ['None']
+        else 'static'
+    )
+    cur_dns_servers = cur['Statically Configured DNS Servers']
     cur_ip_proto = 'static' if 'ip_addrs' in cur else 'dhcp'
-    cur_ip_addrs = cur.get('ip_addrs', [])
+    cur_ip_addrs = _addrdict_to_ip_addrs(cur.get('ip_addrs', []))
     cur_gateway = cur.get('Default Gateway')
 
     if dns_proto != cur_dns_proto:
         changes['dns_proto'] = dns_proto
-    if set(dns_servers) != set(cur_dns_servers):
+    if set(dns_servers or ['None']) != set(cur_dns_servers):
         changes['dns_servers'] = dns_servers
     if ip_proto != cur_ip_proto:
         changes['ip_proto'] = ip_proto
-    if set(ip_addrs) != set(cur_ip_addrs):
+    if set(ip_addrs or []) != set(cur_ip_addrs):
         changes['ip_addrs'] = ip_addrs
     if gateway != cur_gateway:
         changes['gateway'] = gateway
@@ -143,18 +164,18 @@ def managed(name,
     name
         The name of the interface to manage
 
-    dns_proto : dhcp
+    dns_proto : None
         Set to ``static`` and use the ``dns_servers`` parameter to provide a
-        list of DNS nameservers. The default is to get the nameservers via
-        DHCP.
+        list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
+        servers.
 
     dns_servers : None
         A list of static DNS servers.
 
-    ip_proto : dhcp
-        Set to ``static`` and use the ``ip_addrs`` and ``gateway`` parameters
-        to provide a list of static IP addresses and the default gateway. The
-        default is to get the IP and default gateway via DHCP.
+    ip_proto : None
+        Set to ``static`` and use the ``ip_addrs`` and (optionally) ``gateway``
+        parameters to provide a list of static IP addresses and the default
+        gateway. Set to ``dhcp`` to use DHCP.
 
     ip_addrs : None
         A list of static IP addresses.
@@ -176,16 +197,19 @@ def managed(name,
     dns_proto = str(dns_proto).lower()
     ip_proto = str(ip_proto).lower()
 
+    errors = []
     if dns_proto not in __VALID_PROTO:
         ret['result'] = False
-        ret['comment'] = ('dns_proto must be one of the following: {0}'
-                          .format(', '.join(__VALID_PROTO)))
-        return ret
+        errors.append('dns_proto must be one of the following: {0}.'
+                      .format(', '.join(__VALID_PROTO)))
 
     if ip_proto not in __VALID_PROTO:
+        errors.append('ip_proto must be one of the following: {0}.'
+                      .format(', '.join(__VALID_PROTO)))
+
+    if errors:
         ret['result'] = False
-        ret['comment'] = ('ip_proto must be one of the following: {0}'
-                          .format(', '.join(__VALID_PROTO)))
+        ret['comment'] = ' '.join(errors)
         return ret
 
     if not enabled:
@@ -221,17 +245,17 @@ def managed(name,
         if errors:
             ret['result'] = False
             ret['comment'] = ('The following SLS configuration errors were '
-                              'detected: {0}.'.format('. '.join(errors)))
+                              'detected: {0}'.format(' '.join(errors)))
             return ret
 
-        cur = __salt__['ip.get_interface'](name)
-        if not cur:
+        old = __salt__['ip.get_interface'](name)
+        if not old:
             ret['result'] = False
             ret['comment'] = ('Unable to get current configuration for '
                               'interface {0!r}'.format(name))
             return ret
 
-        changes = _changes(cur,
+        changes = _changes(old,
                            dns_proto,
                            dns_servers,
                            ip_proto,
@@ -270,37 +294,37 @@ def managed(name,
 
             ret['result'] = None
             ret['comment'] = ('The following changes will be made to '
-                              'interface {0!r}: {1}.'
+                              'interface {0!r}: {1}'
                               .format(name, ' '.join(comments)))
             return ret
 
-        if changes.get('dns_proto') is not None:
-            if changes.get('dns_proto') == 'dhcp':
-                __salt__['ip.set_dhcp_dns'](name)
-            else:
-                if changes.get('dns_servers'):
-                    __salt__['ip.set_static_dns'](name,
-                                                  *changes['dns_servers'])
+        if changes.get('dns_proto') == 'dhcp':
+            __salt__['ip.set_dhcp_dns'](name)
 
-        if changes.get('ip_proto') is not None:
-            if changes.get('ip_proto') == 'dhcp':
-                __salt__['ip.set_dhcp_ip'](name)
-            else:
-                if changes.get('ip_addrs'):
-                    for idx in xrange(len(changes['ip_addrs'])):
-                        if idx == 0:
-                            __salt__['ip.set_static_ip'](
-                                name,
-                                changes['ip_addrs'][idx],
-                                gateway=gateway
-                            )
-                        else:
-                            __salt__['ip.set_static_ip'](
-                                name,
-                                changes['ip_addrs'][idx],
-                                gateway=None,
-                                append=True
-                            )
+        elif changes.get('dns_servers'):
+            if changes.get('dns_servers'):
+                __salt__['ip.set_static_dns'](name, *changes['dns_servers'])
+
+        if changes.get('ip_proto') == 'dhcp':
+            __salt__['ip.set_dhcp_ip'](name)
+        elif changes.get('ip_addrs') or changes.get('gateway'):
+            if changes.get('gateway') and not changes.get('ip_addrs'):
+                changes['ip_addrs'] = ip_addrs
+            for idx in xrange(len(changes['ip_addrs'])):
+                if idx == 0:
+                    __salt__['ip.set_static_ip'](
+                        name,
+                        changes['ip_addrs'][idx],
+                        gateway=gateway,
+                        append=False
+                    )
+                else:
+                    __salt__['ip.set_static_ip'](
+                        name,
+                        changes['ip_addrs'][idx],
+                        gateway=None,
+                        append=True
+                    )
 
         new = __salt__['ip.get_interface'](name)
         ret['changes'] = salt.utils.compare_dicts(old, new)
