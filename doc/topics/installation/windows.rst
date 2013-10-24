@@ -193,8 +193,6 @@ and run NSIS.
 
 The NSIS installer can be found here: http://nsis.sourceforge.net/Main_Page
 
-You also need the nsProcess plugin for NSIS. It can be found here: http://nsis.sourceforge.net/NsProcess_plugin
-
 
 Testing the Salt minion
 =======================

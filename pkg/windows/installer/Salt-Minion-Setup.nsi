@@ -12,7 +12,6 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
-!include "nsProcess.nsh"; using plugin nsProcess
 
 Var Dialog
 Var Label
@@ -127,9 +126,8 @@ ShowUnInstDetails show
 
 Section "MainSection" SEC01
 
-  Exec "sc stop salt-minion" ;stopping service before upgrading
-  ${nsProcess::CloseProcess} "salt-minion.exe" $R0
-  ${nsProcess::Unload}
+  ExecWait "net stop salt-minion" ;stopping service before upgrading
+  Sleep 3000
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
@@ -155,7 +153,7 @@ SectionEnd
 Function .onInstSuccess
   Exec "nssm.exe install salt-minion $INSTDIR\salt-minion.exe -c $INSTDIR\conf -l quiet"
   RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
-  Exec "sc start salt-minion"
+  ExecWait "net start salt-minion"
 FunctionEnd
 
 Function un.onUninstSuccess
@@ -191,8 +189,8 @@ Function .onInit
 FunctionEnd
 
 Section Uninstall
-  Exec "sc stop salt-minion"
-  Exec "sc delete salt-minion"
+  ExecWait "net stop salt-minion"
+  ExecWait "sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\python*"
