@@ -369,6 +369,11 @@ class SSH(object):
                 self.opts['cachedir'],
                 self.opts['hash_type'],
                 self.opts['user'])
+        if self.opts.get('verbose'):
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
+            print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
             ret = self.key_deploy(host, ret)
