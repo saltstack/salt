@@ -41,7 +41,7 @@ def __virtual__():
     Confine this module to Windows systems with the required execution module
     available.
     '''
-    if salt.utils.is_windows() and 'ip.get_all_interfaces' in __salt__:
+    if salt.utils.is_windows() and 'ip.get_interface' in __salt__:
         return __virtualname__
     return False
 
