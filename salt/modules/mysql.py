@@ -34,12 +34,10 @@ import time
 import logging
 import re
 import sys
+import shlex
 
 # Import salt libs
 import salt.utils
-
-#import shlex which should be distributed with Python
-import shlex
 
 # Import third party libs
 try:

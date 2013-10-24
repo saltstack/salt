@@ -40,6 +40,7 @@ except ImportError:
 import salt.utils
 import salt.utils.find
 import salt.utils.filebuffer
+import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt._compat
 
@@ -985,6 +986,154 @@ def replace(path,
 
     if show_changes:
         return ''.join(difflib.unified_diff(orig_file, new_file))
+
+    return has_changes
+
+
+def blockreplace(path,
+        marker_start='#-- start managed zone --',
+        marker_end='#-- end managed zone --',
+        content='',
+        append_if_not_found=False,
+        backup='.bak',
+        dry_run=False,
+        show_changes=True,
+        ):
+    '''
+    Replace content of a text block in a file, delimited by line markers
+
+    .. versionadded:: 0.18.0
+
+    A block of content delimited by comments can help you manage several lines entries without
+    worrying about old entries removal.
+    Note: this function will store two copies of the file in-memory
+    (the original version and the edited version) in order to detect changes
+    and only edit the targeted file if necessary.
+
+    :param path: Filesystem path to the file to be edited
+    :param marker_start: The line content identifying a line as the start of
+        the content block. Note that the whole line containing this marker will
+        be considered, so whitespaces or extra content before or after the
+        marker is included in final output
+    :param marker_end: The line content identifying a line as the end of
+        the content block. Note that the whole line containing this marker will
+        be considered, so whitespaces or extra content before or after the
+        marker is included in final output
+    :param content: The content to be used between the two lines identified by
+        marker_start and marker_stop.
+    :param append_if_not_found: False by default, if markers are not found and
+        set to True then the markers and content will be appended to the file
+    :param backup: The file extension to use for a backup of the file if any
+        edit is made. Set to ``False`` to skip making a backup.
+    :param dry_run: Don't make any edits to the file
+    :param show_changes: Output a unified diff of the old file and the new
+        file. If ``False`` return a boolean if any changes were made.
+
+    :rtype: bool or str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.blockreplace /etc/hosts '#-- start managed zone foobar : DO NOT EDIT --' \
+         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\n10.0.1.2 bar.foobar' True
+    '''
+    if not os.path.exists(path):
+        raise SaltInvocationError("File not found: %s", path)
+
+    if not salt.utils.istextfile(path):
+        raise SaltInvocationError(
+            "Cannot perform string replacements on a binary file: %s", path)
+
+    # Search the file; track if any changes have been made for the return val
+    has_changes = False
+    orig_file = []
+    new_file = []
+    in_block = False
+    old_content = ''
+    done = False
+    # we do not use in_place editing to avoid file attrs modifications when
+    # no changes are required and to avoid any file access on a partially
+    # written file.
+    # we could also use salt.utils.filebuffer.BufferedReader
+    for line in fileinput.input(path,
+            inplace=False, backup=False,
+            bufsize=1, mode='rb'):
+
+        result = line
+
+        if marker_start in line:
+            # managed block start found, start recording
+            in_block = True
+
+        else:
+            if in_block:
+                if marker_end in line:
+                    # end of block detected
+                    in_block = False
+
+                    # push new block content in file
+                    for cline in content.split("\n"):
+                        new_file.append(cline+"\n")
+
+                    done = True
+
+                else:
+                    # remove old content, but keep a trace
+                    old_content += line
+                    result = None
+        # else: we are not in the marked block, keep saving things
+
+        orig_file.append(line)
+        if result is not None:
+            new_file.append(result)
+    # end for. If we are here without block managment we maybe have some problems,
+    # or we need to initialise the marked block
+
+    if in_block:
+        # unterminated block => bad, always fail
+        raise CommandExecutionError("Unterminated marked block. End of file reached before marker_end.")
+
+    if not done:
+        if append_if_not_found:
+            # add the markers and content at the end of file
+            new_file.append(marker_start + '\n')
+            new_file.append(content + '\n')
+            new_file.append(marker_end + '\n')
+            done = True
+        else:
+            raise CommandExecutionError("Cannot edit marked block. Markers were not found in file.")
+
+    if done:
+        diff = ''.join(difflib.unified_diff(orig_file, new_file))
+        has_changes = diff is not ''
+        if has_changes and not dry_run:
+            # changes detected
+            # backup old content
+            if backup is not False:
+                shutil.copy2(path, '{0}{1}'.format(path, backup))
+
+            # backup file attrs
+            perms = {}
+            perms['user'] = get_user(path)
+            perms['group'] = get_group(path)
+            perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
+
+            # write new content in the file while avoiding partial reads
+            f = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                f.write(line)
+            f.close()
+
+            # this may have overwritten file attrs
+            check_perms(path,
+                    None,
+                    perms['user'],
+                    perms['group'],
+                    perms['mode'])
+
+        if show_changes:
+            return diff
 
     return has_changes
 

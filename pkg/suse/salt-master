@@ -6,15 +6,15 @@
 # LSB header
 
 ### BEGIN INIT INFO
-# Provides:           salt-master
-# Required-Start:     $local_fs $remote_fs $network $named $time 
-# Should-Start:		    $time ypbind smtp
-# Required-Stop:	    $local_fs $remote_fs $network $named $time 
-# Should-Stop:		    ypbind smtp
-# Default-Start:      3 5
-# Default-Stop:       0 1 2 6
-# Short-Description:  Salt master control daemon
-# Description:        This is a daemon that controls the Salt minions.
+# Provides:          salt-master
+# Required-Start:    $local_fs $remote_fs $network $named $time
+# Should-Start:      $time ypbind smtp
+# Required-Stop:	 $local_fs $remote_fs $network $named $time
+# Should-Stop:       ypbind smtp
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: Salt master control daemon
+# Description:       This is a daemon that controls the Salt minions.
 ### END INIT INFO
 
 
@@ -25,16 +25,6 @@
 #
 # processname: /usr/bin/salt-master
 
-
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTMASTER=/usr/bin/salt-master
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTMASTER ] || exit 0
 
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
@@ -47,27 +37,35 @@ else
     . /etc/rc.d/init.d/functions
 fi
 
+# Default values (can be overridden below)
+SALTMASTER=/usr/bin/salt-master
+PYTHON=/usr/bin/python
+MASTER_ARGS=""
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+fi
+
 SERVICE=salt-master
 PROCESS=salt-master
-CONFIG_ARGS=" "
 
 RETVAL=0
 
 start() {
     echo -n $"Starting salt-master daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid $SALTMASTER -d $CONFIG_ARGS
+        startproc -f -p /var/run/$SERVICE.pid $SALTMASTER -d $MASTER_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found" 
             RETVAL=1
-        elif $PYTHON $SALTMASTER -d >& /dev/null; then
+        elif $PYTHON $SALTMASTER -d $MASTER_ARGS >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
     else
-        daemon --check $SERVICE $SALTMASTER -d $CONFIG_ARGS
+        daemon --check $SERVICE $SALTMASTER -d $MASTER_ARGS
     fi
     RETVAL=$?
     echo
@@ -100,7 +98,6 @@ restart() {
    start
 }
 
-
 # See how we were called.
 case "$1" in
     start|stop|restart)
@@ -129,11 +126,7 @@ case "$1" in
         ;;
     reload)
         echo "can't reload configuration, you have to restart it"
-        if [ -f $SUSE_RELEASE ]; then
-        	rc_status -v
-        else
-        	RETVAL=$?
-        fi
+        RETVAL=$?
         ;;
     *)
         echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
@@ -141,4 +134,3 @@ case "$1" in
         ;;
 esac
 exit $RETVAL
-

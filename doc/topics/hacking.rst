@@ -1,8 +1,8 @@
 Developing Salt
 ===============
 
-There is a great need for contributions to salt and patches are welcome! The goal 
-here is to make contributions clear, make sure there is a trail for where the code 
+There is a great need for contributions to salt and patches are welcome! The goal
+here is to make contributions clear, make sure there is a trail for where the code
 has come from, and most importantly, to give credit where credit is due!
 
 There are a number of ways to contribute to salt development.
@@ -14,8 +14,8 @@ Sending a GitHub pull request
 This is the preferred method for contributions. Simply create a GitHub
 fork, commit changes to the fork, and then open up a pull request.
 
-The following is an example (from `Open Comparison Contributing Docs`_ ) 
-of an efficient workflow for forking, cloning, branching, committing, and 
+The following is an example (from `Open Comparison Contributing Docs`_ )
+of an efficient workflow for forking, cloning, branching, committing, and
 sending a pull request for a GitHub repository.
 
 First, make a local clone of your GitHub fork of the salt GitHub repo and make
@@ -29,7 +29,7 @@ Then, create a new branch on your clone by entering the following commands:
 
     Switched to a new branch 'fixed-broken-thing'
 
-Choose a name for your branch that describes its purpose.  
+Choose a name for your branch that describes its purpose.
 
 Now commit your changes to this new branch with the following command:
 
@@ -51,8 +51,8 @@ Push your locally-committed changes back up to GitHub:
 .. code-block:: bash
 
     git push --set-upstream origin fixed-broken-thing
-    
-Now go look at your fork of the salt repo on the GitHub website. The new 
+
+Now go look at your fork of the salt repo on the GitHub website. The new
 branch will now be listed under the "Source" tab where it says "Switch Branches".
 Select the new branch from this list, and then click the "Pull request" button.
 
@@ -62,7 +62,7 @@ to the pull request.
 The repo managers will be notified of your pull request and it will be
 reviewed. If a reviewer asks for changes, just make the changes locally in the
 same local feature branch, push them to GitHub, then add a comment to the
-discussion section of the pull request. 
+discussion section of the pull request.
 
 
 .. _enable-travis-ci:
@@ -81,7 +81,7 @@ Keeping Salt Forks in Sync
 Salt is advancing quickly. It is therefore critical to pull upstream changes
 from master into forks on a regular basis. Nothing is worse than putting in a
 days of hard work into a pull request only to have it rejected because it has
-diverged too far from master. 
+diverged too far from master.
 
 To pull in upstream changes:
 
@@ -187,7 +187,7 @@ Install Salt (and dependencies) into the virtualenv:
 .. note:: Installing M2Crypto
 
     ``swig`` and ``libssl-dev`` are required to build M2Crypto. To fix
-    the error ``command 'swig' failed with exit status 1`` while installing M2Crypto, 
+    the error ``command 'swig' failed with exit status 1`` while installing M2Crypto,
     try installing it with the following command:
 
     .. code-block:: bash
@@ -226,7 +226,7 @@ Install Salt (and dependencies) into the virtualenv:
     * `Fedora Linux`_ releases 11 and later
     * `Amazon Linux`_
 
-    Developers using one of these systems should create the salt virtualenv using the 
+    Developers using one of these systems should create the salt virtualenv using the
     ``--system-site-packages`` option to ensure that the correct modules are available.
 
 .. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
@@ -383,7 +383,14 @@ Finally you use setup.py to run the tests with the following command:
 
     ./setup.py test
 
-For greater control while running the tests, please try:
+For greater control while running the tests, please try something like:
+
+.. code-block:: bash
+
+    ./tests/runtests.py -n integration.modules.virt -vv
+    ./tests/runtests.py -n unit.modules.virt_test -vv
+
+Also see the help for all options:
 
 .. code-block:: bash
 
