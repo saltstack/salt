@@ -4,9 +4,9 @@ Installing and Configuring Halite
 
 In this tutorial we'll walk through installing and setting up Halite. As of
 2013-10-12 a packaged version of Halite is not available, in addition the
-current version of Halite is considered pre-aplha and is supportd only in
-Salt 0.17 or greater. You will need to check out the latest version from
-Github: https://github.com/saltstack/halite
+current version of Halite is considered pre-alpha and is supported only in
+Salt 0.17 or greater. Additional information is available on GitHub:
+https://github.com/saltstack/halite
 
 Installing Halite
 =================
