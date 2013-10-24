@@ -126,6 +126,8 @@ ShowUnInstDetails show
 
 Section "MainSection" SEC01
 
+  ExecWait "net stop salt-minion" ;stopping service before upgrading
+  Sleep 3000
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
@@ -149,7 +151,8 @@ SectionEnd
 
 Function .onInstSuccess
   Exec "nssm.exe install salt-minion $INSTDIR\salt-minion.exe -c $INSTDIR\conf -l quiet"
-  Exec "sc start salt-minion"
+  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+  ExecWait "net start salt-minion"
 FunctionEnd
 
 Function un.onUninstSuccess
@@ -185,8 +188,8 @@ Function .onInit
 FunctionEnd
 
 Section Uninstall
-  Exec "sc stop salt-minion"
-  Exec "sc delete salt-minion"
+  ExecWait "net stop salt-minion"
+  ExecWait "sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\python*"
