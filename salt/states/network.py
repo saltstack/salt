@@ -156,7 +156,7 @@ import salt.utils
 from salt.loader import _create_loader
 
 # Define the module's virtual name
-__virtualname__ = 'ip'
+__virtualname__ = 'network'
 
 
 def __virtual__():
