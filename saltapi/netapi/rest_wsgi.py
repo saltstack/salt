@@ -131,6 +131,7 @@ Usage examples
 '''
 import errno
 import json
+import logging
 import os
 
 # Import salt libs
@@ -150,12 +151,16 @@ H = {
 
 __virtualname__ = 'rest_wsgi'
 
+logger = logging.getLogger(__virtualname__)
+
 def __virtual__():
     mod_opts = __opts__.get(__virtualname__, {})
 
     if 'port' in mod_opts:
         return __virtualname__
 
+    logger.error("Not loading '%s'. 'port' not specified in config",
+            __virtualname__)
     return False
 
 class HTTPError(Exception):
