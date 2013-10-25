@@ -86,6 +86,7 @@ Full list of builtin state modules
     virtualenv_mod
     win_dns_client
     win_firewall
+    win_network
     win_path
     win_servermanager
     win_system

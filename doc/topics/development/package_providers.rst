@@ -137,12 +137,11 @@ The second return value will be a string with two possible values:
 
 Both before and after the installing the target(s), you should run
 :strong:`list_pkgs` to obtain a list of the installed packages. You should then
-return the output of
-:mod:`pkg_resource.find_changes <salt.modules.pkg_resource.find_changes>`:
+return the output of ``salt.utils.compare_dicts()``
 
 .. code-block:: python
 
-        return __salt__['pkg_resource.find_changes'](old, new)
+        return salt.utils.compare_dicts(old, new)
 
 
 remove

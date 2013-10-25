@@ -423,7 +423,7 @@ def install(name=None,
     __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
@@ -452,10 +452,9 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    ret = {'installed': __salt__['pkg_resource.find_changes'](old, new)}
+    ret = {'installed': salt.utils.compare_dicts(old, new)}
     if action == 'purge':
-        ret['removed'] = __salt__['pkg_resource.find_changes'](old_removed,
-                                                               new_removed)
+        ret['removed'] = salt.utils.compare_dicts(old_removed, new_removed)
         return ret
     else:
         return ret['installed']
@@ -546,7 +545,7 @@ def upgrade(refresh=True, **kwargs):
     __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def _clean_pkglist(pkgs):

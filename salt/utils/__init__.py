@@ -1620,6 +1620,28 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
         return cmp_result in cmp_map[oper]
 
 
+def compare_dicts(old=None, new=None):
+    '''
+    Compare before and after results from various salt functions, returning a
+    dict describing the changes that were made.
+    '''
+    ret = {}
+    for key in set((new or {}).keys()).union((old or {}).keys()):
+        if key not in old:
+            # New key
+            ret[key] = {'old': '',
+                        'new': new[key]}
+        elif key not in new:
+            # Key removed
+            ret[key] = {'new': '',
+                        'old': old[key]}
+        elif new[key] != old[key]:
+            # Key modified
+            ret[key] = {'old': old[key],
+                        'new': new[key]}
+    return ret
+
+
 def argspec_report(functions, module=''):
     '''
     Pass in a functions dict as it is returned from the loader and return the

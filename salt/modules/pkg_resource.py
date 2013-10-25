@@ -352,34 +352,6 @@ def stringify(pkgs):
         log.exception(e)
 
 
-def find_changes(old=None, new=None):
-    '''
-    Compare before and after results from pkg.list_pkgs() to determine what
-    changes were made to the packages installed on the minion.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg_resource.find_changes
-    '''
-    pkgs = {}
-    for npkg in set((new or {}).keys()).union((old or {}).keys()):
-        if npkg not in old:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-        elif npkg not in new:
-            # the package is removed
-            pkgs[npkg] = {'new': '',
-                          'old': old[npkg]}
-        elif new[npkg] != old[npkg]:
-            # the package was here before and the version has changed
-            pkgs[npkg] = {'old': old[npkg],
-                          'new': new[npkg]}
-    return pkgs
-
-
 def version_clean(version):
     '''
     Clean the version string removing extra data.

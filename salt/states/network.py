@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of network interfaces.
-====================================
+Configuration of network interfaces
+===================================
 
 The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
@@ -152,7 +152,21 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
 # Import python libs
 import difflib
+import salt.utils
 from salt.loader import _create_loader
+
+# Define the module's virtual name
+__virtualname__ = 'network'
+
+
+def __virtual__():
+    '''
+    Confine this module to non-Windows systems with the required execution
+    module available.
+    '''
+    if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+        return __virtualname__
+    return False
 
 
 def managed(name, type, enabled=True, **kwargs):

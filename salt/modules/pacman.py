@@ -325,7 +325,7 @@ def install(name=None,
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade():
@@ -348,7 +348,7 @@ def upgrade():
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
@@ -367,7 +367,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):

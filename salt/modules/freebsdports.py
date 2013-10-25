@@ -160,7 +160,7 @@ def install(name, clean=True):
         __context__['ports.install_error'] = result['stderr']
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def deinstall(name):
@@ -178,7 +178,7 @@ def deinstall(name):
     __salt__['cmd.run']('make deinstall BATCH=yes', cwd=portpath)
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def rmconfig(name):

@@ -334,7 +334,7 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     rehash()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade():
@@ -390,7 +390,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
 delete = remove
