@@ -59,7 +59,7 @@ start() {
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found"
             RETVAL=1
-        elif $PYTHON $SALTMINION -d $MINION_ARGS > /dev/null; then
+        elif $PYTHON $SALTMINION -d $MINION_ARGS >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
@@ -75,7 +75,7 @@ start() {
 
             # daemon --check $SERVICE $SALTMINION -d $MINION_ARGS 
             # RETVAL=$?
-	    if $PYTHON $SALTMINION -d $MINION_ARGS > /dev/null; then
+	    if $PYTHON $SALTMINION -d $MINION_ARGS >& /dev/null; then
                 echo_success
                 RETVAL=0
             else
