@@ -81,26 +81,32 @@ def append(name, **kwargs):
         ret['comment'] = 'Failed to set iptables rule for {0}'.format(name)
         return ret
 
+
 def set_policy(name, **kwargs):
     '''Sets policy for iptables firewall tables'''
     ret = {'name': name,
         'changes': {},
         'result': None,
         'comment': ''}
-    
+
     for ignore in "__env__",  "__sls__", "order":
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if __salt__['iptables.get_policy'](kwargs['table'],kwargs['chain'])==kwargs['policy']:
-        ret['result']=True
-        ret['comment']='iptables default policy for {0} already set to {1}'.format(kwargs['table'],kwargs['policy'])
+    if __salt__['iptables.get_policy'](
+            kwargs['table'],
+            kwargs['chain']) == kwargs['policy']:
+        ret['result'] = True
+        ret['comment'] = 'iptables default policy for {0} already set to {1}'.format(kwargs['table'], kwargs['policy'])
         return ret
 
-    if not __salt__['iptables.set_policy'](kwargs['table'],kwargs['chain'],kwargs['policy']):
+    if not __salt__['iptables.set_policy'](
+            kwargs['table'],
+            kwargs['chain'],
+            kwargs['policy']):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Set default policy for {0} to {1}'.format(kwargs['chain'],kwargs['policy'])
+        ret['comment'] = 'Set default policy for {0} to {1}'.format(kwargs['chain'], kwargs['policy'])
         return ret
     else:
         ret['result'] = False
@@ -127,7 +133,3 @@ def flush(name,**kwargs):
         ret['result'] = False
         ret['comment'] = 'Failed to flush iptables rules'
         return ret
-
-
-
-
