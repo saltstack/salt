@@ -11,6 +11,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.utils.network
+import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Set up logging
@@ -240,10 +241,10 @@ def set_static_ip(iface, addr, gateway=None, append=False):
             time.sleep(1)
         return {}
 
-    if not salt.utils.network.valid_ipv4(addr):
+    if not salt.utils.validate.net.ipv4_addr(addr):
         raise SaltInvocationError('Invalid address {0!r}'.format(addr))
 
-    if gateway and not salt.utils.network.valid_ipv4(addr):
+    if gateway and not salt.utils.validate.net.ipv4_addr(addr):
         raise SaltInvocationError(
             'Invalid default gateway {0!r}'.format(gateway)
         )
