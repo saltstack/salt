@@ -2,6 +2,13 @@
 Salt 0.17.1 Release Notes
 =========================
 
+.. note::
+
+    THIS RELEASE IS NOT COMPATIBLE WITH PREVIOUS VERSIONS.  If you update your
+    master to 0.17.1, you must update your minions as well.  Sorry for the
+    inconvenience -- this is a result of one of the security fixes listed
+    below.
+
 The 0.17.1 release comes with a number of improvements to salt-ssh, many
 bugfixes, and a number of security updates.
 

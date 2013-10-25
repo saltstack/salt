@@ -664,7 +664,7 @@ def syndic_config(master_config_path,
     return opts
 
 
-def get_id(root_dir=None):
+def get_id(root_dir=None, minion_id=False):
     '''
     Guess the id of the minion.
 
@@ -704,11 +704,12 @@ def get_id(root_dir=None):
     fqdn = socket.getfqdn()
     if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
-        try:
-            with salt.utils.fopen(id_cache, 'w') as idf:
-                idf.write(fqdn)
-        except (IOError, OSError) as exc:
-            log.error('Could not cache minion ID: {0}'.format(exc))
+        if minion_id:
+            try:
+                with salt.utils.fopen(id_cache, 'w') as idf:
+                    idf.write(fqdn)
+            except (IOError, OSError) as exc:
+                log.error('Could not cache minion ID: {0}'.format(exc))
         return fqdn, False
 
     # Check /etc/hostname
@@ -720,11 +721,12 @@ def get_id(root_dir=None):
                         'This file should not contain any whitespace.')
         else:
             if name != 'localhost':
-                try:
-                    with salt.utils.fopen(id_cache, 'w') as idf:
-                        idf.write(name)
-                except (IOError, OSError) as exc:
-                    log.error('Could not cache minion ID: {0}'.format(exc))
+                if minion_id:
+                    try:
+                        with salt.utils.fopen(id_cache, 'w') as idf:
+                            idf.write(name)
+                    except (IOError, OSError) as exc:
+                        log.error('Could not cache minion ID: {0}'.format(exc))
                 return name, False
     except (IOError, OSError):
         pass
@@ -740,12 +742,13 @@ def get_id(root_dir=None):
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
-                            try:
-                                with salt.utils.fopen(id_cache, 'w') as idf:
-                                    idf.write(name)
-                            except (IOError, OSError) as exc:
-                                log.error('Could not cache minion ID: {0}'
-                                          .format(exc))
+                            if minion_id:
+                                try:
+                                    with salt.utils.fopen(id_cache, 'w') as idf:
+                                        idf.write(name)
+                                except (IOError, OSError) as exc:
+                                    log.error('Could not cache minion ID: {0}'
+                                              .format(exc))
                             return name, False
     except (IOError, OSError):
         pass
@@ -766,12 +769,13 @@ def get_id(root_dir=None):
                             if name != 'localhost':
                                 log.info('Found minion id in hosts file: {0}'
                                          .format(name))
-                                try:
-                                    with salt.utils.fopen(id_cache, 'w') as idf:
-                                        idf.write(name)
-                                except (IOError, OSError) as exc:
-                                    log.error('Could not cache minion ID: {0}'
-                                              .format(exc))
+                                if minion_id:
+                                    try:
+                                        with salt.utils.fopen(id_cache, 'w') as idf:
+                                            idf.write(name)
+                                    except (IOError, OSError) as exc:
+                                        log.error('Could not cache minion ID: {0}'
+                                                  .format(exc))
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
@@ -830,8 +834,9 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None and minion_id:
-        opts['id'], using_ip_for_id = get_id(opts['root_dir'])
+    if opts['id'] is None:
+        opts['id'], using_ip_for_id = get_id(opts['root_dir'],
+                                             minion_id=minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:

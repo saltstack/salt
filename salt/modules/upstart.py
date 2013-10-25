@@ -60,6 +60,12 @@ def __virtual__():
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS'):
         return __virtualname__
+    elif __grains__['os'] in ('Debian', 'Raspbian'):
+        debian_initctl = '/sbin/initctl'
+        if os.path.isfile(debian_initctl):
+            initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
+            if 'upstart' in initctl_version:
+                return 'service'
     return False
 
 
