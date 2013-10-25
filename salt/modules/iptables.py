@@ -87,6 +87,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
 
     rule = ''
 
+    if 'if' in kwargs:
+        rule += '-i {0} '.format(kwargs['if'])
+        del kwargs['if']
+
     if 'proto' in kwargs:
         rule += '-p {0} '.format(kwargs['proto'])
 
@@ -98,17 +102,24 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         del kwargs['state']
 
     if 'connstate' in kwargs:
-        rule += '--state {0} -m {1} '.format(kwargs['connstate'], kwargs['proto'])
-    del kwargs['connstate']
-    del kwargs['proto']
+        rule += '--state {0} '.format(kwargs['connstate'])
+        del kwargs['connstate']
+
+    if 'proto' in kwargs:
+        rule += '-m {0} '.format(kwargs['proto'])
+        del kwargs['proto']
 
     if 'dport' in kwargs:
         rule += '--dport {0} '.format(kwargs['dport'])
-    del kwargs['dport']
+        del kwargs['dport']
+
+    if 'sport' in kwargs:
+        rule += '--sport {0} '.format(kwargs['sport'])
+        del kwargs['sport']
 
     if 'jump' in kwargs:
         kwargs['j'] = kwargs['jump']
-    del kwargs['jump']
+        del kwargs['jump']
 
     for item in kwargs:
         if len(item) == 1:
