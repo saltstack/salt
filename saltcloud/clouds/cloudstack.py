@@ -61,7 +61,7 @@ def __virtual__():
             'There is no CloudStack cloud provider configuration available. '
             'Not loading module.'
         )
-        return False   
+        return False
 
     log.debug('Loading CloudStack cloud module')
     return True
@@ -91,14 +91,14 @@ def get_conn():
             search_global=False)
 
     if verify_ssl_cert == False:
-      try:
-        import libcloud.security
-        libcloud.security.VERIFY_SSL_CERT = False
-      except:
-        log.debug(
-            'Could not disable SSL certificate verification. '
-            'Not loading module.'
-        )
+        try:
+            import libcloud.security
+            libcloud.security.VERIFY_SSL_CERT = False
+        except (ImportError, AttributeError):
+            log.debug(
+                'Could not disable SSL certificate verification. '
+                'Not loading module.'
+            )
         return False
 
     return driver(
@@ -186,7 +186,7 @@ def get_networkid(vm_):
     Return the networkid to use, only valid for Advanced Zone
     '''
     networkid = config.get_config_value('networkid', vm_, __opts__)
-    
+
     if networkid is not None:
         return networkid
     else:
