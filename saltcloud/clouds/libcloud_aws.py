@@ -67,6 +67,9 @@ from saltcloud.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'aws'
+
 
 # Only load in this module if the AWS configurations are in place
 def __virtual__():
@@ -140,7 +143,7 @@ def __virtual__():
     )
 
     log.debug('Loading Libcloud AWS cloud module')
-    return 'aws'
+    return __virtualname__
 
 
 EC2_LOCATIONS = {

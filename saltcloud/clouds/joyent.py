@@ -117,7 +117,7 @@ def __virtual__():
     list_nodes_select = namespaced_function(
         list_nodes_select, globals(), (conn,)
     )
-    return 'joyent'
+    return True
 
 
 def get_configured_provider():

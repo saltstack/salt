@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Needs no special configuration
     '''
-    return 'saltify'
+    return True
 
 
 def list_nodes():
