@@ -50,5 +50,5 @@ methods, and functions in your :py:mod:`~saltapi.netapi` module.
 Loader “magic” methods
 ======================
 
-The loader makes the ``__opts__`` datastructure available to any function in
+The loader makes the ``__opts__`` data structure available to any function in
 a :py:mod:`~saltapi.netapi` module.

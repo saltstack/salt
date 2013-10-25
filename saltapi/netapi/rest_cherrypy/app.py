@@ -46,7 +46,7 @@ A REST API for Salt
 
         .. versionadded:: 0.8.2
     app_path : ``/app``
-        The URL prefix to use for serving the HTML file specifed in the ``app``
+        The URL prefix to use for serving the HTML file specified in the ``app``
         setting. This should be a simple name containing no slashes.
 
         Any path information after the specified path is ignored; this is
@@ -111,7 +111,7 @@ dictionaries. This allows you to specify multiple commands in a single request.
     lowstate
         A dictionary containing various keys that instruct Salt which command
         to run, where that command lives, any parameters for that command, any
-        authentication credientials, what returner to use, etc.
+        authentication credentials, what returner to use, etc.
 
         Salt uses the lowstate data format internally in many places to pass
         command data between functions. Salt also uses lowstate for the
@@ -309,7 +309,7 @@ def process_request_body(fn):
 def urlencoded_processor(entity):
     '''
     Accept x-www-form-urlencoded data (run through CherryPy's formatter)
-    and reformat it into a Low State datastructure.
+    and reformat it into a Low State data structure.
 
     Since we can't easily represent complicated data structures with
     key-value pairs, any more complicated requirements (e.g. compound
@@ -337,7 +337,7 @@ def urlencoded_processor(entity):
 @process_request_body
 def json_processor(entity):
     '''
-    Unserialize raw POST data in JSON format to a Python datastructure.
+    Unserialize raw POST data in JSON format to a Python data structure.
 
     :param entity: raw POST data
     '''
@@ -351,7 +351,7 @@ def json_processor(entity):
 @process_request_body
 def yaml_processor(entity):
     '''
-    Unserialize raw POST data in YAML format to a Python datastructure.
+    Unserialize raw POST data in YAML format to a Python data structure.
 
     :param entity: raw POST data
     '''
@@ -367,7 +367,7 @@ def hypermedia_in():
     Unserialize POST/PUT data of a specified Content-Type.
 
     The following custom processors all are intended to format Low State data
-    and will place that datastructure into the request object.
+    and will place that data structure into the request object.
 
     :raises HTTPError: if the request contains a Content-Type that we do not
         have a processor for
@@ -420,7 +420,7 @@ class LowDataAdapter(object):
 
     def exec_lowstate(self):
         '''
-        Pull a Low State datastructure from request and execute the low-data
+        Pull a Low State data structure from request and execute the low-data
         chunks through Salt. The low-data chunks will be updated to include the
         authorization token for the current session.
         '''

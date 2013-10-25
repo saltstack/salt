@@ -14,7 +14,7 @@ Synopsis
 Description
 ===========
 
-The Salt API system manages network api connectors for the Salt Matser
+The Salt API system manages network api connectors for the Salt Master
 
 Options
 =======

@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.\" Man page generated from reStructeredText.
+.\" Man page generated from reStructuredText.
 .
 .sp
 \fBsalt\-api\fP is a modular interface on top of \fI\%Salt\fP that can provide a
@@ -52,7 +52,7 @@ netapi modules simply bind to a port and start a service. They are enabled by
 specifying the name of a netapi module and the port to bind in the master
 config file.
 .sp
-Communication with Salt and Salt satelite projects is done by passing a list of
+Communication with Salt and Salt satellite projects is done by passing a list of
 low\-data dictionaries to a client interface. Low\-data is a dictionary that
 specifies the client, the function inside that client to execute, and any
 additional arguments or parameters.
@@ -130,7 +130,7 @@ documentation in the form of a module docstring and docstrings on any classes,
 methods, and functions in your \fBnetapi\fP module.
 .SS Loader “magic” methods
 .sp
-The loader makes the \fB__opts__\fP datastructure available to any function in
+The loader makes the \fB__opts__\fP data structure available to any function in
 a \fBnetapi\fP module.
 .SS Full list of netapi modules
 .SS Full list of netapi modules
@@ -266,7 +266,7 @@ The primary execution vector for the rest of the API
 .INDENT 7.0
 .TP
 .B POST /
-You must pass low\-data in the requst body either from an HTML form
+You must pass low\-data in the request body either from an HTML form
 or as JSON or YAML.
 .sp
 \fBExample request\fP:
@@ -522,7 +522,7 @@ Start an execution command and immediately return the job id
 .INDENT 7.0
 .TP
 .B POST /minions
-You must pass low\-data in the requst body either from an HTML form
+You must pass low\-data in the request body either from an HTML form
 or as JSON or YAML. The \fBclient\fP option is pre\-set to
 \fBlocal_async\fP.
 .sp
