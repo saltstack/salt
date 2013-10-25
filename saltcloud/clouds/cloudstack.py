@@ -27,6 +27,7 @@ import logging
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
 try:
@@ -95,11 +96,10 @@ def get_conn():
             import libcloud.security
             libcloud.security.VERIFY_SSL_CERT = False
         except (ImportError, AttributeError):
-            log.debug(
+            raise SaltCloudSystemExit(
                 'Could not disable SSL certificate verification. '
                 'Not loading module.'
             )
-        return False
 
     return driver(
         key=config.get_config_value(
