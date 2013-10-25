@@ -3,21 +3,59 @@
 Configuration of network interfaces on Windows hosts
 ====================================================
 
-The network module is used to create and manage network settings,
-interfaces can be set as either managed or ignored. By default
-all interfaces are ignored unless specified.
+.. versionadded:: Hydrogen
 
-Please note that only Redhat-style networking is currently
-supported. This module will therefore only work on RH/CentOS/Fedora.
+This module provides the ``network`` state(s) on Windows hosts. DNS servers, IP
+addresses and default gateways can currently be managed.
+
+Below is an example of the configuration for an interface that uses DHCP for
+both DNS servers and IP addresses:
 
 .. code-block:: yaml
 
     Local Area Connection #2:
       network.managed:
         - dns_proto: dhcp
+        - ip_proto: dhcp
+
+.. note::
+
+    Both the ``dns_proto`` and ``ip_proto`` arguments are required.
+
+Static DNS and IP addresses can be configured like so:
+
+.. code-block:: yaml
+
+    Local Area Connection #2:
+      network.managed:
+        - dns_proto: static
+        - dns_servers:
+          - 8.8.8.8
+          - 8.8.4.4
         - ip_proto: static
         - ip_addrs:
           - 10.2.3.4/24
+
+.. note::
+
+    IP addresses are specified using the format
+    ``<ip-address>/<subnet-length>``.
+
+Optionally, if you are setting a static IP address, you can also specify the
+default gateway using the ``gateway`` parameter:
+
+.. code-block:: yaml
+
+    Local Area Connection #2:
+      network.managed:
+        - dns_proto: static
+        - dns_servers:
+          - 8.8.8.8
+          - 8.8.4.4
+        - ip_proto: static
+        - ip_addrs:
+          - 10.2.3.4/24
+        - gateway: 10.2.3.1
 '''
 
 # Import python libs
