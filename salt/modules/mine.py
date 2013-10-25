@@ -73,11 +73,8 @@ def update(clear=False):
             'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    try:
-        sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
-    except Exception:
-        pass
-    return True
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
 
 
 def send(func, *args, **kwargs):
@@ -119,11 +116,8 @@ def send(func, *args, **kwargs):
             'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    try:
-        sreq.send('aes', auth.crypticle.dumps(load), 1, 10)
-    except Exception:
-        return True
-    return True
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
 
 
 def get(tgt, fun, expr_form='glob'):
