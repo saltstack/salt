@@ -63,7 +63,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-import salt.utils.network
+import salt.utils.validate.net
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             )
         else:
             bad_ips = [x for x in dns_servers
-                       if not salt.utils.network.valid_ipv4(x)]
+                       if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
                 errors.append('Invalid DNS server IPs: {0}.'
                               .format(', '.join(bad_ips)))
@@ -136,14 +136,14 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             )
         else:
             bad_ips = [x for x in ip_addrs
-                       if not salt.utils.network.valid_ipv4(x)]
+                       if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
                 errors.append('The following static IPs are invalid: '
                               '{0}.'.format(', '.join(bad_ips)))
 
             # Validate default gateway
             if gateway is not None:
-                if not salt.utils.network.valid_ipv4(gateway):
+                if not salt.utils.validate.net.ipv4_addr(gateway):
                     errors.append('Gateway IP {0} is invalid.'.format(gateway))
 
     return errors

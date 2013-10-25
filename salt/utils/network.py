@@ -568,40 +568,6 @@ def ip_addrs6(interface=None, include_loopback=False):
     return sorted(list(ret))
 
 
-def valid_ipv4(addr):
-    '''
-    Returns True if the IP address (and optional subnet) are valid, otherwise
-    returns False.
-    '''
-    try:
-        if '/' not in addr:
-            addr += '/32'
-    except TypeError:
-        return False
-
-    ip, subnet_len = addr.rsplit('/', 1)
-
-    # Verify that IP address is valid
-    try:
-        socket.inet_aton(ip)
-    except socket.error:
-        return False
-    else:
-        if len(ip.split('.')) != 4:
-            return False
-
-    # Verify that subnet length is valid
-    try:
-        subnet_len = int(subnet_len)
-    except ValueError:
-        return False
-    else:
-        if not 1 <= subnet_len <= 32:
-            return False
-
-    return True
-
-
 def hex2ip(hex_ip):
     '''
     Convert a hex string to an ip, if a failure occurs the original hex is
