@@ -12,7 +12,10 @@ import time
 import salt.utils
 import salt.utils.network
 import salt.utils.validate.net
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltInvocationError
+)
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -203,6 +206,21 @@ def disable(iface):
         'netsh interface set interface "{0}" admin=DISABLED'.format(iface)
     )
     return is_disabled(iface)
+
+
+def get_subnet_length(mask):
+    '''
+    Convenience function to convert the netmask to the CIDR subnet length
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'os_family:Windows' ip.get_subnet_length 255.255.255.0
+    '''
+    if not salt.utils.validate.net.netmask(mask):
+        raise SaltInvocationError('{0!r} is not a valid netmask'.format(mask))
+    return salt.utils.network.get_net_size(mask)
 
 
 def set_static_ip(iface, addr, gateway=None, append=False):
