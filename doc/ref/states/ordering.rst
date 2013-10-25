@@ -71,6 +71,31 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
+Require statements can refer to the following requisite types: pkg, file, sls
+
+In addition to state declarations such as pkg, file, etc., **sls** type requisites
+are also recognized, and essentially allow 'chaining' of states. This provides a
+mechanism to ensure the proper sequence for complex state formulas, especially when
+the discrete states are split or groups into separate sls files:
+
+.. code-block:: yaml
+
+    include:
+      - network
+      
+    httpd:
+      pkg:
+        - installed
+      service:
+        - running
+        - require:
+          - pkg: httpd
+          - sls: network
+
+In this example, the httpd sevice running state will not be applied
+(i.e., the httpd service will not be started) unless both the https package is
+installed AND the network state is satistifed.
+
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
