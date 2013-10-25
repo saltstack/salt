@@ -946,6 +946,23 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        if 'lock' in kwargs:
+            fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+    return fhandle
+
+
+def flopen(*args, **kwargs):
+    fhandle = open(*args, **kwargs)
+    if HAS_FNCTL:
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
+        except AttributeError:
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 

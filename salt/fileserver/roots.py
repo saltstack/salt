@@ -9,6 +9,13 @@ option.
 # Import python libs
 import os
 
+try:
+    import fcntl
+    HAS_FNCTL = True
+except ImportError:
+    # fcntl is not available on windows
+    HAS_FNCTL = False
+
 # Import salt libs
 import salt.fileserver
 import salt.utils
@@ -150,11 +157,14 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         with salt.utils.fopen(cache_path, 'rb') as fp_:
-            hsum, mtime = fp_.read().split(':')
-            if os.path.getmtime(path) == mtime:
-                # check if mtime changed
-                ret['hsum'] = hsum
-                return ret
+            try:
+                hsum, mtime = fp_.read().split(':')
+                if os.path.getmtime(path) == mtime:
+                    # check if mtime changed
+                    ret['hsum'] = hsum
+                    return ret
+            except IOError:  # Can't use Python select() because we need Windows support
+                file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
@@ -163,10 +173,15 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    with salt.utils.fopen(cache_path, 'w') as fp_:
-        fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-
-    return ret
+    if HAS_FNCTL:
+        with salt.utils.flopen(cache_path, 'w') as fp_:
+            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+        return ret
+    else:
+        with salt.utils.fopen(cache_path, 'w') as fp_:
+            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+        return ret
 
 
 def file_list(load):
