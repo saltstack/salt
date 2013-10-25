@@ -1,6 +1,6 @@
-"""
+'''
 Make api awesomeness
-"""
+'''
 # Import Python libs
 import inspect
 
@@ -13,19 +13,19 @@ import salt.utils
 from salt.exceptions import SaltException, EauthAuthenticationError
 
 class APIClient(object):
-    """
+    '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
 
     >>> client = APIClient(__opts__)
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
-    """
+    '''
     def __init__(self, opts):
         self.opts = opts
 
     def run(self, low):
-        """
+        '''
         Execute the specified function in the specified client by passing the
         lowstate
 
@@ -35,7 +35,7 @@ class APIClient(object):
         If 'wheel' or 'runner' prefixes fun then use associated salt client given
             by prefix in the specified 'sync' or 'async' mode.
         Otherwise use local salt client in the given 'sync' or 'async' mode
-        """
+        '''
 
         if not 'client' in low:
             low['client'] = 'async'
@@ -63,24 +63,24 @@ class APIClient(object):
         return ret
 
     def local_async(self, *args, **kwargs):
-        """
+        '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         and immediately return the job ID. The results of the job can then be
         retrieved at a later time.
 
         .. seealso:: :ref:`python-api`
-        """
+        '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.run_job(*args, **kwargs)
 
     async = local_async # default async client
 
     def local_sync(self, *args, **kwargs):
-        """
+        '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
 
         .. seealso:: :ref:`python-api`
-        """
+        '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.cmd(*args, **kwargs)
 
@@ -88,9 +88,9 @@ class APIClient(object):
     sync = local_sync # default sync client
 
     def runner_sync(self, fun, **kwargs):
-        """
+        '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
-        """
+        '''
         runner = salt.runner.RunnerClient(self.opts)
         return runner.low(fun, kwargs)
 
@@ -98,9 +98,9 @@ class APIClient(object):
     runner_async = runner_sync # until we get an runner_async
 
     def wheel_sync(self, fun, **kwargs):
-        """
+        '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
-        """
+        '''
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
         return wheel.master_call(**kwargs)

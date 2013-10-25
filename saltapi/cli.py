@@ -1,6 +1,6 @@
-"""
+'''
 CLI entry-point for salt-api
-"""
+'''
 # Import python libs
 import sys
 import logging
@@ -26,9 +26,9 @@ log = logging.getLogger(__name__)
 
 class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
               DaemonMixIn, MergeConfigMixIn):
-    """
+    '''
     The cli parser object used to fire up the salt api system.
-    """
+    '''
     __metaclass__ = OptionParserMeta
 
     VERSION = saltapi.version.__version__
@@ -42,9 +42,9 @@ class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
         return saltapi.config.api_config(self.get_config_file_path())
 
     def run(self):
-        """
+        '''
         Run the api
-        """
+        '''
         self.parse_args()
         try:
             if self.config['verify_env']:

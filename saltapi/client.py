@@ -1,6 +1,6 @@
-"""
+'''
 The main entry point for salt-api
-"""
+'''
 # Import python libs
 import logging
 import multiprocessing
@@ -11,15 +11,15 @@ import saltapi.loader
 logger = logging.getLogger(__name__)
 
 class SaltAPIClient(object):
-    """
-    """
+    '''
+    '''
     def __init__(self, opts):
         self.opts = opts
 
     def run(self):
-        """
+        '''
         Load and start all available api modules
-        """
+        '''
         netapi = saltapi.loader.netapi(self.opts)
         for fun in netapi:
             if fun.endswith('.start'):

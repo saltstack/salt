@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0103,W0622
-"""
+'''
 Sphinx documentation for salt-api
-"""
+'''
 import os
 import sys
 
@@ -10,14 +10,14 @@ from sphinx.directives import TocTree
 
 # pylint: disable=R0903
 class Mock(object):
-    """
+    '''
     Mock out specified imports
 
     This allows autodoc to do it's thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-    """
+    '''
     def __init__(self, *args, **kwargs):
         pass
 
