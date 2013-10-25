@@ -292,11 +292,27 @@ def application(environ, start_response):
     }))
     return (ret,)
 
+def get_opts():
+    '''
+    Return the Salt master config as __opts__
+    '''
+    import salt.config
+
+    return salt.config.client_config(
+            os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
+
 def start():
     '''
     Start simple_server()
     '''
     from wsgiref.simple_server import make_server
+
+    # When started outside of salt-api __opts__ will not be injected
+    if not '__opts__' in globals():
+        globals()['__opts__'] = get_opts()
+
+        if __virtual__() == False:
+            raise SystemExit(1)
 
     mod_opts = __opts__.get(__virtualname__, {})
 
