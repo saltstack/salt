@@ -18,6 +18,7 @@ import time
 import traceback
 import sys
 import signal
+import yaml
 from random import randint
 
 # Import third party libs
@@ -27,7 +28,6 @@ try:
 except ImportError:
     # Running in local, zmq not needed
     HAS_ZMQ = False
-import yaml
 
 HAS_RANGE = False
 try:
@@ -55,6 +55,7 @@ from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
     SaltInvocationError, SaltReqTimeoutError, SaltClientError
 )
+
 import salt.client
 import salt.crypt
 import salt.loader
