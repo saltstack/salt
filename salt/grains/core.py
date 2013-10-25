@@ -159,7 +159,9 @@ def _linux_gpu_data():
 
         cur_dev = {}
         error = False
-        for line in lspci_out.splitlines():
+        lspci_list = lspci_out.splitlines()
+        lspci_list.append('')
+        for line in lspci_list:
             # check for record-separating empty lines
             if line == '':
                 if cur_dev.get('Class', '') == 'VGA compatible controller':
