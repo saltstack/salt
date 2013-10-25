@@ -159,6 +159,8 @@ def _linux_gpu_data():
 
         cur_dev = {}
         error = False
+        # Add a blank element to the lspci_out.splitlines() list,
+        # otherwise the last device is not evaluated as a cur_dev and ignored.
         lspci_list = lspci_out.splitlines()
         lspci_list.append('')
         for line in lspci_list:
