@@ -31,9 +31,9 @@ from saltcloud.utils import namespaced_function
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    HASLIBS=True
-except:
-    HASLIBS=False
+    HASLIBS = True
+except ImportError:
+    HASLIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def get_conn():
             default=True,
             search_global=False)
 
-    if verify_ssl_cert == False:
+    if verify_ssl_cert is False:
         try:
             import libcloud.security
             libcloud.security.VERIFY_SSL_CERT = False
@@ -169,6 +169,7 @@ def get_keypair(vm_):
     else:
         return False
 
+
 def get_ip(data):
     '''
     Return the IP address of the VM
@@ -181,6 +182,7 @@ def get_ip(data):
         ip = data.private_ips[0]
     return ip
 
+
 def get_networkid(vm_):
     '''
     Return the networkid to use, only valid for Advanced Zone
@@ -191,6 +193,7 @@ def get_networkid(vm_):
         return networkid
     else:
         return False
+
 
 def create(vm_):
     '''
