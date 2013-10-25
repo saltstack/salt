@@ -65,11 +65,22 @@ start() {
         fi
     else
         if [ $(pidofproc $PROCESS) ]; then
-	          RETVAL=$?
-	          echo -n "already running"
+            RETVAL=$?
+            echo -n "already running"
         else
-	          daemon --check $SERVICE $SALTMINION -d $MINION_ARGS
-	          RETVAL=$?
+            # The RHEL 'daemon' function doesn't redirect stdout/err
+            # quite right, executing 'service salt-minion start' as a one-off
+            # over ssh like 'ssh root@ip -C service salt-minion start'
+            # will not return.
+
+            # daemon --check $SERVICE $SALTMINION -d $MINION_ARGS 
+            # RETVAL=$?
+	    if $PYTHON $SALTMINION -d $MINION_ARGS >& /dev/null; then
+                echo_success
+                RETVAL=0
+            else
+                RETVAL=$?
+            fi
         fi
     fi
     echo
