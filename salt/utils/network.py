@@ -423,7 +423,7 @@ def interfaces():
         return linux_interfaces()
 
 
-def _get_net_start(ipaddr, netmask):
+def get_net_start(ipaddr, netmask):
     ipaddr_octets = ipaddr.split('.')
     netmask_octets = netmask.split('.')
     net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
@@ -431,16 +431,16 @@ def _get_net_start(ipaddr, netmask):
     return '.'.join(net_start_octets)
 
 
-def _get_net_size(mask):
+def get_net_size(mask):
     binary_str = ''
     for octet in mask.split('.'):
         binary_str += bin(int(octet))[2:].zfill(8)
     return len(binary_str.rstrip('0'))
 
 
-def _calculate_subnet(ipaddr, netmask):
-    return '{0}/{1}'.format(_get_net_start(ipaddr, netmask),
-                            _get_net_size(netmask))
+def calculate_subnet(ipaddr, netmask):
+    return '{0}/{1}'.format(get_net_start(ipaddr, netmask),
+                            get_net_size(netmask))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -469,7 +469,7 @@ def subnets():
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
-            network = _calculate_subnet(ipv4['address'], ipv4['netmask'])
+            network = calculate_subnet(ipv4['address'], ipv4['netmask'])
             subnetworks.append(network)
     return subnetworks
 
