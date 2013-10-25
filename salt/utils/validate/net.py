@@ -5,6 +5,10 @@ Various network validation utilities
 
 # Import python libs
 import re
+import socket
+
+# Import salt libs
+from salt._compat import string_types
 
 
 def mac(addr):
@@ -52,3 +56,17 @@ def ipv4_addr(addr):
             return False
 
     return True
+
+
+def netmask(mask):
+    '''
+    Returns True if the value passed is a valid netmask, otherwise return False
+    '''
+    if not isinstance(mask, string_types):
+        return False
+
+    octets = mask.split('.')
+    if not len(octets) == 4:
+        return False
+
+    return ipv4_addr(mask) and octets == sorted(octets, reverse=True)
