@@ -148,12 +148,13 @@ H = {
     500: '500 INTERNAL SERVER ERROR',
 }
 
+__virtualname__ = 'rest_wsgi'
+
 def __virtual__():
-    short_name = __name__.rsplit('.')[-1]
-    mod_opts = __opts__.get(short_name, {})
+    mod_opts = __opts__.get(__virtualname__, {})
 
     if 'port' in mod_opts:
-        return __name__
+        return __virtualname__
 
     return False
 
@@ -292,8 +293,7 @@ def start():
     '''
     from wsgiref.simple_server import make_server
 
-    short_name = __name__.rsplit('.')[-1]
-    mod_opts = __opts__.get(short_name, {})
+    mod_opts = __opts__.get(__virtualname__, {})
 
     # pylint: disable-msg=C0103
     httpd = make_server('localhost', mod_opts['port'], application)
