@@ -231,7 +231,9 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         The name of the interface to manage
 
     addr
-        IP address with subnet length (ex. ``10.1.2.3/24``)
+        IP address with subnet length (ex. ``10.1.2.3/24``). The
+        :mod:`ip.get_subnet_length <salt.modules.win_ip.get_subnet_length>`
+        function can be used to calculate the subnet length from a netmask.
 
     gateway : None
         If specified, the default gateway will be set to this value.
