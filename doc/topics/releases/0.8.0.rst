@@ -4,7 +4,7 @@ salt-api 0.8.0
 
 We are happy to announce the release of :program:`salt-api` 0.8.0.
 
-This release encompases bugfixes and new features for the
+This release encompasses bugfixes and new features for the
 :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` netapi module that
 provides a RESTful interface for a running Salt system.
 

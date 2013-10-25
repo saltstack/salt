@@ -20,7 +20,7 @@ provides=('salt-api')
 source=("git://github.com/saltstack/salt-api.git")
 
 # makepkg knows it's a git repo because the url starts with 'git'
-# it then knows to checkout the branch 'pacman41' upon cloning, expediating versioning.
+# it then knows to checkout the branch 'pacman41' upon cloning, expediting versioning.
 # branch="develop"
 # source=("git://github.com/saltstack/salt-api.git#branch=$branch")
 

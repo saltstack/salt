@@ -13,7 +13,7 @@ netapi modules are enabled by adding configuration to your master config file.
 Check the docs for each module to see external requirements and configuration
 settings.
 
-Communication with Salt and Salt satelite projects is done by passing a list of
+Communication with Salt and Salt satellite projects is done by passing a list of
 lowstate dictionaries to a client interface. A list of available client
 interfaces is below. The lowstate dictionary items map to keyword arguments on
 the client interface.
