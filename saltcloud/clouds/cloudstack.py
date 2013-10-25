@@ -27,13 +27,14 @@ import logging
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    HASLIBS=True
-except:
-    HASLIBS=False
+    HASLIBS = True
+except ImportError:
+    HASLIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ def __virtual__():
             'There is no CloudStack cloud provider configuration available. '
             'Not loading module.'
         )
-        return False   
+        return False
 
     log.debug('Loading CloudStack cloud module')
     return True
@@ -90,16 +91,15 @@ def get_conn():
             default=True,
             search_global=False)
 
-    if verify_ssl_cert == False:
-      try:
-        import libcloud.security
-        libcloud.security.VERIFY_SSL_CERT = False
-      except:
-        log.debug(
-            'Could not disable SSL certificate verification. '
-            'Not loading module.'
-        )
-        return False
+    if verify_ssl_cert is False:
+        try:
+            import libcloud.security
+            libcloud.security.VERIFY_SSL_CERT = False
+        except (ImportError, AttributeError):
+            raise SaltCloudSystemExit(
+                'Could not disable SSL certificate verification. '
+                'Not loading module.'
+            )
 
     return driver(
         key=config.get_config_value(
@@ -169,6 +169,7 @@ def get_keypair(vm_):
     else:
         return False
 
+
 def get_ip(data):
     '''
     Return the IP address of the VM
@@ -181,16 +182,18 @@ def get_ip(data):
         ip = data.private_ips[0]
     return ip
 
+
 def get_networkid(vm_):
     '''
     Return the networkid to use, only valid for Advanced Zone
     '''
     networkid = config.get_config_value('networkid', vm_, __opts__)
-    
+
     if networkid is not None:
         return networkid
     else:
         return False
+
 
 def create(vm_):
     '''
