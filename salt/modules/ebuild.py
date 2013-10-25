@@ -553,7 +553,7 @@ def install(name=None,
     if call['retcode'] != 0:
         return _process_emerge_err(call['stderr'])
     new = list_pkgs()
-    changes.update(__salt__['pkg_resource.find_changes'](old, new))
+    changes.update(salt.utils.compare_dicts(old, new))
     return changes
 
 
@@ -598,7 +598,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
     if call['retcode'] != 0:
         return _process_emerge_err(call['stderr'])
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade(refresh=True):
@@ -626,7 +626,7 @@ def upgrade(refresh=True):
     if call['retcode'] != 0:
         return _process_emerge_err(call['stderr'])
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
@@ -681,7 +681,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
@@ -767,7 +767,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def version_cmp(pkg1, pkg2):

@@ -176,7 +176,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
@@ -277,7 +277,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         __salt__['cmd.run'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def list_upgrades():
