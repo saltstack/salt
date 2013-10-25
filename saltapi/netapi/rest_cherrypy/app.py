@@ -1,4 +1,4 @@
-'''
+"""
 A REST API for Salt
 ===================
 
@@ -153,7 +153,7 @@ functionality is available at that URL. The other URLs are largely convenience
 URLs that wrap that main entry point with shorthand or specialized
 functionality.
 
-'''
+"""
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
@@ -179,10 +179,10 @@ logger = logging.getLogger(__name__)
 
 
 def salt_token_tool():
-    '''
+    """
     If the custom authentication header is supplied, put it in the cookie dict
     so the rest of the session-based auth works as intended
-    '''
+    """
     x_auth = cherrypy.request.headers.get('X-Auth-Token', None)
 
     # X-Auth-Token header trumps session cookie
@@ -191,10 +191,10 @@ def salt_token_tool():
 
 
 def salt_ip_verify_tool():
-    '''
+    """
     If there is a list of restricted IPs, verify current
     client is coming from one of those IPs.
-    '''
+    """
     # This is overly cumbersome and crude,
     # But, it's also safe... ish...
     salt_config = cherrypy.config.get('saltopts', None)
@@ -218,9 +218,9 @@ def salt_ip_verify_tool():
 
 
 def salt_auth_tool():
-    '''
+    """
     Redirect all unauthenticated requests to the login page
-    '''
+    """
     # Redirect to the login page if the session hasn't been authed
     if not cherrypy.session.has_key('token'):
         raise cherrypy.InternalRedirect('/login')
@@ -239,14 +239,14 @@ ct_out_map = (
 )
 
 def hypermedia_handler(*args, **kwargs):
-    '''
+    """
     Determine the best output format based on the Accept header, execute the
     regular handler, and transform the output to the request content type (even
     if it's an error).
 
     :param args: Pass args through to the main handler
     :param kwargs: Pass kwargs through to the main handler
-    '''
+    """
     # Execute the real handler. Handle or pass-through any errors we know how
     # to handle (auth & HTTP errors). Reformat any errors we don't know how to
     # handle as a data structure.
@@ -282,12 +282,12 @@ def hypermedia_handler(*args, **kwargs):
 
 
 def hypermedia_out():
-    '''
+    """
     Determine the best handler for the requested content type
 
     Wrap the normal handler and transform the output from that handler into the
     requested content type
-    '''
+    """
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
@@ -297,9 +297,9 @@ def hypermedia_out():
 
 @functools.wraps
 def process_request_body(fn):
-    '''
+    """
     A decorator to skip a processor function if process_request_body is False
-    '''
+    """
     def wrapped(*args, **kwargs):
         if cherrypy.request.process_request_body != False:
             fn(*args, **kwargs)
@@ -307,7 +307,7 @@ def process_request_body(fn):
 
 
 def urlencoded_processor(entity):
-    '''
+    """
     Accept x-www-form-urlencoded data (run through CherryPy's formatter)
     and reformat it into a Low State data structure.
 
@@ -321,7 +321,7 @@ def urlencoded_processor(entity):
                 -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
 
     :param entity: raw POST data
-    '''
+    """
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     lowdata = entity.params
@@ -336,11 +336,11 @@ def urlencoded_processor(entity):
 
 @process_request_body
 def json_processor(entity):
-    '''
+    """
     Unserialize raw POST data in JSON format to a Python data structure.
 
     :param entity: raw POST data
-    '''
+    """
     body = entity.fp.read()
     try:
         cherrypy.serving.request.lowstate = json.loads(body)
@@ -350,11 +350,11 @@ def json_processor(entity):
 
 @process_request_body
 def yaml_processor(entity):
-    '''
+    """
     Unserialize raw POST data in YAML format to a Python data structure.
 
     :param entity: raw POST data
-    '''
+    """
     body = entity.fp.read()
     try:
         cherrypy.serving.request.lowstate = yaml.load(body)
@@ -363,7 +363,7 @@ def yaml_processor(entity):
 
 
 def hypermedia_in():
-    '''
+    """
     Unserialize POST/PUT data of a specified Content-Type.
 
     The following custom processors all are intended to format Low State data
@@ -371,7 +371,7 @@ def hypermedia_in():
 
     :raises HTTPError: if the request contains a Content-Type that we do not
         have a processor for
-    '''
+    """
     # Be liberal in what you accept
     ct_in_map = {
         'application/x-www-form-urlencoded': urlencoded_processor,
@@ -393,11 +393,11 @@ def hypermedia_in():
 
 
 class LowDataAdapter(object):
-    '''
+    """
     The primary entry point to the REST API. All functionality is available
     through this URL. The other available URLs provide convenience wrappers
     around this URL.
-    '''
+    """
     exposed = True
 
     _cp_config = {
@@ -419,11 +419,11 @@ class LowDataAdapter(object):
         self.api = saltapi.APIClient(self.opts)
 
     def exec_lowstate(self):
-        '''
+        """
         Pull a Low State data structure from request and execute the low-data
         chunks through Salt. The low-data chunks will be updated to include the
         authorization token for the current session.
-        '''
+        """
         lowstate = cherrypy.request.lowstate
         token = cherrypy.session.get('token', None)
 
@@ -433,7 +433,7 @@ class LowDataAdapter(object):
             yield self.api.run(chunk)
 
     def GET(self):
-        '''
+        """
         .. http:get:: /
 
             An explanation of the API with links of where to go next.
@@ -458,7 +458,7 @@ class LowDataAdapter(object):
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
-        '''
+        """
         import inspect
 
         # Grab all available client interfaces
@@ -476,7 +476,7 @@ class LowDataAdapter(object):
         }
 
     def POST(self, **kwargs):
-        '''
+        """
         The primary execution interface for the rest of the API
 
         .. http:post:: /
@@ -527,7 +527,7 @@ class LowDataAdapter(object):
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
-        '''
+        """
         return {
             'return': list(self.exec_lowstate()),
         }
@@ -535,7 +535,7 @@ class LowDataAdapter(object):
 
 class Minions(LowDataAdapter):
     def GET(self, mid=None):
-        '''
+        """
         A convenience URL for getting lists of minions or getting minion
         details
 
@@ -571,7 +571,7 @@ class Minions(LowDataAdapter):
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
-        '''
+        """
         cherrypy.request.lowstate = [{
             'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         }]
@@ -580,7 +580,7 @@ class Minions(LowDataAdapter):
         }
 
     def POST(self, **kwargs):
-        '''
+        """
         Start an execution command and immediately return the job id
 
         .. http:post:: /minions
@@ -634,7 +634,7 @@ class Minions(LowDataAdapter):
         :status 202: success
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
-        '''
+        """
         for chunk in cherrypy.request.lowstate:
             chunk['client'] = 'local_async'
         job_data = list(self.exec_lowstate())
@@ -651,7 +651,7 @@ class Minions(LowDataAdapter):
 
 class Jobs(LowDataAdapter):
     def GET(self, jid=None):
-        '''
+        """
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
 
@@ -717,7 +717,7 @@ class Jobs(LowDataAdapter):
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
-        '''
+        """
         cherrypy.request.lowstate = [{
             'client': 'runner',
             'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
@@ -729,7 +729,7 @@ class Jobs(LowDataAdapter):
 
 
 class Login(LowDataAdapter):
-    '''
+    """
     All interactions with this REST API must be authenticated. Authentication
     is performed through Salt's eauth system. You must set the eauth backend
     and allowed users by editing the :conf_master:`external_auth` section in
@@ -743,7 +743,7 @@ class Login(LowDataAdapter):
 
     If the request is initiated programmatically, the request must contain a
     :mailheader:`X-Auth-Token` header with valid and active session id.
-    '''
+    """
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': False,
         'tools.salt_auth.on': False,
@@ -756,7 +756,7 @@ class Login(LowDataAdapter):
         self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self):
-        '''
+        """
         Present the login interface
 
         .. http:get:: /login
@@ -782,7 +782,7 @@ class Login(LowDataAdapter):
 
         :status 401: authentication required
         :status 406: requested Content-Type not available
-        '''
+        """
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
@@ -792,7 +792,7 @@ class Login(LowDataAdapter):
         }
 
     def POST(self, **kwargs):
-        '''
+        """
         Authenticate against Salt's eauth system
 
         .. versionchanged:: 0.8.0
@@ -851,7 +851,7 @@ class Login(LowDataAdapter):
         :status 200: success
         :status 401: could not authenticate using provided credentials
         :status 406: requested Content-Type not available
-        '''
+        """
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
             creds = cherrypy.serving.request.lowstate[0]
@@ -890,11 +890,11 @@ class Logout(LowDataAdapter):
     })
 
     def POST(self):
-        '''
+        """
         Destroy the currently active session and expire the session cookie
 
         .. versionadded:: 0.8.0
-        '''
+        """
         cherrypy.lib.sessions.expire() # set client-side to expire
         cherrypy.session.regenerate() # replace server-side with new
 
@@ -909,16 +909,16 @@ class Run(LowDataAdapter):
     })
 
     def exec_lowstate(self):
-        '''
+        """
         Override exec_lowstate to avoid pulling token from the session
-        '''
+        """
         lowstate = cherrypy.request.lowstate
 
         for chunk in lowstate:
             yield self.api.run(chunk)
 
     def POST(self, **kwargs):
-        '''
+        """
         Run commands bypassing the normal session handling
 
         .. versionadded:: 0.8.0
@@ -971,19 +971,19 @@ class Run(LowDataAdapter):
         :status 200: success
         :status 401: authentication failed
         :status 406: requested Content-Type not available
-        '''
+        """
         return {
             'return': list(self.exec_lowstate()),
         }
 
 
 class Events(object):
-    '''
+    """
     The event bus on the Salt master exposes a large variety of things, notably
     when executions are started on the master and also when minions ultimately
     return their results. This URL provides a real-time window into a running
     Salt infrastructure.
-    '''
+    """
     exposed = True
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
@@ -1002,7 +1002,7 @@ class Events(object):
         self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self, token=None):
-        '''
+        """
         Return an HTTP stream of the Salt master event bus; this stream is
         formatted per the Server Sent Events (SSE) spec
 
@@ -1044,7 +1044,7 @@ class Events(object):
 
         :status 200: success
         :status 401: could not authenticate using provided credentials
-        '''
+        """
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
@@ -1084,9 +1084,9 @@ class App(object):
 
 
 class API(object):
-    '''
+    """
     Collect configuration and URL map for building the CherryPy app
-    '''
+    """
     url_map = {
         'index': LowDataAdapter,
         'login': Login,
@@ -1108,10 +1108,10 @@ class API(object):
             setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
 
     def get_conf(self):
-        '''
+        """
         Combine the CherryPy configuration with the rest_cherrypy config values
         pulled from the master config and return the CherryPy configuration
-        '''
+        """
         conf = {
             'global': {
                 'server.socket_host': self.apiopts.get('host', '0.0.0.0'),
@@ -1143,9 +1143,9 @@ class API(object):
 
 
 def get_app(opts):
-    '''
+    """
     Returns a WSGI app and a configuration dictionary
-    '''
+    """
     apiopts = opts.get(__name__.rsplit('.', 2)[-2], {}) # rest_cherrypy opts
 
     # Add Salt and salt-api config options to the main CherryPy config dict

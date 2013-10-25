@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-'''
+"""
 The setup script for saltapi
-'''
+"""
 
 import os
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var

@@ -1,8 +1,8 @@
-'''
+"""
 A script to start the CherryPy WSGI server
 
 This is run by ``salt-api`` and started in a multiprocess.
-'''
+"""
 # pylint: disable=C0103
 
 # Import Python libs
@@ -58,9 +58,9 @@ def __virtual__():
     return False
 
 def verify_certs(self, *args):
-    '''
+    """
     Sanity checking for the specified SSL certificates
-    '''
+    """
     msg = ("Could not find a certificate: {0}\n"
             "If you want to quickly generate a self-signed certificate, "
             "use the tls.create_self_signed_cert function in Salt")
@@ -70,9 +70,9 @@ def verify_certs(self, *args):
             raise Exception(msg.format(arg))
 
 def start():
-    '''
+    """
     Start the server loop
-    '''
+    """
     from . import app
     root, apiopts, conf = app.get_app(__opts__)
 

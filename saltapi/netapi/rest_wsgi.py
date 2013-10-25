@@ -1,4 +1,4 @@
-'''
+"""
 A minimalist REST API for Salt
 ==============================
 
@@ -128,7 +128,7 @@ Usage examples
 :status 200: success
 :status 401: authentication required
 
-'''
+"""
 import errno
 import json
 import os
@@ -158,18 +158,18 @@ def __virtual__():
     return False
 
 class HTTPError(Exception):
-    '''
+    """
     A custom exception that can take action based on an HTTP error code
-    '''
+    """
     def __init__(self, code, message):
         self.code = code
         Exception.__init__(self, '{0}: {1}'.format(code, message))
 
 def mkdir_p(path):
-    '''
+    """
     mkdir -p
     http://stackoverflow.com/a/600612/127816
-    '''
+    """
     try:
         os.makedirs(path)
     except OSError as exc: # Python >2.5
@@ -178,18 +178,18 @@ def mkdir_p(path):
         else: raise
 
 def read_body(environ):
-    '''
+    """
     Pull the body from the request and return it
-    '''
+    """
     length = environ.get('CONTENT_LENGTH', '0')
     length = 0 if length == '' else int(length)
 
     return environ['wsgi.input'].read(length)
 
 def get_json(environ):
-    '''
+    """
     Return the request body as JSON
-    '''
+    """
     content_type = environ.get('CONTENT_TYPE', '')
     if content_type != 'application/json':
         raise HTTPError(406, 'JSON required')
@@ -200,10 +200,10 @@ def get_json(environ):
         raise HTTPError(400, exc)
 
 def get_headers(data, extra_headers=None):
-    '''
+    """
     Takes the response data as well as any additional headers and returns a
     tuple of tuples of headers suitable for passing to start_response()
-    '''
+    """
     response_headers = {
         'Content-Length': str(len(data)),
     }
@@ -214,20 +214,20 @@ def get_headers(data, extra_headers=None):
     return response_headers.items()
 
 def run_chunk(environ, lowstate):
-    '''
+    """
     Expects a list of lowstate dictionaries that are executed and returned in
     order
-    '''
+    """
     client = environ['SALT_APIClient']
 
     for chunk in lowstate:
         yield client.run(chunk)
 
 def dispatch(environ):
-    '''
+    """
     Do any path/method dispatching here and return a JSON-serializable data
     structure appropriate for the response
-    '''
+    """
     method = environ['REQUEST_METHOD'].upper()
 
     if method == 'GET':
@@ -240,9 +240,9 @@ def dispatch(environ):
         raise HTTPError(405, 'Method Not Allowed')
 
 def saltenviron(environ):
-    '''
+    """
     Make Salt's opts dict and the APIClient available in the WSGI environ
-    '''
+    """
     if not '__opts__' in locals():
         import salt.config
         __opts__ = salt.config.client_config(
@@ -252,10 +252,10 @@ def saltenviron(environ):
     environ['SALT_APIClient'] = saltapi.APIClient(__opts__)
 
 def application(environ, start_response):
-    '''
+    """
     Process the request and return a JSON response. Catch errors and return the
     appropriate HTTP code.
-    '''
+    """
     # Instantiate APIClient once for the whole app
     saltenviron(environ)
 
@@ -287,9 +287,9 @@ def application(environ, start_response):
     return (ret,)
 
 def start():
-    '''
+    """
     Start simple_server()
-    '''
+    """
     from wsgiref.simple_server import make_server
 
     short_name = __name__.rsplit('.')[-1]

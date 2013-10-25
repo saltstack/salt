@@ -1,6 +1,6 @@
-'''
+"""
 The salt api module loader interface
-'''
+"""
 # Import python libs
 import os
 
@@ -10,9 +10,9 @@ import saltapi
 
 
 def netapi(opts):
-    '''
+    """
     Return the network api functions
-    '''
+    """
     load = salt.loader._create_loader(
             opts,
             'netapi',
@@ -22,10 +22,10 @@ def netapi(opts):
     return load.gen_functions()
 
 def runner(opts):
-    '''
+    """
     Load the runners, this function bypasses the issue with the altered
     basepath
-    '''
+    """
     load = salt.loader._create_loader(
             opts,
             'runners',
