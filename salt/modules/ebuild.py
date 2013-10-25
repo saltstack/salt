@@ -80,13 +80,28 @@ def _cpv_to_version(cpv):
     return portage.versions.cpv_getversion(cpv)
 
 
-def _process_emerge_err(stderr):
+def _process_emerge_err(stdout, stderr):
     '''
     Used to parse emerge output to provide meaningful output when emerge fails
     '''
     ret = {}
     changes = {}
-    rexp = re.compile(r'([<>=][^ ]+/[^ ]+ [^\n]+)')
+    rexp = re.compile(r'^[<>=][^ ]+/[^ ]+ [^\n]+', re.M)
+
+    slot_conflicts = re.compile(r'^[^ \n]+/[^ ]+:[^ ]', re.M).findall(stderr)
+    if slot_conflicts:
+        changes['slot conflicts'] = slot_conflicts
+
+    blocked = re.compile(r'(?m)^\[blocks .+\] '
+                         r'([^ ]+/[^ ]+-[0-9]+[^ ]+)'
+                         r'.*$').findall(stdout)
+
+    unsatisfied = re.compile(
+            r'Error: The above package list contains').findall(stderr)
+
+    # If there were blocks and emerge could not resolve it.
+    if blocked and unsatisfied:
+        changes['blocked'] = blocked
 
     sections = re.split('\n\n', stderr)
     for section in sections:
@@ -98,7 +113,7 @@ def _process_emerge_err(stderr):
             changes['use'] = rexp.findall(section)
         elif 'The following mask changes' in section:
             changes['mask'] = rexp.findall(section)
-    ret['changes'] = changes
+    ret['changes'] = {'Needed changes': changes}
     return ret
 
 
@@ -547,7 +562,7 @@ def install(name=None,
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
-        return _process_emerge_err(call['stderr'])
+        return _process_emerge_err(call['stdout'], call['stderr'])
     new = list_pkgs()
     changes.update(__salt__['pkg_resource.find_changes'](old, new))
     return changes
@@ -592,7 +607,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
-        return _process_emerge_err(call['stderr'])
+        return _process_emerge_err(call['stdout'], call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -620,7 +635,7 @@ def upgrade(refresh=True):
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
-        return _process_emerge_err(call['stderr'])
+        return _process_emerge_err(call['stdout'], call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
