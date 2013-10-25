@@ -83,7 +83,9 @@ def append(name, **kwargs):
 
 
 def set_policy(name, **kwargs):
-    '''Sets policy for iptables firewall tables'''
+    '''
+    Sets policy for iptables firewall tables
+    '''
     ret = {'name': name,
         'changes': {},
         'result': None,
@@ -113,8 +115,11 @@ def set_policy(name, **kwargs):
         ret['comment'] = 'Failed to set iptables default policy'
         return ret
 
-def flush(name,**kwargs):
-    '''Flush current iptables state'''
+
+def flush(name, **kwargs):
+    '''
+    Flush current iptables state
+    '''
     ret = {'name': name,
         'changes': {},
         'result': None,
