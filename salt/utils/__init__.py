@@ -100,8 +100,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
