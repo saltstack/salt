@@ -2,7 +2,6 @@
 
 # Import python libs
 import sys
-from xml.etree import ElementTree as ElementTree
 import re
 
 # Import Salt Testing libs
@@ -14,7 +13,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 from salt.modules import virt
 from salt.modules import config
-from salt._compat import ElementTree as _ElementTree
+from salt._compat import ElementTree as ET
 import salt.utils
 
 # Import third party libs
@@ -45,7 +44,7 @@ class VirtTestCase(TestCase):
             nicp,
             'kvm'
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
@@ -62,7 +61,7 @@ class VirtTestCase(TestCase):
             'kvm',
             boot_dev='cdrom'
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'cdrom')
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
@@ -79,7 +78,7 @@ class VirtTestCase(TestCase):
             'kvm',
             boot_dev='cdrom network'
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         devs = root.findall('.//boot')
         self.assertTrue(len(devs) == 2)
 
@@ -98,7 +97,7 @@ class VirtTestCase(TestCase):
             serial_type='pty',
             console=True
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
 
@@ -118,7 +117,7 @@ class VirtTestCase(TestCase):
             console=True,
             telnet_port=22223
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console/source').attrib['service'], '22223')
@@ -138,7 +137,7 @@ class VirtTestCase(TestCase):
             serial_type='tcp',
             console=True
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertIsInstance(int(root.find('devices/console/source').attrib['service']), int)
@@ -158,7 +157,7 @@ class VirtTestCase(TestCase):
             serial_type='pty',
             console=False
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console'), None)
 
@@ -177,7 +176,7 @@ class VirtTestCase(TestCase):
             serial_type='tcp',
             console=False,
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console'), None)
 
@@ -229,7 +228,7 @@ class VirtTestCase(TestCase):
             ' which comes with Python 2.7')
     def test_gen_vol_xml_for_kvm(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
@@ -239,7 +238,7 @@ class VirtTestCase(TestCase):
             ' which comes with Python 2.7')
     def test_gen_vol_xml_for_esxi(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'vmname/system.vmdk')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
@@ -258,7 +257,7 @@ class VirtTestCase(TestCase):
             nicp,
             'kvm',
             )
-        root = ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'kvm')
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, str(512 * 1024))
@@ -299,7 +298,7 @@ class VirtTestCase(TestCase):
             nicp,
             'esxi',
             )
-        root = _ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, str(512 * 1024))
@@ -367,7 +366,7 @@ class VirtTestCase(TestCase):
             nicp,
             'esxi',
             )
-        root = _ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, str(512 * 1024))
@@ -416,7 +415,7 @@ class VirtTestCase(TestCase):
             nicp,
             'kvm',
             )
-        root = _ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'kvm')
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, str(512 * 1024))
@@ -438,7 +437,7 @@ class VirtTestCase(TestCase):
             nicp,
             'esxi'
             )
-        root = _ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
         self.assertTrue(len(controllers) == 1)
         controller = controllers[0]
@@ -458,7 +457,7 @@ class VirtTestCase(TestCase):
             nicp,
             'kvm'
             )
-        root = _ElementTree.fromstring(xml_data)
+        root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
         # There should be no controller
         self.assertTrue(len(controllers) == 0)

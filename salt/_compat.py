@@ -21,7 +21,7 @@ except ImportError:
     except ImportError:
         try:
             # normal cElementTree install
-            import cElementTree as ElementTree
+            import elementtree.cElementTree as ElementTree
         except ImportError:
             try:
                 # normal ElementTree install
