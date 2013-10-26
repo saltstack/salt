@@ -3,18 +3,6 @@
 Module for running arbitrary tests
 '''
 
-# Import Python libs
-import os
-import sys
-import time
-import random
-
-# Import Salt libs
-import salt
-import salt.version
-import salt.loader
-
-
 __virtualname__ = 'test'
 
 def __virtual__():
