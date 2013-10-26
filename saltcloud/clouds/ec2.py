@@ -79,6 +79,9 @@ import datetime
 import urllib
 import urllib2
 
+# Import salt libs
+from salt._compat import ElementTree as ET
+
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
@@ -90,7 +93,6 @@ from saltcloud.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
-from saltcloud._compat import ElementTree as ET
 
 
 # Get logging started
