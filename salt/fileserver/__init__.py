@@ -128,7 +128,7 @@ class Fileserver(object):
 
     def update(self, back=None):
         '''
-        Update all of the fileservers that support the update function or the
+        Update all of the file-servers that support the update function or the
         named fileserver only.
         '''
         back = self._gen_back(back)
@@ -139,7 +139,7 @@ class Fileserver(object):
 
     def envs(self, back=None, sources=False):
         '''
-        Return the environments for the named backend or all backends
+        Return the environments for the named backend or all back-ends
         '''
         back = self._gen_back(back)
         ret = set()
