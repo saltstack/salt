@@ -914,7 +914,8 @@ class Map(Cloud):
                 for vm_name, vm_details in vms.copy().iteritems():
                     if vm_details == 'Absent':
                         query_map[alias][driver].pop(vm_name)
-                    elif vm_details['state'].lower() != 'running' and vm_details['state'].lower() != 'active':
+                    elif vm_details['state'].lower() not in ('running',
+                                                             'active'):
                         query_map[alias][driver].pop(vm_name)
                 if not query_map[alias][driver]:
                     query_map[alias].pop(driver)
