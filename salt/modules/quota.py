@@ -8,6 +8,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -20,11 +21,11 @@ __func_alias__ = {
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on POSIX-like systems with setquota binary available
     '''
-    if salt.utils.is_windows():
-        return False
-    return 'quota'
+    if not salt.utils.is_windows() and salt.utils.which('setquota'):
+        return 'quota'
+    return False
 
 
 def report(mount):
@@ -115,7 +116,9 @@ def set_(device, **kwargs):
 
     if 'group' in kwargs:
         if 'user' in kwargs:
-            return {'Error': 'Please specify a user or group, not both.'}
+            raise SaltInvocationError(
+                'Please specify a user or group, not both.'
+            )
         cmd += ' -g {0} '.format(kwargs['group'])
         parsed = _parse_quota(device, '-g')
         if kwargs['group'] in parsed:
@@ -125,7 +128,7 @@ def set_(device, **kwargs):
         ret = 'Group: {0}'.format(kwargs['group'])
 
     if not current:
-        return {'Error': 'A valid user or group was not found'}
+        raise CommandExecutionError('A valid user or group was not found')
 
     for limit in ('block-soft-limit', 'block-hard-limit',
                   'file-soft-limit', 'file-hard-limit'):
@@ -138,8 +141,12 @@ def set_(device, **kwargs):
                                         current['file-hard-limit'],
                                         device)
 
-    __salt__['cmd.run'](cmd)
-
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Unable to set desired quota. Error follows: \n{0}'
+            .format(result['stderr'])
+        )
     return {ret: current}
 
 
