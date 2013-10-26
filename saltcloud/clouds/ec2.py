@@ -78,7 +78,9 @@ import binascii
 import datetime
 import urllib
 import urllib2
-import xml.etree.ElementTree as ET
+
+# Import salt libs
+from salt._compat import ElementTree as ET
 
 # Import saltcloud libs
 import saltcloud.utils
