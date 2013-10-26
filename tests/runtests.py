@@ -91,6 +91,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run runner tests'
         )
         self.test_selection_group.add_option(
+            '-l',
+            '--loader',
+            default=False,
+            action='store_true',
+            help='Run loader tests'
+        )
+        self.test_selection_group.add_option(
             '-u',
             '--unit',
             '--unit-tests',
@@ -112,7 +119,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if self.options.coverage and any((
                 self.options.module, self.options.client, self.options.shell,
                 self.options.unit, self.options.state, self.options.runner,
-                self.options.name, os.geteuid() != 0,
+                self.options.loader, self.options.name, os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -124,13 +131,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         # Set test suite defaults if no specific suite options are provided
         if not any((self.options.module, self.options.client,
                     self.options.shell, self.options.unit, self.options.state,
-                    self.options.runner, self.options.name)):
+                    self.options.runner, self.options.loader,
+                    self.options.name)):
             self.options.module = True
             self.options.client = True
             self.options.shell = True
             self.options.unit = True
             self.options.runner = True
             self.options.state = True
+            self.options.loader = True
 
         self.start_coverage(
             branch=True,
@@ -161,6 +170,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.state or
                  self.options.module or
                  self.options.client or
+                 self.options.loader or
                  named_tests):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -202,7 +212,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         status = []
         if not any([self.options.client, self.options.module,
                     self.options.runner, self.options.shell,
-                    self.options.state, self.options.name]):
+                    self.options.state, self.options.loader,
+                    self.options.name]):
             return status
 
         with TestDaemon(self):
@@ -212,6 +223,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, load_from_name=True)
                     status.append(results)
+            if self.options.loader:
+                status.append(self.run_integration_suite('loader', 'Loader'))
             if self.options.runner:
                 status.append(self.run_integration_suite('runners', 'Runner'))
             if self.options.module:
