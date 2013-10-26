@@ -5,10 +5,10 @@
     :license: Apache 2.0, see LICENSE for more details.
 
 
-    integration.loader
-    ~~~~~~~~~~~~~~~~~~
+    integration.loader.ext_modules
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test Salt's loader
+    Test Salt's loader regarding external overrides
 '''
 
 # Import Salt Testing libs
@@ -19,9 +19,9 @@ ensure_in_syspath('../')
 import integration
 
 
-class LoaderTest(integration.ModuleCase):
+class LoaderOverridesTest(integration.ModuleCase):
 
-    def test_overridden_internam_module_funcis(self):
+    def test_overridden_internal(self):
         funcs = self.run_function('sys.list_functions')
 
         # We placed a test module under _modules.
@@ -43,4 +43,4 @@ class LoaderTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(LoaderTest)
+    run_tests(LoaderOverridesTest)
