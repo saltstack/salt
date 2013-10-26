@@ -38,10 +38,10 @@ import pprint
 import urllib
 import urllib2
 import logging
-import xml.etree.ElementTree as ET
 
 # Import salt libs
 import salt.utils
+from saltcloud._compat import ElementTree as ET
 
 # Import salt cloud libs
 import saltcloud.utils

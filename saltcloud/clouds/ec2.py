@@ -78,7 +78,6 @@ import binascii
 import datetime
 import urllib
 import urllib2
-import xml.etree.ElementTree as ET
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -91,6 +90,7 @@ from saltcloud.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+from saltcloud._compat import ElementTree as ET
 
 
 # Get logging started
