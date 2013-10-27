@@ -21,18 +21,28 @@ class TestWhich(integration.TestCase):
     expected.
     '''
 
+    # The mock patch bellow will make sure that ALL calls to the which function
+    # returns None
     @patch('salt.utils.which', lambda exe: None)
     def test_missing_binary_in_linux(self):
         self.assertTrue(
             salt.utils.which('this-binary-does-not-exist') is None
         )
 
+    # The mock patch bellow will make sure that ALL calls to the which function
+    # return whatever is sent to it
     @patch('salt.utils.which', lambda exe: exe)
     def test_existing_binary_in_linux(self):
         self.assertTrue(salt.utils.which('this-binary-exists-under-linux'))
 
+    # The mock patch bellow, since we're not providing the return value, we
+    # will be able to tweak it within the test case. The testcase MUST accept
+    # an arguemnt which is the MagicMock'ed object
     @patch('os.access')
     def test_existing_binary_in_windows(self, osaccess):
+        # We define the side_effect attribute on the mocked object in order to
+        # specify which calls return which values. First call to os.access
+        # returns X, the second Y, the third Z, etc...
         osaccess.side_effect = [
             # The first os.access should return False(the abspath one)
             False,
@@ -44,7 +54,7 @@ class TestWhich(integration.TestCase):
         ]
         # Let's patch os.environ to provide a custom PATH variable
         with patch.dict(os.environ, {'PATH': '/bin'}):
-            # Let's also patch is_widows to return True
+            # Let's also patch is_windows to return True
             with patch('salt.utils.is_windows', lambda: True):
                 self.assertEqual(
                     salt.utils.which('this-binary-exists-under-windows'),
