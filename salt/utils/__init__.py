@@ -277,13 +277,13 @@ def which(exe=None):
 
         for path in search_path.split(os.pathsep):
             full_path = os.path.join(path, exe)
-            # Check for .exe on Windows if passed executable does not end in
-            # '.exe'. Allows both 'cmd.exe' and 'cmd' to be matched.
-            if is_windows() and not full_path.endswith('.exe'):
+            if os.access(full_path, os.X_OK):
+                return full_path
+            elif is_windows() and not full_path.endswith('.exe'):
+                # Check for .exe on Windows if passed executable does not end
+                # in '.exe'. Allows both 'cmd.exe' and 'cmd' to be matched.
                 if os.access(full_path + '.exe', os.X_OK):
                     return full_path + '.exe'
-            elif os.access(full_path, os.X_OK):
-                return full_path
         log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
