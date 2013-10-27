@@ -684,9 +684,13 @@ def get_id(root_dir=None, minion_id=False):
     if root_dir is None:
         root_dir = syspaths.ROOT_DIR
 
+    config_dir = syspaths.CONFIG_DIR
+    if config_dir.startswith(root_dir):
+        config_dir = config_dir.split(root_dir, 1)[-1]
+
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
-                            syspaths.CONFIG_DIR.lstrip(syspaths.ROOT_DIR),
+                            config_dir.lstrip('\\'),
                             'minion_id')
     try:
         with salt.utils.fopen(id_cache) as idf:
