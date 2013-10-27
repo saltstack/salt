@@ -50,7 +50,7 @@ def present(name,
         If user exists, forcibly change the password
     tags
         Optionally set user tags for user
-    permissions
+    perms
         A list of dicts with vhost keys and 3-tuple values
     runas
         Name of the user to run the command
@@ -81,9 +81,10 @@ def present(name,
             if tags:
                 result = __salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
-            for vhost, perm in perms:
-                result = __salt__['rabbitmq.set_permissions'](
-                    vhost, name, perm[0], perm[1], perm[2], runas)
+            for element in perms:
+                for vhost, perm in element.items():
+                    result = __salt__['rabbitmq.set_permissions'](
+                        vhost, name, perm[0], perm[1], perm[2], runas)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:
@@ -97,10 +98,11 @@ def present(name,
                 result.update(__salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
                 )
-            for vhost, perm in perms:
-                result.update(__salt__['rabbitmq.set_permissions'](
-                    vhost, name, perm[0], perm[1], perm[2], runas)
-                )
+            for element in perms:
+                for vhost, perm in element.items():
+                    result.update(__salt__['rabbitmq.set_permissions'](
+                        vhost, name, perm[0], perm[1], perm[2], runas)
+                    )
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)
