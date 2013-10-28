@@ -180,6 +180,7 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
                 candidate = line.split()
