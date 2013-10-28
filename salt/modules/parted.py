@@ -35,6 +35,10 @@ __func_alias__ = {
 }
 
 
+VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
+                   'cyl', 'chs', 'compact'])
+
+
 def __virtual__():
     '''
     Only work on POSIX-like systems
@@ -88,9 +92,7 @@ def part_list(device, unit=None):
             )
 
     if unit:
-        valid = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
-                    'cyl', 'chs', 'compact'])
-        if unit not in valid:
+        if unit not in VALID_UNITS:
             raise CommandExecutionError(
                 'Invalid unit passed to partition.part_list'
             )
@@ -388,6 +390,18 @@ def mklabel(device, label_type):
     return out
 
 
+def _validate_partition_boundary(boundary):
+    try:
+        for unit in VALID_UNITS:
+            if boundary.endswith(unit):
+                return
+        int(boundary)
+    except Exception:
+        raise CommandExecutionError(
+            'Invalid partition boundary passed: "{0}"'.format(boundary)
+        )
+
+
 def mkpart(device, part_type, fs_type, start, end):
     '''
     partition.mkpart device part_type fs_type start end
@@ -419,13 +433,8 @@ def mkpart(device, part_type, fs_type, start, end):
             'Invalid fs_type passed to partition.mkpart'
         )
 
-    try:
-        int(start)
-        int(end)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid minor partition boundary passed to partition.mkpart'
-        )
+    _validate_partition_boundary(start)
+    _validate_partition_boundary(end)
 
     cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
         device, part_type, fs_type, start, end
@@ -467,13 +476,8 @@ def mkpartfs(device, part_type, fs_type, start, end):
             'Invalid fs_type passed to partition.mkpartfs'
         )
 
-    try:
-        int(start)
-        int(end)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed to partition.mkpartfs'
-        )
+    _validate_partition_boundary(start)
+    _validate_partition_boundary(end)
 
     cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
         device, part_type, fs_type, start, end
@@ -536,13 +540,8 @@ def rescue(device, start, end):
     if dev not in os.listdir('/dev'):
         raise CommandExecutionError('Invalid device passed to partition.rescue')
 
-    try:
-        int(start)
-        int(end)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed to partition.rescue'
-        )
+    _validate_partition_boundary(start)
+    _validate_partition_boundary(end)
 
     cmd = 'parted -m -s {0} rescue {1} {2}'.format(device, start, end)
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -576,13 +575,8 @@ def resize(device, minor, start, end):
             'Invalid minor number passed to partition.resize'
         )
 
-    try:
-        int(start)
-        int(end)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed to partition.resize'
-        )
+    _validate_partition_boundary(start)
+    _validate_partition_boundary(end)
 
     out = __salt__['cmd.run'](
         'parted -m -s -- {0} resize {1} {2} {3}'.format(
