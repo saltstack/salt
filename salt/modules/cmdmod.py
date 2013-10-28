@@ -804,6 +804,12 @@ def script(source,
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    def _cleanup_tempfile(path):
+        try:
+            os.remove(path)
+        except (IOError, OSError) as exc:
+            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
+                      .format(path, exc))
 
     if isinstance(env, string_types):
         salt.utils.warn_until(
@@ -819,17 +825,31 @@ def script(source,
     else:
         path = __salt__['cp.cache_file'](source, __env__)
         if not path:
+            _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
                     'stderr': '',
                     'cache_error': True}
+
     if template:
-        __salt__['cp.get_template'](source, path, template, __env__, **kwargs)
+        fn_ = __salt__['cp.get_template'](source,
+                                          path,
+                                          template,
+                                          __env__,
+                                          **kwargs)
+        if not fn_:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
     else:
         if not salt.utils.is_windows():
             fn_ = __salt__['cp.cache_file'](source, __env__)
             if not fn_:
+                _cleanup_tempfile(path)
                 return {'pid': 0,
                         'retcode': 1,
                         'stdout': '',
@@ -849,7 +869,7 @@ def script(source,
                umask=umask,
                timeout=timeout,
                reset_system_locale=reset_system_locale)
-    os.remove(path)
+    _cleanup_tempfile(path)
     return ret
 
 
