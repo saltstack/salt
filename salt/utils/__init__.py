@@ -310,7 +310,8 @@ def which(exe=None):
                 exe, search_path
             )
         )
-    log.trace('No executable was passed to be searched by which')
+    else:
+        log.trace('No executable was passed to be searched by which')
     return None
 
 
