@@ -45,7 +45,7 @@ and each event tag has a list of reactor SLS files to be run.
         - /srv/reactor/start.sls       # Things to do when a minion starts
         - /srv/reactor/monitor.sls     # Other things to do
 
-      - 'salt/cloud/\*/destroyed':     # Globs can be used to matching tags
+      - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
         - /srv/reactor/decommision.sls # Things to do when a server is removed
 
 
@@ -140,9 +140,9 @@ a reactor fomular would look like this:
 
     clean_tmp:
       cmd.cmd.run:
-        - tgt: '\*'
+        - tgt: '*'
         - arg:
-          - rm -rf /tmp/\*
+          - rm -rf /tmp/*
 
 The ``arg`` option takes a list of arguments as they would be presented on the
 command line, so the above declaration is the same as running this salt
@@ -150,7 +150,7 @@ command:
 
 .. code-block:: bash
 
-    salt '\*' cmd.run 'rm -rf /tmp/\*'
+    salt '*' cmd.run 'rm -rf /tmp/*'
 
 Use the ``expr_form`` argument to specify a matcher:
 
@@ -161,7 +161,7 @@ Use the ``expr_form`` argument to specify a matcher:
         - tgt: 'os:Ubuntu'
         - expr_form: grain
         - arg:
-          - rm -rf /tmp/\*
+          - rm -rf /tmp/*
 
 
     clean_tmp:
@@ -169,4 +169,4 @@ Use the ``expr_form`` argument to specify a matcher:
         - tgt: 'G@roles:hbase_master'
         - expr_form: compound
         - arg:
-          - rm -rf /tmp/\*
+          - rm -rf /tmp/*
