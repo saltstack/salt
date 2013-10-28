@@ -48,10 +48,10 @@ except ImportError:
 
 try:
     import fcntl
-    HAS_FNCTL = True
+    HAS_FCNTL = True
 except ImportError:
     # fcntl is not available on windows
-    HAS_FNCTL = False
+    HAS_FCNTL = False
 
 try:
     import win32api
@@ -964,7 +964,7 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    if HAS_FNCTL:
+    if HAS_FCNTL:
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -980,7 +980,7 @@ def fopen(*args, **kwargs):
 
 def flopen(*args, **kwargs):
     fhandle = open(*args, **kwargs)
-    if HAS_FNCTL:
+    if HAS_FCNTL:
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
