@@ -274,7 +274,7 @@ def which(exe=None):
         # default path based on busybox's default
         default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
         search_path = os.environ.get('PATH', default_path)
-        path_ext = os.environ.get('PATHEXT', '')
+        path_ext = os.environ.get('PATHEXT', '.EXE')
         ext_list = path_ext.split(';')
 
         @real_memoize
