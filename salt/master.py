@@ -50,7 +50,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
-from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.debug import enable_sigusr1_handler, inspect_function
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 
@@ -829,6 +829,15 @@ class AESFuncs(object):
             return {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return {}
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
+            return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
@@ -916,6 +925,15 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
+            return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
@@ -956,6 +974,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
+            return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
@@ -988,6 +1015,15 @@ class AESFuncs(object):
         if 'id' not in load or 'fun' not in load:
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
             return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
@@ -1023,6 +1059,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
+            return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
@@ -1057,6 +1102,15 @@ class AESFuncs(object):
             # Can overwrite master files!!
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
             return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
@@ -1125,6 +1179,15 @@ class AESFuncs(object):
         if 'id' not in load:
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if 'tok' not in load:
+            log.error(
+                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                .format(
+                    load['id'],
+                    inspect_stack()['co_name'],
+                    'tok'
+                ))
             return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
