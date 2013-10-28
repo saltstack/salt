@@ -800,7 +800,7 @@ def create(vm_=None, call=None):
 
         params = {'Action': 'RequestSpotInstances',
                   'InstanceCount': '1',
-                  'Type': 'one-time',
+                  'Type': spot_config['type'] if 'type' in spot_config else 'one-time',
                   'SpotPrice': spot_config['spot_price']}
 
         # All of the necessary launch parameters for a VM when using
