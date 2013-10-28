@@ -16,7 +16,7 @@ Documentation System
 ----------------------------
 
 The documentation system was put together by Seth House, much of the
-documentation is being maintained by Seth
+documentation is being maintained by Seth.
 
 Developers
 ----------------------------
@@ -45,6 +45,7 @@ epoelke@gmail.com <epoelke@heartflow.com>
 Eric Poelke <epoelke@gmail.com>
 Erik Nolte <enolte@beyondoblivion.com>
 Evan Borgstrom <evan@fatbox.ca>
+Henrik Holmboe <henrik@holmboe.se>
 Jacob Albretsen <jakea@xmission.com>
 Jed Glazner <jglazner@coldcrow.com>
 Jeff Bauer <jbauer@rubic.com>
@@ -87,3 +88,7 @@ Salt is a rapidly growing project with a large community, to view all
 contributors please check ohloh, this file can sometimes be out of date:
 
 https://www.ohloh.net/p/salt/contributors
+
+To see current statistics check out the Github Pulse page:
+
+https://github.com/saltstack/salt/pulse
