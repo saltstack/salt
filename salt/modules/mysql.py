@@ -3,9 +3,10 @@
 Module to provide MySQL compatibility to salt.
 
 :depends:   - MySQLdb Python module
+
 .. note::
 
-        On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb need to be installed.
+    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb need to be installed.
 
 :configuration: In order to connect to MySQL, certain configuration is required
     in /etc/salt/minion on the relevant minions. Some sample configs might look
@@ -189,7 +190,8 @@ def _grant_to_tokens(grant):
             continue
 
         if phrase == 'grants':
-            if token.endswith(',') or exploded_grant[position_tracker+1] == 'ON':  # Read-ahead
+            if token.endswith(',') \
+                    or exploded_grant[position_tracker + 1] == 'ON':  # Read-ahead
                 cleaned_token = token.rstrip(',')
                 if multiword_statement:
                     multiword_statement.append(cleaned_token)
