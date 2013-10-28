@@ -71,7 +71,7 @@ class Schedule(object):
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
         salt.utils.daemonize_if(self.opts)
-        if 'jid_include' in self.opts and self.opts['jid_include'] is True:
+        if 'jid_include' in data and data['jid_include']:
             log.info("XXX adding this job to the jobcache")
             # write this to /var/cache/salt/minion/proc
 
@@ -169,7 +169,8 @@ class Schedule(object):
             else:
                 log.debug('Running scheduled job: {0}'.format(job))
 
-            if 'jid_include' in self.opts:
+
+            if 'jid_include' in data:
                 log.info("XXX This job was scheduled with jid_include, adding to cache")
                 if 'maxrunning' in self.opts:
                     log.info("XXX This job was scheduled with a max number of {}".format(self.opts['maxrunning']))
