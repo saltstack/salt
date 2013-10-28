@@ -10,6 +10,7 @@ import time
 import signal
 import tempfile
 import traceback
+import inspect
 
 # Import salt libs
 import salt.utils
@@ -50,3 +51,10 @@ def enable_sigusr1_handler():
     #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
     if not salt.utils.is_windows():
         signal.signal(signal.SIGUSR1, _handle_sigusr1)
+
+
+def inspect_stack():
+    '''
+    Return a string of which function we are currently in.
+    '''
+    return {'co_name': inspect.stack()[1][3]}
