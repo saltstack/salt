@@ -314,6 +314,8 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
+    elif test is not None:
+        opts['test'] = test
     else:
         opts['test'] = __opts__.get('test', None)
 
