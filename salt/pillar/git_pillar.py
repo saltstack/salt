@@ -9,6 +9,36 @@ so:
 
     ext_pillar:
       - git: master git://gitserver/git-pillar.git
+
+Note that this is not the same thing as configuring pillar data using the
+:conf_master:`pillar_roots` parameter. The branch referenced in the
+:conf_master:`ext_pillar` entry above (``master``), would evaluate to the
+``base`` environment, so this branch needs to contain a ``top.sls`` with a
+``base`` section in it, like this:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - foo
+
+To use other environments from the same git repo as git_pillar sources, just
+add additional lines, like so:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: master git://gitserver/git-pillar.git
+      - git: dev git://gitserver/git-pillar.git
+
+In this case, the ``dev`` branch would need its own ``top.sls`` with a ``dev``
+section in it, like this:
+
+.. code-block:: yaml
+
+    dev:
+      '*':
+        - bar
 '''
 
 # Import python libs
