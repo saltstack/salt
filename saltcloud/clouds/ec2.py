@@ -843,9 +843,9 @@ def create(vm_=None, call=None):
     if ex_iam_profile:
         try:
             if ex_iam_profile.startswith('arn:aws:iam:'):
-                params['IamInstanceProfile.Arn'] = ex_iam_profile
+                params[spot_prefix + 'IamInstanceProfile.Arn'] = ex_iam_profile
             else:
-                params['IamInstanceProfile.Name'] = ex_iam_profile
+                params[spot_prefix + 'IamInstanceProfile.Name'] = ex_iam_profile
         except AttributeError:
             raise SaltCloudConfigError(
                 '\'iam_profile\' should be a string value.'
