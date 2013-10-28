@@ -88,8 +88,8 @@ def part_list(device, unit=None):
             )
 
     if unit:
-        valid = set('s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
-                    'cyl', 'chs', 'compact')
+        valid = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
+                    'cyl', 'chs', 'compact'])
         if unit not in valid:
             raise CommandExecutionError(
                 'Invalid unit passed to partition.part_list'
@@ -155,7 +155,7 @@ def align_check(device, part_type, partition):
             'Invalid device passed to partition.align_check'
         )
 
-    if part_type not in set('minimal', 'optimal'):
+    if part_type not in set(['minimal', 'optimal']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.align_check'
         )
@@ -348,8 +348,8 @@ def mkfs(device, fs_type):
     if dev not in os.listdir('/dev'):
         raise CommandExecutionError('Invalid device passed to partition.mkfs')
 
-    if fs_type not in set('ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs'):
+    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
     cmd = 'mkfs.{0} {1}'.format(fs_type, device)
@@ -377,8 +377,8 @@ def mklabel(device, label_type):
             'Invalid device passed to partition.mklabel'
         )
 
-    if label_type not in set('aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
-                             'msdos', 'pc98', 'sun'):
+    if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
+                             'msdos', 'pc98', 'sun']):
         raise CommandExecutionError(
             'Invalid label_type passed to partition.mklabel'
         )
@@ -408,13 +408,13 @@ def mkpart(device, part_type, fs_type, start, end):
             'Invalid device passed to partition.mkpart'
         )
 
-    if part_type not in set('primary', 'logical', 'extended'):
+    if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type not in set('ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs'):
+    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
@@ -456,13 +456,13 @@ def mkpartfs(device, part_type, fs_type, start, end):
             'Invalid device passed to partition.mkpartfs'
         )
 
-    if part_type not in set('primary', 'logical', 'extended'):
+    if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpartfs'
         )
 
-    if fs_type not in set('ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs'):
+    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpartfs'
         )
@@ -645,11 +645,11 @@ def set_(device, minor, flag, state):
             'Invalid minor number passed to partition.set'
         )
 
-    if flag not in set('bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG'):
+    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
+                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
         raise CommandExecutionError('Invalid flag passed to partition.set')
 
-    if state not in set('on', 'off'):
+    if state not in set(['on', 'off']):
         raise CommandExecutionError('Invalid state passed to partition.set')
 
     cmd = 'parted -m -s {0} set {1} {2} {3}'.format(device, minor, flag, state)
@@ -680,8 +680,8 @@ def toggle(device, partition, flag):
             'Invalid partition number passed to partition.toggle'
         )
 
-    if flag not in set('bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG'):
+    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
+                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
         raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
     cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
