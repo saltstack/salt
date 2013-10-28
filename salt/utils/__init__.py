@@ -274,16 +274,36 @@ def which(exe=None):
         # default path based on busybox's default
         default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
         search_path = os.environ.get('PATH', default_path)
+        path_ext = os.environ.get('PATHEXT', '')
+        ext_list = path_ext.split(';')
+
+        @real_memoize
+        def _exe_has_ext():
+            '''
+            Do a case insensitive test if exe has a file extension match in
+            PATHEXT
+            '''
+            for ext in ext_list:
+                try:
+                    pattern = r'.*\.' + ext.lstrip('.') + r'$'
+                    re.match(pattern, exe, re.I).groups()
+                    return True
+                except AttributeError:
+                    continue
+            return False
 
         for path in search_path.split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
-            elif is_windows() and not full_path.endswith('.exe'):
-                # Check for .exe on Windows if passed executable does not end
-                # in '.exe'. Allows both 'cmd.exe' and 'cmd' to be matched.
-                if os.access(full_path + '.exe', os.X_OK):
-                    return full_path + '.exe'
+            elif is_windows() and not _exe_has_ext():
+                # On Windows, check for any extensions in PATHEXT.
+                # Allows both 'cmd' and 'cmd.exe' to be matched.
+                for ext in ext_list:
+                    # Windows filesystem is case insensitive so we
+                    # safely rely on that behaviour
+                    if os.access(full_path + ext, os.X_OK):
+                        return full_path + ext
         log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
