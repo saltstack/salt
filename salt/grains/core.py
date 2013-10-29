@@ -536,7 +536,7 @@ def _virtual(osdata):
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir('/sys/bus/xen'):
-                    if 'xen' in __salt__['cmd.run']('dmesg').lower():
+                    if 'xen:' in __salt__['cmd.run']('dmesg').lower():
                         grains['virtual_subtype'] = 'Xen PV DomU'
                     elif os.listdir('/sys/bus/xen/drivers'):
                         # An actual DomU will have several drivers
