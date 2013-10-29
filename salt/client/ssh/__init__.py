@@ -593,8 +593,8 @@ class Single(object):
         # 4. execute command
         if self.arg_str.startswith('cmd.run'):
             cmd_args = ' '.join(self.arg_str.split()[1:])
-        if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
-            self.arg_str = "cmd.run '{0}'".format(cmd_args)
+            if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
+                self.arg_str = "cmd.run '{0}'".format(cmd_args)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],
