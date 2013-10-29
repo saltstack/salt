@@ -238,7 +238,8 @@ def highstate(test=None, queue=False, **kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
-    opts = copy.copy(__opts__)
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -279,6 +280,9 @@ def highstate(test=None, queue=False, **kwargs):
         log.error(msg.format(cache_file))
     os.umask(cumask)
     _set_retcode(ret)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
@@ -307,7 +311,8 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
         err = ['Pillar failed to render with the following messages:']
         err += __pillar__['_errors']
         return err
-    opts = copy.copy(__opts__)
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -365,6 +370,9 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
         log.error(msg.format(cache_file))
     os.umask(cumask)
     _set_retcode(ret)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     with salt.utils.fopen(cfn, 'w+') as fp_:
         try:
             serial.dump(high_, fp_)
@@ -398,11 +406,13 @@ def top(topfn, test=None, queue=False, **kwargs):
         err = ['Pillar failed to render with the following messages:']
         err += __pillar__['_errors']
         return err
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
-        __opts__['test'] = True
+        opts['test'] = True
     else:
-        __opts__['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(__opts__)
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.state.HighState(opts)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     try:
@@ -414,6 +424,9 @@ def top(topfn, test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     _set_retcode(ret)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
@@ -489,7 +502,8 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
-    opts = copy.copy(__opts__)
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -503,6 +517,9 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     if errors:
         __context__['retcode'] = 1
         return errors
@@ -583,7 +600,8 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    'fun': comps[1],
                    '__id__': name,
                    'name': name})
-    opts = copy.copy(__opts__)
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -597,6 +615,9 @@ def single(fun, name, test=None, queue=False, **kwargs):
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
