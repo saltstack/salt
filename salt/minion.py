@@ -212,6 +212,8 @@ class SMinion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+
+        # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
@@ -232,6 +234,7 @@ class SMinion(object):
                 self.gen_modules()
         else:
             self.gen_modules()
+
 
     def gen_modules(self):
         '''
