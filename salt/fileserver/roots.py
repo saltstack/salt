@@ -11,10 +11,10 @@ import os
 
 try:
     import fcntl
-    HAS_FNCTL = True
+    HAS_FCNTL = True
 except ImportError:
     # fcntl is not available on windows
-    HAS_FNCTL = False
+    HAS_FCNTL = False
 
 # Import salt libs
 import salt.fileserver
@@ -173,7 +173,7 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    if HAS_FNCTL:
+    if HAS_FCNTL:
         with salt.utils.flopen(cache_path, 'w') as fp_:
             fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
             fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
