@@ -203,6 +203,34 @@ for the user running the salt-master.
 
     GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
 
+
+Using Git as an External Pillar Source
+======================================
+
+Git repositories can also be used to provide :doc:`Pillar </topics/pillar/index>`
+data, using the :doc:`External Pillar </topics/development/external_pillars>`
+system. To define a git external pillar, you can add a section like the
+following to your master config file:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: <branch> <repo>
+
+
+The ``<branch>`` param is the branch containing the pillar SLS tree, and the
+``<repo>`` param is the URI for the repository. The below example would add the
+``master`` branch of the specified repo as an external pillar source.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: master https://domain.com/pillar.git
+
+More information on the git external pillar can be found :mod:`here
+<salt.pillar.git_pillar>`.
+
+
 .. _faq-gitfs-bug:
 
 Why aren't my custom modules/states/etc. syncing to my Minions?
