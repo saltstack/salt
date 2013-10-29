@@ -1139,18 +1139,12 @@ def mod_repo(repo, **kwargs):
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid),
-                                                 **kwargs)
-                if not (out.find('imported') or out.find('not changed')):
+                ret= __salt__['cmd.run_all'](cmd.format(ks, keyid),
+                                             **kwargs)
+                if ret['retcode'] != 0:
                     error_str = 'Error: key retrieval failed: {0}'
-                    raise Exception(
-                        error_str.format(
-                            cmd.format(
-                                ks,
-                                keyid
-                            )
-                        )
-                    )
+                    raise Exception(error_str.format(ret['stdout']))
+
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url)
