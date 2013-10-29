@@ -393,14 +393,14 @@ def check_db(*names, **kwargs):
         pkgname, pkgarch = _pkg_arch(name)
         ret.setdefault(name, {})['found'] = bool(
             [x for x in yumbase.searchPackages(('name', 'arch'), (pkgname,))
-             if x.name == pkgname and x.arch == pkgarch]
+             if x.name == pkgname and x.arch in (pkgarch, 'noarch')]
         )
         if ret[name]['found'] is False:
             provides = [
                 x for x in yumbase.whatProvides(
                     pkgname, None, None
                 ).returnPackages()
-                if x.arch == pkgarch
+                if x.arch in (pkgarch, 'noarch')
             ]
             if provides:
                 for pkg in provides:
