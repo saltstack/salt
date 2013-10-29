@@ -715,7 +715,8 @@ def retcode(cmd,
             umask=None,
             quiet=False,
             timeout=None,
-            reset_system_locale=True):
+            reset_system_locale=True,
+            **kwargs):
     '''
     Execute a shell command and return the command's return code.
 
