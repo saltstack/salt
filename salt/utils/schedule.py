@@ -20,6 +20,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 '''
 
 # Import python libs
+import os
 import time
 import datetime
 import multiprocessing
@@ -29,7 +30,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
-
+import salt.payload
 log = logging.getLogger(__name__)
 
 
@@ -70,10 +71,39 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
-        salt.utils.daemonize_if(self.opts)
+
+        proc_fn = os.path.join(
+            salt.minion.get_proc_dir(self.opts['cachedir']),
+            ret['jid']
+        )
+
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is not set for this job we can ignore all this
         if 'jid_include' in data and data['jid_include']:
-            log.info("XXX adding this job to the jobcache")
+            jobcount = 0
+            for basefilename in  os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
+                fn =  os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
+                with salt.utils.fopen(fn, 'r') as fp_:
+                    job = salt.payload.Serial(self.opts).load(fp_)
+                    log.debug('schedule.handle_func: Checking job against fun {}: {}'.format(ret['fun'], job))
+                    if ret['fun'] == job['fun']:
+                        jobcount += 1
+                        log.debug('schedule.handle_func: Incrementing jobcount, now {}, maxrunning is {}'.format(jobcount, data['maxrunning']))
+                        if jobcount > data['maxrunning']:
+                            log.debug('schedule.handle_func: The scheduled job {0} was not started, {1} already running'.format(func, data['maxrunning']))
+                            return False
+
+        salt.utils.daemonize_if(self.opts)
+
+        ret['pid'] = os.getpid()
+
+        if 'jid_include' in data and data['jid_include']:
+            log.debug('schedule.handle_func: adding this job to the jobcache with data {}'.format(ret))
             # write this to /var/cache/salt/minion/proc
+            with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
         args = None
         if 'args' in data:
@@ -121,6 +151,7 @@ class Schedule(object):
                         func, returner
                         )
                     )
+        os.unlink(proc_fn)
 
     def eval(self):
         '''
@@ -169,15 +200,10 @@ class Schedule(object):
             else:
                 log.debug('Running scheduled job: {0}'.format(job))
 
-
             if 'jid_include' in data:
-                log.info("XXX This job was scheduled with jid_include, adding to cache")
-                if 'maxrunning' in self.opts:
-                    log.info("XXX This job was scheduled with a max number of {}".format(self.opts['maxrunning']))
-                    # search jobcache for this process
-                    # if there are more than maxrunning, log info and return
-                    # else
-                    # continue
+                log.debug('schedule: This job was scheduled with jid_include, adding to cache')
+                if 'maxrunning' in data:
+                    log.debug('schedule: This job was scheduled with a max number of {}'.format(data['maxrunning']))
 
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
