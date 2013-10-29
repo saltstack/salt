@@ -16,6 +16,13 @@ warnings.filterwarnings(
     r'^(salt|salt\.(.*))$'  # Match module(s) 'salt' and 'salt.<whatever>'
 )
 
+# While we are supporting Python2.6, hide nested with-statements warnings
+warnings.filterwarnings(
+    'ignore',
+    'With-statements now directly support multiple context managers',
+    DeprecationWarning
+)
+
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
