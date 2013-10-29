@@ -349,6 +349,12 @@ FREEZER_INCLUDES = [
     'distutils.version',
     'numbers',
     'json',
+    'M2Crypto',
+    'Cookie',
+    'asyncore',
+    'fileinput',
+    'email',
+    'email.mime.*',
 ]
 
 if IS_WINDOWS_PLATFORM:
@@ -360,17 +366,7 @@ if IS_WINDOWS_PLATFORM:
         'ntsecuritycon',
         '_winreg',
         'wmi',
-        'fileinput',
         'site',
-        'email',
-        'email.mime.audio',
-        'email.mime.base',
-        'email.mime.image',
-        'email.mime.message',
-        'email.mime.multipart',
-        'email.mime.nonmultipart',
-        'email.mime.text',
-        'email.mime.application',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
