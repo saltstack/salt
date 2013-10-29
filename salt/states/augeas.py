@@ -3,6 +3,8 @@
 Configuration management using Augeas
 =====================================
 
+.. versionadded:: 0.17.0
+
 This state requires the ``augeas`` Python module.
 
 .. _Augeas: http://augeas.net/
