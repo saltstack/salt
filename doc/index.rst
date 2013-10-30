@@ -102,4 +102,6 @@ Releases
 Reference
 =========
 
-* :doc:`contents`
+* :doc:`Command-line interface <ref/cli/salt-cloud>`
+
+* :doc:`Full table of contents </contents>`
