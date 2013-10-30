@@ -87,7 +87,7 @@ Options
 .. option:: --list-images
 
     Display a list of images available in configured cloud providers.
-    Pass the cloud provider that available images are desired on, aka 
+    Pass the cloud provider that available images are desired on, aka
     "linode", or pass "all" to list images for all configured cloud providers.
 
 .. option:: --list-sizes
@@ -134,33 +134,33 @@ Options
 
     Disable all colored output.
 
-    
+
 Examples
 ========
 
-To create 4 VMs named web1, web2, db1 and db2 from specified profiles:
+To create 4 VMs named web1, web2, db1 and db2 from specified profiles::
 
-# salt-cloud -p fedora_rackspace web1 web2 db1 db2
+    salt-cloud -p fedora_rackspace web1 web2 db1 db2
 
-To read in a map file and create all VMs specified therein:
+To read in a map file and create all VMs specified therein::
 
-# salt-cloud -m /path/to/cloud.map
+    salt-cloud -m /path/to/cloud.map
 
-To read in a map file and create all VMs specified therein in parallel:
+To read in a map file and create all VMs specified therein in parallel::
 
-# salt-cloud -m /path/to/cloud.map -P
+    salt-cloud -m /path/to/cloud.map -P
 
-To delete any VMs specified in the map file:
+To delete any VMs specified in the map file::
 
-# salt-cloud -m /path/to/cloud.map -d
+    salt-cloud -m /path/to/cloud.map -d
 
-To delete any VMs NOT specified in the map file:
+To delete any VMs NOT specified in the map file::
 
-# salt-cloud -m /path/to/cloud.map -H
+    salt-cloud -m /path/to/cloud.map -H
 
-To display the status of all VMs specified in the map file:
+To display the status of all VMs specified in the map file::
 
-# salt-cloud -m /path/to/cloud.map -Q
+    salt-cloud -m /path/to/cloud.map -Q
 
 See also
 ========
