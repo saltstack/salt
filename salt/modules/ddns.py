@@ -153,6 +153,7 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1'):
 
         salt ns1 ddns.delete example.com host1 A
     '''
+    name = str(name)
     fqdn = '{}.{}'.format(name, zone)
     request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
 
