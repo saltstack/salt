@@ -80,6 +80,7 @@ On Debian based distributions:
 
     $ apt-get install gcc
     $ apt-get install python-dev
+    $ apt-get install libevent-dev
     $ pip install gevent
 
 
