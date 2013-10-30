@@ -16,7 +16,7 @@ install the salt-master, please review the installation documentation:
 http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
-       
+
     Halite only works with Salt versions greater than 0.17.
 
 
@@ -58,7 +58,7 @@ install that piece as well. On RHEL based distros, use one of the following:
 
 
 .. code-block:: bash
-       
+
     $ yum install python-devel
     $ yum install gcc
     $ pip install gevent
@@ -131,7 +131,7 @@ and Gevent out of the box.
 
 To configure cherrypy, add the following to the bottom of your /etc/salt/master file:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     halite:
       level: 'debug'
@@ -147,7 +147,7 @@ To configure cherrypy, add the following to the bottom of your /etc/salt/master 
 
 If you wish to use paste:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     halite:
       level: 'debug'
@@ -163,7 +163,7 @@ If you wish to use paste:
 
 To use gevent:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     halite:
       level: 'debug'
