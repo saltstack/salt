@@ -178,6 +178,11 @@ def get_colors(use=True):
     if not use:
         for color in colors:
             colors[color] = ''
+    if isinstance(use, str):
+        # Try to set all of the colors to the passed color
+        if use in colors:
+            for color in colors:
+                colors[color] = colors[use]
 
     return colors
 
