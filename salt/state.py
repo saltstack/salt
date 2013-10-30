@@ -2093,6 +2093,9 @@ class BaseHighState(object):
                                 if arg.keys()[0] == 'order':
                                     found = True
                     if not found:
+                        if not isinstance(state[name][s_dec], list):
+                            # quite certainly a syntax error, managed elsewhere
+                            continue
                         state[name][s_dec].append(
                                 {'order': self.iorder}
                                 )
