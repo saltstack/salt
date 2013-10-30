@@ -181,6 +181,25 @@ would look something like this:
       file.recurse:
         - source: salt://code/flask
         - include_empty: True
+
+A more complex ``recurse`` example:
+
+.. code-block:: yaml
+
+    {% set site_user = 'testuser' %}
+    {% set site_name = 'test_site' %}
+    {% set project_name = 'test_proj' %}
+    {% set sites_dir = 'test_dir' %}
+
+    django-project:
+      file.recurse:
+        - name: {{ sites_dir }}/{{ site_name }}/{{ project_name }}
+        - user: {{ site_user }}
+        - dir_mode: 2775
+        - file_mode: '0644'
+        - template: jinja
+        - source: salt://project/templates_dir
+        - include_empty: True
 '''
 
 # Import python libs
@@ -1400,6 +1419,10 @@ def recurse(name,
         If this setting is applied then the named templating engine will be
         used to render the downloaded file, currently jinja, mako, and wempy
         are supported
+
+    .. note::
+
+        The template option is required when recursively applying templates.
 
     context
         Overrides default context variables passed to the template.

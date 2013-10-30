@@ -2009,7 +2009,7 @@ class BaseHighState(object):
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment
-                        if env_key in matches and fnmatch.filter(self.avail[env_key], inc_sls):
+                        if env_key in matches or fnmatch.filter(self.avail[env_key], inc_sls):
                             resolved_envs = [env_key]
                         else:
                             resolved_envs = []

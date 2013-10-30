@@ -160,6 +160,8 @@ def parse_args_and_kwargs(func, args, data=None):
         # this function accepts **kwargs, pack in the publish data
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
+    log.debug('Parsed args: {0}'.format(_args))
+    log.debug('Parsed kwargs: {0}'.format(kwargs))
     return _args, kwargs
 
 

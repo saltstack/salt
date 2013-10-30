@@ -163,7 +163,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
-    repo = ['-o', 'APT::Default-Release={0!r}'.format(fromrepo)] \
+    repo = ['-o', 'APT::Default-Release={0}'.format(fromrepo)] \
         if fromrepo else ''
 
     # Refresh before looking for the latest version available
@@ -180,6 +180,7 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
                 candidate = line.split()
@@ -423,7 +424,7 @@ def install(name=None,
     __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
@@ -452,10 +453,9 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    ret = {'installed': __salt__['pkg_resource.find_changes'](old, new)}
+    ret = {'installed': salt.utils.compare_dicts(old, new)}
     if action == 'purge':
-        ret['removed'] = __salt__['pkg_resource.find_changes'](old_removed,
-                                                               new_removed)
+        ret['removed'] = salt.utils.compare_dicts(old_removed, new_removed)
         return ret
     else:
         return ret['installed']
@@ -546,7 +546,7 @@ def upgrade(refresh=True, **kwargs):
     __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def _clean_pkglist(pkgs):
@@ -1139,18 +1139,12 @@ def mod_repo(repo, **kwargs):
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid),
-                                                 **kwargs)
-                if not (out.find('imported') or out.find('not changed')):
+                ret = __salt__['cmd.run_all'](cmd.format(ks, keyid),
+                                              **kwargs)
+                if ret['retcode'] != 0:
                     error_str = 'Error: key retrieval failed: {0}'
-                    raise Exception(
-                        error_str.format(
-                            cmd.format(
-                                ks,
-                                keyid
-                            )
-                        )
-                    )
+                    raise Exception(error_str.format(ret['stdout']))
+
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url)

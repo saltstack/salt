@@ -48,10 +48,10 @@ except ImportError:
 
 try:
     import fcntl
-    HAS_FNCTL = True
+    HAS_FCNTL = True
 except ImportError:
     # fcntl is not available on windows
-    HAS_FNCTL = False
+    HAS_FCNTL = False
 
 try:
     import win32api
@@ -100,8 +100,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -274,18 +274,44 @@ def which(exe=None):
         # default path based on busybox's default
         default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
         search_path = os.environ.get('PATH', default_path)
+        path_ext = os.environ.get('PATHEXT', '.EXE')
+        ext_list = path_ext.split(';')
+
+        @real_memoize
+        def _exe_has_ext():
+            '''
+            Do a case insensitive test if exe has a file extension match in
+            PATHEXT
+            '''
+            for ext in ext_list:
+                try:
+                    pattern = r'.*\.' + ext.lstrip('.') + r'$'
+                    re.match(pattern, exe, re.I).groups()
+                    return True
+                except AttributeError:
+                    continue
+            return False
 
         for path in search_path.split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
+            elif is_windows() and not _exe_has_ext():
+                # On Windows, check for any extensions in PATHEXT.
+                # Allows both 'cmd' and 'cmd.exe' to be matched.
+                for ext in ext_list:
+                    # Windows filesystem is case insensitive so we
+                    # safely rely on that behaviour
+                    if os.access(full_path + ext, os.X_OK):
+                        return full_path + ext
         log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
             )
         )
-    log.trace('No executable was passed to be searched by which')
+    else:
+        log.trace('No executable was passed to be searched by which')
     return None
 
 
@@ -938,7 +964,7 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    if HAS_FNCTL:
+    if HAS_FCNTL:
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -946,6 +972,23 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        if 'lock' in kwargs:
+            fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+    return fhandle
+
+
+def flopen(*args, **kwargs):
+    fhandle = open(*args, **kwargs)
+    if HAS_FCNTL:
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
+        except AttributeError:
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
@@ -1618,6 +1661,28 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
         return cmp_result not in cmp_map['==']
     else:
         return cmp_result in cmp_map[oper]
+
+
+def compare_dicts(old=None, new=None):
+    '''
+    Compare before and after results from various salt functions, returning a
+    dict describing the changes that were made.
+    '''
+    ret = {}
+    for key in set((new or {}).keys()).union((old or {}).keys()):
+        if key not in old:
+            # New key
+            ret[key] = {'old': '',
+                        'new': new[key]}
+        elif key not in new:
+            # Key removed
+            ret[key] = {'new': '',
+                        'old': old[key]}
+        elif new[key] != old[key]:
+            # Key modified
+            ret[key] = {'old': old[key],
+                        'new': new[key]}
+    return ret
 
 
 def argspec_report(functions, module=''):

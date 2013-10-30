@@ -317,7 +317,7 @@ def install(name=None, sources=None, **kwargs):
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -423,7 +423,7 @@ def remove(name=None, pkgs=None, **kwargs):
         os.unlink(adminfile)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

@@ -393,14 +393,14 @@ def check_db(*names, **kwargs):
         pkgname, pkgarch = _pkg_arch(name)
         ret.setdefault(name, {})['found'] = bool(
             [x for x in yumbase.searchPackages(('name', 'arch'), (pkgname,))
-             if x.name == pkgname and x.arch == pkgarch]
+             if x.name == pkgname and x.arch in (pkgarch, 'noarch')]
         )
         if ret[name]['found'] is False:
             provides = [
                 x for x in yumbase.whatProvides(
                     pkgname, None, None
                 ).returnPackages()
-                if x.arch == pkgarch
+                if x.arch in (pkgarch, 'noarch')
             ]
             if provides:
                 for pkg in provides:
@@ -688,7 +688,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade(refresh=True):
@@ -731,7 +731,7 @@ def upgrade(refresh=True):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -796,7 +796,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

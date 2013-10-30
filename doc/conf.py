@@ -101,7 +101,7 @@ intersphinx_mapping = {
 }
 # <---- Intersphinx Settings -------------------------------------------------
 
-# -- General configuration -----------------------------------------------------
+# -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
 copyright = '2013 SaltStack, Inc.'

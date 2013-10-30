@@ -20,6 +20,8 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.utils
 import salt.utils.thin
+import salt.utils.verify
+import salt.utils.event
 import salt.roster
 import salt.state
 import salt.loader
@@ -59,6 +61,29 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
       done
       SALT=/tmp/.salt/salt-call
+      if [ {{2}} = 'md5' ]
+      then
+         for md5_candidate in \\
+            md5sum            \\
+            md5               ;
+         do
+            if [ $(which $md5_candidate 2>/dev/null) ]
+            then
+                SUMCHECK=$(which $md5_candidate)
+                break
+            fi
+         done
+      else
+         SUMCHECK={{2}}
+      fi
+
+      if [ $SUMCHECK = '/sbin/md5' ]
+      then
+         CUT_MARK=4
+      else
+         CUT_MARK=1
+      fi
+
       if [ -f $SALT ]
       then
          if [ $(cat /tmp/.salt/version) != {0} ]
@@ -80,7 +105,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             [ $($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f$CUT_MARK -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
              install -m 0700 -d /tmp/.salt
              echo "{1}"
@@ -101,6 +126,13 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
+        if salt.utils.verify.verify_socket(
+                opts['interface'],
+                opts['publish_port'],
+                opts['ret_port']):
+            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        else:
+            self.event = None
         self.opts = opts
         tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
@@ -126,6 +158,7 @@ class SSH(object):
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
+        self.serial = salt.payload.Serial(opts)
 
     def verify_env(self):
         '''
@@ -304,17 +337,73 @@ class SSH(object):
         for ret in self.handle_ssh():
             yield ret
 
+    def cache_job(self, jid, id_, ret):
+        '''
+        Cache the job information
+        '''
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: {0}'.format(jid)
+            )
+            return False
+        if os.path.exists(os.path.join(jid_dir, 'nocache')):
+            return
+        hn_dir = os.path.join(jid_dir, id_)
+        if not os.path.isdir(hn_dir):
+            os.makedirs(hn_dir)
+        # Otherwise the minion has already returned this jid and it should
+        # be dropped
+        else:
+            log.error(
+                'An extra return was detected from minion {0}, please verify '
+                'the minion, this could be a replay attack'.format(
+                    id_
+                )
+            )
+            return False
+
+        self.serial.dump(
+            ret,
+            # Use atomic open here to avoid the file being read before it's
+            # completely written to. Refs #1935
+            salt.utils.atomicfile.atomic_open(
+                os.path.join(hn_dir, 'return.p'), 'w+'
+            )
+        )
+
     def run(self):
         '''
         Execute the overall routine
         '''
+        jid = salt.utils.prep_jid(
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                self.opts['user'])
+        if self.opts.get('verbose'):
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
+            print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
+            #self.cache_job(jid, host, ret)
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
                     self.opts.get('output', 'nested'),
                     self.opts)
+            if self.event:
+                self.event.fire_event(
+                        ret,
+                        salt.utils.event.tagify(
+                            [jid, 'ret', host],
+                            'job'))
 
 
 class Single(object):
@@ -502,6 +591,10 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
+        if self.arg_str.startswith('cmd.run'):
+            cmd_args = ' '.join(self.arg_str.split()[1:])
+            if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
+                self.arg_str = "cmd.run '{0}'".format(cmd_args)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],

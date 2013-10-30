@@ -253,7 +253,8 @@ def set_user_tags(name, tags, runas=None):
     res = __salt__['cmd.run'](
         'rabbitmqctl set_user_tags {0} {1}'.format(name, tags),
         runas=runas)
-    return [r.split('\t') for r in res.splitlines()]
+    msg = "Tag(s) set"
+    return _format_response(res, msg)
 
 
 def status(user=None):

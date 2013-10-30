@@ -3,7 +3,9 @@
 Configuration management using Augeas
 =====================================
 
-:strong:`NOTE:` This state requires the ``augeas`` Python module.
+.. versionadded:: 0.17.0
+
+This state requires the ``augeas`` Python module.
 
 .. _Augeas: http://augeas.net/
 
@@ -11,31 +13,49 @@ Augeas_ can be used to manage configuration files. Currently only the ``set``
 command is supported via this state. The :mod:`augeas
 <salt.modules.augeas_cfg>` module also has support for get, match, remove, etc.
 
-Examples:
+.. warning::
 
-Set the first entry in ``/etc/hosts`` to ``localhost``:
+    Minimal installations of Debian and Ubuntu have been seen to have packaging
+    bugs with python-augeas, causing the augeas module to fail to import. If
+    the minion has the augeas module installed, and the state fails with a
+    comment saying that the state is unavailable, first restart the salt-minion
+    service. If the problem persists past that, the following command can be
+    run from the master to determine what is causing the import to fail:
 
-.. code-block:: yaml
+    .. code-block:: bash
 
-    hosts:
-      augeas.setvalue:
-        - changes:
-          - /files/etc/hosts/1/canonical: localhost
+        salt minion-id cmd.run 'python -c "from augeas import Augeas"'
 
-Add a new host to ``/etc/hosts`` with the IP address ``192.168.1.1`` and
-hostname ``test``:
+    For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
+    known to resolve the issue.
 
-.. code-block:: yaml
 
-    hosts:
-      augeas.setvalue:
-        - changes:
-          - /files/etc/hosts/2/ipaddr: 192.168.1.1
-          - /files/etc/hosts/2/canonical: foo.bar.com
-          - /files/etc/hosts/2/alias[1]: foosite
-          - /files/etc/hosts/2/alias[2]: foo
+Usage examples:
 
-You can also set a prefix if you want to avoid redundancy:
+1. Set the first entry in ``/etc/hosts`` to ``localhost``:
+
+   .. code-block:: yaml
+
+        hosts:
+          augeas.setvalue:
+            - changes:
+              - /files/etc/hosts/1/canonical: localhost
+
+2. Add a new host to ``/etc/hosts`` with the IP address ``192.168.1.1`` and
+   hostname ``test``:
+
+   .. code-block:: yaml
+
+        hosts:
+          augeas.setvalue:
+            - changes:
+              - /files/etc/hosts/2/ipaddr: 192.168.1.1
+              - /files/etc/hosts/2/canonical: foo.bar.com
+              - /files/etc/hosts/2/alias[1]: foosite
+              - /files/etc/hosts/2/alias[2]: foo
+
+
+A prefix can also be set, to avoid redundancy:
 
 .. code-block:: yaml
 

@@ -317,7 +317,7 @@ def install(name=None, refresh=False, fromrepo=None,
     new = list_pkgs()
 
     rehash()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade():
@@ -344,7 +344,7 @@ def upgrade():
     old = list_pkgs()
     __salt__['cmd.retcode']('{0} -y fug'.format(pkgin))
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -403,7 +403,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     new = list_pkgs()
 
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

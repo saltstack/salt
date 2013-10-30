@@ -22,6 +22,7 @@ from salt.utils.templates import (
     render_jinja_tmpl,
     get_template_context
 )
+from salt.utils.odict import OrderedDict
 
 # Import 3rd party libs
 import yaml
@@ -351,7 +352,6 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateRuntimeError):
             env.from_string('{% load_json as document %}{foo, bar: it works}{% endload %}').render()
 
-
     def test_load_json(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
@@ -436,6 +436,32 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.get_template('main6').render().strip()
         self.assertEqual(rendered, u"it works")
+
+    def test_nested_structures(self):
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ data }}').render(data="foo")
+        self.assertEqual(rendered, u"foo")
+
+        data = OrderedDict([
+            ('foo', OrderedDict([
+                        ('bar', 'baz'),
+                        ('qux', 42)
+                    ])
+            )
+        ])
+
+        rendered = env.from_string('{{ data }}').render(data=data)
+        self.assertEqual(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
+
+        rendered = env.from_string('{{ data }}').render(data=[
+                                                            OrderedDict(
+                                                                foo='bar',
+                                                            ),
+                                                            OrderedDict(
+                                                                baz=42,
+                                                            )
+                                                        ])
+        self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

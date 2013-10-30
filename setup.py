@@ -358,7 +358,9 @@ FREEZER_INCLUDES = [
     'M2Crypto',
     'Cookie',
     'asyncore',
-    'fileinput'
+    'fileinput',
+    'email',
+    'email.mime.*',
 ]
 
 if IS_WINDOWS_PLATFORM:
@@ -370,7 +372,7 @@ if IS_WINDOWS_PLATFORM:
         'ntsecuritycon',
         '_winreg',
         'wmi',
-        'fileinput',
+        'site',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):

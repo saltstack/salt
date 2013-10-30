@@ -699,7 +699,7 @@ def install(name=None,
     __salt__['cmd.run_all'](cmd)
     __context__.pop(_contextkey(jail, chroot), None)
     new = list_pkgs(jail=jail, chroot=chroot)
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None,
@@ -836,7 +836,7 @@ def remove(name=None,
     __salt__['cmd.run_all'](cmd)
     __context__.pop(_contextkey(jail, chroot), None)
     new = list_pkgs(jail=jail, chroot=chroot)
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages, since this is the CLI usage
 delete = remove

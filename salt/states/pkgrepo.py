@@ -157,39 +157,36 @@ def managed(name, **kwargs):
            'result': None,
            'comment': ''}
     repo = {}
-    repokwargs = {}
 
     # pkg.mod_repo has conflicting kwargs, so move 'em around
 
-    for kwarg in kwargs.keys():
-        if kwarg == 'name':
-            if 'ppa' in kwargs:
-                ret['result'] = False
-                ret['comment'] = 'You may not use both the "name" argument ' \
-                                 'and the "ppa" argument.'
-                return ret
-            repokwargs['repo'] = kwargs[kwarg]
-        elif kwarg == 'ppa' and __grains__['os'] == 'Ubuntu':
-            # overload the name/repo value for PPAs cleanly
-            # this allows us to have one code-path for PPAs
-            repo_name = 'ppa:{0}'.format(kwargs[kwarg])
-            repokwargs['repo'] = repo_name
-        elif kwarg == 'humanname':
-            repokwargs['name'] = kwargs[kwarg]
-        elif kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
-                       'order', 'watch', 'watch_in', 'require', 'require_in',
-                       'prereq', 'prereq_in'):
-            pass
-        else:
-            repokwargs[kwarg] = kwargs[kwarg]
+    if 'name' in kwargs:
+        if 'ppa' in kwargs:
+            ret['result'] = False
+            ret['comment'] = 'You may not use both the "name" argument ' \
+                             'and the "ppa" argument.'
+            return ret
+        kwargs['repo'] = kwargs['name']
+    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
+        # overload the name/repo value for PPAs cleanly
+        # this allows us to have one code-path for PPAs
+        repo_name = 'ppa:{0}'.format(kwargs['ppa'])
+        kwargs['repo'] = repo_name
+    if 'repo' not in kwargs:
+        kwargs['repo'] = name
 
-    if 'repo' not in repokwargs:
-        repokwargs['repo'] = name
+    if 'humanname' in kwargs:
+        kwargs['name'] = kwargs['humanname']
+
+    for kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
+                  'order', 'watch', 'watch_in', 'require', 'require_in',
+                  'prereq', 'prereq_in'):
+        kwargs.pop(kwarg, None)
 
     try:
         repo = __salt__['pkg.get_repo'](
-                repokwargs['repo'],
-                ppa_auth=repokwargs.get('ppa_auth', None)
+                kwargs['repo'],
+                ppa_auth=kwargs.get('ppa_auth', None)
         )
     except Exception:
         pass
@@ -198,7 +195,7 @@ def managed(name, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use.  Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    sanitizedkwargs = __salt__['pkg.expand_repo_def'](repokwargs)
+    sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
 
     if repo:
         notset = False
@@ -229,7 +226,7 @@ def managed(name, **kwargs):
         ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
         return ret
     try:
-        __salt__['pkg.mod_repo'](**repokwargs)
+        __salt__['pkg.mod_repo'](**kwargs)
     except Exception as e:
         # This is another way to pass information back from the mod_repo
         # function.
@@ -238,9 +235,9 @@ def managed(name, **kwargs):
                                                                       str(e))
         return ret
     try:
-        repodict = __salt__['pkg.get_repo'](repokwargs['repo'],
-                                            ppa_auth=repokwargs.get('ppa_auth',
-                                                                    None))
+        repodict = __salt__['pkg.get_repo'](kwargs['repo'],
+                                            ppa_auth=kwargs.get('ppa_auth',
+                                                                None))
         if repo:
             for kwarg in sanitizedkwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
@@ -248,7 +245,7 @@ def managed(name, **kwargs):
                               'old': repo.get(kwarg)}
                     ret['changes'][kwarg] = change
         else:
-            ret['changes'] = {'repo': repokwargs['repo']}
+            ret['changes'] = {'repo': kwargs['repo']}
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)

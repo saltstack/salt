@@ -246,12 +246,7 @@ def useradd(pwfile, user, password, opts=''):
         salt '*' apache.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
-    if not os.path.exists(pwfile):
-        opts += 'c'
-
-    cmd = ['htpasswd', '-b{0}'.format(opts), pwfile, user, password]
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out
+    return __salt__['webutil.useradd'](pwfile, user, password, opts)
 
 
 def userdel(pwfile, user):
@@ -264,12 +259,7 @@ def userdel(pwfile, user):
 
         salt '*' apache.userdel /etc/httpd/htpasswd larry
     '''
-    if not os.path.exists(pwfile):
-        return 'Error: The specified htpasswd file does not exist'
-
-    cmd = ['htpasswd', '-D', pwfile, user]
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out
+    return __salt__['webutil.userdel'](pwfile, user)
 
 
 def check_site_enabled(site):

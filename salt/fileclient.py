@@ -615,10 +615,10 @@ class RemoteClient(Client):
 
     def _crypted_transfer(self, load, tries=3, timeout=60, payload='aes'):
         '''
-        In case of authentication errors, try to renogiate authentication
+        In case of authentication errors, try to renegotiate authentication
         and retry the method.
         Indeed, we can fail too early in case of a master restart during a
-        minion state executon call
+        minion state execution call
         '''
         def _do_transfer():
             return self.auth.crypticle.loads(
@@ -695,7 +695,7 @@ class RemoteClient(Client):
                             ofile.write(data['data'])
                 if 'hsum' in data and d_tries < 3:
                     # Master has prompted a file verification, if the
-                    # verification fails, redownload the file. Try 3 times
+                    # verification fails, re-download the file. Try 3 times
                     d_tries += 1
                     with salt.utils.fopen(dest, 'rb') as fp_:
                         hsum = getattr(

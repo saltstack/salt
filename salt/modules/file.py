@@ -1002,41 +1002,58 @@ def blockreplace(path,
     '''
     Replace content of a text block in a file, delimited by line markers
 
-    .. versionadded:: 0.18.0
+    .. versionadded:: Hydrogen
 
-    A block of content delimited by comments can help you manage several lines entries without
-    worrying about old entries removal.
-    Note: this function will store two copies of the file in-memory
-    (the original version and the edited version) in order to detect changes
-    and only edit the targeted file if necessary.
+    A block of content delimited by comments can help you manage several lines
+    entries without worrying about old entries removal.
 
-    :param path: Filesystem path to the file to be edited
-    :param marker_start: The line content identifying a line as the start of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
-        marker is included in final output
-    :param marker_end: The line content identifying a line as the end of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
-        marker is included in final output
-    :param content: The content to be used between the two lines identified by
-        marker_start and marker_stop.
-    :param append_if_not_found: False by default, if markers are not found and
-        set to True then the markers and content will be appended to the file
-    :param backup: The file extension to use for a backup of the file if any
-        edit is made. Set to ``False`` to skip making a backup.
-    :param dry_run: Don't make any edits to the file
-    :param show_changes: Output a unified diff of the old file and the new
-        file. If ``False`` return a boolean if any changes were made.
+    .. note::
 
-    :rtype: bool or str
+        This function will store two copies of the file in-memory (the original
+        version and the edited version) in order to detect changes and only
+        edit the targeted file if necessary.
+
+    path
+        Filesystem path to the file to be edited
+
+    marker_start
+        The line content identifying a line as the start of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespaces or extra content before or after the marker is included in
+        final output
+
+    marker_end
+        The line content identifying a line as the end of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespaces or extra content before or after the marker is included in
+        final output
+
+    content
+        The content to be used between the two lines identified by marker_start
+        and marker_stop.
+
+    append_if_not_found : False
+        If markers are not found and set to ``True`` then, the markers and
+        content will be appended to the file.
+
+    backup
+        The file extension to use for a backup of the file if any edit is made.
+        Set to ``False`` to skip making a backup.
+
+    dry_run
+        Don't make any edits to the file.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``,
+        return a boolean if any changes were made.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.blockreplace /etc/hosts '#-- start managed zone foobar : DO NOT EDIT --' \
-         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\n10.0.1.2 bar.foobar' True
+        salt '*' file.blockreplace /etc/hosts '#-- start managed zone foobar : DO NOT EDIT --' \\
+        '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
+
     '''
     if not os.path.exists(path):
         raise SaltInvocationError("File not found: %s", path)
@@ -1074,7 +1091,7 @@ def blockreplace(path,
 
                     # push new block content in file
                     for cline in content.split("\n"):
-                        new_file.append(cline+"\n")
+                        new_file.append(cline + "\n")
 
                     done = True
 

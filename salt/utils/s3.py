@@ -13,11 +13,11 @@ import logging
 import time
 import urllib
 import urllib2
-import xml.etree.ElementTree as ET
 
 # Import Salt libs
 import salt.utils
 import salt.utils.xmlutil as xml
+from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
 

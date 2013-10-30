@@ -31,26 +31,33 @@ information about the event.
 Mapping Events to Reactor SLS Files
 ===================================
 
-The event tag and data are both critical when working with the reactor system.
-In the master configuration file under the reactor option, tags are associated
-with lists of reactor sls formulas (globs can be used for matching):
+Reactor SLS files and event tags are associated in the master config file.
+By default this is /etc/salt/master, or /etc/salt/master.d/reactor.conf.
+
+In the master config section 'reactor:' is a list of event tags to be matched
+and each event tag has a list of reactor SLS files to be run.
 
 .. code-block:: yaml
 
-    reactor:
-      - 'auth':
-        - /srv/reactor/authreact1.sls
-        - /srv/reactor/authreact2.sls
-      - 'minion_start':
-        - /srv/reactor/start.sls
+    reactor:                           # Master config section "reactor"
+     
+      - 'minion_start':                # Match tag "minion_start"
+        - /srv/reactor/start.sls       # Things to do when a minion starts
+        - /srv/reactor/monitor.sls     # Other things to do
 
-When an event with a tag of ``auth`` is fired, the reactor will catch the event 
-and render the two listed files. The rendered files are standard sls files, so 
-by default they are yaml + Jinja. The Jinja is packed with a few data 
-structures similar to state and pillar sls files. The data available is in 
-``tag`` and ``data`` variables. The ``tag`` variable is just the tag in the 
-fired event and the ``data`` variable is the event's data dict. Here is a
-simple reactor sls:
+      - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
+        - /srv/reactor/decommision.sls # Things to do when a server is removed
+
+
+Reactor sls files are similar to state and pillar sls files.  They are
+by default yaml + Jinja templates and are passed familar context variables.
+
+They differ because of the addtion of the ``tag`` and ``data`` variables.
+
+- The ``tag`` variable is just the tag in the fired event.
+- The ``data`` variable is the event's data dict.
+
+Here is a simple reactor sls:
 
 .. code-block:: yaml
 
@@ -82,23 +89,23 @@ execution.
 Fire an event
 =============
 
-From a minion, run bellow command
+To fire an event from a minion call ``event.fire_master``
 
 .. code-block:: bash
 
     salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
 
-In reactor fomular files that are associated with tag ``foo``, data can be
-accessed via ``data['data']``. Above command passed a dictionary as data, its
-``overstate`` key can be accessed via ``data['data']['overstate']``. See
-:py:mod:`salt.modules.event` for more information.
+After this is called, any reactor sls files matching event tag ``foo`` will 
+execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
+
+See :py:mod:`salt.modules.event` for more information.
 
 Understanding the Structure of Reactor Formulas
 ===============================================
 
 While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to operations. In state, formulas
-information is mapped to the state functions, but in the reactor system,
+data does not translate the same way to operations. In state files formula
+information is mapped to the state functions, but in the reactor system
 information is mapped to a number of available subsystems on the master. These
 systems are the :strong:`LocalClient` and the :strong:`Runners`. The
 :strong:`state declaration` field takes a reference to the function to call in
