@@ -161,11 +161,17 @@ def verify_files(files, user):
         sys.exit(2)
     for fn_ in files:
         dirname = os.path.dirname(fn_)
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname)
-        if not os.path.isfile(fn_):
-            with salt.utils.fopen(fn_, 'w+') as fp_:
-                fp_.write('')
+        try:
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            if not os.path.isfile(fn_):
+                with salt.utils.fopen(fn_, 'w+') as fp_:
+                    fp_.write('')
+        except OSError as err:
+            msg = 'Failed to create path "{0}" - {1}\n'
+            sys.stderr.write(msg.format(fn_, err))
+            sys.exit(err.errno)
+
         stats = os.stat(fn_)
         if uid != stats.st_uid:
             try:
