@@ -41,6 +41,9 @@ Package repositories can be managed with the pkgrepo state:
         - refresh: True
 '''
 
+# Import salt libs
+from salt.modules.apt import _strip_uri
+
 
 def __virtual__():
     '''
@@ -108,7 +111,7 @@ def managed(name, **kwargs):
         components (i.e. 'main') which can be added/modified with the
         "comps" option.
 
-          EXAMPLE: name: deb http://us.archive.ubuntu.com/ubuntu/ precise main
+          EXAMPLE: name: deb http://us.archive.ubuntu.com/ubuntu precise main
 
     disabled
         On apt-based systems, disabled toggles whether or not the repo is
@@ -196,6 +199,8 @@ def managed(name, **kwargs):
     # to use.  Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
     sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    if __grains__['os_family'] == 'Debian':
+        kwargs['repo'] = _strip_uri(kwargs['repo'])
 
     if repo:
         notset = False
@@ -220,10 +225,12 @@ def managed(name, **kwargs):
                     notset = True
         if notset is False:
             ret['result'] = True
-            ret['comment'] = 'Package repo {0} already configured'.format(name)
+            ret['comment'] = ('Package repo {0!r} already configured'
+                              .format(name))
             return ret
     if __opts__['test']:
-        ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
+        ret['comment'] = ('Package repo {0!r} needs to be configured'
+                          .format(name))
         return ret
     try:
         __salt__['pkg.mod_repo'](**kwargs)
@@ -231,8 +238,8 @@ def managed(name, **kwargs):
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
-        ret['comment'] = 'Failed to configure repo "{0}": {1}'.format(name,
-                                                                      str(e))
+        ret['comment'] = ('Failed to configure repo {0!r}: {1}'
+                          .format(name, str(e)))
         return ret
     try:
         repodict = __salt__['pkg.get_repo'](kwargs['repo'],
@@ -248,10 +255,10 @@ def managed(name, **kwargs):
             ret['changes'] = {'repo': kwargs['repo']}
 
         ret['result'] = True
-        ret['comment'] = 'Configured package repo {0}'.format(name)
+        ret['comment'] = 'Configured package repo {0!r}'.format(name)
     except Exception as e:
         ret['result'] = False
-        ret['comment'] = 'Failed to confirm config of repo {0}: {1}'.format(
+        ret['comment'] = 'Failed to confirm config of repo {0!r}: {1}'.format(
             name, str(e))
     return ret
 
