@@ -697,7 +697,6 @@ def list_nodes():
     Return a list of the VMs that in this location
     '''
     ret = {}
-    import pprint
     conn = get_conn()
     server_list = _salt_client().cmd(conn['auth_minion'],
                                    'nova.server_list',
