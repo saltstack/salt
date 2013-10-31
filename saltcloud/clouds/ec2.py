@@ -126,6 +126,8 @@ EC2_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
+DEFAULT_EC2_API_VERSION = '2013-10-01'
+
 if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
@@ -242,11 +244,16 @@ def query(params=None, setname=None, requesturl=None, location=None,
             'ec2.{0}.{1}'.format(location, service_url)
         )
 
+        ec2_api_version = provider.get(
+            'ec2_api_version',
+            DEFAULT_EC2_API_VERSION
+        )
+
         params['AWSAccessKeyId'] = provider['id']
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
         params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = '2013-02-01'
+        params['Version'] = ec2_api_version
         keys = sorted(params.keys())
         values = map(params.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
@@ -919,6 +926,13 @@ def create(vm_=None, call=None):
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
         params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping', ex_blockdevicemappings))
+
+    network_interfaces = config.get_config_value(
+        'network_interfaces', vm_, __opts__, search_global=False
+    )
+
+    if network_interfaces:
+        params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
 
     set_del_root_vol_on_destroy = config.get_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
