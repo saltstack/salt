@@ -418,6 +418,11 @@ def installed(
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
+    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
+        __salt__['pkg.refresh_db']()
+        if os.path.isfile(rtag):
+            os.remove(rtag)
+
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo, **kwargs)
     try:
@@ -449,26 +454,14 @@ def installed(
                 'comment': comment}
 
     comment = []
-    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
-        pkg_ret = __salt__['pkg.install'](name,
-                                          refresh=True,
-                                          version=version,
-                                          fromrepo=fromrepo,
-                                          skip_verify=skip_verify,
-                                          pkgs=pkgs,
-                                          sources=sources,
-                                          **kwargs)
-        if os.path.isfile(rtag):
-            os.remove(rtag)
-    else:
-        pkg_ret = __salt__['pkg.install'](name,
-                                          refresh=False,
-                                          version=version,
-                                          fromrepo=fromrepo,
-                                          skip_verify=skip_verify,
-                                          pkgs=pkgs,
-                                          sources=sources,
-                                          **kwargs)
+    pkg_ret = __salt__['pkg.install'](name,
+                                      refresh=False,
+                                      version=version,
+                                      fromrepo=fromrepo,
+                                      skip_verify=skip_verify,
+                                      pkgs=pkgs,
+                                      sources=sources,
+                                      **kwargs)
     if isinstance(pkg_ret, dict):
         changes = pkg_ret
     elif isinstance(pkg_ret, basestring):
