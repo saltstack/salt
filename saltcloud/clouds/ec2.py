@@ -126,6 +126,8 @@ EC2_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
+DEFAULT_EC2_API_VERSION = '2013-10-01'
+
 if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
@@ -242,11 +244,16 @@ def query(params=None, setname=None, requesturl=None, location=None,
             'ec2.{0}.{1}'.format(location, service_url)
         )
 
+        ec2_api_version = provider.get(
+            'ec2_api_version',
+            DEFAULT_EC2_API_VERSION
+        )
+
         params['AWSAccessKeyId'] = provider['id']
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
         params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = '2013-02-01'
+        params['Version'] = ec2_api_version
         keys = sorted(params.keys())
         values = map(params.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
@@ -754,6 +761,54 @@ def block_device_mappings(vm_):
         'block_device_mappings', vm_, __opts__, search_global=True
     )
 
+def _param_from_config(key, data):
+    '''
+    Return EC2 API parameters based on the given config data.
+
+    Examples:
+    1. List of dictionaries
+    >>> data = [
+    ...     {'DeviceIndex': 0, 'SubnetId': 'subid0', 'AssociatePublicIpAddress': True},
+    ...     {'DeviceIndex': 1, 'SubnetId': 'subid1', 'PrivateIpAddress': '192.168.1.128'}
+    ... ]
+    >>> _param_from_config('NetworkInterface', data)
+    {'NetworkInterface.0.SubnetId': 'subid0', 'NetworkInterface.0.DeviceIndex': 0, 'NetworkInterface.1.SubnetId': 'subid1', 'NetworkInterface.1.PrivateIpAddress': '192.168.1.128', 'NetworkInterface.0.AssociatePublicIpAddress': 'true', 'NetworkInterface.1.DeviceIndex': 1}
+
+    2. List of nested dictionaries
+    >>> data = [
+    ...     {'DeviceName': '/dev/sdf', 'Ebs': {'SnapshotId': 'dummy0', 'VolumeSize': 200, 'VolumeType': 'standard'}},
+    ...     {'DeviceName': '/dev/sdg', 'Ebs': {'SnapshotId': 'dummy1', 'VolumeSize': 100, 'VolumeType': 'standard'}}
+    ... ]
+    >>> _param_from_config('BlockDeviceMapping', data)
+    {'BlockDeviceMapping.0.Ebs.VolumeType': 'standard', 'BlockDeviceMapping.1.Ebs.SnapshotId': 'dummy1', 'BlockDeviceMapping.0.Ebs.VolumeSize': 200, 'BlockDeviceMapping.0.Ebs.SnapshotId': 'dummy0', 'BlockDeviceMapping.1.Ebs.VolumeType': 'standard', 'BlockDeviceMapping.1.DeviceName': '/dev/sdg', 'BlockDeviceMapping.1.Ebs.VolumeSize': 100, 'BlockDeviceMapping.0.DeviceName': '/dev/sdf'}
+
+    3. Dictionary of dictionaries
+    >>> data = { 'Arn': 'dummyarn', 'Name': 'Tester' }
+    >>> _param_from_config('IamInstanceProfile', data)
+    {'IamInstanceProfile.Arn': 'dummyarn', 'IamInstanceProfile.Name': 'Tester'}
+
+    '''
+
+    param = {}
+
+    if isinstance(data, dict):
+        for k, v in data.items():
+            param.update( _param_from_config('%s.%s' % (key, k), v) )
+
+    elif isinstance(data, list) or isinstance(data, tuple):
+        for idx, conf_item in enumerate(data):
+            prefix = '%s.%d' % (key, idx)
+            param.update( _param_from_config(prefix, conf_item) )
+
+    else:
+        if isinstance(data, bool):
+            # convert boolean Trur/False to 'true'/'false'
+            param.update({key: str(data).lower()})
+        else:
+            param.update({key: data})
+
+    return param
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -870,9 +925,14 @@ def create(vm_=None, call=None):
 
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
-        for (idx, block_device_mapping) in enumerate(ex_blockdevicemappings):
-            params['BlockDeviceMapping.%d.DeviceName' % idx] = block_device_mapping['DeviceName']
-            params['BlockDeviceMapping.%d.VirtualName' % idx] = block_device_mapping['VirtualName']
+        params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping', ex_blockdevicemappings))
+
+    network_interfaces = config.get_config_value(
+        'network_interfaces', vm_, __opts__, search_global=False
+    )
+
+    if network_interfaces:
+        params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
 
     set_del_root_vol_on_destroy = config.get_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
@@ -928,10 +988,21 @@ def create(vm_=None, call=None):
         log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
-            params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
-            params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-                set_del_root_vol_on_destroy
-            ).lower()
+            if ex_blockdevicemappings:
+                dev_list = [ dev['DeviceName'] for dev in ex_blockdevicemappings ]
+            else:
+                dev_list = []
+
+            if rd_name in dev_list:
+                dev_index = dev_list.index(rd_name)
+                termination_key = spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index
+                params[termination_key] = str(set_del_root_vol_on_destroy).lower()
+            else:
+                dev_index = len(dev_list)
+                params[spot_prefix + 'BlockDeviceMapping.%d.DeviceName' % dev_index] = rd_name
+                params[spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index] = str(
+                    set_del_root_vol_on_destroy
+                ).lower()
 
     set_del_all_vols_on_destroy = config.get_config_value(
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False
