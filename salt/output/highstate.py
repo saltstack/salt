@@ -128,7 +128,12 @@ def output(data):
                     pass_opts = __opts__
                     if __opts__['color']:
                         pass_opts['color'] = 'CYAN'
-                    changes += salt.output.out_format(ret['changes'], 'nested', pass_opts)
+                    pass_opts['nested_indent'] = 19
+                    changes += '\n'
+                    changes += salt.output.out_format(
+                            ret['changes'],
+                            'nested',
+                            pass_opts)
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
 
