@@ -78,4 +78,4 @@ def output(ret):
     Display ret data
     '''
     nest = NestDisplay()
-    return nest.display(ret, 0, '', '')
+    return nest.display(ret, __opts__.get('nested_indent', 0), '', '')
