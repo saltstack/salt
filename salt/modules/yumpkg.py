@@ -23,6 +23,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
@@ -785,6 +786,13 @@ def remove(name=None, pkgs=None, **kwargs):
         else:
             arch = None
         yumbase.remove(name=target, arch=arch)
+
+    log.info('Performing transaction test')
+    try:
+        callback = yum.callbacks.ProcessTransNoOutputCallback()
+        result = yumbase._doTestTransaction(callback)
+    except yum.Errors.YumRPMCheckError as exc:
+        raise CommandExecutionError('\n'.join(exc.__dict__['value']))
 
     log.info('Resolving dependencies')
     yumbase.resolveDeps()
