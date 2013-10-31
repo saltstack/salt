@@ -40,6 +40,8 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
+from salt.modules.pkg_resource import _repack_pkgs
 
 if salt.utils.is_windows():
     from salt.utils import namespaced_function as _namespaced_function
@@ -812,7 +814,13 @@ def removed(name, pkgs=None, **kwargs):
 
     .. versionadded:: 0.16.0
     '''
-    return _uninstall(action='remove', name=name, pkgs=pkgs, **kwargs)
+    try:
+        return _uninstall(action='remove', name=name, pkgs=pkgs, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': str(exc)}
 
 
 def purged(name, pkgs=None, **kwargs):
@@ -832,7 +840,13 @@ def purged(name, pkgs=None, **kwargs):
 
     .. versionadded:: 0.16.0
     '''
-    return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
+    try:
+        return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': str(exc)}
 
 
 def mod_init(low):
