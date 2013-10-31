@@ -338,6 +338,17 @@ created in the order provided and additional mappings will be ignored. Consult t
         - DeviceName: /dev/sdc
           VirtualName: ephemeral1
 
+You can also use block device mappings to change the size of the root device at the 
+provisioing time. For example, assuming the root device is '/dev/sda', you can set 
+its size to 100G by using the following configuration.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      block_device_mappings:
+        - DeviceName: /dev/sda
+          Ebs.VolumeSize: 100 
+
 
 Tags can be set once an instance has been launched.
 
