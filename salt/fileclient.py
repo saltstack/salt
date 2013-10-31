@@ -243,19 +243,36 @@ class Client(object):
 
         return ''
 
-    def list_states(self, env):
+    def list_states(self, env, limit_traversal=False):
         '''
         Return a list of all available sls modules on the master for a given
         environment
         '''
         states = []
-        for path in self.file_list(env):
-            if path.endswith('.sls'):
-                # is an sls module!
-                if path.endswith('{0}init.sls'.format('/')):
-                    states.append(path.replace('/', '.')[:-9])
-                else:
-                    states.append(path.replace('/', '.')[:-4])
+
+        if limit_traversal:
+            if env not in self.opts['file_roots']:
+                log.warning("During an attempt to list states for env {0}, the environment could not be found in the \
+                            configured file roots".format(env))
+                return states
+            for path in self.opts['file_roots'][env]:
+                for root, dirs, files in os.walk(path, topdown=True):
+                    log.debug("Searching for states in dirs {0} and files {1}".format(dirs, files))
+                    if not [file.endswith('.sls') for file in files]:
+                        #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
+                        del dirs[:]
+                    else:
+                        states.extend([sls_file[:-4] for sls_file in files if sls_file.endswith('.sls')])
+
+        else:
+            for path in self.file_list(env):
+                if path.endswith('.sls'):
+                    # is an sls module!
+                    if path.endswith('{0}init.sls'.format('/')):
+                        states.append(path.replace('/', '.')[:-9])
+                    else:
+                        states.append(path.replace('/', '.')[:-4])
+
         return states
 
     def get_state(self, sls, env):
