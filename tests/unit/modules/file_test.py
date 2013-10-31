@@ -116,7 +116,7 @@ class FileModuleTestCase(TestCase):
             filemod.sed(path, before, after, limit=limit)
 
             with open(path, 'rb') as newfile:
-                self.assertEquals(
+                self.assertEqual(
                     SED_CONTENT.replace(before, ''),
                     newfile.read()
                 )
