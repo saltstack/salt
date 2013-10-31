@@ -125,7 +125,10 @@ def output(data):
                     changes += 'Invalid Changes data: {0}'.format(
                             ret['changes'])
                 else:
-                    changes += salt.output.out_format(ret['changes'], 'nested', __opts__)
+                    pass_opts = __opts__
+                    if __opts__['color']:
+                        pass_opts['color'] = 'CYAN'
+                    changes += salt.output.out_format(ret['changes'], 'nested', pass_opts)
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
 
