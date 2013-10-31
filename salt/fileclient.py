@@ -243,11 +243,14 @@ class Client(object):
 
         return ''
 
-    def list_states(self, env, limit_traversal=False):
+    def list_states(self, env):
         '''
         Return a list of all available sls modules on the master for a given
         environment
         '''
+
+        limit_traversal= self.__opts__.get(['fileserver_limit_traversal'], False)
+
         states = []
 
         if limit_traversal:
