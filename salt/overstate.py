@@ -247,7 +247,6 @@ class OverState(object):
             self.over_run[name] = ret
             yield {name: ret}
 
-
     def stages(self):
         '''
         Execute the stages

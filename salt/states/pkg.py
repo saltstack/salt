@@ -689,7 +689,8 @@ def latest(
                     msg = 'The following packages were already up-to-date: ' \
                         '{0}.'.format(', '.join(sorted(up_to_date)))
                 else:
-                    msg = '{} packages were already up-to-date. '.format(len(up_to_date)) 
+                    msg = ('{} packages were already up-to-date. '
+                           .format(len(up_to_date)))
                 comments.append(msg)
 
             return {'name': name,
@@ -714,7 +715,6 @@ def latest(
                 else:
                     comment += '{} packages were already ' \
                         'up-to-date.'.format(len(up_to_date))
-                    
             return {'name': name,
                     'changes': changes,
                     'result': False,
