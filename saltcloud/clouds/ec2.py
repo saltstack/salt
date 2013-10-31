@@ -974,10 +974,21 @@ def create(vm_=None, call=None):
         log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
-            params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
-            params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-                set_del_root_vol_on_destroy
-            ).lower()
+            if ex_blockdevicemappings:
+                dev_list = [ dev['DeviceName'] for dev in ex_blockdevicemappings ]
+            else:
+                dev_list = []
+
+            if rd_name in dev_list:
+                dev_index = dev_list.index(rd_name)
+                termination_key = spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index
+                params[termination_key] = str(set_del_root_vol_on_destroy).lower()
+            else:
+                dev_index = len(dev_list)
+                params[spot_prefix + 'BlockDeviceMapping.%d.DeviceName' % dev_index] = rd_name
+                params[spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index] = str(
+                    set_del_root_vol_on_destroy
+                ).lower()
 
     set_del_all_vols_on_destroy = config.get_config_value(
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False
