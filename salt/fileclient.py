@@ -249,8 +249,7 @@ class Client(object):
         environment
         '''
 
-        limit_traversal= self.__opts__.get(['fileserver_limit_traversal'], False)
-
+        limit_traversal = self.opts.get('fileserver_limit_traversal', False)
         states = []
 
         if limit_traversal:
