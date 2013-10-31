@@ -336,7 +336,7 @@ def _run(cmd,
             kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
-    if not os.path.isabs(cwd) or not os.path.isdir(cwd):
+    if not (os.path.isabs(cwd) or os.path.isdir(cwd)):
         raise CommandExecutionError(
             'Specified cwd {0!r} either not absolute or does not exist'
             .format(cwd)
