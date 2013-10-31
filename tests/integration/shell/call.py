@@ -29,41 +29,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-call'
 
-    def test_issue_8174_sls_syntax_error(self):
-        '''
-        Call sls file with yaml syntax error.
-
-        Ensure theses errors are detected and presented to the user without stack traces.
-        '''
-        expected_comment = 'Data failed to compile:'
-        expected_comment_2 = 'is not formed as a list'
-        unexpected_comment = 'Traceback (most recent call last):'
-        stdout, retcode = self.run_call(
-            '-l quiet state.sls syntax.badlist',
-            with_retcode=True
-        )
-        # it was 1 with previous StackTrace error
-        self.assertEqual(0, retcode)
-        # check presence of clean error message
-        self.assertIn(expected_comment, ''.join(stdout))
-        self.assertIn(expected_comment_2, ''.join(stdout))
-        self.assertNotIn(unexpected_comment, ''.join(stdout))
-
-    def test_issue_7905_sls_syntax_error(self):
-        expected_comment = 'Data failed to compile:'
-        expected_comment_2 = 'is not formed as a list'
-        unexpected_comment = 'Traceback (most recent call last):'
-        stdout, retcode = self.run_call(
-            '-l quiet state.sls syntax.badlist2',
-            with_retcode=True
-        )
-        # it was 1 with previous StackTrace error
-        self.assertEqual(0, retcode)
-        # check presence of clean error message
-        self.assertIn(expected_comment, ''.join(stdout))
-        self.assertIn(expected_comment_2, ''.join(stdout))
-        self.assertNotIn(unexpected_comment, ''.join(stdout))
-
     def test_default_output(self):
         out = self.run_call('-l quiet test.fib 3')
 
