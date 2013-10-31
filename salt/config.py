@@ -140,6 +140,7 @@ VALID_OPTS = {
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
+    'fileserver_limit_traversal': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
@@ -292,6 +293,12 @@ DEFAULT_MASTER_OPTS = {
     'file_ignore_regex': None,
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
+<<<<<<< HEAD
+=======
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
+    'fileserver_limit_traversal': False,
+>>>>>>> 459feb7... Provide a configuration switch to enable limited directory traversal.
     'max_open_files': 100000,
     'hash_type': 'md5',
     'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),
