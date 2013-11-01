@@ -67,8 +67,8 @@ The firewall module in YaST2 provides a text-based interface to modifying the fi
 
 .. _linux-iptables:
 
-Linux iptables
-==============
+iptables
+========
 
 Different Linux distributions store their `iptables` (also known as
 `netfilter`_) rules in different places, which makes it difficult to
