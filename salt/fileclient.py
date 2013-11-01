@@ -280,7 +280,6 @@ class Client(object):
                         states.append(path.replace('/', '.')[:-9])
                     else:
                         states.append(path.replace('/', '.')[:-4])
-        print states
         return states
 
     def get_state(self, sls, env):
