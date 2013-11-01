@@ -165,6 +165,10 @@ class TestDaemon(object):
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
                 TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod')
             ]
         }
         self.master_opts['ext_pillar'].append(
