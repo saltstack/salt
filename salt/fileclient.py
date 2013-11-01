@@ -252,7 +252,9 @@ class Client(object):
         limit_traversal = self.opts.get('fileserver_limit_traversal', False)
         states = []
 
+        limit_traversal=True
         if limit_traversal:
+            print "Limiting traversal"
             if env not in self.opts['file_roots']:
                 log.warning("During an attempt to list states for env {0}, the environment could not be found in the \
                             configured file roots".format(env))
@@ -264,8 +266,20 @@ class Client(object):
                         #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
-                        states.extend([sls_file[:-4] for sls_file in files if sls_file.endswith('.sls')])
-
+                        stripped_root = os.path.relpath(root, path)
+                        for found_file in files:
+                            stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            if found_file.endswith(('.sls')):
+                                if found_file.endswith('init.sls'):
+                                    if stripped_root.endswith('.'):
+                                        stripped_root = stripped_root.rstrip('.')
+                                    states.append(stripped_root)
+                                else:
+                                    if not stripped_root.endswith('.'):
+                                        stripped_root = stripped_root + '.'
+                                    if stripped_root.startswith('.'):
+                                        stripped_root = stripped_root.lstrip('.')
+                                    states.append(stripped_root + found_file[:-4])
         else:
             for path in self.file_list(env):
                 if path.endswith('.sls'):
@@ -274,7 +288,7 @@ class Client(object):
                         states.append(path.replace('/', '.')[:-9])
                     else:
                         states.append(path.replace('/', '.')[:-4])
-
+        print states
         return states
 
     def get_state(self, sls, env):
