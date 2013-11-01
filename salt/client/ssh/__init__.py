@@ -14,6 +14,7 @@ import time
 import multiprocessing
 import re
 import logging
+import yaml
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -113,8 +114,9 @@ SSH_SHIM = '''/bin/sh << 'EOF'
              exit 1
          fi
       fi
+      echo {{4}} > /tmp/.salt/minion
       echo "{1}"
-      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
+      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
 EOF'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
@@ -442,7 +444,7 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
-
+        self.minion_config = yaml.dumps({'root_dir': '/tmp/.salt/running_data'})
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
@@ -579,7 +581,8 @@ class Single(object):
                 sudo,
                 self.arg_str,
                 self.opts['hash_type'],
-                thin_sum)
+                thin_sum,
+                self.minion_config)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             yield stdout, stderr
 
@@ -603,7 +606,8 @@ class Single(object):
                 sudo,
                 self.arg_str,
                 self.opts['hash_type'],
-                thin_sum)
+                thin_sum,
+                self.minion_config)
         log.debug("Performing shimmed command as follows:\n{0}".format(cmd))
         stdout, stderr = self.shell.exec_cmd(cmd)
 
