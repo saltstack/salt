@@ -265,7 +265,6 @@ class Client(object):
                         #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
-                        stripped_root = os.path.relpath(root, path)
                         for found_file in files:
                             stripped_root = os.path.relpath(root, path).replace('/', '.')
                             if found_file.endswith(('.sls')):
