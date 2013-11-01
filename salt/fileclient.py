@@ -253,7 +253,6 @@ class Client(object):
         states = []
 
         if limit_traversal:
-            print "Limiting traversal"
             if env not in self.opts['file_roots']:
                 log.warning("During an attempt to list states for env {0}, the environment could not be found in the \
                             configured file roots".format(env))
