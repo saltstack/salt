@@ -206,8 +206,8 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.leaks
     '''
 
-    return '\n'.join(_wget('findleaks', {'statusLine': 'true'},
-        url, timeout=timeout)['msg'])
+    return _wget('findleaks', {'statusLine': 'true'},
+        url, timeout=timeout)['msg']
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -401,7 +401,7 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
 
     data = _wget('serverinfo', {}, url, timeout=timeout)
     if data['res'] is False:
-        return {'error': data['msg'][0]}
+        return {'error': data['msg']}
 
     ret = {}
     data['msg'].pop(0)
