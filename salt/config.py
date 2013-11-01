@@ -196,6 +196,7 @@ DEFAULT_MINION_OPTS = {
     'file_roots': {
         'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
+    'fileserver_limit_traversal': False,
     'pillar_roots': {
         'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
