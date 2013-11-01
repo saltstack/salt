@@ -294,7 +294,19 @@ def install(name=None, sources=None, **kwargs):
         return {}
 
     if 'admin_source' in kwargs:
-        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
+        if kwargs.get('env'):
+            salt.utils.warn_until(
+                (0, 19),
+                'Passing a salt environment should be '
+                'done using \'__env__\' not '
+                '\'env\'.'
+            )
+            # Backwards compatibility
+            __env__ = kwargs['env']
+        else:
+            __env__ = 'base'
+
+        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], __env__)
     else:
         adminfile = _write_adminfile(kwargs)
 
@@ -382,7 +394,18 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     if 'admin_source' in kwargs:
-        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
+        if kwargs.get('env'):
+            salt.utils.warn_until(
+                (0, 19),
+                'Passing a salt environment should be '
+                'done using \'__env__\' not '
+                '\'env\'.'
+            )
+            # Backwards compatibility
+            __env__ = kwargs['env']
+        else:
+            __env__ = 'base'
+        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], __env__)
     else:
         # Set the adminfile default variables
         email = kwargs.get('email', '')
