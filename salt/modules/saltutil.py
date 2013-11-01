@@ -30,13 +30,6 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-if salt.utils.is_windows():
-    try:
-        import wmi
-        HAS_WMI = True
-    except ImportError:
-        HAS_WMI = False
-
 log = logging.getLogger(__name__)
 
 
@@ -409,7 +402,7 @@ def running():
         if not isinstance(data, dict):
             # Invalid serial object
             continue
-        if not _os_is_running(data['pid']):
+        if not salt.util.process.os_is_running(data['pid']):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)
