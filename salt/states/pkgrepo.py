@@ -43,6 +43,7 @@ Package repositories can be managed with the pkgrepo state:
 
 # Import salt libs
 from salt.modules.apt import _strip_uri
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
 def __virtual__():
@@ -181,9 +182,7 @@ def managed(name, **kwargs):
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
 
-    for kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
-                  'order', 'watch', 'watch_in', 'require', 'require_in',
-                  'prereq', 'prereq_in'):
+    for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
     try:
