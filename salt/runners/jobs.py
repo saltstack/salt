@@ -201,3 +201,5 @@ def _walk_through(job_dir):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             yield jid, job, t_path, final
+
+
