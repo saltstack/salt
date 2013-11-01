@@ -75,7 +75,7 @@ def reboot():
     return ret
 
 
-def shutdown():
+def shutdown(at_time=None):
     '''
     Shutdown a running system
 
@@ -85,6 +85,10 @@ def shutdown():
 
         salt '*' system.shutdown
     '''
-    cmd = 'shutdown'
+
+    if at_time:
+        cmd = 'shutdown -h {0}'.format(at_time)
+    else:
+        cmd = 'shutdown -h now'
     ret = __salt__['cmd.run'](cmd)
     return ret
