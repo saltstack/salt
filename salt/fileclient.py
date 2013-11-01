@@ -252,7 +252,6 @@ class Client(object):
         limit_traversal = self.opts.get('fileserver_limit_traversal', False)
         states = []
 
-        limit_traversal=True
         if limit_traversal:
             print "Limiting traversal"
             if env not in self.opts['file_roots']:
