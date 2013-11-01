@@ -135,6 +135,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
+                log.debug('Updating fileserver cache for the {0} backend'.format(fsb))
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):
