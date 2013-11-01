@@ -43,6 +43,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.process
 import salt.payload
 log = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ class Schedule(object):
         # If jid_include is not set for this job we can ignore all this
         if 'jid_include' in data and data['jid_include']:
             jobcount = 0
-            for basefilename in  os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
+            for basefilename in os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
                 fn =  os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
@@ -166,7 +167,7 @@ class Schedule(object):
                         'Job {0} using invalid returner: {1} Ignoring.'.format(
                         func, returner
                         )
-                   )
+                    )
         try:
             os.unlink(proc_fn)
         except OSError:
@@ -242,41 +243,20 @@ def clean_proc_dir(opts):
     and remove any that refer to processes that no longer exist
     '''
 
-    if salt.utils.is_windows():
-        try:
-            import wmi
-            HAS_WMI = True
-        except ImportError:
-            HAS_WMI = False
-    for basefilename in  os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
+    for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
         fn =  os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
         with salt.utils.fopen(fn, 'r') as fp_:
             job = salt.payload.Serial(opts).load(fp_)
             log.debug('schedule.clean_proc_dir: checking job {} for process existence'.format(job))
             if 'pid' in job:
-                if salt.saltutils.is_windows():
-                    if HAS_WMI:
-                        procs = wmi.WMI().Win32Process()
-                        if job['pid'] in procs:
-                            log.debug('schedule.clean_proc_dir: Cleaning proc dir, pid {0} still exists.'.format(job['pid']))
-                        else:
-                            # Windows cannot delete an open file
-                            fp_.close()
-                            # Maybe the file is already gone
-                            try:
-                                os.unlink(fn)
-                            except OSError:
-                                pass
-                    else:
-                        log.info('schedule.clean_proc_dir: This is Windows and does not have WMI for some reason.  Cannot determine running processes.')
+                if salt.utils.process.os_is_running(pid):
+                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, pid {0} still exists.'.format(job['pid']))
                 else:
+                    # Windows cannot delete an open file
+                    if salt.utils.is_windows():
+                        fp_.close()
+                    # Maybe the file is already gone
                     try:
-                        # Warning--Linux only
-                        os.kill(job['pid'], 0)
-                        log.debug('schedule.clean_proc_dir: Cleaning proc dir, pid {0} still exists.'.format(job['pid']))
-                    except:
-                        # Maybe the file is already gone
-                        try:
-                            os.unlink(fn)
-                        except OSError:
-                            pass
+                        os.unlink(fn)
+                    except OSError:
+                        pass
