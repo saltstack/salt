@@ -274,7 +274,7 @@ class Client(object):
                                     states.append(stripped_root)
                                 else:
                                     if not stripped_root.endswith('.'):
-                                        stripped_root = stripped_root + '.'
+                                        stripped_root += '.'
                                     if stripped_root.startswith('.'):
                                         stripped_root = stripped_root.lstrip('.')
                                     states.append(stripped_root + found_file[:-4])
