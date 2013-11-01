@@ -8,6 +8,7 @@ option.
 
 # Import python libs
 import os
+import logging
 
 try:
     import fcntl
@@ -20,6 +21,8 @@ except ImportError:
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
+
+log = logging.getLogger(__name__)
 
 
 def find_file(path, env='base', **kwargs):
