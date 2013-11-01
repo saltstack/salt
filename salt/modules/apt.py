@@ -375,7 +375,7 @@ def install(name=None,
 
     if kwargs.get('env'):
         try:
-            os.environ.update(kwargs.get('env'))
+            os.environ.update({'env': kwargs['env']})
         except Exception as e:
             log.exception(e)
 
@@ -434,7 +434,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     '''
     if kwargs.get('env'):
         try:
-            os.environ.update(kwargs.get('env'))
+            os.environ.update({'env': kwargs['env']})
         except Exception as e:
             log.exception(e)
 
