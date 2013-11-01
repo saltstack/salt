@@ -1158,7 +1158,20 @@ def mod_repo(repo, **kwargs):
 
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
-        fn_ = __salt__['cp.cache_file'](key_url)
+
+        if kwargs.get('env'):
+            salt.utils.warn_until(
+                (0, 19),
+                'Passing a salt environment should be '
+                'done using \'__env__\' not '
+                '\'env\'.'
+            )
+            # Backwards compatibility
+            __env__ = kwargs['env']
+        else:
+            __env__ = 'base'
+
+        fn_ = __salt__['cp.cache_file'](key_url, __env__)
         cmd = 'apt-key add {0}'.format(fn_)
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
