@@ -346,6 +346,22 @@ fi
         ret = self.run_function('state.sls', mods='pydsl-1')
         self.assertSaltTrueReturn(ret)
 
+    def test_issues_7905_and_8174_sls_syntax_error(self):
+        '''
+        Call sls file with yaml syntax error.
+
+        Ensure theses errors are detected and presented to the user without
+        stack traces.
+        '''
+        ret = self.run_function('state.sls', mods='syntax.badlist')
+        self.assertEqual(ret, [
+            'The state "A" in sls syntax.badlist is not formed as a list'
+        ])
+        ret = self.run_function('state.sls', mods='syntax.badlist2')
+        self.assertEqual(ret, [
+            'The state "C" in sls syntax.badlist2 is not formed as a list'
+        ])
+
 
 if __name__ == '__main__':
     from integration import run_tests
