@@ -795,7 +795,7 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # We'll be showing errors to the users until Salt Lithium comes out, after
     # which, errors will be raised instead.
     warn_until(
         'Lithium',
@@ -834,7 +834,7 @@ def format_call(fun,
         ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
+            '\'key: value\' pairs. Your approach will work until Salt Lithium '
             'is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
