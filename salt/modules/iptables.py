@@ -10,6 +10,7 @@ import shlex
 
 # Import salt libs
 import salt.utils
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
 
@@ -83,7 +84,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         kwargs['jump'] = kwargs['target']
         del kwargs['target']
 
-    for ignore in '__id__', 'fun', 'table', 'chain':
+    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
         if ignore in kwargs:
             del kwargs[ignore]
 
