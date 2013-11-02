@@ -2906,3 +2906,225 @@ source_file = _build/locale/topics/virt/nic.pot
 source_lang = en
 source_name = topics/virt/nic.rst
 
+[salt.ref--auth--all--salt_auth_auto]
+file_filter = locale/<lang>/LC_MESSAGES/ref/auth/all/salt.auth.auto.po
+source_file = _build/locale/ref/auth/all/salt.auth.auto.pot
+source_lang = en
+source_name = ref/auth/all/salt.auth.auto.rst
+
+[salt.ref--modules--all--salt_modules_chocolatey]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.chocolatey.po
+source_file = _build/locale/ref/modules/all/salt.modules.chocolatey.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.chocolatey.rst
+
+[salt.ref--modules--all--salt_modules_dockerio]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.dockerio.po
+source_file = _build/locale/ref/modules/all/salt.modules.dockerio.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.dockerio.rst
+
+[salt.ref--modules--all--salt_modules_freebsdports]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.freebsdports.po
+source_file = _build/locale/ref/modules/all/salt.modules.freebsdports.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.freebsdports.rst
+
+[salt.ref--modules--all--salt_modules_omapi]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.omapi.po
+source_file = _build/locale/ref/modules/all/salt.modules.omapi.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.omapi.rst
+
+[salt.ref--modules--all--salt_modules_powerpath]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.powerpath.po
+source_file = _build/locale/ref/modules/all/salt.modules.powerpath.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.powerpath.rst
+
+[salt.ref--modules--all--salt_modules_rdp]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.rdp.po
+source_file = _build/locale/ref/modules/all/salt.modules.rdp.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.rdp.rst
+
+[salt.ref--modules--all--salt_modules_riak]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.riak.po
+source_file = _build/locale/ref/modules/all/salt.modules.riak.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.riak.rst
+
+[salt.ref--modules--all--salt_modules_saltcloudmod]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.saltcloudmod.po
+source_file = _build/locale/ref/modules/all/salt.modules.saltcloudmod.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.saltcloudmod.rst
+
+[salt.ref--modules--all--salt_modules_win_autoruns]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_autoruns.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_autoruns.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_autoruns.rst
+
+[salt.ref--modules--all--salt_modules_win_dns_client]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_dns_client.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_dns_client.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_dns_client.rst
+
+[salt.ref--modules--all--salt_modules_win_firewall]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_firewall.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_firewall.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_firewall.rst
+
+[salt.ref--modules--all--salt_modules_win_ip]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_ip.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_ip.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_ip.rst
+
+[salt.ref--modules--all--salt_modules_win_path]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_path.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_path.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_path.rst
+
+[salt.ref--modules--all--salt_modules_win_repo]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_repo.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_repo.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_repo.rst
+
+[salt.ref--modules--all--salt_modules_win_servermanager]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_servermanager.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_servermanager.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_servermanager.rst
+
+[salt.ref--modules--all--salt_modules_win_timezone]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_timezone.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_timezone.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_timezone.rst
+
+[salt.ref--pillar--all--salt_pillar_virtkey]
+file_filter = locale/<lang>/LC_MESSAGES/ref/pillar/all/salt.pillar.virtkey.po
+source_file = _build/locale/ref/pillar/all/salt.pillar.virtkey.pot
+source_lang = en
+source_name = ref/pillar/all/salt.pillar.virtkey.rst
+
+[salt.ref--returners--all--salt_returners_couchdb_return]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.couchdb_return.po
+source_file = _build/locale/ref/returners/all/salt.returners.couchdb_return.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.couchdb_return.rst
+
+[salt.ref--returners--all--salt_returners_memcache_return]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.memcache_return.po
+source_file = _build/locale/ref/returners/all/salt.returners.memcache_return.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.memcache_return.rst
+
+[salt.ref--runners--all--salt_runners_thin]
+file_filter = locale/<lang>/LC_MESSAGES/ref/runners/all/salt.runners.thin.po
+source_file = _build/locale/ref/runners/all/salt.runners.thin.pot
+source_lang = en
+source_name = ref/runners/all/salt.runners.thin.rst
+
+[salt.ref--states--all--salt_states_ddns]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.ddns.po
+source_file = _build/locale/ref/states/all/salt.states.ddns.pot
+source_lang = en
+source_name = ref/states/all/salt.states.ddns.rst
+
+[salt.ref--states--all--salt_states_dockerio]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.dockerio.po
+source_file = _build/locale/ref/states/all/salt.states.dockerio.pot
+source_lang = en
+source_name = ref/states/all/salt.states.dockerio.rst
+
+[salt.ref--states--all--salt_states_keystone]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.keystone.po
+source_file = _build/locale/ref/states/all/salt.states.keystone.pot
+source_lang = en
+source_name = ref/states/all/salt.states.keystone.rst
+
+[salt.ref--states--all--salt_states_ports]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.ports.po
+source_file = _build/locale/ref/states/all/salt.states.ports.pot
+source_lang = en
+source_name = ref/states/all/salt.states.ports.rst
+
+[salt.ref--states--all--salt_states_powerpath]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.powerpath.po
+source_file = _build/locale/ref/states/all/salt.states.powerpath.pot
+source_lang = en
+source_name = ref/states/all/salt.states.powerpath.rst
+
+[salt.ref--states--all--salt_states_process]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.process.po
+source_file = _build/locale/ref/states/all/salt.states.process.pot
+source_lang = en
+source_name = ref/states/all/salt.states.process.rst
+
+[salt.ref--states--all--salt_states_rabbitmq_cluster]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.rabbitmq_cluster.po
+source_file = _build/locale/ref/states/all/salt.states.rabbitmq_cluster.pot
+source_lang = en
+source_name = ref/states/all/salt.states.rabbitmq_cluster.rst
+
+[salt.ref--states--all--salt_states_rabbitmq_plugin]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.rabbitmq_plugin.po
+source_file = _build/locale/ref/states/all/salt.states.rabbitmq_plugin.pot
+source_lang = en
+source_name = ref/states/all/salt.states.rabbitmq_plugin.rst
+
+[salt.ref--states--all--salt_states_rabbitmq_policy]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.rabbitmq_policy.po
+source_file = _build/locale/ref/states/all/salt.states.rabbitmq_policy.pot
+source_lang = en
+source_name = ref/states/all/salt.states.rabbitmq_policy.rst
+
+[salt.ref--states--all--salt_states_rdp]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.rdp.po
+source_file = _build/locale/ref/states/all/salt.states.rdp.pot
+source_lang = en
+source_name = ref/states/all/salt.states.rdp.rst
+
+[salt.ref--states--all--salt_states_reg]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.reg.po
+source_file = _build/locale/ref/states/all/salt.states.reg.pot
+source_lang = en
+source_name = ref/states/all/salt.states.reg.rst
+
+[salt.ref--states--all--salt_states_saltmod]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.saltmod.po
+source_file = _build/locale/ref/states/all/salt.states.saltmod.pot
+source_lang = en
+source_name = ref/states/all/salt.states.saltmod.rst
+
+[salt.ref--states--all--salt_states_win_network]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.win_network.po
+source_file = _build/locale/ref/states/all/salt.states.win_network.pot
+source_lang = en
+source_name = ref/states/all/salt.states.win_network.rst
+
+[salt.topics--releases--0_17_1]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/0.17.1.po
+source_file = _build/locale/topics/releases/0.17.1.pot
+source_lang = en
+source_name = topics/releases/0.17.1.rst
+
+[salt.topics--tutorials--halite]
+file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/halite.po
+source_file = _build/locale/topics/tutorials/halite.pot
+source_lang = en
+source_name = topics/tutorials/halite.rst
+
+[salt.topics--tutorials--states_ordering]
+file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/states_ordering.po
+source_file = _build/locale/topics/tutorials/states_ordering.pot
+source_lang = en
+source_name = topics/tutorials/states_ordering.rst
+
