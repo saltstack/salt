@@ -29,6 +29,13 @@ which makes use of the jinja templating system would look like this:
             custom_var: "override"
     {% endif %}
 
+.. note::
+
+    When using both the ``defaults`` and ``context`` arguments, note the extra
+    indentation (four spaces instead of the normal two). This is due to an
+    idiosyncrasy of how PyYAML loads nested dictionaries, and is explained in
+    greater detail :ref:`here <nested-dict-indentation>`.
+
 If using a template, any user-defined template variables in the file defined in
 ``source`` must be passed in using the ``defaults`` and/or ``context``
 arguments. The general best practice is to place default values in
@@ -499,7 +506,7 @@ def _set_symlink_ownership(path, uid, gid):
         path,
         __salt__['file.uid_to_user'](uid),
         __salt__['file.gid_to_group'](gid)
-   )
+    )
 
 
 def _symlink_check(name, target, force, user, group):
@@ -528,8 +535,8 @@ def _symlink_check(name, target, force, user, group):
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
-                          'make way for a new symlink targeting {1}').format(
-                              name, target)
+                          'make way for a new symlink targeting {1}'
+                          .format(name, target))
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
 
