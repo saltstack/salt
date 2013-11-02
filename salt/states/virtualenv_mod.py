@@ -180,7 +180,6 @@ def managed(name,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
-            __env__=__env__,
             pre_releases=pre_releases
         )
         ret['result'] &= _ret['retcode'] == 0
