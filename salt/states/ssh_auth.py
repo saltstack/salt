@@ -168,7 +168,7 @@ def present(
                 options or [],
                 source,
                 config,
-                kwargs.get('__env__', 'base')
+                __env__
                 )
         return ret
 
@@ -177,7 +177,7 @@ def present(
                 user,
                 source,
                 config,
-                kwargs.get('__env__', 'base'))
+                __env__)
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
