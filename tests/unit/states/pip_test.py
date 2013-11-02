@@ -26,6 +26,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 import pip
 
+pip_state.__env__ = 'base'
 pip_state.__opts__ = {'test': False}
 pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 

@@ -14,6 +14,7 @@ import yaml
 # Import salt libs
 import salt.states.file as filestate
 
+filestate.__env__ = 'base'
 filestate.__salt__ = {'file.manage_file': False}
 filestate.__opts__ = {'test': False}
 
