@@ -112,8 +112,7 @@ def installed(name,
               no_chown=False,
               cwd=None,
               activate=False,
-              pre_releases=False,
-              __env__='base'):
+              pre_releases=False):
     '''
     Make sure the package is installed
 
@@ -409,8 +408,7 @@ def removed(name,
             timeout=None,
             user=None,
             runas=None,
-            cwd=None,
-            __env__='base'):
+            cwd=None):
     '''
     Make sure that a package is not installed.
 
@@ -469,7 +467,7 @@ def removed(name,
                                  timeout=timeout,
                                  user=user,
                                  cwd=cwd,
-                                 __env__='base'):
+                                 __env__=__env__):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
