@@ -370,6 +370,7 @@ fi
                 'state.highstate', minion_tgt='sub_minion'
             )
             self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(tgt))
             with salt.utils.fopen(tgt, 'r') as cheese:
                 data = cheese.read()
                 self.assertIn('Gromit', data)
