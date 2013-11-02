@@ -335,7 +335,6 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
-        __env__=__env__
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -466,8 +465,7 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  user=user,
-                                 cwd=cwd,
-                                 __env__=__env__):
+                                 cwd=cwd):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
