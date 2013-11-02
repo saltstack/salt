@@ -640,7 +640,6 @@ def _get_template_texts(source_list=None,
                         template='jinja',
                         defaults=None,
                         context=None,
-                        env='base',
                         **kwargs):
     '''
     Iterate a list of sources and process them as templates.
@@ -665,7 +664,7 @@ def _get_template_texts(source_list=None,
         if context:
             tmpctx.update(context)
         rndrd_templ_fn = __salt__['cp.get_template'](source, '',
-                                  template=template, env=env,
+                                  template=template, env=__env__,
                                   context=tmpctx, **kwargs)
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
@@ -1057,8 +1056,17 @@ def managed(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in Salt Helium and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Helium', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
@@ -1113,7 +1121,7 @@ def managed(name,
             makedirs,
             context,
             defaults,
-            env,
+            __env__,
             contents,
             **kwargs
         )
@@ -1123,7 +1131,7 @@ def managed(name,
     source, source_hash = __salt__['file.source_list'](
         source,
         source_hash,
-        env
+        __env__
     )
 
     # Gather the source file from the server
@@ -1135,7 +1143,7 @@ def managed(name,
         user,
         group,
         mode,
-        env,
+        __env__,
         context,
         defaults,
         **kwargs
@@ -1151,7 +1159,7 @@ def managed(name,
                                             user,
                                             group,
                                             mode,
-                                            env,
+                                            __env__,
                                             backup,
                                             template,
                                             show_diff,
@@ -1513,15 +1521,24 @@ def recurse(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in Salt Helium and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Helium', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
 
     # Verify the source exists.
     _src_proto, _src_path = source.split('://', 1)
 
     if not _src_path:
         pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](env):
+    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](__env__):
         ret['result'] = False
         ret['comment'] = (
             'The source: {0} does not exist on the master'.format(source)
@@ -1591,7 +1608,7 @@ def recurse(name,
             context=context,
             replace=True,
             defaults=defaults,
-            env=env,
+            env=__env__,
             backup=backup,
             **pass_kwargs)
         merge_ret(path, _ret)
@@ -1663,7 +1680,7 @@ def recurse(name,
             keep.add(os.path.join(name, srelpath))
         return filenames
     # If source is a list, find which in the list actually exists
-    source, source_hash = __salt__['file.source_list'](source, '', env)
+    source, source_hash = __salt__['file.source_list'](source, '', __env__)
 
     keep = set()
     vdir = set()
@@ -1672,11 +1689,11 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    fns_ = __salt__['cp.list_master'](env, srcpath)
+    fns_ = __salt__['cp.list_master'](__env__, srcpath)
     # If we are instructed to keep symlinks, then process them.
     if keep_symlinks:
         # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
+        symlinks = __salt__['cp.list_master_symlinks'](__env__, srcpath)
         fns_ = process_symlinks(fns_, symlinks)
     for fn_ in fns_:
         if not fn_.strip():
@@ -1718,7 +1735,7 @@ def recurse(name,
         manage_file(dest, src)
 
     if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](env, srcpath)
+        mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
         for mdir in mdirs:
             if not _check_include_exclude(os.path.relpath(mdir, srcpath),
                                           include_pat,
@@ -1729,7 +1746,8 @@ def recurse(name,
             if keep_symlinks:
                 for link in symlinks:
                     if mdir.startswith(link, 0):
-                        log.debug('** skipping empty dir ** {0}, it intersects a symlink'.format(mdir))
+                        log.debug('** skipping empty dir ** {0}, it intersects'
+                                  ' a symlink'.format(mdir))
                     continue
             manage_directory(mdest)
             keep.add(mdest)
@@ -2220,7 +2238,6 @@ def append(name,
            makedirs=False,
            source=None,
            source_hash=None,
-           __env__='base',
            template='jinja',
            sources=None,
            source_hashes=None,
@@ -2302,8 +2319,7 @@ def append(name,
         tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
                                      defaults=defaults,
-                                     context=context,
-                                     env=__env__)
+                                     context=context)
         if not tmpret['result']:
             return tmpret
         text = tmpret['data']
@@ -2415,10 +2431,19 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in Salt Helium and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Helium', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
+
     # get cached file or copy it to cache
-    if env is None:
-        env = kwargs.get('__env__', 'base')
-    cached_source_path = __salt__['cp.cache_file'](source, env)
+    cached_source_path = __salt__['cp.cache_file'](source, __env__)
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
             source, cached_source_path
@@ -2821,6 +2846,17 @@ def serialize(name,
            'name': name,
            'result': True}
 
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in Salt Helium and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Helium', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
+
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
@@ -2854,7 +2890,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
-                                        env=env,
+                                        env=__env__,
                                         backup=backup,
                                         template=None,
                                         show_diff=show_diff,
