@@ -1608,7 +1608,6 @@ def recurse(name,
             context=context,
             replace=True,
             defaults=defaults,
-            env=__env__,
             backup=backup,
             **pass_kwargs)
         merge_ret(path, _ret)
