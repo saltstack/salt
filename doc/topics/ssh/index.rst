@@ -91,3 +91,15 @@ Targeting with Salt SSH
 Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
+
+Running Salt SSH as non-root user
+=================================
+
+By default, Salt read all the configuration from /etc/salt/. If you are running
+Salt SSH with a regular user you have to modify some paths or you will get
+"Permission denied" messages. You have to modify two parameters: ``pki_dir``
+and ``cachedir``. Those should point to a full path writable for the user.
+
+It's recommed not to modify /etc/salt for this purpose. Create a private copy
+of /etc/salt for the user and run the command with ``-c /new/config/path``.
+
