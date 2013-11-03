@@ -43,7 +43,12 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'fun',
     'order',
     'state',
+    'watch',
+    'watch_in'
+    'prereq',
+    'prereq_in',
     'require',
+    'require_in',
     'fail_hard',
     'reload_modules',
     '__id__',
