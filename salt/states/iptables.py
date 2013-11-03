@@ -25,6 +25,7 @@ at some point be deprecated in favor of a more generic `firewall` state.
 # Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
+
 def __virtual__():
     '''
     Only load if the locale module is available in __salt__
