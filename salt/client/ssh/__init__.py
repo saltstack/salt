@@ -444,7 +444,7 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
-        self.minion_config = yaml.dumps({'root_dir': '/tmp/.salt/running_data'})
+        self.minion_config = yaml.dump({'root_dir': '/tmp/.salt/running_data'})
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
