@@ -213,7 +213,7 @@ local job cache on the master
 ``sock_dir``
 ------------
 
-Default:: :file:`/tmp/salt-unix`
+Default: :file:`/tmp/salt-unix`
 
 Set the location to use for creating Unix sockets for master process
 communication
@@ -393,7 +393,7 @@ The renderer to use on the minions to render the state data
 ``failhard``
 ------------
 
-Default:: ``False``
+Default: ``False``
 
 Set the global failhard flag, this informs all states to stop running states
 at the moment a single state fails
@@ -407,7 +407,7 @@ at the moment a single state fails
 ``test``
 --------
 
-Default:: ``False``
+Default: ``False``
 
 Set all state calls to only test if they are going to actually make changes
 or just post what changes are going to be made
@@ -521,7 +521,7 @@ called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
 the ext_pillar interface is not configured to run.
 
-Default:: ``None``
+Default: ``None``
 
 .. code-block:: yaml
 
