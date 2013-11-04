@@ -156,6 +156,8 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
+    from_vcs = False
+
     if name:
         try:
             try:
@@ -173,6 +175,7 @@ def installed(name,
                 if name.startswith(supported_vcs):
                     for vcs in supported_vcs:
                         if name.startswith(vcs):
+                            from_vcs = True
                             install_req = pip.req.InstallRequirement.from_line(
                                 name.split('{0}+'.format(vcs))[-1]
                             )
@@ -181,7 +184,7 @@ def installed(name,
                     install_req = pip.req.InstallRequirement.from_line(name)
         except ValueError as exc:
             ret['result'] = False
-            if '=' in name and '==' not in name:
+            if not from_vcs and '=' in name and '==' not in name:
                 ret['comment'] = (
                     'Invalid version specification in package {0}. \'=\' is '
                     'not supported, use \'==\' instead.'.format(name)
