@@ -16,8 +16,8 @@
 #
 
 Name:           salt-api
-Version:        0.8.2
-Release:        1%{?dist}
+Version:        0.8.3
+Release:        0
 License:        Apache-2.0
 Summary:        The api for Salt a parallel remote execution system
 Url:            http://saltstack.org/
@@ -44,9 +44,10 @@ Recommends:     python-CherryPy
 %if 0%{?suse_version} >= 1210
 BuildRequires:	systemd
 %{?systemd_requires}
-%endif
-Requires(pre): %fillup_prereq
+%else
 Requires(pre): %insserv_prereq
+Requires(pre): %fillup_prereq
+%endif
 
 %description
 salt-api is a modular interface on top of Salt that can provide a variety of entry points into a running Salt system.
@@ -59,55 +60,58 @@ python setup.py build
 
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
+%fdupes %{buildroot}%{_prefix}
 #
 ##missing directories
+%if 0%{?suse_version} < 1210
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
-mkdir -p %{buildroot}%{_localstatedir}/log/salt
 mkdir -p %{buildroot}/%{_sbindir}
+%endif
+mkdir -p %{buildroot}%{_localstatedir}/log/salt
 #
 ##init scripts
-%if 0%{?sles_version} == 11
+%if 0%{?suse_version} < 1210
 install -Dpm 0755 %{SOURCE1} %{buildroot}%{_sysconfdir}/init.d/salt-api
-%else
-install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-api
-%endif
 ln -sf /etc/init.d/salt-api %{buildroot}%{_sbindir}/rcsalt-api
-
-%if 0%{?_unitdir:1}
+%else
 install -Dpm 644  %{SOURCE2} %{buildroot}%_unitdir/salt-api.service
 %endif
 
 %preun
-%stop_on_removal
 %if 0%{?_unitdir:1}
 %service_del_preun salt-api.service
+%else
+%stop_on_removal
 %endif
 
 %post
-%fillup_and_insserv
 %if 0%{?_unitdir:1}
 %service_add_post salt-api.service
+%else
+%fillup_and_insserv
 %endif
 
 %postun
-%restart_on_update
 %if 0%{?_unitdir:1}
 %service_del_postun salt-api.service
-%endif
+%else
 %insserv_cleanup
+%restart_on_update
+%endif
 
 
 %files
 %defattr(-,root,root)
-%{_sysconfdir}/init.d/salt-api
-%{_sbindir}/rcsalt-api
+%doc LICENSE
 %if 0%{?_unitdir:1}
 %_unitdir
+%else
+%{_sysconfdir}/init.d/salt-api
+%{_sbindir}/rcsalt-api
 %endif
-%doc %{_mandir}/man1/salt-api.1.*
-%doc %{_mandir}/man7/salt-api.7.*
+%{_mandir}/man1/salt-api.1.*
+%{_mandir}/man7/salt-api.7.*
 %{_bindir}/salt-api
-%doc LICENSE
 %{python_sitelib}/*
 
 
