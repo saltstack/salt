@@ -879,7 +879,7 @@ class OutputOptionsMixIn(object):
         if self.options.output_file is not None:
             if os.path.isfile(self.options.output_file):
                 try:
-                    utils.fopen(self.options.output_file, 'w').close()
+                    os.remove(self.options.output_file)
                 except (IOError, OSError) as exc:
                     self.error(
                         '{0}: Access denied: {1}'.format(
