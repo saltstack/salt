@@ -1,7 +1,7 @@
 #
 # spec file for package salt-cloud
 #
-# Copyright (c) 2012 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,29 +15,27 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
+
 Name:           salt-cloud
-Version:        0.8.8
-Release:        1
-License:        Apache-2.0
+Version:        0.8.9
+Release:        0
 Summary:        Salt Cloud is a generic cloud provisioning tool
-Url:            http://saltstack.org
+License:        Apache-2.0
 Group:          System/Monitoring
+Url:            http://saltstack.org
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 BuildRequires:  fdupes
 BuildRequires:  python-PyYAML
 BuildRequires:  python-apache-libcloud >= 0.12.1
-BuildRequires:  python-distribute
+BuildRequires:  python-setuptools
 BuildRequires:  salt >= 0.13.0
-Requires:		python-PyYAML
+Requires:       python-PyYAML
 Requires:       python-apache-libcloud
 Requires:       salt >= 0.13.0
+Recommends:     sshpass
 Recommends:     python-botocore
+Recommends:     python-netaddr
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires(pre):  %fillup_prereq
-Requires(pre):  %insserv_prereq
-%if 0%{?suse_version} >= 1210
-BuildRequires:  systemd
-%endif
 %if 0%{?suse_version} && 0%{?suse_version} > 1110
 BuildArch:      noarch
 %endif
