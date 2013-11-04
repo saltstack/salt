@@ -1,4 +1,31 @@
 -------------------------------------------------------------------
+Thu Oct 24 11:18:09 UTC 2013 - speilicke@suse.com
+
+- Require python-setuptools instead of distribute (upstreams merged)
+
+-------------------------------------------------------------------
+Fri Oct 18 11:54:13 UTC 2013 - p.drouand@gmail.com
+
+- Drop init scripts support; there is none in package
+
+-------------------------------------------------------------------
+Sat Oct 12 21:38:32 UTC 2013 - aboe76@gmail.com
+
+- added python-netaddr as recommends
+
+-------------------------------------------------------------------
+Fri Sep 27 05:58:45 UTC 2013 - aboe76@gmail.com
+
+- Forgot dependencie sshpass
+
+-------------------------------------------------------------------
+Sat Jun 22 20:21:25 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt-cloud 0.8.9
+- joyent api updated
+- cloud stack driver added
+
+-------------------------------------------------------------------
 Tue May  7 18:17:11 UTC 2013 - aboe76@gmail.com
 
 - Updated buildrequirements, python-botocore is only needed
