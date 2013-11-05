@@ -77,6 +77,7 @@ def get(key, default=''):
     '''
     return salt.utils.traverse_dict(__grains__, key, default)
 
+
 def has_value(key):
     '''
     Determine whether a named value exists in the grains dictionary.
@@ -96,6 +97,7 @@ def has_value(key):
         salt '*' grains.has_value pkg:apache
     '''
     return True if salt.utils.traverse_dict(__grains__, key, False) else False
+
 
 def items(sanitize=False):
     '''
