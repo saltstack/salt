@@ -61,7 +61,20 @@ from collections import MutableMapping
 
 # Import third party libs
 try:
-    import zmq
+    try:
+        # Which ZMQ we import depends on if gevent is enabled
+        from gevent import thread as green_thread
+    except ImportError:
+        # No gevent, use regular zmq
+        import zmq
+    else:
+        thread = __import__('thread')
+        if thread.exit is green_thread.exit:
+            # gevent monkey patching is in use, use zmq.green
+            import zmq.green as zmq
+        else:
+            # gevent monkey patching is not in use, use regular zmq
+            import zmq
 except ImportError:
     # Local mode does not need zmq
     pass
