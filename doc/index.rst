@@ -21,12 +21,11 @@ for orchestration, remote execution, configuration management and much more.
 
     * `PDF`_
     * `ePub`_
-    * Dash `Docset`_ (`feed`_)
+    * `Dash Docset`_
 
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
-.. _`Docset`: https://media.readthedocs.org/dash/salt/latest/Salt.tgz
-.. _`feed`: dash-feed://http%3A//media.readthedocs.org/dash/salt/latest/Salt.xml
+.. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
 
 Download
 ========
