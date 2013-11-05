@@ -1,19 +1,22 @@
 '''
 Support for the Amazon Simple Queue Service.
-Currently, this module cannot select which user to run the commands. Your
-boto config must be in /etc/boto.cfg with your AWS credentials.
 '''
+import json
 
 # Import salt libs
 from salt import utils
 from salt.exceptions import CommandExecutionError
 
-_OUTPUT = '-output json'
+_OUTPUT = '--output json'
+
+
+def __virtual__():
+    return _check_aws()
 
 
 def _check_aws():
     '''
-    Make sure boto is installed
+    Make sure awscli is installed
     '''
     utils.check_or_die('aws')
     return 'amazon_sqs'
@@ -41,7 +44,7 @@ def _run_aws(cmd, region, opts, user, **kwargs):
         Key-value arguments to pass to the command
     '''
     _formatted_args = [
-        '--{0} {1}'.format(k, v) for k, v in kwargs.iteritems()]
+        '--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
 
     cmd = 'aws sqs {cmd} {args} {region} {out}'.format(
         cmd=cmd,
@@ -49,7 +52,9 @@ def _run_aws(cmd, region, opts, user, **kwargs):
         region=_region(region),
         out=_OUTPUT)
 
-    rtn = json.loads(__salt__['cmd.run'](cmd, runas=user))
+    rtn = __salt__['cmd.run'](cmd, runas=user)
+
+    return json.loads(rtn) if rtn else ''
 
 
 def list_queues(region, opts=None, user=None):
@@ -66,7 +71,12 @@ def list_queues(region, opts=None, user=None):
         Run hg as a user other than what the minion runs as
     '''
     out = _run_aws('list-queues', region, opts, user)
-    return json.dumps(out['QueueUrls'])
+
+    ret = {
+        'retcode': 0,
+        'stdout': out['QueueUrls'],
+    }
+    return ret
 
 
 def create_queue(name, region, opts=None, user=None):
@@ -91,7 +101,12 @@ def create_queue(name, region, opts=None, user=None):
     out = _run_aws(
         'create-queue', region=region, opts=opts,
         user=user, **create)
-    return json.dumps(out['QueueUrls'])
+
+    ret = {
+        'retcode': 0,
+        'stdout': out['QueueUrl'],
+    }
+    return ret
 
 
 def delete_queue(name, region, opts=None, user=None):
@@ -110,10 +125,13 @@ def delete_queue(name, region, opts=None, user=None):
         Run hg as a user other than what the minion runs as
     '''
     queues = list_queues(region, opts, user)
-    url_map = dict((q.split('/')[-1], q) for q in queues)
+    url_map = _parse_queue_list(queues)
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.debug('map ' + unicode(url_map))
     if name in url_map:
-        
-        delete = {'delete-url': url_map[name]}
+        delete = {'queue-url': url_map[name]}
 
         rtn = _run_aws(
             'delete-queue',
@@ -121,11 +139,21 @@ def delete_queue(name, region, opts=None, user=None):
             opts=opts,
             user=user,
             **delete)
+        success= True
+        err = ''
+        out = '{0} deleted'.format(name)
 
     else:
-        rtn = False
+        out = ''
+        err = "Delete failed"
+        success = False
 
-    return rtn
+    ret = {
+        'retcode': 0 if success else 1,
+        'stdout': out,
+        'stderr': err,
+    }
+    return ret
 
 
 def queue_exists(name, region, opts=None, user=None):
@@ -144,5 +172,14 @@ def queue_exists(name, region, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
     '''
-    queues = [q.split('/')[-1] for q in list_queues(region, opts, user)]
-    return json.dumps(name in queues)
+    output = list_queues(region, opts, user)
+
+    return name in _parse_queue_list(output)
+
+
+def _parse_queue_list(list_output):
+    '''
+    Parse the queue to get a dict of name -> URL
+    '''
+    queues = dict((q.split('/')[-1], q) for q in list_output['stdout'])
+    return queues
