@@ -9,7 +9,6 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.sys
 
 .. currentmodule:: salt.modules
 
@@ -26,61 +25,88 @@ Full list of builtin execution modules
     augeas_cfg
     bluez
     brew
-    butterkvm
+    bridge
+    bsd_shadow
     cassandra
+    chocolatey
     cmdmod
     config
     cp
     cron
     daemontools
+    darwin_sysctl
     data
+    ddns
     debconfmod
     debian_service
+    dig
     disk
     djangomod
+    dnsmasq
+    dnsutil
+    dockerio
+    dpkg
     ebuild
     eix
+    eselect
     event
     extfs
     file
+    freebsd_sysctl
     freebsdjail
     freebsdkmod
     freebsdpkg
+    freebsdports
     freebsdservice
-    freebsd_sysctl
     gem
-    gentoolkitmod
     gentoo_service
+    gentoolkitmod
     git
     glance
     grains
     groupadd
     grub_legacy
+    guestfs
     hg
     hosts
+    img
     iptables
+    key
     keyboard
     keystone
     kmod
-    kvm_hyper
     launchctl
     layman
     ldapmod
     linux_acl
     linux_lvm
     linux_sysctl
-    locale
+    localemod
+    locate
+    logrotate
+    lxc
+    mac_group
+    mac_user
     makeconf
+    match
     mdadm
+    mine
+    modjk
     mongodb
     monit
     moosefs
     mount
+    munin
     mysql
+    netbsd_sysctl
+    netbsdservice
     network
+    nfs3
     nginx
     nova
+    npm
     nzbget
+    omapi
     openbsdpkg
     openbsdservice
     osxdesktop
@@ -90,31 +116,46 @@ Full list of builtin execution modules
     pecl
     pillar
     pip
-    pkgng
     pkg_resource
+    pkgin
+    pkgng
     pkgutil
+    portage_config
     postgres
     poudriere
+    powerpath
     ps
     publish
     puppet
     pw_group
     pw_user
+    qemu_img
+    qemu_nbd
+    quota
     rabbitmq
+    rbenv
+    rdp
     reg
     ret
     rh_ip
     rh_service
+    riak
+    rpm
     rvm
+    s3
+    saltcloudmod
     saltutil
+    seed
     selinux
     service
     shadow
+    smartos_imgadm
+    smartos_vmadm
     smf
     solaris_group
-    solarispkg
     solaris_shadow
     solaris_user
+    solarispkg
     solr
     sqlite3
     ssh
@@ -124,6 +165,7 @@ Full list of builtin execution modules
     svn
     sysbench
     sysmod
+    system
     systemd
     test
     timezone
@@ -132,17 +174,29 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
+    win_autoruns
     win_disk
+    win_dns_client
     win_file
+    win_firewall
     win_groupadd
+    win_ip
     win_network
+    win_ntp
+    win_path
     win_pkg
+    win_repo
+    win_servermanager
     win_service
     win_shadow
     win_status
+    win_system
+    win_timezone
     win_useradd
-    yumpkg5
+    xapi
     yumpkg
+    yumpkg5
+    zfs
     zpool
     zypper

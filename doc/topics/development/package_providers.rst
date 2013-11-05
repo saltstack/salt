@@ -45,8 +45,8 @@ data:
          'bar': '5.6.7-8'}
 
 
-available_version
-^^^^^^^^^^^^^^^^^
+latest_version
+^^^^^^^^^^^^^^
 
 Accepts an arbitrary number of arguments. Each argument is a package name. The
 return value for a package will be an empty string if the package is not found
@@ -57,11 +57,19 @@ installed) or if there is an upgrade available.
 If only one argument was passed, this function return a string, otherwise a
 dict of name/version pairs is returned.
 
+This function must also accept ``**kwargs``, in order to receive the
+``fromrepo`` and ``repo`` keyword arguments from pkg states. Where supported,
+these arguments should be used to find the install/upgrade candidate in the
+specified repository. The ``fromrepo`` kwarg takes precedence over ``repo``, so
+if both of those kwargs are present, the repository specified in ``fromrepo``
+should be used. However, if ``repo`` is used instead of ``fromrepo``, it should
+still work, to preserve backwards compatibility with older versions of Salt.
+
 
 version
 ^^^^^^^
 
-Like ``available_version``, accepts an arbitrary number of arguments and
+Like ``latest_version``, accepts an arbitrary number of arguments and
 returns a string if a single package name was passed, or a dict of name/value
 pairs if more than one was passed. The only difference is that the return
 values are the currently-installed versions of whatever packages are passed. If
@@ -75,7 +83,7 @@ Deprecated and destined to be removed. For now, should just do the following:
 
 .. code-block:: python
 
-        return __salt__['pkg.available_version'](name) != ''
+        return __salt__['pkg.latest_version'](name) != ''
 
 
 install
@@ -123,18 +131,17 @@ done:
   dictionary values will be the path/URI for the package.
 
 
-The second return value will be a string with two possbile values:
+The second return value will be a string with two possible values:
 ``repository`` or ``file``. The :strong:`install` function can use this value
 (if necessary) to build the proper command to install the targeted package(s).
 
 Both before and after the installing the target(s), you should run
 :strong:`list_pkgs` to obtain a list of the installed packages. You should then
-return the output of
-:mod:`pkg_resource.find_changes <salt.modules.pkg_resource.find_changes>`:
+return the output of ``salt.utils.compare_dicts()``
 
 .. code-block:: python
 
-        return __salt__['pkg_resource.find_changes'](old, new)
+        return salt.utils.compare_dicts(old, new)
 
 
 remove
@@ -208,7 +215,7 @@ success.
 
 mod_repo
 ^^^^^^^^
-Modify the local configuration for one or more option for a conifigured repo.
+Modify the local configuration for one or more option for a configured repo.
 This is also the way to create new repository configuration on the local
 system; if a repo is specified which does not yet exist, it will be created.
 
@@ -239,7 +246,7 @@ function that requires that technique must still use the ``lowpkg`` version.
 list_pkgs
 ^^^^^^^^^
 Returns a dict of packages installed, including the package name and version.
-Can accept a list of packages; if none are spcified, then all installed
+Can accept a list of packages; if none are specified, then all installed
 packages will be listed.
 
 .. code-block:: python

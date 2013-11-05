@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for rpm
 '''
@@ -9,6 +10,9 @@ import logging
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
 
 
 def __virtual__():
@@ -24,17 +28,17 @@ def __virtual__():
     os_family = __grains__['os_family']
     try:
         os_major = int(__grains__['osrelease'].split('.')[0])
-    except ValueError:
+    except (AttributeError, ValueError):
         os_major = 0
 
     if os_grain == 'Amazon':
-        return 'lowpkg'
+        return __virtualname__
     elif os_grain == 'Fedora':
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
-            return 'lowpkg'
+            return __virtualname__
     elif os_family == 'RedHat' and os_major >= 6:
-        return 'lowpkg'
+        return __virtualname__
     return False
 
 
@@ -44,16 +48,20 @@ def list_pkgs(*packages):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
     '''
     errors = []
     pkgs = {}
     if not packages:
-        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
     else:
-        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
+            ' '.join(packages)
+        )
     for line in __salt__['cmd.run'](cmd).splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -67,7 +75,9 @@ def verify(*package):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.verify
     '''
@@ -87,7 +97,7 @@ def verify(*package):
         if 'missing' in line:
             line = ' ' + line
             fdict['missing'] = True
-            del(fdict['mismatch'])
+            del fdict['mismatch']
         fname = line[13:]
         if line[11:12] in ftypes:
             fdict['type'] = ftypes[line[11:12]]
@@ -119,7 +129,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's rpm database (not generally
     recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -139,19 +151,23 @@ def file_dict(*packages):
     any packages will return a list of _every_ file on the system's rpm
     database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
-        salt '*' lowpkg.file_list
+    .. code-block:: bash
+
+        salt '*' lowpkg.file_dict httpd
+        salt '*' lowpkg.file_dict httpd postfix
+        salt '*' lowpkg.file_dict
     '''
     errors = []
     ret = {}
     pkgs = {}
     if not packages:
-        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
     else:
-        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
+            ' '.join(packages)
+        )
     for line in __salt__['cmd.run'](cmd).splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -165,4 +181,3 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
-

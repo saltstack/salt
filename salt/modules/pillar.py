@@ -1,50 +1,101 @@
+# -*- coding: utf-8 -*-
 '''
 Extract the pillar data for this minion
 '''
 
+# Import third party libs
+import yaml
+
 # Import salt libs
 import salt.pillar
+import salt.utils
 
 
-def data(key=''):
+def get(key, default=''):
     '''
-    Returns the pillar derived from the configured pillar source. The pillar
-    source is derived from the file_client option in the minion config
+    .. versionadded:: 0.14
 
-    CLI Example::
+    Attempt to retrieve the named value from pillar, if the named value is not
+    available return the passed default. The default return is an empty string.
 
-        salt '*' pillar.data
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict. This means that if a dict in pillar looks like this::
 
-    With the optional key argument, you can select a subtree of the
-    pillar data.::
+        {'pkg': {'apache': 'httpd'}}
 
-        salt '*' pillar.data key='roles'
+    To retrieve the value associated with the apache key in the pkg dict this
+    key can be passed::
+
+        pkg:apache
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.get pkg:apache
     '''
+    return salt.utils.traverse_dict(__pillar__, key, default)
+
+
+def items(*args):
+    '''
+    This function calls the master for a fresh pillar and generates the pillar
+    data on the fly, unlike pillar.raw which returns the pillar data which
+    is currently loaded into the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.items
+    '''
+    # Preserve backwards compatibility
+    if args:
+        return item(*args)
+
     pillar = salt.pillar.get_pillar(
-            __opts__,
-            __grains__,
-            __opts__['id'],
-            __opts__['environment'])
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'])
 
-    compiled_pillar = pillar.compile_pillar()
+    return pillar.compile_pillar()
 
-    if key:
+# Allow pillar.data to also be used to return pillar data
+data = items
+
+
+def item(*args):
+    '''
+    .. versionadded:: 0.16.2
+
+    Return one ore more pillar entries
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pillar.item foo
+        salt '*' pillar.item foo bar baz
+    '''
+    ret = {}
+    pillar = items()
+    for arg in args:
         try:
-            ret = compiled_pillar[key]
+            ret[arg] = pillar[arg]
         except KeyError:
-            ret = {}
-    else:
-        ret = compiled_pillar
-
+            pass
     return ret
 
 
-def raw(key=''):
+def raw(key=None):
     '''
     Return the raw pillar data that is available in the module. This will
     show the pillar as it is loaded as the __pillar__ dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pillar.raw
 
@@ -54,11 +105,32 @@ def raw(key=''):
         salt '*' pillar.raw key='roles'
     '''
     if key:
-        try:
-            ret = __pillar__[key]
-        except KeyError:
-            ret = {}
+        ret = __pillar__.get(key, {})
     else:
         ret = __pillar__
+
+    return ret
+
+
+def ext(external):
+    '''
+    Generate the pillar and apply an explicit external pillar
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.ext 'libvirt: _'
+    '''
+    if isinstance(external, basestring):
+        external = yaml.safe_load(external)
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'],
+        external)
+
+    ret = pillar.compile_pillar()
 
     return ret

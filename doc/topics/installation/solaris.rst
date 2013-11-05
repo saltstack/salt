@@ -12,7 +12,7 @@ starts up successfully on Solaris 10.
 
 Comments and patches for better support on these platforms is very welcome. 
 
-As of version 0.10.4, solaris is well supported under salt, with all of the
+As of version 0.10.4, Solaris is well supported under salt, with all of the
 following working well:
 
 1.   remote execution
@@ -61,7 +61,7 @@ Once pkgutil is installed you'll need to edit it's config file
    - #mirror=http://mirror.opencsw.org/opencsw/testing
    + mirror=http://mirror.opencsw.org/opencsw/unstable
 
-Ok, time to install salt.
+OK, time to install salt.
 
 .. code-block:: bash
 

@@ -1,19 +1,29 @@
+# -*- coding: utf-8 -*-
 '''
 Manage groups on Windows
 '''
+
+# Import salt libs
+import salt.utils
+
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    return 'group' if __grains__['kernel'] == 'Windows' else False
+    return __virtualname__ if salt.utils.is_windows() else False
 
 
 def add(name, gid=None, system=False):
     '''
     Add the specified group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.add foo
     '''
@@ -28,7 +38,9 @@ def delete(name):
     '''
     Remove the named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.delete foo
     '''
@@ -41,7 +53,9 @@ def info(name):
     '''
     Return information about a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.info foo
     '''
@@ -68,14 +82,19 @@ def info(name):
             'members': gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.getent
     '''
+    if 'group.getent' in __context__ and not refresh:
+        return __context__['group.getent']
+
     ret = []
     ret2 = []
     lines = __salt__['cmd.run']('net localgroup').splitlines()
@@ -104,4 +123,6 @@ def getent():
                 'name': item,
                 'passwd': 'x'}
         ret2.append(group)
+
+    __context__['group.getent'] = ret2
     return ret2

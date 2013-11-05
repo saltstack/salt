@@ -1,0 +1,208 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
+    update-transifex-source-translations
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Update the transifex sources configuration file and push the source
+'''
+
+# Import python libs
+import os
+import sys
+import logging
+import subprocess
+import ConfigParser
+
+try:
+    import txclib.utils
+except ImportError:
+    print(
+        'The \'transifex-client\' library needs to be installed. '
+        'Please execute one of \'pip install transifex-client\' or '
+        '\'easy_install transifex-client\''
+    )
+    sys.exit(1)
+
+DOC_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+
+def main():
+    '''
+    Run the update code
+    '''
+    os.chdir(DOC_DIR)
+
+    print('Extracting translatable strings....')
+    try:
+        subprocess.check_call(['make', 'gettext'])
+    except subprocess.CalledProcessError as exc:
+        print('An error occurred while extracting the translation '
+              'strings: {0}'.format(exc))
+        sys.exit(1)
+
+    locale_dir = os.path.join(DOC_DIR, 'locale')
+    pot_dir = os.path.join(DOC_DIR, '_build', 'locale')
+    tx_root = txclib.utils.find_dot_tx()
+    tx_config = os.path.join(tx_root, '.tx', 'config')
+
+    if not tx_root:
+        print('Unable to find the \'.tx/\' directory. Unable to continue')
+        sys.exit(1)
+
+    # We do not want the txclib INFO or WARNING logging
+    logging.getLogger('txclib').setLevel(logging.ERROR)
+
+    print('Gathering the translation template files...'),
+    sys.stdout.flush()
+    entries = []
+    for dirpath, dirnames, filenames in os.walk(pot_dir):
+        for filename in filenames:
+            pot_file = os.path.join(dirpath, filename)
+            base, ext = os.path.splitext(pot_file)
+            if ext != ".pot":
+                continue
+            resource_path = os.path.relpath(base, pot_dir)
+            try:
+                import babel.messages.pofile
+                if not len(babel.messages.pofile.read_po(open(pot_file))):
+                    # Empty pot file, continue
+                    continue
+            except ImportError:
+                # No babel package, let's keep on going
+                pass
+
+            resource_name = resource_path.replace(
+                '\\', '/').replace('/', '--').replace('.', '_')
+            entries.append((resource_path, resource_name))
+    print('Done')
+
+    # Let's load the resources already present in the configuration file
+    cfg = ConfigParser.SafeConfigParser()
+    cfg.read([tx_config])
+    handled_resources = set(
+        section for section in
+        cfg.sections() if section.startswith('salt.')
+    )
+
+    print('Updating the entries in \'.tx/config\'...')
+    sys.stdout.flush()
+    total_entries = len(entries)
+    for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
+        print(
+            '[{0:>{pad}}/{1}] Updating resource for '
+            '{resource_path}.pot ({resource_name})'.format(
+                idx + 1,
+                total_entries,
+                pad=len(str(total_entries)),
+                locale_dir=locale_dir,
+                resource_name=resource_name,
+                resource_path=resource_path
+            )
+        ),
+        sys.stdout.flush()
+        try:
+            txclib.utils.exec_command(
+                'set',
+                '--auto-local -r salt.{resource_name} '
+                '{locale_dir}/<lang>/LC_MESSAGES/{resource_path}.po '
+                '--source-lang en '
+                '--source-file {pot_dir}/{resource_path}.pot '
+                '--source-name {resource_path}.rst '
+                '--execute'.format(
+                    resource_name=resource_name,
+                    resource_path=resource_path,
+                    locale_dir=locale_dir,
+                    pot_dir=pot_dir.rstrip('/')
+                ).split(),
+                tx_root
+            )
+            print
+            if 'salt.{0}'.format(resource_name) in handled_resources:
+                handled_resources.remove('salt.{0}'.format(resource_name))
+        except KeyboardInterrupt:
+            print
+            sys.exit(1)
+
+    if handled_resources:
+        non_handled_resources = len(handled_resources)
+        print('Removing old resources from configuration and upstream'
+              '(if possible)')
+        for idx, resource_name in enumerate(sorted(handled_resources)):
+            print(
+                '[{0:>{pad}}/{1}] Removing resource {resource_name!r}'.format(
+                    idx + 1,
+                    non_handled_resources,
+                    pad=len(str(non_handled_resources)),
+                    resource_name=resource_name,
+                )
+            ),
+            sys.stdout.flush()
+            try:
+                txclib.utils.exec_command(
+                    'delete',
+                    ['-r', resource_name],
+                    tx_root
+                )
+            except Exception, err:
+                print err
+            finally:
+                if cfg.has_section(resource_name):
+                    cfg.remove_section(resource_name)
+            print
+        cfg.write(open(tx_config, 'w'))
+        print
+
+    # Set the translations file type we're using
+    txclib.utils.exec_command('set', ['-t', 'PO'], tx_root)
+
+    print
+    print('Pushing translation template files...')
+    for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
+        print(
+            '[{0:>{pad}}/{1}] Pushing resource for '
+            '{resource_path}.pot ({resource_name})'.format(
+                idx + 1,
+                total_entries,
+                pad=len(str(total_entries)),
+                locale_dir=locale_dir,
+                resource_name=resource_name,
+                resource_path=resource_path
+            )
+        ),
+        sys.stdout.flush()
+        try:
+            txclib.utils.exec_command(
+                'push',
+                '--resource salt.{resource_name} '
+                '--source '
+                '--skip '
+                '--no-interactive'.format(
+                    resource_name=resource_name,
+                    resource_path=resource_path,
+                    locale_dir=locale_dir
+                ).split(),
+                tx_root
+            )
+            print
+        except KeyboardInterrupt:
+            print
+            sys.exit(1)
+
+    if handled_resources:
+        print('=' * 80)
+        print('Don\'t forget to delete the following remote resources:')
+        for resource_name in sorted(handled_resources):
+            print('    {0}'.format(resource_name))
+        print('=' * 80)
+
+    print 'DONE'
+
+
+if __name__ == '__main__':
+    main()

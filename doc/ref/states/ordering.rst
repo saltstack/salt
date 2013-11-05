@@ -2,17 +2,39 @@
 Ordering States
 ===============
 
-When creating Salt SLS files, it is often important to ensure that they run in
-a specific order. While states will always execute in the same order, that
-order is not necessarily defined the way you want it.
+The way in which configuration management systems are executed is a hotly
+debated topic in the configuration management world. Two
+major philosophies exist on the subject, to either execute in an imperative
+fashion where things are executed in the order in which they are defined, or
+in a declarative fashion where dependencies need to be mapped between objects.
 
-A few tools exist in Salt to set up the correct state ordering. These tools
-consist of requisite declarations and order options.
+Imperative ordering is finite and generally considered easier to write, but
+declarative ordering is much more powerful and flexible but generally considered
+more difficult to create.
 
-.. note::
+Salt has been created to get the best of both worlds. States are evaluated in
+a finite order, which guarantees that states are always executed in the same
+order, and the states runtime is declarative, making Salt fully aware of
+dependencies via the `requisite` system.
 
-    Salt does **not** execute :term:`state declarations <state declaration>` in
-    the order they appear in the source.
+State Auto Ordering
+===================
+
+.. versionadded: 0.17.0
+
+Salt always executes states in a finite manner, meaning that they will always
+execute in the same order regardless of the system that is executing them.
+But in Salt 0.17.0, the ``state_auto_order`` option was added. This option
+makes states get evaluated in the order in which they are defined in sls
+files.
+
+The evaluation order makes it easy to know what order the states will be
+executed in, but it is important to note that the requisite system will
+override the ordering defined in the files, and the ``order`` option described
+below will also override the order in which states are defined in sls files.
+
+If the classic ordering is preferred (lexicographic), then set
+``state_auto_order`` to ``False`` in the master configuration file.
 
 Requisite Statements
 ====================
@@ -23,10 +45,10 @@ Requisite Statements
     version 0.9.7 of Salt.
 
 Often when setting up states any single action will require or depend on
-another action. Salt allows you to build relationships between states with
-requisite statements. A requisite statement ensure that the named state is
-evaluated before the state requiring it. There are two types of requisite
-statements in Salt, **require** and **watch**.
+another action. Salt allows for the building of relationships between states
+with requisite statements. A requisite statement ensures that the named state
+is evaluated before the state requiring it. There are three types of requisite
+statements in Salt, **require**, **watch** and **prereq**.
 
 These requisite statements are applied to a specific state declaration:
 
@@ -41,7 +63,7 @@ These requisite statements are applied to a specific state declaration:
         - require:
           - pkg: httpd
 
-In this example we use the **require** requisite to declare that the file
+In this example the **require** requisite is used to declare that the file
 /etc/httpd/conf/httpd.conf should only be set up if the pkg state executes
 successfully.
 
@@ -49,12 +71,38 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
+Require statements can refer to the following requisite types: pkg, file, sls
+
+In addition to state declarations such as pkg, file, etc., **sls** type requisites
+are also recognized, and essentially allow 'chaining' of states. This provides a
+mechanism to ensure the proper sequence for complex state formulas, especially when
+the discrete states are split or groups into separate sls files:
+
+.. code-block:: yaml
+
+    include:
+      - network
+      
+    httpd:
+      pkg:
+        - installed
+      service:
+        - running
+        - require:
+          - pkg: httpd
+          - sls: network
+
+In this example, the httpd sevice running state will not be applied
+(i.e., the httpd service will not be started) unless both the https package is
+installed AND the network state is satistifed.
+
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
-    Therefore, if you are using the ``pkgs`` or ``sources`` argument to install
-    a list of packages in a pkg state, it's important to note that you cannot
-    have a requisite that matches on an individual package in the list.
+    Therefore, if using the ``pkgs`` or ``sources`` argument to install
+    a list of packages in a pkg state, it's important to note that it is
+    imposible to match an individual package in the list, since all packages
+    are installed as a single state.
 
 
 Multiple Requisites
@@ -205,7 +253,7 @@ as if they were under a ``require`` statement.
 Also notice that a ``mod_watch`` may accept additional keyword arguments,
 which, in the sls file, will be taken from the same set of arguments specified
 for the state that includes the ``watch`` requisite. This means, for the
-earlier ``service.running`` example above,  you can tell the service to
+earlier ``service.running`` example above,  the service can be set to
 ``reload`` instead of restart like this:
 
 .. code-block:: yaml
@@ -245,8 +293,8 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beginning.
-Sometimes you may want to send a state to the end of the line. To do this,
-set the order to ``last``:
+Certian circimstances will present a situation where it is desireable to send
+a state to the end of the line. To do this, set the order to ``last``:
 
 .. code-block:: yaml
 

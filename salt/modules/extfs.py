@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing ext2/3/4 file systems
 '''
@@ -5,18 +6,17 @@ Module for managing ext2/3/4 file systems
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
-    if __grains__['os'] in disable:
+    if salt.utils.is_windows():
         return False
     return 'extfs'
 
@@ -25,7 +25,9 @@ def mkfs(device, fs_type, **kwargs):
     '''
     Create a file system on the specified device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' extfs.mkfs /dev/sda1 fs_type=ext4 opts='acl,noexec'
 
@@ -57,8 +59,9 @@ def mkfs(device, fs_type, **kwargs):
         fs_type: set the filesystem type (REQUIRED)
         usage_type: how the filesystem is going to be used
         uuid: set the UUID for the file system
-        
-        see man 8 mke2fs for a more complete description of these options
+
+    See the ``mke2fs(8)`` manpage for a more complete description of these
+    options.
     '''
     kwarg_map = {'block_size': 'b',
                  'check': 'c',
@@ -84,14 +87,15 @@ def mkfs(device, fs_type, **kwargs):
                  'super': 'S',
                  'usage_type': 'T',
                  'uuid': 'U'}
-        
+
     opts = ''
-    for key in kwargs.keys():
-        opt = kwarg_map[key]
-        if kwargs[key] == 'True':
-            opts += '-{0} '.format(opt)
-        else:
-            opts += '-{0} {1} '.format(opt, kwargs[key])
+    for key in kwargs:
+        if key in kwarg_map:
+            opt = kwarg_map[key]
+            if kwargs[key] == 'True':
+                opts += '-{0} '.format(opt)
+            else:
+                opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = []
@@ -118,7 +122,9 @@ def tune(device, **kwargs):
     '''
     Set attributes for the specified device (using tune2fs)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' extfs.tune /dev/sda1 force=True label=wildstallyns opts='acl,noexec'
 
@@ -145,7 +151,8 @@ def tune(device, **kwargs):
         user: user or uid who can use the reserved blocks
         uuid: set the UUID for the file system
 
-        see man 8 tune2fs for a more complete description of these options
+    See the ``mke2fs(8)`` manpage for a more complete description of these
+    options.
     '''
     kwarg_map = {'max': 'c',
                  'count': 'C',
@@ -167,12 +174,13 @@ def tune(device, **kwargs):
                  'user': 'u',
                  'uuid': 'U'}
     opts = ''
-    for key in kwargs.keys():
-        opt = kwarg_map[key]
-        if kwargs[key] == 'True':
-            opts += '-{0} '.format(opt)
-        else:
-            opts += '-{0} {1} '.format(opt, kwargs[key])
+    for key in kwargs:
+        if key in kwarg_map:
+            opt = kwarg_map[key]
+            if kwargs[key] == 'True':
+                opts += '-{0} '.format(opt)
+            else:
+                opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'tune2fs {0}{1}'.format(opts, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -182,7 +190,9 @@ def attributes(device, args=None):
     '''
     Return attributes from dumpe2fs for a specified device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' extfs.attributes /dev/sda1
     '''
@@ -194,7 +204,9 @@ def blocks(device, args=None):
     '''
     Return block and inode info from dumpe2fs for a specified device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' extfs.blocks /dev/sda1
     '''
@@ -206,7 +218,9 @@ def dump(device, args=None):
     '''
     Return all contents of dumpe2fs for a specified device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' extfs.dump /dev/sda1
     '''
@@ -252,8 +266,8 @@ def dump(device, args=None):
                 ret['blocks'][group]['extra'] = []
             elif 'Free blocks:' in line:
                 comps = line.split(': ')
-                blocks = comps[1].split(', ')
-                ret['blocks'][group]['free blocks'] = blocks
+                free_blocks = comps[1].split(', ')
+                ret['blocks'][group]['free blocks'] = free_blocks
             elif 'Free inodes:' in line:
                 comps = line.split(': ')
                 inodes = comps[1].split(', ')
@@ -262,4 +276,3 @@ def dump(device, args=None):
                 line = line.strip()
                 ret['blocks'][group]['extra'].append(line)
     return ret
-

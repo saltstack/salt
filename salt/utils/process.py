@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 import logging
 import os
@@ -43,13 +44,21 @@ def set_pidfile(pidfile, user):
             )
         )
         sys.exit(2)
+
+    if os.getuid() == uid:
+        # The current user already owns the pidfile. Return!
+        return
+
     try:
         os.chown(pidfile, uid, gid)
     except OSError as err:
-        msg = ('Failed to set the ownership of PID file {0} '
-               'to user {1}\n').format(pidfile, user)
-        log.debug(msg, exc_info=True)
-        sys.stderr.write(msg)
+        msg = (
+            'Failed to set the ownership of PID file {0} to user {1}.'.format(
+                pidfile, user
+            )
+        )
+        log.debug('{0} Traceback follows:\n'.format(msg), exc_info=True)
+        sys.stderr.write('{0}\n'.format(msg))
         sys.exit(err.errno)
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 

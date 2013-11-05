@@ -12,10 +12,10 @@ with Salt, and is required as a dependency.
 New Features
 ============
 
-http and ftp support in files.managed
+HTTP and ftp support in files.managed
 -------------------------------------
 
-Now under the source option in the file.managed state a http or ftp address
+Now under the source option in the file.managed state a HTTP or ftp address
 can be used instead of a file located on the salt master.
 
 Allow Multiple Returners

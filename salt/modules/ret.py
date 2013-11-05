@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Module to integrate with the returner system and retrieve data sent to a salt
-returner.
+Module to integrate with the returner system and retrieve data sent to a salt returner
 '''
 
 # Import salt libs
@@ -11,7 +11,9 @@ def get_jid(returner, jid):
     '''
     Return the information for a specified job id
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ret.get_jid redis 20421104181954700505
     '''
@@ -23,7 +25,9 @@ def get_fun(returner, fun):
     '''
     Return info about last time fun was called on each minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ret.get_fun mysql network.interfaces
     '''
@@ -35,7 +39,9 @@ def get_jids(returner):
     '''
     Return a list of all job ids
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ret.get_jids mysql
     '''
@@ -47,7 +53,9 @@ def get_minions(returner):
     '''
     Return a list of all minions
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ret.get_minions mysql
     '''

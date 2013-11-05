@@ -1,7 +1,7 @@
 {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}:
   virtualenv:
     - managed
-    - no_site_packages: True
+    - system_site_packages: False
     - distribute: True
 
 pep8-pip:

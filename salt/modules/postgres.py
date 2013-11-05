@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to provide Postgres compatibility to salt.
 
@@ -9,20 +10,30 @@ Module to provide Postgres compatibility to salt.
         postgres.port: '5432'
         postgres.user: 'postgres'
         postgres.pass: ''
-        postgres.db: 'postgres'
+        postgres.maintenance_db: 'postgres'
 
+    The default for the maintenance_db is 'postgres' and in most cases it can
+    be left at the default setting.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
 '''
 
 # Import python libs
-from datetime import datetime
-import pipes
+import datetime
+import distutils.version  # pylint: disable=E0611
 import logging
+import StringIO
+import os
+import tempfile
+try:
+    import pipes
+    import csv
+    HAS_ALL_IMPORTS = True
+except ImportError:
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -31,30 +42,96 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if salt.utils.which('psql'):
+    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
         return 'postgres'
     return False
 
 
-def version(user=None, host=None, port=None, db=None, runas=None):
+def _run_psql(cmd, runas=None, password=None, host=None,
+              run_cmd="cmd.run_all"):
+    '''
+    Helper function to call psql, because the password requirement
+    makes this too much code to be repeated in each function below
+    '''
+    kwargs = {
+        'reset_system_locale': False
+    }
+    if runas is None:
+        if not host:
+            host = __salt__['config.option']('postgres.host')
+        if not host or host.startswith('/'):
+            if 'FreeBSD' in __grains__['os_family']:
+                runas = 'pgsql'
+            else:
+                runas = 'postgres'
+
+    if runas:
+        kwargs['runas'] = runas
+
+    if password is None:
+        password = __salt__['config.option']('postgres.pass')
+    if password is not None:
+        pgpassfile = salt.utils.mkstemp(text=True)
+        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+            fp_.write('{0}:*:*:{1}:{2}'.format(
+                'localhost' if not host or host.startswith('/') else host,
+                runas if runas else '*',
+                password
+            ))
+            __salt__['file.chown'](pgpassfile, runas, '')
+            kwargs['env'] = {'PGPASSFILE': pgpassfile}
+
+    ret = __salt__[run_cmd](cmd, **kwargs)
+
+    if password is not None and not __salt__['file.remove'](pgpassfile):
+        log.warning('Remove PGPASSFILE failed')
+
+    return ret
+
+
+def version(user=None, host=None, port=None, maintenance_db=None,
+            password=None, runas=None):
     '''
     Return the version of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.version
     '''
     query = 'SELECT setting FROM pg_catalog.pg_settings ' \
             'WHERE name = \'server_version\''
-    cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    cmd = _psql_cmd('-c', query, '-t', host=host, user=user,
+                    port=port, maintenance_db=maintenance_db,
+                    password=password)
+    ret = _run_psql(cmd, runas=runas, password=password, host=host)
 
     for line in ret['stdout'].splitlines():
         return line
 
 
-def _connection_defaults(user=None, host=None, port=None, db=None):
+def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
+                    password=None, runas=None):
+    '''
+    Returns the server version properly parsed and int casted for internal use.
+
+    If the Postgres server does not respond, None will be returned.
+    '''
+
+    psql_version = version(
+        user, host, port, maintenance_db, password, runas
+    )
+
+    if psql_version:
+        return distutils.version.LooseVersion(psql_version)
+    else:
+        log.warning('Attempt to parse version of Postgres server failed. Is the server responding?')
+        return None
+
+
+def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
+                         password=None):
     '''
     Returns a tuple of (user, host, port, db) with config, pillar, or default
     values assigned to missing values.
@@ -65,10 +142,12 @@ def _connection_defaults(user=None, host=None, port=None, db=None):
         host = __salt__['config.option']('postgres.host')
     if not port:
         port = __salt__['config.option']('postgres.port')
-    if not db:
-        db = __salt__['config.option']('postgres.db')
+    if not maintenance_db:
+        maintenance_db = __salt__['config.option']('postgres.maintenance_db')
+    if password is None:
+        password = __salt__['config.option']('postgres.pass')
 
-    return (user, host, port, db)
+    return (user, host, port, maintenance_db, password)
 
 
 def _psql_cmd(*args, **kwargs):
@@ -78,80 +157,126 @@ def _psql_cmd(*args, **kwargs):
     Accept optional keyword arguments: user, host and port as well as any
     number or positional arguments to be added to the end of command.
     '''
-    (user, host, port, db) = _connection_defaults(kwargs.get('user'),
-                                                  kwargs.get('host'),
-                                                  kwargs.get('port'),
-                                                  kwargs.get('db'))
+    (user, host, port, maintenance_db, password) = _connection_defaults(
+        kwargs.get('user'),
+        kwargs.get('host'),
+        kwargs.get('port'),
+        kwargs.get('maintenance_db'),
+        kwargs.get('password'))
+
     cmd = [salt.utils.which('psql'),
            '--no-align',
-           '--no-readline',
-           '--no-password']
+           '--no-readline']
+    if password is None:
+        cmd += ['--no-password']
     if user:
         cmd += ['--username', user]
     if host:
         cmd += ['--host', host]
     if port:
-        cmd += ['--port', port]
-    if db:
-        cmd += ['--dbname', db]
+        cmd += ['--port', str(port)]
+    if not maintenance_db:
+        maintenance_db = 'postgres'
+    cmd += ['--dbname', maintenance_db]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
     return cmdstr
 
 
+def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
+               password=None, runas=None):
+    '''
+    Run an SQL-Query and return the results as a list. This command
+    only supports SELECT statements.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.psql_query 'select * from pg_stat_activity'
+    '''
+    ret = []
+
+    csv_query = 'COPY ({0}) TO STDOUT WITH CSV HEADER'.format(
+        query.strip().rstrip(';'))
+
+    cmd = _psql_cmd(
+        # always use the same datestyle settings to allow parsing dates
+        # regardless what server settings are configured
+        '-v', 'datestyle=ISO,MDY',
+        '-c', csv_query,
+        host=host, user=user, port=port, maintenance_db=maintenance_db,
+        password=password)
+
+    cmdret = _run_psql(cmd, runas=runas, password=password)
+
+    if cmdret['retcode'] > 0:
+        return ret
+
+    csv_file = StringIO.StringIO(cmdret['stdout'])
+    header = {}
+    for row in csv.reader(csv_file, delimiter=',', quotechar='"'):
+        if not row:
+            continue
+        if not header:
+            header = row
+            continue
+        ret.append(dict(zip(header, row)))
+
+    return ret
+
+
 # Database related actions
 
-def db_list(user=None, host=None, port=None, db=None, runas=None):
+def db_list(user=None, host=None, port=None, maintenance_db=None,
+            password=None, runas=None):
     '''
     Return dictionary with information about databases of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_list
     '''
 
     ret = {}
-    header = ['Name',
-              'Owner',
-              'Encoding',
-              'Collate',
-              'Ctype',
-              'Access privileges']
 
-    query = 'SELECT datname as "Name", pga.rolname as "Owner", ' \
-            'pg_encoding_to_char(encoding) as "Encoding", ' \
-            'datcollate as "Collate", datctype as "Ctype", ' \
-            'datacl as "Access privileges" FROM pg_database pgd, ' \
-            'pg_authid pga WHERE pga.oid = pgd.datdba'
+    query = (
+        'SELECT datname as "Name", pga.rolname as "Owner", '
+        'pg_encoding_to_char(encoding) as "Encoding", '
+        'datcollate as "Collate", datctype as "Ctype", '
+        'datacl as "Access privileges", spcname as "Tablespace" '
+        'FROM pg_database pgd, pg_roles pga, pg_tablespace pgts '
+        'WHERE pga.oid = pgd.datdba AND pgts.oid = pgd.dattablespace'
+    )
 
-    cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db)
+    rows = psql_query(query, runas=runas, host=host, user=user,
+                      port=port, maintenance_db=maintenance_db,
+                      password=password)
 
-    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
-
-    if cmdret['retcode'] > 0:
-        return ret
-
-    for line in cmdret['stdout'].splitlines():
-        if line.count('|') != 5:
-            log.warning('Unexpected string: {0}'.format(line))
-            continue
-        comps = line.split('|')
-        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
+    for row in rows:
+        ret[row['Name']] = row
+        ret[row['Name']].pop('Name')
 
     return ret
 
 
-def db_exists(name, user=None, host=None, port=None, db=None, runas=None):
+def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None):
     '''
     Checks if a database exists on the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_exists 'dbname'
     '''
 
-    databases = db_list(user=user, host=host, port=port, db=db, runas=runas)
+    databases = db_list(user=user, host=host, port=port,
+                        maintenance_db=maintenance_db,
+                        password=password, runas=runas)
     return name in databases
 
 
@@ -159,10 +284,10 @@ def db_create(name,
               user=None,
               host=None,
               port=None,
-              db=None,
+              maintenance_db=None,
+              password=None,
               tablespace=None,
               encoding=None,
-              locale=None,
               lc_collate=None,
               lc_ctype=None,
               owner=None,
@@ -171,7 +296,9 @@ def db_create(name,
     '''
     Adds a databases to the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_create 'dbname'
 
@@ -188,9 +315,9 @@ def db_create(name,
         # doesn't get thrown by dashes in the name
         'OWNER': owner and '"{0}"'.format(owner),
         'TEMPLATE': template,
-        'ENCODING': encoding and '\'{0}\''.format(encoding),
-        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
+        'ENCODING': encoding and '{0!r}'.format(encoding),
+        'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
+        'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
         'TABLESPACE': tablespace,
     }
     with_chunks = []
@@ -203,106 +330,154 @@ def db_create(name,
         query += ' '.join(with_chunks)
 
     # Execute the command
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
+                    maintenance_db=maintenance_db,
+                    password=password)
+    ret = _run_psql(cmd, runas=runas, password=password, host=host)
 
     return ret['retcode'] == 0
 
 
-def db_remove(name, user=None, host=None, port=None, db=None, runas=None):
+def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
+             password=None, tablespace=None, owner=None, runas=None):
+    '''
+    Change tablesbase or/and owner of databse.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.db_alter dbname owner=otheruser
+    '''
+    if not any((tablespace, owner)):
+        return True  # Nothing todo?
+
+    queries = []
+    if owner:
+        queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
+            name, owner
+        ))
+    if tablespace:
+        queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
+            name, tablespace
+        ))
+    for query in queries:
+        cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
+                        maintenance_db=maintenance_db, password=password)
+        ret = _run_psql(cmd, runas=runas, password=password, host=host)
+        if ret['retcode'] != 0:
+            return False
+
+    return True
+
+
+def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None):
     '''
     Removes a databases from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_remove 'dbname'
     '''
 
-    # db doesnt exist, proceed
+    # db doesn't exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
+                    maintenance_db=maintenance_db, password=password)
+    ret = _run_psql(cmd, runas=runas, password=password, host=host)
     return ret['retcode'] == 0
 
 
 # User related actions
 
-def user_list(user=None, host=None, port=None, db=None, runas=None):
+def user_list(user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None):
     '''
     Return a dict with information about users of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_list
     '''
 
     ret = {}
-    header = ['name',
-              'superuser',
-              'inherits privileges',
-              'can create roles',
-              'can create databases',
-              'can update system catalogs',
-              'can login',
-              'replication',
-              'connections',
-              'expiry time',
-              'defaults variables']
 
-    ver = version(user=None,
-                  host=None,
-                  port=None,
-                  db=None,
-                  runas=None).split('.')
-    if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
+    ver = _parsed_version(user=user,
+                          host=host,
+                          port=port,
+                          maintenance_db=maintenance_db,
+                          password=password,
+                          runas=runas)
+    if ver >= distutils.version.LooseVersion('9.1'):
         query = (
-            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
-            'rolcreatedb, rolcatupdate, rolcanlogin, rolreplication, '
-            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'SELECT rolname as "name", rolsuper as "superuser", '
+            'rolinherit as "inherits privileges", '
+            'rolcreaterole as "can create roles", '
+            'rolcreatedb as "can create databases", '
+            'rolcatupdate as "can update system catalogs", '
+            'rolcanlogin as "can login", rolreplication as "replication", '
+            'rolconnlimit as "connections", '
+            'rolvaliduntil::timestamp(0) as "expiry time", '
+            'rolconfig  as "defaults variables" '
             'FROM pg_roles'
         )
     else:
         query = (
-            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
-            'rolcreatedb, rolcatupdate, rolcanlogin, NULL, '
-            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'SELECT rolname as "name", rolsuper as "superuser", '
+            'rolinherit as "inherits privileges", '
+            'rolcreaterole as "can create roles", '
+            'rolcreatedb as "can create databases", '
+            'rolcatupdate as "can update system catalogs", '
+            'rolcanlogin as "can login", NULL as "replication", '
+            'rolconnlimit as "connections", '
+            'rolvaliduntil::timestamp(0) as "expiry time", '
+            'rolconfig  as "defaults variables" '
             'FROM pg_roles'
         )
-    cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db)
 
-    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
+    rows = psql_query(query, runas=runas, host=host, user=user,
+                      port=port, maintenance_db=maintenance_db,
+                      password=password)
 
-    if cmdret['retcode'] > 0:
-        return ret
-
-    for line in cmdret['stdout'].splitlines():
-        comps = line.split('|')
-        # type casting
-        for i in range(1, 8):
-            if comps[i] == 't':
-                comps[i] = True
-            elif comps[i] == 'f':
-                comps[i] = False
-            else:
-                comps[i] = None
-        comps[8] = int(comps[8])
-        if comps[9]:
-            comps[9] = datetime.strptime(comps[9], '%Y-%m-%d %H:%M:%S')
+    def get_bool(rowdict, key):
+        if rowdict[key] == 't':
+            return True
+        elif rowdict[key] == 'f':
+            return False
         else:
-            comps[9] = None
-        if not comps[10]:
-            comps[10] = None
-        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
+            return None
+
+    for row in rows:
+        retrow = {}
+        for key in ('superuser', 'inherits privileges', 'can create roles',
+                    'can create databases', 'can update system catalogs',
+                    'can login', 'replication', 'connections'):
+            retrow[key] = get_bool(row, key)
+        for date_key in ('expiry time',):
+            try:
+                retrow[date_key] = datetime.datetime.strptime(
+                    row['date_key'], '%Y-%m-%d %H:%M:%S')
+            except (ValueError, KeyError):
+                retrow[date_key] = None
+        retrow['defaults variables'] = row['defaults variables']
+        ret[row['name']] = retrow
 
     return ret
 
 
-def user_exists(name, user=None, host=None, port=None, db=None, runas=None):
+def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
+                password=None, runas=None):
     '''
     Checks if a user exists on the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_exists 'username'
     '''
@@ -310,7 +485,8 @@ def user_exists(name, user=None, host=None, port=None, db=None, runas=None):
     return name in user_list(user=user,
                              host=host,
                              port=port,
-                             db=db,
+                             maintenance_db=maintenance_db,
+                             password=password,
                              runas=runas)
 
 
@@ -319,13 +495,14 @@ def _role_create(name,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
+                 maintenance_db=None,
+                 password=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
                  superuser=False,
                  replication=False,
-                 password=None,
+                 rolepassword=None,
                  groups=None,
                  runas=None):
     '''
@@ -339,66 +516,75 @@ def _role_create(name,
         create_type = 'ROLE'
 
     # check if role exists
-    if user_exists(name, user, host, port, db, runas=runas):
-        log.info('{0} \'{1}\' already exists'.format(create_type, name,))
+    if user_exists(name, user, host, port, maintenance_db,
+                   password=password, runas=runas):
+        log.info('{0} {1!r} already exists'.format(create_type, name))
         return False
 
-    sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name, )
-    if password:
+    sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name)
+    if rolepassword is not None:
         if encrypted:
-            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
-        escaped_password = password.replace('\'', '\'\'')
-        sub_cmd = '{0} PASSWORD \'{1}\''.format(sub_cmd, escaped_password)
+            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
+        escaped_password = rolepassword.replace('\'', '\'\'')
+        sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, escaped_password)
     if createdb:
-        sub_cmd = '{0} CREATEDB'.format(sub_cmd, )
+        sub_cmd = '{0} CREATEDB'.format(sub_cmd)
     if createuser:
-        sub_cmd = '{0} CREATEUSER'.format(sub_cmd, )
+        sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
     if superuser:
-        sub_cmd = '{0} SUPERUSER'.format(sub_cmd, )
+        sub_cmd = '{0} SUPERUSER'.format(sub_cmd)
     if replication:
-        sub_cmd = '{0} REPLICATION'.format(sub_cmd, )
+        sub_cmd = '{0} REPLICATION'.format(sub_cmd)
     if groups:
-        sub_cmd = '{0} IN GROUP {1}'.format(sub_cmd, groups, )
+        sub_cmd = '{0} IN GROUP {1}'.format(sub_cmd, groups)
 
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
-    return __salt__['cmd.run'](cmd, runas=runas)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
+                    maintenance_db=maintenance_db, password=password)
+    return _run_psql(cmd, runas=runas, password=password, host=host,
+                     run_cmd='cmd.run')
 
 
 def user_create(username,
                 user=None,
                 host=None,
                 port=None,
-                db=None,
+                maintenance_db=None,
+                password=None,
                 createdb=False,
                 createuser=False,
                 encrypted=False,
                 superuser=False,
                 replication=False,
-                password=None,
+                rolepassword=None,
                 groups=None,
                 runas=None):
     '''
     Creates a Postgres user.
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    .. code-block:: bash
+
+        salt '*' postgres.user_create 'username' user='user' \\
+                host='hostname' port='port' password='password' \\
+                rolepassword='rolepassword'
     '''
     return _role_create(username,
                         True,
                         user,
                         host,
                         port,
-                        db,
+                        maintenance_db,
+                        password,
                         createdb,
                         createuser,
                         encrypted,
                         superuser,
                         replication,
-                        password,
+                        rolepassword,
                         groups,
                         runas)
 
@@ -407,12 +593,13 @@ def _role_update(name,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
+                 maintenance_db=None,
+                 password=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
                  replication=False,
-                 password=None,
+                 rolepassword=None,
                  groups=None,
                  runas=None):
     '''
@@ -420,21 +607,22 @@ def _role_update(name,
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, db, runas=runas):
-        log.info('User \'{0}\' does not exist'.format(name,))
+    if not user_exists(name, user, host, port, maintenance_db, password,
+                       runas=runas):
+        log.info('User {0!r} does not exist'.format(name))
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name, )
-    if password:
-        sub_cmd = '{0} PASSWORD \'{1}\''.format(sub_cmd, password)
+    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    if rolepassword is not None:
+        sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, rolepassword)
     if createdb:
-        sub_cmd = '{0} CREATEDB'.format(sub_cmd, )
+        sub_cmd = '{0} CREATEDB'.format(sub_cmd)
     if createuser:
-        sub_cmd = '{0} CREATEUSER'.format(sub_cmd, )
+        sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
     if encrypted:
-        sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
-    if encrypted:
-        sub_cmd = '{0} REPLICATION'.format(sub_cmd, )
+        sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
+    if replication:
+        sub_cmd = '{0} REPLICATION'.format(sub_cmd)
 
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
@@ -443,77 +631,96 @@ def _role_update(name,
         for group in groups.split(','):
             sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
-    return __salt__['cmd.run'](cmd, runas=runas)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
+                    maintenance_db=maintenance_db, password=password)
+    return _run_psql(cmd, runas=runas, password=password, host=host,
+                     run_cmd='cmd.run')
 
 
 def user_update(username,
                 user=None,
                 host=None,
                 port=None,
-                db=None,
+                maintenance_db=None,
+                password=None,
                 createdb=False,
                 createuser=False,
                 encrypted=False,
                 replication=False,
-                password=None,
+                rolepassword=None,
                 groups=None,
                 runas=None):
     '''
     Creates a Postgres user.
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    .. code-block:: bash
+
+        salt '*' postgres.user_create 'username' user='user' \\
+                host='hostname' port='port' password='password' \\
+                rolepassword='rolepassword'
     '''
     return _role_update(username,
                         user,
                         host,
                         port,
-                        db,
+                        maintenance_db,
+                        password,
                         createdb,
                         createuser,
                         encrypted,
                         replication,
-                        password,
+                        rolepassword,
                         groups,
                         runas)
 
 
-def _role_remove(name, user=None, host=None, port=None, db=None, runas=None):
+def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
+                 password=None, runas=None):
     '''
     Removes a role from the Postgres Server
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, db, runas=runas):
-        log.info('User \'{0}\' does not exist'.format(name,))
+    if not user_exists(name, user, host, port, maintenance_db,
+                       password=password, runas=runas):
+        log.info('User {0!r} does not exist'.format(name))
         return False
 
     # user exists, proceed
     sub_cmd = 'DROP ROLE {0}'.format(name)
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
-    __salt__['cmd.run'](cmd, runas=runas)
-    if not user_exists(name, user, host, port, db, runas=runas):
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
+                    maintenance_db=maintenance_db, password=password)
+    _run_psql(
+        cmd, runas=runas, password=password, host=host, run_cmd='cmd.run'
+    )
+    if not user_exists(name, user, host, port, maintenance_db,
+                       password=password, runas=runas):
         return True
     else:
-        log.info('Failed to delete user \'{0}\'.'.format(name, ))
+        log.info('Failed to delete user {0!r}.'.format(name))
+        return False
 
 
 def user_remove(username,
                 user=None,
                 host=None,
                 port=None,
-                db=None,
+                maintenance_db=None,
+                password=None,
                 runas=None):
     '''
     Removes a user from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_remove 'username'
     '''
-    return _role_remove(username, user, host, port, db, runas)
+    return _role_remove(username, user, host, port, maintenance_db,
+                        password, runas)
 
 
 # Group related actions
@@ -522,35 +729,41 @@ def group_create(groupname,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
+                 maintenance_db=None,
+                 password=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
                  superuser=False,
                  replication=False,
-                 password=None,
+                 rolepassword=None,
                  groups=None,
                  runas=None):
     '''
     Creates a Postgres group. A group is postgres is similar to a user, but
     cannot login.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' postgres.group_create 'groupname' user='user' host='hostname' port='port' password='password'
+    .. code-block:: bash
+
+        salt '*' postgres.group_create 'groupname' user='user' \\
+                host='hostname' port='port' password='password' \\
+                rolepassword='rolepassword'
     '''
     return _role_create(groupname,
                         False,
                         user,
                         host,
                         port,
-                        db,
+                        maintenance_db,
+                        password,
                         createdb,
                         createuser,
                         encrypted,
                         superuser,
                         replication,
-                        password,
+                        rolepassword,
                         groups,
                         runas)
 
@@ -559,31 +772,37 @@ def group_update(groupname,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
+                 maintenance_db=None,
+                 password=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
                  replication=False,
-                 password=None,
+                 rolepassword=None,
                  groups=None,
                  runas=None):
     '''
     Updated a postgres group
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' postgres.group_update 'username' user='user' host='hostname' port='port' password='password'
+    .. code-block:: bash
+
+        salt '*' postgres.group_update 'username' user='user' \\
+                host='hostname' port='port' password='password' \\
+                rolepassword='rolepassword'
     '''
     return _role_update(groupname,
                         user,
                         host,
                         port,
-                        db,
+                        maintenance_db,
+                        password,
                         createdb,
                         createuser,
                         encrypted,
                         replication,
-                        password,
+                        rolepassword,
                         groups,
                         runas)
 
@@ -592,13 +811,88 @@ def group_remove(groupname,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
+                 maintenance_db=None,
+                 password=None,
                  runas=None):
     '''
     Removes a group from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.group_remove 'groupname'
     '''
-    return _role_remove(groupname, user, host, port, db, runas)
+    return _role_remove(groupname, user, host, port, maintenance_db,
+                        password, runas)
+
+
+def owner_to(dbname,
+             ownername,
+             user=None,
+             host=None,
+             port=None,
+             password=None,
+             runas=None):
+    '''
+    Set the owner of all schemas, functions, tables, views and sequences to
+    the given username.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.owner_to 'dbname' 'username'
+    '''
+
+    sqlfile = tempfile.NamedTemporaryFile()
+    sqlfile.write('begin;\n')
+    sqlfile.write(
+        'alter database {0} owner to {1};\n'.format(
+            dbname, ownername
+        )
+    )
+
+    queries = (
+        # schemas
+        ('alter schema {n} owner to {owner};',
+         'select quote_ident(schema_name) as n from '
+         'information_schema.schemata;'),
+        # tables and views
+        ('alter table {n} owner to {owner};',
+         'select quote_ident(table_schema)||\'.\'||quote_ident(table_name) as '
+         'n from information_schema.tables where table_schema not in '
+         '(\'pg_catalog\', \'information_schema\');'),
+        # functions
+        ('alter function {n} owner to {owner};',
+         'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
+         'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
+         'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
+         ' and not p.proisagg;'),
+        # aggregate functions
+        ('alter aggregate {n} owner to {owner};',
+         'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
+         'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
+         'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
+         'and p.proisagg;'),
+        # sequences
+        ('alter sequence {n} owner to {owner};',
+         'select quote_ident(sequence_schema)||\'.\'||'
+         'quote_ident(sequence_name) as n from information_schema.sequences;')
+    )
+
+    for fmt, query in queries:
+        ret = psql_query(query, user=user, host=host, port=port,
+                         maintenance_db=dbname, password=password, runas=runas)
+        for row in ret:
+            sqlfile.write(fmt.format(owner=ownername, n=row['n']) + '\n')
+
+    sqlfile.write('commit;\n')
+    sqlfile.flush()
+    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+
+    # run the generated sqlfile in the db
+    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port,
+                    password=password, maintenance_db=dbname)
+    cmdret = _run_psql(cmd, runas=runas, password=password)
+    return cmdret

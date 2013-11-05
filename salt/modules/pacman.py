@@ -1,34 +1,40 @@
+# -*- coding: utf-8 -*-
 '''
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
 # Import python libs
+import copy
 import logging
 import re
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
 
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    return 'pkg' if __grains__['os'] == 'Arch' else False
+    if __grains__['os'] in ('Arch', 'Arch ARM'):
+        return __virtualname__
+    return False
 
 
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
+    return [x for x in old if x not in new]
 
 
-def available_version(*names):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -37,14 +43,22 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3> ...
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if len(names) == 0:
         return ''
-    refresh_db()
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db()
+
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -53,12 +67,12 @@ def available_version(*names):
           '{0}'.format(' '.join(names))
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         try:
-            name, version = line.split()
+            name, version_num = line.split()
             # Only add to return dict if package is in the list of packages
             # passed, otherwise dependencies will make their way into the
             # return data.
             if name in names:
-                ret[name] = version
+                ret[name] = version_num
         except (ValueError, IndexError):
             pass
 
@@ -67,29 +81,36 @@ def available_version(*names):
         return ret[names[0]]
     return ret
 
+# available_version is being deprecated
+available_version = latest_version
+
 
 def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name) != ''
+    return latest_version(name) != ''
 
 
 def list_upgrades():
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
     upgrades = {}
     lines = __salt__['cmd.run'](
-        'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+        'pacman -Sypu --print-format "%n %v" | egrep -v ' r'"^\s|^:"'
     ).splitlines()
     for line in lines:
         comps = line.split(' ')
@@ -99,39 +120,47 @@ def list_upgrades():
     return upgrades
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    pkgs = list_pkgs()
-    if len(names) == 0:
-        return ''
-    elif len(names) == 1:
-        return pkgs.get(names[0], '')
-    else:
-        ret = {}
-        for name in names:
-            ret[name] = pkgs.get(name, '')
-        return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     cmd = 'pacman -Q'
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -139,13 +168,17 @@ def list_pkgs():
         if not line:
             continue
         try:
-            name, version = line.split()[0:2]
+            name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
                       'line: "{0}"'.format(line))
         else:
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -155,7 +188,9 @@ def refresh_db():
 
         {'<database name>': Bool}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -191,7 +226,10 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -207,7 +245,10 @@ def install(name=None,
         version. As with the ``version`` parameter above, comparison operators
         can be used to target a specific version of a package.
 
-        CLI Examples::
+        CLI Examples:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4"}]'
             salt '*' pkg.install pkgs='["foo", {"bar": "<1.2.3-4"}]'
@@ -217,7 +258,10 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.pkg.tar.xz"},{"bar": "salt://bar.pkg.tar.xz"}]'
 
 
@@ -228,17 +272,18 @@ def install(name=None,
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
-            log.warning('"version" parameter will be ignored for muliple '
+            log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
 
     if pkg_type == 'file':
@@ -248,11 +293,11 @@ def install(name=None,
     elif pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -262,15 +307,14 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version, name)
+                          '"{1}"'.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:
                 log.error(problem)
             return {}
 
-        # Catch both boolean input from state and string input from CLI
-        if refresh is True or str(refresh).lower() == 'true':
+        if salt.utils.is_true(refresh):
             cmd = 'pacman -Syu --noprogressbar --noconfirm ' \
                   '"{0}"'.format('" "'.join(targets))
         else:
@@ -279,8 +323,9 @@ def install(name=None,
 
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade():
@@ -292,90 +337,98 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    cmd = 'pacman -Syu --noprogressbar --noconfirm '
-    __salt__['cmd.retcode'](cmd)
+    cmd = 'pacman -Syu --noprogressbar --noconfirm'
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return salt.utils.compare_dicts(old, new)
 
 
-def remove(name, **kwargs):
+def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with ``pacman -R``
+    remove and purge do identical things but with different pacman commands,
+    this function performs the common logic.
+    '''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    remove_arg = '-Rsc' if action == 'purge' else '-R'
+    cmd = 'pacman {0} --noprogressbar --noconfirm {1}'.format(remove_arg,
+                                                              ' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
-    Return a list containing the removed packages.
 
-    CLI Example::
+def remove(name=None, pkgs=None, **kwargs):
+    '''
+    Remove packages with ``pacman -R``.
+
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
+    return _uninstall(action='remove', name=name, pkgs=pkgs)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``pacman -Rsc``
 
-    Return a list containing the removed packages.
+    name
+        The name of the package to be deleted.
 
-    CLI Example::
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+    return _uninstall(action='purge', name=name, pkgs=pkgs)
 
 
 def file_list(*packages):
@@ -384,7 +437,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -408,7 +463,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -426,5 +483,3 @@ def file_dict(*packages):
                 ret[comps[0]] = []
             ret[comps[0]].append((' '.join(comps[1:])))
     return {'errors': errors, 'packages': ret}
-
-

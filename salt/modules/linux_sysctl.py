@@ -1,16 +1,23 @@
+# -*- coding: utf-8 -*-
 '''
 Module for viewing and modifying sysctl parameters
 '''
 
 # Import python libs
-import re
+import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
+from salt.modules.systemd import _sd_booted
 
+log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'sysctl'
 
 # TODO: Add unpersist() to remove either a sysctl or sysctl/value combo from
 # the config
@@ -20,20 +27,58 @@ def __virtual__():
     '''
     Only run on Linux systems
     '''
-    return 'sysctl' if __grains__['kernel'] == 'Linux' else False
+    if __grains__['kernel'] != 'Linux':
+        return False
+    global _sd_booted
+    _sd_booted = salt.utils.namespaced_function(_sd_booted, globals())
+    return __virtualname__
+
+
+def default_config():
+    '''
+    Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only
+    load from ``/etc/sysctl.d/*.conf``. This function will do the proper checks
+    and return a default config file which will be valid for the Minion. Hosts
+    running systemd >= 207 will use ``/etc/sysctl.d/99-salt.conf``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'kernel:Linux' sysctl.default_config
+    '''
+    if _sd_booted():
+        for line in __salt__['cmd.run_stdout'](
+            'systemctl --version'
+        ).splitlines():
+            if line.startswith('systemd '):
+                version = line.split()[-1]
+                try:
+                    if int(version) >= 207:
+                        return '/etc/sysctl.d/99-salt.conf'
+                except ValueError:
+                    log.error(
+                        'Unexpected non-numeric systemd version {0!r} '
+                        'detected'.format(version)
+                    )
+                break
+
+    return '/etc/sysctl.conf'
 
 
 def show():
     '''
     Return a list of sysctl parameters for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.show
     '''
     cmd = 'sysctl -a'
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         if not line or ' = ' not in line:
             continue
         comps = line.split(' = ', 1)
@@ -45,7 +90,9 @@ def get(name):
     '''
     Return a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.get net.ipv4.ip_forward
     '''
@@ -58,23 +105,26 @@ def assign(name, value):
     '''
     Assign a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
+    value = str(value)
     sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
-    ret  = {}
-    cmd  = 'sysctl -w {0}="{1}"'.format(name, value)
+    ret = {}
+    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
-    out  = data['stdout']
+    out = data['stdout']
 
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile('^{0}\s+=\s+{1}$'.format(name, value))
+    regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name), re.escape(value)))
 
     if not regex.match(out):
         if data['retcode'] != 0 and data['stderr']:
@@ -87,14 +137,20 @@ def assign(name, value):
     return ret
 
 
-def persist(name, value, config='/etc/sysctl.conf'):
+def persist(name, value, config=None):
     '''
-    Assign and persist a simple sysctl parameter for this minion
+    Assign and persist a simple sysctl parameter for this minion. If ``config``
+    is not specified, a sensible default will be chosen using
+    :mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.persist net.ipv4.ip_forward 1
     '''
+    if config is None:
+        config = default_config()
     running = show()
     edited = False
     # If the sysctl.conf is not present, add it
@@ -134,11 +190,11 @@ def persist(name, value, config='/etc/sysctl.conf'):
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
         if isinstance(comps[1], string_types) and ' ' in comps[1]:
-            comps[1] = re.sub('\s+', '\t', comps[1])
+            comps[1] = re.sub(r'\s+', '\t', comps[1])
 
         # Do the same thing for the value 'just in case'
         if isinstance(value, string_types) and ' ' in value:
-            value = re.sub('\s+', '\t', value)
+            value = re.sub(r'\s+', '\t', value)
 
         if len(comps) < 2:
             nlines.append(line)
@@ -148,7 +204,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
             if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
                 if name in running:
-                    if not str(running[name]) == str(value):
+                    if str(running[name]) != str(value):
                         assign(name, value)
                         return 'Updated'
                 return 'Already set'

@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
 '''
 Support for nzbget
 '''
 
 # Import salt libs
 import salt.utils
+
+__func_alias__ = {
+    'list_': 'list'
+}
 
 
 def __virtual__():
@@ -20,22 +25,25 @@ def version():
     '''
     Return version from nzbget -v.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.version
     '''
     cmd = 'nzbget -v'
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
-    return {'version': ret[1] }
+    return {'version': ret[1]}
 
 
 def serverversion():
     '''
-    Return server version from nzbget -V.
-    Default user is root.
+    Return server version from ``nzbget -V``. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.serverversion moe
     '''
@@ -52,10 +60,11 @@ def serverversion():
 
 def start(user=None):
     '''
-    Start nzbget as a daemon using -D option
-    Default user is root.
+    Start nzbget as a daemon using -D option. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.start
     '''
@@ -68,10 +77,11 @@ def start(user=None):
 
 def stop(user=None):
     '''
-    Stop nzbget daemon using -Q option.
-    Default user is root.
+    Stop nzbget daemon using -Q option. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.stop curly
     '''
@@ -82,12 +92,13 @@ def stop(user=None):
     return out
 
 
-def list(user=None):
+def list_(user=None):
     '''
-    Return list of active downloads using nzbget -L.
-    Default user is root.
+    Return list of active downloads using nzbget -L. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.list larry
     '''
@@ -121,10 +132,11 @@ def list(user=None):
 
 def pause(user=None):
     '''
-    Pause nzbget daemon using -P option.
-    Default user is root.
+    Pause nzbget daemon using -P option. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.pause shemp
     '''
@@ -137,10 +149,11 @@ def pause(user=None):
 
 def unpause(user=None):
     '''
-    Unpause nzbget daemon using -U option.
-    Default user is root.
+    Unpause nzbget daemon using -U option. Default user is root.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nzbget.unpause shemp
     '''
@@ -149,4 +162,3 @@ def unpause(user=None):
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

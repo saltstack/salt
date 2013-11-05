@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Fire events on the minion, events can be fired up to the master
+Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
+master to the minion and vice-versa.
 '''
 
 # Import salt libs
@@ -8,23 +10,31 @@ import salt.utils.event
 import salt.payload
 
 
-def fire_master(data, tag):
+def fire_master(data, tag, preload=None):
     '''
-    Fire an event off on the master server
+    Fire an event off up to the master server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' event.fire_master 'stuff to be in the event' 'tag'
     '''
-    load = {'id': __opts__['id'],
+    load = {}
+    if preload:
+        load.update(preload)
+
+    auth = salt.crypt.SAuth(__opts__)
+    load.update({'id': __opts__['id'],
             'tag': tag,
             'data': data,
-            'cmd': '_minion_event'}
-    auth = salt.crypt.SAuth(__opts__)
+            'tok': auth.gen_token('salt'),
+            'cmd': '_minion_event'})
+
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:
         sreq.send('aes', auth.crypticle.dumps(load))
-    except:
+    except Exception:
         pass
     return True
 
@@ -33,8 +43,13 @@ def fire(data, tag):
     '''
     Fire an event on the local minion event bus
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' event.fire 'stuff to be in the event' 'tag'
     '''
-    return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)
+    try:
+        return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)
+    except Exception:
+        return False

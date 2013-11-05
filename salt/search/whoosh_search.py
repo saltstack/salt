@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to manage interactions with the whoosh search system
 '''
@@ -19,12 +20,15 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'whoosh'
+
 
 def __virtual__():
     '''
     Only load if the whoosh libs are available
     '''
-    return 'whoosh' if HAS_WHOOSH else False
+    return __virtualname__ if HAS_WHOOSH else False
 
 
 def index():
@@ -32,13 +36,13 @@ def index():
     Build the search index
     '''
     schema = whoosh.fields.Schema(
-            path=whoosh.fields.TEXT, # Path for sls files
-            content=whoosh.fields.TEXT, # All content is indexed here
-            env=whoosh.fields.ID, # The environment associated with a file
-            fn_type=whoosh.fields.ID, # Set to pillar or state
-            minion=whoosh.fields.ID, # The minion id associated with the content
-            jid=whoosh.fields.ID, # The job id
-            load=whoosh.fields.ID, # The load data
+            path=whoosh.fields.TEXT,  # Path for sls files
+            content=whoosh.fields.TEXT,  # All content is indexed here
+            env=whoosh.fields.ID,  # The environment associated with a file
+            fn_type=whoosh.fields.ID,  # Set to pillar or state
+            minion=whoosh.fields.ID,  # The minion id associated with the content
+            jid=whoosh.fields.ID,  # The job id
+            load=whoosh.fields.ID,  # The load data
             )
     index_dir = os.path.join(__opts__['cachedir'], 'whoosh')
     if not os.path.isdir(index_dir):

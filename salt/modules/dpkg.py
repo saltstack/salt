@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for DEB packages
 '''
@@ -5,19 +6,21 @@ Support for DEB packages
 # Import python libs
 import logging
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
 
 
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'lowpkg' if __grains__['os_family'] == 'Debian' else False
+    return __virtualname__ if __grains__['os_family'] == 'Debian' else False
 
 
 def list_pkgs(*packages):
-    ''' 
+    '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
@@ -27,14 +30,23 @@ def list_pkgs(*packages):
         Virtual package resolution requires aptitude. Because this function
         uses dpkg, virtual packages will be reported as not installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
         salt '*' lowpkg.list_pkgs httpd
     '''
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
             pkgs[comps[1]] = comps[2]
@@ -47,7 +59,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -57,10 +71,18 @@ def file_list(*packages):
     ret = set([])
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
+            pkgs[comps[1]] = {'version': comps[2],
+                              'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs.keys():
@@ -79,7 +101,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -89,10 +113,18 @@ def file_dict(*packages):
     ret = {}
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
+            pkgs[comps[1]] = {'version': comps[2],
+                              'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs.keys():
@@ -102,4 +134,3 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
-

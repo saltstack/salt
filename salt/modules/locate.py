@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for using the locate utilities
 '''
@@ -5,18 +6,17 @@ Module for using the locate utilities
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
-    if __grains__['os'] in disable:
+    if salt.utils.is_windows():
         return False
     return 'locate'
 
@@ -25,7 +25,9 @@ def version():
     '''
     Returns the version of locate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.version
     '''
@@ -38,7 +40,9 @@ def stats():
     '''
     Returns statistics about the locate database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.stats
     '''
@@ -58,7 +62,9 @@ def updatedb():
     '''
     Updates the locate database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.updatedb
     '''
@@ -82,9 +88,11 @@ def locate(pattern, database='', limit=0, **kwargs):
         database=<locate's default database>
         limit=<integer, not set by default>
 
-    See the manpage for locate for further explanation of these options.
+    See the manpage for ``locate(1)`` for further explanation of these options.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.locate
     '''
@@ -112,4 +120,3 @@ def locate(pattern, database='', limit=0, **kwargs):
     cmd = 'locate {0} {1}'.format(options, pattern)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

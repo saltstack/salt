@@ -34,7 +34,7 @@ glob:
 
 .. code-block:: bash
 
-    salt \*foo.com sys.doc
+    salt '*foo.com' sys.doc
 
 
 Salt can also define the target minions with regular expressions:
@@ -63,7 +63,8 @@ system properties. So minions running on a particular operating system can
 be called to execute a function, or a specific kernel.
 
 Calling via a grain is done by passing the -G option to salt, specifying
-a grain and a regular expression to match the value of the grain.
+a grain and a glob expression to match the value of the grain. The syntax for
+the target is the grain key followed by a globexpression: "os:Arch*".
 
 .. code-block:: bash
 
@@ -149,7 +150,26 @@ Optional, keyword arguments are also supported:
 
     salt '*' pip.install salt timeout=5 upgrade=True
 
-They are always in the form of ``kwarg=argument``. 
+They are always in the form of ``kwarg=argument``.
+
+Arguments are formatted as YAML:
+
+.. code-block:: bash
+
+    salt '*' cmd.run 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
+
+Note: dictionaries must have curly braces around them (like the ``env``
+keyword argument above).  This was changed in 0.15.1: in the above example,
+the first argument used to be parsed as the dictionary
+``{'echo "Hello': '$FIRST_NAME"'}``. This was generally not the expected
+behavior.
+
+If you want to test what parameters are actually passed to a module, use the
+``test.arg_repr`` command:
+
+.. code-block:: bash
+
+    salt '*' test.arg_repr 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
 
 Finding available minion functions
 ``````````````````````````````````
@@ -188,3 +208,16 @@ arguments, then there needs to be a placeholder for the absent arguments. This
 is why in the above example, there are two commas right next to each other.
 ``test.ping`` takes no arguments, so we need to add another comma, otherwise
 Salt would attempt to pass "foo" to ``test.ping``.
+
+If you need to pass arguments that include commas, then make sure you add
+spaces around the commas that separate arguments. For example:
+
+.. code-block:: bash
+
+    salt '*' cmd.run,test.ping,test.echo 'echo "1,2,3"' , , foo
+
+You may change the arguments separator using the ``--args-separator`` option:
+
+.. code-block:: bash
+
+    salt --args-separator=:: '*' some.fun,test.echo params with , comma :: foo

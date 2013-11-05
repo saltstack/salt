@@ -1,16 +1,21 @@
 %if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
 %global with_python26 1
-%global include_tests 0
 %define pybasever 2.6
 %define __python_ver 26
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
+%global include_tests 1
+
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
+
+%define _salttesting SaltTesting
+%define _salttesting_ver 0.5.1
 
 Name: salt
-Version: 0.13.0
+Version: 0.17.1
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -18,13 +23,14 @@ Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     http://saltstack.org/
 Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
-Source1: %{name}-master
-Source2: %{name}-syndic
-Source3: %{name}-minion
-Source4: %{name}-master.service
-Source5: %{name}-syndic.service
-Source6: %{name}-minion.service
-Source7: README.fedora
+Source1: https://pypi.python.org/packages/source/S/%{_salttesting}/%{_salttesting}-%{_salttesting_ver}.tar.gz
+Source2: %{name}-master
+Source3: %{name}-syndic
+Source4: %{name}-minion
+Source5: %{name}-master.service
+Source6: %{name}-syndic.service
+Source7: %{name}-minion.service
+Source8: README.fedora
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -35,36 +41,45 @@ Requires: dmidecode
 %endif
 
 Requires: pciutils
+Requires: yum-utils
+Requires: sshpass
 
 %if 0%{?with_python26}
-BuildRequires: python26-zmq
 BuildRequires: python26-crypto
 BuildRequires: python26-devel
-BuildRequires: python26-PyYAML
+BuildRequires: python26-jinja2
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
-BuildRequires: python26-jinja2
+BuildRequires: python26-pip
+BuildRequires: python26-zmq
+BuildRequires: python26-PyYAML
 
 Requires: python26-crypto
-Requires: python26-zmq
 Requires: python26-jinja2
-Requires: python26-PyYAML
 Requires: python26-m2crypto
 Requires: python26-msgpack
+Requires: python26-PyYAML
+Requires: python26-zmq
 
 %else
 
-BuildRequires: python-zmq
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
+BuildRequires: python-unittest2
+# this BR causes windows tests to happen
+# clearly, that's not desired
+# https://github.com/saltstack/salt/issues/3749
+BuildRequires: python-mock
+BuildRequires: git
+%endif
+
+BuildRequires: m2crypto
 BuildRequires: python-crypto
 BuildRequires: python-devel
-BuildRequires: PyYAML
-BuildRequires: m2crypto
-BuildRequires: python-msgpack
-
-%if 0%{?include_tests}
-BuildRequires: python-unittest2
-%endif
 BuildRequires: python-jinja2
+BuildRequires: python-msgpack
+BuildRequires: python-pip
+BuildRequires: python-zmq
+BuildRequires: PyYAML
 
 Requires: python-crypto
 Requires: python-zmq
@@ -96,8 +111,6 @@ BuildRequires: systemd-units
 
 %endif
 
-#Requires: MySQL-python libvirt-python yum
-
 %description
 Salt is a distributed remote execution system used to execute commands and 
 query data. It was developed in order to bring the best solutions found in 
@@ -123,36 +136,39 @@ Requires: salt = %{version}-%{release}
 Salt minion is queried and controlled from the master.
 
 %prep
-%setup -q
+%setup -c
+%setup -T -D -a 1
 
 %build
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
+cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 %{__python} setup.py install -O1 --root $RPM_BUILD_ROOT
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p $RPM_BUILD_ROOT%{_initrddir}
-install -p %{SOURCE1} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
+install -p %{SOURCE4} $RPM_BUILD_ROOT%{_initrddir}/
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -p -m 0644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
 install -p -m 0644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
 install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
 
-install -p %{SOURCE7} .
+install -p %{SOURCE8} .
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
 
-%if 0%{?include_tests}
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
-%{__python} setup.py test
+cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
+PYTHONPATH=%{pythonpath}:$RPM_BUILD_DIR/%{name}-%{version}/%{_salttesting}-%{_salttesting_ver} %{__python} setup.py test --runtests-opts=-u
 %endif
 
 %clean
@@ -160,11 +176,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-%{version}-py?.?.egg-info
 %doc %{_mandir}/man7/salt.7.*
-%doc README.fedora
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
 
 %files -n salt-minion
 %defattr(-,root,root)
@@ -183,18 +199,20 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n salt-master
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-master.1.*
 %doc %{_mandir}/man1/salt.1.*
 %doc %{_mandir}/man1/salt-cp.1.*
 %doc %{_mandir}/man1/salt-key.1.*
+%doc %{_mandir}/man1/salt-master.1.*
 %doc %{_mandir}/man1/salt-run.1.*
+%doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
 %{_bindir}/salt
-%{_bindir}/salt-master
-%{_bindir}/salt-syndic
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
+%{_bindir}/salt-master
 %{_bindir}/salt-run
+%{_bindir}/salt-ssh
+%{_bindir}/salt-syndic
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-master
 %attr(0755, root, root) %{_initrddir}/salt-syndic
@@ -237,8 +255,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %postun -n salt-minion
   if [ "$1" -ge "1" ] ; then
-      /sbin/service salt-master condrestart >/dev/null 2>&1 || :
-      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+      /sbin/service salt-minion condrestart >/dev/null 2>&1 || :
   fi
 
 %else
@@ -263,8 +280,8 @@ rm -rf $RPM_BUILD_ROOT
 %else
   if [ $1 -eq 0 ] ; then
       # Package removal, not upgrade
-      /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
-      /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
+      /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+      /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
   fi
 %endif
 
@@ -296,13 +313,69 @@ rm -rf $RPM_BUILD_ROOT
   %systemd_postun salt-minion.service
 %else
   /bin/systemctl daemon-reload &>/dev/null
-  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
-  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
+  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-minion.service &>/dev/null || :
 %endif
 
 %endif
 
 %changelog
+* Thu Oct 17 2013 Erik Johnson <erik@saltstack.com> - 0.17.1-1
+- Update to bugfix release 0.17.1
+
+* Thu Sep 26 2013 Erik Johnson <erik@saltstack.com> - 0.17.0-1
+- Update to feature release 0.17.0
+
+* Wed Sep 11 2013 David Anderson <dave@dubkat.com>
+- Change sourcing order of init functions and salt default file
+
+* Sat Sep 07 2013 Erik Johnson <erik@saltstack.com> - 0.16.4-1
+- Update to patch release 0.16.4
+
+* Sun Aug 25 2013 Florian La Roche <Florian.LaRoche@gmx.net>
+- fixed preun/postun scripts for salt-minion
+
+* Thu Aug 15 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.16.3-1
+- Update to patch release 0.16.3
+
+* Thu Aug 8 2013 Clint Savage <herlo1@gmail.com> - 0.16.2-1
+- Update to patch release 0.16.2
+
+* Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.16.0-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
+* Tue Jul 9 2013 Clint Savage <herlo1@gmail.com> - 0.16.0-1
+- Update to feature release 0.16.0
+
+* Sat Jun 1 2013 Clint Savage <herlo1@gmail.com> - 0.15.3-1
+- Update to patch release 0.15.3
+- Removed OrderedDict patch
+
+* Fri May 31 2013 Clint Savage <herlo1@gmail.com> - 0.15.2-1
+- Update to patch release 0.15.2
+- Patch OrderedDict for failed tests (SaltStack#4912)
+
+* Wed May 8 2013 Clint Savage <herlo1@gmail.com> - 0.15.1-1
+- Update to patch release 0.15.1
+
+* Sat May 4 2013 Clint Savage <herlo1@gmail.com> - 0.15.0-1
+- Update to upstream feature release 0.15.0
+
+* Fri Apr 19 2013 Clint Savage <herlo1@gmail.com> - 0.14.1-1
+- Update to upstream patch release 0.14.1
+
+* Sat Mar 23 2013 Clint Savage <herlo1@gmail.com> - 0.14.0-1
+- Update to upstream feature release 0.14.0
+
+* Fri Mar 22 2013 Clint Savage <herlo1@gmail.com> - 0.13.3-1
+- Update to upstream patch release 0.13.3
+
+* Wed Mar 13 2013 Clint Savage <herlo1@gmail.com> - 0.13.2-1
+- Update to upstream patch release 0.13.2
+
+* Fri Feb 15 2013 Clint Savage <herlo1@gmail.com> - 0.13.1-1
+- Update to upstream patch release 0.13.1
+- Add unittest support
+
 * Sat Feb 02 2013 Clint Savage <herlo1@gmail.com> - 0.12.1-1
 - Remove patches and update to upstream patch release 0.12.1
 
@@ -328,7 +401,7 @@ rm -rf $RPM_BUILD_ROOT
 - Moved to upstream release 0.10.5
 - Added pciutils as Requires
 
-* Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
+* Wed Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
 - Moved to upstream release 0.10.4
 - Patched jcollie/systemd-service-status (SALT@GH#2335) (RHBZ#869669)
 
@@ -339,7 +412,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Aug 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-2
 - Fix upstream bug #1730 per RHBZ#845295
 
-* Sat Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
+* Tue Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
 - Moved to upstream release 0.10.2
 - Removed PyXML as a dependency
 
@@ -382,7 +455,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Dec 1 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-2
 - Removing requirement for Cython. Optional only for salt-minion
 
-* Thu Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
+* Wed Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
 - New upstream release with new features and bugfixes
 
 * Thu Nov 17 2011 Clint Savage <herlo1@gmail.com> - 0.9.3-1

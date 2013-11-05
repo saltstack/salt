@@ -1,32 +1,114 @@
+# -*- coding: utf-8 -*-
 '''
-Support for pkgng
+Support for ``pkgng``, the new package manager for FreeBSD
+
+.. warning::
+
+    This module has been completely rewritten. Up to and includng version
+    0.17.0, it was available as the ``pkgng`` module, (``pkgng.install``,
+    ``pkgng.delete``, etc.), but moving forward this module will no longer be
+    available as ``pkgng``, as it will behave like a normal Salt ``pkg``
+    provider. The documentation below should not be considered to apply to this
+    module in versions <= 0.17.0. If your minion is running one of these
+    versions, then the documentation for this module can be viewed using the
+    :mod:`sys.doc <salt.modules.sys.doc>` function:
+
+    .. code-block:: bash
+
+        salt bsdminion sys.doc pkgng
+
+
+This module provides an interface to ``pkg(8)``. It acts as the default
+package provider for FreeBSD 10 and newer. For FreeBSD hosts which have
+been upgraded to use pkgng, you will need to override the ``pkg`` provider
+by setting the :conf_minion:`providers` parameter in your Minion config
+file, in order to use this module to manage packages, like so:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgng
+
 '''
 
 # Import python libs
+import copy
+import logging
 import os
 
 # Import salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
-    Pkgng module load on FreeBSD only.
+    Load as 'pkg' on FreeBSD 10 and greater
     '''
-    if __grains__['os'] == 'FreeBSD':
-        return 'pkgng'
-    else:
-        return False
+    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
+        return __virtualname__
+    return False
+
+
+def _pkg(jail=None, chroot=None):
+    '''
+    Returns the prefix for a pkg command, using -j if a jail is specified, or
+    -c if chroot is specified.
+    '''
+    ret = 'pkg'
+    if jail:
+        ret += ' -j {0!r}'.format(jail)
+    elif chroot:
+        ret += ' -c {0!r}'.format(chroot)
+    return ret
+
+
+def _get_version(name, results):
+    '''
+    ``pkg search`` will return all packages for which the pattern is a match.
+    Narrow this down and return the package version, or None if no exact match.
+    '''
+    for line in results.splitlines():
+        if not line:
+            continue
+        try:
+            pkgname, pkgver = line.rsplit('-', 1)
+        except ValueError:
+            continue
+        if pkgname == name:
+            return pkgver
+    return None
+
+
+def _contextkey(jail=None, chroot=None):
+    '''
+    As this module is designed to manipulate packages in jails and chroots, use
+    the passed jail/chroot to ensure that a key in the __context__ dict that is
+    unique to that jail/chroot is used.
+    '''
+    ret = 'pkg.list_pkgs'
+    if jail:
+        ret += '.jail_{0}'.format(jail)
+    elif chroot:
+        ret += '.chroot_{0}'.format(chroot)
+    return ret
 
 
 def parse_config(file_name='/usr/local/etc/pkg.conf'):
     '''
     Return dict of uncommented global variables.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.parse_config
-        *NOTE* not working right
+    .. code-block:: bash
+
+        salt '*' pkg.parse_config
+
+    ``NOTE:`` not working properly right now
     '''
     ret = {}
     if not os.path.isfile(file_name):
@@ -43,42 +125,200 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     return ret
 
 
-def version():
+def version(*names, **kwargs):
     '''
-    Displays the current version of pkg
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
-    CLI Example::
+    .. note::
 
-        salt '*' pkgng.version
+        This function can accessed using ``pkg.info`` in addition to
+        ``pkg.version``, to more closely match the CLI usage of ``pkg(8)``.
+
+    jail
+        Get package version information for the specified jail
+
+    chroot
+        Get package version information for the specified chroot (ignored if
+        ``jail`` is specified)
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version <package name>
+        salt '*' pkg.version <package name> jail=<jail name or id>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
-    cmd = 'pkg -v'
-    return __salt__['cmd.run'](cmd)
+# Support pkg.info get version info, since this is the CLI usage
+info = version
 
 
-def available_version(pkg_name):
+def refresh_db(jail=None, chroot=None, force=False):
     '''
-    The available version of the package in the repository
+    Refresh PACKAGESITE contents
 
-    CLI Example::
+    .. note::
 
-        salt '*' pkgng.available_version <package name>
+        This function can accessed using ``pkg.update`` in addition to
+        ``pkg.refresh_db``, to more closely match the CLI usage of ``pkg(8)``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.refresh_db
+
+    jail
+        Refresh the pkg database within the specified jail
+
+    chroot
+        Refresh the pkg database within the specified chroot (ignored if
+        ``jail`` is specified)
+
+    force
+        Force a full download of the repository catalogue without regard to the
+        respective ages of the local and remote copies of the catalogue.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.refresh_db force=True
     '''
+    opts = ''
+    if force:
+        opts += ' -f'
+    return __salt__['cmd.retcode'](
+        '{0} update{1}'.format(_pkg(jail, chroot), opts)) == 0
 
-    cmd = 'pkg info {0}'.format(pkg_name)
-    out = __salt__['cmd.run'](cmd).split()
-    return out[0]
+
+# Support pkg.update to refresh the db, since this is the CLI usage
+update = refresh_db
+
+
+def latest_version(*names, **kwargs):
+    '''
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package name> jail=<jail name or id>
+        salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
+    '''
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+    jail = kwargs.get('jail')
+    chroot = kwargs.get('chroot')
+    pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot)
+
+    for name in names:
+        cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
+        pkgver = _get_version(name, __salt__['cmd.run'](cmd))
+        if pkgver is not None:
+            installed = pkgs.get(name, [])
+            if not installed:
+                ret[name] = pkgver
+            else:
+                if not any(
+                    (salt.utils.compare_versions(ver1=x,
+                                                 oper='>=',
+                                                 ver2=pkgver)
+                     for x in installed)
+                ):
+                    ret[name] = pkgver
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+
+# available_version is being deprecated
+available_version = latest_version
+
+
+def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
+    '''
+    List the packages currently installed as a dict::
+
+        {'<package_name>': '<version>'}
+
+    jail
+        List the packages in the specified jail
+
+    chroot
+        List the pacakges in the specified chroot (ignored if ``jail`` is
+        specified)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs jail=<jail name or id>
+        salt '*' pkg.list_pkgs chroot=/path/to/chroot
+    '''
+    # 'removed' not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    contextkey = _contextkey(jail, chroot)
+
+    if contextkey in __context__:
+        if versions_as_list:
+            return __context__[contextkey]
+        else:
+            ret = copy.deepcopy(__context__[contextkey])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
+    ret = {}
+    cmd = '{0} info'.format(_pkg(jail, chroot))
+    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+        if not line:
+            continue
+        try:
+            pkg, ver = line.split()[0].rsplit('-', 1)
+        except (IndexError, ValueError):
+            continue
+        __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
+
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__[contextkey] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
 def update_package_site(new_url):
     '''
-    Updates remote package repo url, PACKAGESITE var to be exact.
+    Updates remote package repo URL, PACKAGESITE var to be exact.
 
-    Must be using http://, ftp://, or https// protos
+    Must use ``http://``, ``ftp://``, or ``https://`` protocol
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.update_package_site http://127.0.0.1/
+    .. code-block:: bash
+
+        salt '*' pkg.update_package_site http://127.0.0.1/
     '''
     config_file = parse_config()['config_file']
     __salt__['file.sed'](
@@ -89,27 +329,56 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False):
+def stats(local=False, remote=False, jail=None, chroot=None):
     '''
     Return pkgng stats.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.stats
+    .. code-block:: bash
 
-        local
-            Display stats only for the local package database.
+        salt '*' pkg.stats
 
-            CLI Example::
+    local
+        Display stats only for the local package database.
 
-                salt '*' pkgng.stats local=True
+        CLI Example:
 
-        remote
-            Display stats only for the remote package database(s).
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.stats local=True
 
-                salt '*' pkgng.stats remote=True
+    remote
+        Display stats only for the remote package database(s).
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats remote=True
+
+    jail
+        Retrieve stats from the specified jail.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats jail=<jail name or id>
+            salt '*' pkg.stats jail=<jail name or id> local=True
+            salt '*' pkg.stats jail=<jail name or id> remote=True
+
+    chroot
+        Retrieve stats from the specified chroot (ignored if ``jail`` is
+        specified).
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats chroot=/path/to/chroot
+            salt '*' pkg.stats chroot=/path/to/chroot local=True
+            salt '*' pkg.stats chroot=/path/to/chroot remote=True
     '''
 
     opts = ''
@@ -120,354 +389,524 @@ def stats(local=False, remote=False):
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg stats {0}'.format(opts)
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run'](
+        '{0} stats {1}'.format(_pkg(jail, chroot), opts)
+    )
     res = [x.strip("\t") for x in res.split("\n")]
     return res
 
 
-def backup(file_name):
+def backup(file_name, jail=None, chroot=None):
     '''
     Export installed packages into yaml+mtree file
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.backup /tmp/pkg
+    .. code-block:: bash
+
+        salt '*' pkg.backup /tmp/pkg
+
+    jail
+        Backup packages from the specified jail. Note that this will run the
+        command within the jail, and so the path to the backup file will be
+        relative to the root of the jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.backup /tmp/pkg jail=<jail name or id>
+
+    chroot
+        Backup packages from the specified chroot (ignored if ``jail`` is
+        specified). Note that this will run the command within the chroot, and
+        so the path to the backup file will be relative to the root of the
+        chroot.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.backup /tmp/pkg chroot=/path/to/chroot
     '''
-    cmd = 'pkg backup -d {0}'.format(file_name)
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run'](
+        '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name)
+    )
     return res.split('...')[1]
 
 
-def restore(file_name):
+def restore(file_name, jail=None, chroot=None):
     '''
     Reads archive created by pkg backup -d and recreates the database.
 
-        salt '*' pkgng.restore /tmp/pkg
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.restore /tmp/pkg
+
+    jail
+        Restore database to the specified jail. Note that this will run the
+        command within the jail, and so the path to the file from which the pkg
+        database will be restored is relative to the root of the jail.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.restore /tmp/pkg jail=<jail name or id>
+
+    chroot
+        Restore database to the specified chroot (ignored if ``jail`` is
+        specified). Note that this will run the command within the chroot, and
+        so the path to the file from which the pkg database will be restored is
+        relative to the root of the chroot.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
-    cmd = 'pkg backup -r {0}'.format(file_name)
-    res = __salt__['cmd.run'](cmd)
-    return res
+    return __salt__['cmd.run'](
+        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name)
+    )
 
 
-def add(pkg_path):
-    '''
-    Install a package from either a local source or remote one
-
-    CLI Example::
-
-        salt '*' pkgng.add /tmp/package.txz
-    '''
-    if not os.path.isfile(pkg_path) or pkg_path.split(".")[1] != "txz":
-        return '{0} could not be found or is not  a *.txz \
-            format'.format(pkg_path)
-    cmd = 'pkg add {0}'.format(pkg_path)
-    res = __salt__['cmd.run'](cmd)
-    return res
-
-
-def audit():
+def audit(jail=None, chroot=None):
     '''
     Audits installed packages against known vulnerabilities
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.audit
+    .. code-block:: bash
+
+        salt '*' pkg.audit
+
+    jail
+        Audit packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.audit jail=<jail name or id>
+
+    chroot
+        Audit packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.audit chroot=/path/to/chroot
     '''
-
-    cmd = 'pkg audit -F'
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run']('{0} audit -F'.format(_pkg(jail, chroot)))
 
 
-def install(pkg_name, orphan=False, force=False, glob=False, local=False,
-            dryrun=False, quiet=False, require=False, reponame=None,
-            regex=False, pcre=False):
+def install(name=None,
+            fromrepo=None,
+            pkgs=None,
+            sources=None,
+            jail=None,
+            chroot=None,
+            orphan=False,
+            force=False,
+            glob=False,
+            local=False,
+            dryrun=False,
+            quiet=False,
+            require=False,
+            regex=False,
+            pcre=False,
+            **kwargs):
     '''
-    Install package from repositories
+    Install package(s) from a repository
 
-    CLI Example::
+    name
+        The name of the package to install
 
-        salt '*' pkgng.install <package name>
+        CLI Example:
 
-        orphan
-            Mark the installed package as orphan. Will be automatically removed
-            if no other packages depend on them. For more information please
-            refer to pkg-autoremove(8).
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.install <package name>
 
-                salt '*' pkgng.install <package name> orphan=True
+    jail
+        Install the package into the specified jail
 
-        force
-            Force the reinstallation of the package if already installed.
+    chroot
+        Install the paackage into the specified chroot (ignored if ``jail`` is
+        specified)
 
-            CLI Example::
+    orphan
+        Mark the installed package as orphan. Will be automatically removed
+        if no other packages depend on them. For more information please
+        refer to ``pkg-autoremove(8)``.
 
-                salt '*' pkgng.install <package name> force=True
+        CLI Example:
 
-        glob
-            Treat the package names as shell glob patterns.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.install <package name> orphan=True
 
-                salt '*' pkgng.install <package name> glob=True
+    force
+        Force the reinstallation of the package if already installed.
 
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            locally cached copies only.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.install <package name> local=True
+            salt '*' pkg.install <package name> force=True
 
-        dryrun
-            Dru-run mode. The list of changes to packages is always printed,
-            but no changes are actually made.
+    glob
+        Treat the package names as shell glob patterns.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.install <package name> dryrun=True
+        .. code-block:: bash
 
-        quiet
-            Force quiet output, except when dryrun is used, where pkg install
-            will always show packages to be installed, upgraded or deleted.
+            salt '*' pkg.install <package name> glob=True
 
-            CLI Example::
+    local
+        Do not update the repository catalogues with ``pkg-update(8)``.  A
+        value of ``True`` here is equivalent to using the ``-U`` flag with
+        ``pkg install``.
 
-                salt '*' pkgng.install <package name> quiet=True
+        CLI Example:
 
-        require
-            When used with force, reinstalls any packages that require the
-            given package.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.install <package name> local=True
 
-                salt '*' pkgng.install <package name> require=True force=True
+    dryrun
+        Dru-run mode. The list of changes to packages is always printed,
+        but no changes are actually made.
 
-        reponame
-            In multi-repo mode, override the pkg.conf ordering and only attempt
-            to download packages from the named repository.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.install <package name> reponame=repo
+            salt '*' pkg.install <package name> dryrun=True
 
-        regex
-            Treat the package names as a regular expression
+    quiet
+        Force quiet output, except when dryrun is used, where pkg install
+        will always show packages to be installed, upgraded or deleted.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.install <regular expression> regex=True
+        .. code-block:: bash
 
-        pcre
-            Treat the package names as extended regular expressions.
+            salt '*' pkg.install <package name> quiet=True
 
-            CLI Example::
+    require
+        When used with force, reinstalls any packages that require the
+        given package.
 
-                salt '*' pkgng.install <extended regular expression> pcre=True
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> require=True force=True
+
+    fromrepo
+        In multi-repo mode, override the pkg.conf ordering and only attempt
+        to download packages from the named repository.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> fromrepo=repo
+
+    regex
+        Treat the package names as a regular expression
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <regular expression> regex=True
+
+    pcre
+        Treat the package names as extended regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <extended regular expression> pcre=True
     '''
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources,
+                                                                  **kwargs)
+
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
 
     opts = ''
     repo_opts = ''
-    if orphan:
+    if salt.utils.is_true(orphan):
         opts += 'A'
-    if force:
+    if salt.utils.is_true(force):
         opts += 'f'
-    if glob:
+    if salt.utils.is_true(glob):
         opts += 'g'
-    if local:
-        opts += 'l'
-    if dryrun:
+    if salt.utils.is_true(local):
+        opts += 'U'
+    if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not dryrun:
+    if not salt.utils.is_true(dryrun):
         opts += 'y'
-    if quiet:
+    if salt.utils.is_true(quiet):
         opts += 'q'
-    if require:
+    if salt.utils.is_true(require):
         opts += 'R'
-    if reponame:
-        repo_opts += 'r {0}'.format(reponame)
-    if regex:
+    if salt.utils.is_true(fromrepo):
+        repo_opts += 'r {0}'.format(fromrepo)
+    if salt.utils.is_true(regex):
         opts += 'x'
-    if pcre:
+    if salt.utils.is_true(pcre):
         opts += 'X'
     if opts:
         opts = '-' + opts
     if repo_opts:
         repo_opts = '-' + repo_opts
 
-    cmd = 'pkg install {0} {1} {2}'.format(repo_opts,opts,pkg_name)
-    return __salt__['cmd.run'](cmd)
+    old = list_pkgs(jail=jail, chroot=chroot)
+
+    if pkg_type == 'file':
+        pkg_cmd = 'add'
+        targets = pkg_params.keys()
+    elif pkg_type == 'repository':
+        pkg_cmd = 'install'
+        if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
+            # Only use the 'version' param if 'name' was not specified as a
+            # comma-separated list
+            pkg_params = {name: kwargs.get('version')}
+        targets = []
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
+                targets.append(param)
+            else:
+                targets.append('{0}-{1}'.format(param, version_num))
+
+    cmd = '{0} {1} {2} {3} {4}'.format(
+        _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
+    )
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop(_contextkey(jail, chroot), None)
+    new = list_pkgs(jail=jail, chroot=chroot)
+    return salt.utils.compare_dicts(old, new)
 
 
-def delete(pkg_name, all_installed=False, force=False, glob=False,
-            dryrun=False, recurse=False, regex=False, pcre=False):
+def remove(name=None,
+           pkgs=None,
+           jail=None,
+           chroot=None,
+           all_installed=False,
+           force=False,
+           glob=False,
+           dryrun=False,
+           recurse=False,
+           regex=False,
+           pcre=False,
+           **kwargs):
     '''
-    Delete a package from the database and system
+    Remove a package from the database and system
 
-    CLI Example::
+    .. note::
 
-        salt '*' pkgng.delete <package name>
+        This function can accessed using ``pkg.delete`` in addition to
+        ``pkg.remove``, to more closely match the CLI usage of ``pkg(8)``.
 
-        all_installed
-            Deletes all installed packages from the system and empties the
-            database. USE WITH CAUTION!
+    name
+        The package to remove
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.delete all all_installed=True force=True
+        .. code-block:: bash
 
-        force
-            Forces packages to be removed despite leaving unresolved
-            dependencies.
+            salt '*' pkg.remove <package name>
 
-            CLI Example::
+    jail
+        Delete the package from the specified jail
 
-                salt '*' pkgng.delete <package name> force=True
+    chroot
+        Delete the paackage grom the specified chroot (ignored if ``jail`` is
+        specified)
 
-        glob
-            Treat the package names as shell glob patterns.
+    all_installed
+        Deletes all installed packages from the system and empties the
+        database. USE WITH CAUTION!
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.delete <package name> glob=True
+        .. code-block:: bash
 
-        dryrun
-            Dry run mode. The list of packages to delete is always printed, but
-            no packages are actually deleted.
+            salt '*' pkg.remove all all_installed=True force=True
 
-            CLI Example::
+    force
+        Forces packages to be removed despite leaving unresolved
+        dependencies.
 
-                salt '*' pkgng.delete <package name> dryrun=True
+        CLI Example:
 
-        recurse
-            Delete all packages that require the listed package as well.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.remove <package name> force=True
 
-                salt '*' pkgng.delete <package name> recurse=True
+    glob
+        Treat the package names as shell glob patterns.
 
-        regex
-            Treat the package names as regular expressions.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.delete <regular expression> regex=True
+            salt '*' pkg.remove <package name> glob=True
 
-        pcre
-            Treat the package names as extended regular expressions.
+    dryrun
+        Dry run mode. The list of packages to delete is always printed, but
+        no packages are actually deleted.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.delete <extended regular expression> pcre=True
+        .. code-block:: bash
+
+            salt '*' pkg.remove <package name> dryrun=True
+
+    recurse
+        Delete all packages that require the listed package as well.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.remove <package name> recurse=True
+
+    regex
+        Treat the package names as regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.remove <regular expression> regex=True
+
+    pcre
+        Treat the package names as extended regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.remove <extended regular expression> pcre=True
     '''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs(jail=jail, chroot=chroot)
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
 
     opts = ''
-    if all_installed:
+    if salt.utils.is_true(all_installed):
         opts += 'a'
-    if force:
+    if salt.utils.is_true(force):
         opts += 'f'
-    if glob:
+    if salt.utils.is_true(glob):
         opts += 'g'
-    if dryrun:
+    if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not dryrun:
+    if not salt.utils.is_true(dryrun):
         opts += 'y'
-    if recurse:
+    if salt.utils.is_true(recurse):
         opts += 'R'
-    if regex:
+    if salt.utils.is_true(regex):
         opts += 'x'
-    if pcre:
+    if salt.utils.is_true(pcre):
         opts += 'X'
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg delete {0} {1}'.format(opts,pkg_name)
-    return __salt__['cmd.run'](cmd)
+    cmd = '{0} delete {1} {2}'.format(
+        _pkg(jail, chroot), opts, ' '.join(targets)
+    )
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop(_contextkey(jail, chroot), None)
+    new = list_pkgs(jail=jail, chroot=chroot)
+    return salt.utils.compare_dicts(old, new)
+
+# Support pkg.delete to remove packages, since this is the CLI usage
+delete = remove
+# No equivalent to purge packages, use remove instead
+purge = remove
 
 
-def info(pkg_name=None):
+def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     '''
-    Returns info on packages installed on system
+    Upgrade all packages (run a ``pkg upgrade``)
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.info
-        salt '*' pkgng.info sudo
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade
+
+    jail
+        Audit packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade jail=<jail name or id>
+
+    chroot
+        Audit packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade chroot=/path/to/chroot
+
+
+    Any of the below options can also be used with ``jail`` or ``chroot``.
+
+    force
+        Force reinstalling/upgrading the whole set of packages.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade force=True
+
+    local
+        Do not update the repository catalogues with ``pkg-update(8)``. A value
+        of ``True`` here is equivalent to using the ``-L`` flag with ``pkg
+        upgrade``.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade local=True
+
+    dryrun
+        Dry-run mode: show what packages have updates available, but do not
+        perform any upgrades. Repository catalogues will be updated as usual
+        unless the local option is also given.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade dryrun=True
     '''
-    if pkg_name:
-        cmd = 'pkg info {0}'.format(pkg_name)
-    else:
-        cmd = 'pkg info'
-
-    res = __salt__['cmd.run'](cmd)
-
-    if not pkg_name:
-        res = res.splitlines()
-
-    return res
-
-
-def update(force=False):
-    '''
-    Refresh PACKAGESITE contents
-
-    CLI Example::
-
-        salt '*' pkgng.update
-
-        force
-            Force a full download of the repository catalogue without regard to
-            the respective ages of the local and remote copies of the
-            catalogue.
-
-            CLI Example::
-
-                salt '*' pkgng.update force=True
-    '''
-    opts =''
-    if force:
-        opts += 'f'
-    if opts:
-        opts = '-' + opts
-
-    cmd = 'pkg update {0}'.format(opts)
-    return __salt__['cmd.run'](cmd)
-
-
-def upgrade(force=False, local=False, dryrun=False):
-    '''
-    Upgrade all packages
-
-    CLI Example::
-
-        salt '*' pkgng.upgrade
-
-        force
-            Force reinstalling/upgrading the whole set of packages.
-
-            CLI Example::
-
-                salt '*' pkgng.upgrade force=True
-
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            local cache only.
-
-            CLI Example::
-
-                salt '*' pkgng.update local=True
-
-        dryrun
-            Dry-run mode: show what packages have updates available, but do not
-            perform any upgrades. Repository catalogues will be updated as
-            usual unless the local option is also given.
-
-            CLI Example::
-
-                salt '*' pkgng.update dryrun=True
-    '''
-
     opts = ''
     if force:
         opts += 'f'
@@ -480,41 +919,44 @@ def upgrade(force=False, local=False, dryrun=False):
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg upgrade {0}'.format(opts)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](
+        '{0} upgrade {1}'.format(_pkg(jail, chroot), opts)
+    )
 
 
-def clean():
+def clean(jail=None, chroot=None):
     '''
     Cleans the local cache of fetched remote packages
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.clean
+    .. code-block:: bash
+
+        salt '*' pkg.clean
+        salt '*' pkg.clean jail=<jail name or id>
+        salt '*' pkg.clean chroot=/path/to/chroot
     '''
-
-    cmd = 'pkg clean'
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run']('{0} clean'.format(_pkg(jail, chroot)))
 
 
-def autoremove(dryrun=False):
+def autoremove(jail=None, chroot=None, dryrun=False):
     '''
     Delete packages which were automatically installed as dependencies and are
-    not required anymore
+    not required anymore.
 
-    CLI Example::
+    dryrun
+        Dry-run mode. The list of changes to packages is always printed,
+        but no changes are actually made.
 
-	    salt '*' pkgng.autoremove
+    CLI Example:
 
-        dryrun
-            Dry-run mode. The list of changes to packages is always printed,
-            but no changes are actually made.
+    .. code-block:: bash
 
-            CLI Example::
-
-                salt '*' pkgng.autoremove dryrun=True
+         salt '*' pkg.autoremove
+         salt '*' pkg.autoremove jail=<jail name or id>
+         salt '*' pkg.autoremove dryrun=True
+         salt '*' pkg.autoremove jail=<jail name or id> dryrun=True
     '''
-
     opts = ''
     if dryrun:
         opts += 'n'
@@ -522,36 +964,70 @@ def autoremove(dryrun=False):
         opts += 'y'
     if opts:
         opts = '-' + opts
+    return __salt__['cmd.run'](
+        '{0} autoremove {1}'.format(_pkg(jail, chroot), opts)
+    )
 
-    cmd = 'pkg autoremove {0}'.format(opts)
-    return __salt__['cmd.run'](cmd)
 
-
-def check(depends=False, recompute=False, checksum=False):
+def check(jail=None,
+          chroot=None,
+          depends=False,
+          recompute=False,
+          checksum=False):
     '''
     Sanity checks installed packages
 
-        depends
-            Check for and install missing dependencies.
+    jail
+        Perform the sanity check in the specified jail
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.check recompute=True
+        .. code-block:: bash
 
-        recompute
-            Recompute sizes and checksums of installed packages.
+            salt '*' pkg.check jail=<jail name or id>
 
-            CLI Example::
+    chroot
+        Perform the sanity check in the specified chroot (ignored if ``jail``
+        is specified)
 
-                salt '*' pkgng.check depends=True
+        CLI Example:
 
-        checksum
-            Find invalid checksums for installed packages.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.check chroot=/path/to/chroot
 
-                salt '*' pkgng.check checksum=True
+
+    Of the below, at least one must be set to ``True``.
+
+    depends
+        Check for and install missing dependencies.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.check recompute=True
+
+    recompute
+        Recompute sizes and checksums of installed packages.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.check depends=True
+
+    checksum
+        Find invalid checksums for installed packages.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.check checksum=True
     '''
+    if not any((depends, recompute, checksum)):
+        return 'One of depends, recompute, or checksum must be set to True'
 
     opts = ''
     if depends:
@@ -563,33 +1039,59 @@ def check(depends=False, recompute=False, checksum=False):
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg check {0}'.format(opts)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](
+        '{0} check {1}'.format(_pkg(jail, chroot), opts)
+    )
 
 
-def which(file_name, origin=False, quiet=False):
+def which(path, jail=None, chroot=None, origin=False, quiet=False):
     '''
     Displays which package installed a specific file
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.which <file name>
+    .. code-block:: bash
 
-        origin
-            Shows the origin of the package instead of name-version.
+        salt '*' pkg.which <file name>
 
-            CLI Example::
+    jail
+        Perform the check in the specified jail
 
-                salt '*' pkgng.which <file name> origin=True
+        CLI Example:
 
-        quiet
-            Quiet output.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.which <file name> jail=<jail name or id>
 
-                salt '*' pkgng.which <file name> quiet=True
+    chroot
+        Perform the check in the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.which <file name> chroot=/path/to/chroot
+
+
+    origin
+        Shows the origin of the package instead of name-version.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.which <file name> origin=True
+
+    quiet
+        Quiet output.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.which <file name> quiet=True
     '''
-
     opts = ''
     if quiet:
         opts += 'q'
@@ -597,105 +1099,161 @@ def which(file_name, origin=False, quiet=False):
         opts += 'o'
     if opts:
         opts = '-' + opts
+    return __salt__['cmd.run'](
+        '{0} which {1} {2}'.format(_pkg(jail, chroot), opts, path))
 
-    cmd = 'pkg which {0} {1}'.format(opts, file_name)
-    return __salt__['cmd.run'](cmd)
 
-
-def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
-            comment=False, desc=False, full=False, depends=False,
-            size=False, quiet=False, origin=False, prefix=False, ):
+def search(name,
+           jail=None,
+           chroot=None,
+           exact=False,
+           glob=False,
+           regex=False,
+           pcre=False,
+           comment=False,
+           desc=False,
+           full=False,
+           depends=False,
+           size=False,
+           quiet=False,
+           origin=False,
+           prefix=False):
     '''
     Searches in remote package repositories
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.search pattern
+    .. code-block:: bash
 
-        exact
-            Treat pattern as exact pattern.
+        salt '*' pkg.search pattern
 
-            CLI Example::
+    jail
+        Perform the search using the ``pkg.conf(5)`` from the specified jail
 
-                salt '*' pkgng.search pattern exact=True
+        CLI Example:
 
-        glob
-            Treat pattern as a shell glob pattern.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.search pattern jail=<jail name or id>
 
-                salt '*' pkgng.search pattern glob=True
+    chroot
+        Perform the search using the ``pkg.conf(5)`` from the specified chroot
+        (ignored if ``jail`` is specified)
 
-        regex
-            Treat pattern as a regular expression.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern regex=True
+            salt '*' pkg.search pattern chroot=/path/to/chroot
 
-        pcre
-            Treat pattern as an extended regular expression.
+    exact
+        Treat pattern as exact pattern.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern pcre=True
+        .. code-block:: bash
 
-        comment
-            Search for pattern in the package comment one-line description.
+            salt '*' pkg.search pattern exact=True
 
-            CLI Example::
+    glob
+        Treat pattern as a shell glob pattern.
 
-                salt '*' pkgng.search pattern comment=True
+        CLI Example:
 
-        desc
-            Search for pattern in the package description.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.search pattern glob=True
 
-                salt '*' pkgng.search pattern desc=True
+    regex
+        Treat pattern as a regular expression.
 
-        full
-            Displays full information about the matching packages.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern full=True
+            salt '*' pkg.search pattern regex=True
 
-        depends
-            Displays the dependencies of pattern.
+    pcre
+        Treat pattern as an extended regular expression.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern depends=True
+        .. code-block:: bash
 
-        size
-            Displays the size of the package
+            salt '*' pkg.search pattern pcre=True
 
-            CLI Example::
+    comment
+        Search for pattern in the package comment one-line description.
 
-                salt '*' pkgng.search pattern size=True
+        CLI Example:
 
-        quiet
-            Be quiet. Prints only the requested information without displaying
-            many hints.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.search pattern comment=True
 
-                salt '*' pkgng.search pattern quiet=True
+    desc
+        Search for pattern in the package description.
 
-        origin
-            Displays pattern origin.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern origin=True
+            salt '*' pkg.search pattern desc=True
 
-        prefix
-            Displays the installation prefix for each package matching pattern.
+    full
+        Displays full information about the matching packages.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern prefix=True
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern full=True
+
+    depends
+        Displays the dependencies of pattern.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern depends=True
+
+    size
+        Displays the size of the package
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern size=True
+
+    quiet
+        Be quiet. Prints only the requested information without displaying
+        many hints.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern quiet=True
+
+    origin
+        Displays pattern origin.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern origin=True
+
+    prefix
+        Displays the installation prefix for each package matching pattern.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.search pattern prefix=True
     '''
 
     opts = ''
@@ -726,86 +1284,132 @@ def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg search {0} {1}'.format(opts,pkg_name)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](
+        '{0} search {1} {2}'.format(_pkg(jail, chroot), opts, name)
+    )
 
 
-def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
-            regex=False, pcre=False, local=False, depends=False):
+def fetch(name,
+          jail=None,
+          chroot=None,
+          fetch_all=False,
+          quiet=False,
+          fromrepo=None,
+          glob=True,
+          regex=False,
+          pcre=False,
+          local=False,
+          depends=False):
     '''
     Fetches remote packages
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.fetch <package name>
+    .. code-block:: bash
 
-        all
-            Fetch all packages.
+        salt '*' pkg.fetch <package name>
 
-            CLI Example::
+    jail
+        Fetch package in the specified jail
 
-                salt '*' pkgng.fetch <package name> all=True
+        CLI Example:
 
-        quiet
-            Quiet mode. Show less output.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.fetch <package name> jail=<jail name or id>
 
-                salt '*' pkgng.fetch <package name> quiet=True
+    chroot
+        Fetch package in the specified chroot (ignored if ``jail`` is
+        specified)
 
-        reponame
-            Fetches packages from the given reponame if multiple repo support
-            is enabled. See pkg.conf(5).
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.fetch <package name> reponame=repo
+            salt '*' pkg.fetch <package name> chroot=/path/to/chroot
 
-        glob
-            Treat pkg_name as a shell glob pattern.
+    fetch_all
+        Fetch all packages.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.fetch <package name> glob=True
+        .. code-block:: bash
 
-        regex
-            Treat pkg_name as a regular expression.
+            salt '*' pkg.fetch <package name> fetch_all=True
 
-            CLI Example::
+    quiet
+        Quiet mode. Show less output.
 
-                salt '*' pkgng.fetch <regular expression> regex=True
+        CLI Example:
 
-        pcre
-            Treat pkg_name is an extended regular expression.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.fetch <package name> quiet=True
 
-                salt '*' pkgng.fetch <extended regular expression> pcre=True
+    fromrepo
+        Fetches packages from the given repo if multiple repo support
+        is enabled. See ``pkg.conf(5)``.
 
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            local cache only.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.fetch <package name> local=True
+            salt '*' pkg.fetch <package name> fromrepo=repo
 
-        depends
-            Fetch the package and its dependencies as well.
+    glob
+        Treat pkg_name as a shell glob pattern.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.fetch <package name> depends=True
+        .. code-block:: bash
+
+            salt '*' pkg.fetch <package name> glob=True
+
+    regex
+        Treat pkg_name as a regular expression.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.fetch <regular expression> regex=True
+
+    pcre
+        Treat pkg_name is an extended regular expression.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.fetch <extended regular expression> pcre=True
+
+    local
+        Skip updating the repository catalogues with pkg-update(8). Use the
+        local cache only.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.fetch <package name> local=True
+
+    depends
+        Fetch the package and its dependencies as well.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.fetch <package name> depends=True
     '''
-
     opts = ''
     repo_opts = ''
-    if all:
+    if fetch_all:
         opts += 'a'
     if quiet:
         opts += 'q'
-    if reponame:
-        repo_opts += 'r {0}'.format(reponame)
+    if fromrepo:
+        repo_opts += 'r {0}'.format(fromrepo)
     if glob:
         opts += 'g'
     if regex:
@@ -821,31 +1425,63 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
     if repo_opts:
         opts = '-' + repo_opts
 
-    cmd = 'pkg fetch -y {0} {1} {2}'.format(repo_opts,opts,pkg_name)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](
+        '{0} fetch -y {1} {2} {3}'.format(
+            _pkg(jail, chroot), repo_opts, opts, name
+        )
+    )
 
 
-def updating(pkg_name, filedate=None, filename=None):
+def updating(name,
+             jail=None,
+             chroot=None,
+             filedate=None,
+             filename=None):
     ''''
     Displays UPDATING entries of software packages
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkgng.updating foo
+    .. code-block:: bash
 
-        filedate
-            Only entries newer than date are shown. Use a YYYYMMDD date format.
+        salt '*' pkg.updating foo
 
-            CLI Example::
+    jail
+        Perform the action in the specified jail
 
-                salt '*' pkgng.updating foo filedate=20130101
+        CLI Example:
 
-        filename
-            Defines an alternative location of the UPDATING file.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkg.updating foo jail=<jail name or id>
 
-                salt '*' pkgng.updating foo filename=/tmp/UPDATING
+    chroot
+        Perform the action in the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.updating foo chroot=/path/to/chroot
+
+    filedate
+        Only entries newer than date are shown. Use a YYYYMMDD date format.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.updating foo filedate=20130101
+
+    filename
+        Defines an alternative location of the UPDATING file.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.updating foo filename=/tmp/UPDATING
     '''
 
     opts = ''
@@ -856,31 +1492,6 @@ def updating(pkg_name, filedate=None, filename=None):
     if opts:
         opts = '-' + opts
 
-    cmd = 'pkg updating {0} {1}'.format(opts,pkg_name)
-    return __salt__['cmd.run'](cmd)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+    return __salt__['cmd.run'](
+        '{0} updating {1} {2}'.format(_pkg(jail, chroot), opts, name)
+    )

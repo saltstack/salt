@@ -66,14 +66,19 @@ Running Salt
 ============
 
 1.  Start the master in the foreground (to daemonize the process, pass the
-    :option:`-d flag <salt-master -d>`)::
+    :option:`-d flag <salt-master -d>`):
 
-        # salt-master
+    .. code-block:: bash
+
+        salt-master
 
 2.  Start the minion in the foreground (to daemonize the process, pass the
-    :option:`-d flag <salt-minion -d>`)::
+    :option:`-d flag <salt-minion -d>`):
 
-        # salt-minion
+    .. code-block:: bash
+
+        salt-minion
+
 
 .. admonition:: Having trouble?
 
@@ -82,7 +87,11 @@ Running Salt
 
         salt-master --log-level=debug
 
-.. admonition:: Run as an unprivileged (non-root) user?
+    For information on salt's logging system please see the :doc:`logging 
+    document</ref/configuration/logging/index>`.
+
+
+.. admonition:: Run as an unprivileged (non-root) user
 
     To run Salt as another user, specify ``--user`` in the command
     line or assign ``user`` in the
@@ -91,6 +100,7 @@ Running Salt
 
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
 available.
+
 
 Key Management
 ==============
@@ -139,27 +149,36 @@ Sending Commands
 ================
 
 Communication between the Master and a Minion may be verified by running
-the ``test.ping`` remote command. ::
+the ``test.ping`` command:
 
+.. code-block:: bash
 
-   [root@master ~]# salt 'alpha' test.ping
-   {'alpha': True}
+   [root@master ~]# salt alpha test.ping
+   alpha:
+       True
 
 Communication between the Master and all Minions may be tested in a
-similar way. ::
+similar way:
+
+.. code-block:: bash
 
    [root@master ~]# salt '*' test.ping
-   {'alpha': True}
-   {'bravo': True}
-   {'charlie': True}
-   {'delta': True}
+   alpha:
+       True
+   bravo:
+       True
+   charlie:
+       True
+   delta:
+       True
 
-Each of the Minions should send a "True" response as shown above.
+Each of the Minions should send a ``True`` response as shown above.
 
 What's Next?
 ============
 
-Depending on the primary way you want to manage your machines you may
-either want to visit the section regarding Salt States, or the section
-on Modules.
+Understanding :doc:`targeting <targeting/index>` is important. From there,
+depending on the way you wish to use Salt, you should also proceed to learn
+about :doc:`States <tutorials/starting_states>` and :doc:`Execution Modules
+</ref/modules/index>`.
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for iptables
 '''
@@ -5,9 +6,11 @@ Support for iptables
 # Import python libs
 import os
 import sys
+import shlex
 
 # Import salt libs
 import salt.utils
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
 
@@ -28,6 +31,8 @@ def _conf():
         return '/etc/sysconfig/iptables'
     elif __grains__['os_family'] == 'Arch':
         return '/etc/iptables/iptables.rules'
+    elif __grains__['os'] == 'Gentoo':
+        return '/var/lib/iptables/rules-save'
     else:
         return False
 
@@ -36,7 +41,9 @@ def version():
     '''
     Return version from iptables --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.version
     '''
@@ -45,11 +52,108 @@ def version():
     return out[1]
 
 
+def build_rule(table=None, chain=None, command=None, position='', full=None,
+               **kwargs):
+    '''
+    Build a well-formatted iptables rule based on kwargs. Long options must be
+    used (`--jump` instead of `-j`) because they will have the `--` added to
+    them. A `table` and `chain` are not required, unless `full` is True.
+
+    If `full` is `True`, then `table`, `chain` and `command` are required.
+    `command` may be specified as either a short option ('I') or a long option
+    (`--insert`). This will return the iptables command, exactly as it would
+    be used from the command line.
+
+    If a position is required (as with `-I` or `-D`), it may be specified as
+    `position`. This will only be useful if `full` is True.
+
+    If `connstate` is passed in, it will automatically be changed to `state`.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \\
+            jump=ACCEPT
+        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
+            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+    '''
+    if 'target' in kwargs:
+        kwargs['jump'] = kwargs['target']
+        del kwargs['target']
+
+    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
+        if ignore in kwargs:
+            del kwargs[ignore]
+
+    rule = ''
+
+    if 'if' in kwargs:
+        rule += '-i {0} '.format(kwargs['if'])
+        del kwargs['if']
+
+    if 'proto' in kwargs:
+        rule += '-p {0} '.format(kwargs['proto'])
+
+    if 'match' in kwargs:
+        rule += '-m {0} '.format(kwargs['match'])
+        del kwargs['match']
+
+    if 'state' in kwargs:
+        del kwargs['state']
+
+    if 'connstate' in kwargs:
+        rule += '--state {0} '.format(kwargs['connstate'])
+        del kwargs['connstate']
+
+    if 'proto' in kwargs:
+        rule += '-m {0} '.format(kwargs['proto'])
+        del kwargs['proto']
+
+    if 'dport' in kwargs:
+        rule += '--dport {0} '.format(kwargs['dport'])
+        del kwargs['dport']
+
+    if 'sport' in kwargs:
+        rule += '--sport {0} '.format(kwargs['sport'])
+        del kwargs['sport']
+
+    if 'jump' in kwargs:
+        kwargs['j'] = kwargs['jump']
+        del kwargs['jump']
+
+    for item in kwargs:
+        if len(item) == 1:
+            rule += '-{0} {1} '.format(item, kwargs[item])
+        else:
+            rule += '--{0} {1} '.format(item, kwargs[item])
+
+    if full is True:
+        if not table:
+            return 'Error: Table needs to be specified'
+        if not chain:
+            return 'Error: Chain needs to be specified'
+        if not command:
+            return 'Error: Command needs to be specified'
+
+        if command in 'ACDIRLSFZNXPE':
+            flag = '-'
+        else:
+            flag = '--'
+
+        return 'iptables -t {0} {1}{2} {3} {4} {5}'.format(table,
+            flag, command, chain, position, rule)
+
+    return rule
+
+
 def get_saved_rules(conf_file=None):
     '''
     Return a data structure of the rules in the conf file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_saved_rules
     '''
@@ -60,7 +164,9 @@ def get_rules():
     '''
     Return a data structure of the current, in-memory rules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_rules
     '''
@@ -71,7 +177,9 @@ def get_saved_policy(table='filter', chain=None, conf_file=None):
     '''
     Return the current policy for the specified table/chain
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_saved_policy filter INPUT
         salt '*' iptables.get_saved_policy filter INPUT conf_file=/etc/iptables.saved
@@ -87,7 +195,9 @@ def get_policy(table='filter', chain=None):
     '''
     Return the current policy for the specified table/chain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_policy filter INPUT
     '''
@@ -102,7 +212,9 @@ def set_policy(table='filter', chain=None, policy=None):
     '''
     Set the current policy for the specified table/chain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.set_policy filter INPUT ACCEPT
     '''
@@ -120,7 +232,9 @@ def save(filename=None):
     '''
     Save the current in-memory rules to disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.save /etc/sysconfig/iptables
     '''
@@ -135,6 +249,40 @@ def save(filename=None):
     return out
 
 
+def check(table='filter', chain=None, rule=None):
+    '''
+    Check for the existance of a rule in the table and chain
+
+    This function accepts a rule in a standard iptables command format,
+        starting with the chain. Trying to force users to adapt to a new
+        method of creating rules would be irritating at best, and we
+        already have a parser that can handle it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' iptables.check filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+    '''
+    if not chain:
+        return 'Error: Chain needs to be specified'
+    if not rule:
+        return 'Error: Rule needs to be specified'
+
+    if __grains__['os_family'] == 'RedHat':
+        cmd = 'iptables-save'
+        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(table, chain, rule))
+    if out != -1:
+        out = ''
+    else:
+        cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
+        out = __salt__['cmd.run'](cmd)
+
+    if not out:
+        return True
+    return out
+
+
 def append(table='filter', chain=None, rule=None):
     '''
     Append a rule to the specified table/chain.
@@ -144,16 +292,18 @@ def append(table='filter', chain=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' iptables.append filter INPUT '-m state --state RELATED,ESTABLISHED -j ACCEPT'
+    .. code-block:: bash
+
+        salt '*' iptables.append filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -A {1}'.format(table, rule)
+    cmd = 'iptables -t {0} -A {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -167,22 +317,25 @@ def insert(table='filter', chain=None, position=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' iptables.insert filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+    .. code-block:: bash
+
         salt '*' iptables.insert filter INPUT position=3 rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
+    if not position:
+        return 'Error: Position needs to be specified or use append (-A)'
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -I {1}'.format(table, rule)
+    cmd = 'iptables -t {0} -I {1} {2} {3}'.format(table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def delete(table, chain, position=None, rule=None):
+def delete(table, chain=None, position=None, rule=None):
     '''
     Delete a rule from the specified table/chain, specifying either the rule
         in its entirety, or the rule's position in the chain.
@@ -192,19 +345,21 @@ def delete(table, chain, position=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.delete filter INPUT position=3
         salt '*' iptables.delete filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
 
-    cmd = ''
+    if position and rule:
+        return 'Error: Only specify a position or a rule, not both'
+
     if position:
-        cmd = 'iptables -t {0} -D {1}'.format(table, rule)
-    elif rule:
-        cmd = 'iptables -t {0} -D {1}'.format(table, position)
-    else:
-        return 'Error: Either rule or position needs to be specified'
+        rule = position
+
+    cmd = 'iptables -t {0} -D {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -213,7 +368,9 @@ def flush(table='filter'):
     '''
     Flush all chains in the specified table.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.flush filter
     '''
@@ -262,10 +419,10 @@ def _parse_conf(conf_file=None, in_mem=False):
             parser = _parser()
             parsed_args = []
             if sys.version.startswith('2.6'):
-                (opts, args) = parser.parse_args(line.split())
+                (opts, args) = parser.parse_args(shlex.split(line))
                 parsed_args = vars(opts)
             else:
-                parsed_args = vars(parser.parse_args(line.split()))
+                parsed_args = vars(parser.parse_args(shlex.split(line)))
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:
@@ -273,7 +430,7 @@ def _parse_conf(conf_file=None, in_mem=False):
                     ret_args[arg] = parsed_args[arg]
             if parsed_args['comment'] is not None:
                 comment = parsed_args['comment'][0].strip('"')
-                ret[table][chain[0]]['rules_comment'][comment]=ret_args
+                ret[table][chain[0]]['rules_comment'][comment] = ret_args
             ret[table][chain[0]]['rules'].append(ret_args)
     return ret
 
@@ -600,4 +757,3 @@ def _parser():
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
 
     return parser
-

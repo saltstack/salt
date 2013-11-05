@@ -1,16 +1,51 @@
+# -*- coding: utf-8 -*-
 '''
 Manage events
-'''
 
-# Events are all fired off via a zeromq pub socket, and listened to with
-# local subscribers. The event messages are comprised of two parts delimited
-# at the 20 char point. The first 20 characters are used for the zeromq
-# subscriber to match publications and 20 characters were chosen because it is
-# a few more characters than the length of a jid. The 20 characters
-# are padded with "|" chars so that the msgpack component can be predictably
-# extracted. All of the formatting is self contained in the event module, so
-# we should be able to modify the structure in the future since the same module
-# to read is the same module to fire off events.
+Events are all fired off via a zeromq 'pub' socket, and listened to with
+local zeromq 'sub' sockets
+
+
+All of the formatting is self contained in the event module, so
+we should be able to modify the structure in the future since the same module
+used to read events is the same module used to fire off events.
+
+Old style event messages were comprised of two parts delimited
+at the 20 char point. The first 20 characters are used for the zeromq
+subscriber to match publications and 20 characters was chosen because it was at
+the time a few more characters than the length of a jid (Job ID).
+Any tags of length less than 20 characters were padded with "|" chars out to 20 characters.
+Although not explicit, the data for an event comprised a python dict that was serialized by
+msgpack.
+
+New style event messages support event tags longer than 20 characters while still
+being backwards compatible with old style tags.
+The longer tags better enable name spaced event tags which tend to be longer.
+Moreover, the constraint that the event data be a python dict is now an explicit
+constraint and fire-event will now raise a ValueError if not. Tags must be
+ascii safe strings, that is, have values less than 0x80
+
+Since the msgpack dict (map) indicators have values greater than or equal to 0x80
+it can be unambiguously determined if the start of data is at char 21 or not.
+
+In the new style:
+When the tag is longer than 20 characters, an end of tag string
+is appended to the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
+When the tag is less than 20 characters then the tag is padded with pipes
+"|" out to 20 characters as before.
+When the tag is exactly 20 characters no padded is done.
+
+The get_event method intelligently figures out if the tag is longer than 20 characters.
+
+
+The convention for namespacing is to use dot characters "." as the name space delimeter.
+The name space "salt" is reserved by SaltStack for internal events.
+
+For example:
+Namspaced tag
+    'salt.runner.manage.status.start'
+
+'''
 
 # Import python libs
 import os
@@ -19,11 +54,17 @@ import glob
 import hashlib
 import errno
 import logging
+import datetime
 import multiprocessing
 from multiprocessing import Process
+from collections import MutableMapping
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+except ImportError:
+    # Local mode does not need zmq
+    pass
 import yaml
 
 # Import salt libs
@@ -33,6 +74,49 @@ import salt.state
 import salt.utils
 from salt._compat import string_types
 log = logging.getLogger(__name__)
+
+# The SUB_EVENT set is for functions that require events fired based on
+# component executions, like the state system
+SUB_EVENT = set([
+            'state.highstate',
+            'state.sls',
+            ])
+
+TAGEND = '\n\n'  # long tag delimeter
+TAGPARTER = '/'  # name spaced tag delimeter
+SALT = 'salt'  # base prefix for all salt/ events
+# dict map of namespaced base tag prefixes for salt events
+TAGS = {
+    'auth': 'auth',  # prefix for all salt/auth events
+    'job': 'job',  # prefix for all salt/job events (minion jobs)
+    'key': 'key',  # prefix for all salt/key events
+    'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
+    'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
+    'run': 'run',  # prefix for all salt/run events (salt runners)
+    'wheel': 'wheel',  # prefix for all salt/wheel events
+    'cloud': 'cloud',  # prefix for all salt/cloud events
+    'fileserver': 'fileserver',  # prefix for all salt/fileserver events
+}
+
+
+def tagify(suffix='', prefix='', base=SALT):
+    '''
+    convenience function to build a namespaced event tag string
+    from joinning with the TABPART character the base, prefix and suffix
+
+    If string prefix is a valid key in TAGS Then use the value of key prefix
+    Else use prefix string
+
+    If suffix is a list Then join all string elements of suffix individually
+    Else use string suffix
+
+    '''
+    parts = [base, TAGS.get(prefix, prefix)]
+    if hasattr(suffix, 'append'):  # list so extend parts
+        parts.extend(suffix)
+    else:  # string so append
+        parts.append(suffix)
+    return (TAGPARTER.join([part for part in parts if part]))
 
 
 class SaltEvent(object):
@@ -49,7 +133,7 @@ class SaltEvent(object):
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
-        Return the string uri for the location of the pull and pub sockets to
+        Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
         id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
@@ -127,25 +211,33 @@ class SaltEvent(object):
 
     def get_event(self, wait=5, tag='', full=False):
         '''
-        Get a single publication
-        '''
-        wait = wait * 1000
+        Get a single publication.
+        IF no publication available THEN block for upto wait seconds
+        AND either return publication OR None IF no publication available.
 
+        IF wait is 0 then block forever.
+        '''
         self.subscribe(tag)
-        while True:
-            socks = dict(self.poller.poll(wait))
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-                # Double check the tag
-                if not raw[:20].rstrip('|').startswith(tag):
-                    continue
-                data = self.serial.loads(raw[20:])
-                if full:
-                    ret = {'data': data,
-                           'tag': raw[:20].rstrip('|')}
-                    return ret
-                return data
-            return None
+        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+            raw = self.sub.recv()
+            if ord(raw[20]) >= 0x80:  # old style
+                mtag = raw[0:20].rstrip('|')
+                mdata = raw[20:]
+            else:  # new style
+                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+
+            data = self.serial.loads(mdata)
+
+            if not mtag.startswith(tag):  # tag not match
+                return None
+
+            if full:
+                ret = {'data': data,
+                        'tag': mtag}
+                return ret
+            return data
+        return None
 
     def iter_events(self, tag='', full=False):
         '''
@@ -157,14 +249,31 @@ class SaltEvent(object):
                 continue
             yield data
 
-    def fire_event(self, data, tag=''):
+    def fire_event(self, data, tag):
         '''
-        Send a single event into the publisher
+        Send a single event into the publisher with paylod dict "data" and event
+        identifier "tag"
+
+        Supports new style long tags.
         '''
+        if not str(tag):  # no empty tags allowed
+            raise ValueError('Empty tag.')
+
+        if not isinstance(data, MutableMapping):  # data must be dict
+            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+
         if not self.cpush:
             self.connect_pull()
-        tag = '{0:|<20}'.format(tag)
-        event = '{0}{1}'.format(tag, self.serial.dumps(data))
+
+        data['_stamp'] = datetime.datetime.now().isoformat('_')
+
+        tagend = ''
+        if len(tag) <= 20:  # old style compatible tag
+            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
+        else:  # new style longer than 20 chars
+            tagend = TAGEND
+
+        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         self.push.send(event)
         return True
 
@@ -178,17 +287,55 @@ class SaltEvent(object):
         if self.cpush is True and self.push.closed is False:
             self.push.setsockopt(zmq.LINGER, 1)
             self.push.close()
-        # If socket's are not unregistered from a poller, nothing which touches
-        # that poller get's garbage collected. The Poller itself, it's
+        # If sockets are not unregistered from a poller, nothing which touches
+        # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
-        for socket in self.poller.sockets.keys():
-            if socket.closed is False:
-                # Should already be closed from above, but....
-                socket.setsockopt(zmq.LINGER, 1)
-                socket.close()
-            self.poller.unregister(socket)
+        if isinstance(self.poller.sockets, dict):
+            for socket in self.poller.sockets.keys():
+                if socket.closed is False:
+                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.close()
+                self.poller.unregister(socket)
+        else:
+            for socket in self.poller.sockets:
+                if socket[0].closed is False:
+                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].close()
+                self.poller.unregister(socket[0])
         if self.context.closed is False:
             self.context.term()
+
+    def fire_ret_load(self, load):
+        '''
+        Fire events based on information in the return load
+        '''
+        if load.get('retcode') and load.get('fun'):
+            # Minion fired a bad retcode, fire an event
+            if load['fun'] in SUB_EVENT:
+                try:
+                    for tag, data in load.get('return', {}).items():
+                        data['retcode'] = load['retcode']
+                        tags = tag.split('_|-')
+                        if data.get('result') is False:
+                            self.fire_event(
+                                    data,
+                                    '{0}.{1}'.format(tags[0], tags[-1]))  # old dup event
+                            data['jid'] = load['jid']
+                            data['id'] = load['id']
+                            data['success'] = False
+                            data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
+                            data['fun'] = load['fun']
+                            data['user'] = load['user']
+                            self.fire_event(
+                                data,
+                                tagify([load['jid'],
+                                        'sub',
+                                        load['id'],
+                                        'error',
+                                        load['fun']],
+                                       'job'))
+                except Exception:
+                    pass
 
     def __del__(self):
         self.destroy()
@@ -313,11 +460,11 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Take in the tag from an event and return a list of the reactors to
         process
         '''
-        log.debug('Gathering rections for tag {0}'.format(tag))
+        log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
         if isinstance(self.opts['reactor'], basestring):
             try:
-                with open(self.opts['reactor']) as fp_:
+                with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -327,16 +474,16 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     )
             except Exception:
                 log.error(
-                    'Failed to parse yaml in reactor map: "{0}"'.format(
+                    'Failed to parse YAML in reactor map: "{0}"'.format(
                         self.opts['reactor']
                         )
                     )
         else:
             react_map = self.opts['reactor']
-        for ropt in self.opts['reactor']:
+        for ropt in react_map:
             if not isinstance(ropt, dict):
                 continue
-            if not len(ropt) == 1:
+            if len(ropt) != 1:
                 continue
             key = ropt.keys()[0]
             val = ropt[key]
@@ -398,8 +545,14 @@ class ReactWrap(object):
         '''
         l_fun = getattr(self, low['state'])
         f_call = salt.utils.format_call(l_fun, low)
-
-        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        try:
+            ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        except Exception:
+            log.error(
+                    'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
+                    exc_info=True
+                    )
+            return False
         return ret
 
     def cmd(self, *args, **kwargs):
@@ -439,7 +592,7 @@ class StateFire(object):
         else:
             self.auth = auth
 
-    def fire_master(self, data, tag):
+    def fire_master(self, data, tag, preload=None):
         '''
         Fire an event off on the master server
 
@@ -447,21 +600,27 @@ class StateFire(object):
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''
-        load = {'id': self.opts['id'],
-                'tag': tag,
-                'data': data,
-                'cmd': '_minion_event'}
+        load = {}
+        if preload:
+            load.update(preload)
+
+        load.update({'id': self.opts['id'],
+                    'tag': tag,
+                    'data': data,
+                    'cmd': '_minion_event',
+                    'tok': self.auth.gen_token('salt')})
+
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
-        except:
+        except Exception:
             pass
         return True
 
     def fire_running(self, running):
         '''
         Pass in a state "running" dict, this is the return dict from a state
-        call. The dict will be processesd and fire events.
+        call. The dict will be processed and fire events.
 
         By default yellows and reds fire events on the master and minion, but
         this can be configured.
@@ -484,6 +643,6 @@ class StateFire(object):
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
-        except:
+        except Exception:
             pass
         return True

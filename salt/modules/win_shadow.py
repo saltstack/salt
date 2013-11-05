@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the shadow file
 '''
 
 import salt.utils
+
+# Define the module's virtual name
+__virtualname__ = 'shadow'
 
 
 def __virtual__():
@@ -10,7 +14,7 @@ def __virtual__():
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        return 'shadow'
+        return __virtualname__
     return False
 
 
@@ -19,13 +23,15 @@ def info(name):
     Return information for the specified user
     This is just returns dummy data so that salt states can work.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
     ret = {
             'name': name,
-            'pwd': '',
+            'passwd': '',
             'lstchg': '',
             'min': '',
             'max': '',
@@ -39,7 +45,9 @@ def set_password(name, password):
     '''
     Set the password for a named user.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password root mysecretpassword
     '''

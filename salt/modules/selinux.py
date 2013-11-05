@@ -1,5 +1,14 @@
+# -*- coding: utf-8 -*-
 '''
 Execute calls on selinux
+
+.. note::
+    This module requires the ``semanage`` and ``setsebool`` commands to be
+    available on the minion. On RHEL-based distros, this means that the
+    ``policycoreutils`` and ``policycoreutils-python`` packages must be
+    installed. If not on a RHEL-based distribution, consult the selinux
+    documentation for your distro to ensure that the proper packages are
+    installed.
 '''
 
 # Import python libs
@@ -7,6 +16,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 
@@ -30,12 +40,14 @@ def __virtual__():
 
 
 # Cache the SELinux directory to not look it up over and over
-@salt.utils.memoize
+@decorators.memoize
 def selinux_fs_path():
     '''
     Return the location of the SELinux VFS directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.selinux_fs_path
     '''
@@ -52,7 +64,9 @@ def getenforce():
     '''
     Return the mode selinux is running in
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.getenforce
     '''
@@ -72,7 +86,9 @@ def setenforce(mode):
     '''
     Set the SELinux enforcing mode
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setenforce enforcing
     '''
@@ -100,7 +116,9 @@ def getsebool(boolean):
     '''
     Return the information on a specific selinux boolean
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.getsebool virt_use_usb
     '''
@@ -111,7 +129,9 @@ def setsebool(boolean, value, persist=False):
     '''
     Set the value for a boolean
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setsebool virt_use_usb off
     '''
@@ -126,7 +146,9 @@ def setsebools(pairs, persist=False):
     '''
     Set the value of multiple booleans
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setsebools '{virt_use_usb: on, squid_use_tproxy: off}'
     '''
@@ -146,7 +168,9 @@ def list_sebool():
     Return a structure listing all of the selinux booleans on the system and
     what state they are in
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.list_sebool
     '''
@@ -156,8 +180,7 @@ def list_sebool():
         if not line.strip():
             continue
         comps = line.split()
-        ret[comps[0]] = {
-                         'State': comps[1][1:],
+        ret[comps[0]] = {'State': comps[1][1:],
                          'Default': comps[3][:-1],
                          'Description': ' '.join(comps[4:])}
     return ret

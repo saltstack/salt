@@ -1,0 +1,104 @@
+# Salt: Installer: Arch
+# Maintainer: Niels Abspoel
+
+pre_install(){
+  # create salt user
+  getent passwd salt &>/dev/null || \
+    echo "salt master user doesn't exist, creating..."; \
+    useradd -r -d /srv/salt -s /sbin/nologin -c "Salt" salt &>/dev/null || :
+}
+
+pre_upgrade () {
+  pre_install
+  salthomedir=`getent passwd salt | cut -d: -f6`
+  saltdir=/srv/salt/
+  if [[ $salthomedir != $saltdir ]]; then
+    echo "setting salt master user homedir to /srv/salt/"
+    usermod -d /srv/salt/ salt &>/dev/null || :
+  fi
+}
+
+post_install() {
+  # set user permissions on directories needed for salt
+  getent passwd salt &>/dev/null && chown -R salt /var/cache/salt
+  getent passwd salt &>/dev/null && chown -R salt /var/log/salt
+  getent passwd salt &>/dev/null && chown -R salt /etc/salt/pki
+  getent passwd salt &>/dev/null && chown -R salt /srv/salt
+
+  # set salt master user in config
+  # and verify environment
+  if [[ ! -f /etc/salt/master.d/salt-user.conf ]]; then
+    if [[ ! -d /etc/salt/master.d ]]; then
+      mkdir -p /etc/salt/master.d
+    fi
+    echo "configure salt-master to run as salt master user"
+    cat << EOF1 > /etc/salt/master.d/salt-user.conf
+user: salt
+verify_env: True
+EOF1
+  fi
+
+  # set salt user limits
+  if [[ ! -f /etc/security/limits.d/20-salt.conf ]]; then
+    echo "raising file limits for salt master user"
+    cat << EOF2 > /etc/security/limits.d/20-salt.conf
+salt  soft  nofile  100000
+salt  hard  nofile  100000
+EOF2
+  fi
+}
+
+post_upgrade () {
+  # if salt-master/salt-minion daemon is running reinitialise
+  if [[ -f /var/run/salt-master.pid ]]; then
+    if [ "`systemctl is-active salt-master`" == "active" ]; then
+      echo "salt-master is running system daemons are reloaded"
+      getent passwd salt &>/dev/null && systemctl daemon-reexec
+      getent passwd salt &>/dev/null && systemctl daemon-reload
+    fi
+  fi
+  if [[ -f /var/run/salt-minion.pid ]]; then
+    if [ "`systemctl is-active salt-minion`" == "active" ]; then
+      echo "salt-minion was running system daemons are reloaded"
+      getent passwd salt &>/dev/null && systemctl daemon-reexec
+      getent passwd salt &>/dev/null && systemctl daemon-reload
+    fi
+  fi
+}
+
+pre_remove (){
+  # Stop salt-master daemon and remove it
+  if [[ -f /var/run/salt-master.pid ]]; then
+    if [ "`systemctl is-active salt-master`" == "active" ]; then
+      echo "stopping salt-master and removing it"
+      systemctl stop salt-master
+      systemctl disable salt-master
+    fi
+  fi
+
+  # Stop salt-minion daemon and remove it
+  if [[ -f /var/run/salt-minion.pid ]]; then
+    if [ "`systemctl is-active salt-minion`" == "active" ]; then
+      echo "stopping salt-minion and removing it"
+      systemctl stop salt-minion
+      systemctl disable salt-minion
+    fi
+  fi
+}
+
+post_remove (){
+  # remove shared job cache and other runtime directories
+  rm -rf \
+    /var/cache/salt \
+    /var/log/salt \
+    2> /dev/null
+  echo "shared job cache and runtime directories removed"
+  # remove salt user and group but leave /srv/salt
+  getent passwd salt &>/dev/null && userdel salt && echo "salt master user removed"
+  echo "salt has been removed but /srv/salt is still available"
+}
+
+op=$1
+shift
+
+$op "$@"

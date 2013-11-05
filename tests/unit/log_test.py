@@ -1,26 +1,28 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.unit.log_test
     ~~~~~~~~~~~~~~~~~~~
 
     Test salt's "hacked" logging
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
-# Import salt libs
-from saltunittest import (
-    TestCase, TestLoader, TextTestRunner, TestsLoggingHandler
-)
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+
+ensure_in_syspath('../')
 
 
 class TestLog(TestCase):
     '''Test several logging settings'''
 
     def test_issue_2853_regex_TypeError(self):
-        from salt import log as saltlog
+        from salt.log import setup as saltlog
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
         log = saltlog.SaltLoggingClass(__name__)
@@ -36,7 +38,7 @@ class TestLog(TestCase):
             # calculations.
             try:
                 saltlog.SaltLoggingClass('{0}.with_digits'.format(__name__))
-            except Exception, err:
+            except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
                 )
@@ -55,7 +57,7 @@ class TestLog(TestCase):
             # calculations.
             try:
                 saltlog.SaltLoggingClass('{0}.without_digits'.format(__name__))
-            except Exception, err:
+            except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
                 )
@@ -64,7 +66,6 @@ class TestLog(TestCase):
             log.removeHandler(handler)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestLog)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestLog, needs_daemon=False)

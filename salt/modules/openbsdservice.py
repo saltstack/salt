@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The service module for OpenBSD
 '''
@@ -5,10 +6,10 @@ The service module for OpenBSD
 # Import python libs
 import os
 
-# Import salt libs
-import salt.utils
-
 # XXX enable/disable support would be nice
+
+# Define the module's virtual name
+__virtualname__ = 'service'
 
 
 def __virtual__():
@@ -20,7 +21,7 @@ def __virtual__():
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
-            return 'service'
+            return __virtualname__
     return False
 
 
@@ -28,7 +29,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -40,7 +43,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -52,12 +57,12 @@ def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -67,7 +72,9 @@ def status(name, sig=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
