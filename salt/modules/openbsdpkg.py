@@ -1,108 +1,134 @@
+# -*- coding: utf-8 -*-
 '''
 Package support for OpenBSD
 '''
 
 # Import python libs
+import copy
 import re
 import logging
+
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
 
+__PKG_RE = re.compile('^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$')
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 # XXX need a way of setting PKG_PATH instead of inheriting from the environment
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD':
-        return 'pkg'
+        return __virtualname__
     return False
 
 
-def _splitpkg(name):
-    if name:
-        match = re.match(
-            '^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$',
-            name
-        )
-        if match:
-            return match.groups()
-
-
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
-
-
-def _get_pkgs():
-    pkg = {}
-    cmd = 'pkg_info -q -a'
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        namever = _splitpkg(line)
-        if namever:
-            pkg[namever[0]] = namever
-    return pkg
-
-
-def _format_pkgs(split):
-    pkg = {}
-    for value in split.values():
-        if value[2]:
-            name = '{0}--{1}'.format(value[0], value[2])
-        else:
-            name = value[0]
-        pkg[name] = value[1]
-    return pkg
-
-
-def list_pkgs():
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
-    return _format_pkgs(_get_pkgs())
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
+    ret = {}
+    cmd = 'pkg_info -q -a'
+    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    for line in out.splitlines():
+        try:
+            pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
+        except AttributeError:
+            continue
+        pkgname += '--{0}'.format(flavor) if flavor else ''
+        __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
+
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
-def available_version(name):
+def latest_version(*names, **kwargs):
     '''
     The available version of the package in the repository
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.available_version <package name>
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
     '''
-    cmd = 'pkg_info -q -I {0}'.format(name)
-    namever = _splitpkg(__salt__['cmd.run'](cmd))
-    if namever:
-        return namever[1]
-    return ''
+    kwargs.pop('refresh', True)
+
+    pkgs = list_pkgs()
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+
+    stems = [x.split('--')[0] for x in names]
+    cmd = 'pkg_info -q -I {0}'.format(' '.join(stems))
+    for line in __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines():
+        try:
+            pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
+        except AttributeError:
+            continue
+        pkgname += '--{0}'.format(flavor) if flavor else ''
+        cur = pkgs.get(pkgname, '')
+        if not cur or __salt__['pkg_resource.compare'](pkg1=cur,
+                                                       oper='<',
+                                                       pkg2=pkgver):
+            ret[pkgname] = pkgver
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
-def version(name):
+def version(*names, **kwargs):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    cmd = 'unset PKG_PATH; pkg_info -q -I {0}'.format(name)
-    namever = _splitpkg(__salt__['cmd.run'](cmd))
-    if namever:
-        return namever[1]
-    return ''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def install(name=None, pkgs=None, sources=None, **kwargs):
@@ -114,91 +140,107 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, Install one package::
+    CLI Example, Install one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
 
-    CLI Example, Install more than one package::
+    CLI Example, Install more than one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install pkgs='["<package name>", "<package name>"]'
 
-    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, http, ftp, local filesystem)::
+    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem):
+
+    .. code-block:: bash
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    # Get a list of the currently installed packages
-    old = _get_pkgs()
-
+    old = list_pkgs()
     for pkg in pkg_params:
         if pkg_type == 'repository':
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
+        cmd = 'pkg_add -x {0}'.format(pkg)
+        __salt__['cmd.run_all'](cmd)
 
-            if stem in old:
-                cmd = 'pkg_add -xu {0}'.format(pkg)
-            else:
-                cmd = 'pkg_add -x {0}'.format(pkg)
-        else:
-            cmd = 'pkg_add -x {0}'.format(pkg)
-
-        stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-        if stderr:
-            log.error(stderr)
-
-    # Get a list of all the packages that are now installed.
-    new = _format_pkgs(_get_pkgs())
-
-    # New way
-    return __salt__['pkg_resource.find_changes'](_format_pkgs(old), new)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
 
-
-def remove(name, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove a single package with pkg_delete
 
-    Returns a list containing the removed packages.
+    Multiple Package Options:
 
-    CLI Example::
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    old = _get_pkgs()
-    stem, _ = (name.split('--') + [''])[:2]
-    if stem in old:
-        cmd = 'pkg_delete -xD dependencies {0}'.format(stem)
-        __salt__['cmd.retcode'](cmd)
-    new = _format_pkgs(_get_pkgs())
-    return _list_removed(_format_pkgs(old), new)
+    old = list_pkgs()
+    pkg_params = [x.split('--')[0] for x in
+                  __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+
+    cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkg_delete
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
 
-    CLI Example::
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name)
-
-
-def compare(version1='', version2=''):
-    '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return remove(name=name, pkgs=pkgs)

@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Layman
-
 '''
 
 import salt.utils
+
 
 def __virtual__():
     '''
@@ -12,6 +13,7 @@ def __virtual__():
     if __grains__['os'] == 'Gentoo' and salt.utils.which('layman'):
         return 'layman'
     return False
+
 
 def _get_makeconf():
     '''
@@ -25,6 +27,7 @@ def _get_makeconf():
     elif __salt__['file.file_exists'](new_conf):
         return new_conf
 
+
 def add(overlay):
     '''
     Add the given overlay from the caced remote list to your locally
@@ -33,7 +36,9 @@ def add(overlay):
 
     Return a list of the new overlay(s) added:
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' layman.add <overlay name>
     '''
@@ -43,7 +48,7 @@ def add(overlay):
     __salt__['cmd.retcode'](cmd)
     new_overlays = list_local()
 
-    # If we did not have any overlays before and we sucessfully added
+    # If we did not have any overlays before and we successfully added
     # a new one. We need to ensure the make.conf is sourcing layman's
     # make.conf so emerge can see the overlays
     if len(old_overlays) == 0 and len(new_overlays) > 0:
@@ -63,7 +68,9 @@ def delete(overlay):
 
     Return a list of the overlays(s) that were removed:
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' layman.delete <overlay name>
     '''
@@ -84,6 +91,7 @@ def delete(overlay):
     ret = [overlay for overlay in old_overlays if overlay not in new_overlays]
     return ret
 
+
 def sync(overlay='ALL'):
     '''
     Update the specified overlay. Use 'ALL' to synchronize all overlays.
@@ -92,12 +100,15 @@ def sync(overlay='ALL'):
     overlay
         Name of the overlay to sync. (Defaults to 'ALL')
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' layman.sync
     '''
     cmd = 'layman --quietness=0 --sync {0}'.format(overlay)
     return __salt__['cmd.retcode'](cmd) == 0
+
 
 def list_local():
     '''
@@ -105,7 +116,9 @@ def list_local():
 
     Return a list of installed overlays:
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' layman.list_local
     '''
