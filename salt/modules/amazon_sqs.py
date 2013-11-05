@@ -43,12 +43,13 @@ def _run_aws(cmd, region, opts, user, **kwargs):
     _formatted_args = [
         '--{0} {1}'.format(k, v) for k, v in kwargs.iteritems()]
 
-    cmd = 'aws sqs {cmd} {args} {region}'.format(
+    cmd = 'aws sqs {cmd} {args} {region} {out}'.format(
         cmd=cmd,
         args=' '.join(_formatted_args),
-        region=_region(region))
+        region=_region(region),
+        out=_OUTPUT)
 
-    rtn = __salt__['cmd.run'](cmd, runas=user)
+    rtn = json.loads(__salt__['cmd.run'](cmd, runas=user))
 
 
 def list_queues(region, opts=None, user=None):
@@ -64,7 +65,8 @@ def list_queues(region, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
     '''
-    return _run_aws('list-queues', region, opts, user)
+    out = _run_aws('list-queues', region, opts, user)
+    return json.dumps(out['QueueUrls'])
 
 
 def create_queue(name, region, opts=None, user=None):
@@ -85,35 +87,11 @@ def create_queue(name, region, opts=None, user=None):
     '''
     _check_aws()
 
-    return _run_aws(
-        'create-queue', name=name, region=region, opts=opts,
-        user=user)
-    
-    create = True
-
-    out = ''
-    err = ''
-    rtn = 0
-
-    if queue_exists(name, region):
-        err = (
-            u'Queue {0} in region {1} exists'.format(name, region))
-        create = False
-        rtn = 1
-
-    if create:
-        # Create the queue
-        sqs_region = _connect_to_region(region)
-        sqs_region.create_queue(name, default_timeout)
-        if not out:
-            out = u'Creating queue {0} in region {1}'.format(
-                name, region)
-
-    return {
-        'stdout': out,
-        'stderr': err,
-        'retcode': rtn,
-    }
+    create = {'queue-name': name}
+    out = _run_aws(
+        'create-queue', region=region, opts=opts,
+        user=user, **create)
+    return json.dumps(out['QueueUrls'])
 
 
 def delete_queue(name, region, opts=None, user=None):
@@ -131,23 +109,24 @@ def delete_queue(name, region, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
     '''
-    out = ''
-    err = ''
-    rtn = 0
+    queues = list_queues(region, opts, user)
+    url_map = dict((q.split('/')[-1], q) for q in queues)
+    if name in url_map:
+        
+        delete = {'delete-url': url_map[name]}
 
-    if queue_exists(name, region):
-        sqs_region = _connect_to_region(region)
-        out = u'Deleting {0} from {1}'.format(name, region)
-        sqs_region.delete_queue(name)
+        rtn = _run_aws(
+            'delete-queue',
+            region=region,
+            opts=opts,
+            user=user,
+            **delete)
+
     else:
-        err = u'Queue {0} does not exist in {1}'.format(name, region)
-        rtn = 1
+        rtn = False
 
-    return {
-        'stdout': out,
-        'stderr': err,
-        'retcode': rtn,
-    }
+    return rtn
+
 
 def queue_exists(name, region, opts=None, user=None):
     '''
@@ -165,5 +144,5 @@ def queue_exists(name, region, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
     '''
-    sqs_region = _connect_to_region(region)
-    return sqs_region.get_queue(name) != None
+    queues = [q.split('/')[-1] for q in list_queues(region, opts, user)]
+    return json.dumps(name in queues)
