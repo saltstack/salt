@@ -423,7 +423,7 @@ def check_hash(path, hash):
     '''
     hash_parts = hash.split('=', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {!r}'.format(hash))
+        raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -881,7 +881,9 @@ def _get_flags(flags):
             _flag = getattr(re, flag.upper())
 
             if not isinstance(_flag, int):
-                raise SaltInvocationError("Invalid re flag given: %s", flag)
+                raise SaltInvocationError(
+                    'Invalid re flag given: {0}'.format(flag)
+                )
 
             _flags_acc.append(_flag)
 
@@ -912,10 +914,12 @@ def replace(path,
     :param pattern: The PCRE search
     :param repl: The replacement text
     :param count: Maximum number of pattern occurrences to be replaced
-    :param flags: A list of flags defined in :ref:`contents-of-module-re`. Each
-        list item should be a string that will correlate to the human-friendly
-        flag name. E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline
-        searches must specify ``file`` as the ``bufsize`` argument below.
+    :param flags: A list of flags defined in the :ref:`re module documentation
+        <contents-of-module-re>`. Each list item should be a string that will
+        correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
+        'MULTILINE']``. Note: multiline searches must specify ``file`` as the
+        ``bufsize`` argument below.
+
     :type flags: list or int
     :param bufsize: How much of the file to buffer into memory at once. The
         default value ``1`` processes one line at a time. The special value
@@ -944,11 +948,13 @@ def replace(path,
         salt '*' file.replace /some/file 'before' 'after' flags='[MULTILINE, IGNORECASE]'
     '''
     if not os.path.exists(path):
-        raise SaltInvocationError("File not found: %s", path)
+        raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
-            "Cannot perform string replacements on a binary file: %s", path)
+            'Cannot perform string replacements on a binary file: {0}'
+            .format(path)
+        )
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(pattern, flags_num)
@@ -1254,7 +1260,7 @@ def symlink(src, link):
         os.symlink(src, link)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create "{0}"'.format(link))
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
     return False
 
 
@@ -1275,8 +1281,9 @@ def rename(src, dst):
         os.rename(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not rename "{0}" to "{1}"'
-                                    .format(src, dst))
+        raise CommandExecutionError(
+            'Could not rename {0!r} to {1!r}'.format(src, dst)
+        )
     return False
 
 
@@ -1297,8 +1304,9 @@ def copy(src, dst):
         shutil.copyfile(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not copy "{0}" to "{1}"'
-                                    .format(src, dst))
+        raise CommandExecutionError(
+            'Could not copy {0!r} to {1!r}'.format(src, dst)
+        )
     return False
 
 
@@ -1369,8 +1377,10 @@ def remove(path):
         elif os.path.isdir(path):
             shutil.rmtree(path)
             return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not remove "{0}"'.format(path))
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            'Could not remove {0!r}: {1}'.format(path, exc)
+        )
     return False
 
 
