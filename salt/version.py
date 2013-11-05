@@ -370,7 +370,6 @@ def __get_version(version, version_info):
 
     if __file__ == 'setup.py':
         # This is from the exec() call in Salt's setup.py
-        print 123, os.path.join(cwd, '.git')
         if not os.path.exists(os.path.join(cwd, '.git')):
             # This is not a Salt git checkout!!! Don't even try to parse...
             return version, version_info
