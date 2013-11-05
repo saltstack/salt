@@ -250,13 +250,6 @@ In essence, it is a simple dictionary that serves as a lookup table. The
 a lookup on that table using the ``os_family`` grain (by default) and sets the
 result to a variable that can be used throughout the formula.
 
-The ``merge`` keyword specifies the location of a dictionary in Pillar that can
-be used to override any of the default values in the lookup table. If the value
-exists in Pillar it will take precedence, otherwise ``merge`` will be ignored.
-This is when software or configuration files are installed to non-standard
-locations, for example when a package is installed manually and not from the
-upstream repository.
-
 .. seealso:: :py:func:`grains.filter_by <salt.modules.grains.filter_by>`
 
 :file:`map.jinja`:
@@ -286,6 +279,19 @@ upstream repository.
 
     {% set mysql = salt['grains.filter_by'](mysql_lookup_table,
         merge=salt['pillar.get']('mysql:lookup')) 
+
+The ``merge`` keyword specifies the location of a dictionary in Pillar that can
+be used to override values returned from the lookup table. If the value exists
+in Pillar it will take precedence, otherwise ``merge`` will be ignored. This is
+useful when software or configuration files is installed to non-standard
+locations. For example, the following Pillar would replace the ``config`` value
+from the call above.
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        config: /usr/local/etc/mysql/my.cnf
 
 Any of the values defined above can be fetched for the current platform in any
 state file using the following syntax:
