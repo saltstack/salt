@@ -14,7 +14,7 @@ from salt.exceptions import SaltInvocationError
 import integration
 
 
-@requires_salt_modules('test.ping')
+@requires_salt_modules('test.ping', 'test.arg')
 class ArgumentTestCase(integration.ModuleCase):
     def test_unsupported_kwarg(self):
         '''
@@ -26,6 +26,18 @@ class ArgumentTestCase(integration.ModuleCase):
              "are not valid: foo=bar")
         )
 
+    def test_kwarg_name_containing_dashes(self):
+        '''
+        Tests the arg parser to ensure that kwargs with dashes in the arg name
+        are properly identified as kwargs. If this fails, then the KWARG_REGEX
+        in salt/utils/__init__.py needs to be fixed.
+        '''
+        self.assertEqual(
+            self.run_function(
+                'test.arg', ['foo-bar=baz']
+            ).get('kwargs', {}).get('foo-bar'),
+            'baz'
+        )
 
 if __name__ == '__main__':
     from integration import run_tests
