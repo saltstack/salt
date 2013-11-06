@@ -146,6 +146,7 @@ VALID_OPTS = {
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
+    'fileserver_limit_traversal': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
@@ -195,6 +196,7 @@ DEFAULT_MINION_OPTS = {
     'file_roots': {
         'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
+    'fileserver_limit_traversal': False,
     'pillar_roots': {
         'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
@@ -307,6 +309,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
+    'fileserver_limit_traversal': False,
     'max_open_files': 100000,
     'hash_type': 'md5',
     'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),

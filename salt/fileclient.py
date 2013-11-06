@@ -248,14 +248,43 @@ class Client(object):
         Return a list of all available sls modules on the master for a given
         environment
         '''
+
+        limit_traversal = self.opts.get('fileserver_limit_traversal', False)
         states = []
-        for path in self.file_list(env):
-            if path.endswith('.sls'):
-                # is an sls module!
-                if path.endswith('{0}init.sls'.format('/')):
-                    states.append(path.replace('/', '.')[:-9])
-                else:
-                    states.append(path.replace('/', '.')[:-4])
+
+        if limit_traversal:
+            if env not in self.opts['file_roots']:
+                log.warning("During an attempt to list states for env {0}, the environment could not be found in the \
+                            configured file roots".format(env))
+                return states
+            for path in self.opts['file_roots'][env]:
+                for root, dirs, files in os.walk(path, topdown=True):
+                    log.debug("Searching for states in dirs {0} and files {1}".format(dirs, files))
+                    if not [file.endswith('.sls') for file in files]:
+                        #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
+                        del dirs[:]
+                    else:
+                        for found_file in files:
+                            stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            if found_file.endswith(('.sls')):
+                                if found_file.endswith('init.sls'):
+                                    if stripped_root.endswith('.'):
+                                        stripped_root = stripped_root.rstrip('.')
+                                    states.append(stripped_root)
+                                else:
+                                    if not stripped_root.endswith('.'):
+                                        stripped_root += '.'
+                                    if stripped_root.startswith('.'):
+                                        stripped_root = stripped_root.lstrip('.')
+                                    states.append(stripped_root + found_file[:-4])
+        else:
+            for path in self.file_list(env):
+                if path.endswith('.sls'):
+                    # is an sls module!
+                    if path.endswith('{0}init.sls'.format('/')):
+                        states.append(path.replace('/', '.')[:-9])
+                    else:
+                        states.append(path.replace('/', '.')[:-4])
         return states
 
     def get_state(self, sls, env):
