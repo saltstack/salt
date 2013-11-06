@@ -639,8 +639,8 @@ def script(name,
         )
         salt.utils.warn_until('Helium', msg)
         ret.setdefault('warnings', []).append(msg)
-        # Backwards compatibility
-        __env__ = env
+        # No need to set __env__ = env since that's done in function
+        # globals injection machinery
 
     if HAS_GRP:
         pgid = os.getegid()
