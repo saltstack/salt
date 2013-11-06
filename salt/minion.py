@@ -147,6 +147,7 @@ def parse_args_and_kwargs(func, args, data=None):
     kwargs = {}
     invalid_kwargs = []
     for arg in args:
+        # support old yamlify syntax
         if isinstance(arg, string_types):
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
@@ -161,6 +162,13 @@ def parse_args_and_kwargs(func, args, data=None):
             else:
                 # Not a kwarg
                 pass
+        # if the arg is a dict with __kwarg__ == True, then its a kwarg
+        elif isinstance(arg, dict) and arg.get('__kwarg__') is True:
+            for key, val in arg.iteritems():
+                if key == '__kwarg__':
+                    continue
+                kwargs[key] = val
+            continue
         _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
