@@ -682,11 +682,18 @@ class RemoteClient(Client):
             hash_server = self.hash_file(path, env)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file ** skipped **, '
-                    'latest already in cache \'{0}\''.format(path))
+                    'Fetching file from env {0!r}, ** skipped ** '
+                    'latest already in cache {1!r}'.format(
+                        env, path
+                    )
+                )
                 return dest2check
 
-        log.debug('Fetching file ** attempting ** \'{0}\''.format(path))
+        log.debug(
+            'Fetching file from env {0!r}, ** attempting ** {1!r}'.format(
+                env, path
+            )
+        )
         d_tries = 0
         path = self._check_proto(path)
         load = {'path': path,
@@ -751,7 +758,11 @@ class RemoteClient(Client):
             fn_.write(data)
         if fn_:
             fn_.close()
-            log.info('Fetching file ** done ** \'{0}\''.format(path))
+            log.info(
+                'Fetching file from env {0!r}, ** done ** {1!r}'.format(
+                    env, path
+                )
+            )
         return dest
 
     def file_list(self, env='base', prefix=''):

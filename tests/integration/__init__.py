@@ -55,10 +55,11 @@ import yaml
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
-PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
+PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
@@ -165,6 +166,11 @@ class TestDaemon(object):
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
                 TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                TMP_PRODENV_STATE_TREE
             ]
         }
         self.master_opts['ext_pillar'].append(
@@ -175,7 +181,11 @@ class TestDaemon(object):
                 )
             )}
         )
-        self.master_opts['extension_modules'] = os.path.join(INTEGRATION_TEST_DIR, 'files', 'extension_modules')
+
+        self.master_opts['extension_modules'] = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+        )
+
         # clean up the old files
         self._clean()
 
@@ -206,7 +216,8 @@ class TestDaemon(object):
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
                     TMP_STATE_TREE,
-                    TMP
+                    TMP_PRODENV_STATE_TREE,
+                    TMP,
                     ],
                    running_tests_user)
 
@@ -410,8 +421,10 @@ class TestDaemon(object):
             shutil.rmtree(self.master_opts['root_dir'])
         if os.path.isdir(self.smaster_opts['root_dir']):
             shutil.rmtree(self.smaster_opts['root_dir'])
-        if os.path.isdir(TMP):
-            shutil.rmtree(TMP)
+
+        for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs

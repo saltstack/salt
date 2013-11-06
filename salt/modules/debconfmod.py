@@ -134,7 +134,7 @@ def set_(package, question, type, value, *extra):
     return True
 
 
-def set_file(path, **kwargs):
+def set_file(path, saltenv='base', **kwargs):
     '''
     Set answers to debconf questions from a file.
 
@@ -144,7 +144,15 @@ def set_file(path, **kwargs):
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
-    path = __salt__['cp.cache_file'](path, kwargs.get('__env__', 'base'))
+    if '__env__' in kwargs:
+        salt.utils.warn_until(
+            'Helium',
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'__env__\'. This functionality will be removed in Salt Helium.'
+        )
+        # Backwards compatibility
+        saltenv = kwargs['__env__']
+    path = __salt__['cp.cache_file'](path, saltenv)
     if path:
         _set_file(path)
         return True

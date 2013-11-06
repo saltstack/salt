@@ -54,7 +54,7 @@ import re
 import sys
 
 
-def _present_test(user, name, enc, comment, options, source, config, env):
+def _present_test(user, name, enc, comment, options, source, config):
     '''
     Run checks for "present"
     '''
@@ -64,7 +64,7 @@ def _present_test(user, name, enc, comment, options, source, config, env):
                 user,
                 source,
                 config,
-                env)
+                __env__)
         if keys:
             comment = ''
             for key, status in keys.items():
@@ -168,7 +168,6 @@ def present(
                 options or [],
                 source,
                 config,
-                kwargs.get('__env__', 'base')
                 )
         return ret
 
@@ -176,8 +175,7 @@ def present(
         data = __salt__['ssh.set_auth_key_from_file'](
                 user,
                 source,
-                config,
-                kwargs.get('__env__', 'base'))
+                config)
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')

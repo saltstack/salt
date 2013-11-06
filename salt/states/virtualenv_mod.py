@@ -34,7 +34,6 @@ def managed(name,
             extra_search_dir=None,
             never_download=None,
             prompt=None,
-            __env__='base',
             user=None,
             runas=None,
             no_chown=False,
@@ -181,7 +180,6 @@ def managed(name,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
-            __env__=__env__,
             pre_releases=pre_releases
         )
         ret['result'] &= _ret['retcode'] == 0
