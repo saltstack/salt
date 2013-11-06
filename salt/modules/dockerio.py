@@ -2037,7 +2037,7 @@ def script(container,
            timeout=None,
            reset_system_locale=True,
            no_clean=False,
-           saltenv='base'
+           saltenv='base',
            *nargs,
            **kwargs):
     '''

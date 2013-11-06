@@ -908,7 +908,7 @@ def script_retcode(source,
                    timeout=None,
                    reset_system_locale=True,
                    __env__=None,
-                   saltenv='base'
+                   saltenv='base',
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
