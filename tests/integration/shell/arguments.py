@@ -18,7 +18,9 @@ import integration
 class ArgumentTestCase(integration.ModuleCase):
     def test_unsupported_kwarg(self):
         '''
-        Test passing a non-supported keyword argument
+        Test passing a non-supported keyword argument. The relevant code that
+        checks for invalid kwargs is located in salt/minion.py, within the
+        'parse_args_and_kwargs' function.
         '''
         self.assertEqual(
             self.run_function('test.ping', ['foo=bar']),
@@ -30,7 +32,7 @@ class ArgumentTestCase(integration.ModuleCase):
         '''
         Tests the arg parser to ensure that kwargs with dashes in the arg name
         are properly identified as kwargs. If this fails, then the KWARG_REGEX
-        in salt/utils/__init__.py needs to be fixed.
+        variable in salt/utils/__init__.py needs to be fixed.
         '''
         self.assertEqual(
             self.run_function(
@@ -38,6 +40,7 @@ class ArgumentTestCase(integration.ModuleCase):
             ).get('kwargs', {}).get('foo-bar'),
             'baz'
         )
+
 
 if __name__ == '__main__':
     from integration import run_tests
