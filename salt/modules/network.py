@@ -106,8 +106,8 @@ def traceroute(host):
 
         if len(traceroute_version) < 3:
             traceroute_version.append(0)
-        except IndexError:
-            traceroute_version = [0, 0, 0]
+    except: IndexError:
+        traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
         if ' ' not in line:
