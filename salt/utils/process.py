@@ -96,6 +96,7 @@ def clean_proc(proc, wait_for_kill=10):
         # and proc.terminate() and turns into a NoneType
         pass
 
+
 def os_is_running(pid):
     '''
     Use OS facilities to determine if a process is running
@@ -104,8 +105,7 @@ def os_is_running(pid):
         return psutil.pid_exists(pid)
     else:
         try:
-            os.kill(pid, 0) # SIG 0 is the "are you alive?" signal
+            os.kill(pid, 0)  # SIG 0 is the "are you alive?" signal
             return True
         except OSError:
             return False
-

@@ -878,8 +878,8 @@ def apply_minion_config(overrides=None,
             {
                 'function': 'mine.update',
                 'minutes': opts['mine_interval'],
-                'jid_include' : True,
-                'maxrunning' : 2
+                'jid_include': True,
+                'maxrunning': 2
             }
         })
     return opts

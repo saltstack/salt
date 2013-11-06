@@ -249,7 +249,6 @@ class SMinion(object):
         else:
             self.gen_modules()
 
-
     def gen_modules(self):
         '''
         Load all of the modules for the minion
