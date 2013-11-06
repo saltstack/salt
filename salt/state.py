@@ -52,6 +52,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'require_in',
     'fail_hard',
     'reload_modules',
+    'saltenv',
     '__id__',
     '__sls__',
     '__env__',
