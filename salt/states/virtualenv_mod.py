@@ -23,6 +23,7 @@ def managed(name,
             no_site_packages=None,
             system_site_packages=False,
             distribute=False,
+            use_wheel=False,
             clear=False,
             python=None,
             extra_search_dir=None,
@@ -46,6 +47,8 @@ def managed(name,
         the file will be transferred from the master file server.
     cwd
         Path to the working directory where "pip install" is executed.
+    use_wheel : False
+        Prefer wheel archives (requires pip>=1.4)
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -165,11 +168,27 @@ def managed(name,
     elif venv_exists:
         ret['comment'] = 'virtualenv exists'
 
+    if use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
+            return ret
+
+
     # Populate the venv via a requirements file
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
-            requirements=requirements, bin_env=name, runas=user, cwd=cwd,
+            requirements=requirements,
+            bin_env=name,
+            use_wheel=use_wheel,
+            runas=user,
+            cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
