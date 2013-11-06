@@ -90,6 +90,10 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
+    if not salt.utils.which('traceroute'):
+        log.info("This minion does not have traceroute installed")
+        return ret
+
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
 
     out = __salt__['cmd.run'](cmd)
@@ -102,7 +106,14 @@ def traceroute(host):
         #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
         # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
-        traceroute_version = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
+        traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
+
+        traceroute_version = []
+        for t in traceroute_version_raw:
+            try:
+                traceroute_version.append(int(t))
+            except ValueError:
+                traceroute_version.append(t)
 
         if len(traceroute_version) < 3:
             traceroute_version.append(0)
