@@ -327,7 +327,7 @@ def file(name,
 
     if isinstance(env, salt._compat.string_types):
         msg = (
-            'Passing a salt environment should be done using \'__env__\' not '
+            'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Helium and this '
             'will be the default and expected behaviour. Please update your '
             'state files.'
