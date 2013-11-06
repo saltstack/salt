@@ -527,7 +527,7 @@ class LogLevelMixIn(object):
                     logfile_basename = os.path.basename(
                         self._default_logging_logfile_
                     )
-                    logging.getLogger(__name__).warning(
+                    logging.getLogger(__name__).debug(
                         'The user {0!r} is not allowed to write to {1!r}. '
                         'The log file will be stored in '
                         '\'~/.salt/{2!r}.log\''.format(
