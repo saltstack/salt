@@ -2944,13 +2944,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Character device {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the major/minor
         else:
@@ -2985,13 +2991,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Block device {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the major/minor
         else:
@@ -3025,13 +3037,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #  if it is a fifo
         elif not __salt__['file.is_fifo'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Fifo pipe {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the perms
         else:
