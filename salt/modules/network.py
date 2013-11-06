@@ -91,12 +91,23 @@ def traceroute(host):
     '''
     ret = []
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
+
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
     cmd2 = 'traceroute --version'
     out2 = __salt__['cmd.run'](cmd2)
-    traceroute_version = re.findall(r'version (\d+)\.(\d+)\.(\d+)', out2)[0]
+    try:
+        # Linux traceroute version looks like:
+        #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
+        # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
+
+        traceroute_version = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
+
+        if len(traceroute_version) < 3:
+            traceroute_version.append(0)
+        except IndexError:
+            traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
         if ' ' not in line:
