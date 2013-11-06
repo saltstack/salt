@@ -2066,8 +2066,7 @@ class BaseHighState(object):
                                             inc_sls,
                                             ', '.join(resolved_envs))
                         log.critical(msg)
-                        if self.opts['failhard']:
-                            errors.append(msg)
+                        errors.append(msg)
                 self._handle_iorder(state)
         else:
             state = {}
