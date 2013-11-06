@@ -1672,9 +1672,9 @@ def source_list(source, source_hash, env):
             except ValueError:
                 continue
             else:
-                mfiles += ["{0}?env={1}".format(f, senv)
+                mfiles += ['{0}?env={1}'.format(f, senv)
                            for f in __salt__['cp.list_master'](senv)]
-                mdirs += ["{0}?env={1}".format(d, senv)
+                mdirs += ['{0}?env={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
         for single in source:

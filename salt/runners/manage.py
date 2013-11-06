@@ -278,7 +278,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        http://saltstack.com/downloads
+        http://docs.saltstack.com/downloads
 
     username
         Optional user name for login on remote computer.
@@ -297,7 +297,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
     '''
 
     if not installer_url:
-        base_url = 'http://saltstack.com/downloads/'
+        base_url = 'http://docs.saltstack.com/downloads/'
         source = urllib.urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
         source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
@@ -372,9 +372,9 @@ objShell.Exec("{1}{2}")'''
     # from a file. Glue it together line by line.
     for x, y in ((vb_vcrunexec, vb_vcrun), (vb_saltexec, vb_salt)):
         vb_lines = y.split('\n')
-        batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'>'+x+'.vbs\n@echo ' + \
-                 ('>>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
-                 '>>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
+        batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'  >'+x+'.vbs\n@echo ' + \
+                 ('  >>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
+                 '  >>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
     batch_file = open(batch_path, 'wb')
@@ -387,5 +387,5 @@ objShell.Exec("{1}{2}")'''
             argv += ['-u', username]
             if password:
                 argv += ['-p', password]
-        argv += ['-c', batch_path]
+        argv += ['-h', '-c', batch_path]
         subprocess.call(argv)

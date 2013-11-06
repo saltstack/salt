@@ -22,6 +22,9 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - save: True
 '''
 
+# Import salt libs
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
+
 
 def __virtual__():
     '''
@@ -48,7 +51,7 @@ def append(name, **kwargs):
            'result': None,
            'comment': ''}
 
-    for ignore in "__env__",  "__sls__", "order":
+    for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
     rule = __salt__['iptables.build_rule'](**kwargs)
@@ -91,7 +94,7 @@ def set_policy(name, **kwargs):
         'result': None,
         'comment': ''}
 
-    for ignore in "__env__",  "__sls__", "order":
+    for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
 
@@ -125,7 +128,7 @@ def flush(name, **kwargs):
         'result': None,
         'comment': ''}
 
-    for ignore in "__env__",  "__sls__", "order":
+    for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
 

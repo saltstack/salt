@@ -8,6 +8,7 @@ option.
 
 # Import python libs
 import os
+import logging
 
 try:
     import fcntl
@@ -20,6 +21,8 @@ except ImportError:
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
+
+log = logging.getLogger(__name__)
 
 
 def find_file(path, env='base', **kwargs):
@@ -156,15 +159,22 @@ def file_hash(load, fnd):
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
-        with salt.utils.fopen(cache_path, 'rb') as fp_:
-            try:
-                hsum, mtime = fp_.read().split(':')
+        try:
+            with salt.utils.fopen(cache_path, 'rb') as fp_:
+                try:
+                    hsum, mtime = fp_.read().split(':')
+                except ValueError:
+                    log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    file_hash(load, fnd)
+                    return(ret)
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-            except IOError:  # Can't use Python select() because we need Windows support
-                file_hash(load, fnd)
+        except os.error:  # Can't use Python select() because we need Windows support
+            log.debug("Fileserver encountered lock when reading cache file. Retrying.")
+            file_hash(load, fnd)
+            return(ret)
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])

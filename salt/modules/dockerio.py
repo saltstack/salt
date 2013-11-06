@@ -1982,10 +1982,9 @@ def _script(status,
         tpath = os.path.join(rpath, 'tmp')
         if isinstance(env, string_types):
             salt.utils.warn_until(
-                (0, 19),
-                'Passing a salt environment should be '
-                'done using \'__env__\' not '
-                '\'env\'.'
+                'Helium',
+                'Passing a salt environment should be done using \'__env__\' '
+                'not \'env\'.'
             )
             # Backwards compatibility
             __env__ = env

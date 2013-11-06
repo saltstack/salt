@@ -43,6 +43,7 @@ Package repositories can be managed with the pkgrepo state:
 
 # Import salt libs
 from salt.modules.apt import _strip_uri
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
 def __virtual__():
@@ -181,9 +182,7 @@ def managed(name, **kwargs):
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
 
-    for kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
-                  'order', 'watch', 'watch_in', 'require', 'require_in',
-                  'prereq', 'prereq_in'):
+    for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
     try:
@@ -229,7 +228,10 @@ def managed(name, **kwargs):
                               .format(name))
             return ret
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} needs to be configured'
+        ret['comment'] = ('Package repo {0!r} will be configured. This may '
+                          'cause pkg states to behave differently than stated '
+                          'if this action is repeated without test=True, due '
+                          'to the differences in the configured repositories.'
                           .format(name))
         return ret
     try:
@@ -305,7 +307,11 @@ def absent(name, **kwargs):
         ret['result'] = True
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Package repo {0} needs to be removed'.format(name)
+        ret['comment'] = ('Package repo {0!r} will be removed. This may '
+                          'cause pkg states to behave differently than stated '
+                          'if this action is repeated without test=True, due '
+                          'to the differences in the configured repositories.'
+                          .format(name))
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
