@@ -1275,9 +1275,11 @@ class State(object):
                 # format_call
                 env = cdata['kwargs']['env']
             elif '__env__' in data:
-                # The user is passing an alternative environement using the
-                # proper keyword argument
+                # The user is passing an alternative environment using __env__
+                # which is also not the appropriate choice, still, handle it
                 env = data['__env__']
+            elif 'saltenv' in data:
+                env = data['saltenv']
             else:
                 # Let's use the default environment
                 env = 'base'
