@@ -145,6 +145,7 @@ def parse_args_and_kwargs(func, args, data=None):
     spec_args, _, has_kwargs, _ = salt.utils.get_function_argspec(func)
     _args = []
     kwargs = {}
+    invalid_kwargs = []
     for arg in args:
         if isinstance(arg, string_types):
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
@@ -152,6 +153,11 @@ def parse_args_and_kwargs(func, args, data=None):
                 if has_kwargs or arg_name in spec_args:
                     kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
+                else:
+                    # **kwargs not in argspec and parsed argument name not in
+                    # list of positional arguments. This keyword argument is
+                    # invalid.
+                    invalid_kwargs.append(arg)
             else:
                 # Not a kwarg
                 pass
@@ -162,6 +168,11 @@ def parse_args_and_kwargs(func, args, data=None):
             kwargs['__pub_{0}'.format(key)] = val
     log.debug('Parsed args: {0}'.format(_args))
     log.debug('Parsed kwargs: {0}'.format(kwargs))
+    if invalid_kwargs:
+        raise SaltInvocationError(
+            'The following keyword arguments are not valid: {0}'
+            .format(', '.join(invalid_kwargs))
+        )
     return _args, kwargs
 
 
