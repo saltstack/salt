@@ -328,11 +328,11 @@ def file(name,
     if isinstance(env, salt._compat.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Helium and this '
+            '\'env\'. This warning will go away in Salt Boron and this '
             'will be the default and expected behaviour. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Helium', msg)
+        salt.utils.warn_until('Boron', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 

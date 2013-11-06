@@ -146,9 +146,9 @@ def set_file(path, saltenv='base', **kwargs):
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Helium',
+            'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Helium.'
+            '\'__env__\'. This functionality will be removed in Salt Boron.'
         )
         # Backwards compatibility
         saltenv = kwargs['__env__']
