@@ -115,7 +115,7 @@ Default: the system's hostname
 
 Explicitly declare the id for this minion to use. Since Salt uses detached ids
 it is possible to run multiple minions on the same machine but with different
-ids. This can be useful for Salt compute clusters.
+ids.
 
 .. code-block:: yaml
 
