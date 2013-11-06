@@ -63,7 +63,7 @@ def condition_kwarg(arg, kwarg):
     if isinstance(kwarg, dict):
         kw_ = []
         for key, val in kwarg.items():
-            kw_.append('{0}={1}'.format(key, val))
+            kw_.append({'__kwarg__': True, key:val})
         return list(arg) + kw_
     return arg
 
