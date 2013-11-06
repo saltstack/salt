@@ -302,6 +302,16 @@ class CPModuleTest(integration.ModuleCase):
         finally:
             os.unlink(tgt)
 
+        try:
+            self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertIn('Comte', data)
+        finally:
+            os.unlink(tgt)
+
+
 
 if __name__ == '__main__':
     from integration import run_tests

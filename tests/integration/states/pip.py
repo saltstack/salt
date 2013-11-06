@@ -410,7 +410,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # The requirements file must be found in the prod environment
             ret = self.run_state(
-                'pip.installed', name='', bin_env=venv_dir, __env__='prod',
+                'pip.installed', name='', bin_env=venv_dir, saltenv='prod',
                 requirements='salt://prod-env-requirements.txt'
             )
             self.assertSaltTrueReturn(ret)
@@ -424,6 +424,15 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_state(
                 'pip.installed', name='', bin_env=venv_dir,
                 requirements='salt://prod-env-requirements.txt?env=prod'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(
+                'Successfully processed requirements file '
+                'salt://prod-env-requirements.txt', ret
+            )
+            ret = self.run_state(
+                'pip.installed', name='', bin_env=venv_dir,
+                requirements='salt://prod-env-requirements.txt?saltenv=prod'
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(

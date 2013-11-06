@@ -67,7 +67,7 @@ def set_file(name, source, **kwargs):
 
         <state_id>:
           debconf.set_file:
-            - source: salt://pathto/pkg.selections?env=myenvironment
+            - source: salt://pathto/pkg.selections?saltenv=myenvironment
 
     source:
         The location of the file containing the package selections

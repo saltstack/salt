@@ -65,7 +65,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
     /etc/foo.conf:
       file.managed:
         - source:
-          - salt://foo.conf?env=dev
+          - salt://foo.conf?saltenv=dev
         - user: foo
         - group: users
         - mode: '0644'
