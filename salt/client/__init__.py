@@ -61,10 +61,10 @@ def condition_kwarg(arg, kwarg):
     Return a single arg structure for the publisher to safely use
     '''
     if isinstance(kwarg, dict):
-        kw_ = []
+        kw_ = {'__kwarg__': True}
         for key, val in kwarg.items():
-            kw_.append({'__kwarg__': True, key:val})
-        return list(arg) + kw_
+            kw_[key] = val
+        return list(arg) + [kw_]
     return arg
 
 
