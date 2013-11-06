@@ -38,7 +38,8 @@ def __virtual__():
         'SUSE  Enterprise Server',
         'OEL',
         'Linaro',
-        'elementary OS'
+        'elementary OS',
+        'McAfee  OS Server'
     ))
     if __grains__.get('os', '') in disable:
         return False
