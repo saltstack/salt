@@ -51,8 +51,10 @@ def __virtual__():
 
 
 # Functions
-def war_deployed(name, war, url='http://localhost:8080/manager',
-        __env__='base', timeout=180):
+def war_deployed(name,
+                 war,
+                 url='http://localhost:8080/manager',
+                 timeout=180):
     '''
     Enforce that the WAR will be deployed and started in the context path
     it will make use of WAR versions
@@ -137,8 +139,12 @@ def war_deployed(name, war, url='http://localhost:8080/manager',
             return ret
 
     # Deploy
-    deploy_res = __salt__['tomcat.deploy_war'](war, name, 'yes', url, __env__,
-            timeout)
+    deploy_res = __salt__['tomcat.deploy_war'](war,
+                                               name,
+                                               'yes',
+                                               url,
+                                               __env__,
+                                               timeout)
 
     # Return
     if deploy_res.startswith('OK'):
