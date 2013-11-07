@@ -933,6 +933,7 @@ def managed(name,
             mode=None,
             template=None,
             makedirs=False,
+            dir_mode=None,
             context=None,
             replace=True,
             defaults=None,
@@ -1163,7 +1164,8 @@ def managed(name,
                                             backup,
                                             template,
                                             show_diff,
-                                            contents)
+                                            contents,
+                                            dir_mode)
 
 
 def directory(name,
