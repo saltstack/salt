@@ -29,7 +29,8 @@ from salt.utils.verify import (
     verify_env,
     verify_socket,
     zmq_version,
-    check_max_open_files
+    check_max_open_files,
+    valid_id
 )
 
 
@@ -37,6 +38,14 @@ class TestVerify(TestCase):
     '''
     Verify module tests
     '''
+
+    def test_valid_id_exception_handler(self):
+        '''
+        Ensure we just return False if we pass in invalid or undefined paths.
+        Refs #8259
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        self.assertFalse(valid_id(opts, None))
 
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
