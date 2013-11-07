@@ -563,7 +563,20 @@ def init(name,
                 disk_file_name
             )
             img_dir = os.path.dirname(img_dest)
-            sfn = __salt__['cp.cache_file'](image)
+
+            if kwargs.get('env'):
+                salt.utils.warn_until(
+                    (0, 19),
+                    'Passing a salt environment should be '
+                    'done using \'__env__\' not '
+                    '\'env\'.'
+                )
+                # Backwards compatibility
+                __env__ = kwargs['env']
+            else:
+                __env__ = 'base'
+
+            sfn = __salt__['cp.cache_file'](image, __env__)
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
             salt.utils.copyfile(sfn, img_dest)

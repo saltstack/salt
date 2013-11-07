@@ -375,7 +375,7 @@ def install(name=None,
 
     if kwargs.get('env'):
         try:
-            os.environ.update(kwargs.get('env'))
+            os.environ.update({'env': kwargs['env']})
         except Exception as e:
             log.exception(e)
 
@@ -434,7 +434,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     '''
     if kwargs.get('env'):
         try:
-            os.environ.update(kwargs.get('env'))
+            os.environ.update({'env': kwargs['env']})
         except Exception as e:
             log.exception(e)
 
@@ -1158,7 +1158,20 @@ def mod_repo(repo, **kwargs):
 
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
-        fn_ = __salt__['cp.cache_file'](key_url)
+
+        if kwargs.get('env'):
+            salt.utils.warn_until(
+                (0, 19),
+                'Passing a salt environment should be '
+                'done using \'__env__\' not '
+                '\'env\'.'
+            )
+            # Backwards compatibility
+            __env__ = kwargs['env']
+        else:
+            __env__ = 'base'
+
+        fn_ = __salt__['cp.cache_file'](key_url, __env__)
         cmd = 'apt-key add {0}'.format(fn_)
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
@@ -1401,7 +1414,7 @@ def get_selections(pattern=None, state=None):
 # TODO: allow state=None to be set, and that *args will be set to that state
 # TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
 # TODO: handle path to selection file from local fs as well as from salt file server
-def set_selections(path=None, selection=None, clear=False):
+def set_selections(path=None, selection=None, clear=False, __env__='base'):
     '''
     Change package state in the dpkg database.
 
@@ -1459,7 +1472,7 @@ def set_selections(path=None, selection=None, clear=False):
             )
 
     if path:
-        path = __salt__['cp.cache_file'](path)
+        path = __salt__['cp.cache_file'](path, __env__)
         with salt.utils.fopen(path, 'r') as ifile:
             content = ifile.readlines()
         selection = _parse_selections(content)

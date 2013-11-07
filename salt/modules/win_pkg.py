@@ -443,7 +443,7 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
     return value_data
 
 
-def refresh_db():
+def refresh_db(__env__='base'):
     '''
     Just recheck the repository and return a dict::
 
@@ -457,14 +457,15 @@ def refresh_db():
     '''
     __context__.pop('winrepo.data', None)
     repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache)
+    cached_repo = __salt__['cp.is_cached'](repocache, __env__)
     if not cached_repo:
         # It's not cached. Cache it, mate.
-        cached_repo = __salt__['cp.cache_file'](repocache)
+        cached_repo = __salt__['cp.cache_file'](repocache, __env__)
         return True
     # Check if the master's cache file has changed
-    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo):
-        cached_repo = __salt__['cp.cache_file'](repocache)
+    if __salt__['cp.hash_file'](repocache, __env__) != \
+            __salt__['cp.hash_file'](cached_repo, __env__):
+        cached_repo = __salt__['cp.cache_file'](repocache, __env__)
     return True
 
 
@@ -494,6 +495,18 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
+
+    if kwargs.get('env'):
+        salt.utils.warn_until(
+            (0, 19),
+            'Passing a salt environment should be '
+            'done using \'__env__\' not '
+            '\'env\'.'
+        )
+        # Backwards compatibility
+        __env__ = kwargs['env']
+    else:
+        __env__ = 'base'
 
     old = list_pkgs()
 
@@ -527,10 +540,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 or installer.startswith('http:') \
                 or installer.startswith('https:') \
                 or installer.startswith('ftp:'):
-            cached_pkg = __salt__['cp.is_cached'](installer)
+            cached_pkg = __salt__['cp.is_cached'](installer, __env__)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
-                cached_pkg = __salt__['cp.cache_file'](installer)
+                cached_pkg = __salt__['cp.cache_file'](installer, __env__)
         else:
             cached_pkg = installer
 
@@ -606,6 +619,19 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     pkg_params = __salt__['pkg_resource.parse_targets'](name,
                                                         pkgs,
                                                         **kwargs)[0]
+
+    if kwargs.get('env'):
+        salt.utils.warn_until(
+            (0, 19),
+            'Passing a salt environment should be '
+            'done using \'__env__\' not '
+            '\'env\'.'
+        )
+        # Backwards compatibility
+        __env__ = kwargs['env']
+    else:
+        __env__ = 'base'
+
     old = list_pkgs()
     for target in pkg_params:
         pkginfo = _get_package_info(target)
@@ -622,11 +648,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             return 'Error: No installer or uninstaller configured for package {0}'.format(name)
         if uninstaller.startswith('salt:'):
             cached_pkg = \
-                __salt__['cp.is_cached'](uninstaller)
+                __salt__['cp.is_cached'](uninstaller, __env__)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
                 cached_pkg = \
-                    __salt__['cp.cache_file'](uninstaller)
+                    __salt__['cp.cache_file'](uninstaller, __env__)
         else:
             cached_pkg = uninstaller
         cached_pkg = cached_pkg.replace('/', '\\')
@@ -680,7 +706,7 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
     return remove(name=name, pkgs=pkgs, version=version, **kwargs)
 
 
-def get_repo_data():
+def get_repo_data(__env__='base'):
     '''
     Returns the cached winrepo data
 
@@ -693,7 +719,7 @@ def get_repo_data():
     #if 'winrepo.data' in __context__:
     #    return __context__['winrepo.data']
     repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache)
+    cached_repo = __salt__['cp.is_cached'](repocache, __env__)
     if not cached_repo:
         __salt__['pkg.refresh_db']()
     try:
