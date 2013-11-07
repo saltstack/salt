@@ -988,7 +988,7 @@ def del_repo(repo, **kwargs):
     return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
 
 
-def mod_repo(repo, **kwargs):
+def mod_repo(repo, saltenv='base', **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as the definition is well formed.  For Ubuntu the
@@ -1043,16 +1043,18 @@ def mod_repo(repo, **kwargs):
                 if not ppa_format_support:
                     _warn_software_properties(repo)
                 else:
-                    log.info('falling back to urllib method for private PPA ')
-                #fall back to urllib style
+                    log.info('Falling back to urllib method for private PPA')
+
+                # fall back to urllib style
                 try:
                     owner_name, ppa_name = repo[4:].split('/', 1)
                 except ValueError:
-                    err_str = 'Unable to get PPA info from argument. ' \
-                              'Expected format "<PPA_OWNER>/<PPA_NAME>" ' \
-                              '(e.g. saltstack/salt) not found.  Received ' \
-                              '{0!r} instead.'
-                    raise CommandExecutionError(err_str.format(repo[4:]))
+                    raise CommandExecutionError(
+                        'Unable to get PPA info from argument. '
+                        'Expected format "<PPA_OWNER>/<PPA_NAME>" '
+                        '(e.g. saltstack/salt) not found.  Received '
+                        '{0!r} instead.'.format(repo[4:])
+                    )
                 dist = __grains__['lsb_distrib_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
@@ -1076,25 +1078,25 @@ def mod_repo(repo, **kwargs):
                                 error_str.format(owner_name, ppa_name)
                             )
                 except urllib2.HTTPError as exc:
-                    error_str = 'Launchpad does not know about {0}/{1}: {2}'
                     raise CommandExecutionError(
-                        error_str.format(owner_name, ppa_name, exc)
+                        'Launchpad does not know about {0}/{1}: {2}'.format(
+                            owner_name, ppa_name, exc)
                     )
                 except IndexError as e:
-                    error_str = 'Launchpad knows about {0}/{1} but did not ' \
-                                'return a fingerprint. Please set keyid ' \
-                                'manually: {2}'
                     raise CommandExecutionError(
-                        error_str.format(owner_name, ppa_name, e)
+                        'Launchpad knows about {0}/{1} but did not '
+                        'return a fingerprint. Please set keyid '
+                        'manually: {2}'.format(owner_name, ppa_name, e)
                     )
 
                 if 'keyserver' not in kwargs:
                     kwargs['keyserver'] = 'keyserver.ubuntu.com'
                 if 'ppa_auth' in kwargs:
                     if not launchpad_ppa_info['private']:
-                        error_str = 'PPA is not private but auth ' \
-                                    'credentials passed: {0}'
-                        raise CommandExecutionError(error_str.format(repo))
+                        raise CommandExecutionError(
+                            'PPA is not private but auth credentials '
+                            'passed: {0}'.format(repo)
+                        )
                 # assign the new repo format to the "repo" variable
                 # so we can fall through to the "normal" mechanism
                 # here.
@@ -1128,11 +1130,11 @@ def mod_repo(repo, **kwargs):
     repos = filter(lambda s: not s.invalid, sources)
     mod_source = None
     try:
-        repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(
-            repo)
+        repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
     except SyntaxError:
-        error_str = 'Error: repo {0!r} not a well formatted definition'
-        raise SyntaxError(error_str.format(repo))
+        raise SyntaxError(
+            'Error: repo {0!r} not a well formatted definition'.format(repo)
+        )
 
     full_comp_list = set(repo_comps)
 
@@ -1159,7 +1161,7 @@ def mod_repo(repo, **kwargs):
 
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
-        fn_ = __salt__['cp.cache_file'](key_url)
+        fn_ = __salt__['cp.cache_file'](key_url, saltenv)
         cmd = 'apt-key add {0}'.format(fn_)
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
@@ -1400,9 +1402,12 @@ def get_selections(pattern=None, state=None):
 
 
 # TODO: allow state=None to be set, and that *args will be set to that state
-# TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
-# TODO: handle path to selection file from local fs as well as from salt file server
-def set_selections(path=None, selection=None, clear=False):
+# TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list
+# passed to selection, with the default state set to whatever is passed by the
+# above, but override that if explicitly specified
+# TODO: handle path to selection file from local fs as well as from salt file
+# server
+def set_selections(path=None, selection=None, clear=False, saltenv='base'):
     '''
     Change package state in the dpkg database.
 
@@ -1460,7 +1465,7 @@ def set_selections(path=None, selection=None, clear=False):
             )
 
     if path:
-        path = __salt__['cp.cache_file'](path)
+        path = __salt__['cp.cache_file'](path, saltenv)
         with salt.utils.fopen(path, 'r') as ifile:
             content = ifile.readlines()
         selection = _parse_selections(content)
