@@ -248,10 +248,10 @@ def install(pkgs=None,
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
-            'Helium',
+            'Boron',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'__env__\'. This functionality will be removed in Salt '
-            'Helium.'
+            'Boron.'
         )
         # Backwards compatibility
         saltenv = __env__
@@ -570,10 +570,10 @@ def uninstall(pkgs=None,
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
-            'Helium',
+            'Boron',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'__env__\'. This functionality will be removed in Salt '
-            'Helium.'
+            'Boron.'
         )
         # Backwards compatibility
         saltenv = __env__

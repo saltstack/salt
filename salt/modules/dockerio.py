@@ -1983,10 +1983,10 @@ def _script(status,
 
         if isinstance(env, string_types):
             salt.utils.warn_until(
-                'Helium',
+                'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Helium.'
+                'Boron.'
             )
             # Backwards compatibility
             saltenv = env
@@ -2063,10 +2063,10 @@ def script(container,
 
     if isinstance(env, string_types):
         salt.utils.warn_until(
-            'Helium',
+            'Boron',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'env\'. This functionality will be removed in Salt '
-            'Helium.'
+            'Boron.'
         )
         # Backwards compatibility
         saltenv = env
@@ -2125,10 +2125,10 @@ def script_retcode(container,
 
     if isinstance(env, string_types):
         salt.utils.warn_until(
-            'Helium',
+            'Boron',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'env\'. This functionality will be removed in Salt '
-            'Helium.'
+            'Boron.'
         )
         # Backwards compatibility
         saltenv = env
