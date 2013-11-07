@@ -569,7 +569,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     return sorted(list(ret))
 
 
-def hex2ip(hex_ip):
+def hex2ip(hex_ip, invert=False):
     '''
     Convert a hex string to an ip, if a failure occurs the original hex is
     returned
@@ -578,6 +578,11 @@ def hex2ip(hex_ip):
         hip = int(hex_ip, 16)
     except ValueError:
         return hex_ip
+    if invert:
+        return '{3}.{2}.{1}.{0}'.format(hip >> 24 & 255,
+                                        hip >> 16 & 255,
+                                        hip >> 8 & 255,
+                                        hip & 255)
     return '{0}.{1}.{2}.{3}'.format(hip >> 24 & 255,
                                     hip >> 16 & 255,
                                     hip >> 8 & 255,
@@ -608,9 +613,9 @@ def _parse_tcp_line(line):
     ret[sl] = {}
     l_addr, l_port = comps[1].split(':')
     r_addr, r_port = comps[2].split(':')
-    ret[sl]['local_addr'] = hex2ip(l_addr)
+    ret[sl]['local_addr'] = hex2ip(l_addr, True)
     ret[sl]['local_port'] = int(l_port, 16)
-    ret[sl]['remote_addr'] = hex2ip(r_addr)
+    ret[sl]['remote_addr'] = hex2ip(r_addr, True)
     ret[sl]['remote_port'] = int(r_port, 16)
     return ret
 
