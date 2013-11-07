@@ -22,7 +22,9 @@ def __virtual__():
     '''
     Only load if aws is available.
     '''
-    return __salt__['cmd.has_exec']('aws')
+    if __salt__['cmd.has_exec']('aws'):
+        return 'aws'
+    return False
 
 
 def exists(
@@ -50,6 +52,11 @@ def exists(
     exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
     if not exists:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'AWS SQS queue {0} is set to be created'.format(
+                    name)
+            return ret
         created = __salt__['aws_sqs.create_queue'](name, region, opts, user)
         if created['retcode'] == 0:
             ret['changes']['new'] = created['stdout']
@@ -88,6 +95,11 @@ def absent(
     exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
     if exists:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'AWS SQS queue {0} is set to be removed'.format(
+                    name)
+            return ret
         removed = __salt__['aws_sqs.delete_queue'](name, region, opts, user)
         if removed['retcode'] == 0:
             ret['changes']['removed'] = removed['stdout']
