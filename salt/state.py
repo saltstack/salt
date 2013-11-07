@@ -1430,7 +1430,7 @@ class State(object):
             return 'change'
         return 'met'
 
-    def event(self, chunk_ret):
+    def event(self, chunk_ret, length):
         '''
         Fire an event on the master bus
         '''
@@ -1439,6 +1439,7 @@ class State(object):
                     [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
                     )
             preload = {'jid': self.jid}
+            chunk_ret['len'] = length
             self.functions['event.fire_master'](chunk_ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
@@ -1506,7 +1507,7 @@ class State(object):
                                 'comment': comment,
                                 '__run_num__': self.__run_num}
                 self.__run_num += 1
-                self.event(running[tag])
+                self.event(running[tag], len(chunks))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1528,7 +1529,7 @@ class State(object):
                                     'comment': 'Recursive requisite found',
                                     '__run_num__': self.__run_num}
                         self.__run_num += 1
-                        self.event(running[tag])
+                        self.event(running[tag], len(chunks))
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1576,7 +1577,7 @@ class State(object):
             else:
                 running[tag] = self.call(low)
         if tag in running:
-            self.event(running[tag])
+            self.event(running[tag], len(chunks))
         return running
 
     def call_high(self, high):
