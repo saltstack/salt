@@ -83,7 +83,7 @@ def list_queues(region, opts=None, user=None):
 def create_queue(name, region, opts=None, user=None):
     '''
     Creates a queue with the correct name.
-    
+
     name
         Name of the SQS queue to create
 
