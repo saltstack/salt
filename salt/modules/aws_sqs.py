@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for the Amazon Simple Queue Service.
 '''
@@ -82,7 +83,7 @@ def list_queues(region, opts=None, user=None):
 def create_queue(name, region, opts=None, user=None):
     '''
     Creates a queue with the correct name.
-    
+
     name
         Name of the SQS queue to create
 
@@ -139,7 +140,7 @@ def delete_queue(name, region, opts=None, user=None):
             opts=opts,
             user=user,
             **delete)
-        success= True
+        success = True
         err = ''
         out = '{0} deleted'.format(name)
 
