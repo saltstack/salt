@@ -160,6 +160,7 @@ VALID_OPTS = {
     'win_repo_mastercachefile': str,
     'win_gitrepos': list,
     'enable_lspci': bool,
+    'syndic_wait': int,
 }
 
 # default configurations
@@ -350,6 +351,7 @@ DEFAULT_MASTER_OPTS = {
     'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'syndic_wait': 1,
 }
 
 

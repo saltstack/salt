@@ -48,3 +48,12 @@ starting the other Salt daemons.
 .. code-block:: bash
 
     # salt-syndic
+
+
+.. note::
+
+    If you have an exceptionally large infrastructure or many layers of
+    syndics, you may find that the CLI doesn't wait long enough for the syndics
+    to return their events.  If you think this is the case, you can set the
+    ``syndic_wait`` value in the upper master config.  The default value is
+    ``1``, and should work for the majority of deployments.
