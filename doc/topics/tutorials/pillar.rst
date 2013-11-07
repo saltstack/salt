@@ -5,7 +5,7 @@ Pillar Walkthrough
 .. note::
 
     This walkthrough assumes that the reader has already completed the initial
-    Salt Stack :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
 The pillar interface inside of Salt is one of the most important components
 of a Salt deployment. Pillar is the interface used to generate arbitrary data
@@ -291,6 +291,6 @@ pillar but can retrieve data from external sources. This can be useful when
 information about an infrastructure is stored in a separate location.
 
 Reference information on pillar and the external pillar interface can be found
-in the Salt Stack documentation:
+in the Salt documentation:
 
 :doc:`Pillar </topics/pillar/index>`

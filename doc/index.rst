@@ -5,8 +5,8 @@
 .. image:: _static/saltconf.jpg
     :target: http://saltconf.com/
 
-What is Salt Stack?
-===================
+What is SaltStack?
+==================
 
 Salt is a new approach to infrastructure management. Easy enough to get
 running in minutes, scalable enough to manage tens of thousands of servers,
@@ -246,7 +246,7 @@ More information about the project
 ==================================
 
 :doc:`Release notes </topics/releases/index>`
-    Living history of Salt Stack.
+    Living history of SaltStack.
 
 :doc:`Community </topics/community>`
     How to get involved.

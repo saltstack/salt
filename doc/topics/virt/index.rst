@@ -1,6 +1,6 @@
-===========================================
-Salt Virt - The Salt Stack Cloud Controller
-===========================================
+==========================================
+Salt Virt - The SaltStack Cloud Controller
+==========================================
 
 The Salt Virt cloud controller capability was initial added to Salt in version
 0.14.0 as an alpha technology.
