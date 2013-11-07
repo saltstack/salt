@@ -16,7 +16,8 @@ Package repositories can be managed with the pkgrepo state:
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
-.. code-block::yaml
+.. code-block:: yaml
+
     base:
       pkgrepo.managed:
         - humanname: Logstash PPA
@@ -32,13 +33,28 @@ Package repositories can be managed with the pkgrepo state:
         - name: logstash
         - refresh: True
 
-.. code-block::yaml
+.. code-block:: yaml
+
     base:
       pkgrepo.managed:
         - ppa: wolfnet/logstash
       pkg.latest:
         - name: logstash
         - refresh: True
+
+
+.. _bug: https://bugs.launchpad.net/ubuntu/+source/software-properties/+bug/1249080
+
+.. note::
+
+    On Ubuntu systems, the ``python-software-properties`` package should be
+    installed for better support of PPA repositories. To check if this package
+    is installed, run ``dpkg -l python-software-properties``.
+
+    Also, some Ubuntu releases have a bug_ in their
+    ``python-software-properties`` package, a missing dependency on pycurl, so
+    ``python-pycurl`` will need to be manually installed if it is not present
+    once ``python-software-properties`` is installed.
 '''
 
 # Import salt libs
@@ -95,16 +111,25 @@ def managed(name, **kwargs):
         Launchpad simply by specifying the user and archive name. The keyid
         will be queried from launchpad and everything else is set
         automatically. You can override any of the below settings by simply
-        setting them as you would normally.
+        setting them as you would normally. For example:
 
-          EXAMPLE: ppa: wolfnet/logstash
+        .. code-block:: yaml
+
+            logstash-ppa:
+              pkgrepo.managed:
+                - ppa: wolfnet/logstash
 
     ppa_auth
         For Ubuntu PPAs there can be private PPAs that require authentication
         to access. For these PPAs the username/password can be passed as an
         HTTP Basic style username/password combination.
 
-          EXAMPLE: ppa_auth: username:password
+        .. code-block:: yaml
+
+            logstash-ppa:
+              pkgrepo.managed:
+                - ppa: wolfnet/logstash
+                - ppa_auth: username:password
 
     name
         On apt-based systems this must be the complete entry as it would be
@@ -112,7 +137,11 @@ def managed(name, **kwargs):
         components (i.e. 'main') which can be added/modified with the
         "comps" option.
 
-          EXAMPLE: name: deb http://us.archive.ubuntu.com/ubuntu precise main
+        .. code-block:: yaml
+
+            precise-repo:
+              pkgrepo.managed:
+                - name: deb http://us.archive.ubuntu.com/ubuntu precise main
 
     disabled
         On apt-based systems, disabled toggles whether or not the repo is
@@ -278,16 +307,25 @@ def absent(name, **kwargs):
         On Ubuntu, you can take advantage of Personal Package Archives on
         Launchpad simply by specifying the user and archive name.
 
-          EXAMPLE: ppa: wolfnet/logstash
+        .. code-block:: yaml
+
+            logstash-ppa:
+              pkgrepo.absent:
+                - ppa: wolfnet/logstash
 
     ppa_auth
         For Ubuntu PPAs there can be private PPAs that require authentication
         to access. For these PPAs the username/password can be specified.  This
         is required for matching if the name format uses the "ppa:" specifier
         and is private (requires username/password to access, which is encoded
-        in the URI)
+        in the URI).
 
-          EXAMPLE: ppa_auth: username:password
+        .. code-block:: yaml
+
+            logstash-ppa:
+              pkgrepo.absent:
+                - ppa: wolfnet/logstash
+                - ppa_auth: username:password
     '''
     ret = {'name': name,
            'changes': {},
