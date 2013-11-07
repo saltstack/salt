@@ -23,7 +23,7 @@ def __virtual__():
     Only load if aws is available.
     '''
     if __salt__['cmd.has_exec']('aws'):
-        return 'aws'
+        return 'aws_sqs'
     return False
 
 
