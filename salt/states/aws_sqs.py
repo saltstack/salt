@@ -14,7 +14,7 @@ information.
 
     myqueue:
         aws_sqs.exists:
-            - user: aws
+            - region: eu-west-1
 '''
 
 
@@ -50,7 +50,7 @@ def exists(
     exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
     if not exists:
-        created = create_queue(name, region, opts, user)
+        created = __salt__['aws_sqs.create_queue'](name, region, opts, user)
         if created['retcode'] == 0:
             ret['changes']['new'] = created['stdout']
         else:
@@ -88,7 +88,7 @@ def absent(
     exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
     if exists:
-        removed = delete_queue(name, region, opts, user)
+        removed = __salt__['aws_sqs.delete_queue'](name, region, opts, user)
         if removed['retcode'] == 0:
             ret['changes']['removed'] = removed['stdout']
         else:
