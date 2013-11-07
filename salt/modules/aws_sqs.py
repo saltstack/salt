@@ -5,22 +5,17 @@ Support for the Amazon Simple Queue Service.
 import json
 
 # Import salt libs
-from salt import utils
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 _OUTPUT = '--output json'
 
 
 def __virtual__():
-    return _check_aws()
-
-
-def _check_aws():
-    '''
-    Make sure awscli is installed
-    '''
-    utils.check_or_die('aws')
-    return 'aws_sqs'
+    if salt.utils.which('aws'):
+        # awscli is installed, load the module
+        return True
+    return False
 
 
 def _region(region):
@@ -96,7 +91,6 @@ def create_queue(name, region, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
     '''
-    _check_aws()
 
     create = {'queue-name': name}
     out = _run_aws(
