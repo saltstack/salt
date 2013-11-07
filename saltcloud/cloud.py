@@ -923,6 +923,22 @@ class Map(Cloud):
                 query_map.pop(alias)
         return query_map
 
+    def get_vmnames_by_action(self, action):
+        query_map = self.interpolated_map("list_nodes")
+        matching_states = {
+            "start" : ["stopped"],
+            "stop" : ["running", "active"],
+            "reboot" : ["running", "active"],
+        }
+        vm_names = []
+        for alias, drivers in query_map.iteritems():
+            for driver, vms in drivers.iteritems():
+                for vm_name, vm_details in vms.iteritems():
+                    if (vm_details != 'Absent') and \
+                        (vm_details['state'].lower() in matching_states[action]):
+                        vm_names.append(vm_name)
+        return vm_names
+
     def read(self):
         '''
         Read in the specified map file and return the map structure

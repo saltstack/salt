@@ -198,7 +198,7 @@ class SaltCloud(parsers.SaltCloudParser):
                                       self.config.get('map', None)):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
-                names = mapper.delete_map(query='list_nodes')
+                names = mapper.get_vmnames_by_action(self.options.action)
             else:
                 names = self.config.get('names', None)
 
