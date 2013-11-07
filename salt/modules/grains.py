@@ -361,7 +361,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         # this one will render {D: {E: I, G: H}, J: K}
         salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
     '''
-    ret = lookup_dict.get( __grains__.get(grain, default), lookup_dict.get(default,None) )
+    ret = lookup_dict.get(
+            __grains__.get(
+                grain, default),
+            lookup_dict.get(
+                default, None)
+            )
 
     if merge:
 
