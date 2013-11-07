@@ -277,7 +277,7 @@ class CPModuleTest(integration.ModuleCase):
                     hashlib.md5(fn_.read()).hexdigest()
                     )
 
-    def test_get_file_from_env_predifined(self):
+    def test_get_file_from_env_predefined(self):
         '''
         cp.get_file
         '''
