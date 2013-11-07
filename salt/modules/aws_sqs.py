@@ -105,6 +105,7 @@ def create_queue(name, region, opts=None, user=None):
     ret = {
         'retcode': 0,
         'stdout': out['QueueUrl'],
+        'stderr': '',
     }
     return ret
 
