@@ -120,6 +120,13 @@ def _get_virtual():
     return __context__['pkg._get_virtual']
 
 
+def _warn_software_properties(repo):
+    log.warning('The \'python-software-properties\' package is not installed. '
+                'For more accurate support of PPA repositories, you should '
+                'install this package.')
+    log.warning('Best guess at ppa format: {0}'.format(repo))
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -904,10 +911,7 @@ def del_repo(repo, **kwargs):
         is_ppa = True
         dist = __grains__['lsb_distrib_codename']
         if not ppa_format_support:
-            warning_str = 'Unable to use functions from ' \
-                          '"python-software-properties" package, making ' \
-                          'best guess at ppa format: {0}'
-            log.warning(warning_str.format(repo))
+            _warn_software_properties(repo)
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
                 auth_info = '{0}@'.format(kwargs['ppa_auth'])
@@ -1034,10 +1038,7 @@ def mod_repo(repo, **kwargs):
                     return {repo: out}
             else:
                 if not ppa_format_support:
-                    warning_str = 'Unable to use functions from ' \
-                                  '"python-software-properties" package, ' \
-                                  'making best guess at ppa format: {0}'
-                    log.warning(warning_str.format(repo))
+                    _warn_software_properties(repo)
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
