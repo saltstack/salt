@@ -70,6 +70,11 @@ def list_queues(region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_sqs.list_queues eu-west-1
     '''
     out = _run_aws('list-queues', region, opts, user)
 
@@ -95,6 +100,11 @@ def create_queue(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_sqs.create_queue myqueue eu-west-1
     '''
     _check_aws()
 
@@ -125,6 +135,12 @@ def delete_queue(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.delete_queue myqueue eu-west-1
     '''
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
@@ -173,6 +189,12 @@ def queue_exists(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.queue_exists myqueue eu-west-1
     '''
     output = list_queues(region, opts, user)
 
