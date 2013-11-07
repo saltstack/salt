@@ -370,9 +370,8 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
             )
 
     if merge:
-
-        if not isinstance(merge, dict):
-            raise SaltException('filter_by merge argument must be a dictionnary.')
+        if not isinstance(merge, collections.Mapping):
+            raise SaltException('filter_by merge argument must be a dictionary.')
 
         else:
 
