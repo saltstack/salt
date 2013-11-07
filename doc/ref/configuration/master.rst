@@ -790,6 +790,17 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
+By adding an additional layer you can limit the target hosts in addition to the
+accessible commands:
+
+.. code-block:: yaml
+
+    peer:
+      foo.example.com:
+        'db*':
+          - test.*
+          - pkg.*
+
 .. conf_master:: peer_run
 
 ``peer_run``

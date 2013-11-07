@@ -112,8 +112,7 @@ def installed(name,
               no_chown=False,
               cwd=None,
               activate=False,
-              pre_releases=False,
-              __env__='base'):
+              pre_releases=False):
     '''
     Make sure the package is installed
 
@@ -179,6 +178,8 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
+    from_vcs = False
+
     if name:
         try:
             try:
@@ -196,6 +197,7 @@ def installed(name,
                 if name.startswith(supported_vcs):
                     for vcs in supported_vcs:
                         if name.startswith(vcs):
+                            from_vcs = True
                             install_req = pip.req.InstallRequirement.from_line(
                                 name.split('{0}+'.format(vcs))[-1]
                             )
@@ -204,7 +206,7 @@ def installed(name,
                     install_req = pip.req.InstallRequirement.from_line(name)
         except ValueError as exc:
             ret['result'] = False
-            if '=' in name and '==' not in name:
+            if not from_vcs and '=' in name and '==' not in name:
                 ret['comment'] = (
                     'Invalid version specification in package {0}. \'=\' is '
                     'not supported, use \'==\' instead.'.format(name)
@@ -336,7 +338,6 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
-        __env__=__env__
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -409,8 +410,7 @@ def removed(name,
             timeout=None,
             user=None,
             runas=None,
-            cwd=None,
-            __env__='base'):
+            cwd=None):
     '''
     Make sure that a package is not installed.
 
@@ -468,8 +468,7 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  user=user,
-                                 cwd=cwd,
-                                 __env__='base'):
+                                 cwd=cwd):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'

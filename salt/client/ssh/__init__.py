@@ -106,7 +106,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f$CUT_MARK -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             [ $($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f$CUT_MARK -d' ') = {{3}} ] && {{0}} tar opxzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
              install -m 0700 -d /tmp/.salt
              echo "{1}"
@@ -527,7 +527,8 @@ class Single(object):
                 self.opts,
                 self.id,
                 **self.target)
-            opts_pkg = pre_wrapper['test.opts_pkg']()
+            default_opts = pre_wrapper['test.opts_pkg']()
+            opts_pkg = dict(default_opts.items() + self.opts.items())
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],

@@ -288,6 +288,13 @@ class Resolver(object):
         self.opts = opts
         self.auth = salt.loader.auth(opts)
 
+    def _send_token_request(self, load):
+        sreq = salt.payload.SREQ(
+            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            )
+        tdata = sreq.send('clear', load)
+        return tdata
+
     def cli(self, eauth):
         '''
         Execute the CLI options to fill in the extra data needed for the
@@ -326,10 +333,7 @@ class Resolver(object):
         '''
         load['cmd'] = 'mk_token'
         load['eauth'] = eauth
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        tdata = sreq.send('clear', load)
+        tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
         try:
@@ -344,12 +348,7 @@ class Resolver(object):
         Request a token from the master
         '''
         load['cmd'] = 'mk_token'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        tdata = sreq.send('clear', load)
-        if 'token' not in tdata:
-            return tdata
+        tdata = self._send_token_request(load)
         return tdata
 
     def get_token(self, token):
@@ -359,10 +358,5 @@ class Resolver(object):
         load = {}
         load['token'] = token
         load['cmd'] = 'get_token'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        tdata = sreq.send('clear', load)
-        if 'token' not in tdata:
-            return tdata
+        tdata = self._send_token_request(load)
         return tdata

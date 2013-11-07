@@ -78,6 +78,27 @@ def get(key, default=''):
     return salt.utils.traverse_dict(__grains__, key, default)
 
 
+def has_value(key):
+    '''
+    Determine whether a named value exists in the grains dictionary.
+
+    Given a grains dictionary that contains the following structure::
+
+        {'pkg': {'apache': 'httpd'}}
+
+    One would determine if the apache key in the pkg dict exists by::
+
+        pkg:apache
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.has_value pkg:apache
+    '''
+    return True if salt.utils.traverse_dict(__grains__, key, False) else False
+
+
 def items(sanitize=False):
     '''
     Return all of the minion's grains

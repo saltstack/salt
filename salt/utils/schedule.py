@@ -17,9 +17,23 @@ code-block:: yaml
 
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
+
+The scheduler also supports ensuring that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long-running
+and could step on each other or pile up in case of infrastructure outage.
+
+code-block:: yaml
+
+    schedule:
+      long_running_job:
+          function: big_file_transfer
+          jid_include: True
+          maxrunning: 1
+
 '''
 
 # Import python libs
+import os
 import time
 import datetime
 import multiprocessing
@@ -29,6 +43,8 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.process
+import salt.payload
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +67,7 @@ class Schedule(object):
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
+        clean_proc_dir(opts)
 
     def option(self, opt):
         '''
@@ -70,7 +87,39 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+
+        proc_fn = os.path.join(
+            salt.minion.get_proc_dir(self.opts['cachedir']),
+            ret['jid']
+        )
+
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is not set for this job we can ignore all this
+        if 'jid_include' in data and data['jid_include']:
+            jobcount = 0
+            for basefilename in os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
+                fn = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
+                with salt.utils.fopen(fn, 'r') as fp_:
+                    job = salt.payload.Serial(self.opts).load(fp_)
+                    log.debug('schedule.handle_func: Checking job against fun {}: {}'.format(ret['fun'], job))
+                    if ret['fun'] == job['fun']:
+                        jobcount += 1
+                        log.debug('schedule.handle_func: Incrementing jobcount, now {}, maxrunning is {}'.format(jobcount, data['maxrunning']))
+                        if jobcount >= data['maxrunning']:
+                            log.debug('schedule.handle_func: The scheduled job {0} was not started, {1} already running'.format(func, data['maxrunning']))
+                            return False
+
         salt.utils.daemonize_if(self.opts)
+
+        ret['pid'] = os.getpid()
+
+        if 'jid_include' in data and data['jid_include']:
+            log.debug('schedule.handle_func: adding this job to the jobcache with data {}'.format(ret))
+            # write this to /var/cache/salt/minion/proc
+            with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
         args = None
         if 'args' in data:
@@ -118,6 +167,10 @@ class Schedule(object):
                         func, returner
                         )
                     )
+        try:
+            os.unlink(proc_fn)
+        except OSError:
+            pass
 
     def eval(self):
         '''
@@ -166,6 +219,11 @@ class Schedule(object):
             else:
                 log.debug('Running scheduled job: {0}'.format(job))
 
+            if 'jid_include' in data:
+                log.debug('schedule: This job was scheduled with jid_include, adding to cache')
+                if 'maxrunning' in data:
+                    log.debug('schedule: This job was scheduled with a max number of {}'.format(data['maxrunning']))
+
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
             else:
@@ -175,3 +233,29 @@ class Schedule(object):
             if self.opts.get('multiprocessing', True):
                 proc.join()
             self.intervals[job] = int(time.time())
+
+
+def clean_proc_dir(opts):
+
+    '''
+    Loop through jid files in the minion proc directory (default /var/cache/salt/minion/proc)
+    and remove any that refer to processes that no longer exist
+    '''
+
+    for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
+        fn = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
+        with salt.utils.fopen(fn, 'r') as fp_:
+            job = salt.payload.Serial(opts).load(fp_)
+            log.debug('schedule.clean_proc_dir: checking job {} for process existence'.format(job))
+            if 'pid' in job:
+                if salt.utils.process.os_is_running(job['pid']):
+                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, pid {0} still exists.'.format(job['pid']))
+                else:
+                    # Windows cannot delete an open file
+                    if salt.utils.is_windows():
+                        fp_.close()
+                    # Maybe the file is already gone
+                    try:
+                        os.unlink(fn)
+                    except OSError:
+                        pass

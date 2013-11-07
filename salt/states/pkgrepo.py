@@ -228,7 +228,10 @@ def managed(name, **kwargs):
                               .format(name))
             return ret
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} needs to be configured'
+        ret['comment'] = ('Package repo {0!r} will be configured. This may '
+                          'cause pkg states to behave differently than stated '
+                          'if this action is repeated without test=True, due '
+                          'to the differences in the configured repositories.'
                           .format(name))
         return ret
     try:
@@ -304,7 +307,11 @@ def absent(name, **kwargs):
         ret['result'] = True
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Package repo {0} needs to be removed'.format(name)
+        ret['comment'] = ('Package repo {0!r} will be removed. This may '
+                          'cause pkg states to behave differently than stated '
+                          'if this action is repeated without test=True, due '
+                          'to the differences in the configured repositories.'
+                          .format(name))
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()

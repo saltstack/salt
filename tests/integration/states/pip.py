@@ -26,6 +26,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -192,7 +193,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if venv_create['retcode'] > 0:
             self.skipTest(
                 'Failed to create testcase virtual environment: {0}'.format(
-                    ret
+                    venv_create
                 )
             )
 
@@ -228,8 +229,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         req_filename = os.path.join(
             integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
-        with open(req_filename, 'wb') as f:
-            f.write('pep8')
+        with salt.utils.fopen(req_filename, 'wb') as reqf:
+            reqf.write('pep8')
 
         try:
             ret = self.run_state(
@@ -295,8 +296,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         req_filename = os.path.join(
             integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
-        with open(req_filename, 'wb') as f:
-            f.write('pep8')
+        with salt.utils.fopen(req_filename, 'wb') as reqf:
+            reqf.write('pep8')
 
         try:
             ret = self.run_state(
@@ -380,6 +381,69 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+    def test_pip_installed_specific_env(self):
+        # Create the testing virtualenv
+        venv_dir = os.path.join(
+            integration.TMP, 'pip-installed-specific-env'
+        )
+
+        # Let's write a requirements file
+        requirements_file = os.path.join(
+            integration.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
+        )
+        with salt.utils.fopen(requirements_file, 'wb') as reqf:
+            reqf.write('pep8\n')
+
+        try:
+            ret = self.run_function('virtualenv.create', [venv_dir])
+
+            # The requirements file should not be found the base environment
+            ret = self.run_state(
+                'pip.installed', name='', bin_env=venv_dir,
+                requirements='salt://prod-env-requirements.txt'
+            )
+            self.assertSaltFalseReturn(ret)
+            self.assertInSaltComment(
+                "'salt://prod-env-requirements.txt' not found", ret
+            )
+
+            # The requirements file must be found in the prod environment
+            ret = self.run_state(
+                'pip.installed', name='', bin_env=venv_dir, saltenv='prod',
+                requirements='salt://prod-env-requirements.txt'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(
+                'Successfully processed requirements file '
+                'salt://prod-env-requirements.txt', ret
+            )
+
+            # We're using the base environment but we're passing the prod
+            # environment as an url arg to salt://
+            ret = self.run_state(
+                'pip.installed', name='', bin_env=venv_dir,
+                requirements='salt://prod-env-requirements.txt?env=prod'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(
+                'Successfully processed requirements file '
+                'salt://prod-env-requirements.txt', ret
+            )
+            ret = self.run_state(
+                'pip.installed', name='', bin_env=venv_dir,
+                requirements='salt://prod-env-requirements.txt?saltenv=prod'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(
+                'Successfully processed requirements file '
+                'salt://prod-env-requirements.txt', ret
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+            if os.path.isfile(requirements_file):
+                os.unlink(requirements_file)
 
 
 if __name__ == '__main__':

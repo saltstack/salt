@@ -30,6 +30,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
+from salt.utils import context
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltReqTimeoutError, SaltException
@@ -51,6 +52,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'require_in',
     'fail_hard',
     'reload_modules',
+    'saltenv',
     '__id__',
     '__sls__',
     '__env__',
@@ -1260,12 +1262,33 @@ class State(object):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
         try:
-            if 'kwargs' in cdata:
-                ret = self.states[cdata['full']](
-                    *cdata['args'], **cdata['kwargs'])
+            # Let's get a reference to the salt environment to use within this
+            # state call.
+            #
+            # If the state function accepts an 'env' keyword argument, it
+            # allows the state to be overridden(we look for that in cdata). If
+            # that's not found in cdata, we look for what we're being passed in
+            # the original data, namely, the special dunder __env__. If that's
+            # not found we default to 'base'
+            if cdata['kwargs'].get('env', None) is not None:
+                # User is using a deprecated env setting which was parsed by
+                # format_call
+                env = cdata['kwargs']['env']
+            elif '__env__' in data:
+                # The user is passing an alternative environment using __env__
+                # which is also not the appropriate choice, still, handle it
+                env = data['__env__']
+            elif 'saltenv' in data:
+                env = data['saltenv']
             else:
-                ret = self.states[cdata['full']](*cdata['args'])
-            self.verify_ret(ret)
+                # Let's use the default environment
+                env = 'base'
+
+            with context.state_call_context(self.states[cdata['full']],
+                                            __env__=env):
+                ret = self.states[cdata['full']](*cdata['args'],
+                                                 **cdata['kwargs'])
+                self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             ret = {
@@ -2066,8 +2089,7 @@ class BaseHighState(object):
                                             inc_sls,
                                             ', '.join(resolved_envs))
                         log.critical(msg)
-                        if self.opts['failhard']:
-                            errors.append(msg)
+                        errors.append(msg)
                 self._handle_iorder(state)
         else:
             state = {}

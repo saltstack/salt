@@ -57,8 +57,8 @@ class SaltStackVersion(object):
         'Hydrogen': (sys.maxint - 108, 0, 0, 0),
         'Helium': (sys.maxint - 107, 0, 0, 0),
         'Lithium': (sys.maxint - 106, 0, 0, 0),
-        #'Beryllium'    : (sys.maxint - 105, 0, 0, 0),
-        #'Boron'        : (sys.maxint - 104, 0, 0, 0),
+        'Beryllium': (sys.maxint - 105, 0, 0, 0),
+        'Boron': (sys.maxint - 104, 0, 0, 0),
         #'Carbon'       : (sys.maxint - 103, 0, 0, 0),
         #'Nitrogen'     : (sys.maxint - 102, 0, 0, 0),
         #'Oxygen'       : (sys.maxint - 101, 0, 0, 0),
@@ -368,7 +368,13 @@ def __get_version(version, version_info):
             os.path.dirname(inspect.getsourcefile(__get_version))
         )
 
-    if not os.path.exists(os.path.join(os.path.dirname(cwd), '.git')):
+    if __file__ == 'setup.py':
+        # This is from the exec() call in Salt's setup.py
+        if not os.path.exists(os.path.join(cwd, '.git')):
+            # This is not a Salt git checkout!!! Don't even try to parse...
+            return version, version_info
+
+    elif not os.path.exists(os.path.join(os.path.dirname(cwd), '.git')):
         # This is not a Salt git checkout!!! Don't even try to parse...
         return version, version_info
 

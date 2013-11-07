@@ -561,7 +561,6 @@ def script(name,
            stateful=False,
            umask=None,
            timeout=None,
-           __env__='base',
            **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -621,11 +620,6 @@ def script(name,
     args
         String of command line args to pass to the script.  Only used if no
         args are specified as part of the `name` argument.
-
-    __env__
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
-
     '''
     ret = {'changes': {},
            'comment': '',
@@ -638,15 +632,15 @@ def script(name,
 
     if isinstance(env, string_types):
         msg = (
-            'Passing a salt environment should be done using \'__env__\' not '
-            '\'env\'. This warning will go away in Salt {version} and this '
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
             'will be the default and expected behaviour. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Helium', msg)
+        salt.utils.warn_until('Boron', msg)
         ret.setdefault('warnings', []).append(msg)
-        # Backwards compatibility
-        __env__ = env
+        # No need to set __env__ = env since that's done in function
+        # globals injection machinery
 
     if HAS_GRP:
         pgid = os.getegid()

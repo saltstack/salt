@@ -24,9 +24,10 @@ class StateModuleTest(integration.ModuleCase,
         state.show_highstate
         '''
         high = self.run_function('state.show_highstate')
+        destpath = os.path.join(integration.SYS_TMP_DIR, 'testfile')
         self.assertTrue(isinstance(high, dict))
-        self.assertTrue('/testfile' in high)
-        self.assertEqual(high['/testfile']['__env__'], 'base')
+        self.assertTrue(destpath in high)
+        self.assertEqual(high[destpath]['__env__'], 'base')
 
     def test_show_lowstate(self):
         '''
@@ -361,6 +362,21 @@ fi
         self.assertEqual(ret, [
             'The state "C" in sls syntax.badlist2 is not formed as a list'
         ])
+
+    def test_get_file_from_env_in_top_match(self):
+        tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
+        try:
+            ret = self.run_function(
+                'state.highstate', minion_tgt='sub_minion'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(tgt))
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertIn('Comte', data)
+        finally:
+            os.unlink(tgt)
 
 
 if __name__ == '__main__':

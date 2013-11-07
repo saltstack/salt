@@ -115,7 +115,7 @@ Default: the system's hostname
 
 Explicitly declare the id for this minion to use. Since Salt uses detached ids
 it is possible to run multiple minions on the same machine but with different
-ids. This can be useful for Salt compute clusters.
+ids.
 
 .. code-block:: yaml
 
@@ -161,6 +161,13 @@ Verify and set permissions on configuration directories at startup.
 .. code-block:: yaml
 
     verify_env: True
+
+.. note::
+
+    When marked as True the verify_env option requires WRITE access to the 
+    configuration directory (/etc/salt/). In certain situations such as
+    mounting /etc/salt/ as read-only for templating this will create a
+    stack trace when state.highstate is called.
 
 .. conf_minion:: cache_jobs
 

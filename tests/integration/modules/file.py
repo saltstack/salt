@@ -185,10 +185,10 @@ class FileModuleTest(integration.ModuleCase):
             'cp.list_master': MagicMock(side_effect=list_master),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
-        ret = filemod.source_list(['salt://http/httpd.conf?env=dev',
+        ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
                                    'salt://http/httpd.conf.fallback'],
                                   'filehash', 'base')
-        self.assertItemsEqual(ret, ['salt://http/httpd.conf?env=dev',
+        self.assertItemsEqual(ret, ['salt://http/httpd.conf?saltenv=dev',
                                     'filehash'])
 
     def test_source_list_for_list_returns_file_from_dict(self):

@@ -1966,34 +1966,37 @@ def _script(status,
             stdin=None,
             runas=None,
             shell=cmdmod.DEFAULT_SHELL,
-            env=(),
+            env=None,
             template='jinja',
             umask=None,
             timeout=None,
             reset_system_locale=True,
-            __env__='base',
             run_func_=None,
             no_clean=False,
+            saltenv='base',
             **kwargs):
     try:
         if not run_func_:
             run_func_ = run_all
         rpath = get_container_root(container)
         tpath = os.path.join(rpath, 'tmp')
+
         if isinstance(env, string_types):
             salt.utils.warn_until(
-                'Helium',
-                'Passing a salt environment should be done using \'__env__\' '
-                'not \'env\'.'
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
             )
             # Backwards compatibility
-            __env__ = env
+            saltenv = env
+
         path = salt.utils.mkstemp(dir=tpath)
         if template:
             __salt__['cp.get_template'](
-                source, path, template, __env__, **kwargs)
+                source, path, template, saltenv, **kwargs)
         else:
-            fn_ = __salt__['cp.cache_file'](source, __env__)
+            fn_ = __salt__['cp.cache_file'](source, saltenv)
             if not fn_:
                 return {'pid': 0,
                         'retcode': 1,
@@ -2028,13 +2031,13 @@ def script(container,
            stdin=None,
            runas=None,
            shell=cmdmod.DEFAULT_SHELL,
-           env=(),
+           env=None,
            template='jinja',
            umask=None,
            timeout=None,
            reset_system_locale=True,
-           __env__='base',
            no_clean=False,
+           saltenv='base',
            *nargs,
            **kwargs):
     '''
@@ -2057,6 +2060,17 @@ def script(container,
         salt '*' docker.script <container id> salt://docker_script.py
     '''
     status = base_status.copy()
+
+    if isinstance(env, string_types):
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt '
+            'Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     return _script(status,
                    container,
                    source,
@@ -2065,13 +2079,12 @@ def script(container,
                    stdin=stdin,
                    runas=runas,
                    shell=shell,
-                   env=env,
                    template=template,
                    umask=umask,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
-                   __env__=__env__,
                    no_clean=no_clean,
+                   saltenv=saltenv,
                    **kwargs)
 
 
@@ -2081,13 +2094,13 @@ def script_retcode(container,
                    stdin=None,
                    runas=None,
                    shell=cmdmod.DEFAULT_SHELL,
-                   env=(),
+                   env=None,
                    template='jinja',
                    umask=None,
                    timeout=None,
                    reset_system_locale=True,
-                   __env__='base',
                    no_clean=False,
+                   saltenv='base',
                    *args,
                    **kwargs):
     '''
@@ -2109,17 +2122,28 @@ def script_retcode(container,
 
         salt '*' docker.script_retcode <container id> salt://docker_script.py
     '''
+
+    if isinstance(env, string_types):
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt '
+            'Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     return _script(container,
                    source=source,
                    cwd=cwd,
                    stdin=stdin,
                    runas=runas,
                    shell=shell,
-                   env=env,
                    template=template,
                    umask=umask,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    run_func_=retcode,
                    no_clean=no_clean,
+                   saltenv=saltenv,
                    **kwargs)
