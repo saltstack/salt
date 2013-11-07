@@ -520,6 +520,7 @@ def init(name,
          hypervisor=VIRT_DEFAULT_HYPER,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
+         saltenv='base',
          **kwargs):
     '''
     Initialize a new vm
@@ -563,7 +564,7 @@ def init(name,
                 disk_file_name
             )
             img_dir = os.path.dirname(img_dest)
-            sfn = __salt__['cp.cache_file'](image)
+            sfn = __salt__['cp.cache_file'](image, saltenv)
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
             salt.utils.copyfile(sfn, img_dest)
