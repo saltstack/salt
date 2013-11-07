@@ -933,6 +933,7 @@ def managed(name,
             mode=None,
             template=None,
             makedirs=False,
+            dir_mode=None,
             context=None,
             replace=True,
             defaults=None,
@@ -998,6 +999,11 @@ def managed(name,
         the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
+
+    dir_mode
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions from the 'mode' argument.
 
     replace
         If this file should be replaced.  If false, this command will
@@ -1163,7 +1169,8 @@ def managed(name,
                                             backup,
                                             template,
                                             show_diff,
-                                            contents)
+                                            contents,
+                                            dir_mode)
 
 
 def directory(name,
