@@ -1801,7 +1801,7 @@ def get_managed(
                 protos = ['salt', 'http', 'ftp']
                 if salt._compat.urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                             source_hash)
