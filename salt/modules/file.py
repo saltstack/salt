@@ -2099,7 +2099,6 @@ def get_diff(
         # Backwards compatibility
         saltenv = env
 
-
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
         return ret

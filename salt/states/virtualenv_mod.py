@@ -186,7 +186,6 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
-
     # Populate the venv via a requirements file
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
