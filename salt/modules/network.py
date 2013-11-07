@@ -107,7 +107,7 @@ def traceroute(host):
         # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
         traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-
+        log.debug("traceroute_version_raw: {}".format(traceroute_version_raw))
         traceroute_version = []
         for t in traceroute_version_raw:
             try:
@@ -117,6 +117,9 @@ def traceroute(host):
 
         if len(traceroute_version) < 3:
             traceroute_version.append(0)
+
+        log.debug("traceroute_version: {}".format(str(traceroute_version)))
+
     except IndexError:
         traceroute_version = [0, 0, 0]
 
@@ -126,7 +129,33 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
+        if ('Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1])):
+            try:
+                traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
+            except IndexError:
+                traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
+
+            log.debug("traceline: {}".format(traceline))
+            delays = re.findall(r'(\d+\.\d+)\s*ms', str(traceline))
+
+            try:
+                if traceline[1] == '* * *':
+                    result = {
+                        'count': traceline[0],
+                        'hostname': '*'
+                    }
+                else:
+                    result = {
+                        'count': traceline[0],
+                        'hostname': traceline[1],
+                        'ip': traceline[2],
+                    }
+                    for x in range(0, len(delays)):
+                        result['ms{}'.format(x+1)] = delays[x]
+            except IndexError:
+                result = {}
+
+        elif (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
                 or traceroute_version[0] >= 2 and traceroute_version[1] > 0):
             comps = line.split('  ')
             if comps[1] == '* * *':
