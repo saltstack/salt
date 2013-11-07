@@ -1435,12 +1435,13 @@ class State(object):
         Fire an event on the master bus
         '''
         if not self.opts.get('local') and self.opts.get('state_events', True) and self.opts.get('master_uri'):
+            ret = {'ret': chunk_ret,
+                   'len': length}
             tag = salt.utils.event.tagify(
                     [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
                     )
             preload = {'jid': self.jid}
-            chunk_ret['len'] = length
-            self.functions['event.fire_master'](chunk_ret, tag, preload=preload)
+            self.functions['event.fire_master'](ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
         '''
