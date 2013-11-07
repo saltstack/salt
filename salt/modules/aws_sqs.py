@@ -19,7 +19,7 @@ def _check_aws():
     Make sure awscli is installed
     '''
     utils.check_or_die('aws')
-    return 'amazon_sqs'
+    return 'aws_sqs'
 
 
 def _region(region):
