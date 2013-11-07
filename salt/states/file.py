@@ -1000,6 +1000,11 @@ def managed(name,
         directories will be created to facilitate the creation of the named
         file.
 
+    dir_mode
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions from the 'mode' argument.
+
     replace
         If this file should be replaced.  If false, this command will
         not overwrite file contents but will enforce permissions if the file
