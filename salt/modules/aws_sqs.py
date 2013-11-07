@@ -140,7 +140,7 @@ def delete_queue(name, region, opts=None, user=None):
             opts=opts,
             user=user,
             **delete)
-        success= True
+        success = True
         err = ''
         out = '{0} deleted'.format(name)
 
