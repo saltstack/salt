@@ -278,6 +278,8 @@ class TestDaemon(object):
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
             grains = self.client.cmd('minion', 'grains.items')
+            import pprint
+            pprint.pprint(grains['minion'])
 
         print_header('', sep='=', inline=True)
 
