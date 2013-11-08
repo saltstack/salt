@@ -169,6 +169,8 @@ VALID_OPTS = {
     'grains_refresh_every': int,
     'enable_lspci': bool,
     'syndic_wait': int,
+    'jinja_lstrip_blocks': bool,
+    'jinja_trim_blocks': bool,
 }
 
 # default configurations
@@ -363,6 +365,8 @@ DEFAULT_MASTER_OPTS = {
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
     'syndic_wait': 1,
+    'jinja_lstrip_blocks': False,
+    'jinja_trim_blocks': False,
 }
 
 
