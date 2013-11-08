@@ -1,3 +1,0 @@
-# pip requirements file for Salt Cloud
-salt
--e git+https://github.com/apache/libcloud.git#egg=apache-libcloud-0.14.0-dev
