@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    saltcloud.utils.parsers
+    salt.cloud.utils.parsers
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     This is where the salt-cloud parser system gets setup.
@@ -19,9 +19,9 @@ from functools import partial
 import salt.utils.parsers as parsers
 
 # Import salt cloud libs
-import saltcloud.config as config
-import saltcloud.version as version
-import saltcloud.exceptions as exceptions
+import salt.cloud.config as config
+import salt.cloud.version as version
+import salt.cloud.exceptions as exceptions
 
 
 class CloudConfigMixIn(object):
@@ -41,7 +41,7 @@ class CloudConfigMixIn(object):
         group.add_option(
             '-C', '--cloud-config',
             default='/etc/salt/cloud',
-            help='The location of the saltcloud config file. Default: %default'
+            help='The location of the salt.cloud config file. Default: %default'
         )
         group.add_option(
             '-M', '--master-config',
@@ -53,7 +53,7 @@ class CloudConfigMixIn(object):
             '-V', '--profiles', '--vm_config',
             dest='vm_config',
             default=None,
-            help='The location of the saltcloud VM config file. '
+            help='The location of the salt.cloud VM config file. '
                  'Default: /etc/salt/cloud.profiles'
         )
         group.add_option(

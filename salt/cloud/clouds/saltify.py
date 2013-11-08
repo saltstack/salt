@@ -18,9 +18,9 @@ import logging
 import salt.utils
 
 # Import salt cloud libs
-import saltcloud.utils
-import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
+import salt.cloud.utils
+import salt.cloud.config as config
+from salt.cloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ def create(vm_):
         'key_filename': key_filename,
         'script_args': config.get_config_value('script_args', vm_, __opts__),
         'script_env': config.get_config_value('script_env', vm_, __opts__),
-        'minion_conf': saltcloud.utils.minion_config(__opts__, vm_),
+        'minion_conf': salt.cloud.utils.minion_config(__opts__, vm_),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': config.get_config_value(
             'display_ssh_output', vm_, __opts__, default=True
@@ -124,7 +124,7 @@ def create(vm_):
         deploy_kwargs['make_master'] = True
         deploy_kwargs['master_pub'] = vm_['master_pub']
         deploy_kwargs['master_pem'] = vm_['master_pem']
-        master_conf = saltcloud.utils.master_config(__opts__, vm_)
+        master_conf = salt.cloud.utils.master_config(__opts__, vm_)
         deploy_kwargs['master_conf'] = master_conf
 
         if master_conf.get('syndic_master', None):
@@ -137,7 +137,7 @@ def create(vm_):
     win_installer = config.get_config_value('win_installer', vm_, __opts__)
     if win_installer:
         deploy_kwargs['win_installer'] = win_installer
-        minion = saltcloud.utils.minion_config(__opts__, vm_)
+        minion = salt.cloud.utils.minion_config(__opts__, vm_)
         deploy_kwargs['master'] = minion['master']
         deploy_kwargs['username'] = config.get_config_value(
             'win_username', vm_, __opts__, default='Administrator'
@@ -149,7 +149,7 @@ def create(vm_):
     # Store what was used to the deploy the VM
     ret['deploy_kwargs'] = deploy_kwargs
 
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -159,9 +159,9 @@ def create(vm_):
 
     deployed = False
     if win_installer:
-        deployed = saltcloud.utils.deploy_windows(**deploy_kwargs)
+        deployed = salt.cloud.utils.deploy_windows(**deploy_kwargs)
     else:
-        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+        deployed = salt.cloud.utils.deploy_script(**deploy_kwargs)
 
     if deployed:
         ret['deployed'] = deployed
@@ -182,12 +182,12 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    return saltcloud.utils.os_script(
+    return salt.cloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_,
         __opts__,
-        saltcloud.utils.salt_config_to_yaml(
-            saltcloud.utils.minion_config(__opts__, vm_)
+        salt.cloud.utils.salt_config_to_yaml(
+            salt.cloud.utils.minion_config(__opts__, vm_)
         )
     )
 

@@ -1,5 +1,5 @@
 '''
-Utility functions for saltcloud
+Utility functions for salt.cloud
 '''
 
 # Import python libs
@@ -30,9 +30,9 @@ import salt.utils
 import salt.utils.event
 
 # Import salt cloud libs
-import saltcloud.config as config
-from saltcloud.utils.nb_popen import NonBlockingPopen
-from saltcloud.exceptions import (
+import salt.cloud.config as config
+from salt.cloud.utils.nb_popen import NonBlockingPopen
+from salt.cloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -165,11 +165,11 @@ def get_option(option, opts, vm_):
     '''
     # Make the next warning visible at least once.
     warnings.filterwarnings(
-        'once', category=DeprecationWarning, module='saltcloud'
+        'once', category=DeprecationWarning, module='salt.cloud'
     )
     warnings.warn(
-        '`saltcloud.utils.get_option() was deprecated in favour of '
-        '`saltcloud.config.get_config_value()`. Please stop using it '
+        '`salt.cloud.utils.get_option() was deprecated in favour of '
+        '`salt.cloud.config.get_config_value()`. Please stop using it '
         'since it will be removed in version 0.8.8.',
         DeprecationWarning,
         stacklevel=2
@@ -421,7 +421,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 # Let's not just fail regarding this change, specially
                 # since we can handle it
                 raise DeprecationWarning(
-                    '`saltcloud.utils.deploy_windows` now only accepts '
+                    '`salt.cloud.utils.deploy_windows` now only accepts '
                     'dictionaries for its `minion_conf` parameter. '
                     'Loading YAML...'
                 )
@@ -550,7 +550,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`saltcloud.utils.deploy_script now only accepts '
+                        '`salt.cloud.utils.deploy_script now only accepts '
                         'dictionaries for it\'s `minion_conf` parameter. '
                         'Loading YAML...'
                     )
@@ -581,7 +581,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`saltcloud.utils.deploy_script now only accepts '
+                        '`salt.cloud.utils.deploy_script now only accepts '
                         'dictionaries for it\'s `master_conf` parameter. '
                         'Loading from YAML ...'
                     )

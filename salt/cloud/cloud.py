@@ -12,11 +12,11 @@ import logging
 import multiprocessing
 from itertools import groupby
 
-# Import saltcloud libs
-import saltcloud.utils
-import saltcloud.loader
-import saltcloud.config as config
-from saltcloud.exceptions import (
+# Import salt.cloud libs
+import salt.cloud.utils
+import salt.cloud.loader
+import salt.cloud.config as config
+from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -41,7 +41,7 @@ except ImportError:
 
 
 # Simple alias to improve code readability
-CloudProviderContext = saltcloud.utils.CloudProviderContext
+CloudProviderContext = salt.cloud.utils.CloudProviderContext
 
 
 class Cloud(object):
@@ -50,7 +50,7 @@ class Cloud(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.clouds = saltcloud.loader.clouds(self.opts)
+        self.clouds = salt.cloud.loader.clouds(self.opts)
         self.__switch_credentials()
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
@@ -426,14 +426,14 @@ class Cloud(object):
             if not os.path.isfile(key_file) and not globbed_key_file:
                 # There's no such key file!? It might have been renamed
                 if isinstance(ret, dict) and 'newname' in ret:
-                    saltcloud.utils.remove_key(
+                    salt.cloud.utils.remove_key(
                         self.opts['pki_dir'], ret['newname']
                     )
                 continue
 
             if os.path.isfile(key_file) and not globbed_key_file:
                 # Single key entry. Remove it!
-                saltcloud.utils.remove_key(self.opts['pki_dir'], name)
+                salt.cloud.utils.remove_key(self.opts['pki_dir'], name)
                 continue
 
             if not os.path.isfile(key_file) and globbed_key_file:
@@ -442,7 +442,7 @@ class Cloud(object):
                 # append_domain set.
                 if len(globbed_key_file) == 1:
                     # Single entry, let's remove it!
-                    saltcloud.utils.remove_key(
+                    salt.cloud.utils.remove_key(
                         self.opts['pki_dir'],
                         os.path.basename(globbed_key_file[0])
                     )
@@ -486,7 +486,7 @@ class Cloud(object):
                     'Delete {0!r}? [Y/n]? '.format(filename)
                 )
                 if delete == '' or delete.lower().startswith('y'):
-                    saltcloud.utils.remove_key(
+                    salt.cloud.utils.remove_key(
                         self.opts['pki_dir'], filename
                     )
                     print('Deleted {0!r}'.format(filename))
@@ -567,7 +567,7 @@ class Cloud(object):
 
             if 'pub_key' not in vm_ and 'priv_key' not in vm_:
                 log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
-                priv, pub = saltcloud.utils.gen_keys(
+                priv, pub = salt.cloud.utils.gen_keys(
                     config.get_config_value('keysize', vm_, self.opts)
                 )
                 vm_['pub_key'] = pub
@@ -590,7 +590,7 @@ class Cloud(object):
                         vm_
                     )
                 )
-                master_priv, master_pub = saltcloud.utils.gen_keys(
+                master_priv, master_pub = salt.cloud.utils.gen_keys(
                     config.get_config_value('keysize', vm_, self.opts)
                 )
                 vm_['master_pub'] = master_pub
@@ -598,7 +598,7 @@ class Cloud(object):
         elif local_master is True and deploy is True:
             # Since we're not creating a master, and we're deploying, accept
             # the key on the local master
-            saltcloud.utils.accept_key(
+            salt.cloud.utils.accept_key(
                 self.opts['pki_dir'], vm_['pub_key'], key_id
             )
 
@@ -1249,7 +1249,7 @@ class Map(Cloud):
             log.debug(
                 'Generating master keys for {0[name]!r}'.format(master_profile)
             )
-            priv, pub = saltcloud.utils.gen_keys(
+            priv, pub = salt.cloud.utils.gen_keys(
                 config.get_config_value('keysize', master_profile, self.opts)
             )
             master_profile['master_pub'] = pub
@@ -1281,7 +1281,7 @@ class Map(Cloud):
                 log.debug(
                     'Generating minion keys for {0[name]!r}'.format(profile)
                 )
-                priv, pub = saltcloud.utils.gen_keys(
+                priv, pub = salt.cloud.utils.gen_keys(
                     config.get_config_value('keysize', profile, self.opts)
                 )
                 profile['pub_key'] = pub
@@ -1456,7 +1456,7 @@ def create_multiprocessing(parallel_data):
         output.pop('deploy_kwargs', None)
 
     return {
-        parallel_data['name']: saltcloud.utils.simple_types_filter(output)
+        parallel_data['name']: salt.cloud.utils.simple_types_filter(output)
     }
 
 
@@ -1473,7 +1473,7 @@ def run_parallel_map_providers_query(data):
             return (
                 data['alias'],
                 data['driver'],
-                saltcloud.utils.simple_types_filter(
+                salt.cloud.utils.simple_types_filter(
                     cloud.clouds[data['fun']]()
                 )
             )
