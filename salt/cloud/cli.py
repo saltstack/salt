@@ -23,7 +23,7 @@ import salt.utils
 from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
-import salt.cloud.cloud
+import salt.cloud
 import salt.cloud.config
 from salt.cloud.utils import parsers
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
@@ -107,7 +107,7 @@ class SaltCloud(parsers.SaltCloudParser):
             self.error('Failed to update the bootstrap script')
 
         log.info('salt-cloud starting')
-        mapper = salt.cloud.cloud.Map(self.config)
+        mapper = salt.cloud.Map(self.config)
 
         ret = {}
 
