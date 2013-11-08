@@ -277,6 +277,7 @@ class TestDaemon(object):
             print_header(
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
+            grains = self.client.cmd('minion', 'grains.items')
 
         print_header('', sep='=', inline=True)
 
