@@ -59,7 +59,20 @@ class MinionError(SaltException):
     '''
 
 
-class SaltInvocationError(SaltException):
+class RenderError(SaltException):
+    '''
+    Problems rendering data
+    '''
+    def __init__(self, error, line_num, buf):
+        self.error = error
+        self.line_num = line_num
+        self.buffer = buf
+        SaltException.__init__(
+            self, 'Problem rendering data: {0}'.format(error)
+        )
+
+
+class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
     arguments are specified on the command line
