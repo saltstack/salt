@@ -113,7 +113,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-
     if tmplstr and not isinstance(tmplstr, unicode):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
@@ -146,13 +145,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
-    # lstrip_blocks strips tabs and spaces from the beginning of 
-    # line to the start of a block. 
-
-    if opts.get('pillar').get('master').get('jinja_trim_blocks'):
+    # lstrip_blocks strips tabs and spaces from the beginning of
+    # line to the start of a block.
+    if opts.get('jinja_trim_blocks', False):
         log.debug('Jinja2 trim_blocks is enabled')
         env_args['trim_blocks'] = True
-    if opts.get('pillar').get('master').get('jinja_lstrip_blocks'):
+    if opts.get('jinja_lstrip_blocks', False):
         log.debug('Jinja2 lstrip_blocks is enabled')
         env_args['lstrip_blocks'] = True
 
@@ -284,9 +282,9 @@ def get_template_context(template, line, num_lines=5, marker=None):
     if line > num_template_lines:
         return template
 
-    context_start = max(0, line - num_lines - 1)  # subtract 1 for 0-based indexing
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
     context_end = min(num_template_lines, line + num_lines)
-    error_line_in_context = line - context_start - 1  # subtract 1 for 0-based indexing
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
 
     buf = []
     if context_start > 0:

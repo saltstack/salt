@@ -1763,6 +1763,8 @@ class BaseHighState(object):
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
             opts['state_events'] = mopts.get('state_events')
+            opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
+            opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
         return opts
 
     def _get_envs(self):
