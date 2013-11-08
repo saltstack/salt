@@ -190,6 +190,7 @@ class Master(SMaster):
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
+        ckminions = salt.utils.minions.CkMinions(self.opts)
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
@@ -241,6 +242,7 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
+            log.debug(ckminions.connected_ids())
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
