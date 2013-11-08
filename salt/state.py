@@ -45,7 +45,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'order',
     'state',
     'watch',
-    'watch_in'
+    'watch_in',
     'prereq',
     'prereq_in',
     'require',
@@ -62,7 +62,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_fun',
     '__pub_tgt',
     '__pub_ret',
-    '__pub_tgt_type'
+    '__pub_tgt_type',
 ])
 
 
