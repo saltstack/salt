@@ -41,10 +41,6 @@ except ImportError:
     log.debug('Mako not available')
 
 
-# Simple alias to improve code readability
-CloudProviderContext = salt.cloud.utils.CloudProviderContext
-
-
 class Cloud(object):
     '''
     An object for the creation of new VMs
@@ -130,7 +126,7 @@ class Cloud(object):
                     pmap[alias] = {}
 
                 try:
-                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                    with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                         pmap[alias][driver] = self.clouds[fun]()
                 except Exception as err:
                     log.debug(
@@ -270,7 +266,7 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                with CloudProviderContext(self.clouds[fun], alias, driver):
+                with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -310,7 +306,7 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                with CloudProviderContext(self.clouds[fun], alias, driver):
+                with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -350,7 +346,7 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                with CloudProviderContext(self.clouds[fun], alias, driver):
+                with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -407,7 +403,7 @@ class Cloud(object):
 
         for alias, driver, name in vms_to_destroy:
             fun = '{0}.destroy'.format(driver)
-            with CloudProviderContext(self.clouds[fun], alias, driver):
+            with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                 ret = self.clouds[fun](name)
             if alias not in processed:
                 processed[alias] = {}
@@ -608,7 +604,7 @@ class Cloud(object):
         try:
             alias, driver = vm_['provider'].split(':')
             func = '{0}.create'.format(driver)
-            with CloudProviderContext(self.clouds[func], alias, driver):
+            with salt.cloud.utils.CloudProviderContext(self.clouds[func], alias, driver):
                 output = self.clouds[func](vm_)
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
@@ -736,7 +732,7 @@ class Cloud(object):
                         break
                     if vm_name not in names:
                         continue
-                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                    with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                         if alias not in ret:
                             ret[alias] = {}
                         if driver not in ret[alias]:
@@ -789,7 +785,7 @@ class Cloud(object):
             )
         )
 
-        with CloudProviderContext(self.clouds[fun], alias, driver):
+        with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
             if kwargs:
                 return {
                     alias: {
@@ -839,7 +835,7 @@ class Cloud(object):
                         self.opts['providers'].pop(alias)
                     continue
 
-                with CloudProviderContext(self.clouds[fun], alias, driver):
+                with salt.cloud.utils.CloudProviderContext(self.clouds[fun], alias, driver):
                     if self.clouds[fun]() is False:
                         log.warn(
                             'The cloud driver, {0!r}, configured under the '
@@ -1468,7 +1464,7 @@ def run_parallel_map_providers_query(data):
     '''
     cloud = Cloud(data['opts'])
     try:
-        with CloudProviderContext(cloud.clouds[data['fun']],
+        with salt.cloud.utils.CloudProviderContext(cloud.clouds[data['fun']],
                                   data['alias'],
                                   data['driver']):
             return (
