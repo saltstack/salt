@@ -203,7 +203,7 @@ module:
 
 .. code-block:: bash
 
-    salt '*' tls.create_ca_signed_cert test localhost
+    salt '*' tls.create_self_signed_cert test 
 
 
 When using self-signed certs, browsers will need approval before accepting the
