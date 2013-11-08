@@ -1,16 +1,10 @@
 #!/usr/bin/env python
+'''
+Publish commands to the salt system from the command line on the master.
+'''
 
-import salt.cloud.cli
+from salt.scripts import salt_cloud
 
-def main():
-    '''
-    The main function for salt-cloud
-    '''
-    cloud = salt.cloud.cli.SaltCloud()
-    cloud.run()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        raise SystemExit('\nExiting gracefully on Ctrl-c')
+    salt_cloud()
