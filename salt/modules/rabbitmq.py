@@ -225,6 +225,22 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
     return _format_response(res, msg)
 
 
+def list_permissions(vhost, runas=None):
+    '''
+    Lists permissions for vhost via rabbitmqctl list_permissions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.list_permissions '/myvhost'
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_permissions -p {0}'.format(vhost),
+        runas=runas)
+    return [r.split('\t') for r in res.splitlines()]
+
+
 def list_user_permissions(name, user=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
@@ -501,6 +517,12 @@ def policy_exists(vhost, name, runas=None):
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
 
+def plugin_is_enabled(name, runas=None):
+    '''
+    Return whether the plugin is enabled.
+    '''
+    ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
+    return bool(name in ret)
 
 def enable_plugin(name, runas=None):
     '''
