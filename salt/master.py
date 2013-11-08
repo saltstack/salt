@@ -1352,7 +1352,7 @@ class AESFuncs(object):
                 )
             )
             return {}
-        load.pop('tok')
+        clear_load.pop('tok')
         perms = set()
         for match in self.opts['peer_run']:
             if re.match(match, clear_load['id']):
