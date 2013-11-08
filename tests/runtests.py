@@ -37,7 +37,9 @@ REQUIRED_OPEN_FILES = 3072
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
+    support_docker_execution = True
     support_destructive_tests_selection = True
+    source_code_basedir = SALT_ROOT
 
     def setup_additional_options(self):
         self.add_option(
@@ -159,11 +161,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         named_tests = []
         named_unit_test = []
-        for test in self.options.name:
-            if test.startswith('unit.'):
-                named_unit_test.append(test)
-                continue
-            named_tests.append(test)
+
+        if self.options.name:
+            for test in self.options.name:
+                if test.startswith('unit.'):
+                    named_unit_test.append(test)
+                    continue
+                named_tests.append(test)
 
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runner or
@@ -242,10 +246,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Execute the unit tests
         '''
         named_unit_test = []
-        for test in self.options.name:
-            if not test.startswith('unit.'):
-                continue
-            named_unit_test.append(test)
+        if self.options.name:
+            for test in self.options.name:
+                if not test.startswith('unit.'):
+                    continue
+                named_unit_test.append(test)
 
         if not self.options.unit and not named_unit_test:
             # We are not explicitly running the unit tests and none of the
