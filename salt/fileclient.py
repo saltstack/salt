@@ -339,22 +339,25 @@ class Client(object):
                     )
                 )
         # Replicate empty dirs from master
-        for fn_ in self.file_list_emptydirs(env):
-            if fn_.startswith(path):
-                # Prevent an empty dir "salt://foobar/" from matching a path of
-                # "salt://foo"
-                try:
-                    if fn_[len(path)] != '/':
+        try:
+            for fn_ in self.file_list_emptydirs(env):
+                if fn_.startswith(path):
+                    # Prevent an empty dir "salt://foobar/" from matching a path of
+                    # "salt://foo"
+                    try:
+                        if fn_[len(path)] != '/':
+                            continue
+                    except IndexError:
                         continue
-                except IndexError:
-                    continue
-                # Remove the leading directories from path to derive
-                # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):], '/')
-                minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
-                if not os.path.isdir(minion_mkdir):
-                    os.makedirs(minion_mkdir)
-                ret.append(minion_mkdir)
+                    # Remove the leading directories from path to derive
+                    # the relative path on the minion.
+                    minion_relpath = string.lstrip(fn_[len(prefix):], '/')
+                    minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
+                    if not os.path.isdir(minion_mkdir):
+                        os.makedirs(minion_mkdir)
+                    ret.append(minion_mkdir)
+        except TypeError:
+            pass
         ret.sort()
         return ret
 
