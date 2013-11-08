@@ -1,0 +1,4001 @@
+.TH "SALT-CLOUD" "7" "June 22, 2013" "0.8.9" "salt-cloud"
+.SH NAME
+salt-cloud \- Salt Cloud Documentation
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.\" Man page generated from reStructuredText.
+.
+.SH VM PROFILES
+.sp
+Salt cloud designates virtual machines inside the profile configuration file.
+The profile configuration file defaults to \fB/etc/salt/cloud.profiles\fP and is
+a yaml configuration. The syntax for declaring profiles is simple:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+fedora_rackspace:
+    provider: rackspace
+    image: Fedora 17
+    size: 256 server
+    script: Fedora
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+A few key pieces of information need to be declared and can change based on the
+public cloud provider. A number of additional parameters can also be inserted:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+centos_rackspace:
+    provider: rackspace
+    image: CentOS 6.2
+    size: 1024 server
+    script: RHEL6
+    minion:
+        master: salt.example.com
+        append_domain: webs.example.com
+    grains:
+        role: webserver
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The image must be selected from available images. Similarly, sizes must be
+selected from the list of sizes. To get a list of available images and sizes
+use the following command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-list\-images openstack
+salt\-cloud \-\-list\-sizes openstack
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Some parameters can be specified in the main Salt cloud configuration file and
+then are applied to all cloud profiles. For instance if only a single cloud
+provider is being used then the provider option can be declared in the Salt
+cloud configuration file.
+.SS Multiple Configuration Files
+.sp
+In addition to \fB/etc/salt/cloud.profiles\fP, profiles can also be specified in
+any file matching \fBcloud.profiles.d/*conf\fP which is a sub\-directory relative
+to the profiles configuration file(with the above configuration file as an
+example, \fB/etc/salt/cloud.profiles.d/*.conf\fP).  This allows for more
+extensible configuration, and plays nicely with various configuration
+management tools as well as version control systems.
+.SS Larger Example
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rhel_aws:
+    provider: aws
+    image: ami\-e565ba8c
+    size: Micro Instance
+    script: RHEL6
+    minion:
+        cheese: edam
+
+ubuntu_aws:
+    provider: aws
+    image: ami\-7e2da54e
+    size: Micro Instance
+    script: Ubuntu
+    minion:
+        cheese: edam
+
+ubuntu_rackspace:
+    provider: rackspace
+    image: Ubuntu 12.04 LTS
+    size: 256 server
+    script: Ubuntu
+    minion:
+        cheese: edam
+
+fedora_rackspace:
+    provider: rackspace
+    image: Fedora 17
+    size: 256 server
+    script: Fedora
+    minion:
+        cheese: edam
+
+cent_linode:
+    provider: linode
+    image: CentOS 6.2 64bit
+    size: Linode 512
+    script: RHEL6
+
+cent_gogrid:
+    provider: gogrid
+    image: 12834
+    size: 512MB
+    script: RHEL6
+
+cent_joyent:
+    provider: joyent
+    image: centos\-6
+    script: RHEL6
+    size: Small 1GB
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH CLOUD MAP FILE
+.sp
+A number of options exist when creating virtual machines. They can be managed
+directly from profiles and the command line execution, or a more complex map
+file can be created. The map file allows for a number of virtual machines to
+be created and associated with specific profiles.
+.sp
+Map files have a simple format, specify a profile and then a list of virtual
+machines to make from said profile:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+fedora_small:
+    \- web1
+    \- web2
+    \- web3
+fedora_high:
+    \- redis1
+    \- redis2
+    \- redis3
+cent_high:
+    \- riak1
+    \- riak2
+    \- riak3
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This map file can then be called to roll out all of these virtual machines. Map
+files are called from the salt\-cloud command with the \-m option:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Remember, that as with direct profile provisioning the \-P option can be passed
+to create the virtual machines in parallel:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-P
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+A map file can also be enforced to represent the total state of a cloud
+deployment by using the \fB\-\-hard\fP option. When using the hard option any vms
+that exist but are not specified in the map file will be destroyed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-P \-H
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Be careful with this argument, it is very dangerous! In fact, it is so
+dangerous that in order to use it, you must explicitly enable it in the main
+configuration file.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+enable_hard_maps: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+A map file can include grains and minion configuration options:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+fedora_small:
+    \- web1:
+        minion:
+            log_level: debug
+        grains:
+            cheese: tasty
+            omelet: du fromage
+    \- web2:
+        minion:
+            log_level: warn
+        grains:
+            cheese: more tasty
+            omelet: with peppers
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+A map file may also be used with the various query options:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-Q
+{\(aqaws\(aq: {\(aqweb1\(aq: {\(aqid\(aq: \(aqi\-e6aqfegb\(aq,
+                     \(aqimage\(aq: None,
+                     \(aqprivate_ips\(aq: [],
+                     \(aqpublic_ips\(aq: [],
+                     \(aqsize\(aq: None,
+                     \(aqstate\(aq: 0}},
+         \(aqweb2\(aq: {\(aqAbsent\(aq}}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+...or with the delete option:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-d
+The following virtual machines are set to be destroyed:
+  web1
+  web2
+
+Proceed? [N/y]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH WRITING CLOUD PROVIDER MODULES
+.sp
+Salt Cloud runs on a module system similar to the main Salt project. The
+modules inside saltcloud exist in the \fBsaltcloud/clouds\fP directory of the
+salt\-cloud source.
+.sp
+Adding a provider requires that a cloud module is created. The cloud module
+needs to only impliment a single function \fBcreate\fP, which will accept a
+single virtual machine data structure. Whatever functions need to be called to
+execute the create function can and should be included in the provider module.
+.sp
+A good example to follow for writing a cloud provider module is the module
+provided for Linode:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/linode.py\fP
+.sp
+If possible it is prefered that libcloud is used to connect to public cloud
+systems, but if libcloud support is not available or another system makes more
+sense then by all means, use the other system to connect to the cloud provider.
+.sp
+An example of a non\-libcloud provider is the ec2 module:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/develop/saltcloud/clouds/ec2.py\fP
+.SH OS SUPPORT FOR CLOUD VMS
+.sp
+Salt Cloud works primarily by executing a script on the virtual machines as
+soon as they become available. The script that is executed is referenced in the
+cloud profile as the \fBscript\fP. In older versions, this was the \fBos\fP
+argument. This was changed in 0.8.2.
+.sp
+A number of legacy scripts exist in the deploy directory in the saltcloud
+source tree. The preferred method is currently to use the salt\-bootstrap
+script. A stable version is included with each release tarball starting with
+0.8.4. The most updated version can be found at:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+If you do not specify a script argument, this script will be used at the
+default.
+.sp
+If the Salt Bootstrap script does not meet your needs, you may write your own.
+The script should be written in bash and is a Jinja template. Deploy scripts
+need to execute a number of functions to do a complete salt setup. These
+functions include:
+.INDENT 0.0
+.IP 1. 3
+Install the salt minion. If this can be done via system packages this method
+is HIGHLY preferred.
+.IP 2. 3
+Add the salt minion keys before the minion is started for the first time.
+The minion keys are available as strings that can be copied into place in
+the Jinja template under the dict named "vm".
+.IP 3. 3
+Start the salt\-minion daemon and enable it at startup time.
+.IP 4. 3
+Set up the minion configuration file from the "minion" data available in
+the Jinja template.
+.UNINDENT
+.sp
+A good, well commented, example of this process is the Fedora deployment
+script:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh\fP
+.sp
+A number of legacy deploy scripts are included with the release tarball. None
+of them are as functional or complete as Salt Bootstrap, and are still included
+for academic purposes.
+.SS Other Generic Deploy Scripts
+.sp
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are a few generic templates available in the deploy directory of your
+saltcloud source tree:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+curl\-bootstrap
+curl\-bootstrap\-git
+python\-bootstrap
+wget\-bootstrap
+wget\-bootstrap\-git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt\-bootstrap script, such as updating to specific git tags.
+.SS Post\-Deploy Commands
+.sp
+Once a minion has been deployed, it has the option to run a salt command.
+Normally, this would be the state.highstate command, which would finish
+provisioning the VM. Another common option is state.sls, or for just testing,
+test.ping. This is configured in the main cloud config file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+start_action: state.highstate
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This is currently considered to be experimental functionality, and may not work
+well with all providers. If you experience problems with Salt Cloud hanging
+after Salt is deployed, consider using Startup States instead:
+.sp
+\fI\%http://docs.saltstack.org/en/latest/ref/states/startup.html\fP
+.SS Skipping the Deploy Script
+.sp
+For whatever reason, you may want to skip the deploy script altogether. This
+results in a VM being spun up much faster, with absolutely no configuration.
+This can be set from the command line:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-no\-deploy \-p micro_aws my_instance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or it can be set from the main cloud config file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or it can be set from the provider\(aqs configuration:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+RACKSPACE.user: example_user
+RACKSPACE.apikey: 123984bjjas87034
+RACKSPACE.deploy: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or even on the VM\(aqs profile settings:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ubuntu_aws:
+  provider: aws
+  image: ami\-7e2da54e
+  size: Micro Instance
+  deploy: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The default for deploy is True.
+.sp
+In the profile, you may also set the script option to \fBNone\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+script: None
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This is the slowest option, since it still uploads the None deploy script and
+executes it.
+.SS Updating Salt Bootstrap
+.sp
+Salt Bootstrap can be updated automatically with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-u
+salt\-cloud \-\-update\-bootstrap
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Bear in mind that this updates to the latest (unstable) version, so use with
+caution.
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH CORE CONFIGURATION
+.sp
+A number of core configuration options and some options that are global to the
+VM profiles can be set in the cloud configuration file. By default this file is
+located at \fB/etc/salt/cloud\fP.
+.SS Minion Configuration
+.sp
+The default minion configuration is set up in this file. This is where the
+minions that are created derive their configuration.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+minion:
+    master: saltmaster.example.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This is the location in particular to specify the location of the salt master.
+.SS New Cloud Configuration Syntax
+.sp
+The data specific to interacting with public clouds is set up here.
+.sp
+\fBATTENTION\fP: Since version 0.8.7 a new cloud provider configuration syntax
+was implemented.  It will allow for multiple configurations of the same cloud
+provider where only minor details can change, for example, the region for an
+EC2 instance. While the old format is still supported and automatically
+migrated every time salt\-cloud configuration is parsed, a choice was made to
+warn the user or even exit with an error if both formats are mixed.
+.SS Migrating Configurations
+.sp
+If you wish to migrate, there are several alternatives. Since the old syntax
+was mainly done on the main cloud configuration file, see the next before and
+after migration example.
+.INDENT 0.0
+.IP \(bu 2
+Before migration in \fB/etc/salt/cloud\fP:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+AWS.id: HJGRYCILJLKJYG
+AWS.key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+AWS.keyname: test
+AWS.securitygroup: quick\-start
+AWS.private_key: /root/test.pem
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+After migration in \fB/etc/salt/cloud\fP:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+providers:
+  my\-aws\-migrated\-config:
+    id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    provider: aws
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Notice that it\(aqs not longer required to name a cloud provider\(aqs configuration
+after it\(aqs provider, it can be an alias, though, an additional configuration
+key is added, \fBprovider\fP. This allows for multiple configuration for the same
+cloud provider to coexist.
+.sp
+While moving towards an improved and extensible configuration handling
+regarding the cloud providers, \fB\-\-providers\-config\fP, which defaults to
+\fB/etc/salt/cloud.providers\fP, was added to the cli parser.  It allows for the
+cloud providers configuration to be provided in a different file, and/or even
+any matching file on a sub\-directory, \fBcloud.providers.d/*.conf\fP which is
+relative to the providers configuration file(with the above configuration file
+as an example, \fB/etc/salt/cloud.providers.d/*.conf\fP).
+.sp
+So, using the example configuration above, after migration in
+\fB/etc/salt/cloud.providers\fP or
+\fB/etc/salt/cloud.providers.d/aws\-migrated.conf\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-aws\-migrated\-config:
+  id: HJGRYCILJLKJYG
+  key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+  keyname: test
+  securitygroup: quick\-start
+  private_key: /root/test.pem
+  provider: aws
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Notice that on this last migrated example, it \fBno longer\fP includes the
+\fBproviders\fP starting key.
+.sp
+While migrating the cloud providers configuration, if the provider alias(from
+the above example \fBmy\-aws\-migrated\-config\fP) changes from what you had(from
+the above example \fBaws\fP), you will also need to change the \fBprovider\fP
+configuration key in the defined profiles.
+.INDENT 0.0
+.IP \(bu 2
+From:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rhel_aws:
+  provider: aws
+  image: ami\-e565ba8c
+  size: Micro Instance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+To:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rhel_aws:
+  provider: my\-aws\-migrated\-config
+  image: ami\-e565ba8c
+  size: Micro Instance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This new configuration syntax even allows you to have multiple cloud
+configurations under the same alias, for example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+production\-config:
+  \- id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+
+  \- user: example_user
+    apikey: 123984bjjas87034
+    provider: rackspace
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNotice the dash and indentation on the above example.\fP
+.sp
+Having multiple entries for a configuration alias also makes the \fBprovider\fP
+key on any defined profile to change, see the example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rhel_aws_dev:
+  provider: production\-config:aws
+  image: ami\-e565ba8c
+  size: Micro Instance
+
+rhel_aws_prod:
+  provider: production\-config:aws
+  image: ami\-e565ba8c
+  size: High\-CPU Extra Large Instance
+
+
+database_prod:
+  provider: production\-config:rackspace
+  image: Ubuntu 12.04 LTS
+  size: 256 server
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Notice that because of the multiple entries, one has to be explicit about the
+provider alias and name, from the above example, \fBproduction\-config:aws\fP.
+.sp
+This new syntax also changes the interaction with the \fBsalt\-cloud\fP binary.
+\fB\-\-list\-location\fP, \fB\-\-list\-images\fP and \fB\-\-list\-sizes\fP which needs a cloud
+provider as an argument. Since 0.8.7 the argument used should be the configured
+cloud provider alias. If the provider alias only as a single entry, use
+\fB<provider\-alias>\fP.  If it has multiple entries,
+\fB<provider\-alias>:<provider\-name>\fP should be used.
+.SS Cloud Configurations
+.SS Rackspace
+.sp
+Rackspace cloud requires two configuration options:
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+RACKSPACE.user: example_user
+RACKSPACE.apikey: 123984bjjas87034
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-rackspace\-config:
+  user: example_user
+  apikey: 123984bjjas87034
+  provider: rackspace
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have \fBprovider:
+rackspace\-config\fP instead of \fBprovider: rackspace\fP on a profile
+configuration.
+.SS Amazon AWS
+.sp
+A number of configuration options are required for Amazon AWS:
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+AWS.id: HJGRYCILJLKJYG
+AWS.key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+AWS.keyname: test
+AWS.securitygroup: quick\-start
+AWS.private_key: /root/test.pem
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-aws\-quick\-start:
+  id: HJGRYCILJLKJYG
+  key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+  keyname: test
+  securitygroup: quick\-start
+  private_key: /root/test.pem
+  provider: aws
+
+my\-aws\-default:
+  id: HJGRYCILJLKJYG
+  key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+  keyname: test
+  securitygroup: default
+  private_key: /root/test.pem
+  provider: aws
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-aws\-quick\-start\fP or \fBprovider: my\-aws\-default\fP instead of
+\fBprovider: aws\fP on a profile configuration.
+.SS Linode
+.sp
+Linode requires a single API key, but the default root password also needs to
+be set:
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+LINODE.password: F00barbaz
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-linode\-config:
+  apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+  password: F00barbaz
+  provider: linode
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-linode\-config\fP instead of \fBprovider: linode\fP on a profile
+configuration.
+.sp
+The password needs to be 8 characters and contain lowercase, uppercase and
+numbers.
+.SS Joyent Cloud
+.sp
+The Joyent cloud requires three configuration parameters. The user name and
+password that are used to log into the Joyent system, and the location of the
+private ssh key associated with the Joyent account. The ssh key is needed to
+send the provisioning commands up to the freshly created virtual machine,
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+JOYENT.user: fred
+JOYENT.password: saltybacon
+JOYENT.private_key: /root/joyent.pem
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-joyent\-config:
+    user: fred
+    password: saltybacon
+    private_key: /root/joyent.pem
+    provider: joyent
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-joyent\-config\fP instead of \fBprovider: joyent\fP on a profile
+configuration.
+.SS GoGrid
+.sp
+To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+API key. Do this by clicking on "My Account" and then going to the API Keys
+tab.
+.sp
+The GOGRID.apikey and the GOGRID.sharedsecret configuration parameters need to
+be set in the configuration file to enable interfacing with GoGrid:
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+GOGRID.apikey: asdff7896asdh789
+GOGRID.sharedsecret: saltybacon
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-gogrid\-config:
+  apikey: asdff7896asdh789
+  sharedsecret: saltybacon
+  provider: gogrid
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-gogrid\-config\fP instead of \fBprovider: gogrid\fP on a profile
+configuration.
+.SS OpenStack
+.sp
+OpenStack configuration differs between providers, and at the moment several
+options need to be specified. This module has been officially tested against
+the HP and the Rackspace implementations, and some examples are provided for
+both.
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# For HP
+OPENSTACK.identity_url: \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
+OPENSTACK.compute_name: Compute
+OPENSTACK.compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
+OPENSTACK.tenant: myuser\-tenant1
+OPENSTACK.user: myuser
+OPENSTACK.ssh_key_name: mykey
+OPENSTACK.ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
+OPENSTACK.password: mypass
+
+# For Rackspace
+OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
+OPENSTACK.compute_name: cloudServersOpenStack
+OPENSTACK.protocol: ipv4
+OPENSTACK.compute_region: DFW
+OPENSTACK.protocol: ipv4
+OPENSTACK.user: myuser
+OPENSTACK.tenant: 5555555
+OPENSTACK.password: mypass
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If you have an API key for your provider, it may be specified instead of a
+password:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+OPENSTACK.apikey: 901d3f579h23c8v73q9
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# For HP
+my\-openstack\-hp\-config:
+  identity_url:
+  \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
+  compute_name: Compute
+  compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
+  tenant: myuser\-tenant1
+  user: myuser
+  ssh_key_name: mykey
+  ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
+  password: mypass
+  provider: openstack
+
+# For Rackspace
+my\-openstack\-rackspace\-config:
+  identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
+  compute_name: cloudServersOpenStack
+  protocol: ipv4
+  compute_region: DFW
+  protocol: ipv4
+  user: myuser
+  tenant: 5555555
+  password: mypass
+  provider: openstack
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If you have an API key for your provider, it may be specified instead of a
+password:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-openstack\-hp\-config:
+  apikey: 901d3f579h23c8v73q9
+
+my\-openstack\-rackspace\-config:
+  apikey: 901d3f579h23c8v73q9
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-openstack\-hp\-config\fP or \fBprovider:
+my\-openstack\-rackspace\-config\fP instead of \fBprovider: openstack\fP on a profile
+configuration.
+.sp
+You will certainly need to configure the \fBuser\fP, \fBtenant\fP and either
+\fBpassword\fP or \fBapikey\fP.
+.sp
+If your OpenStack instances only have private IP addresses and a CIDR range of
+private addresses are not reachable from the salt\-master, you may set your
+preference to have Salt ignore it. Using the old could configurations syntax:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+OPENSTACK.ignore_cidr: 192.168.0.0/16
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Using the new syntax:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-openstack\-config:
+  ignore_cidr: 192.168.0.0/16
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Digital Ocean
+.sp
+Using Salt for Digital Ocean requires a client_key and an api_key. These can be
+found in the Digital Ocean web interface, in the "My Settings" section, under
+the API Access tab.
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
+DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-digitalocean\-config:
+  client_key: wFGEwgregeqw3435gDger
+  api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+  provider: digital_ocean
+  location: New York 1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-digitalocean\-config\fP instead of \fBprovider: digital_ocean\fP on a
+profile configuration.
+.SS Parallels
+.sp
+Using Salt with Parallels requires a user, password and url. These can be
+obtained from your cloud provider.
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+PARALLELS.user: myuser
+PARALLELS.password: xyzzy
+PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-parallels\-config:
+  user: myuser
+  password: xyzzy
+  url: https://api.cloud.xmission.com:4465/paci/v1.0/
+  provider: parallels
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-parallels\-config\fP instead of \fBprovider: parallels\fP on a
+profile configuration.
+.SS IBM SmartCloud Enterprise
+.sp
+In addition to a username and password, the IBM SCE module requires an SSH key,
+which is currently configured inside IBM\(aqs web interface. A location is also
+required to create instances, but not to query their cloud. This is important,
+because you need to use salt\-cloud \-\-list\-locations (with the other options
+already set) in order to find the name of the location that you want to use.
+.INDENT 0.0
+.IP \(bu 2
+Using the old format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+IBMSCE.user: myuser@mycorp.com
+IBMSCE.password: mypass
+IBMSCE.ssh_key_name: mykey
+IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+IBMSCE.location: Raleigh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+Using the new configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-ibmsce\-config:
+  user: myuser@mycorp.com
+  password: mypass
+  ssh_key_name: mykey
+  ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+  location: Raleigh
+  provider: ibmsce
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE\fP: With the new providers configuration syntax you would have
+\fBprovider: my\-imbsce\-config\fP instead of \fBprovider: ibmsce\fP on a profile
+configuration.
+.SS Saltify
+.sp
+The Saltify driver is a new, experimental driver for installing Salt on
+existing machines (virtual or bare metal). Because it does not use an actual
+cloud provider, it needs no configuration in the main cloud config file.
+However, it does still require a profile to be set up, and is most useful when
+used inside a map file. The key parameters to be set are \fBssh_host\fP,
+\fBssh_username\fP and either \fBssh_keyfile\fP or \fBssh_password\fP. These may all
+be set in either the profile or the map. An example configuration might use the
+following in cloud.profiles:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make_salty:
+  provider: saltify
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+And in the map file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make_salty:
+  \- myinstance:
+    ssh_host: 54.262.11.38
+    ssh_username: ubuntu
+    ssh_keyfile: \(aq/etc/salt/mysshkey.pem\(aq
+    sudo: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Extending Profiles and Cloud Providers Configuration
+.sp
+As of 0.8.7, the option to extend both the profiles and cloud providers
+configuration and avoid duplication was added. The extends feature works on the
+current profiles configuration, but, regarding the cloud providers
+configuration, \fBonly\fP works in the new syntax and respective configuration
+files, ie, \fB/etc/salt/salt/cloud.providers\fP or
+\fB/etc/salt/cloud.providers.d/*.conf\fP.
+.SS Extending Profiles
+.sp
+Some example usage on how to use \fBextends\fP with profiles. Consider
+\fB/etc/salt/salt/cloud.profiles\fP containing:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+development\-instances:
+  provider: my\-ec2\-config
+  size: Micro Instance
+  ssh_username: ec2_user
+  securitygroup:
+    \- default
+  deploy: False
+
+Amazon\-Linux\-AMI\-2012.09\-64bit:
+  image: ami\-54cf5c3d
+  extends: development\-instances
+
+Fedora\-17:
+  image: ami\-08d97e61
+  extends: development\-instances
+
+CentOS\-5:
+  provider: my\-aws\-config
+  image: ami\-09b61d60
+  extends: development\-instances
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The above configuration, once parsed would generate the following profiles
+data:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[{\(aqdeploy\(aq: False,
+  \(aqimage\(aq: \(aqami\-08d97e61\(aq,
+  \(aqprofile\(aq: \(aqFedora\-17\(aq,
+  \(aqprovider\(aq: \(aqmy\-ec2\-config\(aq,
+  \(aqsecuritygroup\(aq: [\(aqdefault\(aq],
+  \(aqsize\(aq: \(aqMicro Instance\(aq,
+  \(aqssh_username\(aq: \(aqec2_user\(aq},
+ {\(aqdeploy\(aq: False,
+  \(aqimage\(aq: \(aqami\-09b61d60\(aq,
+  \(aqprofile\(aq: \(aqCentOS\-5\(aq,
+  \(aqprovider\(aq: \(aqmy\-aws\-config\(aq,
+  \(aqsecuritygroup\(aq: [\(aqdefault\(aq],
+  \(aqsize\(aq: \(aqMicro Instance\(aq,
+  \(aqssh_username\(aq: \(aqec2_user\(aq},
+ {\(aqdeploy\(aq: False,
+  \(aqimage\(aq: \(aqami\-54cf5c3d\(aq,
+  \(aqprofile\(aq: \(aqAmazon\-Linux\-AMI\-2012.09\-64bit\(aq,
+  \(aqprovider\(aq: \(aqmy\-ec2\-config\(aq,
+  \(aqsecuritygroup\(aq: [\(aqdefault\(aq],
+  \(aqsize\(aq: \(aqMicro Instance\(aq,
+  \(aqssh_username\(aq: \(aqec2_user\(aq},
+ {\(aqdeploy\(aq: False,
+  \(aqprofile\(aq: \(aqdevelopment\-instances\(aq,
+  \(aqprovider\(aq: \(aqmy\-ec2\-config\(aq,
+  \(aqsecuritygroup\(aq: [\(aqdefault\(aq],
+  \(aqsize\(aq: \(aqMicro Instance\(aq,
+  \(aqssh_username\(aq: \(aqec2_user\(aq}]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Pretty cool right?
+.SS Extending Providers
+.sp
+Some example usage on how to use \fBextends\fP within the cloud providers
+configuration.  Consider \fB/etc/salt/salt/cloud.providers\fP containing:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-develop\-envs:
+  \- id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    location: ap\-southeast\-1
+    availability_zone: ap\-southeast\-1b
+    provider: aws
+
+  \- user: myuser@mycorp.com
+    password: mypass
+    ssh_key_name: mykey
+    ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+    location: Raleigh
+    provider: ibmsce
+
+
+my\-productions\-envs:
+  \- extends: my\-develop\-envs:ibmsce
+    user: my\-production\-user@mycorp.com
+    location: us\-east\-1
+    availability_zone: us\-east\-1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The above configuration, once parsed would generate the following providers
+data:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\(aqproviders\(aq: {
+    \(aqmy\-develop\-envs\(aq: [
+        {\(aqavailability_zone\(aq: \(aqap\-southeast\-1b\(aq,
+         \(aqid\(aq: \(aqHJGRYCILJLKJYG\(aq,
+         \(aqkey\(aq: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq,
+         \(aqkeyname\(aq: \(aqtest\(aq,
+         \(aqlocation\(aq: \(aqap\-southeast\-1\(aq,
+         \(aqprivate_key\(aq: \(aq/root/test.pem\(aq,
+         \(aqprovider\(aq: \(aqaws\(aq,
+         \(aqsecuritygroup\(aq: \(aqquick\-start\(aq
+        },
+        {\(aqlocation\(aq: \(aqRaleigh\(aq,
+         \(aqpassword\(aq: \(aqmypass\(aq,
+         \(aqprovider\(aq: \(aqibmsce\(aq,
+         \(aqssh_key_file\(aq: \(aq/etc/salt/ibm/mykey.pem\(aq,
+         \(aqssh_key_name\(aq: \(aqmykey\(aq,
+         \(aquser\(aq: \(aqmyuser@mycorp.com\(aq
+        }
+    ],
+    \(aqmy\-productions\-envs\(aq: [
+        {\(aqavailability_zone\(aq: \(aqus\-east\-1\(aq,
+         \(aqlocation\(aq: \(aqus\-east\-1\(aq,
+         \(aqpassword\(aq: \(aqmypass\(aq,
+         \(aqprovider\(aq: \(aqibmsce\(aq,
+         \(aqssh_key_file\(aq: \(aq/etc/salt/ibm/mykey.pem\(aq,
+         \(aqssh_key_name\(aq: \(aqmykey\(aq,
+         \(aquser\(aq: \(aqmy\-production\-user@mycorp.com\(aq
+        }
+    ]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH CLOUD ACTIONS
+.sp
+Once a VM has been created, there are a number of actions that can be performed
+on it. The "reboot" action can be used across all providers, but all other
+actions are specific to the cloud provider. In order to perform an action, you
+may specify it from the command line, including the name(s) of the VM to
+perform the action on:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a reboot vm_name
+$ salt\-cloud \-a reboot vm1 vm2 vm2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or you may specify a map which includes all VMs to perform the action on:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a reboot \-m /path/to/mapfile
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The following is a list of actions currently supported by salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+all providers:
+    \- reboot
+aws:
+    \- start
+    \- stop
+joyent:
+    \- stop
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH CLOUD FUNCTIONS
+.sp
+Cloud functions work much the same way as cloud actions, except that they don\(aqt
+perform an operation on a specific instance, and so do not need a machine name
+to be specified. However, since they perform an operation on a specific cloud
+provider, that provider must be specified.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH MISCELLANEOUS SALT CLOUD OPTIONS
+.sp
+This page describes various miscellaneous options available in Salt Cloud
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Sync After Install
+.sp
+Salt allows users to create custom modules, grains and states which can be
+synchronised to minions to extend Salt with further functionality.
+.sp
+This option will inform Salt Cloud to synchronise your custom modules, grains,
+states or all these to the minion just after it has been created. For this to
+happen, the following line needs to be added to the main cloud
+configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sync_after_install: all
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The available options for this setting are:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modules
+grains
+states
+all
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Setting up New Salt Masters
+.sp
+It has become increasingly common for users to set up multi\-hierarchal
+infrastructures using Salt Cloud. This sometimes involves setting up an
+instance to be a master in addition to a minion. With that in mind, you can
+now law down master configuration on a machine by specifying master options
+in the profile or map file.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make_master: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will cause Salt Cloud to generate master keys for the instance, and tell
+salt\-bootstrap to install the salt\-master package, in addition to the
+salt\-minion package.
+.sp
+The default master configuration is usually appropriate for most users, and
+will not be changed unless specific master configuration has been added to the
+profile or map:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+master:
+    user: root
+    interface: 0.0.0.0
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Delete SSH Keys
+.sp
+When Salt Cloud deploys an instance, the SSH pub key for the instance is added
+to the known_hosts file for the user that ran the salt\-cloud command. When an
+instance is deployed, a cloud provider generally recycles the IP address for
+the instance.  When Salt Cloud attempts to deploy an instance using a recycled
+IP address that has previously been accessed from the same machine, the old key
+in the known_hosts file will cause a conflict.
+.sp
+In order to mitigate this issue, Salt Cloud can be configured to remove old
+keys from the known_hosts file when destroying the node. In order to do this,
+the following line needs to be added to the main cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+delete_sshkeys: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Hide Output From Minion Install
+.sp
+By default Salt Cloud will stream the output from the minion deploy script
+directly to STDOUT. Although this can been very useful, in certain cases you
+may wish to switch this off. The following config option is there to enable or
+disable this output:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+display_ssh_output: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
+.SS Salt Cloud 0.6.0 Release Notes
+.sp
+The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
+has been developed to ease the automation and integration of Salt with public
+cloud providers by allowing cloud vms to be cleanly defined, created and
+automatically hooked back into a Salt Master.
+.sp
+While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,
+it has been created in a generic way, so that it can be used to provision and
+hook systems of any type via the familiar Salt modules system.
+.sp
+This release supports three public cloud providers (all via libcloud),
+Amazon EC2, Rackspace Cloud and Linode.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+Packages are not yet available, Salt Cloud requires three dependencies, the
+salt libs, libcloud, and paramiko.
+.SS Extensible With Cloud Modules
+.sp
+The Salt loader system has been employed to make adding support for additional
+public cloud systems just as modular and simple as adding support for new
+package managers in Salt.
+.sp
+Adding support for a new cloud provider is extremely simple, just add a cloud
+module and everything cleanly links together.
+.SS Define VM Profiles
+.sp
+The way a vms is created is done via profiles. Profiles are used to define what
+properties a vm will have, the cloud provider, the size and the image.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+centos_rackspace:
+  provider: rackspace
+  image: CentOS 6.2
+  size: 1024 server
+  os: RHEL6
+  minion:
+    grains:
+        role: webserver
+    master: salt.example.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
+image and the Rackspace 1024 vm size. Particulars of the minion config can
+also be specified.
+.sp
+Individual vms can be created from profiles:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# salt\-cloud \-p centos_rackspace web1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This command creates a vms with the name web1 on the Rackspace cloud and
+connects the new vm to a Salt Master located at salt.example.com. The new VM
+has the Salt id of web1.
+.SS Define Maps of Profiles
+.sp
+When it is desired to have a predefined mapping of many, or a specific group
+of vms then a cloud map can be defined:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+centos_rackspace:
+  web1
+  web2
+  web3
+  web4
+centos_linode:
+  redis1
+  riak1
+  riak2
+  riak3
+ubuntu_ec2:
+  dev1
+  dev2
+  cassandra1
+  cassandra2
+  cassandra3
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This map file will create vms named web 1\-4 using the centos_rackspace profile
+on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
+ec2. It can be run with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# salt\-cloud \-m mapfile
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When creating more than one vm the \-P option can be passed, to make the vms
+provision in parallel, greatly speeding up large scale expansions of vms.
+.SS Salt Cloud 0.7.0 Release Notes
+.sp
+Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
+Stack projects the 0.7.0 release is intended to be much more robust and
+deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
+.sp
+With new tools to help look into what is available on cloud providers,
+new additions to make cloud management more stateful and the addition of
+more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
+of the overall Salt platform.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS New Cloud Provider Support
+.sp
+The following cloud providers are now supported:
+.INDENT 0.0
+.TP
+.B Amazon AWS
+\fI\%http://aws.amazon.com/ec2/\fP
+.TP
+.B Rackspace Cloud
+\fI\%http://www.rackspace.com/cloud/\fP
+.TP
+.B Linode
+\fI\%http://www.linode.com/\fP
+.TP
+.B Joyent
+\fI\%http://joyent.com/\fP
+.TP
+.B GoGrid
+\fI\%http://www.gogrid.com/\fP
+.UNINDENT
+.SS List Available Resources
+.sp
+Setting up Salt Cloud requires knowlege of the available sizes and images on
+cloud providers. Listing the available images and sizes can now be done with
+the salt\-cloud command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-\-list\-sizes linode
+linode
+  Linode 1024
+    bandwidth: 400
+    disk: 40960
+    id: 3
+    name: Linode 1024
+    ram: 1024
+    uuid: 56e6f495190cb2ed1a343f7159ad447cf27d906d
+  Linode 12GB
+    bandwidth: 2000
+    disk: 491520
+    id: 8
+    name: Linode 12GB
+    ram: 12288
+    uuid: 3d1731ebefdbcb4c283957b43d45f89a01f67c5f
+  Linode 1536
+    bandwidth: 600
+    disk: 61440
+    id: 4
+    name: Linode 1536
+    ram: 1536
+    uuid: f0f28628cc70c5f2656aa3f313588d8509ee3787
+  Linode 16GB
+    bandwidth: 2000
+    disk: 655360
+    id: 9
+    name: Linode 16GB
+    ram: 16384
+    uuid: 208cc3c0a60c4eab6ed6861344fef0311c13ffd2
+  Linode 2048
+    bandwidth: 800
+    disk: 81920
+    id: 5
+    name: Linode 2048
+    ram: 2048
+    uuid: 0c9ee69dc7ef7a4cdce71963f8d18e76c61dd57f
+  Linode 20GB
+    bandwidth: 2000
+    disk: 819200
+    id: 10
+    name: Linode 20GB
+    ram: 20480
+    uuid: e0a7b61e3830a120eec94459c9fc34ef7c9e0e36
+  Linode 4GB
+    bandwidth: 1600
+    disk: 163840
+    id: 6
+    name: Linode 4GB
+    ram: 4096
+    uuid: 09585e0f1d4ef4aad486cfa3d53f9d8960f575e7
+  Linode 512
+    bandwidth: 200
+    disk: 20480
+    id: 1
+    name: Linode 512
+    ram: 512
+    uuid: 3497f7def3d6081e6f65ac6e577296bc6b810c05
+  Linode 768
+    bandwidth: 300
+    disk: 30720
+    id: 2
+    name: Linode 768
+    ram: 768
+    uuid: da9f0dbc144aaa234aa5d555426863c8068a8c70
+  Linode 8GB
+    bandwidth: 2000
+    disk: 327680
+    id: 7
+    name: Linode 8GB
+    ram: 8192
+    uuid: e08f8a57551297b9310545430c67667f59120606
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Destroy!
+.sp
+Salt Cloud can now destroy cloud vms as easily as it can create them. The new
+\fB\-\-destroy\fP option can be passed to end the life of a vm:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-d web1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The map operation can now also destroy vms, the new \fBhard\fP option can be
+passed which makes vm maps much more stateful. With the \fBhard\fP option the
+vm maps are viewed as the absolute source of information for the state of
+cloud resources, and any vm that is not specified in the map file will be
+destroyed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-m /etc/salt/cloud.map \-H
+The following virtual machines are set to be created:
+  web1
+  riak4
+The following virtual machines are set to be destroyed:
+  app7
+  devtest4
+
+Proceed? [N/y]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Salt Cloud 0.8.0 Release Notes
+.sp
+Salt Cloud has reached another milestone, with the 0.8.0 release. This
+release includes many improvements to usability, error handling and general
+stability of the product.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Increased Formatting Options
+.sp
+Additional options have been added to salt\-cloud \-Q, to support the same kinds
+of formatting already available in Salt:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\-\-raw\-out
+\-\-text\-out
+\-\-yaml\-out
+\-\-json\-out
+\-\-no\-color
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS More Helpful Error Messages
+.sp
+As an ongoing effort, we have been cleaning up and adding error messages in an
+attempt to make salt\-cloud more helpful when something goes wrong. This
+includes displaying messages as they are received from libcloud.
+.SS Specify Grains in Map Files
+.sp
+Previously, map files only had the ability to specify a profile name, and the
+node names that would be associated with it. Now you can also specify grains
+that will be laid down in each individual node:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+vm_profile:
+  \- mynodename:
+    minion:
+      master: salt\-master
+    grains:
+      fromage: tasty
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+These grains can also be specified in the profile itself. When this happens,
+the grains in map files will override grains in the profile. For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+vm_profile:
+  provider: gogrid
+  size: 512MB
+  image: CentOS 6.2 (64\-bit) w/ None
+  os: RHEL6
+  minion:
+    master: salt.mycompany.com
+  grains:
+    french: fries
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In this example, mynodename will include grains for both fromage and french,
+but the master will be salt\-master, not salt\-mycompany.com.
+.SS AWS Improvements
+.sp
+AWS is much more complex to work with than any of the other supported cloud
+providers. As such, additional configuration has been added in order to
+accomodate their usage:
+.INDENT 0.0
+.TP
+.B AWS.ssh_username:
+Because AWS images can include a variety of different usernames for the
+initial login, this option allows you to specify which one(s) to use to
+install salt upon firstboot.
+.TP
+.B AWS.ssh_interface:
+AWS instances include both private and public IP addresses. By default,
+salt\-cloud will use the public IP to login. In situations where the
+salt\-master is also located within AWS, the private IP can be used instead.
+.TP
+.B AWS.location and AWS.availability_zone:
+These options allow you to specify from within salt\-cloud, which AWS
+locations your machines spin up in.
+.UNINDENT
+.SS Ubuntu Fixes
+.sp
+Ubuntu packages automatically start the service upon installation, and needed
+to be handled differently in the deploy script. Configuration is now laid down
+before the package is installed, so that the minion can make its initial start
+happen with the correct configuration.
+.SS Salt Cloud 0.8.1 Release Notes
+.sp
+In a somewhat quicker timeline than usual, Salt Cloud 0.8.1 has been released!
+While many of the updates in this release focus on stability, users of map
+files and AWS also have some new features to look forward to.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.1.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.1.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Full Query Option
+.sp
+The \-Q or \-\-query option only displays a small amount of information about
+each virtual machine. This is to keep command\-line reports small and
+manageable. Now the \-F or \-\-full\-query option can be used to display all
+of the information about a VM that salt\-cloud knows about. The amount of
+information returned varies between providers, depending on the kinds of
+functionality available through them.
+.SS Increased Map Functionality
+.sp
+Previously, map files were only used for creating VMs. Now they can also be
+used to query and delete VMs. The \-Q, \-F and \-d options can all be used in
+conjunction with \-m, to display map\-specific data. If a VM that is specified
+in the map does not exist, it will still show up under \-Q and \-F as "Absent".
+If a VM specified in the map does not exist when a \-d is specified, it will
+of course be ignored.
+.SS Multiple Security Groups in AWS
+.sp
+AWS allows for multiple security groups to be applied to any given VM, but
+until this release, Salt Cloud only supported managing one. This update allows
+a list of security groups to be specified. In the main configuration file, an
+example of multiple security groups would look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+AWS.securitygroup:
+  \- default
+  \- extra
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In a profile, an example would be:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+micro_amazon:
+  provider: aws
+  image: ami\-e565ba8c
+  size: Micro Instance
+  os: RHEL6
+  securitygroup:
+      \- default
+      \- extra
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Bug Fixes
+.sp
+A number of bugs have been fixed in this release. Most of these were internal
+fixes related to authentication and deployment across various providers. Bug
+fixes in this release include:
+.sp
+Ubuntu users may notice that deploying an instance has become significantly
+noisier. A change was made to make Ubuntu display information returned as
+packages are installed, which is more aligned with how yum\-based machines
+already behaved. This also forced these VMs to deploy salt in a much more
+reliable manner.
+.sp
+Requirements listed in requirements.txt are also pulled into setup.py, to make
+it easy to use the easy_install tool.
+.sp
+Most cloud providers default to root as the initial user, but AWS typically
+providers a different user (ec2\-user, ubuntu, bitnami, etc). Deployment on
+such images must be handled using sudo. Previously, sudo was used to issue
+all deployment commands, but this failed on images where sudo was not installed
+by default (such as FreeBSD). Now sudo will only be used with non\-root logins.
+.SS Salt Cloud 0.8.2 Release Notes
+.sp
+This is a great release for Salt Cloud! New cloud providers have been added,
+and the deploy functionality has been embiggened! Read on to see the cromulent
+new features.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.2.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.2.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Select Query Option
+.sp
+The last release of Salt Cloud added the \-F/\-\-full query option, to display
+all information available for a particular instance. We now also have the \-S
+or \-\-select\-query option, which lets you specify which fields to display. Any
+fields not specified will not be displayed, and if you specify a field that
+doesn\(aqt exist on a particular provider, it will be ignored for them. Just
+add a query.selection option to /etc/salt/cloud like such:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+query.selection:
+  \- id
+  \- state
+  \- public_ips
+  \- keyname
+  \- TOTALXFER
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS os vs script
+.sp
+In a cloud profile, you need to specify which deploy script to use to install
+Salt on the newly\-provisioned VM. The option for this has always been \(aqos\(aq,
+which has been confusing to some. As of this release, you may now specify
+\(aqscript\(aq instead of \(aqos\(aq. If you specify both, the value for \(aqscript\(aq will be
+used. See the SmartOS Deploy Script below for an example.
+.SS SmartOS Deploy Script
+.sp
+Of particular interest to Joyent users may be the new SmartOS deploy script.
+Salt itself is not fully\-supported on SmartOS just yet, in part because ZeroMQ
+is also not yet supported. When this script is used for deployment, it will
+automatically install the required libraries and build ZeroMQ, and then use
+easy_install to install the latest versions of PyZMQ and Salt. To use this,
+just specify SmartOS as the \(aqos\(aq or \(aqscript\(aq option in your cloud.profiles:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+joyent_smartos:
+  provider: joyent
+  size: Extra Small 512 MB
+  image: smartos
+  script: SmartOS
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS OpenStack and IBM Modules
+.sp
+Support has been added for clouds using OpenStack (OPENSTACK) and for IBM\(aqs
+SmartCloud Enterprise (IBMSCE) offering. We know that people have already
+started using the OpenStack module, because pull requests have already been
+merged from the community. This module has been tested against both the HP
+and the Rackspace implementations of OpenStack. This can be a tricky module
+to configure, depending on your provider, so some examples are provided here:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# For HP
+OPENSTACK.identity_url: \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
+OPENSTACK.compute_name: Compute
+OPENSTACK.compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
+OPENSTACK.tenant: myuser\-tenant1
+OPENSTACK.user: myuser
+OPENSTACK.ssh_key_name: mykey
+OPENSTACK.ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
+OPENSTACK.password: mypass
+
+# For Rackspace
+OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
+OPENSTACK.compute_name: cloudServersOpenStack
+OPENSTACK.compute_region: DFW
+OPENSTACK.tenant: 5555555
+OPENSTACK.user: myuser
+OPENSTACK.password: mypass
+OPENSTACK.protocol: ipv4
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+It is important to note that currently, only password\-based authentication is
+provided through the Salt Cloud OpenStack module.
+.sp
+IBM has fewer things that need to be configured, but setting them up can be
+tricky as well. An example might look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+IBMSCE.user: myuser@mycorp.com
+IBMSCE.password: mypass
+IBMSCE.ssh_key_name: mykey
+IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+IBMSCE.location: Raleigh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The location currently must be configured in order to create an instance, but
+not to query the IBM cloud. This is important, because you need to use
+salt\-cloud \-\-list\-locations (with the other options already set) in order to
+find the name of the location that you want to use.
+.SS OpenStack with Salt
+.sp
+This isn\(aqt specifically another Salt Cloud feature, but it should be noted that
+with the release of Salt 0.10.5, OpenStack is not only the first Cloud product,
+but in fact the first piece of software explicitly supported by both Salt Cloud
+(from a user perspective) and Salt itself (from an admin perspective).
+.SS Salt Cloud Logging
+.sp
+Those who have tried to hack on Salt Cloud may have discovered a complete lack
+of logging support. With this release, Salt Cloud has started to implement
+the logging features already available in Salt. The default log location is
+/var/log/salt/cloud (with a default level of warn), but it can be changed in
+your cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+log_file: /var/log/salt/cloud
+log_level_logfile: debug
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If you would like to change the default logging level for the command line, you
+can also configure that in the same place:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+log_level: debug
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Check salt\-cloud \-\-help for a list of logging levels, which can also be
+specified from the command line.
+.SS Salt Cloud 0.8.3 Release Notes
+.sp
+Welcome to 0.8.3! While there are some new features, this release of Salt
+Cloud is primarily targeted at stability. Read on to see what\(aqs happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.3.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.3.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS No Deploy
+.sp
+Salt Cloud was originally intended to spin up machines and deploy Salt on them,
+but several use cases have arisen in which this is not the appropriate action.
+For instance, when booting into new platforms which may not even support Salt
+just yet, it makes no sense to try and install a non\-existant package. In these
+instances, you can add the \-\-no\-deploy argument to the salt\-cloud command to
+skip running the deploy script.
+.sp
+It is also possible to configure Salt Cloud to default to never deploying:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Firing Events
+.sp
+Salt Cloud is starting to make use of Salt\(aqs event system. If you are watching
+the event bus on the Salt Master, you can now watch for events to fire when
+minions are created or destroyed.
+.SS Start Actions
+.sp
+This is an experimental feature which some users may find handy. You may now
+configure a start_action for a deployed VM:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+start_action: state.highstate
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If configured, when the salt\-cloud command runs the deploy script, it will open
+a subprocess to wait for the salt\-minion service to start, and check in with
+the master (via the salt event bus). This feature does not currently work
+smoothly with all providers, particularly the ones which do not use "root" as
+the default login users. Your mileage will vary.
+.SS Exception Handling
+.sp
+There were a handful of spots in the code which would exit when an error
+occurred, sometimes without any meaningful error messages. This was was neither
+helpful to the user, nor Pythonic. Errors now should fire an exception of some
+sort, and if the error is Salt\- or Salt Cloud\-specific, a SaltException will be
+fired. This also helps pave the way for API usage of Salt Cloud.
+.SS Provider\-Specific Actions
+.sp
+This is largely a programmatic addition at this point, which will continue to
+expand into userland. All providers supported by libcloud provide a minimum
+level of functionality that Salt Cloud takes advantage of. Most providers also
+include a number of "extra" functions which are non\-standard. Some of these
+are critical in certain instances. For instance, most providers will shut down
+a VM for you when you send a destroy command, but Joyent requires you to
+manually shut it down first. This was previously only doable via their web
+interface. You may now pass a supported \-\-action (or \-a) to a cloud provider:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-action stop joyentvm1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+All cloud providers support the destroy command via an action:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a destroy mymachine1 mymachine2 mymachine2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Human\-Readable States
+.sp
+Most of our cloud providers are accessed via libcloud, which provides a
+numerical code declaring the current state of the machine. This state is
+viewable via the various query options. Unfortunately, if you don\(aqt know what
+the codes mean, they\(aqre largely useless to you. Now, with the \-Q or \-\-query
+option, a human\-readable state (i.e. RUNNING) will de displayed instead).
+.sp
+It should be noted that because some users are running salt\-cloud via another
+script, the \-F/\-\-full\-query and \-S/\-\-select\-query options still return the
+numerical code.
+.SS Various other Features and Stability Fixes
+.sp
+The above features addressed many stability issues. Additionally, the following
+have been addressed.
+.sp
+Salt Cloud requires at least libcloud 0.11.4. If you are not running at least
+this version, an exception will be fired.
+.sp
+A certain amount of minion configuration is required for all VMs. If you fail
+to specify any, a (mostly empty) minion config will be created for you. The
+default master for this config will be "salt".
+.sp
+Previously, Joyent supported all Salt Cloud features without using Salt Cloud\(aqs
+own built\-in deploy function. This is no longer the case, and so the Joyent
+module has been updated appropriately.
+.sp
+Some log settings where previously ignored. This has been fixed.
+.sp
+The Rackspace module previously would silently strip certain characters from
+a VM name. It now has a base set of characters that it will verify against, and
+raise an exception if an illegal character was specified. This functionality is
+also available for other cloud providers, but not currently set up for them.
+.sp
+AWS introduced a new region in Sydney. This region is not available in the
+latest official libcloud release, but if you happen to be running libcloud out
+of trunk, it will be supported by Salt Cloud.
+.sp
+Additional logging and PEP\-8 fixes have also been applied. This should only
+affect developers.
+.SS Salt Cloud 0.8.4 Release Notes
+.sp
+Welcome to 0.8.4! Aside from various bug fixes, the most important improvements
+in this release are to the deploy scripts. Read on to see what\(aqs happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.4.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Salt Bootstrap
+.sp
+By far the biggest change to Salt Cloud is the inclusion of the salt\-bootstrap
+script, made possible by the genius of Alec Koumjian and Pedro Algarvio. From
+this point on, each release of Salt Cloud will include the latest stable
+version of bootstrap\-salt\-minion.sh in the deploy folder. This is a generic,
+POSIX\-compliant deployment script, which autodetects your OS, and installs
+the latest version of Salt accordingly. For more information, see:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+To use this deploy script explicitly, set the script option to
+bootstrap\-salt\-minion in the profile for your VM. For instance:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+aws\-archlinux:
+    provider: aws
+    image: ami\-0356da6a
+    size: Micro Instance
+    script: bootstrap\-salt\-minion
+    ssh_username: root
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For those of you still using "os" in your profiles, it should be noted that
+this option was renamed to "script" in 0.8.2, and your configuration should
+be updated accordingly.
+.SS Optional Script Option
+.sp
+As mentioned above, usage of the "os" argument has been deprecated in favor of
+the "script" argument. However, "script" is now optional. If you do not
+specify this option, salt\-cloud will default to bootstrap\-salt\-minion for you.
+If you do not want any deployment scripts run, you still have the following
+options available to you.
+.sp
+From the command line, use the \-\-no\-deploy option:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-no\-deploy \-p myprofile mymachine
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In the Salt Cloud configuration, set:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Or in the profile, set the script option to None:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+script: None
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Other Generic Deploy Scripts
+.sp
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are now a few generic templates available in the deploy directory of
+your saltcloud source tree:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+curl\-bootstrap
+curl\-bootstrap\-git
+python\-bootstrap
+wget\-bootstrap
+wget\-bootstrap\-git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt\-bootstrap script, such as updating to specific git tags.
+.SS Salt Cloud 0.8.5 Release Notes
+.sp
+Welcome to 0.8.5! Some important things have happened in this release, that
+you\(aqll want to take note of. The first thing that may trip you up when
+installing directly is that Paramiko is no longer a dependency, and botocore
+and sshpass are new dependencies. Read on to see what else has happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.5.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Salt Bootstrap
+.sp
+In 0.8.4, the default deploy script was set to bootstrap\-salt\-minion. Since
+then, the Salt Boostrap script has been extended to be able to install more
+than just minions, and as such, has been renamed. It is now called
+bootstrap\-salt, and has been renamed in Salt Cloud accordingly. Check out the
+salt\-bootstrap project for more details:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+Just another reminder: For those of you still using "os" in your profiles, this
+option was renamed to "script" in 0.8.2, and your configuration should be
+updated accordingly.
+.SS Updating Salt Bootstrap
+.sp
+If you like running the latest and greatest version of salt\-bootstrap, but
+you\(aqre sick of tracking down the source directory to update it, a new option
+has been added to update it for you.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-u
+salt\-cloud \-\-update\-bootstrap
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Bear in mind that this updates to the latest (unstable) version, so use with
+caution.
+.SS Modify AWS Tags
+.sp
+One of the features of AWS is the ability to tag resources. In fact, under the
+hood, the names given to EC2 instances by salt\-cloud are actually just stored
+as a tag called Name. The ability to manage tags on AWS instances has now been
+added to Salt Cloud.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a get_tags mymachine
+salt\-cloud \-a set_tags mymachine tag1=somestuff tag2=\(aqOther stuff\(aq
+salt\-cloud \-a del_tags mymachine tag1,tag2,tag3
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Rename AWS Instances
+.sp
+As mentioned above, AWS instances are named via a tag. However, renaming an
+instance by renaming its tag will cause the salt keys to mismatch. A rename
+function has been added which renames both the instance, and the salt keys.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a rename mymachine newname=yourmachine
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS AWS Termination Protection
+.sp
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a enable_term_protect mymachine
+salt\-cloud \-a disable_term_protect mymachine
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Setting up New Salt Masters
+.sp
+It has become increasingly common for users to set up multi\-hierarchal
+infrastructures using Salt Cloud. This sometimes involves setting up an
+instance to be a master in addition to a minion. With that in mind, you can
+now law down master configuration on a machine by specifying master options
+in the profile or map file.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make_master: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will cause Salt Cloud to generate master keys for the instance, and tell
+salt\-bootstrap to install the salt\-master package, in addition to the
+salt\-minion package.
+.sp
+The default master configuration is usually appropriate for most users, and
+will not be changed unless specific master configuration has been added to the
+profile or map:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+master:
+    user: root
+    interface: 0.0.0.0
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map
+file, to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Remove Old SSH Keys
+.sp
+When an instance is destroyed, its IP address is usually recycled back into
+the IP pool. When such an IP is reassigned to you, and the old key is still in
+your known_hosts file, the deploy script will fail due to mismatched SSH keys.
+To mitigate this, add the following to your main cloud configuration:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+delete_sshkeys: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Salt Cloud 0.8.6 Release Notes
+.sp
+Welcome to 0.8.6! This is an exciting release, especially for EC2 users. To see
+what new features are available, read on.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.6.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Updated libcloud
+.sp
+This version of Salt Cloud now depends upon libcloud version 0.12.1. Be sure to
+update your packages accordingly.
+.SS Salt Outputter
+.sp
+Previously, output from Salt Cloud was a mix of log output and print
+statements, while the Salt outputter system has grown into a beautiful,
+configurable tool. This release of Salt Cloud now takes advantage of the Salt
+outputter system, making the output from the salt\-cloud command much more
+beautiful, easy to read, and usable from other scripts.
+.SS Experimental EC2 Driver
+.sp
+A new driver has been introduced for Amazon EC2, to potentially replace the
+existing AWS driver. This driver contains several optimizations which have been
+found to greatly improve instance creation and deployment. They also allow for
+extra functionality to be added, which is not currently available in the AWS
+driver. However, it should be noted that the EC2 driver is currently considered
+to be experiemental. While existing AWS usage should not currently differ, it
+should be expected to change between versions until it is declared stable.
+.sp
+Many of the features of this release are specific to the EC2 driver. Please
+check the AWS documentation for configuration and usage of the EC2 driver.
+.SS AWS/EC2 Rename on Destroy
+.sp
+When instances on AWS are destroyed, there will be a lag between the time that
+the action is sent, and the time that Amazon cleans up the instance. During this
+time, the instance still retails a Name tag, which will cause a collision if the
+creation of an instance with the same name is attempted before the cleanup
+occurs. In order to avoid such collisions, Salt Cloud can be configured to
+rename instances when they are destroyed. The new name will look something like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+myinstance\-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In order to enable this, add AWS.rename_on_destroy line to the main
+configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+AWS.rename_on_destroy: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS New Action: show_instance
+.sp
+This action is a thin wrapper around \-\-full\-query, which displays details on a
+single instance only. In an environment with several machines, this will save a
+user from having to sort through all instance data, just to examine a single
+instance.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a show_instance myinstance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Actions vs Functions
+.sp
+Salt Cloud 0.8.3 introduced the concept of provider\-specific actions. However,
+these actions were designed to operate on specific instances within a provider.
+In order to perform calls on a provider, but not on specific instances,
+functions have been added. Currently, only EC2 takes advantage of these.
+.SS New Function: show_image
+.sp
+This is a function that describes an AMI on EC2. This will give insight as to
+the defaults that will be applied to an instance using a particular AMI.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS EC2: delvol_on_destroy
+.sp
+This argument overrides the default DeleteOnTermination setting in the AMI for
+the root EBS volume for an instance. Many AMIs contain \(aqfalse\(aq as a default,
+resulting in orphaned volumes in the EC2 account, which may unknowingly be
+charged to the account. This setting can be added to the profile or map file
+for an instance.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+delvol_on_destroy: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This can also be set as a global setting in the EC2 cloud configuration:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+EC2.delvol_on_destroy: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The setting for this may be changed on an existing instance using one of the
+following commands:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a delvol_on_destroy myinstance
+salt\-cloud \-a keepvol_on_destroy myinstance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS EC2 Termination Protection
+.sp
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed. The EC2
+driver adds a show_term_protect action to the regular AWS functionality.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a show_term_protect mymachine
+salt\-cloud \-a enable_term_protect mymachine
+salt\-cloud \-a disable_term_protect mymachine
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS EC2 Alternate Endpoint
+.sp
+Normally, ec2 endpoints are build using the region and the service_url. The
+resulting endpoint would follow this pattern:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ec2.<region>.<service_url>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This results in an endpoint that looks like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ec2.us\-east\-1.amazonaws.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+There are other projects that support an EC2 compatibility layer, which this
+scheme does not account for. This can be overridden by specifying the endpoint
+directly in the main cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS EC2 Volume Management
+.sp
+The EC2 driver has several functions and actions for management of EBS volumes.
+.SS Creating Volumes
+.sp
+A volume may be created, independent of an instance. A zone must be specified.
+A size or a snapshot may be specified (in GiB). If neither is given, a default
+size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
+will be used.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b size=10
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b snapshot=snap12345678
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b size=10 type=standard
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b size=10 type=io1 iops=1000
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Attaching Volumes
+.sp
+Unattached volumes may be attached to an instance. The following values are
+required: name or instance_id, volume_id and device.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a attach_volume myinstance volume_id=vol\-12345 device=/dev/sdb1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Show a Volume
+.sp
+The details about an existing volume may be retreived.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a show_volume myinstance volume_id=vol\-12345
+salt\-cloud \-f show_volume ec2 volume_id=vol\-12345
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Detaching Volumes
+.sp
+An existing volume may be detached from an instance.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-a detach_volume myinstance volume_id=vol\-12345
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Deleting Volumes
+.sp
+A volume that is not attached to an instance may be deleted.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_volume ec2 volume_id=vol\-12345
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Managing Key Pairs on EC2
+.sp
+The EC2 driver has the ability to manage key pairs.
+.SS Creating a Key Pair
+.sp
+A key pair is required in order to create an instance. When creating a key pair
+with this function, the return data will contain a copy of the private key.
+This private key is not stored by Amazon, and will not be obtainable past this
+point, and should be stored immediately.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f create_keypair ec2 keyname=mykeypair
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Show a Key Pair
+.sp
+This function will show the details related to a key pair, not including the
+private key itself (which is not stored by Amazon).
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Delete a Key Pair
+.sp
+This function removes the key pair from Amazon.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Salt Cloud 0.8.7 Release Notes
+.sp
+Welcome to 0.8.7! This is a landmark release which adds two new cloud providers,
+one pseudo cloud provider, and an exciting, flexible new configuration format!
+Don\(aqt worry, the old config format will still work, and you can wait to migrate
+to the new format when you\(aqre ready. However, the old and new formats are not
+compatible, so don\(aqt try and mix them.
+.sp
+We would like to extend a special thanks to the folks at X\-Mission for granting
+us access to their cloud so that we could develop the Parallels driver! Without
+their help, this driver would not exist. Please take a moment to take a look at
+their cloud offering:
+.sp
+\fI\%http://xmission.com/cloud_hosting\fP
+.sp
+We would also like to thank Digital Ocean for their help and resources while
+developing the driver for their cloud offering. The folks over there have been
+very friendly and helpful! Please take a moment to check them out:
+.sp
+\fI\%https://www.digitalocean.com/\fP
+.sp
+For more details, read on!
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.7.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Added Parallels Support
+.sp
+As mentioned above, X\-Mission was kind enough to lend us the resources to write
+a cloud driver for Parallels\-based cloud providers. This driver requires only
+a \fBuser\fP, \fBpassword\fP and a \fBurl\fP. These can be obtained from your cloud
+provider.
+.INDENT 0.0
+.IP \(bu 2
+Using the legacy configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+PARALLELS.user: myuser
+PARALLELS.password: xyzzy
+PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Added Digital Ocean Support
+.sp
+Digital Ocean has been a highly\-requested cloud provider, and we are pleased to
+be able to meet the demand. Only a \fBclient_key\fP and an \fBapi_key\fP are
+required for Digital Ocean.
+.INDENT 0.0
+.IP \(bu 2
+Using the legacy configuration format:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
+DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Updated Configuration Format
+.sp
+This is a massive change that we have been wanting for months to add. We would
+like to extend special thanks to Pedro Algarvio (s0undt3ch) for his tireless
+efforts, which included significant changes to the codebase.
+.sp
+The old configuration format will still function as before, so there is no
+pressure just yet to move over. However, the configuration formats are not
+compatible with each other, so when you\(aqre ready to switch over, make sure to
+switch everything over at once.
+.sp
+Luckily, the changes are not difficult to get used to. The old format looked
+like the following:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+SOMEPROVIDER.option1: some_stuff
+SOMEPROVIDER.option2: some_other_stuff
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The new format for the above would look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my_provider:
+  option1: some_stuff
+  option2: some_other_stuff
+  provider: someprovider
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This update allows for multiple accounts using the same provider. For instance,
+if using multiple accounts with Amazon EC2, your configuration may look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-first\-ec2:
+  id: HJGRYCILJLKJYG
+  key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+  keyname: test
+  securitygroup: quick\-start
+  private_key: /root/test.pem
+  provider: ec2
+
+my\-second\-ec2:
+  id: LJLKJYGHJGRYCI
+  key: \(aqrigjksjdhasdfgnkdjgfsgm;woormgl/ase\(aq
+  keyname: test
+  securitygroup: quick\-start
+  private_key: /root/test.pem
+  provider: ec2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Profiles are then configured using the name of the configuration block, rather
+than the provider name. For instance:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rhel\-ec2:
+    provider: my\-second\-ec2
+    image: ami\-e565ba8c
+    size: Micro Instance
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Likewise, issuing commands will reference the name of the configuration block,
+rather than the provider name. For instance:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-list\-sizes my\-first\-ec2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This is critical for using multiple clouds, which use the same Salt Cloud
+driver. For instance, Salt Cloud has been gaining popularity for usage with
+private clouds utilizing OpenStack. The following two commands are likely to
+return different data:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-list\-images openstack\-hp
+salt\-cloud \-\-list\-images openstack\-rackspace
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Provider Aliases
+.sp
+It is also possible to have multiple providers configured with the same name.
+This allows for similar environments across multiple providers to share the same
+name. For instance:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+production\-config:
+  \- id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    provider: aws
+
+  \- id: LJLKJYGHJGRYCI
+    key: \(aqrigjksjdhasdfgnkdjgfsgm;woormgl/ase\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    provider: ec2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+With this configuration, you can then set up the following profiles:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+development\-instances:
+  provider: production\-config:aws
+  size: Micro Instance
+  ssh_username: ec2_user
+  securitygroup: default
+
+staging\-instances:
+  provider: production\-config:ec2
+  size: Micro Instance
+  ssh_username: ec2_user
+  securitygroup: default
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Keep in mind that if there is only one configured provider with a specific name,
+you do not have to specify an alias. But if multiple are set up as above, you
+must use the aliased name.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-\-list\-sizes production\-config:ec2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Extending Profiles
+.sp
+If using the new configuration format, you will have the ability to extend
+profile definitions. This can make profile configuration much easier to read and
+manage. For instance:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+development\-instances:
+  provider: my\-ec2\-config
+  size: Micro Instance
+  ssh_username: ec2_user
+  securitygroup:
+    \- default
+  deploy: False
+
+Amazon\-Linux\-AMI\-2012.09\-64bit:
+  image: ami\-54cf5c3d
+  extends: development\-instances
+
+Fedora\-17:
+  image: ami\-08d97e61
+  extends: development\-instances
+
+CentOS\-5:
+  provider: my\-aws\-config
+  image: ami\-09b61d60
+  extends: development\-instances
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In this case, the CentOS\-5 profile will in fact look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+CentOS\-5:
+  provider: my\-aws\-config
+  size: Micro Instance
+  ssh_username: ec2_user
+  securitygroup:
+    \- default
+  deploy: False
+  image: ami\-09b61d60
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Because it copied all of the configuration from \fBdevelopment\-instances\fP, and
+overrode the provider with a new provider.
+.SS Extending Providers
+.sp
+If using the new configuration format, providers can be extended in the same
+way. For instance, the following will set up two different providers, each
+sharing some of the same configuration:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+my\-develop\-envs:
+  \- id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    location: ap\-southeast\-1
+    availability_zone: ap\-southeast\-1b
+    provider: aws
+
+  \- user: myuser@mycorp.com
+    password: mypass
+    ssh_key_name: mykey
+    ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+    location: Raleigh
+    provider: ibmsce
+
+
+my\-productions\-envs:
+  \- extends: my\-develop\-envs:ibmsce
+    user: my\-production\-user@mycorp.com
+    location: us\-east\-1
+    availability_zone: us\-east\-1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Salt Cloud 0.8.9 Release Notes
+.sp
+Welcome to 0.8.9! It has been a long time since the last release, and we\(aqre
+excited to get this one out the door!
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.9.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS New Cloudstack Driver
+.sp
+One of the more impressive stories this release involves the Cloud Stack driver,
+written by Sebastien Goasguen. After meeting Thomas Hatch at the LinuxTag
+conference, Sebastien went out and wrote a Cloud Stack driver for Salt Cloud, in
+less time than it took to compile these release notes. His story is here:
+.sp
+\fI\%http://sebgoa.blogspot.com/2013/05/the-linuxtag-hack.html\fP
+.sp
+Several people have been asking for this driver, and we are very grateful to
+Sebastien for adding it for us!
+.SS Updated Joyent Support
+.sp
+Joyent has updated their API, and Salt Cloud has included the updates in this
+version. Bob Szabo did the bulk of this work, and we would like to extend a
+special thanks to him for his efforts. The Joyent driver has also been
+optimized to access the API directly, resulting in faster operations, and
+opening up more of Joyent\(aqs native API for future use. Some of the features
+that have already been added as a result of this pertain to SSH key management,
+directly from Salt Cloud. The following functions have been added:
+.INDENT 0.0
+.IP \(bu 2
+list_keys
+.IP \(bu 2
+show_key
+.IP \(bu 2
+import_key
+.IP \(bu 2
+delete_key
+.UNINDENT
+.SS Mapping Independent Hierarchies
+.sp
+Salt Cloud 0.8.5 introduced the ability to spin up an instance and install
+the salt\-master package on it. This functionality has been extended, so that
+a map file may now spin up a new master, and its minions, and pre\-seed the
+master with the minion keys so that they are immediately accepted by the time
+the new salt\-master starts up, and each minion is started up. A map file that
+can accomplish this might look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Ubuntu\-12.04\-64bit:
+  TT_Master:
+    minion:
+      retry_dns: 5
+    make_master: True
+  TT2:
+    minion:
+      retry_dns: 5
+  TT3:
+    minion:
+      retry_dns: 5
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This functionality was added by Pedro Algarvio, to spin up hierarchies for
+testing purposes, and then remove them when finished. This can be instrumental
+to organizations wishing to extend their testing and build environments. We
+would like to thank him for this, and the many other contributions that he has
+added to this and other releases!
+.SS Parallel Creation and Logging
+.sp
+There have been reports of issues in the past pertaining to screen issues when
+running salt\-cloud in parallel mode (\-P). This mode has been greatly stabilized
+in this release. Additionally, parallel logging capabilities have been added,
+allowing users to store parallel execution logs. Finally, keyboard interrupts
+(such as ^C) are now properly handled.
+.SS Internal Data Structure
+.sp
+On 0.8.7 we unleashed the power of multiple cloud provider profiles, it even
+allows multiple profiles for the same cloud provider.  That was a much asked
+feature and was adopted by users right away.  Unfortunately, all that power had
+a small point of failure when multiple profiles existed for the same cloud
+provider. Only the first was used in most operations.
+To fix this small issue, salt\-cloud\(aqs internal data structure changed quite a
+bit. Every action, function, virtual machine creation, etc, is now, \fBalways\fP
+"attached" to a provider alias and the(one of the) cloud drivers defined.
+Internally, when loading the configuration, all the defined profiles are
+matched to the available providers. If the provider does not exits, the profile
+gets removed. The same happens for the defined providers, they all know which
+profiles they can manage. This closes that small point of failure.
+.SS Data Presentation
+.sp
+With the internal data structure change also came a data presentation change.
+Most, unless not applicable, output is now done in an \fB<provider\-alias>\fP
+→ \fB<provider\-driver>\fP → \fB<detailed\-output>\fP. An example is
+always better. For an \fBec2\-config\fP provider alias with an \fBec2\fP driver
+configured:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f show_image ec2\-config image=ami\-35eb835c
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ec2\-config:
+    \-\-\-\-\-\-\-\-\-\-
+    ec2:
+        \-\-\-\-\-\-\-\-\-\-
+        \- architecture:
+            x86_64
+        \- blockDeviceMapping:
+            \-\-\-\-\-\-\-\-\-\-
+            item:
+                \-\-\-\-\-\-\-\-\-\-
+                deviceName:
+                    /dev/sda
+                ebs:
+                    \-\-\-\-\-\-\-\-\-\-
+                    deleteOnTermination:
+                        true
+                    snapshotId:
+                        snap\-59724004
+                    volumeSize:
+                        8
+                    volumeType:
+                        standard
+        \- description:
+            OmniOS r151006 Base (Stable)
+        \- hypervisor:
+            xen
+        \- imageId:
+            ami\-35eb835c
+        \- imageLocation:
+            182711560792/OmniOS r151006c
+        \- imageOwnerId:
+            182711560792
+        \- imageState:
+            available
+        \- imageType:
+            machine
+        \- isPublic:
+            true
+        \- kernelId:
+            aki\-b4aa75dd
+        \- name:
+            OmniOS r151006c
+        \- rootDeviceName:
+            /dev/sda
+        \- rootDeviceType:
+            ebs
+        \- virtualizationType:
+            paravirtual
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+We\(aqre now always aware of what was done using what.
+.SH SALT CLOUD 0.6.0 RELEASE NOTES
+.sp
+The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
+has been developed to ease the automation and integration of Salt with public
+cloud providers by allowing cloud vms to be cleanly defined, created and
+automatically hooked back into a Salt Master.
+.sp
+While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,
+it has been created in a generic way, so that it can be used to provision and
+hook systems of any type via the familiar Salt modules system.
+.sp
+This release supports three public cloud providers (all via libcloud),
+Amazon EC2, Rackspace Cloud and Linode.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+Packages are not yet available, Salt Cloud requires three dependencies, the
+salt libs, libcloud, and paramiko.
+.SS Extensible With Cloud Modules
+.sp
+The Salt loader system has been employed to make adding support for additional
+public cloud systems just as modular and simple as adding support for new
+package managers in Salt.
+.sp
+Adding support for a new cloud provider is extremely simple, just add a cloud
+module and everything cleanly links together.
+.SS Define VM Profiles
+.sp
+The way a vms is created is done via profiles. Profiles are used to define what
+properties a vm will have, the cloud provider, the size and the image.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+centos_rackspace:
+  provider: rackspace
+  image: CentOS 6.2
+  size: 1024 server
+  os: RHEL6
+  minion:
+    grains:
+        role: webserver
+    master: salt.example.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
+image and the Rackspace 1024 vm size. Particulars of the minion config can
+also be specified.
+.sp
+Individual vms can be created from profiles:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# salt\-cloud \-p centos_rackspace web1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This command creates a vms with the name web1 on the Rackspace cloud and
+connects the new vm to a Salt Master located at salt.example.com. The new VM
+has the Salt id of web1.
+.SS Define Maps of Profiles
+.sp
+When it is desired to have a predefined mapping of many, or a specific group
+of vms then a cloud map can be defined:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+centos_rackspace:
+  web1
+  web2
+  web3
+  web4
+centos_linode:
+  redis1
+  riak1
+  riak2
+  riak3
+ubuntu_ec2:
+  dev1
+  dev2
+  cassandra1
+  cassandra2
+  cassandra3
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This map file will create vms named web 1\-4 using the centos_rackspace profile
+on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
+ec2. It can be run with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# salt\-cloud \-m mapfile
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When creating more than one vm the \-P option can be passed, to make the vms
+provision in parallel, greatly speeding up large scale expansions of vms.
+.SH SALT CLOUD 0.7.0 RELEASE NOTES
+.sp
+Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
+Stack projects the 0.7.0 release is intended to be much more robust and
+deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
+.sp
+With new tools to help look into what is available on cloud providers,
+new additions to make cloud management more stateful and the addition of
+more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
+of the overall Salt platform.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS New Cloud Provider Support
+.sp
+The following cloud providers are now supported:
+.INDENT 0.0
+.TP
+.B Amazon AWS
+\fI\%http://aws.amazon.com/ec2/\fP
+.TP
+.B Rackspace Cloud
+\fI\%http://www.rackspace.com/cloud/\fP
+.TP
+.B Linode
+\fI\%http://www.linode.com/\fP
+.TP
+.B Joyent
+\fI\%http://joyent.com/\fP
+.TP
+.B GoGrid
+\fI\%http://www.gogrid.com/\fP
+.UNINDENT
+.SS List Available Resources
+.sp
+Setting up Salt Cloud requires knowlege of the available sizes and images on
+cloud providers. Listing the available images and sizes can now be done with
+the salt\-cloud command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-\-list\-sizes linode
+linode
+  Linode 1024
+    bandwidth: 400
+    disk: 40960
+    id: 3
+    name: Linode 1024
+    ram: 1024
+    uuid: 56e6f495190cb2ed1a343f7159ad447cf27d906d
+  Linode 12GB
+    bandwidth: 2000
+    disk: 491520
+    id: 8
+    name: Linode 12GB
+    ram: 12288
+    uuid: 3d1731ebefdbcb4c283957b43d45f89a01f67c5f
+  Linode 1536
+    bandwidth: 600
+    disk: 61440
+    id: 4
+    name: Linode 1536
+    ram: 1536
+    uuid: f0f28628cc70c5f2656aa3f313588d8509ee3787
+  Linode 16GB
+    bandwidth: 2000
+    disk: 655360
+    id: 9
+    name: Linode 16GB
+    ram: 16384
+    uuid: 208cc3c0a60c4eab6ed6861344fef0311c13ffd2
+  Linode 2048
+    bandwidth: 800
+    disk: 81920
+    id: 5
+    name: Linode 2048
+    ram: 2048
+    uuid: 0c9ee69dc7ef7a4cdce71963f8d18e76c61dd57f
+  Linode 20GB
+    bandwidth: 2000
+    disk: 819200
+    id: 10
+    name: Linode 20GB
+    ram: 20480
+    uuid: e0a7b61e3830a120eec94459c9fc34ef7c9e0e36
+  Linode 4GB
+    bandwidth: 1600
+    disk: 163840
+    id: 6
+    name: Linode 4GB
+    ram: 4096
+    uuid: 09585e0f1d4ef4aad486cfa3d53f9d8960f575e7
+  Linode 512
+    bandwidth: 200
+    disk: 20480
+    id: 1
+    name: Linode 512
+    ram: 512
+    uuid: 3497f7def3d6081e6f65ac6e577296bc6b810c05
+  Linode 768
+    bandwidth: 300
+    disk: 30720
+    id: 2
+    name: Linode 768
+    ram: 768
+    uuid: da9f0dbc144aaa234aa5d555426863c8068a8c70
+  Linode 8GB
+    bandwidth: 2000
+    disk: 327680
+    id: 7
+    name: Linode 8GB
+    ram: 8192
+    uuid: e08f8a57551297b9310545430c67667f59120606
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Destroy!
+.sp
+Salt Cloud can now destroy cloud vms as easily as it can create them. The new
+\fB\-\-destroy\fP option can be passed to end the life of a vm:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-d web1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The map operation can now also destroy vms, the new \fBhard\fP option can be
+passed which makes vm maps much more stateful. With the \fBhard\fP option the
+vm maps are viewed as the absolute source of information for the state of
+cloud resources, and any vm that is not specified in the map file will be
+destroyed:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-m /etc/salt/cloud.map \-H
+The following virtual machines are set to be created:
+  web1
+  riak4
+The following virtual machines are set to be destroyed:
+  app7
+  devtest4
+
+Proceed? [N/y]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH AUTHOR
+Thomas S. Hatch <thatch@saltstack.com> and many others, please see the Authors file
+.SH COPYRIGHT
+2012 - 2013, Salt Stack, Inc.
+.\" Generated by docutils manpage writer.
+.

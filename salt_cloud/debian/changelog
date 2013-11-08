@@ -1,0 +1,43 @@
+salt-cloud (0.8.9) unstable; urgency=low
+
+  * New release
+
+ -- Corey Quinn <corey@sequestered.net>  Sun, 23 Jun 2013 18:35:02 -0700
+
+salt-cloud (0.8.7) unstable; urgency=low
+
+  * new release
+
+ -- Sean Channel <pentabular@gmail.com>  Tue, 09 Apr 2013 13:10:50 -0800
+
+salt-cloud (0.8.6) unstable; urgency=low
+
+  * new release
+
+ -- Sean Channel <pentabular@gmail.com>  Fri, 8 Mar 2013 08:35:24 -0800
+
+salt-cloud (0.8.5) unstable; urgency=low
+
+  * new release
+  * replace boto dep with recommended botocore
+
+ -- Sean Channel <pentabular@gmail.com>  Sat, 16 Feb 2013 07:39:46 -0800
+
+salt-cloud (0.8.4-193-g47cf390raring) raring; urgency=low
+
+  * replace paramiko with sshpass
+
+ -- Sean Channel <pentabular@gmail.com>  Thu, 7 Feb 2013 13:01:23 -0800
+
+salt-cloud (0.8.4) unstable; urgency=low
+
+  * require python-boto
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 19 Dec 2012 13:07:14 -0700
+
+salt-cloud (0.8.3) unstable; urgency=low
+
+  * initial package for salt-cloud
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 19 Dec 2012 13:07:14 -0700
+

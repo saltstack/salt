@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import saltcloud.cli
+
+def main():
+    '''
+    The main function for salt-cloud
+    '''
+    cloud = saltcloud.cli.SaltCloud()
+    cloud.run()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
