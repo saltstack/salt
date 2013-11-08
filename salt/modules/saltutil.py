@@ -380,8 +380,6 @@ def running():
 
         salt '*' saltutil.running
     '''
-
-
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
