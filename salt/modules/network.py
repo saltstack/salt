@@ -79,6 +79,19 @@ def netstat():
     return ret
 
 
+def active_tcp():
+    '''
+    Return a dict containing information on all of the running TCP connections
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.active_tcp
+    '''
+    return salt.utils.network.active_tcp()
+
+
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
