@@ -13,9 +13,9 @@ import multiprocessing
 from itertools import groupby
 
 # Import salt.cloud libs
+import salt.cloud.config
 import salt.cloud.utils
 import salt.cloud.loader
-import salt.cloud.config as config
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
@@ -538,7 +538,7 @@ class Cloud(object):
         '''
         output = {}
 
-        minion_dict = config.get_config_value(
+        minion_dict = salt.cloud.config.get_config_value(
             'minion', vm_, self.opts, default={}
         )
 
@@ -554,8 +554,8 @@ class Cloud(object):
             )
             return
 
-        deploy = config.get_config_value('deploy', vm_, self.opts)
-        make_master = config.get_config_value('make_master', vm_, self.opts)
+        deploy = salt.cloud.config.get_config_value('deploy', vm_, self.opts)
+        make_master = salt.cloud.config.get_config_value('make_master', vm_, self.opts)
 
         if deploy:
             if make_master is False and 'master' not in minion_dict:
@@ -568,7 +568,7 @@ class Cloud(object):
             if 'pub_key' not in vm_ and 'priv_key' not in vm_:
                 log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
                 priv, pub = salt.cloud.utils.gen_keys(
-                    config.get_config_value('keysize', vm_, self.opts)
+                    salt.cloud.config.get_config_value('keysize', vm_, self.opts)
                 )
                 vm_['pub_key'] = pub
                 vm_['priv_key'] = priv
@@ -591,7 +591,7 @@ class Cloud(object):
                     )
                 )
                 master_priv, master_pub = salt.cloud.utils.gen_keys(
-                    config.get_config_value('keysize', vm_, self.opts)
+                    salt.cloud.config.get_config_value('keysize', vm_, self.opts)
                 )
                 vm_['master_pub'] = master_pub
                 vm_['master_pem'] = master_priv
@@ -602,7 +602,7 @@ class Cloud(object):
                 self.opts['pki_dir'], vm_['pub_key'], key_id
             )
 
-        vm_['os'] = config.get_config_value('script', vm_, self.opts)
+        vm_['os'] = salt.cloud.config.get_config_value('script', vm_, self.opts)
 
         try:
             alias, driver = vm_['provider'].split(':')
@@ -1237,7 +1237,7 @@ class Map(Cloud):
                 if profile.get('make_master', False) is True
             ).next()
             log.debug('Creating new master {0!r}'.format(master_name))
-            if config.get_config_value('deploy',
+            if salt.cloud.config.get_config_value('deploy',
                                        master_profile,
                                        self.opts) is False:
                 raise SaltCloudSystemExit(
@@ -1250,7 +1250,7 @@ class Map(Cloud):
                 'Generating master keys for {0[name]!r}'.format(master_profile)
             )
             priv, pub = salt.cloud.utils.gen_keys(
-                config.get_config_value('keysize', master_profile, self.opts)
+                salt.cloud.config.get_config_value('keysize', master_profile, self.opts)
             )
             master_profile['master_pub'] = pub
             master_profile['master_pem'] = priv
@@ -1272,7 +1272,7 @@ class Map(Cloud):
 
             # Generate the minion keys to pre-seed the master:
             for name, profile in create_list:
-                make_minion = config.get_config_value(
+                make_minion = salt.cloud.config.get_config_value(
                     'make_minion', profile, self.opts, default=True
                 )
                 if make_minion is False:
@@ -1282,7 +1282,7 @@ class Map(Cloud):
                     'Generating minion keys for {0[name]!r}'.format(profile)
                 )
                 priv, pub = salt.cloud.utils.gen_keys(
-                    config.get_config_value('keysize', profile, self.opts)
+                    salt.cloud.config.get_config_value('keysize', profile, self.opts)
                 )
                 profile['pub_key'] = pub
                 profile['priv_key'] = priv
