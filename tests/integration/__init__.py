@@ -278,8 +278,10 @@ class TestDaemon(object):
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
             grains = self.client.cmd('minion', 'grains.items')
-            import pprint
-            pprint.pprint(grains['minion'])
+
+            minion_opts = self.minion_opts.copy()
+            minion_opts['color'] = self.parser.options.no_colors is False
+            salt.output.display_output(grains, 'grains', minion_opts)
 
         print_header('', sep='=', inline=True)
 
