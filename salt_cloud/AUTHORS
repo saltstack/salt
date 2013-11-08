@@ -1,0 +1,46 @@
+=============
+Salt Authors
+=============
+
+Whos Who in Salt
+============================
+
+The Man With the Plan
+----------------------------
+
+Thomas S Hatch is the main developer of Salt. He is the founder, owner,
+maintainer and lead of the Salt project, as well as author of the majority
+of the Salt code and documentation.
+
+Documentation System
+----------------------------
+
+The documentation system was put together by Seth House, much of the
+documentation is being maintained by Joseph Hall
+
+Developers
+----------------------------
+
+Dan Garthwaite <dan@garthwaite.org>
+deutsche
+Johnny Bergström
+K Jonathan Harker <jesusaurus@inbox.com>
+Joseph Hall <joseph@saltstack.com>
+lexual
+Marat Shakirov
+Matt Black
+Peter Baumgartner
+Robert Fielding
+Sean Channel <pentabular@gmail.com>
+Seth House
+Thomas S Hatch <thatch@saltstack.com>
+Pedro Algarvio <pedro@algarvio.me>
+
+
+Growing Community
+--------------------------------
+
+To view all contributors please check ohloh, this file can sometimes be out
+of date:
+
+https://www.ohloh.net/p/salt-cloud/contributors
