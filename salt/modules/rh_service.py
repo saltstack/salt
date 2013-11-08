@@ -41,7 +41,7 @@ def __virtual__():
     enable = set((
         'RedHat',
         'CentOS',
-        'Scientific',
+        'ScientificLinux',
         'CloudLinux',
         'Amazon',
         'Fedora',
