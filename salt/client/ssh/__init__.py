@@ -14,6 +14,7 @@ import time
 import multiprocessing
 import re
 import logging
+import yaml
 
 # Import salt libs
 import salt.client.ssh.shell
