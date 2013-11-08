@@ -174,6 +174,10 @@ Miscellaneous topics
 
 Salt is many splendid things.
 
+:doc:`Salt Cloud <topics/cloud/index>`
+    Salt Cloud is a public cloud provisioning tool that integrates Salt with
+    many cloud providers.
+
 :doc:`File Server <ref/file_server/index>`
     Salt can easily and quickly transfer files (in fact, that's how Salt
     States work). Even under heavy load, files are chunked and served.
