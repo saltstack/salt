@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    saltcloud.utils.nb_popen
+    salt.cloud.utils.nb_popen
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
     Non blocking subprocess Popen.
@@ -37,8 +37,8 @@ log = logging.getLogger(__name__)
 
 class CloudNonBlockingPopen(subprocess.Popen):
 
-    _stdout_logger_name_ = 'saltcloud.utils.nb_popen.STDOUT.PID-{pid}'
-    _stderr_logger_name_ = 'saltcloud.utils.nb_popen.STDERR.PID-{pid}'
+    _stdout_logger_name_ = 'salt.cloud.utils.nb_popen.STDOUT.PID-{pid}'
+    _stderr_logger_name_ = 'salt.cloud.utils.nb_popen.STDERR.PID-{pid}'
 
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
@@ -207,8 +207,8 @@ try:
     from salt.utils.nb_popen import NonBlockingPopen as SaltNonBlockingPopen
 
     class NonBlockingPopen(SaltNonBlockingPopen):
-        _stdout_logger_name_ = 'saltcloud.utils.nb_popen.STDOUT.PID-{pid}'
-        _stderr_logger_name_ = 'saltcloud.utils.nb_popen.STDERR.PID-{pid}'
+        _stdout_logger_name_ = 'salt.cloud.utils.nb_popen.STDOUT.PID-{pid}'
+        _stderr_logger_name_ = 'salt.cloud.utils.nb_popen.STDERR.PID-{pid}'
 
 except ImportError:
     NonBlockingPopen = CloudNonBlockingPopen

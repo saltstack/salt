@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    saltcloud.exceptions
+    salt.cloud.exceptions
     ~~~~~~~~~~~~~~~~~~~~
 
     Salt cloud related exceptions.

@@ -3,5 +3,5 @@ The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
 
-# Import saltcloud libs
-from saltcloud.cloud import Cloud
+# Import salt.cloud libs
+from salt.cloud.cloud import Cloud

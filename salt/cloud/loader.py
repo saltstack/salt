@@ -7,12 +7,12 @@ import logging
 
 # Import Salt libs
 import salt.loader
-import saltcloud
+import salt.cloud
 
 log = logging.getLogger(__name__)
 
 
-# Because on the cloud drivers we do `from saltcloud.libcloudfuncs import *`
+# Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
 # which simplifies code readability, it adds some unsupported functions into
 # the driver's module scope.
 # We list un-supported functions here. These will be removed from the loaded.
@@ -31,7 +31,7 @@ def clouds(opts):
     '''
     Return the cloud functions
     '''
-    salt_base_path = os.path.dirname(saltcloud.__file__)
+    salt_base_path = os.path.dirname(salt.cloud.__file__)
 
     def saltcloud_mod_type_check(modpath):
         if modpath.startswith(salt_base_path):
@@ -44,7 +44,7 @@ def clouds(opts):
             'clouds',
             'cloud',
             base_path=salt_base_path,
-            loaded_base_name='saltcloud.loaded',
+            loaded_base_name='salt.cloud.loaded',
             mod_type_check=saltcloud_mod_type_check
         )
     except TypeError:

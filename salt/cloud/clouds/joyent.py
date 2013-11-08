@@ -58,13 +58,13 @@ import inspect
 import yaml
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
+from salt.cloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
-# Import saltcloud libs
-import saltcloud.utils
-import saltcloud.config as config
-from saltcloud.utils import namespaced_function, is_public_ip
-from saltcloud.exceptions import (
+# Import salt.cloud libs
+import salt.cloud.utils
+import salt.cloud.config as config
+from salt.cloud.utils import namespaced_function, is_public_ip
+from salt.cloud.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
@@ -185,7 +185,7 @@ def create(vm_):
             'system for the password.'
         )
 
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -204,7 +204,7 @@ def create(vm_):
     )
 
     ## added . for fqdn hostnames
-    saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
+    salt.cloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
         'image': get_image(vm_),
@@ -213,7 +213,7 @@ def create(vm_):
 
     }
 
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -260,7 +260,7 @@ def create(vm_):
                 '\n\t\t-- please wait for IP addresses to be assigned...'
             )
         try:
-            data = saltcloud.utils.wait_for_ip(
+            data = salt.cloud.utils.wait_for_ip(
                 __query_node_data,
                 update_args=(
                     data['id'],
@@ -311,7 +311,7 @@ def create(vm_):
                 'script_args', vm_, __opts__
             ),
             'script_env': config.get_config_value('script_env', vm_, __opts__),
-            'minion_conf': saltcloud.utils.minion_config(__opts__, vm_)
+            'minion_conf': salt.cloud.utils.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
@@ -319,7 +319,7 @@ def create(vm_):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_config(__opts__, vm_)
+            master_conf = salt.cloud.utils.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
@@ -333,7 +333,7 @@ def create(vm_):
         win_installer = config.get_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
-            minion = saltcloud.utils.minion_config(__opts__, vm_)
+            minion = salt.cloud.utils.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
             deploy_kwargs['username'] = config.get_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
@@ -345,7 +345,7 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
-        saltcloud.utils.fire_event(
+        salt.cloud.utils.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -354,9 +354,9 @@ def create(vm_):
 
         deployed = False
         if win_installer:
-            deployed = saltcloud.utils.deploy_windows(**deploy_kwargs)
+            deployed = salt.cloud.utils.deploy_windows(**deploy_kwargs)
         else:
-            deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+            deployed = salt.cloud.utils.deploy_script(**deploy_kwargs)
 
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -376,7 +376,7 @@ def create(vm_):
 
     ret.update(data)
 
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -431,7 +431,7 @@ def destroy(name, call=None):
         salt-cloud -d vm_name
 
     '''
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -442,7 +442,7 @@ def destroy(name, call=None):
     ret = query2(command='my/machines/{0}'.format(node['id']),
                  location=node['location'], method='DELETE')
 
-    saltcloud.utils.fire_event(
+    salt.cloud.utils.fire_event(
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
