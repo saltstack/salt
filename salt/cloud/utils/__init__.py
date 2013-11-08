@@ -30,7 +30,7 @@ import salt.utils
 import salt.utils.event
 
 # Import salt cloud libs
-import salt.cloud.config as config
+import salt.cloud
 from salt.cloud.utils.nb_popen import NonBlockingPopen
 from salt.cloud.exceptions import (
     SaltCloudConfigError,
@@ -196,7 +196,7 @@ def minion_config(opts, vm_):
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
-    master_finger = config.get_config_value('master_finger', vm_, opts)
+    master_finger = salt.cloud.config.get_config_value('master_finger', vm_, opts)
     if master_finger is not None:
         minion['master_finger'] = master_finger
     minion.update(
@@ -204,12 +204,12 @@ def minion_config(opts, vm_):
         # 1. VM config
         # 2. Profile config
         # 3. Global configuration
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'minion', vm_, opts, default={}, search_global=True
         )
     )
 
-    make_master = config.get_config_value('make_master', vm_, opts)
+    make_master = salt.cloud.config.get_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
         raise SaltCloudConfigError(
             'A master setting was not defined in the minion\'s configuration.'
@@ -220,7 +220,7 @@ def minion_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     minion.setdefault('grains', {}).update(
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'grains', vm_, opts, default={}, search_global=True
         )
     )
@@ -244,7 +244,7 @@ def master_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     master.update(
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'master', vm_, opts, default={}, search_global=True
         )
     )
