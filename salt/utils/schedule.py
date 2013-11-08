@@ -48,8 +48,6 @@ import salt.payload
 log = logging.getLogger(__name__)
 
 
-
-
 class Schedule(object):
     '''
     Create a Schedule object, pass in the opts and the functions dict to use
@@ -101,7 +99,7 @@ class Schedule(object):
         if 'jid_include' in data and data['jid_include']:
             jobcount = 0
             for basefilename in os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
-                fn =  os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
+                fn = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
                     log.debug('schedule.handle_func: Checking job against fun {}: {}'.format(ret['fun'], job))
@@ -243,7 +241,7 @@ def clean_proc_dir(opts):
     '''
 
     for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
-        fn =  os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
+        fn = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
         with salt.utils.fopen(fn, 'r') as fp_:
             job = salt.payload.Serial(opts).load(fp_)
             log.debug('schedule.clean_proc_dir: checking job {} for process existence'.format(job))
