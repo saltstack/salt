@@ -33,7 +33,8 @@ import salt.syspaths as syspaths
 from salt.utils import context
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
-from salt.exceptions import SaltReqTimeoutError, SaltException
+from salt.utils.templates import get_template_context
+from salt.exceptions import RenderError, SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
 
@@ -1990,6 +1991,15 @@ class BaseHighState(object):
                 fn_, self.state.rend, self.state.opts['renderer'], env, sls,
                 rendered_sls=mods
             )
+        except RenderError as exc:
+            context = get_template_context(
+                exc.buffer,
+                exc.line_num,
+                marker='    <======================'
+            )
+            msg = 'Rendering SLS failed: {0}\n{1}'.format(exc.error, context)
+            log.critical(msg)
+            errors.append(msg)
         except Exception as exc:
             msg = 'Rendering SLS {0} failed, render error: {1}'.format(
                 sls, exc
