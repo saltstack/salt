@@ -185,12 +185,13 @@ def arg(*args, **kwargs):
     '''
     return {"args": args, "kwargs": kwargs}
 
+
 def arg_type(*args, **kwargs):
     '''
     Print out the types of the args and kwargs. This is used to test the types
     of the args and kwargs passed down to the minion
     '''
-    ret = {'args': [], 'kwargs':{}}
+    ret = {'args': [], 'kwargs': {}}
     # all the args
     for arg in args:
         ret['args'].append(str(type(arg)))
@@ -200,7 +201,6 @@ def arg_type(*args, **kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
-
 
 
 def arg_repr(*args, **kwargs):
