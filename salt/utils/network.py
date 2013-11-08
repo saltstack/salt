@@ -604,9 +604,9 @@ def active_tcp():
     return ret
 
 
-def remote_port_tcp(port):
+def local_port_tcp(port):
     '''
-    Return a set of ip addrs attached to the specified port
+    Return a set of remote ip addrs attached to the specified local port
     '''
     ret = set()
     if os.path.isfile('/proc/net/tcp'):
@@ -616,7 +616,7 @@ def remote_port_tcp(port):
                     continue
                 iret = _parse_tcp_line(line)
                 sl = iter(iret).next()
-                if iret[sl]['remote_port'] == port:
+                if iret[sl]['local_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret
     return ret
