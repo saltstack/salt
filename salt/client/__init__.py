@@ -1037,6 +1037,8 @@ class LocalClient(object):
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
                     continue
+                if 'return' not in raw:
+                    continue
                 found.add(raw.get('id'))
                 ret = {raw['id']: {'ret': raw['return']}}
                 if 'out' in raw:
