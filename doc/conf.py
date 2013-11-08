@@ -228,6 +228,7 @@ man_pages = [
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
+    ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
 ]
 
 
