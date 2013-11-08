@@ -113,6 +113,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
+
     if tmplstr and not isinstance(tmplstr, unicode):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
@@ -142,6 +143,18 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(JinjaSerializerExtension)
+
+    # Pass through trim_blocks and lstrip_blocks Jinja parameters
+    # trim_blocks removes newlines around Jinja blocks
+    # lstrip_blocks strips tabs and spaces from the beginning of 
+    # line to the start of a block. 
+
+    if opts.get('pillar').get('master').get('jinja_trim_blocks'):
+        log.debug('Jinja2 trim_blocks is enabled')
+        env_args['trim_blocks'] = True
+    if opts.get('pillar').get('master').get('jinja_lstrip_blocks'):
+        log.debug('Jinja2 lstrip_blocks is enabled')
+        env_args['lstrip_blocks'] = True
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
