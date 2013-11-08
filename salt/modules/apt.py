@@ -376,12 +376,6 @@ def install(name=None,
     if not fromrepo and repo:
         fromrepo = repo
 
-    if kwargs.get('env'):
-        try:
-            os.environ.update(kwargs.get('env'))
-        except Exception as e:
-            log.exception(e)
-
     old = list_pkgs()
 
     downgrade = False
@@ -424,7 +418,7 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-    __salt__['cmd.run_all'](cmd, python_shell=False)
+    __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -435,11 +429,6 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     remove and purge do identical things but with different apt-get commands,
     this function performs the common logic.
     '''
-    if kwargs.get('env'):
-        try:
-            os.environ.update(kwargs.get('env'))
-        except Exception as e:
-            log.exception(e)
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
@@ -451,7 +440,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return {}
     cmd = ['apt-get', '-q', '-y', action]
     cmd.extend(targets)
-    __salt__['cmd.run_all'](cmd, python_shell=False)
+    __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
