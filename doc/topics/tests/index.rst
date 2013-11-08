@@ -46,7 +46,7 @@ requests against our `docker salt test containers`__ repository.
 
 .. _docker: http://www.docker.io/
 .. __: https://index.docker.io/u/salttest/
-.. __: https://github.com/salttest/docker-salttest-containers
+.. __: https://github.com/saltstack/docker-salttest-containers
 
 
 =============
