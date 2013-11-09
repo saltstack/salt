@@ -701,6 +701,8 @@ def list_nodes():
     server_list = _salt_client().cmd(conn['auth_minion'],
                                    'nova.server_list',
                                    [conn['profile']])
+    if not server_list:
+        return {}
     for server_name in server_list[conn['auth_minion']]:
         server = server_list[conn['auth_minion']][server_name]
         ret[server['name']] = {
