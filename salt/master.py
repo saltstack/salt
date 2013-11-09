@@ -1601,7 +1601,9 @@ class AESFuncs(object):
 
             pret = {}
             pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(ret)
+            pret['pillar'] = pcrypt.dumps(
+                ret if ret is not False else {}
+            )
             return pret
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
