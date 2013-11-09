@@ -316,9 +316,17 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'env' not in load:
+    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
         return ret
     if not fnd['path']:
         return ret
@@ -338,10 +346,18 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'path' not in load or 'env' not in load:
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if 'path' not in load or 'saltenv' not in load:
         return ''
     ret = {'hash_type': __opts__['hash_type']}
-    short = load['env']
+    short = load['saltenv']
     if __opts__['hgfs_branch_method'] != 'bookmarks' and short == 'base':
         short = 'default'
     relpath = fnd['rel']
@@ -369,15 +385,24 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
-    if __opts__['hgfs_branch_method'] != 'bookmarks' and load['env'] == 'base':
-        load['env'] = 'default'
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and \
+            load['saltenv'] == 'base':
+        load['saltenv'] = 'default'
     repos = init()
     for repo in repos:
         repo.open()
-        ref = _get_ref(repo, load['env'])
+        ref = _get_ref(repo, load['saltenv'])
         if ref:
             manifest = repo.manifest(rev=ref[1])
             for tup in manifest:
@@ -398,15 +423,24 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = set()
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
-    if __opts__['hgfs_branch_method'] != 'bookmarks' and load['env'] == 'base':
-        load['env'] = 'default'
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and \
+            load['saltenv'] == 'base':
+        load['saltenv'] = 'default'
     repos = init()
     for repo in repos:
         repo.open()
-        ref = _get_ref(repo, load['env'])
+        ref = _get_ref(repo, load['saltenv'])
         if ref:
             manifest = repo.manifest(rev=ref[1])
             for tup in manifest:
