@@ -26,6 +26,7 @@ Using the new format, set up the cloud configuration at
       provider: linode
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import pprint
