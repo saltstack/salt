@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Utility functions for salt.cloud
 '''
@@ -425,7 +426,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                     'dictionaries for its `minion_conf` parameter. '
                     'Loading YAML...'
                 )
-                minion_conf = yaml.load(minion_conf)
             minion_grains = minion_conf.pop('grains', {})
             if minion_grains:
                 smb_file(
@@ -554,7 +554,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'dictionaries for it\'s `minion_conf` parameter. '
                         'Loading YAML...'
                     )
-                    minion_conf = yaml.load(minion_conf)
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
                     scp_file(
@@ -585,7 +584,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'dictionaries for it\'s `master_conf` parameter. '
                         'Loading from YAML ...'
                     )
-                    master_conf = yaml.load(master_conf)
 
                 scp_file(
                     '/tmp/master',
@@ -1093,7 +1091,7 @@ def remove_sshkey(host, known_hosts=None):
                 known_hosts = '{0}/.ssh/known_hosts'.format(
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
-            except:
+            except Exception:
                 pass
 
     if known_hosts is not None:
