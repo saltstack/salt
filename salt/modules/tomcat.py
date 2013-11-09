@@ -438,8 +438,9 @@ def deploy_war(war,
                context,
                force='no',
                url='http://localhost:8080/manager',
-               env='base',
-               timeout=180):
+               saltenv='base',
+               timeout=180,
+               env=None):
     '''
     Deploy a WAR file
 
@@ -452,7 +453,7 @@ def deploy_war(war,
         set True to deploy the webapp even one is deployed in the context
     url : http://localhost:8080/manager
         the URL of the server manager webapp
-    env : base
+    saltenv : base
         the environment for WAR file in used by salt.modules.cp.get_url
         function
     timeout : 180
@@ -476,6 +477,14 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
 
     # Copy file name if needed
     tfile = war
@@ -484,7 +493,7 @@ def deploy_war(war,
         cache = True
         tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
                 os.path.basename(war))
-        cached = __salt__['cp.get_url'](war, tfile, env)
+        cached = __salt__['cp.get_url'](war, tfile, saltenv)
         if not cached:
             return 'FAIL - could not cache the WAR file'
         try:
