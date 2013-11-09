@@ -239,7 +239,11 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
-def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
+def check_key_file(user,
+                   source,
+                   config='.ssh/authorized_keys',
+                   saltenv='base',
+                   env=None):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
@@ -250,7 +254,16 @@ def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
 
         salt '*' root salt://ssh/keyfile
     '''
-    keyfile = __salt__['cp.cache_file'](source, env)
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    keyfile = __salt__['cp.cache_file'](source, saltenv)
     if not keyfile:
         return {}
     s_keys = _validate_keys(keyfile)
@@ -366,11 +379,11 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     return 'Key not present'
 
 
-def set_auth_key_from_file(
-        user,
-        source,
-        config='.ssh/authorized_keys',
-        env='base'):
+def set_auth_key_from_file(user,
+                          source,
+                          config='.ssh/authorized_keys',
+                          saltenv='base',
+                          env=None):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
@@ -381,8 +394,17 @@ def set_auth_key_from_file(
         salt '*' ssh.set_auth_key_from_file <user>\
                 salt://ssh_keys/<user>.id_rsa.pub
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     # TODO: add support for pulling keys from other file sources as well
-    lfile = __salt__['cp.cache_file'](source, env)
+    lfile = __salt__['cp.cache_file'](source, saltenv)
     if not os.path.isfile(lfile):
         raise CommandExecutionError(
             'Failed to pull key file from salt file server'
@@ -390,8 +412,11 @@ def set_auth_key_from_file(
 
     s_keys = _validate_keys(lfile)
     if not s_keys:
-        err = 'No keys detected in {0}. Is file properly ' \
-              'formatted?'.format(source)
+        err = (
+            'No keys detected in {0}. Is file properly formatted?'.format(
+                source
+            )
+        )
         log.error(err)
         __context__['ssh_auth.error'] = err
         return 'fail'
