@@ -247,7 +247,14 @@ def highstate(test=None, queue=False, **kwargs):
         opts['test'] = __opts__.get('test', None)
 
     if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
         opts['environment'] = kwargs['env']
+    elif 'saltenv' in kwargs:
+        opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
 
@@ -289,7 +296,13 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
+def sls(mods,
+        saltenv='base',
+        test=None,
+        exclude=None,
+        queue=False,
+        env=None,
+        **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -301,6 +314,14 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
         salt '*' state.sls core,edit.vim dev
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -345,7 +366,7 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
 
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({env: mods})
+        high_, errors = st_.render_highstate({saltenv: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -490,7 +511,12 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
-def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
+def show_low_sls(mods,
+                 saltenv='base',
+                 test=None,
+                 queue=False,
+                 env=None,
+                 **kwargs):
     '''
     Display the low data from a specific sls
 
@@ -500,6 +526,15 @@ def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
 
         salt '*' state.show_low_sls foo
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
@@ -518,7 +553,7 @@ def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({env: mods})
+        high_, errors = st_.render_highstate({saltenv: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -532,7 +567,7 @@ def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
     return ret
 
 
-def show_sls(mods, env='base', test=None, queue=False, **kwargs):
+def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master
@@ -543,6 +578,14 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
@@ -561,7 +604,7 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({env: mods})
+        high_, errors = st_.render_highstate({saltenv: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
