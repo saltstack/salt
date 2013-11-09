@@ -175,7 +175,7 @@ class Pillar(object):
                             )
                         ]
             else:
-                for saçtenv in self._get_envs():
+                for saltenv in self._get_envs():
                     tops[saltenv].append(
                             compile_template(
                                 self.client.cache_file(
