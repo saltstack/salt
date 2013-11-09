@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage configuration files in salt-cloud
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 
 __version_info__ = (0, 8, 9)
