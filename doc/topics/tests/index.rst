@@ -41,7 +41,7 @@ tests suite under a different distribution than the one you're currently using.
 
 You can see the current list of test suite images on our `docker repository`__.
 
-If you with to provide your own `docker`_ container, you can submit pull 
+If you wish to provide your own `docker`_ container, you can submit pull 
 requests against our `docker salt test containers`__ repository.
 
 .. _docker: http://www.docker.io/
