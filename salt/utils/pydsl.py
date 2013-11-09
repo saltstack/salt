@@ -108,9 +108,9 @@ SLS_MATCHES = None
 
 class Sls(object):
 
-    def __init__(self, sls, env, rendered_sls):
+    def __init__(self, sls, saltenv, rendered_sls):
         self.name = sls
-        self.env = env
+        self.saltenv = saltenv
         self.includes = []
         self.included_highstate = {}
         self.extends = []
@@ -135,11 +135,20 @@ class Sls(object):
         self.options.update(options)
 
     def include(self, *sls_names, **kws):
-        env = kws.get('env', self.env)
+        if kws.get('env', None) is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt Boron.'
+            )
+            # Backwards compatibility
+            kws['saltenv'] = kws.pop('env')
+
+        saltenv = kws.get('saltenv', self.saltenv)
 
         if kws.get('delayed', False):
             for incl in sls_names:
-                self.includes.append((env, incl))
+                self.includes.append((saltenv, incl))
             return
 
         HIGHSTATE = HighState.get_active()
@@ -155,7 +164,7 @@ class Sls(object):
                 self.rendered_sls.add(sls)  # needed in case the starting sls
                                             # uses the pydsl renderer.
                 histates, errors = HIGHSTATE.render_state(
-                    sls, env, self.rendered_sls, SLS_MATCHES
+                    sls, saltenv, self.rendered_sls, SLS_MATCHES
                 )
                 HIGHSTATE.merge_included_states(highstate, histates, errors)
                 if errors:
