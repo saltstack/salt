@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Joyent Cloud Module
 ===================
