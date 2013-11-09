@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Primary interfaces for the salt-cloud system
 '''

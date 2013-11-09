@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 SoftLayer HW Cloud Module
 =========================
