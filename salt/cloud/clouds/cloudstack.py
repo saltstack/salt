@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 CloudStack Cloud Module
 =======================
@@ -178,7 +179,7 @@ def get_ip(data):
     '''
     try:
         ip = data.public_ips[0]
-    except:
+    except Exception:
         ip = data.private_ips[0]
     return ip
 
