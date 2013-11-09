@@ -19,6 +19,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       provider: cloudstack
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import pprint
