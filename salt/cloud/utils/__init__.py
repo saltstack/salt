@@ -29,10 +29,10 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
+from salt.utils.nb_popen import NonBlockingPopen
 
 # Import salt cloud libs
 import salt.cloud
-from salt.cloud.utils.nb_popen import NonBlockingPopen
 from salt.cloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
