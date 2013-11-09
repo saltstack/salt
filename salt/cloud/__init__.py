@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The top level interface used to translate configuration data back to the
 correct cloud modules
@@ -476,7 +477,7 @@ class Cloud(object):
                     filename = os.path.basename(
                         globbed_key_file.pop(selection)
                     )
-                except:
+                except Exception:
                     continue
 
                 delete = raw_input(
@@ -923,9 +924,9 @@ class Map(Cloud):
     def get_vmnames_by_action(self, action):
         query_map = self.interpolated_map("list_nodes")
         matching_states = {
-            "start" : ["stopped"],
-            "stop" : ["running", "active"],
-            "reboot" : ["running", "active"],
+            'start': ['stopped'],
+            'stop': ['running', 'active'],
+            'reboot': ['running', 'active'],
         }
         vm_names = []
         for alias, drivers in query_map.iteritems():
@@ -956,8 +957,8 @@ class Map(Cloud):
                     temp_ = Template(open(fp_, 'r').read())
                     # render as yaml
                     map_ = temp_.render()
-                except:
-                    map_ = yaml.load(fp_.read())
+                except Exception:
+                    map_ = yaml.safe_load(fp_.read())
         except Exception as exc:
             log.error(
                 'Rendering map {0} failed, render error:\n{1}'.format(
