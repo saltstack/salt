@@ -20,6 +20,7 @@ configuration at:
       provider: softlayer-hw
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import pprint
