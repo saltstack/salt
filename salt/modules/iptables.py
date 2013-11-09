@@ -272,8 +272,8 @@ def check(table='filter', chain=None, rule=None):
     if __grains__['os_family'] == 'RedHat':
         cmd = 'iptables-save'
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(table, chain, rule))
-    if out != -1:
-        out = ''
+        if out != -1:
+            out = ''
     else:
         cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
         out = __salt__['cmd.run'](cmd)

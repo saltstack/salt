@@ -87,6 +87,13 @@ def present(name,
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
 
+    if vhost_exists:
+        perms = __salt__['rabbitmq.list_permissions'](name, runas=runas)
+        for perm in perms:
+            if perm == [owner, conf, write, read]:
+                ret['comment'] = 'Nothing to do'
+                return ret
+
     if __opts__['test']:
         ret['result'] = None
         if vhost_exists:
@@ -109,9 +116,9 @@ def present(name,
             if 'Error' in result:
                 ret['result'] = False
                 ret['comment'] = result['Error']
-                return ret
             elif 'Added' in result:
                 ret['comment'] = result['Added']
+                ret['changes'] = {'old': '', 'new': name}
         else:
             ret['comment'] = 'VHost {0} already exists'.format(name)
 
@@ -145,12 +152,14 @@ def absent(name,
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
 
-    if __opts__['test']:
+    if not vhost_exists:
+        ret['comment'] = 'Virtual Host {0} is not present'.format(name)
+
+    elif __opts__['test']:
         ret['result'] = None
         if vhost_exists:
             ret['comment'] = 'Removing Virtual Host {0}'.format(name)
-        else:
-            ret['comment'] = 'Virtual Host {0} is not present'.format(name)
+
     else:
         if vhost_exists:
             result = __salt__['rabbitmq.delete_vhost'](name, runas=runas)
@@ -159,4 +168,5 @@ def absent(name,
                 ret['comment'] = result['Error']
             elif 'Deleted' in result:
                 ret['comment'] = result['Deleted']
+                ret['changes'] = {'new': '', 'old': name}
     return ret

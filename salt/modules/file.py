@@ -1801,7 +1801,7 @@ def get_managed(
                 protos = ['salt', 'http', 'ftp']
                 if salt._compat.urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                             source_hash)
@@ -2135,7 +2135,8 @@ def manage_file(name,
                 backup,
                 template=None,
                 show_diff=True,
-                contents=None):
+                contents=None,
+                dir_mode=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2282,7 +2283,7 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group, mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')

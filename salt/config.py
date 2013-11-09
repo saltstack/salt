@@ -168,6 +168,9 @@ VALID_OPTS = {
     'modules_max_memory': int,
     'grains_refresh_every': int,
     'enable_lspci': bool,
+    'syndic_wait': int,
+    'jinja_lstrip_blocks': bool,
+    'jinja_trim_blocks': bool,
 }
 
 # default configurations
@@ -361,6 +364,9 @@ DEFAULT_MASTER_OPTS = {
     'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'syndic_wait': 1,
+    'jinja_lstrip_blocks': False,
+    'jinja_trim_blocks': False,
 }
 
 
@@ -688,13 +694,14 @@ def get_id(root_dir=None, minion_id=False):
         root_dir = syspaths.ROOT_DIR
 
     config_dir = syspaths.CONFIG_DIR
-    if config_dir.startswith(root_dir):
-        config_dir = config_dir.split(root_dir, 1)[-1]
+    if config_dir.startswith(syspaths.ROOT_DIR):
+        config_dir = config_dir.split(syspaths.ROOT_DIR, 1)[-1]
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
                             config_dir.lstrip('\\'),
                             'minion_id')
+
     try:
         with salt.utils.fopen(id_cache) as idf:
             name = idf.read().strip()

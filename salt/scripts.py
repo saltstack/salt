@@ -10,6 +10,7 @@ import sys
 # Import salt libs
 import salt
 import salt.cli
+import salt.cloud.cli
 
 
 def salt_master():
@@ -101,6 +102,19 @@ def salt_ssh():
     try:
         client = salt.cli.SaltSSH()
         client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def salt_cloud():
+    '''
+    The main function for salt-cloud
+    '''
+    if '' in sys.path:
+        sys.path.remove('')
+    try:
+        cloud = salt.cloud.cli.SaltCloud()
+        cloud.run()
     except KeyboardInterrupt:
         raise SystemExit('\nExiting gracefully on Ctrl-c')
 

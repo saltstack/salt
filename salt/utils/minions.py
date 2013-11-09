@@ -46,6 +46,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
+        self.ip_addrs = salt.utils.network.ip_addrs()
 
     def _check_glob_minions(self, expr):
         '''
@@ -301,6 +302,37 @@ class CkMinions(object):
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
         return list(minions)
+
+    def connected_ids(self, subset=None):
+        '''
+        Return a set of all connected minion ids, optionally within a subset
+        '''
+        minions = set()
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
+            if '127.0.0.1' in addrs:
+                addrs.update(self.ip_addrs)
+            if subset:
+                search = subset
+            else:
+                search = os.listdir(cdir)
+            for id_ in search:
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
+                for ipv4 in grains['ipv4']:
+                    if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
+                        continue
+                    if ipv4 in addrs:
+                        minions.add(id_)
+                        break
+        return minions
 
     def _all_minions(self, expr=None):
         '''

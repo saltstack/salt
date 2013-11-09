@@ -33,7 +33,8 @@ import salt.syspaths as syspaths
 from salt.utils import context
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
-from salt.exceptions import SaltReqTimeoutError, SaltException
+from salt.utils.templates import get_template_context
+from salt.exceptions import RenderError, SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'order',
     'state',
     'watch',
-    'watch_in'
+    'watch_in',
     'prereq',
     'prereq_in',
     'require',
@@ -62,7 +63,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_fun',
     '__pub_tgt',
     '__pub_ret',
-    '__pub_tgt_type'
+    '__pub_tgt_type',
 ])
 
 
@@ -652,7 +653,7 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
-        if not isinstance(data['name'], string_types):
+        if data['name'] and not isinstance(data['name'], string_types):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
@@ -1430,16 +1431,18 @@ class State(object):
             return 'change'
         return 'met'
 
-    def event(self, chunk_ret):
+    def event(self, chunk_ret, length):
         '''
         Fire an event on the master bus
         '''
         if not self.opts.get('local') and self.opts.get('state_events', True) and self.opts.get('master_uri'):
+            ret = {'ret': chunk_ret,
+                   'len': length}
             tag = salt.utils.event.tagify(
                     [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
                     )
             preload = {'jid': self.jid}
-            self.functions['event.fire_master'](chunk_ret, tag, preload=preload)
+            self.functions['event.fire_master'](ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
         '''
@@ -1506,7 +1509,7 @@ class State(object):
                                 'comment': comment,
                                 '__run_num__': self.__run_num}
                 self.__run_num += 1
-                self.event(running[tag])
+                self.event(running[tag], len(chunks))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1528,7 +1531,7 @@ class State(object):
                                     'comment': 'Recursive requisite found',
                                     '__run_num__': self.__run_num}
                         self.__run_num += 1
-                        self.event(running[tag])
+                        self.event(running[tag], len(chunks))
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1576,7 +1579,7 @@ class State(object):
             else:
                 running[tag] = self.call(low)
         if tag in running:
-            self.event(running[tag])
+            self.event(running[tag], len(chunks))
         return running
 
     def call_high(self, high):
@@ -1761,6 +1764,8 @@ class BaseHighState(object):
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
             opts['state_events'] = mopts.get('state_events')
+            opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
+            opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
         return opts
 
     def _get_envs(self):
@@ -1986,6 +1991,15 @@ class BaseHighState(object):
                 fn_, self.state.rend, self.state.opts['renderer'], env, sls,
                 rendered_sls=mods
             )
+        except RenderError as exc:
+            context = get_template_context(
+                exc.buffer,
+                exc.line_num,
+                marker='    <======================'
+            )
+            msg = 'Rendering SLS failed: {0}\n{1}'.format(exc.error, context)
+            log.critical(msg)
+            errors.append(msg)
         except Exception as exc:
             msg = 'Rendering SLS {0} failed, render error: {1}'.format(
                 sls, exc

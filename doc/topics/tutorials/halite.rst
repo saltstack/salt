@@ -8,9 +8,6 @@ current version of Halite is considered pre-alpha and is supported only in
 Salt 0.17 or greater. Additional information is available on GitHub:
 https://github.com/saltstack/halite
 
-Installing Halite
-=================
-
 Before beginning this tutorial, ensure that the salt-master is installed. To
 install the salt-master, please review the installation documentation:
 http://docs.saltstack.com/topics/installation/index.html
@@ -19,11 +16,29 @@ http://docs.saltstack.com/topics/installation/index.html
 
     Halite only works with Salt versions greater than 0.17.
 
+Installing Halite Via Package
+=============================
 
-To begin the installation of Halite, you'll need to install pip. The
+On CentOS, RHEL, or Fedora:
+
+.. code-block:: bash
+
+    $ yum install python-halite
+
+.. note::
+
+    By default python-halite only installs CherryPy. If you would like to use
+    a different webserver please review the instructions below to install
+    pip and your server of choice. The package does not modify the master
+    configuration with ``/etc/salt/master``.
+
+Installing Halite Using pip
+===========================
+
+To begin the installation of Halite from PyPi, you'll need to install pip. The
 Salt package, as well as the bootstrap, do not install pip by default.
 
-On CentOS:
+On CentOS, RHEL, or Fedora:
 
 .. code-block:: bash
 
@@ -88,7 +103,7 @@ Configuring Halite Permissions
 ==============================
 
 Configuring Halite access permissions is easy. By default, you only need to
-ensure that the @runner group is configured. In the /etc/salt/master file,
+ensure that the @runner group is configured. In the ``/etc/salt/master file``,
 uncomment and modify the following lines:
 
 .. code-block:: yaml
@@ -122,7 +137,7 @@ to modify this value. For example:
 Currently Halite allows, but does not require, any wheel modules.
 
 
-Configuring Halite settings
+Configuring Halite Settings
 ===========================
 
 Once you've configured the permissions for Halite, you'll need to set up the
@@ -188,7 +203,7 @@ module:
 
 .. code-block:: bash
 
-    salt '*' tls.create_ca_signed_cert test localhost
+    salt '*' tls.create_self_signed_cert test 
 
 
 When using self-signed certs, browsers will need approval before accepting the
@@ -197,7 +212,7 @@ the app, then the browser cache will have to be cleared before it will
 recognize and prompt to accept the self-signed certificate.
 
 
-Starting halite
+Starting Halite
 ===============
 
 Once you've configured the halite section of your /etc/salt/master, you can
@@ -214,12 +229,12 @@ http://123.456.789.012:8080/app .
 All logs relating to halite are logged to the default /var/log/salt/master file.
 
 
-Running your halite instance through nginx
+Running Your Halite Instance Through Nginx
 ==========================================
 
 
 
-Running your halite instance through apache
+Running Your Halite Instance Through Apache
 ===========================================
 
 

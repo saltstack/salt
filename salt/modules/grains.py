@@ -14,6 +14,7 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.exceptions import SaltException
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -287,7 +288,7 @@ def ls():  # pylint: disable=C0103
     return sorted(__grains__)
 
 
-def filter_by(lookup_dict, grain='os_family', merge=None):
+def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     '''
     .. versionadded:: 0.17.0
 
@@ -303,6 +304,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
+            'default': {'pkg': 'apache', 'srv': 'apache'},
         }) %}
 
         myapache:
@@ -347,17 +349,37 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         values for non-standard package names such as when using a different
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
+    :param default: default lookup_dict's key used if the grain does not exists
+         or if the grain value has no match on lookup_dict.
+         this parameter was added in version 0.17.2
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
+        # this one will render {D: {E: I, G: H}, J: K}
+        salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
     '''
-    ret = lookup_dict.get(__grains__[grain], None)
+    ret = lookup_dict.get(
+            __grains__.get(
+                grain, default),
+            lookup_dict.get(
+                default, None)
+            )
 
     if merge:
-        salt.utils.dictupdate.update(ret, merge)
+
+        if not isinstance(merge, dict):
+            raise SaltException('filter_by merge argument must be a dictionnary.')
+
+        else:
+
+            if ret is None:
+                ret = merge
+
+            else:
+                salt.utils.dictupdate.update(ret, merge)
 
     return ret
 

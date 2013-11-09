@@ -1030,12 +1030,14 @@ class LocalClient(object):
         syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
-            if raw is not None and 'id' in raw:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
+                    continue
+                if 'return' not in raw:
                     continue
                 found.add(raw.get('id'))
                 ret = {raw['id']: {'ret': raw['return']}}

@@ -190,6 +190,7 @@ class Master(SMaster):
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
+        ckminions = salt.utils.minions.CkMinions(self.opts)
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
@@ -241,6 +242,7 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
+            log.debug(ckminions.connected_ids())
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -798,6 +800,7 @@ class AESFuncs(object):
                 ).format(clear_load['id'])
             )
             return False
+        clear_load.pop('tok')
         perms = []
         for match in self.opts['peer']:
             if re.match(match, clear_load['id']):
@@ -848,6 +851,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
         # and should be removed within 3-5 releases in favor of the
@@ -919,6 +923,8 @@ class AESFuncs(object):
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
+        mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
+        mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
     def _mine_get(self, load):
@@ -945,6 +951,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -1005,6 +1012,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1047,6 +1055,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1090,6 +1099,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1134,6 +1144,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         cpath = os.path.join(
                 self.opts['cachedir'],
                 'minions',
@@ -1211,6 +1222,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
         if 'events' in load:
@@ -1357,6 +1369,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        clear_load.pop('tok')
         perms = set()
         for match in self.opts['peer_run']:
             if re.match(match, clear_load['id']):
@@ -1395,6 +1408,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         # Check that this minion can access this data
         auth_cache = os.path.join(
                 self.opts['cachedir'],

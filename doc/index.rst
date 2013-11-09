@@ -5,8 +5,8 @@
 .. image:: _static/saltconf.jpg
     :target: http://saltconf.com/
 
-What is Salt Stack?
-===================
+What is SaltStack?
+==================
 
 Salt is a new approach to infrastructure management. Easy enough to get
 running in minutes, scalable enough to manage tens of thousands of servers,
@@ -174,6 +174,10 @@ Miscellaneous topics
 
 Salt is many splendid things.
 
+:doc:`Salt Cloud <topics/cloud/index>`
+    Salt Cloud is a public cloud provisioning tool that integrates Salt with
+    many cloud providers.
+
 :doc:`File Server <ref/file_server/index>`
     Salt can easily and quickly transfer files (in fact, that's how Salt
     States work). Even under heavy load, files are chunked and served.
@@ -246,7 +250,7 @@ More information about the project
 ==================================
 
 :doc:`Release notes </topics/releases/index>`
-    Living history of Salt Stack.
+    Living history of SaltStack.
 
 :doc:`Community </topics/community>`
     How to get involved.
