@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 OpenStack Nova Cloud Module
 ===========================
@@ -121,7 +122,7 @@ from salt.cloud.exceptions import (
 try:
     from netaddr import all_matching_cidrs
     HAS_NETADDR = True
-except:
+except ImportError:
     HAS_NETADDR = False
 
 # Get logging started
@@ -205,7 +206,7 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except:
+        except Exception:
             continue
 
         return False
@@ -223,7 +224,7 @@ def ignore_cidr(vm_, ip):
         'ignore_cidr', vm_, __opts__, default='', search_global=False
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
-        log.warning("IP '%s' found within '%s'; ignoring it.'" % (ip, cidr))
+        log.warning('IP "{0}" found within "{1}"; ignoring it.'.format(ip, cidr))
         return True
 
     return False
@@ -353,7 +354,6 @@ def create(vm_):
             g for g in avail_groups if g.name in group_list
         ]
 
-
     networks = config.get_config_value(
         'networks', vm_, __opts__, search_global=False
     )
@@ -467,7 +467,7 @@ def create(vm_):
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
-                    "Attaching floating IP '%s' to node '%s'" % (ip, name)
+                    'Attaching floating IP "{0}" to node "{1}"'.format(ip, name)
                 )
             except Exception as e:
                 # Note(pabelanger): Because we loop, we only want to attach the
@@ -504,7 +504,7 @@ def create(vm_):
                 return data
 
         if result:
-            log.debug('result = %s' % result)
+            log.debug('result = {0}'.format(result))
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
                 return data
@@ -537,7 +537,7 @@ def create(vm_):
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
     elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
-            ip_address = data.public_ips
+        ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
@@ -730,31 +730,6 @@ def list_nodes_full():
         ret[server['name']]['state'] = server['status']
         ret[server['name']]['private_ips'] = [server['accessIPv4']]
         ret[server['name']]['public_ips'] = [server['accessIPv4'], server['accessIPv6']]
-    return ret
-
-
-def list_nodes_select():
-    '''
-    Return a list of the VMs that are on the provider, with select fields
-    '''
-    ret = {}
-    nodes = list_nodes_full(get_location())
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
-
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
     return ret
 
 
