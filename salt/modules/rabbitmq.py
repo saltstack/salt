@@ -517,12 +517,14 @@ def policy_exists(vhost, name, runas=None):
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
 
+
 def plugin_is_enabled(name, runas=None):
     '''
     Return whether the plugin is enabled.
     '''
     ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
     return bool(name in ret)
+
 
 def enable_plugin(name, runas=None):
     '''
@@ -534,7 +536,6 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-
     ret = __salt__['cmd.run'](
             'rabbitmq-plugins enable {0}'.format(name),
             runas=runas)
