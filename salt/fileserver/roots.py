@@ -25,19 +25,28 @@ from salt.utils.event import tagify
 log = logging.getLogger(__name__)
 
 
-def find_file(path, env='base', **kwargs):
+def find_file(path, saltenv='base', env=None, **kwargs):
     '''
     Search the environment for the relative path
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     fnd = {'path': '',
            'rel': ''}
     if os.path.isabs(path):
         return fnd
-    if env not in __opts__['file_roots']:
+    if saltenv not in __opts__['file_roots']:
         return fnd
     if 'index' in kwargs:
         try:
-            root = __opts__['file_roots'][env][int(kwargs['index'])]
+            root = __opts__['file_roots'][saltenv][int(kwargs['index'])]
         except IndexError:
             # An invalid index was passed
             return fnd
@@ -49,7 +58,7 @@ def find_file(path, env='base', **kwargs):
             fnd['path'] = full
             fnd['rel'] = path
         return fnd
-    for root in __opts__['file_roots'][env]:
+    for root in __opts__['file_roots'][saltenv]:
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
@@ -69,9 +78,17 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'env' not in load:
+    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
         return ret
     if not fnd['path']:
         return ret
@@ -138,7 +155,15 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'path' not in load or 'env' not in load:
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if 'path' not in load or 'saltenv' not in load:
         return ''
     path = fnd['path']
     ret = {}
@@ -154,7 +179,7 @@ def file_hash(load, fnd):
     # cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
-                              load['env'],
+                              load['saltenv'],
                               '{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
@@ -199,11 +224,19 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if load['env'] not in __opts__['file_roots']:
+    if load['saltenv'] not in __opts__['file_roots']:
         return ret
 
-    for path in __opts__['file_roots'][load['env']]:
+    for path in __opts__['file_roots'][load['saltenv']]:
         try:
             prefix = load['prefix'].strip('/')
         except KeyError:
@@ -226,10 +259,18 @@ def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if load['env'] not in __opts__['file_roots']:
+    if load['saltenv'] not in __opts__['file_roots']:
         return ret
-    for path in __opts__['file_roots'][load['env']]:
+    for path in __opts__['file_roots'][load['saltenv']]:
         try:
             prefix = load['prefix'].strip('/')
         except KeyError:
@@ -247,10 +288,18 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if load['env'] not in __opts__['file_roots']:
+    if load['saltenv'] not in __opts__['file_roots']:
         return ret
-    for path in __opts__['file_roots'][load['env']]:
+    for path in __opts__['file_roots'][load['saltenv']]:
         try:
             prefix = load['prefix'].strip('/')
         except KeyError:
@@ -265,10 +314,18 @@ def symlink_list(load):
     '''
     Return a dict of all symlinks based on a given path on the Master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = {}
-    if load['env'] not in __opts__['file_roots']:
+    if load['saltenv'] not in __opts__['file_roots']:
         return ret
-    for path in __opts__['file_roots'][load['env']]:
+    for path in __opts__['file_roots'][load['saltenv']]:
         try:
             prefix = load['prefix'].strip('/')
         except KeyError:
