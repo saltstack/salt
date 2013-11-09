@@ -110,7 +110,7 @@ def present(name,
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
-                changes['new'] += ' {0} {1}'.format(vhost, p)
+                    changes['new'] += ' {0} {1}'.format(vhost, perm)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)
