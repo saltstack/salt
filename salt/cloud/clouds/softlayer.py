@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 SoftLayer Cloud Module
 ======================
@@ -145,7 +146,6 @@ def avail_images():
     response = conn.getCreateObjectOptions()
     conn = get_conn('SoftLayer_Account')
     response = conn.getBlockDeviceTemplateGroups()
-    return response
     for image in response['operatingSystems']:
         ret[image['itemPrice']['item']['description']] = {
             'name': image['itemPrice']['item']['description'],
@@ -261,7 +261,7 @@ def create(vm_):
     if public_vlan:
         kwargs['primaryNetworkComponent'] = {
             'networkVlan': {
-                'id': vlan_id,
+                'id': public_vlan,
             }
         }
 
