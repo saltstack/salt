@@ -48,15 +48,24 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, env='base', encoding='utf-8'):
+    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None):
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
         self.opts = opts
-        self.env = env
+        self.saltenv = saltenv
         self.encoding = encoding
         if opts.get('file_client', 'remote') == 'local':
-            self.searchpath = opts['file_roots'][env]
+            self.searchpath = opts['file_roots'][saltenv]
         else:
-            self.searchpath = [path.join(opts['cachedir'], 'files', env)]
-        log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
+            self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
+        log.debug('Jinja search path: {0!r}'.format(self.searchpath))
         self._file_client = None
         self.cached = []
 
@@ -73,7 +82,7 @@ class SaltCacheLoader(BaseLoader):
         Cache a file from the salt master
         '''
         saltpath = path.join('salt://', template)
-        self.file_client().get_file(saltpath, '', True, self.env)
+        self.file_client().get_file(saltpath, '', True, self.saltenv)
 
     def check_cache(self, template):
         '''
