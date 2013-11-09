@@ -43,6 +43,7 @@ associated with that vm. An example profile might look like:
         image: centos-6
         location: us-east-1
 '''
+# pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
 
