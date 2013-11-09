@@ -521,6 +521,12 @@ def policy_exists(vhost, name, runas=None):
 def plugin_is_enabled(name, runas=None):
     '''
     Return whether the plugin is enabled.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.plugin_is_enabled foo
     '''
     ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
     return bool(name in ret)
