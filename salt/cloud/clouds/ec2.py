@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The EC2 Cloud Module
 ====================
@@ -725,6 +726,7 @@ def securitygroupid(vm_):
         'securitygroupid', vm_, __opts__, search_global=False
     )
 
+
 def get_spot_config(vm_):
     '''
     Returns the spot instance configuration for the provided vm
@@ -761,6 +763,7 @@ def block_device_mappings(vm_):
         'block_device_mappings', vm_, __opts__, search_global=True
     )
 
+
 def _param_from_config(key, data):
     '''
     Return EC2 API parameters based on the given config data.
@@ -793,12 +796,12 @@ def _param_from_config(key, data):
 
     if isinstance(data, dict):
         for k, v in data.items():
-            param.update( _param_from_config('%s.%s' % (key, k), v) )
+            param.update(_param_from_config('{0}.{1}'.format(key, k), v))
 
     elif isinstance(data, list) or isinstance(data, tuple):
         for idx, conf_item in enumerate(data):
-            prefix = '%s.%d' % (key, idx)
-            param.update( _param_from_config(prefix, conf_item) )
+            prefix = '{0}.{1}'.format(key, idx)
+            param.update(_param_from_config(prefix, conf_item))
 
     else:
         if isinstance(data, bool):
@@ -808,6 +811,7 @@ def _param_from_config(key, data):
             param.update({key: data})
 
     return param
+
 
 def create(vm_=None, call=None):
     '''
@@ -905,7 +909,6 @@ def create(vm_=None, call=None):
             raise SaltCloudConfigError(
                 '\'iam_profile\' should be a string value.'
             )
-        pass
 
     az_ = get_availability_zone(vm_)
     if az_ is not None:
@@ -989,7 +992,7 @@ def create(vm_=None, call=None):
 
         if rd_name is not None:
             if ex_blockdevicemappings:
-                dev_list = [ dev['DeviceName'] for dev in ex_blockdevicemappings ]
+                dev_list = [dev['DeviceName'] for dev in ex_blockdevicemappings]
             else:
                 dev_list = []
 
