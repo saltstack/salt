@@ -26,9 +26,18 @@ class OverState(object):
     '''
     Manage sls file calls over multiple systems
     '''
-    def __init__(self, opts, env='base', overstate=None):
+    def __init__(self, opts, saltenv='base', overstate=None, env=None):
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
         self.opts = opts
-        self.env = env
+        self.saltenv = saltenv
         self.over = self.__read_over(overstate)
         self.names = self._names()
         self.local = salt.client.LocalClient(self.opts['conf_file'])
@@ -45,9 +54,9 @@ class OverState(object):
                     return self.__sort_stages(yaml.safe_load(fp_))
                 except Exception:
                     return {}
-        if self.env not in self.opts['file_roots']:
+        if self.saltenv not in self.opts['file_roots']:
             return {}
-        for root in self.opts['file_roots'][self.env]:
+        for root in self.opts['file_roots'][self.saltenv]:
             fn_ = os.path.join(
                     root,
                     self.opts.get('overstate', 'overstate.sls')
@@ -158,7 +167,7 @@ class OverState(object):
 
         if 'sls' in stage:
             fun = 'state.sls'
-            arg = (','.join(stage['sls']), self.env)
+            arg = (','.join(stage['sls']), self.saltenv)
 
         elif 'function' in stage or 'fun' in stage:
             fun_d = stage.get('function', stage.get('fun'))
