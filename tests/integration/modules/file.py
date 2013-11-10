@@ -42,7 +42,8 @@ class FileModuleTest(integration.ModuleCase):
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
-        os.remove(self.myfile)
+        if os.path.isfile(self.myfile):
+            os.remove(self.myfile)
         if os.path.islink(self.mysymlink):
             os.remove(self.mysymlink)
         if os.path.islink(self.mybadsymlink):
