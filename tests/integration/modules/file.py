@@ -154,7 +154,7 @@ class FileModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
     def test_cannot_remove(self):
-        ret = self.run_function('file.remove', args=['/dev/tty'])
+        ret = self.run_function('file.remove', arg=['tty'])
         self.assertEqual(
             'ERROR executing \'file.remove\': File path must be absolute.', ret
         )
