@@ -337,7 +337,6 @@ SETUP_KWARGS = {'name': NAME,
                                  ]),
                                ('share/man/man7',
                                 ['doc/man/salt.7',
-                                 'doc/man/salt-cloud.7'
                                  ]),
                                ],
                 # Required for esky builds
