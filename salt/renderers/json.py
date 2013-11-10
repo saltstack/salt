@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import json
 
 
-def render(json_data, env='', sls='', **kws):
+def render(json_data, saltenv='base', sls='', **kws):
     '''
     Accepts JSON as a string or as a file object and runs it through the JSON
     parser.
