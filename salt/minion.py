@@ -168,9 +168,6 @@ def parse_args_and_kwargs(func, args, data=None):
             for key, val in arg.iteritems():
                 if key == '__kwarg__':
                     continue
-                if key in __args:
-                    _args.append(val)
-                    continue
                 kwargs[key] = val
             continue
         _args.append(yamlify_arg(arg))
