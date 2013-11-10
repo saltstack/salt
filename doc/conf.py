@@ -46,6 +46,7 @@ MOCK_MODULES = [
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
+    'yaml.scanner',
     'zmq',
     # modules, renderers, states, returners, et al
     'django',
