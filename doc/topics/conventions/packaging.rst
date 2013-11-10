@@ -183,6 +183,7 @@ Depends
 
 - `Salt Common`
 - `sshpass`
+- `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 
 Salt Doc
 --------
