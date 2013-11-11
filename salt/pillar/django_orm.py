@@ -121,13 +121,13 @@ def ext_pillar(pillar,
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: \'{}\' not a directory!'.format(
+        log.error('Django project dir: {0!r} not a directory!'.format(
             project_path))
         return {}
     if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
         for path in virtualenv.path_locations(env):
             if not os.path.isdir(path):
-                log.error('Virtualenv {} not a directory!'.format(path))
+                log.error('Virtualenv {0} not a directory!'.format(path))
                 return {}
         # load the virtualenv
         sys.path.append(virtualenv.path_locations(env)[1] + '/site-packages/')
@@ -154,7 +154,7 @@ def ext_pillar(pillar,
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')
-                log.debug('Adding {} = {} to Django environment'.format(
+                log.debug('Adding {0} = {1} to Django environment'.format(
                             key,
                             value.rstrip('\n')))
 
@@ -192,8 +192,8 @@ def ext_pillar(pillar,
 
         return {pillar_name: django_pillar}
     except ImportError, e:
-        log.error('Failed to import library: {}'.format(e.message))
+        log.error('Failed to import library: {0}'.format(e.message))
         return {}
     except Exception, e:
-        log.error('Failed on Error: {}'.format(e.message))
+        log.error('Failed on Error: {0}'.format(e.message))
         return {}
