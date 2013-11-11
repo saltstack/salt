@@ -88,7 +88,9 @@ def _set_persistent_module(mod):
         return set()
     escape_mod = re.escape(mod)
     ## If module is commented only uncomment it
-    if __salt__['file.contains_regex_multiline'](conf, "^#[\t ]*{}[\t ]*$".format(escape_mod)):
+    if __salt__['file.contains_regex_multiline'](conf,
+                                                 '^#[\t ]*{0}[\t ]*$'.format(
+                                                     escape_mod)):
         __salt__['file.uncomment'](conf, escape_mod)
     else:
         __salt__['file.append'](conf, mod)
@@ -106,9 +108,9 @@ def _remove_persistent_module(mod, comment):
         return set()
     escape_mod = re.escape(mod)
     if comment:
-        __salt__['file.comment'](conf, "^[\t ]*{}[\t ]?".format(escape_mod))
+        __salt__['file.comment'](conf, '^[\t ]*{0}[\t ]?'.format(escape_mod))
     else:
-        __salt__['file.sed'](conf, "^[\t ]*{}[\t ]?".format(escape_mod), '')
+        __salt__['file.sed'](conf, '^[\t ]*{0}[\t ]?'.format(escape_mod), '')
     return set([mod_name])
 
 
