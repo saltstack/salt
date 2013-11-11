@@ -44,7 +44,7 @@ def present(name, value, vtype='REG_DWORD'):
         ret['comment'] = '{0} is already configured'.format(name)
         return ret
     else:
-        ret['changes'] = {'reg': 'configured to {}'.format(value)}
+        ret['changes'] = {'reg': 'configured to {0}'.format(value)}
 
     if __opts__['test']:
         ret['result'] = None
