@@ -85,5 +85,5 @@ def say(*words):
 
         salt '*' desktop.say <word0> <word1> ... <wordN>
     '''
-    cmd = 'say {}'.format(' '.join(words))
+    cmd = 'say {0}'.format(' '.join(words))
     return __salt__['cmd.run'](cmd)
