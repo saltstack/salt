@@ -142,7 +142,7 @@ def present():
 
         salt-run manage.present
     '''
-    ckminions = salt.utils.minions.CKMinions(__opts__)
+    ckminions = salt.utils.minions.CkMinions(__opts__)
     connected = sorted(ckminions.connected_ids())
     salt.output.display_output(connected, '', __opts__)
     return connected
