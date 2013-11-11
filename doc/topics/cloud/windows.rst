@@ -15,15 +15,22 @@ own `smbclient` package, depending on the distribution. `winexe` is less
 commonly available in distribution-specific repositories. However, it is
 currently being built for various distributions in 3rd party channels:
 
-* `RPMs at pbone.net <http://rpm.pbone.net/index.php3?stat=3&search=winexe>`_
+* `RPMs at pbone.net`__
 
-* `OpenSuse Build Service <http://software.opensuse.org/package/winexe>`_
+  .. __: http://rpm.pbone.net/index.php3?stat=3&search=winexe
+
+* `OpenSuse Build Service`__
+
+  .. __: http://software.opensuse.org/package/winexe
 
 Additionally, a copy of the Salt Minion Windows installer must be present on
 the system on which Salt Cloud is running. This installer may be downloaded
 from saltstack.com:
 
-* `SaltStack Download Area <http://saltstack.com/downloads/>`_
+* `SaltStack Download Area`__
+
+  .. __: http://saltstack.com/downloads/
+
 
 Firewall Settings
 =================

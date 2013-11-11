@@ -428,23 +428,42 @@ are provided here as a reference for those who are interested, and contain no
 warranty (express or implied) from anyone affiliated with Salt Stack. Most of
 them have never been used, much less tested, by the Salt Stack team.
 
-* `Arch Linux <https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services>`_
+* `Arch Linux`__
 
-* `FreeBSD <http://www.daemonology.net/freebsd-on-ec2/>`_
+  .. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
 
-* `Fedora <https://fedoraproject.org/wiki/Cloud_images>`_
+* `FreeBSD`__
 
-* `CentOS <http://wiki.centos.org/Cloud/AWS>`_
+  .. __: http://www.daemonology.net/freebsd-on-ec2/
 
-* `Ubuntu <http://cloud-images.ubuntu.com/locator/ec2/>`_
+* `Fedora`__
 
-* `Debian <http://wiki.debian.org/Cloud/AmazonEC2Image>`_
+  .. __: https://fedoraproject.org/wiki/Cloud_images
 
-* `Gentoo <https://aws.amazon.com/amis?platform=Gentoo&selection=platform>`_
+* `CentOS`__
 
-* `OmniOS <http://omnios.omniti.com/wiki.php/Installation#IntheCloud>`_
+  .. __: http://wiki.centos.org/Cloud/AWS
 
-* `All Images on Amazon <https://aws.amazon.com/amis>`_
+* `Ubuntu`__
+
+  .. __: http://cloud-images.ubuntu.com/locator/ec2/
+
+* `Debian`__
+
+  .. __: http://wiki.debian.org/Cloud/AmazonEC2Image
+
+* `Gentoo`__
+
+  .. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
+
+* `OmniOS`__
+
+  .. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+
+* `All Images on Amazon`__
+
+  .. __: https://aws.amazon.com/amis
+
 
 show_image
 ==========
