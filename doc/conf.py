@@ -48,6 +48,13 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
+    # salt.cloud
+    'libcloud',
+    'libcloud.compute',
+    'libcloud.compute.base',
+    'libcloud.compute.deployment',
+    'libcloud.compute.providers',
+    'libcloud.compute.types',
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
