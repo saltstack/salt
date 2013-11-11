@@ -73,7 +73,8 @@ def _check_cron(user,
                 hour=None,
                 daymonth=None,
                 month=None,
-                dayweek=None):
+                dayweek=None,
+                comment=None):
     '''
     Return the changes
     '''
@@ -93,7 +94,7 @@ def _check_cron(user,
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek))]):
+                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -125,7 +126,8 @@ def present(name,
             hour='*',
             daymonth='*',
             month='*',
-            dayweek='*'):
+            dayweek='*',
+            comment=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -156,6 +158,9 @@ def present(name,
 
     dayweek
         The information to be set in the day of week section. Default is ``*``
+
+    comment
+        User comment to be added on line previous the cron job
     '''
     name = ' '.join(name.strip().split())
     ret = {'changes': {},
@@ -169,7 +174,8 @@ def present(name,
                              hour,
                              daymonth,
                              month,
-                             dayweek)
+                             dayweek,
+                             comment)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -186,7 +192,8 @@ def present(name,
                                     daymonth=daymonth,
                                     month=month,
                                     dayweek=dayweek,
-                                    cmd=name)
+                                    cmd=name,
+                                    comment=comment)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
