@@ -966,6 +966,8 @@ def replace(path,
     has_changes = False
     orig_file = []  # used if show_changes
     new_file = []  # used if show_changes
+    fstat_pre = os.stat(path)
+    fperm_pre = fstat_pre.st_mode & 4095
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
@@ -989,6 +991,14 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+
+    if not dry_run:
+        try:
+            os.chown(path, fstat_pre.st_uid, fstat_pre.st_gid)
+            os.chmod(path, fperm_pre)
+        except (IOError, OSError) as exc:
+            log.error('Unable to set ownership/permissions on {0}: {1}'
+                    .format(path, exc))
 
     if show_changes:
         return ''.join(difflib.unified_diff(orig_file, new_file))
