@@ -423,12 +423,13 @@ def create_node(**kwargs):
 def destroy(name, call=None):
     '''
     destroy a machine by name
+
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: array of booleans , true if successful;ly stopped and true if
              successfully removed
 
-        CLI Example:
+    CLI Example::
 
         salt-cloud -d vm_name
 

@@ -756,8 +756,9 @@ def list_availability_zones():
 
 def block_device_mappings(vm_):
     '''
-    Return the block device mapping
-    e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+    Return the block device mapping::
+
+        [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
     '''
     return config.get_config_value(
