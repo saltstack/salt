@@ -98,4 +98,9 @@ Other community links
 - `Twitter <https://twitter.com/SaltStackInc>`_
 - `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
-.. include:: hacking.rst
+Hack the Source
+===============
+
+If you want to get involved with the development of source code or the
+documentation efforts, please review the :doc:`hacking section
+<hacking>`!
