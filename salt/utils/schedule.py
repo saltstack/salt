@@ -103,12 +103,19 @@ class Schedule(object):
                 fn = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
-                    log.debug('schedule.handle_func: Checking job against fun {}: {}'.format(ret['fun'], job))
+                    log.debug('schedule.handle_func: Checking job against '
+                              'fun {0}: {1}'.format(ret['fun'], job))
                     if ret['fun'] == job['fun']:
                         jobcount += 1
-                        log.debug('schedule.handle_func: Incrementing jobcount, now {}, maxrunning is {}'.format(jobcount, data['maxrunning']))
+                        log.debug(
+                            'schedule.handle_func: Incrementing jobcount, now '
+                            '{0}, maxrunning is {1}'.format(
+                                      jobcount, data['maxrunning']))
                         if jobcount >= data['maxrunning']:
-                            log.debug('schedule.handle_func: The scheduled job {0} was not started, {1} already running'.format(func, data['maxrunning']))
+                            log.debug(
+                                'schedule.handle_func: The scheduled job {0} '
+                                'was not started, {1} already running'.format(
+                                    func, data['maxrunning']))
                             return False
 
         salt.utils.daemonize_if(self.opts)
@@ -116,7 +123,8 @@ class Schedule(object):
         ret['pid'] = os.getpid()
 
         if 'jid_include' in data and data['jid_include']:
-            log.debug('schedule.handle_func: adding this job to the jobcache with data {}'.format(ret))
+            log.debug('schedule.handle_func: adding this job to the jobcache '
+                      'with data {0}'.format(ret))
             # write this to /var/cache/salt/minion/proc
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
@@ -220,9 +228,11 @@ class Schedule(object):
                 log.debug('Running scheduled job: {0}'.format(job))
 
             if 'jid_include' in data:
-                log.debug('schedule: This job was scheduled with jid_include, adding to cache')
+                log.debug('schedule: This job was scheduled with jid_include, '
+                          'adding to cache')
                 if 'maxrunning' in data:
-                    log.debug('schedule: This job was scheduled with a max number of {}'.format(data['maxrunning']))
+                    log.debug('schedule: This job was scheduled with a max '
+                              'number of {0}'.format(data['maxrunning']))
 
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
@@ -246,10 +256,12 @@ def clean_proc_dir(opts):
         fn = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
         with salt.utils.fopen(fn, 'r') as fp_:
             job = salt.payload.Serial(opts).load(fp_)
-            log.debug('schedule.clean_proc_dir: checking job {} for process existence'.format(job))
+            log.debug('schedule.clean_proc_dir: checking job {0} for process '
+                      'existence'.format(job))
             if 'pid' in job:
                 if salt.utils.process.os_is_running(job['pid']):
-                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, pid {0} still exists.'.format(job['pid']))
+                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, '
+                              'pid {0} still exists.'.format(job['pid']))
                 else:
                     # Windows cannot delete an open file
                     if salt.utils.is_windows():

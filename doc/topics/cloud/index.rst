@@ -1,9 +1,13 @@
-:orphan:
-
-.. _contents:
-
 Salt Cloud Documentation
 ========================
+
+.. toctree::
+    :maxdepth: 3
+    :glob:
+    :hidden:
+
+    *
+    install/index
 
 Salt cloud is a public cloud provisioning tool. Salt cloud is made to integrate
 Salt into cloud providers in a clean way so that minions on public cloud
@@ -23,15 +27,15 @@ cloud management platform and can be used to manage non Salt centric clouds.
 Getting Started
 ===============
 
-* :doc:`Installing salt cloud <topics/install/index>`
+* :doc:`Installing salt cloud <install/index>`
 
 Some quick guides covering getting started with Amazon AWS, Rackspace, and
 Parallels.
 
-* :doc:`Getting Started With AWS <topics/aws>`
-* :doc:`Getting Started With Rackspace <topics/rackspace>`
-* :doc:`Getting Started With Parallels <topics/parallels>`
-* :doc:`Getting Started With SoftLayer <topics/softlayer>`
+* :doc:`Getting Started With AWS <aws>`
+* :doc:`Getting Started With Rackspace <rackspace>`
+* :doc:`Getting Started With Parallels <parallels>`
+* :doc:`Getting Started With SoftLayer <softlayer>`
 
 Core Configuration
 ==================
@@ -40,7 +44,7 @@ The core configuration of Salt cloud is handled in the cloud configuration
 file. This file is comprised of global configurations for interfacing with
 cloud providers.
 
-* :doc:`Core Configuration <topics/config>`
+* :doc:`Core Configuration <config>`
 
 Windows Configuration
 =====================
@@ -49,7 +53,7 @@ Salt Cloud may be used to spin up a Windows minion, and then install the Salt
 Minion client on that instance. At this time, Salt Cloud itself still needs to
 be run from a Linux or Unix machine.
 
-* :doc:`Windows Configuration <topics/windows>`
+* :doc:`Windows Configuration <windows>`
 
 Using Salt Cloud
 ================
@@ -58,23 +62,23 @@ Salt cloud works via profiles and maps. Simple profiles for cloud VMs are
 defined and can be used directly, or a map can be defined specifying
 a large group of virtual machines to create.
 
-* :doc:`Profiles <topics/profiles>`
-* :doc:`Maps <topics/map>`
+* :doc:`Profiles <profiles>`
+* :doc:`Maps <map>`
 
 Once a VM has been deployed, a number of actions may be available to perform
 on it, depending on the specific cloud provider.
 
-* :doc:`Actions <topics/action>`
+* :doc:`Actions <action>`
 
 Depending on your cloud provider, a number of functions may also be available
 which do not require a VM to be specified.
 
-* :doc:`Functions <topics/function>`
+* :doc:`Functions <function>`
 
 Miscellaneous Options
 =====================
 
-* :doc:`Miscellaneous <topics/misc>`
+* :doc:`Miscellaneous <misc>`
 
 Extending Salt Cloud
 ====================
@@ -83,8 +87,8 @@ Salt cloud extensions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
-* :doc:`Adding Cloud Providers <topics/cloud>`
-* :doc:`Adding OS Support <topics/deploy>`
+* :doc:`Adding Cloud Providers <cloud>`
+* :doc:`Adding OS Support <deploy>`
 
 Feature Comparison
 ==================
@@ -92,16 +96,20 @@ Feature Comparison
 A table is available which compares various features available across all
 supported cloud providers.
 
-* :doc:`Features <topics/features>`
+* :doc:`Features <features>`
 
-Releases
-========
+Legacy Releases
+===============
 
-* :doc:`Release Notes <topics/releases/index>`
+.. versionchanged:: Hydrogen
+    Release notes will be part of Salt's main release notes starting with
+    Salt's Hydrogen release.
+
+* :doc:`Legacy Release Notes <releases/index>`
 
 Reference
 =========
 
-* :doc:`Command-line interface <ref/cli/salt-cloud>`
+* :doc:`Command-line interface </ref/cli/salt-cloud>`
 
 * :doc:`Full table of contents </contents>`

@@ -225,6 +225,22 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
     return _format_response(res, msg)
 
 
+def list_permissions(vhost, runas=None):
+    '''
+    Lists permissions for vhost via rabbitmqctl list_permissions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.list_permissions '/myvhost'
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_permissions -p {0}'.format(vhost),
+        runas=runas)
+    return [r.split('\t') for r in res.splitlines()]
+
+
 def list_user_permissions(name, user=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
@@ -442,7 +458,7 @@ def list_policies(runas=None):
                 'definition': parts[3],
                 'priority': parts[4]
             }
-    log.debug('Listing policies: {}'.format(ret))
+    log.debug('Listing policies: {0}'.format(ret))
     return ret
 
 
@@ -462,7 +478,7 @@ def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
         "rabbitmqctl set_policy -p {0} {1} '{2}' '{3}' {4}".format(
             vhost, name, pattern, definition.replace("'", '"'), priority),
         runas=runas)
-    log.debug('Set policy: {}'.format(res))
+    log.debug('Set policy: {0}'.format(res))
     return _format_response(res, 'Set')
 
 
@@ -482,7 +498,7 @@ def delete_policy(vhost, name, runas=None):
         'rabbitmqctl clear_policy -p {0} {1}'.format(
             vhost, name),
         runas=runas)
-    log.debug('Delete policy: {}'.format(res))
+    log.debug('Delete policy: {0}'.format(res))
     return _format_response(res, 'Deleted')
 
 
@@ -502,6 +518,20 @@ def policy_exists(vhost, name, runas=None):
     return bool(vhost in policies and name in policies[vhost])
 
 
+def plugin_is_enabled(name, runas=None):
+    '''
+    Return whether the plugin is enabled.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.plugin_is_enabled foo
+    '''
+    ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
+    return bool(name in ret)
+
+
 def enable_plugin(name, runas=None):
     '''
     Enable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -512,7 +542,6 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-
     ret = __salt__['cmd.run'](
             'rabbitmq-plugins enable {0}'.format(name),
             runas=runas)

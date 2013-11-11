@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines

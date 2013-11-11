@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 SoftLayer HW Cloud Module
 =========================
@@ -19,6 +20,7 @@ configuration at:
       provider: softlayer-hw
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import pprint

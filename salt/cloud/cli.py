@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Primary interfaces for the salt-cloud system
 '''
@@ -23,11 +24,15 @@ import salt.utils
 from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
-import salt.cloud.cloud
+import salt.cloud
 import salt.cloud.config
 from salt.cloud.utils import parsers
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.cloud.libcloudfuncs import libcloud_version
+try:
+    from salt.cloud.libcloudfuncs import libcloud_version
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 
 log = logging.getLogger(__name__)
@@ -38,6 +43,9 @@ class SaltCloud(parsers.SaltCloudParser):
         '''
         Execute the salt-cloud command line
         '''
+        if HAS_LIBCLOUD is False:
+            self.error('salt-cloud requires >= libcloud 0.11.4')
+
         libcloud_version()
 
         # Parse shell arguments
@@ -107,7 +115,7 @@ class SaltCloud(parsers.SaltCloudParser):
             self.error('Failed to update the bootstrap script')
 
         log.info('salt-cloud starting')
-        mapper = salt.cloud.cloud.Map(self.config)
+        mapper = salt.cloud.Map(self.config)
 
         ret = {}
 

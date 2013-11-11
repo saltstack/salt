@@ -77,9 +77,9 @@ class GrainsModuleTestCase(TestCase):
         #Now, re-test with a matching grain.
         dict1={'A': 'B', 'MockedOS': {'D': {'E': 'F','G': 'H'}}}
         res=grainsmod.filter_by(dict1)
-        self.assertEquals(res,{'D': {'E': 'F','G': 'H'}})
+        self.assertEqual(res,{'D': {'E': 'F','G': 'H'}})
         res=grainsmod.filter_by(dict1, default='A')
-        self.assertEquals(res,{'D': {'E': 'F','G': 'H'}})
+        self.assertEqual(res,{'D': {'E': 'F','G': 'H'}})
         res=grainsmod.filter_by(dict1, merge=mdict, default='A')
         self.assertEqual(res,{'D': {'E': 'I','G': 'H'},'J': 'K'})
         # dict1 was altered, restablish

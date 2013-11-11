@@ -340,7 +340,7 @@ The following actions are currently supported by the SoftLayer Salt Cloud
 driver.
 
 show_instance
--------------
+~~~~~~~~~~~~~
 This action is a thin wrapper around `--full-query`, which displays details on a 
 single instance only. In an environment with several machines, this will save a 
 user from having to sort through all instance data, just to examine a single 
@@ -357,7 +357,7 @@ The following functions are currently supported by the SoftLayer Salt Cloud
 driver.
 
 list_vlans
-----------
+~~~~~~~~~~
 This function lists all VLANs associated with the account, and all known data
 from the SoftLayer API concerning those VLANs.
 
@@ -370,7 +370,7 @@ The `id` returned in this list is necessary for the `vlan` option when creating
 an instance.
 
 list_custom_images
-------------------
+~~~~~~~~~~~~~~~~~~
 This function lists any custom templates associated with the account, that can
 be used to create a new instance.
 

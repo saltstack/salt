@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The AWS Cloud Module
 ====================
@@ -41,6 +42,7 @@ Using the new format, set up the cloud configuration at
       provider: aws
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import os
@@ -213,7 +215,7 @@ def _toggle_term_protect(name, enabled):
 
     # init botocore
     vm_ = get_configured_provider()
-    session = botocore.session.get_session()
+    session = botocore.session.get_session()  # pylint: disable=E0602
     session.set_credentials(
         access_key=config.get_config_value(
             'id', vm_, __opts__, search_global=False

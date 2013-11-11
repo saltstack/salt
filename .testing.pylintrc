@@ -14,7 +14,7 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263
+load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
 
 [MESSAGES CONTROL]
 
@@ -142,7 +142,7 @@ indent-string='    '
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__active_provider_name__
 
 
 [IMPORTS]

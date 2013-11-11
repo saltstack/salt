@@ -12,11 +12,11 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
-
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
         return False
-    return 'ssh'
+    return True
 
 
 def _refine_enc(enc):
@@ -51,8 +51,9 @@ def _refine_enc(enc):
             return 'ecdsa-sha2-nistp256'
         return enc
     else:
-        msg = 'Incorrect encryption key type "{}".'.format(enc)
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            'Incorrect encryption key type {0!r}.'.format(enc)
+        )
 
 
 def _format_auth_line(key, enc, comment, options):
@@ -82,9 +83,10 @@ def _replace_auth_key(
     lines = []
     uinfo = __salt__['user.info'](user)
     if not uinfo:
-        msg = 'User {0} does not exist'.format(user)
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError('User {0!r} does not exist'.format(user))
+
     full = os.path.join(uinfo['home'], config)
+
     try:
         # open the file for both reading AND writing
         with salt.utils.fopen(full, 'r') as _fh:
@@ -111,8 +113,9 @@ def _replace_auth_key(
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
-        msg = 'Problem reading or writing to key file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        raise CommandExecutionError(
+            'Problem reading or writing to key file: {0}'.format(exc)
+        )
 
 
 def _validate_keys(key_file):
@@ -160,8 +163,9 @@ def _validate_keys(key_file):
                             'options': options,
                             'fingerprint': fingerprint}
     except (IOError, OSError):
-        msg = 'Problem reading ssh key file {0}'
-        raise CommandExecutionError(msg.format(key_file))
+        raise CommandExecutionError(
+            'Problem reading ssh key file {0}'.format(key_file)
+        )
 
     return ret
 
@@ -200,8 +204,7 @@ def host_keys(keydir=None):
             keydir = '/etc/ssh'
         else:
             # If keydir is None, os.listdir() will blow up
-            msg = 'ssh.host_keys: Please specify a keydir'
-            raise SaltInvocationError(msg)
+            raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
@@ -381,8 +384,9 @@ def set_auth_key_from_file(
     # TODO: add support for pulling keys from other file sources as well
     lfile = __salt__['cp.cache_file'](source, env)
     if not os.path.isfile(lfile):
-        msg = 'Failed to pull key file from salt file server'
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            'Failed to pull key file from salt file server'
+        )
 
     s_keys = _validate_keys(lfile)
     if not s_keys:
@@ -504,6 +508,7 @@ def _parse_openssh_output(lines):
                'fingerprint': fingerprint}
 
 
+@decorators.which('ssh-keygen')
 def get_known_host(user, hostname, config='.ssh/known_hosts'):
     '''
     Return information about known host from the configfile, if any.
@@ -525,6 +530,7 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
     return known_hosts[0] if known_hosts else None
 
 
+@decorators.which('ssh-keyscan')
 def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     '''
     Retrieve information about host public key from remote server

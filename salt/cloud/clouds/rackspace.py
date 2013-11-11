@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Rackspace Cloud Module
 ======================
@@ -172,7 +173,7 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except:
+        except Exception:
             continue
     return False
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Saltify Module
 ==============
@@ -156,7 +157,6 @@ def create(vm_):
         {'kwargs': deploy_kwargs},
     )
 
-
     deployed = False
     if win_installer:
         deployed = salt.cloud.utils.deploy_windows(**deploy_kwargs)
@@ -191,6 +191,7 @@ def script(vm_):
         )
     )
 
+
 def get_configured_provider():
     '''
     Return the first configured instance.
@@ -200,4 +201,3 @@ def get_configured_provider():
         __active_provider_name__ or 'saltify',
         ()
     )
-

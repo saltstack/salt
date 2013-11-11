@@ -41,7 +41,7 @@ class CloudConfigMixIn(object):
         group.add_option(
             '-C', '--cloud-config',
             default='/etc/salt/cloud',
-            help='The location of the salt.cloud config file. Default: %default'
+            help='The location of the salt-cloud config file. Default: %default'
         )
         group.add_option(
             '-M', '--master-config',

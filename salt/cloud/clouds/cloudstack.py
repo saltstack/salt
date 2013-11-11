@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 CloudStack Cloud Module
 =======================
@@ -18,6 +19,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       provider: cloudstack
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 import pprint
@@ -178,7 +180,7 @@ def get_ip(data):
     '''
     try:
         ip = data.public_ips[0]
-    except:
+    except Exception:
         ip = data.private_ips[0]
     return ip
 

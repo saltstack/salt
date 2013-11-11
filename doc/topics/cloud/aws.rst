@@ -352,7 +352,7 @@ its size to 100G by using the following configuration.
 
 Tags can be set once an instance has been launched.
 
-.. code.block:: yaml
+.. code-block:: yaml
 
     my-ec2-config:
         tag:
@@ -429,31 +429,40 @@ warranty (express or implied) from anyone affiliated with Salt Stack. Most of
 them have never been used, much less tested, by the Salt Stack team.
 
 * `Arch Linux`__
-.. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
+
+  .. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
 
 * `FreeBSD`__
-.. __: http://www.daemonology.net/freebsd-on-ec2/
+
+  .. __: http://www.daemonology.net/freebsd-on-ec2/
 
 * `Fedora`__
-.. __: https://fedoraproject.org/wiki/Cloud_images
+
+  .. __: https://fedoraproject.org/wiki/Cloud_images
 
 * `CentOS`__
-.. __: http://wiki.centos.org/Cloud/AWS
+
+  .. __: http://wiki.centos.org/Cloud/AWS
 
 * `Ubuntu`__
-.. __: http://cloud-images.ubuntu.com/locator/ec2/
+
+  .. __: http://cloud-images.ubuntu.com/locator/ec2/
 
 * `Debian`__
-.. __: http://wiki.debian.org/Cloud/AmazonEC2Image
+
+  .. __: http://wiki.debian.org/Cloud/AmazonEC2Image
 
 * `Gentoo`__
-.. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
+
+  .. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
 
 * `OmniOS`__
-.. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+
+  .. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
 
 * `All Images on Amazon`__
-.. __: https://aws.amazon.com/amis
+
+  .. __: https://aws.amazon.com/amis
 
 
 show_image

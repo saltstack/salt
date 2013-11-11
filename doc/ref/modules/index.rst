@@ -158,10 +158,11 @@ This means that the package manager modules can be presented as the ``pkg`` modu
 regardless of what the actual module is named.
 
 The package manager modules are the best example of using the ``__virtual__``
-function:
-:blob:`salt/modules/pacman.py`
-:blob:`salt/modules/yumpkg.py`
-:blob:`salt/modules/apt.py`
+function. Some examples:
+
+- :blob:`pacman.py <salt/modules/pacman.py>`
+- :blob:`yumpkg.py <salt/modules/yumpkg.py>`
+- :blob:`apt.py <salt/modules/apt.py>`
 
 
 Documentation

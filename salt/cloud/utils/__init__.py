@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Utility functions for salt.cloud
 '''
@@ -28,10 +29,10 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
+from salt.utils.nb_popen import NonBlockingPopen
 
 # Import salt cloud libs
-import salt.cloud.config as config
-from salt.cloud.utils.nb_popen import NonBlockingPopen
+import salt.cloud
 from salt.cloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -196,7 +197,7 @@ def minion_config(opts, vm_):
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
-    master_finger = config.get_config_value('master_finger', vm_, opts)
+    master_finger = salt.cloud.config.get_config_value('master_finger', vm_, opts)
     if master_finger is not None:
         minion['master_finger'] = master_finger
     minion.update(
@@ -204,12 +205,12 @@ def minion_config(opts, vm_):
         # 1. VM config
         # 2. Profile config
         # 3. Global configuration
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'minion', vm_, opts, default={}, search_global=True
         )
     )
 
-    make_master = config.get_config_value('make_master', vm_, opts)
+    make_master = salt.cloud.config.get_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
         raise SaltCloudConfigError(
             'A master setting was not defined in the minion\'s configuration.'
@@ -220,7 +221,7 @@ def minion_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     minion.setdefault('grains', {}).update(
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'grains', vm_, opts, default={}, search_global=True
         )
     )
@@ -244,7 +245,7 @@ def master_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     master.update(
-        config.get_config_value(
+        salt.cloud.config.get_config_value(
             'master', vm_, opts, default={}, search_global=True
         )
     )
@@ -425,7 +426,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                     'dictionaries for its `minion_conf` parameter. '
                     'Loading YAML...'
                 )
-                minion_conf = yaml.load(minion_conf)
             minion_grains = minion_conf.pop('grains', {})
             if minion_grains:
                 smb_file(
@@ -554,7 +554,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'dictionaries for it\'s `minion_conf` parameter. '
                         'Loading YAML...'
                     )
-                    minion_conf = yaml.load(minion_conf)
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
                     scp_file(
@@ -585,7 +584,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'dictionaries for it\'s `master_conf` parameter. '
                         'Loading from YAML ...'
                     )
-                    master_conf = yaml.load(master_conf)
 
                 scp_file(
                     '/tmp/master',
@@ -1093,7 +1091,7 @@ def remove_sshkey(host, known_hosts=None):
                 known_hosts = '{0}/.ssh/known_hosts'.format(
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
-            except:
+            except Exception:
                 pass
 
     if known_hosts is not None:

@@ -22,7 +22,7 @@ def __virtual__():
     if salt.utils.is_windows():
         return False
 
-    return 'network'
+    return True
 
 
 def ping(host):
@@ -39,7 +39,8 @@ def ping(host):
     return __salt__['cmd.run'](cmd)
 
 
-# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0 (Ubuntu 10.10)
+# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools
+# 1.6.0 (Ubuntu 10.10)
 def netstat():
     '''
     Return information on open ports and states
@@ -104,7 +105,7 @@ def traceroute(host):
     '''
     ret = []
     if not salt.utils.which('traceroute'):
-        log.info("This minion does not have traceroute installed")
+        log.info('This minion does not have traceroute installed')
         return ret
 
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
@@ -120,7 +121,7 @@ def traceroute(host):
         # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
         traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-        log.debug("traceroute_version_raw: {}".format(traceroute_version_raw))
+        log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
         traceroute_version = []
         for t in traceroute_version_raw:
             try:
@@ -131,7 +132,7 @@ def traceroute(host):
         if len(traceroute_version) < 3:
             traceroute_version.append(0)
 
-        log.debug("traceroute_version: {}".format(str(traceroute_version)))
+        log.debug('traceroute_version: {0}'.format(traceroute_version))
 
     except IndexError:
         traceroute_version = [0, 0, 0]
@@ -148,7 +149,7 @@ def traceroute(host):
             except IndexError:
                 traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
 
-            log.debug("traceline: {}".format(traceline))
+            log.debug('traceline: {0}'.format(traceline))
             delays = re.findall(r'(\d+\.\d+)\s*ms', str(traceline))
 
             try:
@@ -164,7 +165,7 @@ def traceroute(host):
                         'ip': traceline[2],
                     }
                     for x in range(0, len(delays)):
-                        result['ms{}'.format(x+1)] = delays[x]
+                        result['ms{0}'.format(x+1)] = delays[x]
             except IndexError:
                 result = {}
 
