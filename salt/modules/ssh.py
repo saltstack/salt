@@ -17,7 +17,6 @@ from salt.exceptions import (
     CommandExecutionError,
 )
 
-
 log = logging.getLogger(__name__)
 
 
@@ -25,7 +24,7 @@ def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
         return False
-    return 'ssh'
+    return True
 
 
 def _refine_enc(enc):
@@ -51,8 +50,9 @@ def _refine_enc(enc):
             return 'ecdsa-sha2-nistp256'
         return enc
     else:
-        msg = 'Incorrect encryption key type "{}".'.format(enc)
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            'Incorrect encryption key type {0!r}.'.format(enc)
+        )
 
 
 def _format_auth_line(key, enc, comment, options):
@@ -111,8 +111,9 @@ def _replace_auth_key(
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
-        msg = 'Problem reading or writing to key file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        raise CommandExecutionError(
+            'Problem reading or writing to key file: {0}'.format(exc)
+        )
 
 
 def _validate_keys(key_file):
@@ -160,8 +161,9 @@ def _validate_keys(key_file):
                             'options': options,
                             'fingerprint': fingerprint}
     except (IOError, OSError):
-        msg = 'Problem reading ssh key file {0}'
-        raise CommandExecutionError(msg.format(key_file))
+        raise CommandExecutionError(
+            'Problem reading ssh key file {0}'.format(key_file)
+        )
 
     return ret
 
