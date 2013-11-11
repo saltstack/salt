@@ -335,8 +335,8 @@ and 103 characters on BSD-based systems.
     </topics/installation/osx>` instructions.
 
 
-Using easy_install to Install Salt
-----------------------------------
+Installing Salt from the Python Package Index
+---------------------------------------------
 
 If you are installing using ``easy_install``, you will need to define a
 :strong:`USE_SETUPTOOLS` environment variable, otherwise dependencies will not
