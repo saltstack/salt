@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 
 try:
     from mako.template import Template
+    from mako.exceptions import MakoException
 except ImportError:
     log.debug('Mako not available')
 
@@ -954,10 +955,11 @@ class Map(Cloud):
             with open(self.opts['map'], 'rb') as fp_:
                 try:
                     # open mako file
-                    temp_ = Template(open(fp_, 'r').read())
+                    temp_ = Template(fp_.read())
                     # render as yaml
-                    map_ = temp_.render()
-                except Exception:
+                    yaml_str_ = temp_.render()
+                    map_ = yaml.safe_load(yaml_str_)
+                except MakoException:
                     map_ = yaml.safe_load(fp_.read())
         except Exception as exc:
             log.error(
