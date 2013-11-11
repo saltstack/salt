@@ -12,6 +12,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
@@ -82,9 +83,10 @@ def _replace_auth_key(
     lines = []
     uinfo = __salt__['user.info'](user)
     if not uinfo:
-        msg = 'User {0} does not exist'.format(user)
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError('User {0!r} does not exist'.format(user))
+
     full = os.path.join(uinfo['home'], config)
+
     try:
         # open the file for both reading AND writing
         with salt.utils.fopen(full, 'r') as _fh:
@@ -202,8 +204,7 @@ def host_keys(keydir=None):
             keydir = '/etc/ssh'
         else:
             # If keydir is None, os.listdir() will blow up
-            msg = 'ssh.host_keys: Please specify a keydir'
-            raise SaltInvocationError(msg)
+            raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
@@ -383,8 +384,9 @@ def set_auth_key_from_file(
     # TODO: add support for pulling keys from other file sources as well
     lfile = __salt__['cp.cache_file'](source, env)
     if not os.path.isfile(lfile):
-        msg = 'Failed to pull key file from salt file server'
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            'Failed to pull key file from salt file server'
+        )
 
     s_keys = _validate_keys(lfile)
     if not s_keys:
@@ -506,6 +508,7 @@ def _parse_openssh_output(lines):
                'fingerprint': fingerprint}
 
 
+@decorators.which('ssh-keygen')
 def get_known_host(user, hostname, config='.ssh/known_hosts'):
     '''
     Return information about known host from the configfile, if any.
@@ -527,6 +530,7 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
     return known_hosts[0] if known_hosts else None
 
 
+@decorators.which('ssh-keyscan')
 def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     '''
     Retrieve information about host public key from remote server
