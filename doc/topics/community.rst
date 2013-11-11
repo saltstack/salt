@@ -35,9 +35,6 @@ can use the `Freenode webchat client`__ right from your browser.
 .. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
 .. __: http://irclog.perlgeek.de/salt/
 
-Salt development
-----------------
-
 If you wish to discuss the development of Salt itself join us in
 ``#salt-devel``.
 
@@ -53,11 +50,16 @@ is happening in Salt development:
 
 .. _community-blog:
 
-The Red45 Blog
-==============
+Blogs
+=====
 
-News and thoughts on Salt and related projects is often posted on Thomas' blog
-`The Red45`_:
+SaltStack Inc. keeps a `blog`_ with recent news and advancements:
+
+http://www.saltstack.com/blog/
+
+.. _`blog`: http://www.saltstack.com/blog/
+
+Thomas Hatch also shares news and thoughts on Salt and related projects in his personal blog `The Red45`_:
 
 http://red45.wordpress.com/
 
@@ -96,4 +98,9 @@ Other community links
 - `Twitter <https://twitter.com/SaltStackInc>`_
 - `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
-.. include:: hacking.rst
+Hack the Source
+===============
+
+If you want to get involved with the development of source code or the
+documentation efforts, please review the :doc:`hacking section
+<hacking>`!
