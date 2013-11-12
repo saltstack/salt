@@ -33,8 +33,6 @@ class APIClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
-
-
     '''
     def __init__(self, opts=None):
         if not opts:
