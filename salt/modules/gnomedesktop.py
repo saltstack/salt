@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-GNOME implementations 
+GNOME implementations
 '''
 
 try:
     from gi.repository import Gio, GLib
     HAS_GLIB = True
-except:
+except ImportError:
     HAS_GLIB = False
 
 import logging
@@ -60,30 +60,30 @@ class _GSettings(object):
         session_file = None
 
         # Check User's home dir first, then /root
-        for dir in ["%s/.dbus/session-bus" % (HOME), "/root/.dbus/session-bus"]:
+        for directory in ["{0}/.dbus/session-bus".format(HOME), "/root/.dbus/session-bus"]:
 
             # Path doesn't exist, next
-            if not os.path.exists(dir):
+            if not os.path.exists(directory):
                 continue
 
             # If there are no session files, next
-            sessions = os.listdir(dir)
+            sessions = os.listdir(directory)
             if not len(sessions):
                 continue
-            session_file = "%s/%s" % (dir, sessions[0])
+            session_file = "{0}/{1}".format(directory, sessions[0])
 
         # DBUS isn't running, return false
         if not session_file:
             log.debug("No DBUS available")
             return False
-        
+
         ENVIRON = {}
         content = open(session_file).readlines()
         for line in content:
             if not line[0] == '#':
                 key, value = line.split("=", 1)
                 ENVIRON[key] = value
-	
+
         return ENVIRON['DBUS_SESSION_BUS_ADDRESS']
 
     def _get(self):
@@ -113,7 +113,7 @@ class _GSettings(object):
             w = os.fdopen(w, 'w')
 
             # Change child process to run as user
-            log.debug("switching to %d" % (uid))
+            log.debug("switching to {0}".format(uid))
             self._switchUser(uid, user, dbusAddress)
 
             gsettings = Gio.Settings.new(self.SCHEMA)
@@ -161,7 +161,7 @@ class _GSettings(object):
             w = os.fdopen(w, 'w')
 
             # Change child process to run as user
-            log.debug("switching to %d" % (uid))
+            log.debug("switching to {0}".format(uid))
             self._switchUser(uid, user, dbusAddress)
 
             gsettings = Gio.Settings.new(self.SCHEMA)
@@ -248,7 +248,7 @@ def getClockFormat(**kwargs):
 
 def setClockFormat(clockFormat, **kwargs):
     '''
-    Set the clock format, either 12h or 24h format. 
+    Set the clock format, either 12h or 24h format.
 
     CLI Example:
 
