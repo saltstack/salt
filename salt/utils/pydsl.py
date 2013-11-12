@@ -88,6 +88,7 @@ from uuid import uuid4 as _uuid
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
+from salt.utils import warn_until
 from salt.state import HighState
 
 
@@ -136,7 +137,7 @@ class Sls(object):
 
     def include(self, *sls_names, **kws):
         if kws.get('env', None) is not None:
-            salt.utils.warn_until(
+            warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt Boron.'
