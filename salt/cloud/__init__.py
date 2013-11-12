@@ -45,6 +45,7 @@ except ImportError:
 
 class CloudClient(object):
     '''
+    The client class to wrap cloud interactions
     '''
     def __init__(self, path=None, opts=None, config_dir=None):
         if opts:
