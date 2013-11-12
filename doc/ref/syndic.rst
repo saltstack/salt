@@ -38,6 +38,9 @@ To sum up, you have those configuration options available on the master side:
     - **syndic_log_file**: path to the logfile (absolute or not)
     - **syndic_pidfile**: path to the pidfile (absolute or not)
 
+Each Syndic must provide its own ``file_roots`` directory. Files will not be
+automatically transferred from the master-master.
+
 Running the Syndic
 ==================
 
