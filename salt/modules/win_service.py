@@ -12,6 +12,7 @@ __virtualname__ = 'service'
 
 BUFFSIZE = 5000
 
+
 def __virtual__():
     '''
     Only works on Windows systems
