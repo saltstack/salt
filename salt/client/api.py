@@ -14,6 +14,7 @@ import salt.client
 import salt.runner
 import salt.wheel
 import salt.utils
+import salt.cloud
 import salt.syspaths as syspaths
 from salt.utils.event import tagify
 
@@ -48,6 +49,7 @@ class APIClient(object):
         self.localClient = salt.client.LocalClient(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
         self.wheelClient = salt.wheel.Wheel(self.opts)
+        self.cloudClient = salt.cloud.Cloud(self.opts)
         self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
 
@@ -156,6 +158,16 @@ class APIClient(object):
         return self.wheelClient.master_call(**kwargs)
 
     wheel_async = wheel_sync  # always wheel_sync, so it works either mode
+
+    def cloud_sync(self, **kwargs):
+        '''
+        Wrap Cloud to enable executing :ref:`cloud modules <all-salt.wheel>`
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call
+        '''
+        return self.cloudClient.master_call(**kwargs)
+
+    cloud_async = cloud_sync  # always cloud_sync, so it works either mode
 
     def signature(self, cmd):
         '''
