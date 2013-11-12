@@ -43,6 +43,30 @@ except ImportError:
     log.debug('Mako not available')
 
 
+class CloudClient(object):
+    '''
+    '''
+    def __init__(self, path=None, opts=None, config_dir=None):
+        if opts:
+            self.opts = opts
+        else:
+            self.opts = salt.cloud.config.cloud_config(path)
+        self.mapper = salt.cloud.Map(self.opts)
+    # list_images
+    # list_sizes
+    # list_locations
+    # profile
+    # map
+    # query
+    # full_query
+    # select_query
+    # action
+    # destroy
+    # create
+    def list_sizes(self, provider=None):
+        return self.mapper.size_list(provider)
+
+
 class Cloud(object):
     '''
     An object for the creation of new VMs

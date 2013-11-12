@@ -15,7 +15,6 @@ import salt.runner
 import salt.wheel
 import salt.utils
 import salt.syspaths as syspaths
-from salt.exceptions import SaltException, EauthAuthenticationError
 from salt.utils.event import tagify
 
 
