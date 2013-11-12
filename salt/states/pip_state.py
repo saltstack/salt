@@ -338,6 +338,7 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
+        saltenv=__env__
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
