@@ -26,6 +26,7 @@ from salt.cloud.exceptions import (
 )
 
 # Import salt libs
+import salt.payload
 import salt.client
 import salt.utils
 from salt.utils.verify import check_user
@@ -852,6 +853,25 @@ class Cloud(object):
 
             if not self.opts['providers'][alias]:
                 self.opts['providers'].pop(alias)
+
+    def master_call(self, **kwargs):
+        '''
+        Send a function call to a cloud module through the master network
+        interface.
+
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
+        '''
+        load = kwargs
+        load['cmd'] = 'cloud'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret
+
 
 
 class Map(Cloud):
