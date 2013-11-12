@@ -325,7 +325,10 @@ def missing(name, limit=''):
     elif limit == 'sysvinit':
         return not _service_is_sysv(name)
     else:
-        return not _service_is_upstart(name) or _service_is_sysv(name)
+        if _service_is_upstart(name) or _service_is_sysv(name):
+            return False
+        else:
+            return True
 
 
 def start(name):
