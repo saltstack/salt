@@ -351,7 +351,8 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
     :param default: default lookup_dict's key used if the grain does not exists
          or if the grain value has no match on lookup_dict.
-         this parameter was added in version 0.17.2
+
+         .. versionadded:: 0.17.2
 
     CLI Example:
 
@@ -369,9 +370,8 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
             )
 
     if merge:
-
-        if not isinstance(merge, dict):
-            raise SaltException('filter_by merge argument must be a dictionnary.')
+        if not isinstance(merge, collections.Mapping):
+            raise SaltException('filter_by merge argument must be a dictionary.')
 
         else:
 
