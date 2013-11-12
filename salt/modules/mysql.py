@@ -686,6 +686,7 @@ def user_exists(user,
                 password=None,
                 password_hash=None,
                 passwordless=False,
+                unix_socket=False,
                 **connection_args):
     '''
     Checks if a user exists on the MySQL server. A login can be checked to see
@@ -712,7 +713,10 @@ def user_exists(user,
            'Host = {1!r}'.format(user, host))
 
     if salt.utils.is_true(passwordless):
-        qry += ' AND Password = \'\''
+        if salt.utils.is_true(unix_socket):
+            qry += ' AND plugin={0!r}'.format('unix_socket')
+        else:
+            qry += ' AND Password = \'\''
     elif password:
         qry += ' AND Password = PASSWORD({0!r})'.format(password)
     elif password_hash:
@@ -765,6 +769,7 @@ def user_create(user,
                 password=None,
                 password_hash=None,
                 allow_passwordless=False,
+                unix_socket=False,
                 **connection_args):
     '''
     Creates a MySQL user
@@ -793,6 +798,9 @@ def user_create(user,
         If ``True``, then ``password`` and ``password_hash`` can be omitted (or
         set to ``None``) to permit a passwordless login.
 
+    unix_socket
+        If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
+
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
 
@@ -818,7 +826,13 @@ def user_create(user,
         qry += ' IDENTIFIED BY {0!r}'.format(password)
     elif password_hash is not None:
         qry += ' IDENTIFIED BY PASSWORD {0!r}'.format(password_hash)
-    elif not salt.utils.is_true(allow_passwordless):
+    elif salt.utils.is_true(allow_passwordless):
+        if salt.utils.is_true(unix_socket):
+            if host == 'localhost':
+                qry += ' IDENTIFIED VIA unix_socket'
+            else:
+                log.error('Auth via unix_socket can be set only for host=localhost')
+    else:
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
         return False
