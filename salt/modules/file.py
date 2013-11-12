@@ -967,7 +967,7 @@ def replace(path,
     orig_file = []  # used if show_changes
     new_file = []  # used if show_changes
     fstat_pre = os.stat(path)
-    fperm_pre = fstat_pre.st_mode & 4095
+    fperm_pre = salt.utils.file_perms(fstat_pre)
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
