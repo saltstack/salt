@@ -71,25 +71,35 @@ class CloudClient(object):
             raise salt.exceptions.EauthAuthenticationError
         return ret
 
-    # list_sizes
     def list_sizes(self, provider=None):
+        '''
+        List all available sizes in configured cloud systems
+        '''
         return self.mapper.size_list(provider)
 
-    # list_images
     def list_images(self, provider=None):
+        '''
+        List all available images in configured cloud systems
+        '''
         return self.mapper.image_list(provider)
 
-    # list_locations
     def list_locations(self, provider=None):
+        '''
+        List all available locations in configured cloud systems
+        '''
         return self.mapper.location_list(provider)
 
-    # profile
     def query(self, profile=None, names=None):
+        '''
+        Query all cloud information
+        '''
         return self.mapper.run_profile(profile, names)
 
-    # action
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
+        '''
+        Execute a single action via the cloud plugin backend
+        '''
         if instance and not provider:
             return self.mapper.do_action(names, kwargs)
         if provider:
