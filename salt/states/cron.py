@@ -263,7 +263,8 @@ def absent(name,
     return ret
 
 
-def file(name,
+def file(source=None,
+         name=None,
          source_hash='',
          user='root',
          template=None,
@@ -277,7 +278,7 @@ def file(name,
     Provides file.managed-like functionality (templating, etc.) for a pre-made
     crontab file, to be assigned to a given user.
 
-    name
+    source
         The source file to be used as the crontab. This source file can be
         hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
@@ -286,6 +287,9 @@ def file(name,
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
+
+    name (deprecated)
+        Deprecated in the name of consistency, please use source instead.
 
     source_hash
         This can be either a file which contains a source hash string for
@@ -323,14 +327,15 @@ def file(name,
     with salt.utils.fopen(cron_path, 'w+') as fp_:
         fp_.write(__salt__['cron.raw_cron'](user))
 
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
-
     # Avoid variable naming confusion in below module calls, since ID
     # declaration for this state will be a source URI.
-    source = name
+    if name is not None:
+        source = name
+
+    ret = {'changes': {},
+           'comment': '',
+           'source': source,
+           'result': True}
 
     if isinstance(env, salt._compat.string_types):
         msg = (
