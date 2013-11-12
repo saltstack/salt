@@ -18,25 +18,29 @@ Configuring the Syndic
 
 Since the Syndic only needs to be attached to a higher level master the
 configuration is very simple. On a master that is running a syndic to connect
-to a higher level master the syndic_master option needs to be set in the
-master config file. The syndic_master option contains the hostname or IP
-address of the master server that can control the master that the syndic is
-running on.
+to a higher level master the :conf_master:`syndic_master` option needs to be
+set in the master config file. The ``syndic_master`` option contains the
+hostname or IP address of the master server that can control the master that
+the syndic is running on.
 
 The master that the syndic connects to sees the syndic as an ordinary minion,
 and treats it as such. the higher level master will need to accept the syndic's
 minion key like any other minion. This master will also need to set the
-order_masters value in the configuration to True. The order_masters option in
-the config on the higher level master is very important, to control a syndic
-extra information needs to be sent with the publications, the order_masters
-option makes sure that the extra data is sent out.
+:conf_master:`order_masters` value in the configuration to ``True``. The
+``order_masters`` option in the config on the higher level master is very
+important, to control a syndic extra information needs to be sent with the
+publications, the ``order_masters`` option makes sure that the extra data is
+sent out.
 
 To sum up, you have those configuration options available on the master side:
 
-    - **syndic_master**: MasterOfMaster ip/address
-    - **syndic_master_port**: MasterOfMaster ret_port
-    - **syndic_log_file**: path to the logfile (absolute or not)
-    - **syndic_pidfile**: path to the pidfile (absolute or not)
+    - :conf_master:`syndic_master`: MasterOfMaster ip/address
+    - :conf_master:`syndic_master_port`: MasterOfMaster ret_port
+    - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
+    - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
+
+Each Syndic must provide its own ``file_roots`` directory. Files will not be
+automatically transferred from the master-master.
 
 Running the Syndic
 ==================
@@ -49,11 +53,10 @@ starting the other Salt daemons.
 
     # salt-syndic
 
-
 .. note::
 
     If you have an exceptionally large infrastructure or many layers of
     syndics, you may find that the CLI doesn't wait long enough for the syndics
     to return their events.  If you think this is the case, you can set the
-    ``syndic_wait`` value in the upper master config.  The default value is
-    ``1``, and should work for the majority of deployments.
+    :conf_master:`syndic_wait` value in the upper master config.  The default
+    value is ``1``, and should work for the majority of deployments.
