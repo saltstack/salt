@@ -8,6 +8,7 @@ from __future__ import with_statement
 
 import os
 import sys
+import glob
 from datetime import datetime
 from distutils.cmd import Command
 from distutils.command.build import build
@@ -117,11 +118,9 @@ class Clean(clean):
         for subdir in ('salt', 'tests', 'doc'):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, dirnames, filenames in os.walk(root):
-                for filename in filenames:
-                    for ext in remove_extensions:
-                        if filename.endswith(ext):
-                            os.remove(os.path.join(dirname, filename))
-                            break
+                for to_remove_filename in glob.glob(
+                        '{0}/*.py[oc]'.format(dirname)):
+                    os.remove(to_remove_filename)
 
 
 INSTALL_VERSION_TEMPLATE = '''\
