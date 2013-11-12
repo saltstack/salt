@@ -870,15 +870,15 @@ class AESFuncs(object):
                         stdout=subprocess.PIPE
                         ).communicate()[0])
             if 'environment' in ndata:
-                env = ndata['environment']
+                saltenv = ndata['environment']
             else:
-                env = 'base'
+                saltenv = 'base'
 
             if 'classes' in ndata:
                 if isinstance(ndata['classes'], dict):
-                    ret[env] = list(ndata['classes'])
+                    ret[saltenv] = list(ndata['classes'])
                 elif isinstance(ndata['classes'], list):
-                    ret[env] = ndata['classes']
+                    ret[saltenv] = ndata['classes']
                 else:
                     return ret
         # Evaluate all configured master_tops interfaces
@@ -911,9 +911,9 @@ class AESFuncs(object):
         mopts = {}
         file_roots = {}
         envs = self._file_envs()
-        for env in envs:
-            if env not in file_roots:
-                file_roots[env] = []
+        for saltenv in envs:
+            if saltenv not in file_roots:
+                file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
         if load.get('env_only'):
             return mopts
@@ -1171,7 +1171,7 @@ class AESFuncs(object):
         '''
         Return the pillar data for the minion
         '''
-        if any(key not in load for key in ('id', 'grains', 'env')):
+        if any(key not in load for key in ('id', 'grains', 'saltenv')):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
@@ -1179,7 +1179,7 @@ class AESFuncs(object):
                 self.opts,
                 load['grains'],
                 load['id'],
-                load['env'],
+                load['saltenv'],
                 load.get('ext'))
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
@@ -1618,7 +1618,9 @@ class AESFuncs(object):
 
             pret = {}
             pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(ret)
+            pret['pillar'] = pcrypt.dumps(
+                ret if ret is not False else {}
+            )
             return pret
         # AES Encrypt the return
         return self.crypticle.dumps(ret)

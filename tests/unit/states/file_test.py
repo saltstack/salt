@@ -27,7 +27,6 @@ class TestFileState(TestCase):
             returner.returned = contents
         returner.returned = None
 
-
         filestate.__salt__ = {
             'file.manage_file': returner
         }
@@ -80,9 +79,7 @@ class TestFileState(TestCase):
         self.run_contents_pillar(pillar_value, expected=pillar_value)
 
     def run_contents_pillar(self, pillar_value, expected):
-        def returner(contents, *args, **kwargs):
-            returner.returned = (contents, args, kwargs)
-        returner.returned = None
+        returner = MagicMock(return_value=None)
 
         filestate.__salt__ = {
             'file.manage_file': returner
@@ -109,7 +106,7 @@ class TestFileState(TestCase):
         self.assertEqual(None, ret)
 
         # make sure the value is correct
-        self.assertIn(expected, returner.returned[1])
+        self.assertEqual(expected, returner.call_args[0][-2])
 
 if __name__ == '__main__':
     from integration import run_tests

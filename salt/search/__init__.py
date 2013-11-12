@@ -41,24 +41,24 @@ def iter_ret(opts, ret):
         yield jids
 
 
-def _iter_dir(dir_, env):
+def _iter_dir(dir_, saltenv):
     ret = []
     for fn_ in os.listdir(dir_):
         path = os.path.join(dir_, fn_)
         if os.path.isdir(path):
-            yield _iter_dir(path, env)
+            yield _iter_dir(path, saltenv)
         elif os.path.isfile(path):
             with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
                         {'path': unicode(path),
-                         'env': unicode(env),
+                         'saltenv': unicode(saltenv),
                          'content': unicode(fp_.read())}
                         )
                 else:
                     ret.append(
                         {'path': unicode(path),
-                         'env': unicode(env),
+                         'saltenv': unicode(saltenv),
                          'content': u'bin'}
                         )
     yield ret
@@ -68,14 +68,14 @@ def iter_roots(roots):
     '''
     Accepts the file_roots or the pillar_roots structures and yields
     {'path': <path>,
-     'env': <env>,
+     'saltenv': <saltenv>,
      'cont': <contents>}
     '''
-    for env, dirs in roots.items():
+    for saltenv, dirs in roots.items():
         for dir_ in dirs:
             if not os.path.isdir(dir_):
                 continue
-            for ret in _iter_dir(dir_, env):
+            for ret in _iter_dir(dir_, saltenv):
                 yield ret
 
 

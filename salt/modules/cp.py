@@ -63,7 +63,7 @@ def _mk_client():
                 salt.fileclient.get_file_client(__opts__)
 
 
-def _render_filenames(path, dest, env, template):
+def _render_filenames(path, dest, saltenv, template):
     if not template:
         return (path, dest)
 
@@ -79,7 +79,7 @@ def _render_filenames(path, dest, env, template):
     kwargs['pillar'] = __pillar__
     kwargs['grains'] = __grains__
     kwargs['opts'] = __opts__
-    kwargs['env'] = env
+    kwargs['saltenv'] = saltenv
 
     def _render(contents):
         # write out path to temp file
@@ -107,7 +107,13 @@ def _render_filenames(path, dest, env, template):
     return (path, dest)
 
 
-def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
+def get_file(path,
+             dest,
+             saltenv='base',
+             makedirs=False,
+             template=None,
+             gzip=None,
+             env=None):
     '''
     Used to get a single file from the salt master
 
@@ -136,9 +142,18 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     is the lightest compression and 9 the heaviest.  1 uses the least CPU on
     the master (and minion), 9 uses the most.
     '''
-    (path, dest) = _render_filenames(path, dest, env, template)
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
 
-    if not hash_file(path, env):
+    (path, dest) = _render_filenames(path, dest, saltenv, template)
+
+    if not hash_file(path, saltenv):
         return ''
     else:
         _mk_client()
@@ -146,11 +161,16 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
                 path,
                 dest,
                 makedirs,
-                env,
+                saltenv,
                 gzip)
 
 
-def get_template(path, dest, template='jinja', env='base', **kwargs):
+def get_template(path,
+                 dest,
+                 template='jinja',
+                 saltenv='base',
+                 env=None,
+                 **kwargs):
     '''
     Render a file as a template before setting it down
 
@@ -160,6 +180,15 @@ def get_template(path, dest, template='jinja', env='base', **kwargs):
 
         salt '*' cp.get_template salt://path/to/template /minion/dest
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     if not 'salt' in kwargs:
         kwargs['salt'] = __salt__
@@ -174,11 +203,11 @@ def get_template(path, dest, template='jinja', env='base', **kwargs):
             dest,
             template,
             False,
-            env,
+            saltenv,
             **kwargs)
 
 
-def get_dir(path, dest, env='base', template=None, gzip=None):
+def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -190,13 +219,22 @@ def get_dir(path, dest, env='base', template=None, gzip=None):
 
     get_dir supports the same template and gzip arguments as get_file.
     '''
-    (path, dest) = _render_filenames(path, dest, env, template)
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    (path, dest) = _render_filenames(path, dest, saltenv, template)
 
     _mk_client()
-    return __context__['cp.fileclient'].get_dir(path, dest, env, gzip)
+    return __context__['cp.fileclient'].get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest, env='base'):
+def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
 
@@ -207,11 +245,20 @@ def get_url(path, dest, env='base'):
         salt '*' cp.get_url salt://my/file /tmp/mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].get_url(path, dest, False, env)
+    return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
 
 
-def get_file_str(path, env='base'):
+def get_file_str(path, saltenv='base', env=None):
     '''
     Return the contents of a file from a URL
 
@@ -221,13 +268,22 @@ def get_file_str(path, env='base'):
 
         salt '*' cp.get_file_str salt://my/file
     '''
-    fn_ = cache_file(path, env)
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    fn_ = cache_file(path, saltenv)
     with salt.utils.fopen(fn_, 'r') as fp_:
         data = fp_.read()
     return data
 
 
-def cache_file(path, env='base'):
+def cache_file(path, saltenv='base', env=None):
     '''
     Used to cache a single file in the local salt-master file cache.
 
@@ -237,21 +293,30 @@ def cache_file(path, env='base'):
 
         salt '*' cp.cache_file salt://path/to/file
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     if path.startswith('salt://|'):
         # Strip pipe. Windows doesn't allow pipes in filenames
         path = 'salt://{0}'.format(path[8:])
-    result = __context__['cp.fileclient'].cache_file(path, env)
+    result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
-            'Unable to cache file "{0}" from env "{1}".'.format(
-                path, env
+            'Unable to cache file {0!r} from saltenv {1!r}.'.format(
+                path, saltenv
             )
         )
     return result
 
 
-def cache_files(paths, env='base'):
+def cache_files(paths, saltenv='base', env=None):
     '''
     Used to gather many files from the master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
@@ -263,11 +328,20 @@ def cache_files(paths, env='base'):
 
         salt '*' cp.cache_files salt://pathto/file1,salt://pathto/file1
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].cache_files(paths, env)
+    return __context__['cp.fileclient'].cache_files(paths, saltenv)
 
 
-def cache_dir(path, env='base', include_empty=False):
+def cache_dir(path, saltenv='base', include_empty=False, env=None):
     '''
     Download and cache everything under a directory from the master
 
@@ -277,11 +351,20 @@ def cache_dir(path, env='base', include_empty=False):
 
         salt '*' cp.cache_dir salt://path/to/dir
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].cache_dir(path, env, include_empty)
+    return __context__['cp.fileclient'].cache_dir(path, saltenv, include_empty)
 
 
-def cache_master(env='base'):
+def cache_master(saltenv='base', env=None):
     '''
     Retrieve all of the files on the master and cache them locally
 
@@ -291,8 +374,17 @@ def cache_master(env='base'):
 
         salt '*' cp.cache_master
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].cache_master(env)
+    return __context__['cp.fileclient'].cache_master(saltenv)
 
 
 def cache_local_file(path):
@@ -323,7 +415,7 @@ def cache_local_file(path):
     return __context__['cp.fileclient'].cache_local_file(path)
 
 
-def list_states(env='base'):
+def list_states(saltenv='base', env=None):
     '''
     List all of the available state modules in an environment
 
@@ -333,11 +425,20 @@ def list_states(env='base'):
 
         salt '*' cp.list_states
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].list_states(env)
+    return __context__['cp.fileclient'].list_states(saltenv)
 
 
-def list_master(env='base', prefix=''):
+def list_master(saltenv='base', prefix='', env=None):
     '''
     List all of the files stored on the master
 
@@ -348,10 +449,10 @@ def list_master(env='base', prefix=''):
         salt '*' cp.list_master
     '''
     _mk_client()
-    return __context__['cp.fileclient'].file_list(env, prefix)
+    return __context__['cp.fileclient'].file_list(saltenv, prefix)
 
 
-def list_master_dirs(env='base', prefix=''):
+def list_master_dirs(saltenv='base', prefix='', env=None):
     '''
     List all of the directories stored on the master
 
@@ -361,11 +462,20 @@ def list_master_dirs(env='base', prefix=''):
 
         salt '*' cp.list_master_dirs
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].dir_list(env, prefix)
+    return __context__['cp.fileclient'].dir_list(saltenv, prefix)
 
 
-def list_master_symlinks(env='base', prefix=''):
+def list_master_symlinks(saltenv='base', prefix='', env=None):
     '''
     List all of the symlinks stored on the master
 
@@ -375,11 +485,20 @@ def list_master_symlinks(env='base', prefix=''):
 
         salt '*' cp.list_master_symlinks
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].symlink_list(env, prefix)
+    return __context__['cp.fileclient'].symlink_list(saltenv, prefix)
 
 
-def list_minion(env='base'):
+def list_minion(saltenv='base', env=None):
     '''
     List all of the files cached on the minion
 
@@ -389,11 +508,20 @@ def list_minion(env='base'):
 
         salt '*' cp.list_minion
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].file_local_list(env)
+    return __context__['cp.fileclient'].file_local_list(saltenv)
 
 
-def is_cached(path, env='base'):
+def is_cached(path, saltenv='base', env=None):
     '''
     Return a boolean if the given path on the master has been cached on the
     minion
@@ -404,11 +532,20 @@ def is_cached(path, env='base'):
 
         salt '*' cp.is_cached salt://path/to/file
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
-    return __context__['cp.fileclient'].is_cached(path, env)
+    return __context__['cp.fileclient'].is_cached(path, saltenv)
 
 
-def hash_file(path, env='base'):
+def hash_file(path, saltenv='base', env=None):
     '''
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
@@ -421,7 +558,7 @@ def hash_file(path, env='base'):
         salt '*' cp.hash_file salt://path/to/file
     '''
     _mk_client()
-    return __context__['cp.fileclient'].hash_file(path, env)
+    return __context__['cp.fileclient'].hash_file(path, saltenv)
 
 
 def push(path):

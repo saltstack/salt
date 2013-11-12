@@ -103,36 +103,44 @@ def update():
 
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
-        for env, env_meta in metadata.iteritems():
+        for saltenv, env_meta in metadata.iteritems():
             for bucket, files in _find_files(env_meta).iteritems():
                 for file_path in files:
-                    cached_file_path = _get_cached_file_name(bucket, env, file_path)
-                    log.info('{0} - {1} : {2}'.format(bucket, env, file_path))
+                    cached_file_path = _get_cached_file_name(bucket, saltenv, file_path)
+                    log.info('{0} - {1} : {2}'.format(bucket, saltenv, file_path))
 
                     # load the file from S3 if it's not in the cache or it's old
-                    _get_file_from_s3(metadata, env, bucket, file_path, cached_file_path)
+                    _get_file_from_s3(metadata, saltenv, bucket, file_path, cached_file_path)
 
         log.info('Sync local cache from S3 completed.')
 
 
-def find_file(path, env='base', **kwargs):
+def find_file(path, saltenv='base', env=None, **kwargs):
     '''
     Look through the buckets cache file for a match.
     If the field is found, it is retrieved from S3 only if its cached version
     is missing, or if the MD5 does not match.
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
 
     fnd = {'bucket': None,
            'path': None}
 
     metadata = _init()
-    if not metadata or env not in metadata:
+    if not metadata or saltenv not in metadata:
         return fnd
 
-    env_files = _find_files(metadata[env])
+    env_files = _find_files(metadata[saltenv])
 
     if not _is_env_per_bucket():
-        path = os.path.join(env, path)
+        path = os.path.join(saltenv, path)
 
     # look for the files and check if they're ignored globally
     for bucket_name, files in env_files.iteritems():
@@ -143,10 +151,10 @@ def find_file(path, env='base', **kwargs):
     if not fnd['path'] or not fnd['bucket']:
         return fnd
 
-    cached_file_path = _get_cached_file_name(fnd['bucket'], env, path)
+    cached_file_path = _get_cached_file_name(fnd['bucket'], saltenv, path)
 
     # jit load the file from S3 if it's not in the cache or it's old
-    _get_file_from_s3(metadata, env, fnd['bucket'], path, cached_file_path)
+    _get_file_from_s3(metadata, saltenv, fnd['bucket'], path, cached_file_path)
 
     return fnd
 
@@ -155,10 +163,17 @@ def file_hash(load, fnd):
     '''
     Return an MD5 file hash
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
 
     ret = {}
 
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
 
     if 'path' not in fnd or 'bucket' not in fnd or not fnd['path']:
@@ -166,7 +181,7 @@ def file_hash(load, fnd):
 
     cached_file_path = _get_cached_file_name(
             fnd['bucket'],
-            load['env'],
+            load['saltenv'],
             fnd['path'])
 
     if os.path.isfile(cached_file_path):
@@ -180,11 +195,18 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
 
-    if 'path' not in load or 'loc' not in load or 'env' not in load:
+    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
         return ret
 
     if 'path' not in fnd or 'bucket' not in fnd:
@@ -192,10 +214,10 @@ def serve_file(load, fnd):
 
     gzip = load.get('gzip', None)
 
-    # get the env/path file from the cache
+    # get the saltenv/path file from the cache
     cached_file_path = _get_cached_file_name(
             fnd['bucket'],
-            load['env'],
+            load['saltenv'],
             fnd['path'])
 
     ret['dest'] = fnd['path']
@@ -214,21 +236,28 @@ def file_list(load):
     '''
     Return a list of all files on the file server in a specified environment
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
 
     ret = []
 
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
 
-    env = load['env']
+    saltenv = load['saltenv']
     metadata = _init()
 
-    if not metadata or env not in metadata:
+    if not metadata or saltenv not in metadata:
         return ret
 
-    for buckets in _find_files(metadata[env]).values():
+    for buckets in _find_files(metadata[saltenv]).values():
         files = filter(lambda f: not fs.is_file_ignored(__opts__, f), buckets)
-        ret += _trim_env_off_path(files, env)
+        ret += _trim_env_off_path(files, saltenv)
 
     return ret
 
@@ -247,22 +276,29 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
 
     ret = []
 
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
 
-    env = load['env']
+    saltenv = load['saltenv']
     metadata = _init()
 
-    if not metadata or env not in metadata:
+    if not metadata or saltenv not in metadata:
         return ret
 
     # grab all the dirs from the buckets cache file
-    for dirs in _find_files(metadata[env], dirs_only=True).values():
+    for dirs in _find_files(metadata[saltenv], dirs_only=True).values():
         # trim env and trailing slash
-        dirs = _trim_env_off_path(dirs, env, trim_slash=True)
+        dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
         # remove empty string left by the base env dir in single bucket mode
         ret += filter(None, dirs)
 
@@ -306,14 +342,14 @@ def _get_cache_dir():
     return os.path.join(__opts__['cachedir'], 's3cache')
 
 
-def _get_cached_file_name(bucket_name, env, path):
+def _get_cached_file_name(bucket_name, saltenv, path):
     '''
     Return the cached file name for a bucket path file
     '''
 
-    file_path = os.path.join(_get_cache_dir(), env, bucket_name, path)
+    file_path = os.path.join(_get_cache_dir(), saltenv, bucket_name, path)
 
-    # make sure bucket and env directories exist
+    # make sure bucket and saltenv directories exist
     if not os.path.exists(os.path.dirname(file_path)):
         os.makedirs(os.path.dirname(file_path))
 
@@ -354,7 +390,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     if _is_env_per_bucket():
         # Single environment per bucket
-        for env, buckets in _get_buckets().items():
+        for saltenv, buckets in _get_buckets().items():
             bucket_files = {}
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)
@@ -366,7 +402,7 @@ def _refresh_buckets_cache_file(cache_file):
                 # grab only the files/dirs
                 bucket_files[bucket_name] = filter(lambda k: 'Key' in k, s3_meta)
 
-            metadata[env] = bucket_files
+            metadata[saltenv] = bucket_files
 
     else:
         # Multiple environments per buckets
@@ -384,16 +420,16 @@ def _refresh_buckets_cache_file(cache_file):
 
             # pull out the files for the environment
             for env in environments:
-                # grab only files/dirs that match this env
-                env_files = filter(lambda k: k['Key'].startswith(env), files)
+                # grab only files/dirs that match this saltenv
+                env_files = filter(lambda k: k['Key'].startswith(saltenv), files)
 
-                if env not in metadata:
-                    metadata[env] = {}
+                if saltenv not in metadata:
+                    metadata[saltenv] = {}
 
-                if bucket_name not in metadata[env]:
-                    metadata[env][bucket_name] = []
+                if bucket_name not in metadata[saltenv]:
+                    metadata[saltenv][bucket_name] = []
 
-                metadata[env][bucket_name] += env_files
+                metadata[saltenv][bucket_name] += env_files
 
     # write the metadata to disk
     if os.path.isfile(cache_file):
@@ -439,12 +475,12 @@ def _find_files(metadata, dirs_only=False):
     return ret
 
 
-def _find_file_meta(metadata, bucket_name, env, path):
+def _find_file_meta(metadata, bucket_name, saltenv, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
 
-    env_meta = metadata[env] if env in metadata else {}
+    env_meta = metadata[saltenv] if saltenv in metadata else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
     files_meta = filter((lambda k: 'Key' in k), bucket_meta)
 
@@ -461,7 +497,7 @@ def _get_buckets():
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
 
 
-def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
+def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     '''
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
@@ -469,7 +505,7 @@ def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
-        file_meta = _find_file_meta(metadata, bucket_name, env, path)
+        file_meta = _find_file_meta(metadata, bucket_name, saltenv, path)
         file_md5 = filter(str.isalnum, file_meta['ETag']) if file_meta else None
 
         cached_file_hash = hashlib.md5()
@@ -490,11 +526,11 @@ def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
             local_file=cached_file_path)
 
 
-def _trim_env_off_path(paths, env, trim_slash=False):
+def _trim_env_off_path(paths, saltenv, trim_slash=False):
     '''
-    Return a list of file paths with the env directory removed
+    Return a list of file paths with the saltenv directory removed
     '''
-    env_len = None if _is_env_per_bucket() else len(env) + 1
+    env_len = None if _is_env_per_bucket() else len(saltenv) + 1
     slash_len = -1 if trim_slash else None
 
     return map(lambda d: d[env_len:slash_len], paths)

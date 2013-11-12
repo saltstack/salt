@@ -1781,7 +1781,7 @@ def get_managed(
                 user=user,
                 group=group,
                 mode=mode,
-                env=saltenv,
+                saltenv=saltenv,
                 context=context_dict,
                 salt=__salt__,
                 pillar=__pillar__,
