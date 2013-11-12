@@ -12,12 +12,15 @@ import time
 import signal
 import logging
 import multiprocessing
+import datetime
 from itertools import groupby
 
 # Import salt.cloud libs
 import salt.cloud.config
 import salt.cloud.utils
 import salt.cloud.loader
+import salt.utils.event
+from salt.utils.event import tagify
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
@@ -53,6 +56,48 @@ class CloudClient(object):
         else:
             self.opts = salt.cloud.config.cloud_config(path)
         self.mapper = salt.cloud.Map(self.opts)
+
+    def __proc_runner(self, fun, low, user, tag, jid):
+        '''
+        Execute a cloud method in a multiprocess and fire the return on the event bus
+        '''
+        salt.utils.daemonize()
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        data = {'fun': 'cloud.{0}'.format(fun),
+                'jid': jid,
+                'user': user}
+        event.fire_event(data, tagify('new', base=tag))
+
+        try:
+            data['ret'] = self.low(fun, low)
+            data['success'] = True
+        except Exception as exc:
+            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
+                    fun,
+                    exc,
+                    )
+        event.fire_event(data, tagify('ret', base=tag))
+
+    def low(self, fun, low):
+        '''
+        Pass the cloud function and low data structure to run
+        '''
+        l_fun = getattr(self, fun)
+        f_call = salt.utils.format_call(l_fun, low)
+        return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+
+    def async(self, fun, low, user='UNKNOWN'):
+        '''
+        Execute a cloud function in a multiprocess and return the event tag
+        to watch
+        '''
+        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        tag = tagify(jid, prefix='cloud')
+        proc = multiprocessing.Process(
+                target=self.__proc_runner,
+                args=(fun, low, user, tag, jid))
+        proc.start()
+        return tag
 
     def master_call(self, **kwargs):
         '''
