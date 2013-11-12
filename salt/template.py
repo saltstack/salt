@@ -31,7 +31,12 @@ SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
-def compile_template(template, renderers, default, env='', sls='', **kwargs):
+def compile_template(template,
+                     renderers,
+                     default,
+                     saltenv='base',
+                     sls='',
+                     **kwargs):
     '''
     Take the path to a template and return the high data structure
     derived from the template.
@@ -66,11 +71,11 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
         render_kwargs.update(kwargs)
         if argline:
             render_kwargs['argline'] = argline
-        ret = render(input_data, env, sls, **render_kwargs)
+        ret = render(input_data, saltenv, sls, **render_kwargs)
         if ret is None:
             # The file is empty or is being written elsewhere
             time.sleep(0.01)
-            ret = render(input_data, env, sls, **render_kwargs)
+            ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
         if log.isEnabledFor(logging.GARBAGE):
             try:

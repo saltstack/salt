@@ -55,7 +55,7 @@ def wrap_tmpl_func(render_str):
         kws.update(context)
         context = kws
         assert 'opts' in context
-        assert 'env' in context
+        assert 'saltenv' in context
 
         if isinstance(tmplsrc, basestring):
             if from_str:
@@ -109,7 +109,7 @@ def wrap_tmpl_func(render_str):
 
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
-    env = context['env']
+    saltenv = context['saltenv']
     loader = None
     newline = False
 
@@ -120,7 +120,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if tmplstr.endswith('\n'):
         newline = True
 
-    if not env:
+    if not saltenv:
         if tmplpath:
             # ie, the template is from a file outside the state tree
             #
@@ -131,7 +131,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, context['env'])
+        loader = JinjaSaltCacheLoader(opts, saltenv)
 
     env_args = {'extensions': [], 'loader': loader}
 
@@ -207,15 +207,15 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     from mako.template import Template
     from salt.utils.mako import SaltMakoTemplateLookup
 
-    env = context['env']
+    saltenv = context['saltenv']
     lookup = None
-    if not env:
+    if not saltenv:
         if tmplpath:
             # ie, the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
-        lookup = SaltMakoTemplateLookup(context['opts'], context['env'])
+        lookup = SaltMakoTemplateLookup(context['opts'], saltenv)
     try:
         return Template(
             tmplstr,

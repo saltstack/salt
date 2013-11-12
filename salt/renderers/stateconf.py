@@ -98,7 +98,7 @@ Options(for this renderer):
 )
 
 
-def render(input, env='', sls='', argline='', **kws):
+def render(input, saltenv='base', sls='', argline='', **kws):
     gen_start_state = False
     no_goal_state = False
     implicit_require = False
@@ -111,10 +111,10 @@ def render(input, env='', sls='', argline='', **kws):
             ctx.update(context)
 
         tmplout = render_template(
-                StringIO(data), env, sls, context=ctx,
+                StringIO(data), saltenv, sls, context=ctx,
                 argline=rt_argline.strip(), **kws
         )
-        high = render_data(tmplout, env, sls, argline=rd_argline.strip())
+        high = render_data(tmplout, saltenv, sls, argline=rd_argline.strip())
         return process_high_data(high, extract)
 
     def process_high_data(high, extract):
@@ -124,7 +124,7 @@ def render(input, env='', sls='', argline='', **kws):
         data = copy.deepcopy(high)
         try:
             rewrite_single_shorthand_state_decl(data)
-            rewrite_sls_includes_excludes(data, sls, env)
+            rewrite_sls_includes_excludes(data, sls, saltenv)
 
             if not extract and implicit_require:
                 sid = has_names_decls(data)
@@ -265,7 +265,7 @@ def _parent_sls(sls):
     return sls[:i] + '.' if i != -1 else ''
 
 
-def rewrite_sls_includes_excludes(data, sls, env):
+def rewrite_sls_includes_excludes(data, sls, saltenv):
     # if the path of the included/excluded sls starts with a leading dot(.)
     # then it's taken to be relative to the including/excluding sls.
     sls = _parent_sls(sls)
@@ -276,7 +276,7 @@ def rewrite_sls_includes_excludes(data, sls, env):
                 if isinstance(each, dict):
                     slsenv, incl = each.popitem()
                 else:
-                    slsenv = env
+                    slsenv = saltenv
                     incl = each
                 if incl.startswith('.'):
                     includes[i] = {slsenv: (sls + incl[1:])}
