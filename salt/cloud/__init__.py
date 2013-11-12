@@ -52,6 +52,23 @@ class CloudClient(object):
         else:
             self.opts = salt.cloud.config.cloud_config(path)
         self.mapper = salt.cloud.Map(self.opts)
+
+    def master_call(self, **kwargs):
+        '''
+        Send a function call to a runner module through the master network
+        interface.
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
+        '''
+        load = kwargs
+        load['cmd'] = 'cloud'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret
     # list_images
     # list_sizes
     # list_locations
