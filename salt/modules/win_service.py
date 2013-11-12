@@ -40,7 +40,7 @@ def get_enabled():
                 continue
             services.append(comps[1].strip())
     for service in services:
-        cmd2 = 'sc qc "{0} {1}"'.format(service, BUFFSIZE)
+        cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
         lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'AUTO_START' in line:
@@ -69,7 +69,7 @@ def get_disabled():
                 continue
             services.append(comps[1].strip())
     for service in services:
-        cmd2 = 'sc qc "{0} {1}"'.format(service, BUFFSIZE)
+        cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
         lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'DEMAND_START' in line:
@@ -217,7 +217,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0} {1}"'.format(name, BUFFSIZE)
+    cmd = 'sc query "{0}" {1}'.format(name, BUFFSIZE)
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
