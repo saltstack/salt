@@ -52,19 +52,45 @@ class CloudClient(object):
         else:
             self.opts = salt.cloud.config.cloud_config(path)
         self.mapper = salt.cloud.Map(self.opts)
-    # list_images
+
     # list_sizes
+    def list_sizes(self, provider=None):
+        return self.mapper.size_list(provider)
+
+    # list_images
+    def list_images(self, provider=None):
+        return self.mapper.image_list(provider)
+
     # list_locations
+    def list_locations(self, provider=None):
+        return self.mapper.location_list(provider)
+
     # profile
+    def query(self, profile=None, names=None):
+        return self.mapper.run_profile(profile, names)
+
+    # action
+    def action(self, fun=None, cloudmap=None, names=None, provider=None,
+              instance=None, kwargs=None):
+        if instance and not provider:
+            return self.mapper.do_action(names, kwargs)
+        if provider:
+            return self.mapper.do_function(provider, fun, kwargs)
+        else:
+            # This should not be called without either an instance or a
+            # provider.
+            raise SaltCloudConfigError(
+                'Either an instance or a provider must be specified.'
+            )
+
+        return self.mapper.run_profile(profile, names)
+
     # map
+    # create
+    # destroy
     # query
     # full_query
     # select_query
-    # action
-    # destroy
-    # create
-    def list_sizes(self, provider=None):
-        return self.mapper.size_list(provider)
 
 
 class Cloud(object):
