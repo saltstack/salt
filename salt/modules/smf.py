@@ -74,15 +74,31 @@ def get_disabled():
 
 def available(name):
     '''
-    Return if the specified service is available
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.available
+        salt '*' service.available net-snmp
     '''
     return name in get_all()
+
+
+def missing(name):
+    '''
+    The inverse of service.available.
+    Returns ``True`` if the specified service is not available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing net-snmp
+    '''
+    return not name in get_all()
 
 
 def get_all():
