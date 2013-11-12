@@ -200,4 +200,5 @@ def ext_pillar(minion_id,
         return {}
     except Exception, e:
         log.error('Failed on Error: {0}'.format(e.message))
+        log.debug('django_orm traceback', exc_info=True)
         return {}
