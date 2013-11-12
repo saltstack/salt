@@ -4,18 +4,14 @@ GNOME implementations
 '''
 
 try:
-    from gi.repository import Gio,GLib
+    from gi.repository import Gio, GLib
     HAS_GLIB = True
 except:
     HAS_GLIB = False
 
 import logging
-import psutil
 import pwd
 import os
-import subprocess
-import sys
-import time
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +26,7 @@ def __virtual__():
         return __virtualname__
     return False
 
-class _GSettings:
-
+class _GSettings(object):
     def __init__(self, user, schema, key, ftype):
         self.SCHEMA = schema
         self.KEY = key
@@ -54,8 +49,8 @@ class _GSettings:
         os.setuid(uid)
 
         # Set ENV variables needed for DBUS connections
-        os.putenv('HOME',pwd.getpwnam(user).pw_dir)
-        os.putenv('XDG_RUNTIME_DIR',"/run/user/%d" % (uid))
+        os.putenv('HOME', pwd.getpwnam(user).pw_dir)
+        os.putenv('XDG_RUNTIME_DIR', "/run/user/{0}".format(uid))
         os.putenv('DBUS_SESSION_BUS_ADDRESS', dbusAddress)
         #os.putenv('DISPLAY',":0")
 
@@ -86,7 +81,7 @@ class _GSettings:
         content = open(session_file).readlines()
         for line in content:
             if not line[0] == '#':
-                key,value = line.split("=", 1)
+                key, value = line.split("=", 1)
                 ENVIRON[key] = value
 	
         return ENVIRON['DBUS_SESSION_BUS_ADDRESS']
@@ -177,9 +172,9 @@ class _GSettings:
                 else:
                     result = gsettings.set_boolean(self.KEY, False)
             elif self.FTYPE == 'variant':
-                result = gsettings.set_value(self.KEY,GLib.Variant.new_uint32(value))
+                result = gsettings.set_value(self.KEY, GLib.Variant.new_uint32(value))
             elif self.FTYPE == 'int':
-                result = gsettings.set_int(self.KEY,value)
+                result = gsettings.set_int(self.KEY, value)
             elif self.FTYPE == 'string':
                 result = gsettings.set_string(self.KEY, value)
             else:
