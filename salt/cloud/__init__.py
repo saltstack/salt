@@ -173,7 +173,6 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = salt.cloud.loader.clouds(self.opts)
-        self.__switch_credentials()
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
 
@@ -924,15 +923,6 @@ class Cloud(object):
                     driver: self.clouds[fun](call='function')
                 }
             }
-
-    def __switch_credentials(self):
-        user = self.opts.get('user', None)
-        if user is not None and check_user(user) is not True:
-            raise SaltCloudSystemExit(
-                'salt-cloud needs to run as the same user as salt-master, '
-                '{0!r}, but was unable to switch credentials. Please run '
-                'salt-cloud as root or as {0!r}'.format(user)
-            )
 
     def __filter_non_working_providers(self):
         '''
