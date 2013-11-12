@@ -172,7 +172,7 @@ def ext_pillar(minion_id,
             model_file = importlib.import_module(app + '.models')
             for model_name, model_meta in models.iteritems():
                 model_orm = model_file.__dict__[model_name]
-                django_pillar[app][model_orm.__name__] = {}
+                pillar_for_model = django_pillar[app][model_orm.__name__] = {}
 
                 fields = model_meta['fields']
 
