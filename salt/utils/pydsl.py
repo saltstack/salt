@@ -279,7 +279,7 @@ class StateDeclaration(object):
         return iter(self._mods)
 
     def _repr(self, context=None):
-        return dict(m._repr(context) for m in self)
+        return OrderedDict(m._repr(context) for m in self)
 
     def __call__(self, check=True):
         sls = Sls.get_render_stack()[-1]
