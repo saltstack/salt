@@ -39,6 +39,7 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
+import salt._compat
 import salt.config
 import salt.master
 import salt.minion
@@ -560,6 +561,14 @@ class TestDaemon(object):
                         # Already synced!?
                         syncing.remove(name)
                         continue
+
+                    if isinstance(output['ret'], salt._compat.string_types):
+                        # An errors has occurred
+                        print(
+                            ' {RED_BOLD}*{ENDC} {0} Failed so sync modules: '
+                            '{1}'.format(name, output['ret'], **self.colors)
+                        )
+                        return False
 
                     print(
                         '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '

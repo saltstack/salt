@@ -28,7 +28,7 @@ def get_yaml_loader(argline):
     return yaml_loader
 
 
-def render(yaml_data, env='', sls='', argline='', **kws):
+def render(yaml_data, saltenv='base', sls='', argline='', **kws):
     '''
     Accepts YAML as a string or as a file object and runs it through the YAML
     parser.
@@ -48,8 +48,8 @@ def render(yaml_data, env='', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    '{warn} found in salt://{sls} environment={env}'.format(
-                        warn=item.message, sls=sls, env=env
+                    '{warn} found in salt://{sls} environment={saltenv}'.format(
+                        warn=item.message, sls=sls, saltenv=saltenv
                     )
                 )
         if not data:
