@@ -211,7 +211,7 @@ class Pillar(object):
                     if sls in done[saltenv]:
                         continue
                     try:
-                        tops[satenv].append(
+                        tops[saltenv].append(
                                 compile_template(
                                     self.client.get_state(
                                         sls,
