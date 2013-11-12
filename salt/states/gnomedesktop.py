@@ -10,7 +10,7 @@ Control the GNOME settings
 	localdesktop_wm_prefs:
 	    gnomedesktop.wm_preferences:
 	        - user: username
-	        - audible_bell: false 
+	        - audible_bell: false
 	        - action_double_click_titlebar: 'toggle-maximize'
 	        - visual_bell: true
 	        - num_workspaces: 6
@@ -26,24 +26,17 @@ Control the GNOME settings
 '''
 
 import logging
-import os
 import re
-import yaml
 
-# Import salt libs
-import salt.utils
-from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
 def _check_current_value(gnome_kwargs, value):
-
-    currentValue = __salt__['gnome.get'](**gnome_kwargs)
-    log.debug(("CurrentValue %s") % (currentValue))
-    log.debug(("PassedValue %s") % (value))
-    log.debug(( str(currentValue) == str(value) ))
-    return (( str(currentValue) == str(value) ))
+    current_value = __salt__['gnome.get'](**gnome_kwargs)
+    log.debug("CurrentValue {0}".format(current_value))
+    log.debug("PassedValue {0}".format(value))
+    log.debug(str(current_value) == str(value))
+    return str(current_value) == str(value)
 
 def _do(name, gnome_kwargs, preferences):
 
@@ -59,62 +52,61 @@ def _do(name, gnome_kwargs, preferences):
         key = pref
         value = preferences[pref]
 
-        if isinstance( value, bool ):
+        if isinstance(value, bool):
             ftype = "boolean"
-            log.debug(("%s is %s") % (pref, ftype))
-        elif isinstance( value, int ):
+        elif isinstance(value, int):
             ftype = "int"
-            log.debug(("%s is %s") % (pref, ftype))
-        elif isinstance( value, str ):
+        elif isinstance(value, str):
             ftype = "string"
-            log.debug(("%s is %s") % (pref, ftype))
         else:
             ftype = "string"
-            log.debug(("%s is %s") % (pref, ftype))
+        log.debug("{0} is {1}".format(pref, ftype))
 
         gnome_kwargs.update({'key': key, 'ftype': ftype, 'value': value})
 
         if _check_current_value(gnome_kwargs, value):
-            messages.append('{0} is already set to {1}' . format(key, value))
+            messages.append('{0} is already set to {1}'.format(key, value))
         else:
             log.debug("Values different, setting.")
             result = __salt__['gnome.set'](**gnome_kwargs)
             if result:
-                messages.append('Setting {0} to {1}' . format(key, value))
+                messages.append('Setting {0} to {1}'.format(key, value))
                 ret['changes'][key] = '{0}:{1}'.format(key, value)
                 ret['result'] = result
             else:
                 ret['result'] = result
 
-        ret['comment'] = ', '.join(messages)    
+        ret['comment'] = ', '.join(messages)
 
     log.debug(ret)
     return ret
 
-def wm_preferences( name,
-                    user = None,
-                    action_double_click_titlebar = None,
-                    action_middle_click_titlebar = None,
-                    action_right_click_titlebar = None,
-                    application_based = False,
-                    audible_bell = None,
-                    auto_raise = None,
-                    auto_raise_delay = None,
-                    button_layout = None,
-                    disable_workarounds = None,
-                    focus_mode = None,
-                    focus_new_windows = None,
-                    mouse_button_modifier = None,
-                    num_workspaces = None,
-                    raise_on_click = None,
-                    resize_with_right_button = None,
-                    theme = None,
-                    titlebar_font = None,
-                    titlebar_uses_system_font = None,
-                    visual_bell = None,
-                    visual_bell_type = None,
-                    workspace_names = [],
-                    **kwargs):
+def wm_preferences(name,
+                   user=None,
+                   action_double_click_titlebar=None,
+                   action_middle_click_titlebar=None,
+                   action_right_click_titlebar=None,
+                   application_based=False,
+                   audible_bell=None,
+                   auto_raise=None,
+                   auto_raise_delay=None,
+                   button_layout=None,
+                   disable_workarounds=None,
+                   focus_mode=None,
+                   focus_new_windows=None,
+                   mouse_button_modifier=None,
+                   num_workspaces=None,
+                   raise_on_click=None,
+                   resize_with_right_button=None,
+                   theme=None,
+                   titlebar_font=None,
+                   titlebar_uses_system_font=None,
+                   visual_bell=None,
+                   visual_bell_type=None,
+                   workspace_names=None,
+                   **kwargs):
+    if workspace_names is None:
+        workspace_names = []
 
     gnome_kwargs = {
         'user': user,
