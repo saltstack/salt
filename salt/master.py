@@ -1996,12 +1996,20 @@ class ClearFuncs(object):
     def cloud(self, clear_load):
         '''
         Hook into the salt-cloud libs and execute cloud routines
-        # NOT HOOKED IN YET
         '''
         authorize = salt.auth.Authorize(self.opts, clear_load, self.loadauth)
         if not authorize.rights('cloud', clear_load):
             return False
-        return True
+        try:
+            cloud_client = salt.cloud.CloudClient(
+                    os.path.join(
+                        os.path.dirname(self.opts['conf_file']), 'cloud'
+                        )
+                    )
+            fun = clear_load.pop('fun')
+            return cloud_client.cmd_async(fun, clear_load)
+        except Exception:
+            return ''
 
     def runner(self, clear_load):
         '''

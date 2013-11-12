@@ -33,8 +33,6 @@ class APIClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
-
-
     '''
     def __init__(self, opts=None):
         if not opts:
@@ -48,6 +46,9 @@ class APIClient(object):
         self.localClient = salt.client.LocalClient(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
         self.wheelClient = salt.wheel.Wheel(self.opts)
+        self.cloudClient = salt.cloud.CloudClient(
+                os.path.join(os.path.dirname(self.opts['conf_file']), 'cloud')
+                )
         self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
 
@@ -107,7 +108,7 @@ class APIClient(object):
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
         funparts = cmd.get('fun', '').split('.')
-        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']:  # master
+        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner', 'cloud']:  # master
             client = funparts[0]
             cmd['fun'] = '.'.join(funparts[1:])  # strip prefix
 
@@ -146,6 +147,16 @@ class APIClient(object):
         return self.runnerClient.master_call(**kwargs)
 
     runner_sync = runner_async  # always runner async, so works in either mode
+
+    def cloud_async(self, **kwargs):
+        '''
+        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
+        '''
+        return self.cloudClient.master_call(**kwargs)
+
+    cloud_sync = cloud_async  # always runner async, so works in either mode
 
     def wheel_sync(self, **kwargs):
         '''
