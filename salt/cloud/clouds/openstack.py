@@ -462,6 +462,14 @@ def create(vm_):
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
     )
+    
+    kwargs['ex_metadata'] = config.get_config_value(
+        'metadata', vm_, __opts__, default={}, search_global=False
+    )
+    if not isinstance(kwargs['ex_metadata'], dict):
+        raise SaltCloudConfigError(
+                '\'metadata\' should be a dict.'
+        )
 
     try:
         data = conn.create_node(**kwargs)
