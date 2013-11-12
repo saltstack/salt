@@ -14,6 +14,7 @@ import salt.client
 import salt.runner
 import salt.wheel
 import salt.utils
+import salt.cloud
 import salt.syspaths as syspaths
 from salt.utils.event import tagify
 
