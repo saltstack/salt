@@ -170,8 +170,9 @@ def create(vm_):
     '''
     Create a single VM from a data dict
 
+    CLI Example:
 
-        CLI Example:
+    .. code-block:: bash
 
         salt-cloud -p profile_name vm_name
     '''
@@ -429,7 +430,9 @@ def destroy(name, call=None):
     :return: array of booleans , true if successful;ly stopped and true if
              successfully removed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -d vm_name
 
@@ -462,8 +465,9 @@ def reboot(name, call=None):
     :param call: call value in this case is 'action'
     :return: true if successful
 
-
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot vm_name
     '''
@@ -481,8 +485,9 @@ def stop(name, call=None):
     :param call: call value in this case is 'action'
     :return: true if successful
 
-
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop vm_name
     '''
@@ -502,6 +507,8 @@ def start(name, call=None):
 
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start vm_name
     '''
@@ -724,8 +731,9 @@ def list_nodes(full=False):
     '''
     list of nodes, keeping only a brief listing
 
-
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -Q
     '''
@@ -755,8 +763,9 @@ def list_nodes_full():
     '''
     list of nodes, maintaining all content provided from joyent listings
 
-
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -F
     '''
@@ -769,8 +778,9 @@ def avail_images():
 
     CLI Example:
 
-        salt-cloud --list-images
+    .. code-block:: bash
 
+        salt-cloud --list-images
     '''
     rcode, items = query2(command='/my/datasets')
     if rcode not in VALID_RESPONSE_CODES:
@@ -783,6 +793,8 @@ def avail_sizes():
     get list of available packages
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --list-sizes
     '''
@@ -839,6 +851,8 @@ def import_key(kwargs=None, call=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-cloud -f import_key joyent keyname=mykey keyfile=/tmp/mykey.pub
     '''
     if call != 'function':
@@ -880,6 +894,8 @@ def delete_key(kwargs=None, call=None):
     List the keys available
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_key joyent keyname=mykey
     '''
