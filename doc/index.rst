@@ -15,17 +15,23 @@ and fast enough to communicate with them in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Offline documentation
+.. seealso:: Other Documentation
 
-    Download a copy of the Salt documentation:
+    Download an offline copy of the Salt documentation:
 
     * `PDF`_
     * `ePub`_
     * `Dash Docset`_
 
+    See documentation for past Salt releases at http://salt.readthedocs.org
+
+    Watch announcements, demonstrations, and video tutorials on the `SaltStack
+    YouTube channel`_.
+
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
 .. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
+.. _`SaltStack YouTube channel`: http://youtube.com/saltstack
 
 Download
 ========
