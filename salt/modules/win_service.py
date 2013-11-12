@@ -10,6 +10,7 @@ import salt.utils
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+BUFFSIZE = 5000
 
 def __virtual__():
     '''
@@ -32,7 +33,7 @@ def get_enabled():
     '''
     ret = set()
     services = []
-    cmd = 'sc query type= service state= all'
+    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
@@ -41,7 +42,7 @@ def get_enabled():
                 continue
             services.append(comps[1].strip())
     for service in services:
-        cmd2 = 'sc qc "{0}"'.format(service)
+        cmd2 = 'sc qc "{0} {1}"'.format(service, BUFFSIZE)
         lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'AUTO_START' in line:
@@ -61,7 +62,7 @@ def get_disabled():
     '''
     ret = set()
     services = []
-    cmd = 'sc query type= service state= all'
+    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
@@ -70,7 +71,7 @@ def get_disabled():
                 continue
             services.append(comps[1].strip())
     for service in services:
-        cmd2 = 'sc qc "{0}"'.format(service)
+        cmd2 = 'sc qc "{0} {1}"'.format(service, BUFFSIZE)
         lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'DEMAND_START' in line:
@@ -130,7 +131,7 @@ def get_service_name(*args):
     ret = {}
     services = []
     display_names = []
-    cmd = 'sc query type= service state= all'
+    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
@@ -214,7 +215,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0}"'.format(name)
+    cmd = 'sc query "{0} {1}"'.format(name, BUFFSIZE)
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
