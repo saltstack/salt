@@ -86,7 +86,8 @@ def __virtual__():
     return 'django_orm'
 
 
-def ext_pillar(pillar,
+def ext_pillar(minion_id,
+               pillar,
                pillar_name,
                project_path,
                settings_module,
