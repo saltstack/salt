@@ -138,23 +138,23 @@ class FileModuleTest(integration.ModuleCase):
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_remove_file(self):
-        ret = self.run_function('file.remove', args=[self.myfile])
+        ret = self.run_function('file.remove', arg=[self.myfile])
         self.assertTrue(ret)
 
     def test_remove_dir(self):
-        ret = self.run_function('file.remove', args=[self.mydir])
+        ret = self.run_function('file.remove', arg=[self.mydir])
         self.assertTrue(ret)
 
     def test_remove_symlink(self):
-        ret = self.run_function('file.remove', args=[self.mysymlink])
+        ret = self.run_function('file.remove', arg=[self.mysymlink])
         self.assertTrue(ret)
 
     def test_remove_broken_symlink(self):
-        ret = self.run_function('file.remove', args=[self.mybadsymlink])
+        ret = self.run_function('file.remove', arg=[self.mybadsymlink])
         self.assertTrue(ret)
 
     def test_cannot_remove(self):
-        ret = self.run_function('file.remove', args=['/dev/tty'])
+        ret = self.run_function('file.remove', arg=['/dev/tty'])
         self.assertEqual(
             'ERROR executing file.remove: File path must be absolute.', ret
         )
