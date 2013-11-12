@@ -142,6 +142,20 @@ def available(job_label):
     return True if _service_by_name(job_label) else False
 
 
+def missing(job_label):
+    '''
+    The inverse of service.available
+    Check that the given service is not available.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing com.openssh.sshd
+    '''
+    return False if _service_by_name(job_label) else True
+
+
 def status(job_label, runas=None):
     '''
     Return the status for a service, returns a bool whether the service is
