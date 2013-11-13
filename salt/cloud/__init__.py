@@ -56,7 +56,7 @@ class CloudClient(object):
             self.opts = salt.cloud.config.cloud_config(path)
         self.mapper = salt.cloud.Map(self.opts)
 
-    def __proc_runner(self, fun, low, user, tag, jid):
+    def _proc_runner(self, fun, low, user, tag, jid):
         '''
         Execute a cloud method in a multiprocess and fire the return on the event bus
         '''
@@ -77,6 +77,14 @@ class CloudClient(object):
                     )
         event.fire_event(data, tagify('ret', base=tag))
 
+    def _opts_defaults(self, **kwargs):
+        '''
+        Set the opts dict to defaults and allow for opts to be overridden in
+        the kwargs
+        '''
+        self.mapper.opts['parallel'] = False
+        self.mapper.opts.update(kwargs)
+
     def low(self, fun, low):
         '''
         Pass the cloud function and low data structure to run
@@ -93,7 +101,7 @@ class CloudClient(object):
         jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
         tag = tagify(jid, prefix='cloud')
         proc = multiprocessing.Process(
-                target=self.__proc_runner,
+                target=self._proc_runner,
                 args=(fun, low, user, tag, jid))
         proc.start()
         return tag
@@ -139,10 +147,11 @@ class CloudClient(object):
         '''
         return self.mapper.map_providers_parallel(query_type)
 
-    def profile(self, profile, names):
+    def profile(self, profile, names, **kwargs):
         '''
         Pass in a profile to create, names is a list of vm names to allocate
         '''
+        self._opts_defaults(**kwargs)
         if isinstance(names, str):
             names = names.split(',')
         return self.mapper.run_profile(profile, names)
