@@ -20,16 +20,14 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
-import salt.exceptions
+from salt.exceptions import SaltRenderError
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 
 log = logging.getLogger(__name__)
 
 
-class SaltTemplateRenderError(salt.exceptions.SaltException):
-    pass
-
+TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 
 # FIXME: also in salt/template.py
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
@@ -81,7 +79,7 @@ def wrap_tmpl_func(render_str):
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
 
-        except SaltTemplateRenderError as exc:
+        except SaltRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -157,23 +155,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
-        marker = '    <======================'
-        context = get_template_context(tmplstr, line, marker=marker)
-        error = '{0}; line {1} in template:\n\n{2}'.format(
-                exc,
-                line,
-                context
-        )
-        raise SaltTemplateRenderError(error)
-    except jinja2.exceptions.UndefinedError:
-        line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
-        marker = '    <======================'
-        context = get_template_context(tmplstr, line, marker=marker)
-        error = 'Undefined jinja variable; line {0} in template\n\n{1}'.format(
-                line,
-                context
-        )
-        raise SaltTemplateRenderError(error)
+        raise SaltRenderError(exc, line, tmplstr)
+    except jinja2.exceptions.UndefinedError as exc:
+        tb_data = traceback.extract_tb(sys.exc_info()[2])
+        try:
+            line = [
+                x[1] for x in tb_data if x[2] == 'top-level template code'
+            ][-1]
+        except IndexError:
+            line = None
+        raise SaltRenderError('Jinja variable {0}'.format(exc), line, tmplstr)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
@@ -205,8 +196,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             lookup=lookup
         ).render(**context)
     except:
-        raise SaltTemplateRenderError(
-                    mako.exceptions.text_error_template().render())
+        raise SaltRenderError(mako.exceptions.text_error_template().render())
 
 
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):
@@ -247,40 +237,6 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
-
-
-def get_template_context(template, line, num_lines=5, marker=None):
-    """Returns debugging context around a line in a given template.
-
-    Returns:: string
-    """
-    template_lines = template.splitlines()
-    num_template_lines = len(template_lines)
-
-    # in test, a single line template would return a crazy line number like,
-    # 357.  do this sanity check and if the given line is obviously wrong, just
-    # return the entire template
-    if line > num_template_lines:
-        return template
-
-    context_start = max(0, line-num_lines-1)  # subtract 1 for 0-based indexing
-    context_end = min(num_template_lines, line+num_lines)
-    error_line_in_context = line - context_start - 1  # subtract 1 for 0-based indexing
-
-    buf = []
-    if context_start > 0:
-        buf.append('[...]')
-        error_line_in_context += 1
-
-    buf.extend(template_lines[context_start:context_end])
-
-    if context_end < num_template_lines:
-        buf.append('[...]')
-
-    if marker:
-        buf[error_line_in_context] += marker
-
-    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
