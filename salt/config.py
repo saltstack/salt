@@ -379,9 +379,9 @@ def _validate_file_roots(opts):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
-    for env, dirs in list(opts['file_roots'].items()):
+    for saltenv, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
-            opts['file_roots'][env] = []
+            opts['file_roots'][saltenv] = []
     return opts['file_roots']
 
 
@@ -769,7 +769,7 @@ def get_id(root_dir=None, minion_id=False):
 
     # Can Windows 'hosts' file help?
     try:
-        windir = os.getenv("WINDIR")
+        windir = os.getenv('WINDIR')
         with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
             for line in hfl:
                 # skip commented or blank lines
