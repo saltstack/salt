@@ -103,6 +103,19 @@ def wrap_tmpl_func(render_str):
     return render_tmpl
 
 
+def _get_jinja_error_line(tb_data):
+    '''
+    Return the line number where the template error was found
+    '''
+    try:
+        return [
+            x[1] for x in tb_data if x[2] == 'top-level template code'
+        ][-1]
+    except IndexError:
+        pass
+    return None
+
+
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
     saltenv = context['saltenv']
@@ -171,16 +184,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     try:
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
         raise SaltRenderError(exc, line, tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
-        tb_data = traceback.extract_tb(sys.exc_info()[2])
-        try:
-            line = [
-                x[1] for x in tb_data if x[2] == 'top-level template code'
-            ][-1]
-        except IndexError:
-            line = None
+        line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
         raise SaltRenderError('Jinja variable {0}'.format(exc), line, tmplstr)
 
     # Workaround a bug in Jinja that removes the final newline
