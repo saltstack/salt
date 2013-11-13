@@ -28,6 +28,9 @@ as either absent or present
 import logging
 import sys
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -96,7 +99,7 @@ def _changes(name,
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
-    if 'shadow.info' in __salt__:
+    if 'shadow.info' in __salt__ and 'shadow.default_hash' in __salt__:
         if password:
             default_hash = __salt__['shadow.default_hash']()
             if lshad['passwd'] == default_hash \
@@ -369,7 +372,7 @@ def present(name,
             if all((password, 'shadow.info' in __salt__)):
                 __salt__['shadow.set_password'](name, password)
                 spost = __salt__['shadow.info'](name)
-                if spost['passwd'] != password:
+                if spost['passwd'] != password and not salt.utils.is_windows():
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to {1}'.format(name, password)
                     ret['result'] = False
