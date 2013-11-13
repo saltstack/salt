@@ -1503,6 +1503,11 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set this directory as the base file root.'
         )
         self.add_option(
+            '--pillar-root',
+            default=None,
+            help='Set this directory as the base pillar root.'
+        )
+        self.add_option(
             '--retcode-passthrough',
             default=False,
             action='store_true',
