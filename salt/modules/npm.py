@@ -184,6 +184,10 @@ def list_(pkg=None, dir=None):
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir)
 
+    # newer NPM versions have a return code of 1 when not installed
+    if result['stdout'] == '{}':
+        return {}
+
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
