@@ -1506,7 +1506,6 @@ def copy(src, dst):
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
         )
-        return False
 
     if not salt.utils.is_windows():
         check_perms(dst, None, pre_user, pre_group, pre_mode)
