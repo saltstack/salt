@@ -286,7 +286,7 @@ class SerializerExtension(Extension, object):
         if isinstance(value, TemplateModule):
             value = str(value)
         try:
-            return yaml.load(value)
+            return yaml.safe_load(value)
         except AttributeError:
             raise TemplateRuntimeError(
                     'Unable to load yaml from {0}'.format(value))
