@@ -48,6 +48,7 @@ def __virtual__():
 
 def installed(name,
               composer=None,
+              php=None,
               runas=None,
               prefer_source=None,
               prefer_dist=None,
@@ -55,7 +56,7 @@ def installed(name,
               no_plugins=None,
               optimize=None,
               no_dev=None,
-              quiet=True):
+              composer_home='/root'):
     '''
     Docs go here
     '''
@@ -65,6 +66,7 @@ def installed(name,
         call = __salt__['composer.install'](
             name,
             composer=composer,
+            php=php,
             runas=runas,
             prefer_source=prefer_source,
             prefer_dist=prefer_dist,
@@ -72,22 +74,22 @@ def installed(name,
             no_plugins=no_plugins,
             optimize=optimize,
             no_dev=no_dev,
-            quiet=quiet
+            quiet=False,
+            composer_home=composer_home
         )
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error executing composer in \'{0}\': {1}'.format(name, err)
+        ret['comment'] = 'Error executing composer in \'{0!r}\': {1!r}'.format(name, err)
         return ret
 
     if call or isinstance(call, list) or isinstance(call, dict):
         ret['result'] = True
-        ret['changes']['Composer Ran'] = 'Installed'
-        ret['comment'] = 'Composer install executed in '.format(dir)
+        if call.find('Nothing to install or update') < 0:
+          ret['changes']['stdout'] = call
+
+        ret['comment'] = 'Composer ran, nothing changed in {0!r}'.format(name)
     else:
         ret['result'] = False
         ret['comment'] = 'Could not run composer'
 
     return ret
-
-
-

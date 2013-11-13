@@ -30,6 +30,7 @@ def _valid_composer(composer):
 
 def install(dir,
             composer=None,
+            php=None,
             runas=None,
             prefer_source=None,
             prefer_dist=None,
@@ -37,25 +38,35 @@ def install(dir,
             no_plugins=None,
             optimize=None,
             no_dev=None,
-            quiet=True):
+            quiet=False,
+            composer_home='/root'):
     '''
     Install composer dependencies for a project
 
     If no composer is specified
     '''
 
-    if composer is None:
-            composer = 'composer'
+    if composer != None:
+        if php is None:
+            php = 'php'
+    else:
+        composer = 'composer'
+
 
     # Validate Composer is there
     if not _valid_composer(composer):
-        return '{0!r} is not available.'.format('composer.install')
+        return '{0!r} is not available. Couldn\'t find {1!r}.'.format('composer.install', composer)
 
     if dir is None:
         return '{0!r} is required for {1!r}'.format('dir', 'composer.install')
 
+
     # Base Settings
     cmd = composer + ' install --no-interaction'
+
+    # If php is set, prepend it
+    if php != None:
+        cmd = php + ' ' + cmd
 
     # Add Working Dir
     cmd += ' --working-dir=' + dir
@@ -82,7 +93,7 @@ def install(dir,
     if optimize is True:
         cmd += ' --optimize-autoloader'
 
-    result = __salt__['cmd.run_all'](cmd, runas=runas)
+    result = __salt__['cmd.run_all'](cmd, runas=runas, env={'COMPOSER_HOME': composer_home})
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
@@ -91,6 +102,3 @@ def install(dir,
         return True
 
     return result['stdout']
-
-
-
