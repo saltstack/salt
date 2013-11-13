@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'gnome'
 
+
 def __virtual__():
     '''
     Only load if the Gio and Glib modules are available
@@ -25,6 +26,7 @@ def __virtual__():
     if HAS_GLIB:
         return __virtualname__
     return False
+
 
 class _GSettings(object):
     def __init__(self, user, schema, key, ftype):
@@ -188,6 +190,7 @@ class _GSettings(object):
 
         return result
 
+
 def ping(**kwargs):
     '''
     A test to ensure the GNOME module is loaded
@@ -200,6 +203,7 @@ def ping(**kwargs):
 
     '''
     return True
+
 
 def getIdleDelay(**kwargs):
     '''
@@ -216,6 +220,7 @@ def getIdleDelay(**kwargs):
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.session', key = 'idle-delay', ftype = 'variant')
     return _gsession._get()
 
+
 def setIdleDelay(delaySeconds, **kwargs):
     '''
     Set the current idle delay setting in seconds
@@ -231,6 +236,7 @@ def setIdleDelay(delaySeconds, **kwargs):
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.session', key = 'idle-delay', ftype = 'variant')
     return _gsession._set(delaySeconds)
 
+
 def getClockFormat(**kwargs):
     '''
     Return the current clock format, either 12h or 24h format.
@@ -245,6 +251,7 @@ def getClockFormat(**kwargs):
 
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-format', ftype = 'string')
     return _gsession._get()
+
 
 def setClockFormat(clockFormat, **kwargs):
     '''
@@ -263,6 +270,7 @@ def setClockFormat(clockFormat, **kwargs):
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-format', ftype = 'string')
     return _gsession._set(clockFormat)
 
+
 def getClockShowDate(**kwargs):
     '''
     Return the current setting, if the date is shown in the clock
@@ -277,6 +285,7 @@ def getClockShowDate(**kwargs):
 
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-show-date', ftype = 'boolean')
     return _gsession._get()
+
 
 def setClockShowDate(kvalue, **kwargs):
     '''
@@ -295,6 +304,7 @@ def setClockShowDate(kvalue, **kwargs):
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-show-date', ftype = 'boolean')
     return _gsession._set(kvalue)
 
+
 def getIdleActivation(**kwargs):
     '''
     Get whether the idle activation is enabled
@@ -309,6 +319,7 @@ def getIdleActivation(**kwargs):
 
     _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.screensaver', key = 'idle-activation-enabled', ftype = 'boolean')
     return _gsession._get()
+
 
 def setIdleActivation(kvalue, **kwargs):
     '''
@@ -344,6 +355,7 @@ def get(schema = None, key = None, user = None, ftype = None, value= None, **kwa
     _gsession = _GSettings(user = user, schema = schema, key = key, ftype = ftype)
     value = _gsession._get()
     return value
+
 
 def set(schema = None, key = None, user = None, ftype = None, value = None, **kwargs):
     '''
