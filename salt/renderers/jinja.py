@@ -37,7 +37,7 @@ def render(template_file, saltenv='base', sls='', argline='',
                                           context=context,
                                           tmplpath=tmplpath,
                                           **kws)
-    if not tmp_data.get('result', False):
+    if tmp_data.get('result', False):
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
