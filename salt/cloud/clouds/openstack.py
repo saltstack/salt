@@ -462,7 +462,7 @@ def create(vm_):
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
     )
-    
+
     kwargs['ex_metadata'] = config.get_config_value(
         'metadata', vm_, __opts__, default={}, search_global=False
     )
