@@ -31,7 +31,6 @@ from salt.cloud.exceptions import (
 # Import salt libs
 import salt.client
 import salt.utils
-from salt.utils.verify import check_user
 
 # Import third party libs
 import yaml
@@ -134,11 +133,11 @@ class CloudClient(object):
         '''
         return self.mapper.location_list(provider)
 
-    def query(self, profile=None, names=None):
+    def query(self, query_type='list_nodes'):
         '''
         Query all cloud information
         '''
-        return self.mapper.run_profile(profile, names)
+        return self.mapper.map_providers_parallel(query_type)
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
@@ -177,6 +176,9 @@ class Cloud(object):
         self.__cached_provider_queries = {}
 
     def get_configured_providers(self):
+        '''
+        Return the configured providers
+        '''
         providers = set()
         for alias, drivers in self.opts['providers'].iteritems():
             if len(drivers) > 1:
@@ -187,6 +189,11 @@ class Cloud(object):
         return providers
 
     def lookup_providers(self, lookup):
+        '''
+        Get a dict describing the configured providers
+        '''
+        if lookup is None:
+            lookup = 'all'
         if lookup == 'all':
             providers = set()
             for alias, drivers in self.opts['providers'].iteritems():
