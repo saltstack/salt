@@ -967,8 +967,9 @@ def replace(path,
     orig_file = []  # used if show_changes
     new_file = []  # used if show_changes
     if not salt.utils.is_windows():
-        fstat_pre = os.stat(path)
-        fperm_pre = salt.utils.file_perms(fstat_pre)
+        pre_user = get_user(path)
+        pre_group = get_group(path)
+        pre_mode = __salt__['config.manage_mode'](get_mode(path))
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
@@ -994,12 +995,7 @@ def replace(path,
                 print(result, end='', file=sys.stdout)
 
     if not dry_run and not salt.utils.is_windows():
-        try:
-            os.chown(path, fstat_pre.st_uid, fstat_pre.st_gid)
-            os.chmod(path, fperm_pre)
-        except (IOError, OSError) as exc:
-            log.error('Unable to set ownership/permissions on {0}: {1}'
-                    .format(path, exc))
+        check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
         return ''.join(difflib.unified_diff(orig_file, new_file))
@@ -1500,8 +1496,9 @@ def copy(src, dst):
         raise SaltInvocationError('File path must be absolute.')
 
     if not salt.utils.is_windows():
-        fstat_pre = os.stat(src)
-        fperm_pre = salt.utils.file_perms(fstat_pre)
+        pre_user = get_user(src)
+        pre_group = get_group(src)
+        pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
         shutil.copyfile(src, dst)
@@ -1512,12 +1509,7 @@ def copy(src, dst):
         return False
 
     if not salt.utils.is_windows():
-        try:
-            os.chown(dst, fstat_pre.st_uid, fstat_pre.st_gid)
-            os.chmod(dst, fperm_pre)
-        except (IOError, OSError) as exc:
-            log.error('Unable to set ownership/permissions on {0}: {1}'
-                      .format(dst, exc))
+        check_perms(dst, None, pre_user, pre_group, pre_mode)
     return True
 
 
