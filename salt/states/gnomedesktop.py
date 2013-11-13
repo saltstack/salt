@@ -7,22 +7,22 @@ Control the GNOME settings
 
 .. code-block:: yaml
 
-	localdesktop_wm_prefs:
-	    gnomedesktop.wm_preferences:
-	        - user: username
-	        - audible_bell: false
-	        - action_double_click_titlebar: 'toggle-maximize'
-	        - visual_bell: true
-	        - num_workspaces: 6
-	localdesktop_lockdown:
-	    gnomedesktop.desktop_lockdown:
-	        - user: username
-	        - disable_user_switching: true
-	localdesktop_interface:
-	    gnomedesktop.desktop_interface:
-	        - user: username
-	        - clock_show_date: true
-	        - clock_show_format: 12H
+    localdesktop_wm_prefs:
+        gnomedesktop.wm_preferences:
+            - user: username
+            - audible_bell: false
+            - action_double_click_titlebar: 'toggle-maximize'
+            - visual_bell: true
+            - num_workspaces: 6
+    localdesktop_lockdown:
+        gnomedesktop.desktop_lockdown:
+            - user: username
+            - disable_user_switching: true
+    localdesktop_interface:
+        gnomedesktop.desktop_interface:
+            - user: username
+            - clock_show_date: true
+            - clock_show_format: 12H
 '''
 
 import logging
@@ -31,12 +31,14 @@ import re
 
 log = logging.getLogger(__name__)
 
+
 def _check_current_value(gnome_kwargs, value):
     current_value = __salt__['gnome.get'](**gnome_kwargs)
     log.debug("CurrentValue {0}".format(current_value))
     log.debug("PassedValue {0}".format(value))
     log.debug(str(current_value) == str(value))
     return str(current_value) == str(value)
+
 
 def _do(name, gnome_kwargs, preferences):
 
@@ -81,6 +83,7 @@ def _do(name, gnome_kwargs, preferences):
     log.debug(ret)
     return ret
 
+
 def wm_preferences(name,
                    user=None,
                    action_double_click_titlebar=None,
@@ -113,11 +116,11 @@ def wm_preferences(name,
         'schema': 'org.gnome.desktop.wm.preferences'
     }
 
-    preferences = ['action_double_click_titlebar','action_middle_click_titlebar','action_right_click_titlebar',
-                   'application_based','audible_bell','auto_raise','auto_raise_delay','button_layout',
-                   'disable_workarounds','focus_mode','focus_new_windows','mouse_button_modifier','num_workspaces',
-                   'raise_on_click','resize_with_right_button','theme','titlebar_font','titlebar_uses_system_font',
-                   'visual_bell','visual_bell_type','workspace_names']
+    preferences = ['action_double_click_titlebar', 'action_middle_click_titlebar', 'action_right_click_titlebar',
+                   'application_based', 'audible_bell', 'auto_raise', 'auto_raise_delay', 'button_layout',
+                   'disable_workarounds', 'focus_mode','focus_new_windows', 'mouse_button_modifier', 'num_workspaces',
+                   'raise_on_click', 'resize_with_right_button', 'theme', 'titlebar_font', 'titlebar_uses_system_font',
+                   'visual_bell', 'visual_bell_type', 'workspace_names']
 
     preferences_hash = {}
     for pref in preferences:
@@ -130,18 +133,18 @@ def wm_preferences(name,
     return ret
 
 
-def desktop_lockdown( name,
-                    user = None,
-                    disable_application_handlers  = None,
-                    disable_command_line  = None,
-                    disable_lock_screen  = None,
-                    disable_log_out  = None,
-                    disable_print_setup  = None,
-                    disable_printing  = None,
-                    disable_save_to_disk  = None,
-                    disable_user_switching  = None,
-                    user_administration_disabled  = None,
-                    **kwargs):
+def desktop_lockdown(name,
+                     user = None,
+                     disable_application_handlers=None,
+                     disable_command_line=None,
+                     disable_lock_screen=None,
+                     disable_log_out=None,
+                     disable_print_setup=None,
+                     disable_printing=None,
+                     disable_save_to_disk=None,
+                     disable_user_switching=None,
+                     user_administration_disabled=None,
+                     **kwargs):
 
     gnome_kwargs = {
         'user': user,
@@ -161,45 +164,46 @@ def desktop_lockdown( name,
     ret = _do(name, gnome_kwargs, preferences_hash)
     return ret
 
-def desktop_interface( name,
-                       user = None,
-                       automatic_mnemonics = None,
-                       buttons_have_icons = None,
-                       can_change_accels = None,
-                       clock_format = None,
-                       clock_show_date = None,
-                       clock_show_seconds = None,
-                       cursor_blink = None,
-                       cursor_blink_time = None,
-                       cursor_blink_timeout = None,
-                       cursor_size = None,
-                       cursor_theme = None,
-                       document_font_name = None,
-                       enable_animations = None,
-                       font_name = None,
-                       gtk_color_palette = None,
-                       gtk_color_scheme = None,
-                       gtk_im_module = None,
-                       gtk_im_preedit_style = None,
-                       gtk_im_status_style = None,
-                       gtk_key_theme = None,
-                       gtk_theme = None,
-                       gtk_timeout_initial = None,
-                       gtk_timeout_repeat = None,
-                       icon_theme = None,
-                       menubar_accel = None,
-                       menubar_detachable = None,
-                       menus_have_icons = None,
-                       menus_have_tearoff = None,
-                       monospace_font_name = None,
-                       show_input_method_menu = None,
-                       show_unicode_menu = None,
-                       text_scaling_factor = None,
-                       toolbar_detachable = None,
-                       toolbar_icons_size = None,
-                       toolbar_style = None,
-                       toolkit_accessibility = None,
-                       **kwargs):
+
+def desktop_interface(name,
+                      user = None,
+                      automatic_mnemonics=None,
+                      buttons_have_icons=None,
+                      can_change_accels=None,
+                      clock_format=None,
+                      clock_show_date=None,
+                      clock_show_seconds=None,
+                      cursor_blink=None,
+                      cursor_blink_time=None,
+                      cursor_blink_timeout=None,
+                      cursor_size=None,
+                      cursor_theme=None,
+                      document_font_name=None,
+                      enable_animations=None,
+                      font_name=None,
+                      gtk_color_palette=None,
+                      gtk_color_scheme=None,
+                      gtk_im_module=None,
+                      gtk_im_preedit_style=None,
+                      gtk_im_status_style=None,
+                      gtk_key_theme=None,
+                      gtk_theme=None,
+                      gtk_timeout_initial=None,
+                      gtk_timeout_repeat=None,
+                      icon_theme=None,
+                      menubar_accel=None,
+                      menubar_detachable=None,
+                      menus_have_icons=None,
+                      menus_have_tearoff=None,
+                      monospace_font_name=None,
+                      show_input_method_menu=None,
+                      show_unicode_menu=None,
+                      text_scaling_factor=None,
+                      toolbar_detachable=None,
+                      toolbar_icons_size=None,
+                      toolbar_style=None,
+                      toolkit_accessibility=None,
+                      **kwargs):
 
     gnome_kwargs = {
         'user': user,
