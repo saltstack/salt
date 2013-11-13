@@ -118,7 +118,7 @@ def wm_preferences(name,
 
     preferences = ['action_double_click_titlebar', 'action_middle_click_titlebar', 'action_right_click_titlebar',
                    'application_based', 'audible_bell', 'auto_raise', 'auto_raise_delay', 'button_layout',
-                   'disable_workarounds', 'focus_mode','focus_new_windows', 'mouse_button_modifier', 'num_workspaces',
+                   'disable_workarounds', 'focus_mode', 'focus_new_windows', 'mouse_button_modifier', 'num_workspaces',
                    'raise_on_click', 'resize_with_right_button', 'theme', 'titlebar_font', 'titlebar_uses_system_font',
                    'visual_bell', 'visual_bell_type', 'workspace_names']
 
@@ -134,7 +134,7 @@ def wm_preferences(name,
 
 
 def desktop_lockdown(name,
-                     user = None,
+                     user=None,
                      disable_application_handlers=None,
                      disable_command_line=None,
                      disable_lock_screen=None,
@@ -166,7 +166,7 @@ def desktop_lockdown(name,
 
 
 def desktop_interface(name,
-                      user = None,
+                      user=None,
                       automatic_mnemonics=None,
                       buttons_have_icons=None,
                       can_change_accels=None,
@@ -229,5 +229,4 @@ def desktop_interface(name,
 
     ret = _do(name, gnome_kwargs, preferences_hash)
     return ret
-
 
