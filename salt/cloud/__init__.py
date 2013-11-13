@@ -156,7 +156,7 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return self.mapper.run_profile(profile, names)
+        return self.mapper.run_profile(fun, names)
 
     # map
     # create
