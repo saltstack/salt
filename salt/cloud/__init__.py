@@ -139,6 +139,14 @@ class CloudClient(object):
         '''
         return self.mapper.map_providers_parallel(query_type)
 
+    def profile(self, profile, names):
+        '''
+        Pass in a profile to create, names is a list of vm names to allocate
+        '''
+        if isinstance(names, str):
+            names = names.split(',')
+        return self.mapper.run_profile(profile, names)
+
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
         '''
