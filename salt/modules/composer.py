@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Use composer to install PHP dependencies
+Use composer to install PHP dependencies for a directory
 '''
 
 # Import python libs
@@ -24,6 +24,9 @@ def __virtual__():
     return 'composer'
 
 def _valid_composer(composer):
+    '''
+    Validate the composer file is indeed there.
+    '''
     if salt.utils.which(composer):
         return True
     return False
@@ -41,9 +44,59 @@ def install(dir,
             quiet=False,
             composer_home='/root'):
     '''
-    Install composer dependencies for a project
+    Install composer dependencies for a directory.
 
-    If no composer is specified
+    If you haven't installed composer globally by putting it in 
+    your PATH & making it executible, you will need to set both
+    the ``composer`` and ``php`` parameters.
+
+    dir
+        Directory location of the composer.json file.
+
+    composer
+        Location of the composer.phar file. If not set composer will 
+        just execute "composer" as if it is installed globally. 
+        (i.e. /path/to/composer.phar)
+
+    php
+        Location of the php executible to use with composer.
+        (i.e. /usr/bin/php)
+
+    runas
+        Which system user to run composer as.
+
+    prefer_source
+        --prefer-source option of composer.
+
+    prefer_dist
+        --prefer-dist option of composer.
+
+    no_scripts
+        --no-scripts option of composer.
+
+    no_plugins
+        --no-plugins option of composer.
+
+    optimize
+        --optimize-autoloader option of composer. Recommended for production.
+
+    no_dev
+        --no-dev option for composer. Recommended for production.
+
+    quiet
+        --queit option for composer. Whether or not to return output from composer.
+
+    composer_home
+        $COMPOSER_HOME environment variable
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' composer.install /var/www/application
+
+        salt '*' composer.install /var/www/application \
+            no_dev=True optimize=True
     '''
 
     if composer != None:
