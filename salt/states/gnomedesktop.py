@@ -229,4 +229,3 @@ def desktop_interface(name,
 
     ret = _do(name, gnome_kwargs, preferences_hash)
     return ret
-
