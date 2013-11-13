@@ -1937,8 +1937,10 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from {id}'.format(**load))
-        # only write to disk if you are adding the file
-        if not os.path.isfile(pubfn):
+        # only write to disk if you are adding the file, and in open mode,
+        # which implies we accept any key from a minion (key needs to be
+        # written every time because what's on disk is used for encrypting)
+        if not os.path.isfile(pubfn) or self.opts['open_mode']:
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
         pub = None
