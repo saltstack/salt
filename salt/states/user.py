@@ -99,7 +99,7 @@ def _changes(name,
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
-    if 'shadow.info' in __salt__ and 'shadow.default_hash' in __salt__::
+    if 'shadow.info' in __salt__ and 'shadow.default_hash' in __salt__:
         if password:
             default_hash = __salt__['shadow.default_hash']()
             if lshad['passwd'] == default_hash \
