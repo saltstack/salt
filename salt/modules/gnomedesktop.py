@@ -351,6 +351,11 @@ def getIdleActivation(**kwargs):
 
     '''
 
+    try:
+        user = kwargs['user']
+    except KeyError:
+        user = None
+
     _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled', ftype='boolean')
     return _gsession._get()
 
