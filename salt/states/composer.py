@@ -1,5 +1,5 @@
 '''
-Installaction of Composer Packages
+Installation of Composer Packages
 ==================================
 
 These states manage the installed packages for composer for PHP.
@@ -22,7 +22,7 @@ directory or you can pass the location of composer in the state.
 
     /path/to/project:
       composer.installed:
-        - no_dev
+        - no_dev: true
         - require:
           - cmd: install-composer
 
@@ -33,7 +33,9 @@ directory or you can pass the location of composer in the state.
       composer.installed:
         - composer: /path/to/composer.phar
         - php: /usr/local/bin/php
-        - no_dev
+        - no_dev: true
+
+
 '''
 
 # Import salt libs
@@ -42,7 +44,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 def __virtual__():
     '''
-    Only load if the npm module is available in __salt__
+    Only load if the composer module is available in __salt__
     '''
     return 'composer' if 'composer.install' in __salt__ else False
 
@@ -58,7 +60,47 @@ def installed(name,
               no_dev=None,
               composer_home='/root'):
     '''
-    Docs go here
+    Verify that composer has installed the latest packages give a 
+    ``composer.json`` and ``composer.lock`` file in a directory.
+
+    dir
+        Directory location of the composer.json file.
+
+    composer
+        Location of the composer.phar file. If not set composer will 
+        just execute "composer" as if it is installed globally. 
+        (i.e. /path/to/composer.phar)
+
+    php
+        Location of the php executible to use with composer.
+        (i.e. /usr/bin/php)
+
+    runas
+        Which system user to run composer as.
+
+    prefer_source
+        --prefer-source option of composer.
+
+    prefer_dist
+        --prefer-dist option of composer.
+
+    no_scripts
+        --no-scripts option of composer.
+
+    no_plugins
+        --no-plugins option of composer.
+
+    optimize
+        --optimize-autoloader option of composer. Recommended for production.
+
+    no_dev
+        --no-dev option for composer. Recommended for production.
+
+    quiet
+        --queit option for composer. Whether or not to return output from composer.
+
+    composer_home
+        $COMPOSER_HOME environment variable
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
