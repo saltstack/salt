@@ -267,10 +267,11 @@ class APIClient(object):
             raise EauthAuthenticationError("Authentication failed with provided credentials.")
 
         # Grab eauth config for the current backend for the current user
-        if tokenage['name'] in self.opts['external_auth'][tokenage['eauth']]:
-            tokenage['perms'] = self.opts['external_auth'][tokenage['eauth']][tokenage['name']]
+        tokenage_eauth = self.opts['external_auth'][tokenage['eauth']]
+        if tokenage['name'] in tokenage_eauth:
+            tokenage['perms'] = tokenage_eauth[tokenage['name']]
         else:
-            tokenage['perms'] = self.opts['external_auth'][tokenage['eauth']]['*']
+            tokenage['perms'] = tokenage_eauth['*']
 
         tokenage['user'] = tokenage['name']
         tokenage['username'] = tokenage['name']
