@@ -4,9 +4,7 @@ Use composer to install PHP dependencies for a directory
 '''
 
 # Import python libs
-import json
 import logging
-import distutils.version  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
@@ -21,7 +19,11 @@ __func_alias__ = {
 
 
 def __virtual__():
+    '''
+    Ensure correct name
+    '''
     return 'composer'
+
 
 def _valid_composer(composer):
     '''
@@ -30,6 +32,7 @@ def _valid_composer(composer):
     if salt.utils.which(composer):
         return True
     return False
+
 
 def install(dir,
             composer=None,
@@ -46,16 +49,16 @@ def install(dir,
     '''
     Install composer dependencies for a directory.
 
-    If you haven't installed composer globally by putting it in 
-    your PATH & making it executible, you will need to set both
-    the ``composer`` and ``php`` parameters.
+    If composer has not been installed globally making it avaliable in the
+    system PATH & making it executible, the ``composer`` and ``php`` parameters
+    will need to be set to the location of the executables.
 
     dir
         Directory location of the composer.json file.
 
     composer
-        Location of the composer.phar file. If not set composer will 
-        just execute "composer" as if it is installed globally. 
+        Location of the composer.phar file. If not set composer will
+        just execute "composer" as if it is installed globally.
         (i.e. /path/to/composer.phar)
 
     php
@@ -98,13 +101,11 @@ def install(dir,
         salt '*' composer.install /var/www/application \
             no_dev=True optimize=True
     '''
-
-    if composer != None:
+    if composer is not None:
         if php is None:
             php = 'php'
     else:
         composer = 'composer'
-
 
     # Validate Composer is there
     if not _valid_composer(composer):
@@ -113,12 +114,11 @@ def install(dir,
     if dir is None:
         return '{0!r} is required for {1!r}'.format('dir', 'composer.install')
 
-
     # Base Settings
     cmd = composer + ' install --no-interaction'
 
     # If php is set, prepend it
-    if php != None:
+    if php is not None:
         cmd = php + ' ' + cmd
 
     # Add Working Dir
@@ -130,7 +130,7 @@ def install(dir,
 
     if no_dev is True:
         cmd += ' --no-dev'
-    
+
     if prefer_source is True:
         cmd += ' --prefer-source'
 
