@@ -957,34 +957,6 @@ def str_to_num(text):
             return text
 
 
-def file_perms(path):
-    '''
-    the stat_result struct returned from os.stat() has a parameter st_mode,
-    which does not play nicely with os.chmod(). This function will accept
-    either a file path or a stat_result struct, and will return an integer
-    representing the mode. This integer can be passed directly to os.chmod(),
-    but if you want a human-readable permission string you'll need to use oct()
-    to convert the return value to octal.
-
-    If any problems are encountered, they will be logged and None will be
-    returned.
-    '''
-    # Not implemented yet on Windows
-    if salt.utils.is_windows():
-        return None
-
-    if isinstance(path, string_types):
-        try:
-            path = os.stat(path)
-        except (IOError, OSError) as exc:
-            log.error('Unable to stat {0}: {1}'.format(path, exc))
-            return None
-    if not isinstance(path, os.stat_result):
-        log.error('Invalid data passed to salt.utils.file_perms()')
-        return None
-    return path.st_mode & 4095
-
-
 def fopen(*args, **kwargs):
     '''
     Wrapper around open() built-in to set CLOEXEC on the fd.
