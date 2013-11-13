@@ -43,7 +43,8 @@ def create(path,
            pip=False,
            symlinks=None,
            upgrade=None,
-           runas=None):
+           runas=None,
+           saltenv='base'):
     '''
     Create a virtualenv
 
@@ -249,7 +250,7 @@ def create(path,
     if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
-            path, venv_python, runas
+            path, venv_python, runas, saltenv=saltenv
         )
 
         # clear up the distribute archive which gets downloaded
@@ -264,7 +265,7 @@ def create(path,
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
             'https://raw.github.com/pypa/pip/master/contrib/get-pip.py',
-            path, venv_python, runas
+            path, venv_python, runas, saltenv=saltenv
         )
         # Let's update the return dictionary with the details from the pip
         # installation
@@ -297,15 +298,14 @@ def get_site_packages(venv):
             'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
-def _install_script(source, cwd, python, runas):
-    env = 'base'
+def _install_script(source, cwd, python, runas, saltenv='base'):
     if not salt.utils.is_windows():
         tmppath = salt.utils.mkstemp(dir=cwd)
     else:
-        tmppath = __salt__['cp.cache_file'](source, env)
+        tmppath = __salt__['cp.cache_file'](source, saltenv)
 
     if not salt.utils.is_windows():
-        fn_ = __salt__['cp.cache_file'](source, env)
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
         os.chmod(tmppath, 320)
         os.chown(tmppath, __salt__['file.user_to_uid'](runas), -1)
