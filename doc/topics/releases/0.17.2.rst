@@ -68,3 +68,5 @@ Version 0.17.2 is another bugfix release for :doc:`0.17.0
 - Fix for matching minions under syndics (:issue:`7671`)
 - Improve exception handling for missing ID (:issue:`8259`)
 - Fix grain mismatch for ScientificLinux (:issue:`8338`)
+- Add configuration option for minion_id_caching
+- Fix open mode auth errors (:issue:`8402`)
