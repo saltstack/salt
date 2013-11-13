@@ -17,6 +17,7 @@ import salt.utils
 import salt.cloud
 import salt.syspaths as syspaths
 from salt.utils.event import tagify
+from salt.exceptions import EauthAuthenticationError
 
 
 def tokenify(cmd, token=None):
