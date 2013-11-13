@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of Composer Packages
 ==================================
@@ -34,19 +35,17 @@ directory or you can pass the location of composer in the state.
         - composer: /path/to/composer.phar
         - php: /usr/local/bin/php
         - no_dev: true
-
-
 '''
-
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
 
 def __virtual__():
     '''
     Only load if the composer module is available in __salt__
     '''
     return 'composer' if 'composer.install' in __salt__ else False
+
 
 def installed(name,
               composer=None,
@@ -60,15 +59,15 @@ def installed(name,
               no_dev=None,
               composer_home='/root'):
     '''
-    Verify that composer has installed the latest packages give a 
+    Verify that composer has installed the latest packages give a
     ``composer.json`` and ``composer.lock`` file in a directory.
 
     dir
         Directory location of the composer.json file.
 
     composer
-        Location of the composer.phar file. If not set composer will 
-        just execute "composer" as if it is installed globally. 
+        Location of the composer.phar file. If not set composer will
+        just execute "composer" as if it is installed globally.
         (i.e. /path/to/composer.phar)
 
     php
@@ -127,7 +126,7 @@ def installed(name,
     if call or isinstance(call, list) or isinstance(call, dict):
         ret['result'] = True
         if call.find('Nothing to install or update') < 0:
-          ret['changes']['stdout'] = call
+            ret['changes']['stdout'] = call
 
         ret['comment'] = 'Composer ran, nothing changed in {0!r}'.format(name)
     else:
