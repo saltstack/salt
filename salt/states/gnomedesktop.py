@@ -36,13 +36,13 @@ def _check_current_value(gnome_kwargs, value):
     Check the current value with the passed value
     '''
     currentValue = __salt__['gnome.get'](**gnome_kwargs)
-    return (( str(currentValue) == str(value) ))
+    return ((str(currentValue) == str(value)))
 
 
 def _do(name, gnome_kwargs, preferences):
     '''
     worker function for the others to use
-    this handles all the gsetting magic 
+    this handles all the gsetting magic
     '''
     ret = {'name': name,
            'result': True,
@@ -55,16 +55,16 @@ def _do(name, gnome_kwargs, preferences):
         key = pref
         value = preferences[pref]
 
-        if isinstance(value, bool ):
+        if isinstance(value, bool):
             ftype = 'boolean'
 
             # need to convert boolean values to strings and make lowercase to
             # pass to gsettings
             value = str(value).lower()
 
-        elif isinstance(value, int ):
+        elif isinstance(value, int):
             ftype = 'int'
-        elif isinstance(value, str ):
+        elif isinstance(value, str):
             ftype = 'string'
         else:
             ftype = 'string'
