@@ -24,6 +24,8 @@ except NameError:
 if SETUP_DIRNAME != '':
     os.chdir(SETUP_DIRNAME)
 
+SETUP_DIRNAME = os.path.abspath(SETUP_DIRNAME)
+
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
 
