@@ -80,6 +80,22 @@ SALT_SYSPATHS = os.path.join(
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 
+    def write_manifest(self):
+        if IS_WINDOWS_PLATFORM is False:
+            # Remove un-necessary scripts grabbed by MANIFEST.in
+            for filename in self.filelist.files[:]:
+                if filename in ('scripts/salt',
+                                'scripts/salt-cloud',
+                                'scripts/salt-key',
+                                'scripts/salt-master',
+                                'scripts/salt-run',
+                                'scripts/salt-ssh',
+                                'scripts/salt-syndic'):
+                    self.filelist.files.pop(
+                        self.filelist.files.index(filename)
+                    )
+        return sdist.write_manifest(self)
+
 
 class TestCommand(Command):
     description = 'Run tests'
