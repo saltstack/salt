@@ -125,3 +125,12 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
     /usr/bin/foo:
       file.symlink:
         - target: /usr/local/bin/foo
+
+Can I run different versions of Salt on my Master and Minion?
+-------------------------------------------------------------
+
+As of release 0.17.1 you can no longer run different versions of Salt on your
+Master and Minion servers. This is due to a protocol change for security
+purposes. It is unknown at this time whether Salt will support backwards
+compatibility going into the future, however the Salt team will continue
+to attempt to ensure versions are as backwards compatible as possible.
