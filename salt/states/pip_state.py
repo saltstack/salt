@@ -119,7 +119,7 @@ def installed(name,
     name
         The name of the python package to install. You can also specify version
         numbers here using the standard operators ``==, >=, <=``. If
-        ``requiremenets`` is given, this parameter will be ignored.
+        ``requirements`` is given, this parameter will be ignored.
 
     Example::
 
