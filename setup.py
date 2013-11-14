@@ -4,6 +4,8 @@
 The setup script for salt
 '''
 
+# pylint: disable=C0111,E1101,E1103,F0401,W0611
+
 # For Python 2.5.  A no-op on 2.6 and above.
 from __future__ import with_statement
 
@@ -12,11 +14,13 @@ import sys
 import glob
 import urllib2
 from datetime import datetime
+# pylint: disable=E0611
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
+# pylint: enable=E0611
 
 # Change to salt source's directory prior to running any command
 try:
@@ -58,8 +62,10 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
 
 if WITH_SETUPTOOLS is False:
     import warnings
+    # pylint: disable=E0611
     from distutils.command.install import install
     from distutils.core import setup
+    # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
         'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
@@ -89,8 +95,10 @@ SALT_SYSPATHS = os.path.join(
     os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py'
 )
 
+# pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
+# pylint: enable=W0122
 
 
 class CloudSdist(sdist):
@@ -244,6 +252,7 @@ class Build(build):
             version_file_path = os.path.join(
                 self.build_lib, 'salt', '_version.py'
             )
+            # pylint: disable=E0602
             open(version_file_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=datetime.utcnow(),
@@ -251,6 +260,7 @@ class Build(build):
                     version_info=__version_info__
                 )
             )
+            # pylint: enable=E0602
 
             # Write the system paths file
             system_paths_file_path = os.path.join(
@@ -299,6 +309,7 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+        # pylint: disable=E0602
         self.salt_root_dir = ROOT_DIR
         self.salt_config_dir = CONFIG_DIR
         self.salt_cache_dir = CACHE_DIR
@@ -309,6 +320,7 @@ class Install(install):
         self.salt_base_master_roots_dir = BASE_MASTER_ROOTS_DIR
         self.salt_logs_dir = LOGS_DIR
         self.salt_pidfile_dir = PIDFILE_DIR
+        # pylint: enable=E0602
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -334,7 +346,7 @@ class Install(install):
 
 
 NAME = 'salt'
-VER = __version__
+VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
 
