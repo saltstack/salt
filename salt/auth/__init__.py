@@ -244,7 +244,7 @@ class Authorize(object):
         authorization
         '''
         adata = self.auth_data()
-        good = True
+        good = False
         if load.get('token', False):
             good = False
             for sub_auth in self.token(adata, load):
