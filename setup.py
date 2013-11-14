@@ -10,7 +10,9 @@ from __future__ import with_statement
 import os
 import sys
 import glob
+import urllib2
 from datetime import datetime
+from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
@@ -26,6 +28,15 @@ except NameError:
 
 if SETUP_DIRNAME != '':
     os.chdir(SETUP_DIRNAME)
+
+BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
+    # The user can provide a different bootstrap-script version.
+    # ATTENTION: A tag for that version MUST exist
+    'BOOTSTRAP_SCRIPT_VERSION',
+    # If no bootstrap-script version was provided from the environment, let's
+    # provide the one we define.
+    'v1.5.9'
+)
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
@@ -83,13 +94,13 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 
 
 class CloudSdist(sdist):
-    user_options = original_sdist.user_options + [
+    user_options = sdist.user_options + [
         ('skip-bootstrap-download', None,
          'Skip downloading the bootstrap-salt.sh script. This can also be '
          'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
          'variable.')
     ]
-    boolean_options = original_sdist.boolean_options + [
+    boolean_options = sdist.boolean_options + [
         'skip-bootstrap-download'
     ]
 
@@ -117,8 +128,9 @@ class CloudSdist(sdist):
             )
             req = urllib2.urlopen(url)
             deploy_path = os.path.join(
-                SALTCLOUD_SOURCE_DIR,
-                'saltcloud',
+                SETUP_DIRNAME,
+                'salt',
+                'cloud',
                 'deploy',
                 'bootstrap-salt.sh'
             )
