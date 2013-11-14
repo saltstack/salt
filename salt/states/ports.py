@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if __grains__.get('os', '') == 'FreeBSD' and 'ports.install':
+    if __grains__.get('os', '') == 'FreeBSD' and 'ports.install' in __salt__:
         return 'ports'
     return False
 
