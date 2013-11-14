@@ -33,6 +33,8 @@ except NameError:
 if SETUP_DIRNAME != '':
     os.chdir(SETUP_DIRNAME)
 
+SETUP_DIRNAME = os.path.abspath(SETUP_DIRNAME)
+
 BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
     # The user can provide a different bootstrap-script version.
     # ATTENTION: A tag for that version MUST exist
