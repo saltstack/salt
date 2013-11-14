@@ -171,7 +171,7 @@ class SaltStackVersion(object):
 #
 # Please bump version information for __saltstack_version__ on new releases
 # ----------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion(0, 17, 1)
+__saltstack_version__ = SaltStackVersion(0, 17, 2)
 __version_info__ = __saltstack_version__.info
 __version__ = __saltstack_version__.string
 # <---- Hardcoded Salt Version Information -----------------------------------
