@@ -343,7 +343,7 @@ if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['data_files'][0][1].extend([
         'doc/man/salt-master.1',
         'doc/man/salt-key.1',
-        'doc/man/salt.1'
+        'doc/man/salt.1',
         'doc/man/salt-syndic.1',
         'doc/man/salt-run.1',
         'doc/man/salt-ssh.1',
@@ -430,7 +430,7 @@ if WITH_SETUPTOOLS:
     ]
     SETUP_KWARGS['tests_require'] = ['SaltTesting']
 else:
-    SETUP_KWARGS['scripts'] = ['scripts/salt-call'
+    SETUP_KWARGS['scripts'] = ['scripts/salt-call',
                                'scripts/salt-cp',
                                'scripts/salt-minion',
                                ]
