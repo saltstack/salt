@@ -68,9 +68,9 @@ def _chugid(runas):
     #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
     # ]
 
-    supgroups = [ g.gr_gid for g in grp.getgrall()
-                      if uinfo.pw_name in g.gr_mem \
-                          and g.gr_gid not in supgroups_seen \
+    supgroups = [g.gr_gid for g in grp.getgrall()
+                      if uinfo.pw_name in g.gr_mem
+                          and g.gr_gid not in supgroups_seen
                           and not supgroups_seen.add(g.gr_gid)
                 ]
     # No logging can happen on this function
