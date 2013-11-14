@@ -417,7 +417,8 @@ if WITH_SETUPTOOLS:
                             ]
     }
     if IS_WINDOWS_PLATFORM is False:
-        SETUP_KWARGS['entry_points'].append('salt-cloud = salt.scripts:salt_cloud')
+        SETUP_KWARGS['entry_points']['console_scripts'].append(
+            'salt-cloud = salt.scripts:salt_cloud')
 
     # Required for running the tests suite
     SETUP_KWARGS['dependency_links'] = [
