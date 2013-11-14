@@ -5,19 +5,13 @@ GNOME implementations
 
 try:
     import pwd
-    import psutil
     from gi.repository import Gio, GLib
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
 
 import logging
-import os
 import re
-import subprocess
-import sys
-import time
-
 import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
