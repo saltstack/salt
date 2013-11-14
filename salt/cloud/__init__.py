@@ -62,7 +62,7 @@ class CloudClient(object):
         '''
         Execute a cloud method in a multiprocess and fire the return on the event bus
         '''
-        salt.utils.daemonize()
+        salt.utils.daemonize(False)
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         data = {'fun': 'cloud.{0}'.format(fun),
                 'jid': jid,
