@@ -29,7 +29,7 @@ from saltstack.com:
 
 * `SaltStack Download Area`__
 
-  .. __: http://saltstack.com/downloads/
+  .. __: http://docs.saltstack.com/downloads/
 
 
 Firewall Settings
