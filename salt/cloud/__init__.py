@@ -178,8 +178,14 @@ class CloudClient(object):
               instance=None, kwargs=None):
         '''
         Execute a single action via the cloud plugin backend
+
+        Examples:
+
+            client.action(fun='show_instance', names=['myinstance'])
+            client.action(fun='show_image', provider='my-ec2-config', kwargs={'image': 'ami-10314d79'})
         '''
-        if instance and not provider:
+        if names and not provider:
+            self.opts['action'] = fun
             return self.mapper.do_action(names, kwargs)
         if provider:
             return self.mapper.do_function(provider, fun, kwargs)
