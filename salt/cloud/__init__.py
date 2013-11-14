@@ -41,8 +41,10 @@ log = logging.getLogger(__name__)
 try:
     from mako.template import Template
     from mako.exceptions import MakoException
+    MAKO_AVAILABLE = True
 except ImportError:
     log.debug('Mako not available')
+    MAKO_AVAILABLE = False
 
 
 class CloudClient(object):
@@ -1075,6 +1077,17 @@ class Map(Cloud):
                         vm_names.append(vm_name)
         return vm_names
 
+    def _mako_read(self, fp):
+        try:
+            # open mako file
+            temp_ = Template(fp.read())
+            # render as yaml
+            yaml_str_ = temp_.render()
+            map = yaml.safe_load(yaml_str_)
+        except MakoException:
+            map = yaml.safe_load(fp.read())
+        return map
+
     def read(self):
         '''
         Read in the specified map file and return the map structure
@@ -1090,13 +1103,9 @@ class Map(Cloud):
             )
         try:
             with open(self.opts['map'], 'rb') as fp_:
-                try:
-                    # open mako file
-                    temp_ = Template(fp_.read())
-                    # render as yaml
-                    yaml_str_ = temp_.render()
-                    map_ = yaml.safe_load(yaml_str_)
-                except MakoException:
+                if MAKO_AVAILABLE:
+                    map_ = self._mako_read(fp_)
+                else:
                     map_ = yaml.safe_load(fp_.read())
         except Exception as exc:
             log.error(
