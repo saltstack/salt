@@ -291,9 +291,6 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.client',
                              'salt.client.ssh',
                              'salt.client.ssh.wrapper',
-                             'salt.cloud',
-                             'salt.cloud.utils',
-                             'salt.cloud.clouds',
                              'salt.ext',
                              'salt.auth',
                              'salt.wheel',
@@ -320,12 +317,10 @@ SETUP_KWARGS = {'name': NAME,
                                     'rh_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
-                                 'salt.cloud': ['deploy/*.sh'],
                                 },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-master.1',
                                  'doc/man/salt-key.1',
-                                 'doc/man/salt-cloud.1',
                                  'doc/man/salt.1',
                                  'doc/man/salt-cp.1',
                                  'doc/man/salt-call.1',
@@ -344,6 +339,14 @@ SETUP_KWARGS = {'name': NAME,
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
                 }
+
+if IS_WINDOWS_PLATFORM is False:
+    SETUP_KWARGS['packages'].extend(['salt.cloud',
+                                     'salt.cloud.utils',
+                                     'salt.cloud.clouds'])
+    SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
+    SETUP_KWARGS['data_files'][0][1].append('doc/man/salt-cloud.1')
+
 
 # bbfreeze explicit includes
 # Sometimes the auto module traversal doesn't find everything, so we
@@ -410,10 +413,11 @@ if WITH_SETUPTOOLS:
                             'salt-call = salt.scripts:salt_call',
                             'salt-run = salt.scripts:salt_run',
                             'salt-ssh = salt.scripts:salt_ssh',
-                            'salt-cloud = salt.scripts:salt_cloud',
                             'salt = salt.scripts:salt_main'
-                            ],
+                            ]
     }
+    if IS_WINDOWS_PLATFORM is False:
+        SETUP_KWARGS['entry_points'].append('salt-cloud = salt.scripts:salt_cloud')
 
     # Required for running the tests suite
     SETUP_KWARGS['dependency_links'] = [
@@ -429,8 +433,10 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt-ssh',
-                               'scripts/salt-cloud',
                                'scripts/salt']
+
+    if IS_WINDOWS_PLATFORM is False:
+        SETUP_KWARGS['scripts'].append('scripts/salt-cloud')
 
 if __name__ == '__main__':
     setup(**SETUP_KWARGS)
