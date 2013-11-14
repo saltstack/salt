@@ -184,7 +184,9 @@ def list_(pkg=None, dir=None):
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir)
 
-    if result['retcode'] != 0:
+    # npm will return error code 1 for both no packages found and an actual
+    # error. The only difference between the two cases are if stderr is empty
+    if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout']).get('dependencies', {})
