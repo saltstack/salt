@@ -542,11 +542,14 @@ class CkMinions(object):
         '''
         Check special API permissions
         '''
-        comps = fun.split('.')
-        if len(comps) != 2:
-            return False
-        mod = comps[0]
-        fun = comps[1]
+        if form != 'cloud':
+            comps = fun.split('.')
+            if len(comps) != 2:
+                return False
+            mod = comps[0]
+            fun = comps[1]
+        else:
+            mod = fun
         for ind in auth_list:
             if isinstance(ind, str):
                 if ind.startswith('@') and ind[1:] == mod:
