@@ -145,7 +145,19 @@ class CloudClient(object):
 
     def query(self, query_type='list_nodes'):
         '''
-        Query all cloud information
+        Query basic instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def full_query(self, query_type='list_nodes_full'):
+        '''
+        Query all instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def select_query(self, query_type='list_nodes_select'):
+        '''
+        Query select instance information
         '''
         return self.mapper.map_providers_parallel(query_type)
 
@@ -179,9 +191,6 @@ class CloudClient(object):
     # map
     # create
     # destroy
-    # query
-    # full_query
-    # select_query
 
 
 class Cloud(object):
