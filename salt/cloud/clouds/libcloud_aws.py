@@ -143,6 +143,7 @@ def __virtual__():
     libcloudfuncs_destroy = namespaced_function(
         libcloudfuncs_destroy, globals(), (conn,)
     )
+    show_instance = namespaced_function(show_instance, globals())
 
     log.debug('Loading Libcloud AWS cloud module')
     return __virtualname__

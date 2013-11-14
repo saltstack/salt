@@ -413,6 +413,19 @@ def list_nodes_select(conn=None):
     return ret
 
 
+def show_instance(name, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    nodes = list_nodes_full()
+    return nodes[name]
+
+
 def conn_has_method(conn, method_name):
     '''
     Find if the provided connection object has a specific method
