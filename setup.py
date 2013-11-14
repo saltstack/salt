@@ -14,6 +14,7 @@ from datetime import datetime
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
+from distutils.command.sdist import sdist
 
 # Change to salt source's directory prior to running any command
 try:
@@ -39,6 +40,7 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
         from setuptools.command.install import install
+        from setuptools.command.sdist import sdist
         WITH_SETUPTOOLS = True
     except ImportError:
         WITH_SETUPTOOLS = False
@@ -78,6 +80,74 @@ SALT_SYSPATHS = os.path.join(
 
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
+
+
+class CloudSdist(sdist):
+    user_options = original_sdist.user_options + [
+        ('skip-bootstrap-download', None,
+         'Skip downloading the bootstrap-salt.sh script. This can also be '
+         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
+         'variable.')
+    ]
+    boolean_options = original_sdist.boolean_options + [
+        'skip-bootstrap-download'
+    ]
+
+    def initialize_options(self):
+        sdist.initialize_options(self)
+        self.skip_bootstrap_download = False
+
+    def finalize_options(self):
+        sdist.finalize_options(self)
+        if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
+            skip_bootstrap_download = os.environ.get(
+                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
+            )
+            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+
+    def run(self):
+        if self.skip_bootstrap_download is False:
+            # Let's update the bootstrap-script to the version defined to be
+            # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
+            url = (
+                'https://github.com/saltstack/salt-bootstrap/raw/{0}'
+                '/bootstrap-salt.sh'.format(
+                    BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
+                )
+            )
+            req = urllib2.urlopen(url)
+            deploy_path = os.path.join(
+                SALTCLOUD_SOURCE_DIR,
+                'saltcloud',
+                'deploy',
+                'bootstrap-salt.sh'
+            )
+            if req.getcode() == 200:
+                try:
+                    log.info(
+                        'Updating bootstrap-salt.sh.'
+                        '\n\tSource:      {0}'
+                        '\n\tDestination: {1}'.format(
+                            url,
+                            deploy_path
+                        )
+                    )
+                    with open(deploy_path, 'w') as fp_:
+                        fp_.write(req.read())
+                except (OSError, IOError), err:
+                    log.error(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
+            else:
+                log.error(
+                    'Failed to update the bootstrap-salt.sh script. HTTP '
+                    'Error code: {0}'.format(
+                        req.getcode()
+                    )
+                )
+
+        # Let's the rest of the build command
+        sdist.run(self)
 
 
 class TestCommand(Command):
@@ -336,6 +406,7 @@ SETUP_KWARGS = {'name': NAME,
                 }
 
 if IS_WINDOWS_PLATFORM is False:
+    SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
     SETUP_KWARGS['packages'].extend(['salt.cloud',
                                      'salt.cloud.utils',
                                      'salt.cloud.clouds'])
