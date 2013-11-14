@@ -438,7 +438,7 @@ else:
     if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['scripts'].extend([
             'scripts/salt',
-            'scripts/salt-cloud'
+            'scripts/salt-cloud',
             'scripts/salt-key',
             'scripts/salt-master',
             'scripts/salt-run',
