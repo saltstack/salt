@@ -15,12 +15,12 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltRenderError
+from salt.utils import get_context
 from salt.utils.jinja import SaltCacheLoader, SerializerExtension
 from salt.utils.templates import (
     JINJA,
-    SaltTemplateRenderError,
     render_jinja_tmpl,
-    get_template_context
 )
 from salt.utils.odict import OrderedDict
 
@@ -240,47 +240,57 @@ class TestGetTemplate(TestCase):
             result = fp.read().decode('utf-8')
             self.assertEqual(u'Assunção\n', result)
 
-    def test_get_template_context_has_enough_context(self):
+    def test_get_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_template_context(template, 8)
+        context = get_context(template, 8)
         expected = '---\n[...]\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\n[...]\n---'
         self.assertEqual(expected, context)
 
-    def test_get_template_context_at_top_of_file(self):
+    def test_get_context_at_top_of_file(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_template_context(template, 1)
+        context = get_context(template, 1)
         expected = '---\n1\n2\n3\n4\n5\n6\n[...]\n---'
         self.assertEqual(expected, context)
 
-    def test_get_template_context_at_bottom_of_file(self):
+    def test_get_context_at_bottom_of_file(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_template_context(template, 15)
+        context = get_context(template, 15)
         expected = '---\n[...]\na\nb\nc\nd\ne\nf\n---'
         self.assertEqual(expected, context)
 
-    def test_get_template_context_2_context_lines(self):
+    def test_get_context_2_context_lines(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_template_context(template, 8, num_lines=2)
+        context = get_context(template, 8, num_lines=2)
         expected = '---\n[...]\n6\n7\n8\n9\na\n[...]\n---'
         self.assertEqual(expected, context)
 
-    def test_get_template_context_with_marker(self):
+    def test_get_context_with_marker(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_template_context(template, 8, num_lines=2, marker=' <---')
+        context = get_context(template, 8, num_lines=2, marker=' <---')
         expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
         self.assertEqual(expected, context)
 
     def test_render_with_syntax_error(self):
         template = 'hello\n\n{{ bad\n\nfoo'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo    <======================\n---'
-        self.assertRaisesRegexp(SaltTemplateRenderError, expected,
-                render_jinja_tmpl, template, dict(opts=self.local_opts, saltenv='other'))
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
-        expected = r'Undefined jinja variable.*\n\n---\nhello\n\n{{ foo }}.*'
-        self.assertRaisesRegexp(SaltTemplateRenderError, expected,
-                render_jinja_tmpl, template, dict(opts=self.local_opts, saltenv='other'))
+        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
 
 
 class TestCustomExtensions(TestCase):

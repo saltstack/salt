@@ -109,7 +109,8 @@ def _get_jinja_error_line(tb_data):
     '''
     try:
         return [
-            x[1] for x in tb_data if x[2] == 'top-level template code'
+            x[1] for x in tb_data if x[2] in ('top-level template code',
+                                              'template')
         ][-1]
     except IndexError:
         pass
@@ -185,7 +186,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
-        raise SaltRenderError(exc, line, tmplstr)
+        raise SaltRenderError(
+            'Jinja syntax error: {0}'.format(exc), line, tmplstr
+        )
     except jinja2.exceptions.UndefinedError as exc:
         line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
         raise SaltRenderError('Jinja variable {0}'.format(exc), line, tmplstr)
