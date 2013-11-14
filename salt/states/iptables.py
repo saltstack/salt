@@ -87,7 +87,7 @@ def append(name, **kwargs):
 
 def set_policy(name, **kwargs):
     '''
-    Sets policy for iptables firewall tables
+    Sets the default policy for iptables firewall tables
     '''
     ret = {'name': name,
         'changes': {},
