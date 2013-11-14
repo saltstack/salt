@@ -25,9 +25,8 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'gnome'
 
+
 def __virtual__():
-
-
     '''
     Only load if the Gio and Glib modules are available
     '''
@@ -35,9 +34,8 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 class _GSettings:
-
-
     def __init__(self, user, schema, key):
         self.SCHEMA = schema
         self.KEY = key
@@ -46,27 +44,24 @@ class _GSettings:
         self.HOME = None
 
     def _get(self):
-
-
         '''
         get the value for user in gsettings
 
         '''
-
         user = self.USER
         try:
             uid = pwd.getpwnam(user).pw_uid
         except KeyError:
-            log.info("User does not exist")
+            log.info('User does not exist')
             return False
 
-        cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}' . format(self.SCHEMA, self.KEY)
+        cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}'.format(self.SCHEMA, self.KEY)
         environ = {}
-        environ['XDG_RUNTIME_DIR'] = "/run/user/%d" % (uid)
+        environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
 
         if 'stdout' in result:
-            if "uint32" in result['stdout']:
+            if 'uint32' in result['stdout']:
                 return re.sub('uint32 ', '', result['stdout'])
             else:
                 return result['stdout']
@@ -74,32 +69,28 @@ class _GSettings:
             return False
 
     def _set(self, value):
-
-
         '''
         set the value for user in gsettings
 
         '''
-
         user = self.USER
         try:
             uid = pwd.getpwnam(user).pw_uid
         except KeyError:
-            log.info("User does not exist")
+            log.info('User does not exist')
             result = {}
             result['retcode'] = 1
-            result['stdout'] = "User {0} does not exist" . format(user)
+            result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 
-        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"' . format(self.SCHEMA, self.KEY, str(value))
+        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
         environ = {}
-        environ['XDG_RUNTIME_DIR'] = "/run/user/%d" % (uid)
+        environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
         return result
 
+
 def ping(**kwargs):
-
-
     '''
     A test to ensure the GNOME module is loaded
 
@@ -112,9 +103,8 @@ def ping(**kwargs):
     '''
     return True
 
+
 def getIdleDelay(**kwargs):
-
-
     '''
     Return the current idle delay setting in seconds
 
@@ -125,13 +115,13 @@ def getIdleDelay(**kwargs):
         salt '*' gnome.getIdleDelay user=<username>
 
     '''
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.session',
+                           key='idle-delay')
     return _gsession._get()
 
+
 def setIdleDelay(delaySeconds, **kwargs):
-
-
     '''
     Set the current idle delay setting in seconds
 
@@ -142,13 +132,13 @@ def setIdleDelay(delaySeconds, **kwargs):
         salt '*' gnome.setIdleDelay <seconds> user=<username>
 
     '''
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.session',
+                           key='idle-delay')
     return _gsession._set(delaySeconds)
 
+
 def getClockFormat(**kwargs):
-
-
     '''
     Return the current clock format, either 12h or 24h format.
 
@@ -159,15 +149,15 @@ def getClockFormat(**kwargs):
         salt '*' gnome.getClockFormat user=<username>
 
     '''
-
-    _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-format')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.interface',
+                           key='clock-format')
     return _gsession._get()
 
+
 def setClockFormat(clockFormat, **kwargs):
-
-
     '''
-    Set the clock format, either 12h or 24h format. 
+    Set the clock format, either 12h or 24h format.
 
     CLI Example:
 
@@ -176,15 +166,15 @@ def setClockFormat(clockFormat, **kwargs):
         salt '*' gnome.setClockFormat <12h|24h> user=<username>
 
     '''
-
-    if clockFormat != "12h" and clockFormat != "24h":
+    if clockFormat != '12h' and clockFormat != '24h':
         return False
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-format') 
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.interface',
+                           key='clock-format')
     return _gsession._set(clockFormat)
 
+
 def getClockShowDate(**kwargs):
-
-
     '''
     Return the current setting, if the date is shown in the clock
 
@@ -195,13 +185,13 @@ def getClockShowDate(**kwargs):
         salt '*' gnome.getClockShowDate user=<username>
 
     '''
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.interface',
+                           key='clock-show-date')
     return _gsession._get()
 
+
 def setClockShowDate(kvalue, **kwargs):
-
-
     '''
     Set whether the date is visable in the clock
 
@@ -212,15 +202,15 @@ def setClockShowDate(kvalue, **kwargs):
         salt '*' gnome.setClockShowDate <True|False> user=<username>
 
     '''
-
     if kvalue is not True and kvalue is not False:
         return False
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.interface',
+                           key='clock-show-date')
     return _gsession._set(kvalue)
 
+
 def getIdleActivation(**kwargs):
-
-
     '''
     Get whether the idle activation is enabled
 
@@ -231,13 +221,13 @@ def getIdleActivation(**kwargs):
         salt '*' gnome.getIdleActivation user=<username>
 
     '''
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.screensaver',
+                           key='idle-activation-enabled')
     return _gsession._get()
 
+
 def setIdleActivation(kvalue, **kwargs):
-
-
     '''
     Set whether the idle activation is enabled
 
@@ -248,34 +238,30 @@ def setIdleActivation(kvalue, **kwargs):
         salt '*' gnome.setIdleActivation <True|False> user=<username>
 
     '''
-
     if kvalue is not True and kvalue is not False:
         return False
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled')
+    _gsession = _GSettings(user=user,
+                           schema='org.gnome.desktop.screensaver',
+                           key='idle-activation-enabled')
     return _gsession._set(kvalue)
 
 
-def get(schema = None, key = None, user = None, value= None, **kwargs):
-
-
+def get(schema=None, key=None, user=None, value=None, **kwargs):
     '''
-   Get key in a particular GNOME schema
+    Get key in a particular GNOME schema
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' gnome.get user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled 
+        salt '*' gnome.get user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled
 
     '''
-
     _gsession = _GSettings(user=user, schema=schema, key=key)
     return _gsession._get()
 
-def set(schema = None, key = None, user = None, value = None, **kwargs):
 
-
+def set(schema=None, key=None, user=None, value=None, **kwargs):
     '''
     Set key in a particular GNOME schema
 
@@ -286,6 +272,5 @@ def set(schema = None, key = None, user = None, value = None, **kwargs):
         salt '*' gnome.set user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled value=False
 
     '''
-
     _gsession = _GSettings(user=user, schema=schema, key=key)
     return _gsession._set(value)
