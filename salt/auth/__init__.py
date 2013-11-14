@@ -166,7 +166,7 @@ class Authorize(object):
         Gather and create the autorization data sets
         '''
         auth_data = [self.opts['external_auth']]
-        for auth_back in self.opts.get('external_auth_sources'):
+        for auth_back in self.opts.get('external_auth_sources', []):
             fstr = '{0}.perms'.format(auth_back)
             if fstr in self.loadauth.auth:
                 auth_data.append(getattr(self.loadauth.auth)())
