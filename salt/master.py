@@ -2005,17 +2005,14 @@ class ClearFuncs(object):
         '''
         authorize = salt.auth.Authorize(self.opts, clear_load, self.loadauth)
         if not authorize.rights('cloud', clear_load):
-            return False
-        try:
-            cloud_client = salt.cloud.CloudClient(
-                    os.path.join(
-                        os.path.dirname(self.opts['conf_file']), 'cloud'
-                        )
-                    )
-            fun = clear_load.pop('fun')
-            return cloud_client.cmd_async(fun, clear_load)
-        except Exception:
             return ''
+        cloud_client = salt.cloud.CloudClient(
+                os.path.join(
+                    os.path.dirname(self.opts['conf_file']), 'cloud'
+                    )
+                )
+        fun = clear_load.pop('fun')
+        return cloud_client.async(fun, clear_load)
 
     def runner(self, clear_load):
         '''
