@@ -242,7 +242,11 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
-            log.debug(ckminions.connected_ids())
+            log.debug(
+                'ckminions.connected_ids: {0}'.format(
+                    ckminions.connected_ids()
+                )
+            )
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
