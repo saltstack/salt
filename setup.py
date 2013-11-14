@@ -4,16 +4,23 @@
 The setup script for salt
 '''
 
+# pylint: disable=C0111,E1101,E1103,F0401,W0611
+
 # For Python 2.5.  A no-op on 2.6 and above.
 from __future__ import with_statement
 
 import os
 import sys
 import glob
+import urllib2
 from datetime import datetime
+# pylint: disable=E0611
+from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
+from distutils.command.sdist import sdist
+# pylint: enable=E0611
 
 # Change to salt source's directory prior to running any command
 try:
@@ -25,6 +32,15 @@ except NameError:
 
 if SETUP_DIRNAME != '':
     os.chdir(SETUP_DIRNAME)
+
+BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
+    # The user can provide a different bootstrap-script version.
+    # ATTENTION: A tag for that version MUST exist
+    'BOOTSTRAP_SCRIPT_VERSION',
+    # If no bootstrap-script version was provided from the environment, let's
+    # provide the one we define.
+    'v1.5.9'
+)
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
@@ -39,14 +55,17 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
         from setuptools.command.install import install
+        from setuptools.command.sdist import sdist
         WITH_SETUPTOOLS = True
     except ImportError:
         WITH_SETUPTOOLS = False
 
 if WITH_SETUPTOOLS is False:
     import warnings
+    # pylint: disable=E0611
     from distutils.command.install import install
     from distutils.core import setup
+    # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
         'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
@@ -76,8 +95,79 @@ SALT_SYSPATHS = os.path.join(
     os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py'
 )
 
+# pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
+# pylint: enable=W0122
+
+
+class CloudSdist(sdist):
+    user_options = sdist.user_options + [
+        ('skip-bootstrap-download', None,
+         'Skip downloading the bootstrap-salt.sh script. This can also be '
+         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
+         'variable.')
+    ]
+    boolean_options = sdist.boolean_options + [
+        'skip-bootstrap-download'
+    ]
+
+    def initialize_options(self):
+        sdist.initialize_options(self)
+        self.skip_bootstrap_download = False
+
+    def finalize_options(self):
+        sdist.finalize_options(self)
+        if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
+            skip_bootstrap_download = os.environ.get(
+                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
+            )
+            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+
+    def run(self):
+        if self.skip_bootstrap_download is False:
+            # Let's update the bootstrap-script to the version defined to be
+            # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
+            url = (
+                'https://github.com/saltstack/salt-bootstrap/raw/{0}'
+                '/bootstrap-salt.sh'.format(
+                    BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
+                )
+            )
+            req = urllib2.urlopen(url)
+            deploy_path = os.path.join(
+                SETUP_DIRNAME,
+                'salt',
+                'cloud',
+                'deploy',
+                'bootstrap-salt.sh'
+            )
+            if req.getcode() == 200:
+                try:
+                    log.info(
+                        'Updating bootstrap-salt.sh.'
+                        '\n\tSource:      {0}'
+                        '\n\tDestination: {1}'.format(
+                            url,
+                            deploy_path
+                        )
+                    )
+                    with open(deploy_path, 'w') as fp_:
+                        fp_.write(req.read())
+                except (OSError, IOError), err:
+                    log.error(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
+            else:
+                log.error(
+                    'Failed to update the bootstrap-salt.sh script. HTTP '
+                    'Error code: {0}'.format(
+                        req.getcode()
+                    )
+                )
+
+        # Let's the rest of the build command
+        sdist.run(self)
 
 
 class TestCommand(Command):
@@ -162,6 +252,7 @@ class Build(build):
             version_file_path = os.path.join(
                 self.build_lib, 'salt', '_version.py'
             )
+            # pylint: disable=E0602
             open(version_file_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=datetime.utcnow(),
@@ -169,6 +260,7 @@ class Build(build):
                     version_info=__version_info__
                 )
             )
+            # pylint: enable=E0602
 
             # Write the system paths file
             system_paths_file_path = os.path.join(
@@ -217,6 +309,7 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+        # pylint: disable=E0602
         self.salt_root_dir = ROOT_DIR
         self.salt_config_dir = CONFIG_DIR
         self.salt_cache_dir = CACHE_DIR
@@ -227,6 +320,7 @@ class Install(install):
         self.salt_base_master_roots_dir = BASE_MASTER_ROOTS_DIR
         self.salt_logs_dir = LOGS_DIR
         self.salt_pidfile_dir = PIDFILE_DIR
+        # pylint: enable=E0602
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -252,7 +346,7 @@ class Install(install):
 
 
 NAME = 'salt'
-VER = __version__
+VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
 
@@ -336,6 +430,7 @@ SETUP_KWARGS = {'name': NAME,
                 }
 
 if IS_WINDOWS_PLATFORM is False:
+    SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
     SETUP_KWARGS['packages'].extend(['salt.cloud',
                                      'salt.cloud.utils',
                                      'salt.cloud.clouds'])
