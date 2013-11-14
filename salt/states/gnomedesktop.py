@@ -10,7 +10,7 @@ Control the GNOME settings
     localdesktop_wm_prefs:
         gnomedesktop.wm_preferences:
             - user: username
-            - audible_bell: false
+            - audible_bell: false 
             - action_double_click_titlebar: 'toggle-maximize'
             - visual_bell: true
             - num_workspaces: 6
@@ -22,95 +22,108 @@ Control the GNOME settings
         gnomedesktop.desktop_interface:
             - user: username
             - clock_show_date: true
-            - clock_show_format: 12H
+            - clock_show_format: 12h
 '''
 
 import logging
+import os
 import re
+import yaml
 
+# Import salt libs
+import salt.utils
+from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
-
 def _check_current_value(gnome_kwargs, value):
-    current_value = __salt__['gnome.get'](**gnome_kwargs)
-    log.debug("CurrentValue {0}".format(current_value))
-    log.debug("PassedValue {0}".format(value))
-    log.debug(str(current_value) == str(value))
-    return str(current_value) == str(value)
 
+
+    '''
+    Check the current value with the passed value
+    '''
+    currentValue = __salt__['gnome.get'](**gnome_kwargs)
+    return (( str(currentValue) == str(value) ))
 
 def _do(name, gnome_kwargs, preferences):
 
+
+    '''
+    worker function for the others to use
+    this handles all the gsetting magic 
+    '''
     ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ""}
+            'result': True,
+            'changes': {},
+            'comment': ""}
 
     messages = []
 
     for pref in preferences:
-
         key = pref
         value = preferences[pref]
 
-        if isinstance(value, bool):
+        if isinstance(value, bool ):
             ftype = "boolean"
-        elif isinstance(value, int):
+
+            # need to convert boolean values to strings and make lowercase to pass to gsettings
+            value = str(value).lower()
+
+        elif isinstance(value, int ):
             ftype = "int"
-        elif isinstance(value, str):
+        elif isinstance(value, str ):
             ftype = "string"
         else:
             ftype = "string"
-        log.debug("{0} is {1}".format(pref, ftype))
 
-        gnome_kwargs.update({'key': key, 'ftype': ftype, 'value': value})
+        gnome_kwargs.update({'key': key, 'value': value})
 
         if _check_current_value(gnome_kwargs, value):
-            messages.append('{0} is already set to {1}'.format(key, value))
+            messages.append('{0} is already set to {1}' . format(key, value))
         else:
-            log.debug("Values different, setting.")
             result = __salt__['gnome.set'](**gnome_kwargs)
-            if result:
-                messages.append('Setting {0} to {1}'.format(key, value))
+            if result['retcode'] == 0:
+                messages.append('Setting {0} to {1}' . format(key, value))
                 ret['changes'][key] = '{0}:{1}'.format(key, value)
-                ret['result'] = result
+                ret['result'] = True
             else:
-                ret['result'] = result
+                messages.append(result['stdout'])
+                ret['result'] = False
 
         ret['comment'] = ', '.join(messages)
 
-    log.debug(ret)
     return ret
 
-
 def wm_preferences(name,
-                   user=None,
-                   action_double_click_titlebar=None,
-                   action_middle_click_titlebar=None,
-                   action_right_click_titlebar=None,
-                   application_based=False,
-                   audible_bell=None,
-                   auto_raise=None,
-                   auto_raise_delay=None,
-                   button_layout=None,
-                   disable_workarounds=None,
-                   focus_mode=None,
-                   focus_new_windows=None,
-                   mouse_button_modifier=None,
-                   num_workspaces=None,
-                   raise_on_click=None,
-                   resize_with_right_button=None,
-                   theme=None,
-                   titlebar_font=None,
-                   titlebar_uses_system_font=None,
-                   visual_bell=None,
-                   visual_bell_type=None,
-                   workspace_names=None,
-                   **kwargs):
-    if workspace_names is None:
-        workspace_names = []
+                    user = None,
+                    action_double_click_titlebar = None,
+                    action_middle_click_titlebar = None,
+                    action_right_click_titlebar = None,
+                    application_based = None,
+                    audible_bell = None,
+                    auto_raise = None,
+                    auto_raise_delay = None,
+                    button_layout = None,
+                    disable_workarounds = None,
+                    focus_mode = None,
+                    focus_new_windows = None,
+                    mouse_button_modifier = None,
+                    num_workspaces = None,
+                    raise_on_click = None,
+                    resize_with_right_button = None,
+                    theme = None,
+                    titlebar_font = None,
+                    titlebar_uses_system_font = None,
+                    visual_bell = None,
+                    visual_bell_type = None,
+                    workspace_names = None,
+                    **kwargs):
 
+
+    '''
+    wm_preferences: sets values in the org.gnome.desktop.wm.preferences schema
+    '''
     gnome_kwargs = {
         'user': user,
         'schema': 'org.gnome.desktop.wm.preferences'
@@ -124,28 +137,30 @@ def wm_preferences(name,
 
     preferences_hash = {}
     for pref in preferences:
-        if eval(pref):
+        if pref in locals() and locals()[pref] is not None:
             key = re.sub('_', '-', pref)
-            value = eval(pref)
-            preferences_hash[key] = value
+            preferences_hash[key] = locals()[pref]
 
-    ret = _do(name, gnome_kwargs, preferences_hash)
-    return ret
+    return _do(name, gnome_kwargs, preferences_hash)
 
 
 def desktop_lockdown(name,
-                     user=None,
-                     disable_application_handlers=None,
-                     disable_command_line=None,
-                     disable_lock_screen=None,
-                     disable_log_out=None,
-                     disable_print_setup=None,
-                     disable_printing=None,
-                     disable_save_to_disk=None,
-                     disable_user_switching=None,
-                     user_administration_disabled=None,
-                     **kwargs):
+                    user = None,
+                    disable_application_handlers  = None,
+                    disable_command_line  = None,
+                    disable_lock_screen  = None,
+                    disable_log_out  = None,
+                    disable_print_setup  = None,
+                    disable_printing  = None,
+                    disable_save_to_disk  = None,
+                    disable_user_switching  = None,
+                    user_administration_disabled  = None,
+                    **kwargs):
 
+
+    '''
+    desktop_lockdown: sets values in the org.gnome.desktop.lockdown schema
+    '''
     gnome_kwargs = {
         'user': user,
         'schema': 'org.gnome.desktop.lockdown'
@@ -156,55 +171,56 @@ def desktop_lockdown(name,
 
     preferences_hash = {}
     for pref in preferences:
-        if eval(pref):
+        if pref in locals() and locals()[pref] is not None:
             key = re.sub('_', '-', pref)
-            value = eval(pref)
-            preferences_hash[key] = value
+            preferences_hash[key] = locals()[pref]
 
-    ret = _do(name, gnome_kwargs, preferences_hash)
-    return ret
-
+    return _do(name, gnome_kwargs, preferences_hash)
 
 def desktop_interface(name,
-                      user=None,
-                      automatic_mnemonics=None,
-                      buttons_have_icons=None,
-                      can_change_accels=None,
-                      clock_format=None,
-                      clock_show_date=None,
-                      clock_show_seconds=None,
-                      cursor_blink=None,
-                      cursor_blink_time=None,
-                      cursor_blink_timeout=None,
-                      cursor_size=None,
-                      cursor_theme=None,
-                      document_font_name=None,
-                      enable_animations=None,
-                      font_name=None,
-                      gtk_color_palette=None,
-                      gtk_color_scheme=None,
-                      gtk_im_module=None,
-                      gtk_im_preedit_style=None,
-                      gtk_im_status_style=None,
-                      gtk_key_theme=None,
-                      gtk_theme=None,
-                      gtk_timeout_initial=None,
-                      gtk_timeout_repeat=None,
-                      icon_theme=None,
-                      menubar_accel=None,
-                      menubar_detachable=None,
-                      menus_have_icons=None,
-                      menus_have_tearoff=None,
-                      monospace_font_name=None,
-                      show_input_method_menu=None,
-                      show_unicode_menu=None,
-                      text_scaling_factor=None,
-                      toolbar_detachable=None,
-                      toolbar_icons_size=None,
-                      toolbar_style=None,
-                      toolkit_accessibility=None,
-                      **kwargs):
+                       user = None,
+                       automatic_mnemonics = None,
+                       buttons_have_icons = None,
+                       can_change_accels = None,
+                       clock_format = None,
+                       clock_show_date = None,
+                       clock_show_seconds = None,
+                       cursor_blink = None,
+                       cursor_blink_time = None,
+                       cursor_blink_timeout = None,
+                       cursor_size = None,
+                       cursor_theme = None,
+                       document_font_name = None,
+                       enable_animations = None,
+                       font_name = None,
+                       gtk_color_palette = None,
+                       gtk_color_scheme = None,
+                       gtk_im_module = None,
+                       gtk_im_preedit_style = None,
+                       gtk_im_status_style = None,
+                       gtk_key_theme = None,
+                       gtk_theme = None,
+                       gtk_timeout_initial = None,
+                       gtk_timeout_repeat = None,
+                       icon_theme = None,
+                       menubar_accel = None,
+                       menubar_detachable = None,
+                       menus_have_icons = None,
+                       menus_have_tearoff = None,
+                       monospace_font_name = None,
+                       show_input_method_menu = None,
+                       show_unicode_menu = None,
+                       text_scaling_factor = None,
+                       toolbar_detachable = None,
+                       toolbar_icons_size = None,
+                       toolbar_style = None,
+                       toolkit_accessibility = None,
+                       **kwargs):
 
+
+    '''
+    desktop_interface: sets values in the org.gnome.desktop.interface schema
+    '''
     gnome_kwargs = {
         'user': user,
         'schema': 'org.gnome.desktop.interface'
@@ -222,10 +238,10 @@ def desktop_interface(name,
 
     preferences_hash = {}
     for pref in preferences:
-        if eval(pref):
+        if pref in locals() and locals()[pref] is not None:
             key = re.sub('_', '-', pref)
-            value = eval(pref)
-            preferences_hash[key] = value
+            preferences_hash[key] = locals()[pref]
 
-    ret = _do(name, gnome_kwargs, preferences_hash)
-    return ret
+    return _do(name, gnome_kwargs, preferences_hash)
+
+

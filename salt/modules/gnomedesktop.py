@@ -10,190 +10,96 @@ except ImportError:
     HAS_GLIB = False
 
 import logging
+import psutil
 import pwd
 import os
+import re
+import subprocess
+import sys
+import time
+
+import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'gnome'
 
-
 def __virtual__():
+
 
     '''
     Only load if the Gio and Glib modules are available
     '''
-
     if HAS_GLIB:
         return __virtualname__
     return False
 
+class _GSettings:
 
-class _GSettings(object):
-    def __init__(self, user, schema, key, ftype):
+
+    def __init__(self, user, schema, key):
         self.SCHEMA = schema
         self.KEY = key
-        self.FTYPE = ftype
-
-        if not user:
-            self.USER = os.getenv("USER")
-        else:
-            self.USER = user
-
+        self.USER = user
         self.UID = None
         self.HOME = None
 
-    def _findUID(self, user):
-        return pwd.getpwnam(user).pw_uid
-
-    def _switchUser(self, uid, user, dbusAddress):
-
-        # Change child process to run as user
-        os.setuid(uid)
-
-        # Set ENV variables needed for DBUS connections
-        os.putenv('HOME', pwd.getpwnam(user).pw_dir)
-        os.putenv('XDG_RUNTIME_DIR', "/run/user/{0}".format(uid))
-        os.putenv('DBUS_SESSION_BUS_ADDRESS', dbusAddress)
-        #os.putenv('DISPLAY',":0")
-
-    def _findDBUS(self, user):
-
-        HOME = pwd.getpwnam(user).pw_dir
-        session_file = None
-
-        # Check User's home dir first, then /root
-        for directory in ["{0}/.dbus/session-bus".format(HOME), "/root/.dbus/session-bus"]:
-
-            # Path doesn't exist, next
-            if not os.path.exists(directory):
-                continue
-
-            # If there are no session files, next
-            sessions = os.listdir(directory)
-            if not len(sessions):
-                continue
-            session_file = "{0}/{1}".format(directory, sessions[0])
-
-        # DBUS isn't running, return false
-        if not session_file:
-            log.debug("No DBUS available")
-            return False
-
-        ENVIRON = {}
-        content = open(session_file).readlines()
-        for line in content:
-            if not line[0] == '#':
-                key, value = line.split("=", 1)
-                ENVIRON[key] = value
-
-        return ENVIRON['DBUS_SESSION_BUS_ADDRESS']
-
     def _get(self):
 
+
+        '''
+        get the value for user in gsettings
+
+        '''
+
         user = self.USER
-        uid = self._findUID(user)
-        dbusAddress = self._findDBUS(user)
-        if not dbusAddress:
-            msg = "Error: DBUS not accessible"
-            log.error(msg)
-            return msg
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+        except KeyError:
+            log.info("User does not exist")
+            return False
 
-        # Fork and open a pipe
-        r, w = os.pipe()
-        pid = os.fork()
+        cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}' . format(self.SCHEMA, self.KEY)
+        environ = {}
+        environ['XDG_RUNTIME_DIR'] = "/run/user/%d" % (uid)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
 
-        if pid:
-            # parent
-            os.close(w)   # use os.close() to close a file descriptor
-            r = os.fdopen(r)
-            result = r.read()
-            os.waitpid(pid, 0)
-
-        else:
-            # child
-            os.close(r)
-            w = os.fdopen(w, 'w')
-
-            # Change child process to run as user
-            log.debug("switching to {0}".format(uid))
-            self._switchUser(uid, user, dbusAddress)
-
-            gsettings = Gio.Settings.new(self.SCHEMA)
-            if self.FTYPE == 'boolean':
-                result = gsettings.get_boolean(self.KEY)
-            elif self.FTYPE == 'variant':
-                result = gsettings.get_value(self.KEY).get_uint32()
-            elif self.FTYPE == 'int':
-                result = gsettings.get_int(self.KEY)
-            elif self.FTYPE == 'string':
-                result = gsettings.get_string(self.KEY)
+        if 'stdout' in result:
+            if "uint32" in result['stdout']:
+                return re.sub('uint32 ', '', result['stdout'])
             else:
-                result = False
-
-            w.write(str(result))
-            w.close()
-            os._exit(os.EX_OK)
-
-        return result
+                return result['stdout']
+        else:
+            return False
 
     def _set(self, value):
+
+
+        '''
+        set the value for user in gsettings
+
+        '''
+
         user = self.USER
-        uid = self._findUID(user)
-        dbusAddress = self._findDBUS(user)
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+        except KeyError:
+            log.info("User does not exist")
+            result = {}
+            result['retcode'] = 1
+            result['stdout'] = "User {0} does not exist" . format(user)
+            return result
 
-        if not dbusAddress:
-            msg = "Error: DBUS not accessible"
-            log.error(msg)
-            return msg
-
-        # Fork and open a pipe
-        r, w = os.pipe()
-        pid = os.fork()
-
-        if pid:
-            # parent
-            os.close(w)   # use os.close() to close a file descriptor
-            r = os.fdopen(r)
-            result = r.read()
-            os.waitpid(pid, 0)
-
-        else:
-            # child
-            os.close(r)
-            w = os.fdopen(w, 'w')
-
-            # Change child process to run as user
-            log.debug("switching to {0}".format(uid))
-            self._switchUser(uid, user, dbusAddress)
-
-            gsettings = Gio.Settings.new(self.SCHEMA)
-
-            if self.FTYPE == 'boolean':
-                if value is True:
-                    result = gsettings.set_boolean(self.KEY, True)
-                else:
-                    result = gsettings.set_boolean(self.KEY, False)
-            elif self.FTYPE == 'variant':
-                result = gsettings.set_value(self.KEY, GLib.Variant.new_uint32(value))
-            elif self.FTYPE == 'int':
-                result = gsettings.set_int(self.KEY, value)
-            elif self.FTYPE == 'string':
-                result = gsettings.set_string(self.KEY, value)
-            else:
-                result = False
-
-            gsettings.sync()
-
-            w.write(str(result))
-            w.close()
-            os._exit(os.EX_OK)
-
+        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"' . format(self.SCHEMA, self.KEY, str(value))
+        environ = {}
+        environ['XDG_RUNTIME_DIR'] = "/run/user/%d" % (uid)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
         return result
 
-
 def ping(**kwargs):
+
+
     '''
     A test to ensure the GNOME module is loaded
 
@@ -206,8 +112,9 @@ def ping(**kwargs):
     '''
     return True
 
-
 def getIdleDelay(**kwargs):
+
+
     '''
     Return the current idle delay setting in seconds
 
@@ -219,16 +126,12 @@ def getIdleDelay(**kwargs):
 
     '''
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay', ftype='variant')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay')
     return _gsession._get()
 
-
 def setIdleDelay(delaySeconds, **kwargs):
+
+
     '''
     Set the current idle delay setting in seconds
 
@@ -240,16 +143,12 @@ def setIdleDelay(delaySeconds, **kwargs):
 
     '''
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay', ftype='variant')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.session', key='idle-delay')
     return _gsession._set(delaySeconds)
 
-
 def getClockFormat(**kwargs):
+
+
     '''
     Return the current clock format, either 12h or 24h format.
 
@@ -261,18 +160,14 @@ def getClockFormat(**kwargs):
 
     '''
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-format', ftype='string')
+    _gsession = _GSettings(user = user, schema = 'org.gnome.desktop.interface', key = 'clock-format')
     return _gsession._get()
 
-
 def setClockFormat(clockFormat, **kwargs):
+
+
     '''
-    Set the clock format, either 12h or 24h format.
+    Set the clock format, either 12h or 24h format. 
 
     CLI Example:
 
@@ -284,17 +179,12 @@ def setClockFormat(clockFormat, **kwargs):
 
     if clockFormat != "12h" and clockFormat != "24h":
         return False
-
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-format', ftype='string')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-format') 
     return _gsession._set(clockFormat)
 
-
 def getClockShowDate(**kwargs):
+
+
     '''
     Return the current setting, if the date is shown in the clock
 
@@ -306,18 +196,14 @@ def getClockShowDate(**kwargs):
 
     '''
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date', ftype='boolean')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date')
     return _gsession._get()
 
-
 def setClockShowDate(kvalue, **kwargs):
+
+
     '''
-    Set whether the date is visible in the clock
+    Set whether the date is visable in the clock
 
     CLI Example:
 
@@ -329,17 +215,12 @@ def setClockShowDate(kvalue, **kwargs):
 
     if kvalue is not True and kvalue is not False:
         return False
-
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date', ftype='boolean')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.interface', key='clock-show-date')
     return _gsession._set(kvalue)
 
-
 def getIdleActivation(**kwargs):
+
+
     '''
     Get whether the idle activation is enabled
 
@@ -351,16 +232,12 @@ def getIdleActivation(**kwargs):
 
     '''
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled', ftype='boolean')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled')
     return _gsession._get()
 
-
 def setIdleActivation(kvalue, **kwargs):
+
+
     '''
     Set whether the idle activation is enabled
 
@@ -375,16 +252,13 @@ def setIdleActivation(kvalue, **kwargs):
     if kvalue is not True and kvalue is not False:
         return False
 
-    try:
-        user = kwargs['user']
-    except KeyError:
-        user = None
-
-    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled', ftype='boolean')
+    _gsession = _GSettings(user=user, schema='org.gnome.desktop.screensaver', key='idle-activation-enabled')
     return _gsession._set(kvalue)
 
 
-def get(schema=None, key=None, user=None, ftype=None, value=None, **kwargs):
+def get(schema = None, key = None, user = None, value= None, **kwargs):
+
+
     '''
    Get key in a particular GNOME schema
 
@@ -392,16 +266,16 @@ def get(schema=None, key=None, user=None, ftype=None, value=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' gnome.get user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled ftype=boolean
+        salt '*' gnome.get user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled 
 
     '''
 
-    _gsession = _GSettings(user=user, schema=schema, key=key, ftype=ftype)
-    value = _gsession._get()
-    return value
+    _gsession = _GSettings(user=user, schema=schema, key=key)
+    return _gsession._get()
+
+def set(schema = None, key = None, user = None, value = None, **kwargs):
 
 
-def set(schema=None, key=None, user=None, ftype=None, value=None, **kwargs):
     '''
     Set key in a particular GNOME schema
 
@@ -409,11 +283,9 @@ def set(schema=None, key=None, user=None, ftype=None, value=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' gnome.set user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled ftype=boolean value=False
+        salt '*' gnome.set user=<username> schema=org.gnome.desktop.screensaver key=idle-activation-enabled value=False
 
     '''
 
-    _gsession = _GSettings(user=user, schema=schema, key=key, ftype=ftype)
-
-    result = _gsession._set(value)
-    return result
+    _gsession = _GSettings(user=user, schema=schema, key=key)
+    return _gsession._set(value)
