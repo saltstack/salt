@@ -5,13 +5,13 @@ GNOME implementations
 
 try:
     import pwd
+    import psutil
     from gi.repository import Gio, GLib
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
 
 import logging
-import psutil
 import os
 import re
 import subprocess
