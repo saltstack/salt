@@ -4,6 +4,7 @@ GNOME implementations
 '''
 
 try:
+    import pwd
     from gi.repository import Gio, GLib
     HAS_GLIB = True
 except ImportError:
@@ -11,7 +12,6 @@ except ImportError:
 
 import logging
 import psutil
-import pwd
 import os
 import re
 import subprocess
