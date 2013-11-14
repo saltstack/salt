@@ -10,7 +10,11 @@ import sys
 # Import salt libs
 import salt
 import salt.cli
-import salt.cloud.cli
+try:
+    import salt.cloud.cli
+except ImportError:
+    # No salt cloud on Windows
+    pass
 
 
 def salt_master():
