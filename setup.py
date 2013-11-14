@@ -324,6 +324,9 @@ SETUP_KWARGS = {'name': NAME,
                                  'doc/man/salt-call.1',
                                  'doc/man/salt-minion.1',
                                  ]),
+                               ('share/man/man7',
+                                ['doc/man/salt.7',
+                                 ]),
                                ],
                 # Required for esky builds
                 'install_requires': REQUIREMENTS,
@@ -346,9 +349,6 @@ if IS_WINDOWS_PLATFORM is False:
         'doc/man/salt-ssh.1',
         'doc/man/salt-cloud.1'
     ])
-    SETUP_KWARGS['data_files'].append(
-        ('share/man/man7', ['doc/man/salt.7'])
-    )
 
 
 # bbfreeze explicit includes
