@@ -129,21 +129,21 @@ class CloudClient(object):
         '''
         List all available sizes in configured cloud systems
         '''
-        return salt.utils.simple_types_filter(
+        return salt.cloud.utils.simple_types_filter(
                 self.mapper.size_list(provider))
 
     def list_images(self, provider=None):
         '''
         List all available images in configured cloud systems
         '''
-        return salt.utils.simple_types_filter(
+        return salt.cloud.utils.simple_types_filter(
                 self.mapper.image_list(provider))
 
     def list_locations(self, provider=None):
         '''
         List all available locations in configured cloud systems
         '''
-        return salt.utils.simple_types_filter(
+        return salt.cloud.utils.simple_types_filter(
                 self.mapper.location_list(provider))
 
     def query(self, query_type='list_nodes'):
@@ -171,7 +171,7 @@ class CloudClient(object):
         self._opts_defaults(**kwargs)
         if isinstance(names, str):
             names = names.split(',')
-        return salt.utils.simple_types_filter(
+        return salt.cloud.utils.simple_types_filter(
                 self.mapper.run_profile(profile, names))
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
@@ -190,7 +190,7 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return salt.utils.simple_types_filter(
+        return salt.cloud.utils.simple_types_filter(
                 self.mapper.run_profile(fun, names))
 
     # map
