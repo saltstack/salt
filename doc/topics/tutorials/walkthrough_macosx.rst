@@ -319,7 +319,7 @@ First Create an empty file.
 
     touch /srv/salt/top.sls
 
-When the file is empty, or if no configuration is found for our minion, an error message happen :
+When the file is empty, or if no configuration is found for our minion, an error message happens :
 
 .. code-block:: bash
 
@@ -331,7 +331,7 @@ Create nginx configuration
 --------------------------
 Now is finally the time to enter the real meat of our servers configuration. We'll suppose our minion is an web server that should have nginx installed.
 
-Insert the following lines to our **top.sls** file (which should have nothing else).
+Insert the following lines to the **top.sls** file (which should have nothing else).
 
 .. code-block:: yaml
 
