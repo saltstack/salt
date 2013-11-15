@@ -395,7 +395,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise RuntimeError(
-                    'The syslog facility {0!r} is not know'.format(
+                    'The syslog facility {0!r} is not known'.format(
                         facility_name
                     )
                 )
@@ -410,7 +410,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # This python syslog version does not know about the user provided
             # facility name
             raise RuntimeError(
-                'The syslog facility {0!r} is not know'.format(
+                'The syslog facility {0!r} is not known'.format(
                     facility_name
                 )
             )

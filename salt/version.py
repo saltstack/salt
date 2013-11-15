@@ -221,7 +221,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version {0!r} is not know'.format(name)
+                'Named version {0!r} is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
