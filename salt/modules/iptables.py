@@ -433,7 +433,7 @@ def delete(table, chain=None, position=None, rule=None):
     return out
 
 
-def flush(table='filter', chain=None):
+def flush(table='filter', chain=''):
     '''
     Flush the chain in the specified table, flush all chains in the specified table if not specified chain.
 
