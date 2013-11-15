@@ -282,6 +282,75 @@ def check(table='filter', chain=None, rule=None):
         return True
     return out
 
+def check_chain(table='filter', chain=None):
+    '''
+
+    Check for the existance of a chain in the table
+
+    CLI Example:
+
+    .. code-block:: bash
+      
+        salt '*' iptables.check_chain filter INPUT
+    '''
+
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables-save -t {0}'.format(table)
+    out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
+
+    if out != -1:
+        out = True 
+    else:
+        out = False
+    
+    return out
+
+def new_chain(table='filter', chain=None):
+    '''
+
+    Create new custom chain to the specified table.
+
+    CLI Example:
+    
+    .. code-block:: bash
+    
+        salt '*' iptables.new_chain filter CUSTOM_CHAIN
+    '''
+         
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables -t {0} -N {1}'.format(table, chain)
+    out = __salt__['cmd.run'](cmd)
+    
+    if not out:
+        out = True
+    return out
+
+def delete_chain(table='filter', chain=None):
+    '''
+
+    Delete custom chain to the specified table.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' iptables.delete_chain filter CUSTOM_CHAIN
+    '''
+
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables -t {0} -X {1}'.format(table, chain)
+    out = __salt__['cmd.run'](cmd)
+    
+    if not out:
+        out = True
+    return out
+
 
 def append(table='filter', chain=None, rule=None):
     '''
@@ -364,18 +433,21 @@ def delete(table, chain=None, position=None, rule=None):
     return out
 
 
-def flush(table='filter'):
+def flush(table='filter', chain=None):
     '''
-    Flush all chains in the specified table.
+    Flush the chain in the specified table, flush all chains in the specified table if not specified chain.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' iptables.flush filter
+        salt '*' iptables.flush filter INPUT
     '''
 
-    cmd = 'iptables -t {0} -F'.format(table)
+    if chain:
+        cmd = 'iptables -t {0} -F {1}'.format(table, chain)
+    else:
+        cmd = 'iptables -t {0} -F'.format(table)
     out = __salt__['cmd.run'](cmd)
     return out
 
