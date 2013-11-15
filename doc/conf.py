@@ -48,6 +48,13 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
+    # salt.cloud
+    'libcloud',
+    'libcloud.compute',
+    'libcloud.compute.base',
+    'libcloud.compute.deployment',
+    'libcloud.compute.providers',
+    'libcloud.compute.types',
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
@@ -109,7 +116,7 @@ copyright = '2013 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.17.1'
+release = '0.17.2'
 
 language = 'en'
 locale_dirs = [

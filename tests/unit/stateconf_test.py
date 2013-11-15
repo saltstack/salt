@@ -22,9 +22,9 @@ OPTS['file_roots'] = dict(base=['/'])
 RENDERERS = salt.loader.render(OPTS, {})
 
 
-def render_sls(content, sls='', env='base', argline='-G yaml . jinja', **kws):
+def render_sls(content, sls='', saltenv='base', argline='-G yaml . jinja', **kws):
     return RENDERERS['stateconf'](
-        StringIO(content), env=env, sls=sls,
+        StringIO(content), saltenv=saltenv, sls=sls,
         argline=argline,
         renderers=salt.loader.render(OPTS, {}),
         **kws

@@ -12,12 +12,15 @@ import time
 import signal
 import logging
 import multiprocessing
+import datetime
 from itertools import groupby
 
 # Import salt.cloud libs
 import salt.cloud.config
 import salt.cloud.utils
 import salt.cloud.loader
+import salt.utils.event
+from salt.utils.event import tagify
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
@@ -28,7 +31,6 @@ from salt.cloud.exceptions import (
 # Import salt libs
 import salt.client
 import salt.utils
-from salt.utils.verify import check_user
 
 # Import third party libs
 import yaml
@@ -39,8 +41,167 @@ log = logging.getLogger(__name__)
 try:
     from mako.template import Template
     from mako.exceptions import MakoException
+    MAKO_AVAILABLE = True
 except ImportError:
     log.debug('Mako not available')
+    MAKO_AVAILABLE = False
+
+
+class CloudClient(object):
+    '''
+    The client class to wrap cloud interactions
+    '''
+    def __init__(self, path=None, opts=None, config_dir=None):
+        if opts:
+            self.opts = opts
+        else:
+            self.opts = salt.cloud.config.cloud_config(path)
+        self.mapper = salt.cloud.Map(self.opts)
+
+    def _proc_runner(self, fun, low, user, tag, jid):
+        '''
+        Execute a cloud method in a multiprocess and fire the return on the event bus
+        '''
+        salt.utils.daemonize(False)
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        data = {'fun': 'cloud.{0}'.format(fun),
+                'jid': jid,
+                'user': user}
+        event.fire_event(data, tagify('new', base=tag))
+
+        try:
+            data['ret'] = self.low(fun, low)
+            data['success'] = True
+        except Exception as exc:
+            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
+                    fun,
+                    exc,
+                    )
+        event.fire_event(data, tagify('ret', base=tag))
+
+    def _opts_defaults(self, **kwargs):
+        '''
+        Set the opts dict to defaults and allow for opts to be overridden in
+        the kwargs
+        '''
+        self.mapper.opts['parallel'] = False
+        self.mapper.opts.update(kwargs)
+
+    def low(self, fun, low):
+        '''
+        Pass the cloud function and low data structure to run
+        '''
+        l_fun = getattr(self, fun)
+        f_call = salt.utils.format_call(l_fun, low)
+        return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+
+    def async(self, fun, low, user='UNKNOWN'):
+        '''
+        Execute a cloud function in a multiprocess and return the event tag
+        to watch
+        '''
+        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        tag = tagify(jid, prefix='cloud')
+        proc = multiprocessing.Process(
+                target=self._proc_runner,
+                args=(fun, low, user, tag, jid))
+        proc.start()
+        return tag
+
+    def master_call(self, **kwargs):
+        '''
+        Send a function call to a runner module through the master network
+        interface.
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
+        '''
+        load = kwargs
+        load['cmd'] = 'cloud'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret
+
+    def list_sizes(self, provider=None):
+        '''
+        List all available sizes in configured cloud systems
+        '''
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.size_list(provider))
+
+    def list_images(self, provider=None):
+        '''
+        List all available images in configured cloud systems
+        '''
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.image_list(provider))
+
+    def list_locations(self, provider=None):
+        '''
+        List all available locations in configured cloud systems
+        '''
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.location_list(provider))
+
+    def query(self, query_type='list_nodes'):
+        '''
+        Query basic instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def full_query(self, query_type='list_nodes_full'):
+        '''
+        Query all instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def select_query(self, query_type='list_nodes_select'):
+        '''
+        Query select instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def profile(self, profile, names, **kwargs):
+        '''
+        Pass in a profile to create, names is a list of vm names to allocate
+        '''
+        self._opts_defaults(**kwargs)
+        if isinstance(names, str):
+            names = names.split(',')
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.run_profile(profile, names))
+
+    def action(self, fun=None, cloudmap=None, names=None, provider=None,
+              instance=None, kwargs=None):
+        '''
+        Execute a single action via the cloud plugin backend
+
+        Examples:
+
+            client.action(fun='show_instance', names=['myinstance'])
+            client.action(fun='show_image', provider='my-ec2-config', kwargs={'image': 'ami-10314d79'})
+        '''
+        if names and not provider:
+            self.opts['action'] = fun
+            return self.mapper.do_action(names, kwargs)
+        if provider:
+            return self.mapper.do_function(provider, fun, kwargs)
+        else:
+            # This should not be called without either an instance or a
+            # provider.
+            raise SaltCloudConfigError(
+                'Either an instance or a provider must be specified.'
+            )
+
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.run_profile(fun, names))
+
+    # map
+    # create
+    # destroy
 
 
 class Cloud(object):
@@ -50,11 +211,13 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = salt.cloud.loader.clouds(self.opts)
-        self.__switch_credentials()
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
 
     def get_configured_providers(self):
+        '''
+        Return the configured providers
+        '''
         providers = set()
         for alias, drivers in self.opts['providers'].iteritems():
             if len(drivers) > 1:
@@ -65,6 +228,11 @@ class Cloud(object):
         return providers
 
     def lookup_providers(self, lookup):
+        '''
+        Get a dict describing the configured providers
+        '''
+        if lookup is None:
+            lookup = 'all'
         if lookup == 'all':
             providers = set()
             for alias, drivers in self.opts['providers'].iteritems():
@@ -802,15 +970,6 @@ class Cloud(object):
                 }
             }
 
-    def __switch_credentials(self):
-        user = self.opts.get('user', None)
-        if user is not None and check_user(user) is not True:
-            raise SaltCloudSystemExit(
-                'salt-cloud needs to run as the same user as salt-master, '
-                '{0!r}, but was unable to switch credentials. Please run '
-                'salt-cloud as root or as {0!r}'.format(user)
-            )
-
     def __filter_non_working_providers(self):
         '''
         Remove any mis-configured cloud providers from the available listing
@@ -938,6 +1097,17 @@ class Map(Cloud):
                         vm_names.append(vm_name)
         return vm_names
 
+    def _mako_read(self, fp):
+        try:
+            # open mako file
+            temp_ = Template(fp.read())
+            # render as yaml
+            yaml_str_ = temp_.render()
+            map = yaml.safe_load(yaml_str_)
+        except MakoException:
+            map = yaml.safe_load(fp.read())
+        return map
+
     def read(self):
         '''
         Read in the specified map file and return the map structure
@@ -953,13 +1123,9 @@ class Map(Cloud):
             )
         try:
             with open(self.opts['map'], 'rb') as fp_:
-                try:
-                    # open mako file
-                    temp_ = Template(fp_.read())
-                    # render as yaml
-                    yaml_str_ = temp_.render()
-                    map_ = yaml.safe_load(yaml_str_)
-                except MakoException:
+                if MAKO_AVAILABLE:
+                    map_ = self._mako_read(fp_)
+                else:
                     map_ = yaml.safe_load(fp_.read())
         except Exception as exc:
             log.error(

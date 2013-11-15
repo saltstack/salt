@@ -37,7 +37,7 @@ class RunnerClient(object):
         '''
         salt.utils.daemonize()
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        data = {'fun': "runner.{0}".format(fun),
+        data = {'fun': 'runner.{0}'.format(fun),
                 'jid': jid,
                 'user': user,
                 }

@@ -137,35 +137,44 @@ def envs():
     return list(ret)
 
 
-def _env_root(repo, env):
+def _env_root(repo, saltenv):
     '''
     Check if the requested env is a valid env for this repo.
     '''
     trunk_root = os.path.join(repo, 'trunk')
-    if os.path.isdir(trunk_root) and env == 'trunk':
+    if os.path.isdir(trunk_root) and saltenv == 'trunk':
         return trunk_root
 
     branch_root = os.path.join(repo, 'branches')
     if os.path.isdir(branch_root):
         branches = os.listdir(branch_root)
-        if env in branches:
-            return os.path.join(branch_root, env)
+        if saltenv in branches:
+            return os.path.join(branch_root, saltenv)
 
     tag_root = os.path.join(repo, 'tags')
     if os.path.isdir(tag_root):
         tags = os.listdir(tag_root)
-        if env in tags:
-            return os.path.join(tag_root, env)
+        if saltenv in tags:
+            return os.path.join(tag_root, saltenv)
 
     return False
 
 
-def find_file(path, env='base', **kwargs):
+def find_file(path, saltenv='base', env=None, **kwargs):
     '''
     Find the first file to match the path and ref. This operates similarly to
     the roots file sever but with assumptions of the directory structure
     based of svn standard practices.
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     fnd = {'path': '',
            'rel': ''}
     if os.path.isabs(path):
@@ -174,8 +183,8 @@ def find_file(path, env='base', **kwargs):
     local_path = path
     path = os.path.join(__opts__['svnfs_root'], local_path)
 
-    if env == 'base':
-        env = 'trunk'
+    if saltenv == 'base':
+        saltenv = 'trunk'
 
     repos = init()
     if 'index' in kwargs:
@@ -188,7 +197,7 @@ def find_file(path, env='base', **kwargs):
             # Invalid index option
             return fnd
     for repo in repos:
-        env_root = _env_root(repo, env)
+        env_root = _env_root(repo, saltenv)
         if not env_root:
             # Branch or tag not found in repo, try the next
             continue
@@ -204,9 +213,17 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'env' not in load:
+    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
         return ret
     if not fnd['path']:
         return ret
@@ -226,11 +243,19 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'path' not in load or 'env' not in load:
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if 'path' not in load or 'saltenv' not in load:
         return ''
-    env = load['env']
-    if env == 'base':
-        env = 'trunk'
+    saltenv = load['saltenv']
+    if saltenv == 'base':
+        saltenv = 'trunk'
     relpath = fnd['rel']
     path = fnd['path']
     ret = {}
@@ -250,7 +275,7 @@ def file_hash(load, fnd):
     # cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
                               'svnfs/hash',
-                              env,
+                              saltenv,
                               '{0}.hash.{1}'.format(relpath,
                                                     __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
@@ -280,14 +305,22 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
-    if load['env'] == 'base':
-        load['env'] = 'trunk'
+    if load['saltenv'] == 'base':
+        load['saltenv'] = 'trunk'
     repos = init()
     for repo in repos:
-        env_root = _env_root(repo, load['env'])
+        env_root = _env_root(repo, load['saltenv'])
         if env_root:
             for root, dirs, files in os.walk(env_root):
                 for fname in files:
@@ -301,14 +334,22 @@ def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
-    if load['env'] == 'base':
-        load['env'] = 'trunk'
+    if load['saltenv'] == 'base':
+        load['saltenv'] = 'trunk'
     repos = init()
     for repo in repos:
-        env_root = _env_root(repo, load['env'])
+        env_root = _env_root(repo, load['saltenv'])
         if env_root:
             for root, dirs, files in os.walk(env_root):
                 if len(dirs) == 0 and len(files) == 0:
@@ -321,14 +362,22 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
     ret = []
-    if 'env' not in load:
+    if 'saltenv' not in load:
         return ret
-    if load['env'] == 'base':
-        load['env'] = 'trunk'
+    if load['saltenv'] == 'base':
+        load['saltenv'] = 'trunk'
     repos = init()
     for repo in repos:
-        env_root = _env_root(repo, load['env'])
+        env_root = _env_root(repo, load['saltenv'])
         if env_root:
             for root, dirs, files in os.walk(env_root):
                 ret.append(os.path.relpath(root, env_root))

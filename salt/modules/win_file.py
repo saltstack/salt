@@ -84,6 +84,8 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
+    if not gid:
+        return False
     sid = win32security.GetBinarySid(gid)
     name, domain, account_type = win32security.LookupAccountSid(None, sid)
     return name
