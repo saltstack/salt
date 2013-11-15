@@ -101,7 +101,7 @@ class APIClient(object):
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
 
         '''
-        cmd = dict(cmd) # make copy
+        cmd = dict(cmd)  # make copy
         client = 'minion'  # default to local minion client
         mode = cmd.get('mode', 'async')  # default to 'async'
 
