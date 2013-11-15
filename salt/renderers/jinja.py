@@ -13,7 +13,7 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
-def render(template_file, env='', sls='', argline='',
+def render(template_file, saltenv='base', sls='', argline='',
                           context=None, tmplpath=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
@@ -32,7 +32,7 @@ def render(template_file, env='', sls='', argline='',
                                           grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,
-                                          env=env,
+                                          saltenv=saltenv,
                                           sls=sls,
                                           context=context,
                                           tmplpath=tmplpath,

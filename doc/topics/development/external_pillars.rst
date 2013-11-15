@@ -148,15 +148,16 @@ Using our example above:
 
 .. code-block:: python
 
-    ext_pillar( pillar, 'some argument' )                   # example_a
-    ext_pillar( pillar, 'argumentA', 'argumentB' )          # example_b
-    ext_pillar( pillar, keyA='valueA', keyB='valueB' } )    # example_c
+    ext_pillar( id, pillar, 'some argument' )                   # example_a
+    ext_pillar( id, pillar, 'argumentA', 'argumentB' )          # example_b
+    ext_pillar( id, pillar, keyA='valueA', keyB='valueB' } )    # example_c
 
 
 In the ``example_a`` case, ``pillar`` will contain the items from the
 ``pillar_roots``, in ``example_b`` ``pillar``  will contain that plus the items
 added by ``example_a``, and in ``example_c`` ``pillar`` will contain that plus
-the items added by ``example_b``.
+the items added by ``example_b``. In all three cases, ``id`` will contain the
+ID of the minion making the pillar request.
 
 This function should return a dictionary, the contents of which are merged in
 with all of the other pillars and returned to the minion. **Note**: this function
@@ -164,7 +165,7 @@ is called once for each minion that fetches its pillar data.
 
 .. code-block:: python
 
-    def ext_pillar( pillar, *args, **kwargs ):
+    def ext_pillar( minion_id, pillar, *args, **kwargs ):
 
         my_pillar = {}
 
@@ -183,8 +184,7 @@ This function has access to some useful globals:
 :__opts__:
     A dictionary of mostly Salt configuration options. If you had an
     ``__opts__`` dictionary defined in your module, those values will be
-    included. Also included and most useful is ``__opts__['id']``, which
-    is the minion id of the minion asking for pillar data.
+    included.
 
 :__salt__:
     A dictionary of Salt module functions, useful so you don't have to

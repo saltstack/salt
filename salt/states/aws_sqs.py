@@ -49,9 +49,9 @@ def exists(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
+    does_exist = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
-    if not exists:
+    if not does_exist:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be created'.format(
@@ -92,9 +92,9 @@ def absent(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    exists = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
+    does_exist = __salt__['aws_sqs.queue_exists'](name, region, opts, user)
 
-    if exists:
+    if does_exist:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be removed'.format(

@@ -8,7 +8,7 @@ import salt.utils.templates
 
 
 def render(template_file,
-           env='',
+           saltenv='base',
            sls='',
            argline='',
            context=None,
@@ -23,7 +23,7 @@ def render(template_file,
             grains=__grains__,
             opts=__opts__,
             pillar=__pillar__,
-            env=env,
+            saltenv=saltenv,
             sls=sls,
             context=context,
             **kws)

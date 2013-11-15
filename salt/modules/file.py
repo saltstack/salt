@@ -966,6 +966,10 @@ def replace(path,
     has_changes = False
     orig_file = []  # used if show_changes
     new_file = []  # used if show_changes
+    if not salt.utils.is_windows():
+        pre_user = get_user(path)
+        pre_group = get_group(path)
+        pre_mode = __salt__['config.manage_mode'](get_mode(path))
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
@@ -989,6 +993,9 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+
+    if not dry_run and not salt.utils.is_windows():
+        check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
         return ''.join(difflib.unified_diff(orig_file, new_file))
@@ -1488,14 +1495,21 @@ def copy(src, dst):
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
 
+    if not salt.utils.is_windows():
+        pre_user = get_user(src)
+        pre_group = get_group(src)
+        pre_mode = __salt__['config.manage_mode'](get_mode(src))
+
     try:
         shutil.copyfile(src, dst)
-        return True
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
         )
-    return False
+
+    if not salt.utils.is_windows():
+        check_perms(dst, None, pre_user, pre_group, pre_mode)
+    return True
 
 
 def stats(path, hash_type='md5', follow_symlink=False):
@@ -1771,7 +1785,7 @@ def get_managed(
                 user=user,
                 group=group,
                 mode=mode,
-                env=saltenv,
+                saltenv=saltenv,
                 context=context_dict,
                 salt=__salt__,
                 pillar=__pillar__,

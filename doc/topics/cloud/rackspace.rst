@@ -66,7 +66,7 @@ that Salt Cloud has been built to support.
 Compute Region
 ==============
 
-Rackspace currently has five compute regions which may be used:
+Rackspace currently has six compute regions which may be used:
 
 .. code-block:: bash
 
@@ -75,6 +75,7 @@ Rackspace currently has five compute regions which may be used:
     SYD -> Sydney
     LON -> London
     IAD -> Northern Virginia
+    HKG -> Hong Kong
 
 Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
 
@@ -96,7 +97,7 @@ An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 
     openstack_512:
         provider: openstack
-        size: 512MB Standard Instance
+        size: 512 MB Standard
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
 
@@ -107,7 +108,7 @@ An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 
     openstack_512:
         provider: my-rackspace-config
-        size: 512MB Standard Instance
+        size: 512 MB Standard
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
 
@@ -142,7 +143,7 @@ to your profiles:
 
     openstack_512:
         provider: my-openstack-config
-        size: 512MB Standard Instance
+        size: 512 MB Standard
         image: Ubuntu 12.04 LTS (Precise Pangolin)
         rackconnect: True
 
@@ -160,7 +161,7 @@ from stomping over the bootstrapping you can add the below to your profiles.
 
     openstack_512:
         provider: my-rackspace-config
-        size: 512MB Standard Instance
+        size: 512 MB Standard
         image: Ubuntu 12.04 LTS (Precise Pangolin)
         managedcloud: True
 
@@ -176,7 +177,7 @@ configuration please add:
 
     FreeBSD-9.0-512:
       provider: my-rackspace-config
-      size: 512MB Standard Instance
+      size: 512 MB Standard
       image: FreeBSD 9.0
       force_first_gen: True
 

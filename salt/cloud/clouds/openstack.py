@@ -68,6 +68,9 @@ configuration at ``/etc/salt/cloud.providers`` or
               - 4402cd51-37ee-435e-a966-8245956dc0e6
           - floating:
               - Ext-Net
+      files:
+          /path/to/dest.txt
+              /local/path/to/src.txt
 
       provider: openstack
       userdata_file: /tmp/userdata.txt
@@ -102,6 +105,17 @@ following option may be useful. Using the old syntax:
       # Ignore IP addresses on this network for bootstrap
       ignore_cidr: 192.168.50.0/24
 
+It is possible to upload a small set of files (no more than 5, and nothing too
+large) to the remote server. Generally this should not be needed, as salt itself
+can upload to the server after it is spun up, with nowhere near the same
+restrictions.
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      files:
+          /path/to/dest.txt
+              /local/path/to/src.txt
 '''
 
 # The import section is mostly libcloud boilerplate
@@ -167,6 +181,7 @@ reboot = namespaced_function(reboot, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
+show_instance = namespaced_function(show_instance, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -446,6 +461,15 @@ def create(vm_):
                         net['floating']
                     )
 
+    files = config.get_config_value(
+        'files', vm_, __opts__, search_global=False
+    )
+    if files:
+        kwargs['ex_files'] = {}
+        for src_path in files:
+            with salt.utils.fopen(files[src_path], 'r') as fp_:
+                kwargs['ex_files'][src_path] = fp_.read()
+
     userdata_file = config.get_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
@@ -463,11 +487,19 @@ def create(vm_):
                     'size': kwargs['size'].name}},
     )
 
+    kwargs['ex_metadata'] = config.get_config_value(
+        'metadata', vm_, __opts__, default={}, search_global=False
+    )
+    if not isinstance(kwargs['ex_metadata'], dict):
+        raise SaltCloudConfigError(
+                '\'metadata\' should be a dict.'
+        )
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on OPENSTACK\n\n'
+            'Error creating {0} on OpenStack\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: {1}\n'.format(
                 vm_['name'], exc

@@ -9,7 +9,7 @@ from yaml.scanner import ScannerError
 # Import salt libs
 from salt.utils.yamlloader import CustomLoader, load
 from salt.utils.odict import OrderedDict
-from salt.exceptions import RenderError
+from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def get_yaml_loader(argline):
     return yaml_loader
 
 
-def render(yaml_data, env='', sls='', argline='', **kws):
+def render(yaml_data, saltenv='base', sls='', argline='', **kws):
     '''
     Accepts YAML as a string or as a file object and runs it through the YAML
     parser.
@@ -43,13 +43,12 @@ def render(yaml_data, env='', sls='', argline='', **kws):
         except ScannerError as exc:
             err_type = _ERROR_MAP.get(exc.problem, 'Unknown yaml render error')
             line_num = exc.problem_mark.line + 1
-            err_msg = '{0}, line {1} of template'.format(err_type, line_num)
-            raise RenderError(err_msg, line_num, exc.problem_mark.buffer)
+            raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    '{warn} found in salt://{sls} environment={env}'.format(
-                        warn=item.message, sls=sls, env=env
+                    '{warn} found in salt://{sls} environment={saltenv}'.format(
+                        warn=item.message, sls=sls, saltenv=saltenv
                     )
                 )
         if not data:

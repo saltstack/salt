@@ -40,9 +40,18 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     """
 
-    def __init__(self, opts, env='base'):
+    def __init__(self, opts, saltenv='base', env=None):
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
         self.opts = opts
-        self.env = env
+        self.saltenv = saltenv
         self.file_client = salt.fileclient.get_file_client(self.opts)
         self.lookup = TemplateLookup(directories='/')
         self.cache = {}
@@ -67,11 +76,11 @@ class SaltMakoTemplateLookup(TemplateCollection):
         else:
             prefix = "salt://"
             if self.opts['file_client'] == 'local':
-                searchpath = self.opts['file_roots'][self.env]
+                searchpath = self.opts['file_roots'][self.saltenv]
             else:
                 searchpath = [os.path.join(self.opts['cachedir'],
                                            'files',
-                                           self.env)]
+                                           self.saltenv)]
             salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
             self.cache_file(salt_uri)
 
@@ -83,4 +92,4 @@ class SaltMakoTemplateLookup(TemplateCollection):
             self.cache[fpath] = self.file_client.get_file(fpath,
                                                           '',
                                                           True,
-                                                          self.env)
+                                                          self.saltenv)

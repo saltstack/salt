@@ -1571,6 +1571,11 @@ def is_hyper():
 
         salt '*' virt.is_hyper
     '''
+    try:
+        import libvirt
+    except ImportError:
+        # not a usable hypervisor without libvirt module
+        return False
     return is_xen_hyper() or is_kvm_hyper()
 
 

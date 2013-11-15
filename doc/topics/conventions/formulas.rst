@@ -182,6 +182,12 @@ A basic Formula repository should have the following layout::
     |-- README.rst
     `-- VERSION
 
+.. seealso:: :formula:`template-formula`
+
+    The :formula:`template-formula` repository has a pre-built layout that
+    serves as the basic structure for a new formula repository. Just copy the
+    files from there and edit them.
+
 ``README.rst``
 --------------
 
