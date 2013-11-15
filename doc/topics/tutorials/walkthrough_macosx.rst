@@ -298,7 +298,7 @@ To make sure master and minion are talking to each other, type this command
 
 It's now time to do some configuration
 
-STEP 4 : Configure services the minion
+STEP 4 : Configure services to install on the minion
 =========================================================================
 
 In the step we'll use salt-master to instruct our minion to install nginx.
