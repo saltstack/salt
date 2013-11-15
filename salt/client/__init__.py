@@ -990,7 +990,7 @@ class LocalClient(object):
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
-                            timeout_at = time.time() + 1
+                            timeout_at = time.time() + timeout
                             continue
                     break
             # Then event system timeout was reached and nothing was returned
