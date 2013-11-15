@@ -32,6 +32,7 @@ def __virtual__():
     '''
     return 'iptables' if 'iptables.version' in __salt__ else False
 
+
 def chain_present(name, table='filter'):
     '''
 
@@ -72,6 +73,7 @@ def chain_present(name, table='filter'):
         )
         return ret
 
+
 def chain_absent(name, table='filter'):
     '''
     Verify the chain is absent.
@@ -109,6 +111,7 @@ def chain_absent(name, table='filter'):
             flush_chain.strip(),
         )
     return ret
+
 
 def append(name, **kwargs):
     '''
