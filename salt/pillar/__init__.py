@@ -61,7 +61,14 @@ class RemotePillar(object):
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        return pcrypt.loads(ret['pillar'])
+        ret_pillar = pcrypt.loads(ret['pillar'])
+        if not isinstance(ret_pillar, dict):
+            log.error(
+                'Got a bad pillar from master, type {0}, expecting dict: '
+                '{1}'.format(type(ret_pillar).__name__, ret_pillar)
+            )
+            return {}
+        return ret_pillar
 
 
 class Pillar(object):
