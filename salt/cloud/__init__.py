@@ -127,7 +127,8 @@ class CloudClient(object):
         '''
         if isinstance(names, str):
             names = names.split(',')
-        return self.mapper.destroy(names)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.destroy(names))
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
