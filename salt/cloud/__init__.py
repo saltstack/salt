@@ -62,6 +62,11 @@ class CloudClient(object):
         '''
         self.opts['parallel'] = False
         self.opts['keep_tmp'] = False
+        self.opts['deploy'] = True
+        self.opts['update_bootstrap'] = False
+        self.opts['show_deploy_args'] = False
+        self.opts['script_args'] = ''
+
         self.opts.update(salt.cloud.config.CLOUD_CONFIG_DEFAULTS)
         self.opts.update(kwargs)
         return self.opts
