@@ -58,27 +58,6 @@ class CloudClient(object):
             self.opts = salt.cloud.config.cloud_config(path)
         self.mapper = salt.cloud.Map(self.opts)
 
-    def _proc_runner(self, fun, low, user, tag, jid):
-        '''
-        Execute a cloud method in a multiprocess and fire the return on the event bus
-        '''
-        salt.utils.daemonize(False)
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        data = {'fun': 'cloud.{0}'.format(fun),
-                'jid': jid,
-                'user': user}
-        event.fire_event(data, tagify('new', base=tag))
-
-        try:
-            data['ret'] = self.low(fun, low)
-            data['success'] = True
-        except Exception as exc:
-            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
-                    fun,
-                    exc,
-                    )
-        event.fire_event(data, tagify('ret', base=tag))
-
     def _opts_defaults(self, **kwargs):
         '''
         Set the opts dict to defaults and allow for opts to be overridden in
@@ -94,36 +73,6 @@ class CloudClient(object):
         l_fun = getattr(self, fun)
         f_call = salt.utils.format_call(l_fun, low)
         return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
-
-    def async(self, fun, low, user='UNKNOWN'):
-        '''
-        Execute a cloud function in a multiprocess and return the event tag
-        to watch
-        '''
-        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-        tag = tagify(jid, prefix='cloud')
-        proc = multiprocessing.Process(
-                target=self._proc_runner,
-                args=(fun, low, user, tag, jid))
-        proc.start()
-        return tag
-
-    def master_call(self, **kwargs):
-        '''
-        Send a function call to a runner module through the master network
-        interface.
-        Expects that one of the kwargs is key 'fun' whose value is the
-        namestring of the function to call.
-        '''
-        load = kwargs
-        load['cmd'] = 'cloud'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        ret = sreq.send('clear', load)
-        if ret == '':
-            raise salt.exceptions.EauthAuthenticationError
-        return ret
 
     def list_sizes(self, provider=None):
         '''
