@@ -837,14 +837,35 @@ def symlink(name,
     return ret
 
 
-def absent(name):
+def absent(name,
+           onlyif=False,
+           unless=False):
     '''
     Verify that the named file or directory is absent, this will work to
     reverse any of the functions in the file state module.
 
     name
         The path which should be deleted
+
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
     '''
+
+    # check if file.absent should be applied
+    run_check_cmd_kwargs = {'runas': user}
+
+    cret = _run_check(
+        run_check_cmd_kwargs, onlyif, unless
+    )
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -883,7 +904,6 @@ def absent(name):
 
     ret['comment'] = 'File {0} is not present'.format(name)
     return ret
-
 
 def exists(name):
     '''
@@ -3112,3 +3132,24 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         )
 
     return ret
+
+def _run_check(cmd_kwargs, onlyif, unless):
+    '''
+    Execute the onlyif and unless logic.
+    Return a result dict if:
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
+    '''
+    if onlyif:
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+            return {'comment': 'onlyif execution failed',
+                    'result': True}
+
+    if unless:
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+            return {'comment': 'unless execution succeeded',
+                    'result': True}
+
+    # No reason to stop, return True
+    return True
