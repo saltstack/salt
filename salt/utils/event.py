@@ -56,6 +56,7 @@ import errno
 import logging
 import datetime
 import multiprocessing
+import time
 from multiprocessing import Process
 from collections import MutableMapping
 from contextlib import contextmanager
@@ -204,7 +205,7 @@ class SaltEvent(object):
             return
         if self.subscriptions.has_key(tag):
             self.subscriptions[tag]['refcount'] -= 1
-            if self.subscriptions[tag]['refcount'] <= 0
+            if self.subscriptions[tag]['refcount'] <= 0:
                 self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
                 del self.subscriptions[tag]
                 return 0
@@ -247,29 +248,41 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        self.subscribe(tag)
-        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-            raw = self.sub.recv()
-            if ord(raw[20]) >= 0x80:  # old style
-                mtag = raw[0:20].rstrip('|')
-                mdata = raw[20:]
-            else:  # new style
-                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+        with self.subscription(tag):
+            # Already subscribed, check if a pending event exists
+            if self.subscriptions[tag]['pending_events']:
+                if full:
+                    return self.subscriptions[tag]['pending_events'].popleft()
+                else:
+                    return self.subscriptions[tag]['pending_events'].popleft()['data']
 
-            data = self.serial.loads(mdata)
+            start = int(time.time())
+            while not wait or int(time.time()) <= start + wait:
+                socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                    raw = self.sub.recv()
+                    if ord(raw[20]) >= 0x80:  # old style
+                        mtag = raw[0:20].rstrip('|')
+                        mdata = raw[20:]
+                    else:  # new style
+                        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
-            if not mtag.startswith(tag):  # tag not match
-                # Re-fire the event
-                self.fire_event(data, mtag)
-                return None
+                    data = self.serial.loads(mdata)
 
-            if full:
-                ret = {'data': data,
-                        'tag': mtag}
-                return ret
-            return data
-        return None
+                    ret = {'data': data,
+                            'tag': mtag}
+
+                    if not mtag.startswith(tag):
+                        # tag not match
+                        # but other subscribers might be interested
+                        for stag in self.subscriptions.keys():
+                            if mtag.startswith(stag):
+                                self.subscriptions[stag]['pending_events'].append(ret)
+                        continue
+                    if full:
+                        return ret
+                    return data
+            return None
 
     def iter_events(self, tag='', full=False):
         '''
