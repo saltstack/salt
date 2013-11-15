@@ -604,6 +604,8 @@ def user_list(profile=None):
                           'name': user.name,
                           'email': user.email,
                           'enabled': user.enabled}
+        if hasattr(user.__dict__, 'tenantId'):
+            ret[user.name]['tenant_id'] = user.__dict__['tenantId']
     return ret
 
 
@@ -633,6 +635,8 @@ def user_get(user_id=None, name=None, profile=None):
                       'name': user.name,
                       'email': user.email,
                       'enabled': user.enabled}
+    if hasattr(user.__dict__, 'tenantId'):
+        ret[user.name]['tenant_id'] = user.__dict__['tenantId']
     return ret
 
 
