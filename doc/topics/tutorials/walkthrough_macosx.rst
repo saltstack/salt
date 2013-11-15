@@ -311,7 +311,7 @@ Open a browser at http://192.168.33.10/
 
 Initialize top.sls file
 -----------------------
-Service configuration is done in the /srv/salt/top.sls file (and subfiles/folder), and then running the state.highstate command to have salt-master give orders to minions to update and update their states.
+Service configuration is done in the /srv/salt/top.sls file (and subfiles/folder), and then running the state.highstate command to have salt-master give orders to minions to update their states.
 
 First Create an empty file.
 
