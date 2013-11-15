@@ -28,6 +28,7 @@ from salt.exceptions import CommandExecutionError
 # Import third party libs
 try:
     import yum
+    import yum.logginglevels
     import rpmUtils.arch
     HAS_YUMDEPS = True
 
@@ -98,10 +99,10 @@ try:
             # Will sometimes contain more detailed error messages.
             self.messages[package] = msgs
 
-
     class _YumBase(yum.YumBase):
         def doLoggingSetup(self, debuglevel, errorlevel,
-                           syslog_indent=None, syslog_facility=None,
+                           syslog_indent=None,
+                           syslog_facility=None,
                            syslog_device='/dev/log'):
             '''
             This method is overridden in salt because we don't want syslog
@@ -112,6 +113,17 @@ try:
             ``sys.stderr`` and ``syslog``. We don't want none of those.
             Any logging will go through salt's logging handlers.
             '''
+
+            # Just set the log levels to yum
+            if debuglevel is not None:
+                logging.getLogger('yum.verbose').setLevel(
+                    yum.logginglevels.logLevelFromDebugLevel(debuglevel)
+                )
+            if errorlevel is not None:
+                logging.getLogger('yum.verbose').setLevel(
+                    yum.logginglevels.logLevelFromErrorLevel(errorlevel)
+                )
+            logging.getLogger('yum.filelogging').setLevel(logging.INFO)
 
 except (ImportError, AttributeError):
     HAS_YUMDEPS = False
