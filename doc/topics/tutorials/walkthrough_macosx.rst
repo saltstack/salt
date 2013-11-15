@@ -110,7 +110,7 @@ You should now be able to launch salt-master typing
 
 and there should be no error.
 
-.. note:: this command is supposed to be a daemon, but for toying around, i prefer to keep it running on a terminal to monitor the activity.
+.. note:: this command is supposed to be a daemon, but for toying around, we'll keep it running on a terminal to monitor the activity.
 
 
 Now that the master is set, let's configure a minion on a VM
