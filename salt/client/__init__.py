@@ -888,7 +888,7 @@ class LocalClient(object):
         while True:
             wait = max(1, timeout) # Wait cannot be 0
             raw = self.event.get_event(wait, jid)
-            if raw is not None
+            if raw is not None:
                 if 'return' in raw:
                     if 'minions' in raw.get('data', {}):
                         minions.update(raw['data']['minions'])
