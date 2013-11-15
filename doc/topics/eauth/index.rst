@@ -29,6 +29,17 @@ So, the above allows the user thatch to execute functions in the test and
 network modules on the minions that match the web* target. User steve is
 given unrestricted access to minion commands.
 
+To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
+modules <all-salt.runner>` the following ``@`` syntax must be used:
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        thatch:
+          - '@wheel'
+          - '@runner'
+
 The external authentication system can then be used from the command line by
 any user on the same system as the master with the `-a` option:
 
