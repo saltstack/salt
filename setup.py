@@ -172,7 +172,7 @@ class CloudSdist(sdist):
         sdist.run(self)
 
     def write_manifest(self):
-        if IS_WINDOWS_PLATFORM is False:
+        if IS_WINDOWS_PLATFORM:
             # Remove un-necessary scripts grabbed by MANIFEST.in
             for filename in self.filelist.files[:]:
                 if filename in ('scripts/salt',
