@@ -215,8 +215,6 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         jid = ''
 
-        self.event.subscribe(jid)
-
         pub_data = self.pub(
             tgt,
             fun,
@@ -880,7 +878,6 @@ class LocalClient(object):
                                      self.opts['cachedir'],
                                      self.opts['hash_type'])
         start = int(time.time())
-        timeout_at = start + timeout
         found = set()
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
@@ -889,11 +886,10 @@ class LocalClient(object):
             return ret
         # Wait for the hosts to check in
         while True:
-            time_left = 1
-            while time_left > 0:
-                time_left = timeout_at - int(time.time())
-                raw = self.event.get_event(max(time_left, 1), jid)
-                if raw is not None and 'return' in raw:
+            wait = max(1, timeout) # Wait cannot be 0
+            raw = self.event.get_event(wait, jid)
+            if raw is not None
+                if 'return' in raw:
                     if 'minions' in raw.get('data', {}):
                         minions.update(raw['data']['minions'])
                         continue
@@ -905,6 +901,9 @@ class LocalClient(object):
                     if len(found.intersection(minions)) >= len(minions):
                         # All minions have returned, break out of the loop
                         break
+                    continue
+                else:
+                    # Not a return event, wait for the next event
                     continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
@@ -969,32 +968,31 @@ class LocalClient(object):
         one_more_time = True
         while True:
             # Process events until timeout is reached or all minions have returned
-            time_left = 1
-            while time_left > 0:
-                time_left = timeout_at - int(time.time())
-                raw = self.event.get_event(max(time_left, 1), jid)
-                if raw is not None and 'id' in raw:
-                    if 'minions' in raw.get('data', {}):
-                        minions.update(raw['data']['minions'])
-                        continue
-                    if 'syndic' in raw:
-                        minions.update(raw['syndic'])
-                        continue
-                    if 'return' not in raw:
-                        continue
-                    found.add(raw.get('id'))
-                    ret = {raw['id']: {'ret': raw['return']}}
-                    if 'out' in raw:
-                        ret[raw['id']]['out'] = raw['out']
-                    yield ret
-                    if len(found.intersection(minions)) >= len(minions):
-                        # All minions have returned, break out of the loop
-                        if self.opts['order_masters']:
-                            if syndic_wait < self.opts.get('syndic_wait', 1):
-                                syndic_wait += 1
-                                timeout_at = time.time() + 1
-                                continue
-                        break
+            time_left = timeout_at - int(time.time())
+            wait = max(1, time_left) 
+            raw = self.event.get_event(wait, jid)
+            if raw is not None and 'id' in raw:
+                if 'minions' in raw.get('data', {}):
+                    minions.update(raw['data']['minions'])
+                    continue
+                if 'syndic' in raw:
+                    minions.update(raw['syndic'])
+                    continue
+                if 'return' not in raw:
+                    continue
+                found.add(raw.get('id'))
+                ret = {raw['id']: {'ret': raw['return']}}
+                if 'out' in raw:
+                    ret[raw['id']]['out'] = raw['out']
+                yield ret
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            timeout_at = time.time() + 1
+                            continue
+                    break
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop

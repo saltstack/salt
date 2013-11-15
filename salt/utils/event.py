@@ -58,6 +58,7 @@ import datetime
 import multiprocessing
 from multiprocessing import Process
 from collections import MutableMapping
+from contextlib import contextmanager
 
 # Import third party libs
 try:
@@ -130,6 +131,7 @@ class SaltEvent(object):
         self.cpub = False
         self.cpush = False
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        self.subscriptions = {}
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
@@ -178,19 +180,47 @@ class SaltEvent(object):
     def subscribe(self, tag):
         '''
         Subscribe to events matching the passed tag.
+        Returns the reference count of the subscription.
         '''
         if not self.cpub:
             self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+        if not self.subscriptions.has_key(tag):
+            self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+            self.subscriptions[tag] = {
+                'refcount':1,
+                'pending_events':[]
+            }
+        else:
+            self.subscriptions[tag]['refcount'] += 1
+        return self.subscriptions[tag]['refcount']
 
     def unsubscribe(self, tag):
         '''
         Un-subscribe to events matching the passed tag.
+        Returns the reference count of the subscription, 0 if the subscription has been deleted.
         '''
         if not self.cpub:
             # There's no way we've even subscribed to this tag
             return
-        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+        if self.subscriptions.has_key(tag):
+            self.subscriptions[tag]['refcount'] -= 1
+            if self.subscriptions[tag]['refcount'] <= 0
+                self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+                del self.subscriptions[tag]
+                return 0
+            else:
+                return self.subscriptions[tag]['refcount']
+        return 0
+
+    @contextmanager
+    def subscription(self, tag):
+        '''
+        Context manager for event subscription'
+        '''
+        self.subscribe(tag)
+        yield
+        self.unsubscribe(tag)
+
 
     def connect_pub(self):
         '''
