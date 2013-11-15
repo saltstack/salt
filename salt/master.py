@@ -1999,21 +1999,6 @@ class ClearFuncs(object):
         self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
-    def cloud(self, clear_load):
-        '''
-        Hook into the salt-cloud libs and execute cloud routines
-        '''
-        authorize = salt.auth.Authorize(self.opts, clear_load, self.loadauth)
-        if not authorize.rights('cloud', clear_load):
-            return ''
-        cloud_client = salt.cloud.CloudClient(
-                os.path.join(
-                    os.path.dirname(self.opts['conf_file']), 'cloud'
-                    )
-                )
-        fun = clear_load.pop('fun')
-        return cloud_client.async(fun, clear_load)
-
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
