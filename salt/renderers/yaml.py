@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import logging
 import warnings
 from yaml.scanner import ScannerError
+from yaml.constructor import ConstructorError
 
 # Import salt libs
 from salt.utils.yamlloader import CustomLoader, load
@@ -44,6 +45,8 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             err_type = _ERROR_MAP.get(exc.problem, 'Unknown yaml render error')
             line_num = exc.problem_mark.line + 1
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
+        except ConstructorError as exc:
+            raise SaltRenderError(exc)
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
