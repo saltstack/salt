@@ -449,6 +449,14 @@ def _read_conf_file(path):
                 'Error parsing configuration file: {0} - {1}'.format(path, err)
             )
             conf_opts = {}
+        # only interpret documents as a valid conf, not things like strings,
+        # which might have been caused by invalid yaml syntax
+        if not isinstance(conf_opts, dict):
+            log.error(
+                'Error parsing configuration file: {0} - conf should be a '
+                'document, not {1}.'.format(path, type(conf_opts))
+            )
+            conf_opts = {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
