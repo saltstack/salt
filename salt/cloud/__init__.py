@@ -62,6 +62,7 @@ class CloudClient(object):
         '''
         self.opts['parallel'] = False
         self.opts['keep_tmp'] = False
+        self.opts.update(salt.cloud.config.CLOUD_CONFIG_DEFAULTS)
         self.opts.update(kwargs)
         return self.opts
 
