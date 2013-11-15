@@ -88,6 +88,15 @@ def profile(prof, names, **kwargs):
     return info
 
 
+def destroy(names):
+    '''
+    Destroy the named vm(s)
+    '''
+    client = _get_client()
+    info = client.destroy(names)
+    return info
+
+
 def action(
         fun=None,
         cloudmap=None,
