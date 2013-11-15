@@ -11,7 +11,8 @@ if a user has permission to execute a Salt command.
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
-in the master configuration file, and uses the new access control system:
+in the master configuration file, and uses the new :ref:`access control system
+<acl>`:
 
 .. code-block:: yaml
 
