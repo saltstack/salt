@@ -22,6 +22,8 @@ The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
 
+The default for maxrunning is 1.
+
 code-block:: yaml
 
     schedule:
@@ -233,6 +235,10 @@ class Schedule(object):
                 if 'maxrunning' in data:
                     log.debug('schedule: This job was scheduled with a max '
                               'number of {0}'.format(data['maxrunning']))
+                else:
+                    log.info('schedule: maxrunning parameter was not specified for '
+                              'job {0}, defaulting to 1.'.format(job))
+                    data['maxrunning'] = 1
 
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
