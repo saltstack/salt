@@ -202,7 +202,7 @@ class Authorize(object):
         '''
         Determine if the given eauth is valid and yield the adata
         '''
-        for sub_auth in adata:
+        for sub_auth in [adata]:
             if load['eauth'] not in sub_auth:
                 continue
             try:
