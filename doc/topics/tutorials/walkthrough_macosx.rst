@@ -1,10 +1,5 @@
 The MacOS X (Maverick) developper step by step guide to salt installation
 =========================================================================
-:Author:
-    Benjamin Garrigues
-
-:Version: 1.0 of 2013/11/15
-:Dedication: To the nice people of #salt on freenode
 
 This document provides a step by step guide to installing a salt cluster (one master, one minion running on a local VM) on Mac OS X to start playing with salt. It is aimed at developers, so it may be a little too slow for experienced admins. At the end of it, you will have installed a bare nginx on a minion using the master.
 The official (linux) walkthrough can be found `here
@@ -25,23 +20,23 @@ Since you're here you've probably already heard about salt, so you already know 
 
   2. the "business" or "service" configuration files (once again, not an official name) : those are configuration files, ending with ".tls" extension, that describe which software should run on which server, along with particular configuration properties for those software. Those files should be created in the /srv/salt folder by default, but their location can be changed using ... /etc/salt/master configuration file !
 
-.. note:: in our case, there is a third important configuration file, not to be confused with the previous two : the virtual machine provisionning configuration file. This, in itself, is not specifically tied to salt, but it also contains some salt configuration. We'll see more in step 3.
+.. note:: this tutorial contains a third important configuration file, not to be confused with the previous two : the virtual machine provisioning configuration file. This, in itself, is not specifically tied to salt, but it also contains some salt configuration. More on that in step 3. Also note that all configuration files are YAML files. So indentation matters a lot.
 
 .. [#] : salt also works with "masterless" configuration where a minion is autonomous (in which case salt can be seen as a local configuration tool), or in
   "multiple master" configuration. See the documentation for more on that.
 
 
 
-Before we dig in : architecture of our salt cluster
+Before digging in : architecture of the salt cluster
 ---------------------------------------------------
 
 Salt-master
 +++++++++++
-The "salt-master" server is going to be your mac os machine, directly. You will run command from a terminal app, so you will need salt to be installed on your mac. This is going to be more convenient for toying around with configuration files.
+The "salt-master" server is going to be the mac os machine, directly. Command will be ran from a terminal app, so salt will need to be installed on the mac. This is going to be more convenient for toying around with configuration files.
 
 Salt-minion
 +++++++++++
-We'll only have one "salt minion" server. It is going to be running on a Virtual Machine running on your mac, using VirtualBox. It will run an Ubuntu distribution.
+We'll only have one "salt minion" server. It is going to be running on a Virtual Machine running on the mac, using VirtualBox. It will run an Ubuntu distribution.
 
 
 STEP 1 : Configuring salt-master on your mac :
@@ -50,7 +45,7 @@ STEP 1 : Configuring salt-master on your mac :
 `official documentation
 <http://docs.saltstack.com/topics/installation/osx.html>`_
 
-Because salt has a lot of dependencies that are not built in Mac Os X, we will use homebrew to install salt. Homebrew is a package manager for Mac, it's great, use it. I fought for 4 years installing libs by hand, and now that i'm on a brand new machine, i don't want to do it all over again. It also lets you *uninstall* things easily.
+Because salt has a lot of dependencies that are not built in Mac Os X, we will use homebrew to install salt. Homebrew is a package manager for Mac, it's great, use it. Some people spend a lot of time installing libs by hand for learning, and realize how useful a package manager is once they've on a brand new machine and have to do it all over again. It also lets you *uninstall* things easily.
 
 .. note::
   brew is a ruby program (ruby is installed by default with your mac). brew downloads, compile and link software. The linking phase is when compiled software are deployed on your machine. It may conflict with previously manually installed software, especially in the /usr/local directory. It's ok, remove them then restart the link by typing brew link thepackage. 
@@ -145,7 +140,7 @@ Make sure vagrant command is found in the terminal. Type "vagrant". It should di
 
 Create the minion VM folder
 ---------------------------
-Create a folder in which you will store your minion's VM. In my case it's going to be a minion folder in my $home directory.
+Create a folder in which you will store your minion's VM. In this tutorial, it's going to be a minion folder in the $home directory.
 
 .. code-block:: bash
 
@@ -224,7 +219,7 @@ From there, type
 
 It's now time to connect the VM to the salt master
 
-STEP 3 : Connecting master and minions
+STEP 3 : Connecting master and minion
 =========================================================================
 
 Creating minion.conf
@@ -264,7 +259,7 @@ Then copy the .pub file into the list of accepted minions :
 
 Modify Vagrantfile to use salt provisionner
 -------------------------------------------
-We can now modify the Vagrantfile to provision the VM using salt.
+Let's now modify the Vagrantfile to provision the VM using salt.
 Add the following section in the Vagrantfile (note : it should be as the same indentation level as the other properties):
 
 .. code-block:: yaml
@@ -365,7 +360,9 @@ Finally launch the state.highstate command again :
     sudo salt 'minion1' state.highstate
 
 =>You should see a log showing that the nginx package has been installed and the service configured.
-To prove it, open your browser at http://192.168.33.10/ and see the Welcome to nging message. Congratulation !
+To prove it, open your browser at http://192.168.33.10/ and see the Welcome to nginx message.
+
+Congratulations !
 
 STEP 5  where to go from there ?
 =========================================================================
