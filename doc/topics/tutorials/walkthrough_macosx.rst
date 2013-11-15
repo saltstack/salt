@@ -65,7 +65,6 @@ Or just type
 
     ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
 
-in your terminal)
 
 Now type the following commands in your terminal  (you may want to type brew doctor after each to make sure everything's fine) :
 
