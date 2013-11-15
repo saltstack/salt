@@ -288,6 +288,7 @@ def check(table='filter', chain=None, rule=None):
         return True
     return out
 
+
 def check_chain(table='filter', chain=None):
     '''
 
@@ -313,6 +314,7 @@ def check_chain(table='filter', chain=None):
 
     return out
 
+
 def new_chain(table='filter', chain=None):
     '''
 
@@ -334,6 +336,7 @@ def new_chain(table='filter', chain=None):
     if not out:
         out = True
     return out
+
 
 def delete_chain(table='filter', chain=None):
     '''
