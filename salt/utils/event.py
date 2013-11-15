@@ -230,6 +230,8 @@ class SaltEvent(object):
             data = self.serial.loads(mdata)
 
             if not mtag.startswith(tag):  # tag not match
+                # Re-fire the event
+                self.fire_event(data, mtag)
                 return None
 
             if full:
