@@ -999,8 +999,10 @@ class LocalClient(object):
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
-                        timeout_at = time.time() + 1
+                        timeout_at = time.time() + timeout
                         continue
+                break
+            if not one_more_time:
                 break
             # The timeout has been reached, check the jid to see if the
             # timeout needs to be increased
@@ -1022,7 +1024,7 @@ class LocalClient(object):
                 if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
                     # The timeout +1 has not been reached and there is still a
                     # write tag for the syndic
-                    timeout_at = time.time() + 1
+                    timeout_at = time.time() + timeout
                     continue
                 break
             time.sleep(0.01)
