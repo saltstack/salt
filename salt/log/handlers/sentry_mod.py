@@ -10,6 +10,13 @@
 
     .. versionadded:: 0.17.0
 
+    This module provides a `Sentry`_ logging handler.
+
+    .. admonition:: Note
+
+        The `Raven`_ library needs to be installed on the system for this
+        logging handler to be available.
+
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key.
     At the bare minimum, you need to define the `DSN`_. As an example:
