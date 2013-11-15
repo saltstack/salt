@@ -186,15 +186,20 @@ def ext_pillar(minion_id,
                             value.rstrip('\n')))
 
     try:
-        import importlib
+        from django.db.models.loading import get_model
 
         django_pillar = {}
 
-        for app, models in django_app.iteritems():
+        for proj_app, models in django_app.iteritems():
+            _, _, app = proj_app.rpartition('.')
             django_pillar[app] = {}
-            model_file = importlib.import_module(app + '.models')
             for model_name, model_meta in models.iteritems():
-                model_orm = model_file.__dict__[model_name]
+                model_orm = get_model(app, model_name)
+                if model_orm is None:
+                    raise salt.exceptions.SaltException(
+                        "Django model '{0}' not found in app '{1}'."
+                        .format(app, model_name))
+
                 pillar_for_model = django_pillar[app][model_orm.__name__] = {}
 
                 name_field = model_meta['name']

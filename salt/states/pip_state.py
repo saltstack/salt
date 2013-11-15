@@ -118,7 +118,8 @@ def installed(name,
 
     name
         The name of the python package to install. You can also specify version
-        numbers here using the standard operators ``==, >=, <=``.
+        numbers here using the standard operators ``==, >=, <=``. If
+        ``requirements`` is given, this parameter will be ignored.
 
     Example::
 
@@ -223,7 +224,7 @@ def installed(name,
 
     from_vcs = False
 
-    if name:
+    if name and not requirements:
         try:
             try:
                 # With pip < 1.2, the __version__ attribute does not exist and

@@ -41,8 +41,10 @@ log = logging.getLogger(__name__)
 try:
     from mako.template import Template
     from mako.exceptions import MakoException
+    MAKO_AVAILABLE = True
 except ImportError:
     log.debug('Mako not available')
+    MAKO_AVAILABLE = False
 
 
 class CloudClient(object):
@@ -60,7 +62,7 @@ class CloudClient(object):
         '''
         Execute a cloud method in a multiprocess and fire the return on the event bus
         '''
-        salt.utils.daemonize()
+        salt.utils.daemonize(False)
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         data = {'fun': 'cloud.{0}'.format(fun),
                 'jid': jid,
@@ -127,23 +129,38 @@ class CloudClient(object):
         '''
         List all available sizes in configured cloud systems
         '''
-        return self.mapper.size_list(provider)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.size_list(provider))
 
     def list_images(self, provider=None):
         '''
         List all available images in configured cloud systems
         '''
-        return self.mapper.image_list(provider)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.image_list(provider))
 
     def list_locations(self, provider=None):
         '''
         List all available locations in configured cloud systems
         '''
-        return self.mapper.location_list(provider)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.location_list(provider))
 
     def query(self, query_type='list_nodes'):
         '''
-        Query all cloud information
+        Query basic instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def full_query(self, query_type='list_nodes_full'):
+        '''
+        Query all instance information
+        '''
+        return self.mapper.map_providers_parallel(query_type)
+
+    def select_query(self, query_type='list_nodes_select'):
+        '''
+        Query select instance information
         '''
         return self.mapper.map_providers_parallel(query_type)
 
@@ -154,14 +171,21 @@ class CloudClient(object):
         self._opts_defaults(**kwargs)
         if isinstance(names, str):
             names = names.split(',')
-        return self.mapper.run_profile(profile, names)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.run_profile(profile, names))
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
         '''
         Execute a single action via the cloud plugin backend
+
+        Examples:
+
+            client.action(fun='show_instance', names=['myinstance'])
+            client.action(fun='show_image', provider='my-ec2-config', kwargs={'image': 'ami-10314d79'})
         '''
-        if instance and not provider:
+        if names and not provider:
+            self.opts['action'] = fun
             return self.mapper.do_action(names, kwargs)
         if provider:
             return self.mapper.do_function(provider, fun, kwargs)
@@ -172,14 +196,12 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return self.mapper.run_profile(fun, names)
+        return salt.cloud.utils.simple_types_filter(
+                self.mapper.run_profile(fun, names))
 
     # map
     # create
     # destroy
-    # query
-    # full_query
-    # select_query
 
 
 class Cloud(object):
@@ -1075,6 +1097,17 @@ class Map(Cloud):
                         vm_names.append(vm_name)
         return vm_names
 
+    def _mako_read(self, fp):
+        try:
+            # open mako file
+            temp_ = Template(fp.read())
+            # render as yaml
+            yaml_str_ = temp_.render()
+            map = yaml.safe_load(yaml_str_)
+        except MakoException:
+            map = yaml.safe_load(fp.read())
+        return map
+
     def read(self):
         '''
         Read in the specified map file and return the map structure
@@ -1090,13 +1123,9 @@ class Map(Cloud):
             )
         try:
             with open(self.opts['map'], 'rb') as fp_:
-                try:
-                    # open mako file
-                    temp_ = Template(fp_.read())
-                    # render as yaml
-                    yaml_str_ = temp_.render()
-                    map_ = yaml.safe_load(yaml_str_)
-                except MakoException:
+                if MAKO_AVAILABLE:
+                    map_ = self._mako_read(fp_)
+                else:
                     map_ = yaml.safe_load(fp_.read())
         except Exception as exc:
             log.error(

@@ -28,7 +28,7 @@ import salt.utils.event
 # Import salt cloud libs
 import salt.cloud.utils
 import salt.cloud.config as config
-from salt.cloud.exceptions import SaltCloudNotFound
+from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -411,6 +411,19 @@ def list_nodes_select(conn=None):
                 pairs[key] = value
         ret[node.name] = pairs
     return ret
+
+
+def show_instance(name, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    nodes = list_nodes_full()
+    return nodes[name]
 
 
 def conn_has_method(conn, method_name):

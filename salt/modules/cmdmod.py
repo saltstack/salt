@@ -51,12 +51,28 @@ def __virtual__():
 def _chugid(runas):
     uinfo = pwd.getpwnam(runas)
     supgroups_seen = set()
-    supgroups = [
-        g.gr_gid for g in grp.getgrall()
-        if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
-        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
-    ]
 
+    # The line below used to exclude the current user's primary gid.
+    # However, when root belongs to more than one group
+    # this causes root's primary group of '0' to be dropped from
+    # his grouplist.  On FreeBSD, at least, this makes some
+    # command executions fail with 'access denied'.
+    #
+    # The Python documentation says that os.setgroups sets only
+    # the supplemental groups for a running process.  On FreeBSD
+    # this does not appear to be strictly true.
+
+    # supgroups = [
+    #     g.gr_gid for g in grp.getgrall()
+    #     if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
+    #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
+    # ]
+
+    supgroups = [g.gr_gid for g in grp.getgrall()
+                      if uinfo.pw_name in g.gr_mem
+                          and g.gr_gid not in supgroups_seen
+                          and not supgroups_seen.add(g.gr_gid)
+                ]
     # No logging can happen on this function
     #
     # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
