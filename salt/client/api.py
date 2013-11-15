@@ -152,7 +152,7 @@ class APIClient(object):
 
     def cloud_async(self, **kwargs):
         '''
-        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        Wrap CloudClient for executing cloud routines
         Expects that one of the kwargs is key 'fun' whose value is the namestring
         of the function to call
         '''

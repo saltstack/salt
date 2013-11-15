@@ -395,7 +395,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise RuntimeError(
-                    'The syslog facility {0!r} is not know'.format(
+                    'The syslog facility {0!r} is not known'.format(
                         facility_name
                     )
                 )
@@ -410,7 +410,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # This python syslog version does not know about the user provided
             # facility name
             raise RuntimeError(
-                'The syslog facility {0!r} is not know'.format(
+                'The syslog facility {0!r} is not known'.format(
                     facility_name
                 )
             )
@@ -513,8 +513,6 @@ def setup_extended_logging(opts):
         handlers = get_handlers_func()
         if isinstance(handlers, types.GeneratorType):
             handlers = list(handlers)
-        elif isinstance(handlers, string_types):
-            handlers = [handlers]
         elif handlers is False or handlers == [False]:
             # A false return value means not configuring any logging handler on
             # purpose
@@ -524,6 +522,9 @@ def setup_extended_logging(opts):
                 'purpose. Continuing...'.format(name)
             )
             continue
+        else:
+            # Make sure we have an iterable
+            handlers = [handlers]
 
         for handler in handlers:
             if not handler and \
