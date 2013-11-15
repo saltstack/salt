@@ -12,7 +12,6 @@ import time
 import signal
 import logging
 import multiprocessing
-import datetime
 from itertools import groupby
 
 # Import salt.cloud libs
@@ -20,7 +19,6 @@ import salt.cloud.config
 import salt.cloud.utils
 import salt.cloud.loader
 import salt.utils.event
-from salt.utils.event import tagify
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
@@ -122,6 +120,14 @@ class CloudClient(object):
             names = names.split(',')
         return salt.cloud.utils.simple_types_filter(
                 self.mapper.run_profile(profile, names))
+
+    def destroy(self, names):
+        '''
+        Destroy the named vms
+        '''
+        if isinstance(names, str):
+            names = names.split(',')
+        return self.mapper.destroy(names)
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
               instance=None, kwargs=None):
