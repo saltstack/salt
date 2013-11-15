@@ -21,6 +21,12 @@ Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
+I'm seeing weird behavior (including but not limited to packages not installing their users properly)
+-----------------------------------------------------------------------------------------------------
+
+This is often caused by SELinux.  Try disabling SELinux or putting it in
+permissive mode and see if the weird behavior goes away.
+
 My script runs every time I run a *state.highstate*. Why?
 ---------------------------------------------------------
 
