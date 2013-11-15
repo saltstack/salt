@@ -513,8 +513,6 @@ def setup_extended_logging(opts):
         handlers = get_handlers_func()
         if isinstance(handlers, types.GeneratorType):
             handlers = list(handlers)
-        elif isinstance(handlers, string_types):
-            handlers = [handlers]
         elif handlers is False or handlers == [False]:
             # A false return value means not configuring any logging handler on
             # purpose
@@ -524,6 +522,9 @@ def setup_extended_logging(opts):
                 'purpose. Continuing...'.format(name)
             )
             continue
+        else:
+            # Make sure we have an iterable
+            handlers = [handlers]
 
         for handler in handlers:
             if not handler and \
