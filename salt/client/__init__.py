@@ -886,7 +886,7 @@ class LocalClient(object):
             return ret
         # Wait for the hosts to check in
         while True:
-            wait = max(1, timeout) # Wait cannot be 0
+            wait = max(1, timeout)  # Wait cannot be 0
             raw = self.event.get_event(wait, jid)
             if raw is not None:
                 if 'return' in raw:
@@ -969,7 +969,7 @@ class LocalClient(object):
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
-            wait = max(1, time_left) 
+            wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
             if raw is not None and 'id' in raw:
                 if 'minions' in raw.get('data', {}):
@@ -1038,7 +1038,6 @@ class LocalClient(object):
                                 'ret': 'Minion did not return'
                             }
                         })
-
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
         '''

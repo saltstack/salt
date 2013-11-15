@@ -185,10 +185,10 @@ class SaltEvent(object):
         '''
         if not self.cpub:
             self.connect_pub()
-        if not self.subscriptions.has_key(tag):
+        if tag not in self.subscriptions:
             self.sub.setsockopt(zmq.SUBSCRIBE, tag)
             self.subscriptions[tag] = {
-                'refcount':1,
+                'refcount':1, 
                 'pending_events':[]
             }
         else:
@@ -203,7 +203,7 @@ class SaltEvent(object):
         if not self.cpub:
             # There's no way we've even subscribed to this tag
             return
-        if self.subscriptions.has_key(tag):
+        if tag in self.subscriptions:
             self.subscriptions[tag]['refcount'] -= 1
             if self.subscriptions[tag]['refcount'] <= 0:
                 self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
@@ -221,7 +221,6 @@ class SaltEvent(object):
         self.subscribe(tag)
         yield
         self.unsubscribe(tag)
-
 
     def connect_pub(self):
         '''
