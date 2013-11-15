@@ -869,64 +869,16 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
-        minions = set(minions)
-        if verbose:
-            msg = 'Executing job with jid {0}'.format(jid)
-            print(msg)
-            print('-' * len(msg) + '\n')
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        start = int(time.time())
-        timeout_at = start + timeout
-        found = set()
         ret = {}
-        wtag = os.path.join(jid_dir, 'wtag*')
-        # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
-            return ret
-        # Wait for the hosts to check in
-        while True:
-            time_left = 1
-            while time_left > 0:
-                time_left = timeout_at - int(time.time())
-                raw = self.event.get_event(max(time_left, 1), jid)
-                if raw is not None and 'return' in raw:
-                    if 'minions' in raw.get('data', {}):
-                        minions.update(raw['data']['minions'])
-                        continue
-                    found.add(raw['id'])
-                    ret[raw['id']] = {'ret': raw['return']}
-                    ret[raw['id']]['success'] = raw.get('success', False)
-                    if 'out' in raw:
-                        ret[raw['id']]['out'] = raw['out']
-                    if len(found.intersection(minions)) >= len(minions):
-                        # All minions have returned, break out of the loop
-                        break
-                    continue
-            # Then event system timeout was reached and nothing was returned
-            if len(found.intersection(minions)) >= len(minions):
-                # All minions have returned, break out of the loop
-                break
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
-            if int(time.time()) > start + timeout:
-                if verbose:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found) < len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                ret[minion] = {
-                                    'out': 'no_return',
-                                    'ret': 'Minion did not return'
-                                }
-                break
-            time.sleep(0.01)
+        for mret in self.get_cli_event_returns(
+            jid,
+            minions,
+            timeout,
+            tgt,
+            tgt_type,
+            verbose
+            ):
+            ret.update(mret)
         return ret
 
     def get_cli_event_returns(
