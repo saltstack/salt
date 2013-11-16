@@ -51,6 +51,11 @@ def set(filename, section, parameter, value):
     value
         The value to set
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call openstack_config.set /etc/keystone/keystone.conf sql connection foo
     '''
 
     filename = _quote(filename)
@@ -87,6 +92,7 @@ def get(filename, section, parameter):
     CLI Example:
 
     .. code-block:: bash
+
         salt-call openstack_config.get /etc/keystone/keystone.conf sql connection
 
     '''
@@ -121,6 +127,11 @@ def delete(filename, section, parameter):
     parameter
         The parameter to delete
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call openstack_config.delete /etc/keystone/keystone.conf sql connection
     '''
 
     filename = _quote(filename)
