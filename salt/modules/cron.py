@@ -310,7 +310,8 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd, comment):
                 else:
                     return jret
             return 'present'
-    cron = {'cmd': cmd}
+    cron = {'cmd': cmd,
+            'comment': comment}
     cron.update(_get_cron_date_time(minute=minute, hour=hour,
                                     daymonth=daymonth, month=month,
                                     dayweek=dayweek))
