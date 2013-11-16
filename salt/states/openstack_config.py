@@ -9,7 +9,9 @@ Manage OpenStack configuration file settings.
 
 '''
 
+# Import salt libs
 import salt.exceptions
+
 
 def __virtual__():
     '''
@@ -22,6 +24,7 @@ def __virtual__():
     if 'openstack_config.delete' not in __salt__:
         return False
     return 'openstack_config'
+
 
 def present(name, filename, section, value, parameter = None):
     '''
@@ -45,9 +48,9 @@ def present(name, filename, section, value, parameter = None):
         parameter = name
 
     try:
-        old_value = __salt__['openstack_config.get'](filename = filename,
-                                                     section = section,
-                                                     parameter = parameter)
+        old_value = __salt__['openstack_config.get'](filename=filename,
+                                                     section=section,
+                                                     parameter=parameter)
 
         if old_value == value:
             return {'name': name,
@@ -59,15 +62,16 @@ def present(name, filename, section, value, parameter = None):
         if not e.message.lower().startswith('parameter not found:'):
             raise
 
-    __salt__['openstack_config.set'](filename = filename,
-                                     section = section,
-                                     parameter = parameter,
-                                     value = value)
+    __salt__['openstack_config.set'](filename=filename,
+                                     section=section,
+                                     parameter=parameter,
+                                     value=value)
 
     return {'name': name,
             'changes': {'Value': 'Updated'},
             'result': True,
             'comment': 'The value has been updated'}
+
 
 def absent(name, filename, section, parameter = None):
     '''
@@ -88,9 +92,9 @@ def absent(name, filename, section, parameter = None):
         parameter = name
 
     try:
-        old_value = __salt__['openstack_config.get'](filename = filename,
-                                                     section = section,
-                                                     parameter = parameter)
+        old_value = __salt__['openstack_config.get'](filename=filename,
+                                                     section=section,
+                                                     parameter=parameter)
     except salt.exceptions.CommandExecutionError, e:
         if e.message.lower().startswith('parameter not found:'):
             return {'name': name,
@@ -99,9 +103,9 @@ def absent(name, filename, section, parameter = None):
                     'comment': 'The value is already absent'}
         raise
 
-    __salt__['openstack_config.delete'](filename = filename,
-                                        section = section,
-                                        parameter = parameter)
+    __salt__['openstack_config.delete'](filename=filename,
+                                        section=section,
+                                        parameter=parameter)
 
     return {'name': name,
             'changes': {'Value': 'Deleted'},
