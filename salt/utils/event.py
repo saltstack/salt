@@ -213,15 +213,6 @@ class SaltEvent(object):
                 return self.subscriptions[tag]['refcount']
         return 0
 
-    @contextmanager
-    def subscription(self, tag):
-        '''
-        Context manager for event subscription'
-        '''
-        self.subscribe(tag)
-        yield
-        self.unsubscribe(tag)
-
     def connect_pub(self):
         '''
         Establish the publish connection
@@ -247,41 +238,41 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        with self.subscription(tag):
-            # Already subscribed, check if a pending event exists
-            if self.subscriptions[tag]['pending_events']:
+        self.subscribe(tag)
+        # Already subscribed, check if a pending event exists
+        if self.subscriptions[tag]['pending_events']:
+            if full:
+                return self.subscriptions[tag]['pending_events'].pop(0)
+            else:
+                return self.subscriptions[tag]['pending_events'].pop(0)['data']
+
+        start = int(time.time())
+        while not wait or int(time.time()) <= start + wait:
+            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+                if ord(raw[20]) >= 0x80:  # old style
+                    mtag = raw[0:20].rstrip('|')
+                    mdata = raw[20:]
+                else:  # new style
+                    mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+
+                data = self.serial.loads(mdata)
+
+                ret = {'data': data,
+                        'tag': mtag}
+
+                if not mtag.startswith(tag):
+                    # tag not match
+                    # but other subscribers might be interested
+                    for stag in self.subscriptions.keys():
+                        if mtag.startswith(stag):
+                            self.subscriptions[stag]['pending_events'].append(ret)
+                    continue
                 if full:
-                    return self.subscriptions[tag]['pending_events'].popleft()
-                else:
-                    return self.subscriptions[tag]['pending_events'].popleft()['data']
-
-            start = int(time.time())
-            while not wait or int(time.time()) <= start + wait:
-                socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                    raw = self.sub.recv()
-                    if ord(raw[20]) >= 0x80:  # old style
-                        mtag = raw[0:20].rstrip('|')
-                        mdata = raw[20:]
-                    else:  # new style
-                        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-
-                    data = self.serial.loads(mdata)
-
-                    ret = {'data': data,
-                            'tag': mtag}
-
-                    if not mtag.startswith(tag):
-                        # tag not match
-                        # but other subscribers might be interested
-                        for stag in self.subscriptions.keys():
-                            if mtag.startswith(stag):
-                                self.subscriptions[stag]['pending_events'].append(ret)
-                        continue
-                    if full:
-                        return ret
-                    return data
-            return None
+                    return ret
+                return data
+        return None
 
     def iter_events(self, tag='', full=False):
         '''
