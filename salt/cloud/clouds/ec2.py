@@ -1332,13 +1332,16 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
-        ret['deploy_kwargs'] = deploy_kwargs
+        # Store what was used to the deploy the VM
+        event_kwargs = deploy_kwargs
+        del(event_kwargs['minion_pem'])
+        ret['deploy_kwargs'] = event_kwargs
 
         salt.cloud.utils.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': deploy_kwargs},
+            {'kwargs': event_kwargs},
         )
 
         deployed = False
