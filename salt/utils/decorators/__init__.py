@@ -38,7 +38,7 @@ class Depends(object):
 
             OR
 
-            @depends('modulename', fallback_funcion=function)
+            @depends('modulename', fallback_function=function)
             def test():
                 return 'foo'
         '''
@@ -49,7 +49,7 @@ class Depends(object):
             )
         )
         self.dependencies = dependencies
-        self.fallback_funcion = kwargs.get('fallback_funcion')
+        self.fallback_function = kwargs.get('fallback_function')
 
     def __call__(self, function):
         '''
@@ -60,7 +60,7 @@ class Depends(object):
         module = inspect.getmodule(inspect.stack()[1][0])
         for dep in self.dependencies:
             self.dependency_dict[dep].add(
-                (module, function, self.fallback_funcion)
+                (module, function, self.fallback_function)
             )
         return function
 
@@ -74,7 +74,7 @@ class Depends(object):
         '''
         for dependency, dependent_set in cls.dependency_dict.iteritems():
             # check if dependency is loaded
-            for module, func, fallback_funcion in dependent_set:
+            for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
                 if dependency in dir(module):
                     log.debug(
@@ -102,8 +102,8 @@ class Depends(object):
                     continue
 
                 try:
-                    if fallback_funcion is not None:
-                        functions[mod_key] = fallback_funcion
+                    if fallback_function is not None:
+                        functions[mod_key] = fallback_function
                     else:
                         del(functions[mod_key])
                 except AttributeError:
