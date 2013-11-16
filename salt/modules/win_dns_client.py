@@ -9,6 +9,10 @@ import logging
 
 # Import salt libs
 import salt.utils
+try:
+    import wmi
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
