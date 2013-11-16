@@ -933,7 +933,7 @@ class LocalClient(object):
                     continue
                 found.add(raw.get('id'))
                 ret = {raw['id']: {
-                    'ret': raw['return']
+                    'ret': raw['return'],
                     'success': raw.get('success', False)
                 }}
                 if 'out' in raw:
