@@ -932,10 +932,14 @@ class LocalClient(object):
                 if 'return' not in raw:
                     continue
                 found.add(raw.get('id'))
-                ret = {raw['id']: {'ret': raw['return']}}
+                ret = {raw['id']: {
+                    'ret': raw['return']
+                    'success': raw.get('success', False)
+                }}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
+                continue
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     if self.opts['order_masters']:
