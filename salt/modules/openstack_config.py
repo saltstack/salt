@@ -8,27 +8,31 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :platform: linux
 
 '''
+# Import Salt libs
 import salt.utils
 import salt.exceptions
 
 from salt.utils.decorators import which as _which
 
-try:
-    from shlex import quote as _quote
-except ImportError:
-    try:
-        from pipes import quote as _quote
-    except ImportError:
-        _quote = None
+import shlex
+import pipes
+if hasattr(shlex, 'quote'):
+    _quote = shlex.quote
+elif hasattr(pipes, 'quote'):
+    _quote = pipes.quote
+else:
+    _quote = None
+
 
 def __virtual__():
-    global _quote
     if _quote is None:
         return False
     return 'openstack_config'
 
+
 def _fallback(*args, **kw):
     return 'The "openstack-config" command needs to be installed for this function to work.  Typically this is included in the "openstack-utils" package.'
+
 
 @_which('openstack-config')
 def set(filename, section, parameter, value):
@@ -54,12 +58,17 @@ def set(filename, section, parameter, value):
     parameter = _quote(parameter)
     value = _quote(value)
 
-    result = __salt__['cmd.run_all']('openstack-config --set {} {} {} {}'.format(filename, section, parameter, value))
+    result = __salt__['cmd.run_all'](
+            'openstack-config --set {0} {1} {2} {3}'.format(
+                filename, section, parameter, value
+                )
+            )
 
     if result['retcode'] == 0:
         return result['stdout']
     else:
         raise salt.exceptions.CommandExecutionError(result['stderr'])
+
 
 @_which('openstack-config')
 def get(filename, section, parameter):
@@ -86,12 +95,17 @@ def get(filename, section, parameter):
     section = _quote(section)
     parameter = _quote(parameter)
 
-    result = __salt__['cmd.run_all']('openstack-config --get {} {} {}'.format(filename, section, parameter))
+    result = __salt__['cmd.run_all'](
+            'openstack-config --get {0} {1} {2}'.format(
+                filename, section, parameter
+                )
+            )
 
     if result['retcode'] == 0:
         return result['stdout']
     else:
         raise salt.exceptions.CommandExecutionError(result['stderr'])
+
 
 @_which('openstack-config')
 def delete(filename, section, parameter):
@@ -113,7 +127,11 @@ def delete(filename, section, parameter):
     section = _quote(section)
     parameter = _quote(parameter)
 
-    result = __salt__['cmd.run_all']('openstack-config --del {} {} {}'.format(filename, section, parameter))
+    result = __salt__['cmd.run_all'](
+            'openstack-config --del {0} {1} {2}'.format(
+                filename, section, parameter
+                )
+            )
 
     if result['retcode'] == 0:
         return result['stdout']
