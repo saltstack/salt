@@ -1964,7 +1964,9 @@ class BaseHighState(object):
                 rendered_sls=mods
             )
         except SaltRenderError as exc:
-            msg = 'Rendering SLS failed: {0}'.format(exc)
+            msg = 'Rendering SLS "{0}:{1}" failed: {2}'.format(
+                saltenv, sls, exc
+            )
             log.critical(msg)
             errors.append(msg)
         except Exception as exc:
