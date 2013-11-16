@@ -26,7 +26,7 @@ def __virtual__():
     return 'openstack_config'
 
 
-def present(name, filename, section, value, parameter = None):
+def present(name, filename, section, value, parameter=None):
     '''
     Ensure a value is set in an OpenStack configuration file.
 
@@ -73,7 +73,7 @@ def present(name, filename, section, value, parameter = None):
             'comment': 'The value has been updated'}
 
 
-def absent(name, filename, section, parameter = None):
+def absent(name, filename, section, parameter=None):
     '''
     Ensure a value is not set in an OpenStack configuration file.
 
