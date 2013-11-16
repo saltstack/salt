@@ -398,7 +398,6 @@ def create(vm_):
         # Store what was used to the deploy the VM
         event_kwargs = deploy_kwargs
         del(event_kwargs['minion_pem'])
-        ret['deploy_kwargs'] = event_kwargs
 
         salt.cloud.utils.fire_event(
             'event',
