@@ -122,12 +122,14 @@ def get_dns_config(interface='Local Area Connection'):
 
     .. code-block:: bash
 
-        salt '*' win_dns_client.get_dns_config <interface>
+        salt '*' win_dns_client.get_dns_config 'Local Area Connection'
     '''
-    out = __salt__['cmd.run'](
-            'netsh interface ip show dns "{0}"'.format(interface)
-            )
-    if re.search('DNS servers configured through DHCP', out):
-        return 'dhcp'
-    else:
-        return 'static'
+    # remove any escape characters
+    interface = interface.split('\\')
+    interface = ''.join(interface)
+
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+            if interface == iface.Description:
+                return iface.DHCPEnabled
