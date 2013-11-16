@@ -175,17 +175,15 @@ def list_tab(user):
             elif len(line.split()) > 5:
                 # Appears to be a standard cron line
                 comps = line.split()
-                dat = {}
-                if comment is not None:
-                    dat['comment'] = comment
-                    comment = None
-                dat['minute'] = comps[0]
-                dat['hour'] = comps[1]
-                dat['daymonth'] = comps[2]
-                dat['month'] = comps[3]
-                dat['dayweek'] = comps[4]
-                dat['cmd'] = ' '.join(comps[5:])
+                dat = {'minute': comps[0],
+                       'hour': comps[1],
+                       'daymonth': comps[2],
+                       'month': comps[3],
+                       'dayweek': comps[4],
+                       'cmd': ' '.join(comps[5:]),
+                       'comment': comment}
                 ret['crons'].append(dat)
+                comment = None
             elif line.find('=') > 0:
                 # Appears to be a ENV setup line
                 comps = line.split('=')
