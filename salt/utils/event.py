@@ -244,11 +244,6 @@ class SaltEvent(object):
                 return self.subscriptions[tag]['pending_events'].pop(0)
             else:
                 return self.subscriptions[tag]['pending_events'].pop(0)['data']
-        # other subscribers might be interested
-        for stag in self.subscriptions.keys():
-            if mtag.startswith(stag):
-                self.subscriptions[stag]['pending_events'].append(ret)
-
         start = int(time.time())
         while not wait or int(time.time()) <= start + wait:
             socks = dict(self.poller.poll(1000))
@@ -264,6 +259,11 @@ class SaltEvent(object):
 
                 ret = {'data': data,
                         'tag': mtag}
+
+                # other subscribers might be interested
+                for stag in self.subscriptions.keys():
+                    if mtag.startswith(stag):
+                        self.subscriptions[stag]['pending_events'].append(ret)
 
                 if not mtag.startswith(tag):
                     # tag not match
