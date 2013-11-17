@@ -244,6 +244,10 @@ class SaltEvent(object):
                 return self.subscriptions[tag]['pending_events'].pop(0)
             else:
                 return self.subscriptions[tag]['pending_events'].pop(0)['data']
+        # other subscribers might be interested
+        for stag in self.subscriptions.keys():
+            if mtag.startswith(stag):
+                self.subscriptions[stag]['pending_events'].append(ret)
 
         start = int(time.time())
         while not wait or int(time.time()) <= start + wait:
@@ -263,10 +267,6 @@ class SaltEvent(object):
 
                 if not mtag.startswith(tag):
                     # tag not match
-                    # but other subscribers might be interested
-                    for stag in self.subscriptions.keys():
-                        if mtag.startswith(stag):
-                            self.subscriptions[stag]['pending_events'].append(ret)
                     continue
                 if full:
                     return ret
