@@ -939,7 +939,6 @@ class LocalClient(object):
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
-                continue
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     if self.opts['order_masters']:
