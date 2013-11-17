@@ -947,6 +947,7 @@ class LocalClient(object):
                             timeout_at = time.time() + timeout
                             continue
                     break
+                continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
