@@ -124,7 +124,7 @@ def __virtual__():
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
-    global get_size, libcloudfuncs_destroy
+    global get_size, libcloudfuncs_destroy, show_instance
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
