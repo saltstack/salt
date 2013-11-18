@@ -260,13 +260,14 @@ class SaltEvent(object):
                 ret = {'data': data,
                         'tag': mtag}
 
+                # other subscribers might be interested
+                for stag in self.subscriptions.keys():
+                    if stag != tag and mtag.startswith(stag):
+                        self.subscriptions[stag]['pending_events'].append(ret)
+
                 if not mtag.startswith(tag):
                     # tag not match
-                    # other subscribers might be interested
-                    for stag in self.subscriptions.keys():
-                        if mtag.startswith(stag):
-                            self.subscriptions[stag]['pending_events'].append(ret)
-                        continue
+                    continue
                 if full:
                     return ret
                 return data
