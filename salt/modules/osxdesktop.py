@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
 Mac OS X implementations of various commands in the "desktop" interface
 '''
+
+# Define the module's virtual name
+__virtualname__ = 'desktop'
 
 
 def __virtual__():
@@ -8,7 +12,7 @@ def __virtual__():
     Only load on Mac systems
     '''
     if __grains__['os'] == 'MacOS':
-        return 'desktop'
+        return __virtualname__
     return False
 
 
@@ -16,7 +20,9 @@ def get_output_volume():
     '''
     Get the output volume (range 0 to 100)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.get_output_volume
     '''
@@ -29,7 +35,9 @@ def set_output_volume(volume):
     '''
     Set the volume of sound (range 0 to 100)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.set_output_volume <volume>
     '''
@@ -44,7 +52,9 @@ def screensaver():
     '''
     Launch the screensaver
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.screensaver
     '''
@@ -57,21 +67,26 @@ def lock():
     '''
     Lock the desktop session
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.lock
     '''
-    cmd = '/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend'
+    cmd = '/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend'
 
     return __salt__['cmd.run'](cmd)
+
 
 def say(*words):
     '''
     Say some words.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.say <word0> <word1> ... <wordN>
     '''
-    cmd = 'say {}'.format(' '.join(words))
+    cmd = 'say {0}'.format(' '.join(words))
     return __salt__['cmd.run'](cmd)

@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+'''
+Execute the salt ssh system
+'''
+
+from salt.scripts import salt_ssh
+
+
+if __name__ == '__main__':
+    salt_ssh()

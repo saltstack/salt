@@ -1,11 +1,15 @@
 # Import python libs
-import sys
+import os
 import yaml
+import shutil
+import tempfile
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -53,7 +57,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
-
 
     def test_glob(self):
         '''
@@ -103,6 +106,12 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        data = self.run_salt('-G "planets:pluto" test.ping')
+        self.assertEqual(
+            ''.join(data),
+            'No minions matched the target. No command was sent, no jid was '
+            'assigned.'
+        )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
         data = '\n'.join(data)
@@ -197,7 +206,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt('-d user')
+        data = self.run_salt('-d \* user')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_arguments_not_assumed(self):
@@ -215,11 +224,38 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt('\'*\' sys.doc user')
         self.assertIn('user.add:', data)
 
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(MatchTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        config = yaml.load(
+            open(self.get_config_file_path(config_file_name), 'r').read()
+        )
+        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        open(os.path.join(config_dir, config_file_name), 'w').write(
+            yaml.dump(config, default_flow_style=False)
+        )
+        ret = self.run_script(
+            self._call_binary_,
+            '--config-dir {0} minion test.ping'.format(
+                config_dir
+            ),
+            timeout=15
+        )
+        try:
+            self.assertIn('minion', '\n'.join(ret))
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            os.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MatchTest)

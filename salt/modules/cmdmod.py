@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A module for shelling out
 
@@ -6,27 +7,35 @@ access to the master root execution access to all salt minions
 '''
 
 # Import python libs
+import functools
+import json
 import logging
 import os
 import shutil
 import subprocess
-import functools
+import sys
+import traceback
+import yaml
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
-import salt.grains.extra 
+import salt.utils.timed_subprocess
+import salt.grains.extra
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 
-# Only available on posix systems, nonfatal on windows
+# Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
+    import grp
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'cmd'
 
 # Set up logging
 log = logging.getLogger(__name__)
-
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -36,16 +45,34 @@ def __virtual__():
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
-    return 'cmd'
+    return __virtualname__
 
 
 def _chugid(runas):
     uinfo = pwd.getpwnam(runas)
+    supgroups_seen = set()
 
-    if os.getuid() == uinfo.pw_uid and os.getgid() == uinfo.pw_gid:
-        # No need to change user or group
-        return
+    # The line below used to exclude the current user's primary gid.
+    # However, when root belongs to more than one group
+    # this causes root's primary group of '0' to be dropped from
+    # his grouplist.  On FreeBSD, at least, this makes some
+    # command executions fail with 'access denied'.
+    #
+    # The Python documentation says that os.setgroups sets only
+    # the supplemental groups for a running process.  On FreeBSD
+    # this does not appear to be strictly true.
 
+    # supgroups = [
+    #     g.gr_gid for g in grp.getgrall()
+    #     if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
+    #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
+    # ]
+
+    supgroups = [g.gr_gid for g in grp.getgrall()
+                      if uinfo.pw_name in g.gr_mem
+                          and g.gr_gid not in supgroups_seen
+                          and not supgroups_seen.add(g.gr_gid)
+                ]
     # No logging can happen on this function
     #
     # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
@@ -58,22 +85,33 @@ def _chugid(runas):
     # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
     #
     # apparently because we closed fd's on Popen, though if not closed, output
-    # would also go to it's stderr
+    # would also go to its stderr
 
     if os.getgid() != uinfo.pw_gid:
         try:
             os.setgid(uinfo.pw_gid)
-        except OSError, err:
+        except OSError as err:
             raise CommandExecutionError(
                 'Failed to change from gid {0} to {1}. Error: {2}'.format(
                     os.getgid(), uinfo.pw_gid, err
                 )
             )
 
+    # Set supplemental groups
+    if sorted(os.getgroups()) != sorted(supgroups):
+        try:
+            os.setgroups(supgroups)
+        except OSError as err:
+            raise CommandExecutionError(
+                'Failed to set supplemental groups to {0}. Error: {1}'.format(
+                    supgroups, err
+                )
+            )
+
     if os.getuid() != uinfo.pw_uid:
         try:
             os.setuid(uinfo.pw_uid)
-        except OSError, err:
+        except OSError as err:
             raise CommandExecutionError(
                 'Failed to change from uid {0} to {1}. Error: {2}'.format(
                     os.getuid(), uinfo.pw_uid, err
@@ -81,7 +119,18 @@ def _chugid(runas):
             )
 
 
-def _render_cmd(cmd, cwd, template):
+def _chugid_and_umask(runas, umask):
+    '''
+    Helper method for for subprocess.Popen to initialise uid/gid and umask
+    for the new process.
+    '''
+    if runas is not None:
+        _chugid(runas)
+    if umask is not None:
+        os.umask(umask)
+
+
+def _render_cmd(cmd, cwd, template, saltenv='base'):
     '''
     If template is a valid template engine, process the cmd and cwd through
     that engine.
@@ -101,7 +150,7 @@ def _render_cmd(cmd, cwd, template):
     kwargs['pillar'] = __pillar__
     kwargs['grains'] = __grains__
     kwargs['opts'] = __opts__
-    kwargs['env'] = 'base'
+    kwargs['saltenv'] = saltenv
 
     def _render(contents):
         # write out path to temp file
@@ -128,23 +177,31 @@ def _render_cmd(cmd, cwd, template):
     cwd = _render(cwd)
     return (cmd, cwd)
 
+
 def _run(cmd,
          cwd=None,
+         stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          quiet=False,
          runas=None,
-         with_env=True,
          shell=DEFAULT_SHELL,
+         python_shell=True,
          env=(),
+         clean_env=False,
          rstrip=True,
-         retcode=False,
-         template=None):
+         template=None,
+         umask=None,
+         timeout=None,
+         with_communicate=True,
+         reset_system_locale=True,
+         saltenv='base'):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
-    # Set the default working directory to the home directory
-    # of the user salt-minion is running as.  Default:  /root
+    # Set the default working directory to the home directory of the user
+    # salt-minion is running as. Defaults to home directory of user under which
+    # the minion is running.
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
@@ -154,23 +211,52 @@ def _run(cmd,
         # the euid might not have access to it. See issue #1844
         if not os.access(cwd, os.R_OK):
             cwd = '/'
+            if salt.utils.is_windows():
+                cwd = os.tempnam()[:3]
+    else:
+        # Handle edge cases where numeric/other input is entered, and would be
+        # yaml-ified into non-string types
+        cwd = str(cwd)
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
 
-    # TODO: Figure out the proper way to do this in windows
-    disable_runas = [
-        'Windows',
-    ]
+    if shell.lower().strip() == 'powershell':
+        # If we were called by script(), then fakeout the Windows
+        # shell to run a Powershell script.
+        # Else just run a Powershell command.
+        stack = traceback.extract_stack(limit=2)
+
+        # extract_stack() returns a list of tuples.
+        # The last item in the list [-1] is the currrent method.
+        # The third item[2] in each tuple is the name of that method.
+        if stack[-2][2] == 'script':
+            cmd = 'Powershell -File ' + cmd
+        else:
+            cmd = 'Powershell ' + cmd
 
     # munge the cmd and cwd through the template
-    (cmd, cwd) = _render_cmd(cmd, cwd, template)
+    (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv)
 
     ret = {}
 
-    if runas and __grains__['os'] in disable_runas:
+    if not env:
+        env = {}
+    elif isinstance(env, basestring):
+        try:
+            env = yaml.safe_load(env)
+        except yaml.parser.ParserError as err:
+            log.error(err)
+            env = {}
+    if not isinstance(env, dict):
+        log.error('Invalid input: {0}, must be a dict or '
+                  'string - yaml represented dict'.format(env))
+        env = {}
+
+    if runas and salt.utils.is_windows():
+        # TODO: Figure out the proper way to do this in windows
         msg = 'Sorry, {0} does not support runas functionality'
         raise CommandExecutionError(msg.format(__grains__['os']))
 
@@ -179,10 +265,42 @@ def _run(cmd,
         try:
             pwd.getpwnam(runas)
         except KeyError:
-            msg = 'User \'{0}\' is not available'.format(runas)
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError(
+                'User {0!r} is not available'.format(runas)
+            )
+        try:
+            # Getting the environment for the runas user
+            # There must be a better way to do this.
+            py_code = 'import os, json;' \
+                      'print(json.dumps(os.environ.__dict__))'
+            if __grains__['os'] in ['MacOS', 'Darwin']:
+                env_cmd = ('sudo -i -u {1} -- "{2}"'
+                           ).format(shell, runas, sys.executable)
+            elif __grains__['os'] in ['FreeBSD']:
+                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
+                           ).format(shell, runas, sys.executable)
+            else:
+                env_cmd = ('su -s {0} - {1} -c "{2}"'
+                           ).format(shell, runas, sys.executable)
+            env_json = subprocess.Popen(
+                env_cmd,
+                shell=python_shell,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            ).communicate(py_code)[0]
+            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
+                               env_json.splitlines()) or ['{}']).pop()
+            env_runas = json.loads(env_json).get('data', {})
+            env_runas.update(env)
+            env = env_runas
+        except ValueError:
+            raise CommandExecutionError(
+                'Environment could not be retrieved for User {0!r}'.format(
+                    runas
+                )
+            )
 
-    if not quiet:
+    if not salt.utils.is_true(quiet):
         # Put the most common case first
         log.info(
             'Executing command {0!r} {1}in directory {2!r}'.format(
@@ -190,214 +308,516 @@ def _run(cmd,
             )
         )
 
-    if not env:
-        env = {}
+    if reset_system_locale is True:
+        if not salt.utils.is_windows():
+            # Default to C!
+            # Salt only knows how to parse English words
+            # Don't override if the user has passed LC_ALL
+            env.setdefault('LC_ALL', 'C')
+        else:
+            # On Windows set the codepage to US English.
+            cmd = 'chcp 437 > nul & ' + cmd
 
-    if not salt.utils.is_windows():
-        # Default to C!
-        # Salt only knows how to parse English words
-        # Don't override if the user has passed LC_ALL
-        env.setdefault('LC_ALL', 'C')
+    if clean_env:
+        run_env = env
 
-    run_env = os.environ
-    run_env.update(env)
+    else:
+        run_env = os.environ.copy()
+        run_env.update(env)
+
     kwargs = {'cwd': cwd,
-              'shell': True,
+              'shell': python_shell,
               'env': run_env,
+              'stdin': str(stdin) if stdin is not None else stdin,
               'stdout': stdout,
-              'stderr': stderr}
+              'stderr': stderr,
+              'with_communicate': with_communicate}
 
-    if runas:
-        kwargs['preexec_fn'] = functools.partial(_chugid, runas)
+    if umask:
+        try:
+            _umask = int(str(umask).lstrip('0'), 8)
+            if not _umask:
+                raise ValueError('Zero umask not allowed.')
+        except ValueError:
+            msg = 'Invalid umask: \'{0}\''.format(umask)
+            raise CommandExecutionError(msg)
+    else:
+        _umask = None
+
+    if runas or umask:
+        kwargs['preexec_fn'] = functools.partial(
+                _chugid_and_umask,
+                runas,
+                _umask)
 
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
-        kwargs['executable'] = shell
+        if kwargs['shell'] is True:
+            kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
-    # Setting stdout to None seems to cause the Process to fail.
-    # See bug #2640 for more info
-    if retcode:
-        #kwargs['stdout'] = None
-        kwargs['stderr'] = None
+    if not os.path.isabs(cwd) or not os.path.isdir(cwd):
+        raise CommandExecutionError(
+            'Specified cwd {0!r} either not absolute or does not exist'
+            .format(cwd)
+        )
 
     # This is where the magic happens
-    proc = subprocess.Popen(cmd, **kwargs)
-    out, err = proc.communicate()
+    try:
+        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError('Unable to run command: {0}'.format(exc))
+
+    try:
+        proc.wait(timeout)
+    except TimedProcTimeoutError as exc:
+        ret['stdout'] = str(exc)
+        ret['stderr'] = ''
+        ret['pid'] = proc.process.pid
+        # ok return code for timeouts?
+        ret['retcode'] = 1
+        return ret
+
+    out, err = proc.stdout, proc.stderr
 
     if rstrip:
         if out is not None:
             out = out.rstrip()
-        # None lacks a rstrip() method
         if err is not None:
             err = err.rstrip()
 
     ret['stdout'] = out
     ret['stderr'] = err
-    ret['pid'] = proc.pid
-    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.process.pid
+    ret['retcode'] = proc.process.returncode
+    try:
+        __context__['retcode'] = ret['retcode']
+    except NameError:
+        # Ignore the context error during grain generation
+        pass
     return ret
 
 
-def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def _run_quiet(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               python_shell=True,
+               env=(),
+               template=None,
+               umask=None,
+               timeout=None,
+               reset_system_locale=True,
+               saltenv='base'):
     '''
     Helper for running commands quietly for minion startup
     '''
-    return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
-                quiet=True, shell=shell, env=env, template=template)['stdout']
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                stderr=subprocess.STDOUT,
+                quiet=True,
+                shell=shell,
+                python_shell=python_shell,
+                env=env,
+                template=template,
+                umask=umask,
+                timeout=timeout,
+                reset_system_locale=reset_system_locale,
+                saltenv=saltenv)['stdout']
 
 
-def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def _run_all_quiet(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=True,
+                   env=(),
+                   template=None,
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   saltenv='base'):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True, template=template)
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                shell=shell,
+                python_shell=python_shell,
+                env=env,
+                quiet=True,
+                template=template,
+                umask=umask,
+                timeout=timeout,
+                reset_system_locale=reset_system_locale,
+                saltenv=saltenv)
 
 
-def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-        template=None, rstrip=True):
+def run(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        python_shell=True,
+        env=(),
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        quiet=False,
+        timeout=None,
+        reset_system_locale=True,
+        saltenv='base',
+        **kwargs):
     '''
     Execute the passed command and return the output as a string
 
-    CLI Example::
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+    .. code-block:: bash
 
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    Specify an alternate shell with the shell parameter:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
-               stderr=subprocess.STDOUT, env=env, template=template,
-               rstrip=rstrip)['stdout']
-    log.debug('output: {0}'.format(out))
+    out = _run(cmd,
+               runas=runas,
+               shell=shell,
+               python_shell=python_shell,
+               cwd=cwd,
+               stdin=stdin,
+               stderr=subprocess.STDOUT,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               quiet=quiet,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv)['stdout']
+    if not quiet:
+        log.debug('output: {0}'.format(out))
     return out
 
 
-def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True):
+def run_stdout(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               python_shell=True,
+               env=(),
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               quiet=False,
+               timeout=None,
+               reset_system_locale=True,
+               saltenv='base',
+               **kwargs):
     '''
     Execute a command, and only return the standard out
 
-    CLI Example::
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
-        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
 
-        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+    .. code-block:: bash
 
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip)["stdout"]
-    log.debug('stdout: {0}'.format(stdout))
+    stdout = _run(cmd,
+                  runas=runas,
+                  cwd=cwd,
+                  stdin=stdin,
+                  shell=shell,
+                  python_shell=python_shell,
+                  env=env,
+                  clean_env=clean_env,
+                  template=template,
+                  rstrip=rstrip,
+                  umask=umask,
+                  quiet=quiet,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  saltenv=saltenv)['stdout']
+    if not quiet:
+        log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True):
+def run_stderr(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               python_shell=True,
+               env=(),
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               quiet=False,
+               timeout=None,
+               reset_system_locale=True,
+               saltenv='base',
+               **kwargs):
     '''
     Execute a command and only return the standard error
 
-    CLI Example::
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
-        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
 
-        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+    .. code-block:: bash
 
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip)["stderr"]
-    log.debug('stderr: {0}'.format(stderr))
+    stderr = _run(cmd,
+                  runas=runas,
+                  cwd=cwd,
+                  stdin=stdin,
+                  shell=shell,
+                  python_shell=python_shell,
+                  env=env,
+                  clean_env=clean_env,
+                  template=template,
+                  rstrip=rstrip,
+                  umask=umask,
+                  quiet=quiet,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  saltenv=saltenv)['stderr']
+    if not quiet:
+        log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, rstrip=True):
+def run_all(cmd,
+            cwd=None,
+            stdin=None,
+            runas=None,
+            shell=DEFAULT_SHELL,
+            python_shell=True,
+            env=(),
+            clean_env=False,
+            template=None,
+            rstrip=True,
+            umask=None,
+            quiet=False,
+            timeout=None,
+            reset_system_locale=True,
+            saltenv='base',
+            **kwargs):
     '''
     Execute the passed command and return a dict of return data
 
-    CLI Example::
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
-        salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
 
-        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+    .. code-block:: bash
 
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-               template=template, rstrip=rstrip)
+    ret = _run(cmd,
+               runas=runas,
+               cwd=cwd,
+               stdin=stdin,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               quiet=quiet,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv)
 
-    if ret['retcode'] != 0:
-        rcode = ret['retcode']
-        msg = 'Command \'{0}\' failed with return code: {1}'
-        log.error(msg.format(cmd, rcode))
-        # Don't log a blank line if there is no stderr or stdout
-        if ret['stdout']:
-            log.error('stdout: {0}'.format(ret['stdout']))
-        if ret['stderr']:
-            log.error('stderr: {0}'.format(ret['stderr']))
-    else:
-        # No need to always log output on success to the logs
-        if ret['stdout']:
-            log.debug('stdout: {0}'.format(ret['stdout']))
-        if ret['stderr']:
-            log.debug('stderr: {0}'.format(ret['stderr']))
+    if not quiet:
+        if ret['retcode'] != 0:
+            rcode = ret['retcode']
+            log.error(
+                'Command {0!r} failed with return code: {1}'.format(cmd, rcode)
+            )
+            # Don't log a blank line if there is no stderr or stdout
+            if ret['stdout']:
+                log.error('stdout: {0}'.format(ret['stdout']))
+            if ret['stderr']:
+                log.error('stderr: {0}'.format(ret['stderr']))
+        else:
+            # No need to always log output on success to the logs
+            if ret['stdout']:
+                log.debug('stdout: {0}'.format(ret['stdout']))
+            if ret['stderr']:
+                log.debug('stderr: {0}'.format(ret['stderr']))
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def retcode(cmd,
+            cwd=None,
+            stdin=None,
+            runas=None,
+            shell=DEFAULT_SHELL,
+            python_shell=True,
+            env=(),
+            clean_env=False,
+            template=None,
+            umask=None,
+            quiet=False,
+            timeout=None,
+            reset_system_locale=True,
+            saltenv='base',
+            **kwargs):
     '''
     Execute a shell command and return the command's return code.
 
-    CLI Example::
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.retcode "file /bin/bash"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
 
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    return _run(
-            cmd,
-            runas=runas,
-            cwd=cwd,
-            shell=shell,
-            env=env,
-            retcode=True,
-            template=template
-            )['retcode']
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                shell=shell,
+                python_shell=python_shell,
+                env=env,
+                clean_env=clean_env,
+                template=template,
+                umask=umask,
+                quiet=quiet,
+                timeout=timeout,
+                with_communicate=False,
+                reset_system_locale=reset_system_locale,
+                saltenv=saltenv)['retcode']
 
 
-def script(
-        source,
-        args=None,
-        cwd=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env='base',
-        template='jinja',
-        **kwargs):
+def script(source,
+           args=None,
+           cwd=None,
+           stdin=None,
+           runas=None,
+           shell=DEFAULT_SHELL,
+           python_shell=True,
+           env=(),
+           template='jinja',
+           umask=None,
+           timeout=None,
+           reset_system_locale=True,
+           __env__=None,
+           saltenv='base',
+           **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
-    The script can be located on the salt master file server or on an http/ftp
+    The script can be located on the salt master file server or on an HTTP/FTP
     server.
 
     The script will be executed directly, so it can be written in any available
@@ -406,43 +826,109 @@ def script(
     The script can also be formated as a template, the default is jinja.
     Arguments for the script can be specified as well.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
+        salt '*' cmd.script salt://scripts/windows_task.ps1 args=' -Input c:\\tmp\\infile.txt' shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    path = salt.utils.mkstemp()
-    if template:
-        __salt__['cp.get_template'](source, path, template, env, **kwargs)
+    def _cleanup_tempfile(path):
+        try:
+            os.remove(path)
+        except (IOError, OSError) as exc:
+            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
+                      .format(path, exc))
+
+    if isinstance(__env__, string_types):
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'__env__\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = __env__
+
+    if not salt.utils.is_windows():
+        path = salt.utils.mkstemp(dir=cwd)
     else:
-        fn_ = __salt__['cp.cache_file'](source, env)
-        shutil.copyfile(fn_, path)
+        path = __salt__['cp.cache_file'](source, saltenv)
+        if not path:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
+
+    if template:
+        fn_ = __salt__['cp.get_template'](source,
+                                          path,
+                                          template,
+                                          saltenv,
+                                          **kwargs)
+        if not fn_:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
+    else:
+        if not salt.utils.is_windows():
+            fn_ = __salt__['cp.cache_file'](source, saltenv)
+            if not fn_:
+                _cleanup_tempfile(path)
+                return {'pid': 0,
+                        'retcode': 1,
+                        'stdout': '',
+                        'stderr': '',
+                        'cache_error': True}
+            shutil.copyfile(fn_, path)
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
-    ret = _run(
-            path + ' ' + args if args else path,
-            cwd=cwd,
-            quiet=kwargs.get('quiet', False),
-            runas=runas,
-            shell=shell,
-            retcode=kwargs.get('retcode', False),
-            )
-    os.remove(path)
+    ret = _run(path + ' ' + str(args) if args else path,
+               cwd=cwd,
+               stdin=stdin,
+               quiet=kwargs.get('quiet', False),
+               runas=runas,
+               shell=shell,
+               python_shell=python_shell,
+               umask=umask,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv)
+    _cleanup_tempfile(path)
     return ret
 
 
-def script_retcode(
-        source,
-        cwd=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env='base',
-        template='jinja',
-        **kwargs):
+def script_retcode(source,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=True,
+                   env=(),
+                   template='jinja',
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   __env__=None,
+                   saltenv='base',
+                   **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
-    The script can be located on the salt master file server or on an http/ftp
+    The script can be located on the salt master file server or on an HTTP/FTP
     server.
 
     The script will be executed directly, so it can be written in any available
@@ -452,26 +938,51 @@ def script_retcode(
 
     Only evaluate the script return code and do not block for terminal output
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    return script(
-            source,
-            cwd,
-            runas,
-            shell,
-            env,
-            template,
-            retcode=True,
-            **kwargs)['retcode']
+    if isinstance(__env__, string_types):
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = __env__
+
+    return script(source=source,
+                  cwd=cwd,
+                  stdin=stdin,
+                  runas=runas,
+                  shell=shell,
+                  python_shell=python_shell,
+                  env=env,
+                  template=template,
+                  umask=umask,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  saltenv=saltenv,
+                  **kwargs)['retcode']
 
 
 def which(cmd):
     '''
     Returns the path of an executable available on the minion, None otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.which cat
     '''
@@ -482,7 +993,9 @@ def which_bin(cmds):
     '''
     Returns the first command found in a list of commands
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.which_bin '[pip2, pip, pip-python]'
     '''
@@ -493,7 +1006,9 @@ def has_exec(cmd):
     '''
     Returns true if the executable is available on the minion, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.has_exec cat
     '''
@@ -506,7 +1021,9 @@ def exec_code(lang, code, cwd=None):
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout and stderr will be returned
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''

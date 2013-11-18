@@ -5,58 +5,81 @@ import shutil
 import tempfile
 import stat
 
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
+import integration
 import salt.utils
 import salt.utils.find
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 
 class TestFind(TestCase):
 
     def test_parse_interval(self):
         self.assertRaises(ValueError, salt.utils.find._parse_interval, 'w')
+        self.assertRaises(ValueError, salt.utils.find._parse_interval, '1')
         self.assertRaises(ValueError, salt.utils.find._parse_interval, '1s1w')
         self.assertRaises(ValueError, salt.utils.find._parse_interval, '1s1s')
 
-        result, resolution = salt.utils.find._parse_interval('')
+        result, resolution, modifier = salt.utils.find._parse_interval('')
         self.assertEqual(result, 0)
         self.assertIs(resolution, None)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1')
-        self.assertEqual(result, 86400.0)
-        self.assertEqual(resolution, 86400)
-
-        result, resolution = salt.utils.find._parse_interval('1s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1s')
         self.assertEqual(result, 1.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m')
         self.assertEqual(result, 60.0)
         self.assertEqual(resolution, 60)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1h')
+        result, resolution, modifier = salt.utils.find._parse_interval('1h')
         self.assertEqual(result, 3600.0)
         self.assertEqual(resolution, 3600)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1d')
+        result, resolution, modifier = salt.utils.find._parse_interval('1d')
         self.assertEqual(result, 86400.0)
         self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1w')
+        result, resolution, modifier = salt.utils.find._parse_interval('1w')
         self.assertEqual(result, 604800.0)
         self.assertEqual(resolution, 604800)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1w3d6h')
+        result, resolution, modifier = salt.utils.find._parse_interval('1w3d6h')
         self.assertEqual(result, 885600.0)
         self.assertEqual(resolution, 3600)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m1s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m1s')
         self.assertEqual(result, 61.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m2s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m2s')
         self.assertEqual(result, 62.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
+
+        result, resolution, modifier = salt.utils.find._parse_interval('+1d')
+        self.assertEqual(result, 86400.0)
+        self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '+')
+
+        result, resolution, modifier = salt.utils.find._parse_interval('-1d')
+        self.assertEqual(result, 86400.0)
+        self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '-')
+
+
 
     def test_parse_size(self):
         self.assertRaises(ValueError, salt.utils.find._parse_size, '')
@@ -206,7 +229,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -215,7 +238,7 @@ class TestFind(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_match(self):
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -249,10 +272,10 @@ class TestFind(TestCase):
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     def test_mtime_option_match(self):
-        option = salt.utils.find.MtimeOption('mtime', '1w')
+        option = salt.utils.find.MtimeOption('mtime', '-1w')
         self.assertEqual(option.match('', '', [1] * 9), False)
 
-        option = salt.utils.find.MtimeOption('mtime', '1s')
+        option = salt.utils.find.MtimeOption('mtime', '-1s')
         self.assertEqual(option.match('', '', [10 ** 10] * 9), True)
 
 
@@ -260,7 +283,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -306,7 +329,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -391,7 +414,7 @@ class TestPrintOption(TestCase):
     @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -411,7 +434,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -485,7 +508,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'OwnerOption'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -554,10 +577,9 @@ class TestFinder(TestCase):
         )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestFind)
-    tests.addTests(loader.loadTestsFromTestCase(TestGrepOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestPrintOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestFinder))
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(
+        [TestFind, TestGrepOption, TestPrintOption, TestFinder],
+        needs_daemon=False
+    )

@@ -2,9 +2,13 @@
 import os
 import shutil
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-import salt.utils
 import integration
+import salt.utils
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -20,9 +24,10 @@ class StateModuleTest(integration.ModuleCase,
         state.show_highstate
         '''
         high = self.run_function('state.show_highstate')
+        destpath = os.path.join(integration.SYS_TMP_DIR, 'testfile')
         self.assertTrue(isinstance(high, dict))
-        self.assertTrue('/testfile' in high)
-        self.assertEqual(high['/testfile']['__env__'], 'base')
+        self.assertTrue(destpath in high)
+        self.assertEqual(high[destpath]['__env__'], 'base')
 
     def test_show_lowstate(self):
         '''
@@ -222,7 +227,7 @@ fi
             for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
-    
+
     def test_issue_2068_template_str(self):
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
@@ -334,6 +339,44 @@ fi
                  'invalid when rendering single templates'.format(item)],
                 ret
             )
+
+    def test_pydsl(self):
+        '''
+        Test the basics of the pydsl
+        '''
+        ret = self.run_function('state.sls', mods='pydsl-1')
+        self.assertSaltTrueReturn(ret)
+
+    def test_issues_7905_and_8174_sls_syntax_error(self):
+        '''
+        Call sls file with yaml syntax error.
+
+        Ensure theses errors are detected and presented to the user without
+        stack traces.
+        '''
+        ret = self.run_function('state.sls', mods='syntax.badlist')
+        self.assertEqual(ret, [
+            'The state "A" in sls syntax.badlist is not formed as a list'
+        ])
+        ret = self.run_function('state.sls', mods='syntax.badlist2')
+        self.assertEqual(ret, [
+            'The state "C" in sls syntax.badlist2 is not formed as a list'
+        ])
+
+    def test_get_file_from_env_in_top_match(self):
+        tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
+        try:
+            ret = self.run_function(
+                'state.highstate', minion_tgt='sub_minion'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(tgt))
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertIn('Comte', data)
+        finally:
+            os.unlink(tgt)
 
 
 if __name__ == '__main__':

@@ -1,18 +1,19 @@
 # Import python libs
 import os
-import sys
+import yaml
 import shutil
 import tempfile
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+from salttesting import skipIf
+ensure_in_syspath('../../')
+
 # Import salt libs
-from salt import version
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
-class KeyTest(integration.ShellCase,
-              integration.ShellCaseCommonTestsMixIn):
+class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt-key script
     '''
@@ -37,14 +38,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --json-out
         '''
-        data = self.run_key('-L --json-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --json-out was deprecated. '
-                'Please use \'--out json\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out json')
 
         expect = [
@@ -63,14 +56,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --yaml-out
         '''
-        data = self.run_key('-L --yaml-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --yaml-out was deprecated. '
-                'Please use \'--out yaml\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out yaml')
 
         expect = [
@@ -86,14 +71,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --raw-out
         '''
-        data = self.run_key('-L --raw-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --raw-out was deprecated. '
-                'Please use \'--out raw\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out raw')
 
         expect = [
@@ -123,7 +100,7 @@ class KeyTest(integration.ShellCase,
         )
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
@@ -132,8 +109,9 @@ class KeyTest(integration.ShellCase,
         finally:
             shutil.rmtree(tempdir)
 
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_keys_generation_no_configdir(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_script('salt-key', arg_str)
         try:
@@ -143,7 +121,7 @@ class KeyTest(integration.ShellCase,
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(
@@ -157,16 +135,44 @@ class KeyTest(integration.ShellCase,
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768', error
+                'salt-key: error: The maximum value for keysize is 32768',
+                error
             )
         finally:
             shutil.rmtree(tempdir)
 
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(KeyTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        config = yaml.load(
+            open(self.get_config_file_path(config_file_name), 'r').read()
+        )
+        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        open(os.path.join(config_dir, config_file_name), 'w').write(
+            yaml.dump(config, default_flow_style=False)
+        )
+        ret = self.run_script(
+            self._call_binary_,
+            '--config-dir {0} -L'.format(
+                config_dir
+            ),
+            timeout=15
+        )
+        try:
+            self.assertIn('minion', '\n'.join(ret))
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            os.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(KeyTest)

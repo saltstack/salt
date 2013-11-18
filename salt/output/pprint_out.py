@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The python pretty print system was the default outputter. This outputter
 simply passed the data passed into it through the pprint module.
@@ -6,12 +7,15 @@ simply passed the data passed into it through the pprint module.
 # Import python libs
 import pprint
 
+# Define the module's virtual name
+__virtualname__ = 'pprint'
+
 
 def __virtual__():
     '''
     Change the name to pprint
     '''
-    return 'pprint'
+    return __virtualname__
 
 
 def output(data):

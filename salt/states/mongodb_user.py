@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Mongodb users
 ===========================
 '''
+
 
 def present(name,
             passwd,
@@ -40,7 +42,7 @@ def present(name,
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
     # check if user exists
-    if __salt__['mongodb.user_exists'](name, user, password, host, port):
+    if __salt__['mongodb.user_exists'](name, user, password, host, port, database):
         return ret
 
     if __opts__['test']:

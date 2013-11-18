@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.utils.filebuffer
     ~~~~~~~~~~~~~~~~~~~~~
 
     This utility allows parsing a file in chunks.
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import salt libs
@@ -105,7 +106,7 @@ def _main():
 
         breader = BufferedReader(fpath, max_size, chunk_size)
         for chunk in breader:
-            chunk
+            chunk  # pylint: disable=W0104
         return
 
     def sizeof_fmt(num):
@@ -115,7 +116,8 @@ def _main():
             num /= 1024.0
         return '{0:3.1f}{1}'.format(num, 'TB')
 
-    import os, timeit
+    import os
+    import timeit
     fpath = os.path.normpath(os.path.join(
         os.path.dirname(__file__),
         "../../doc/topics/tutorials/starting_states.rst"

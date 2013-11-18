@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Stateconf System
 ================
@@ -8,10 +9,10 @@ functionality, but is used to interact with the stateconf renderer.
 '''
 
 
-def _no_op(name, **kws):
+def _no_op(name, **kwargs):
     '''
     No-op state to support state config via the stateconf renderer.
     '''
     return dict(name=name, result=True, changes={}, comment='')
 
-set = context = _no_op  # pylint: disable-msg=C0103
+set = context = _no_op  # pylint: disable=C0103

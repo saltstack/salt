@@ -2,50 +2,62 @@
 Debian Installation
 ===================
 
-Currently the latest packages for Debian are published in Martin F. Krafft's
-personal debian.org repository. 
+Currently the latest packages for Debian Old Stable, Stable and
+Unstable (Squeeze, Wheezy and Sid) are published in our
+(saltstack.com) debian repository.
 
-Confiure Apt
-------------
+Configure Apt
+-------------
 
-Setup apt to install Salt from the repository and use Debian's stable (squeeze)
-backports for dependencies:
 
-.. code-block:: bash
+Squeeze (Old Stable)
+~~~~~~~~~~~~~~~~~~~~
 
-    for i in salt-{common,master,minion,syndic,doc} sysvinit-utils; do
-    echo "Package: $i"
-    echo "Pin: release a=squeeze-backports"
-    echo "Pin-Priority: 600"
-    echo
-    done > /etc/apt/preferences.d/local-salt-backport.pref 
+For squeeze, you will need to enable the debian backports repository
+as well as the debian.saltstack.com repository. To do so, add the
+following to ``/etc/apt/sources.list`` or a file in
+``/etc/apt/sources.list.d``::
 
-Add repository
---------------
+  deb http://debian.saltstack.com/debian squeeze-saltstack main
+  deb http://backports.debian.org/debian-backports squeeze-backports main contrib non-free
 
-Add the repository to the list of sources:
 
-.. code-block:: bash
 
-    cat <<_eof > /etc/apt/sources.list.d/local-madduck-backports.list
-        deb http://debian.madduck.net/repo squeeze-backports main
-        deb-src http://debian.madduck.net/repo squeeze-backports main
-    _eof 
+Wheezy (Stable)
+~~~~~~~~~~~~~~~
+
+For wheezy, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
+
+  deb http://debian.saltstack.com/debian wheezy-saltstack main
+
+Sid (Unstable)
+~~~~~~~~~~~~~~
+
+For sid, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
+
+  deb http://debian.saltstack.com/debian unstable main
+
 
 Import the repository key.
+--------------------------
+
+You will need to import the key used for signing.
 
 .. code-block:: bash
 
-    wget -q -O- "http://debian.madduck.net/repo/gpg/archive.key" | apt-key add -
+    wget -q -O- "http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key" | apt-key add -
 
 .. note:: 
  
     You can optionally verify the key integrity with ``sha512sum`` using the 
     public key signature shown here. E.g::
 
-        echo "8b1983fc2d2c55c83e2bbc15d93c3fc090c8e0e92c04ece555a6b6d8ff26de8b4fc2ccbe1bbd16a6357ff86b8b69fd261e90d61350e07a518d50fc9f5f0a1eb3 archive.key" | sha512sum -c 
+        echo "b702969447140d5553e31e9701be13ca11cc0a7ed5fe2b30acb8491567560ee62f834772b5095d735dfcecb2384a5c1a20045f52861c417f50b68dd5ff4660e6  debian-salt-team-joehealy.gpg.key" | sha512sum -c
 
-Update the package database:
+Update the package database
+---------------------------
 
 .. code-block:: bash
 
@@ -74,44 +86,25 @@ may be given at a time:
 .. _Debian-config:
 
 Post-installation tasks
-=======================
+-----------------------
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now, go to the :doc:`Configuring Salt </topics/configuration>` page.
 
 
-Packages from Source
-====================
+Notes
+-----
 
-To build your own salt Debian packages on squeeze use:
+1. These packages will be backported from the packages intended to be
+uploaded into debian unstable. This means that the packages will be
+built for unstable first and then backported over the next day or so.
 
-.. code-block:: bash
+2. These packages will be tracking the released versions of salt
+rather than maintaining a stable fixed feature set. If a fixed version
+is what you desire, then either pinning or manual installation may be
+more appropriate for you.
 
-    cat <<EOF | sudo tee /etc/apt/sources.list.d/backports.list
-    deb http://backports.debian.org/debian-backports squeeze-backports main
-    EOF
-    apt-get update
-    apt-get install build-essential fakeroot
-    apt-get install python-argparse python-zmq
-    apt-get -t squeeze-backports install debhelper python-sphinx
+3. The version numbering and backporting process should provide clean
+upgrade paths between debian versions.
 
-After installing the necessary dependencies build the packages with:
-
-.. code-block:: bash
-
-    git clone https://github.com/saltstack/salt.git
-    cd salt
-    fakeroot debian/rules binary
-
-You will need to install the salt-common package along with the salt-minion or
-salt-master packages. For example:
-
-.. code-block:: bash
-
-   dpkg -i salt-common_<version>.deb salt-minion<version>.deb
-   apt-get -f install
-
-The last command pulls in the required dependencies for your salt packages.
-
-For more information how to use debian-backports see
-http://backports-master.debian.org/Instructions/
-
+If you have any questions regarding these, please email the mailing
+list or look for joehh on irc.

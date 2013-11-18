@@ -1,0 +1,97 @@
+==============================
+Salt Cloud 0.8.4 Release Notes
+==============================
+
+Welcome to 0.8.4! Aside from various bug fixes, the most important improvements
+in this release are to the deploy scripts. Read on to see what's happened.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+http://salt-cloud.readthedocs.org
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi:
+
+http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.4.tar.gz
+
+Some packages have been made available for salt-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+
+Salt Bootstrap
+==============
+By far the biggest change to Salt Cloud is the inclusion of the salt-bootstrap
+script, made possible by the genius of Alec Koumjian and Pedro Algarvio. From
+this point on, each release of Salt Cloud will include the latest stable
+version of bootstrap-salt-minion.sh in the deploy folder. This is a generic,
+POSIX-compliant deployment script, which autodetects your OS, and installs
+the latest version of Salt accordingly. For more information, see:
+
+https://github.com/saltstack/salt-bootstrap
+
+To use this deploy script explicitly, set the script option to
+bootstrap-salt-minion in the profile for your VM. For instance:
+
+.. code-block:: yaml
+
+    aws-archlinux:
+        provider: aws 
+        image: ami-0356da6a
+        size: Micro Instance
+        script: bootstrap-salt-minion
+        ssh_username: root
+
+For those of you still using "os" in your profiles, it should be noted that
+this option was renamed to "script" in 0.8.2, and your configuration should
+be updated accordingly.
+
+Optional Script Option
+======================
+As mentioned above, usage of the "os" argument has been deprecated in favor of
+the "script" argument. However, "script" is now optional. If you do not 
+specify this option, salt-cloud will default to bootstrap-salt-minion for you.
+If you do not want any deployment scripts run, you still have the following
+options available to you.
+
+From the command line, use the --no-deploy option:
+
+.. code-block:: bash
+
+    salt-cloud --no-deploy -p myprofile mymachine
+
+In the Salt Cloud configuration, set:
+
+.. code-block:: yaml
+
+    deploy: False
+
+Or in the profile, set the script option to None:
+
+.. code-block:: yaml
+
+    script: None
+
+Other Generic Deploy Scripts
+============================
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are now a few generic templates available in the deploy directory of
+your saltcloud source tree:
+
+.. code-block:: bash
+
+    curl-bootstrap
+    curl-bootstrap-git
+    python-bootstrap
+    wget-bootstrap
+    wget-bootstrap-git
+
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt-bootstrap script, such as updating to specific git tags.
+

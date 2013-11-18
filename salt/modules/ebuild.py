@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Portage
 
@@ -8,14 +9,15 @@ i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 '''
 
 # Import python libs
+import copy
 import logging
 import re
 
-log = logging.getLogger(__name__)
-
-HAS_PORTAGE = False
+# Import salt libs
+import salt.utils
 
 # Import third party libs
+HAS_PORTAGE = False
 try:
     import portage
     HAS_PORTAGE = True
@@ -31,12 +33,19 @@ except ImportError:
         except ImportError:
             pass
 
+log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
+    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+        return __virtualname__
+    return False
 
 
 def _vartree():
@@ -47,19 +56,125 @@ def _porttree():
     return portage.db[portage.root]['porttree']
 
 
-def _cpv_to_name(cpv):
-    if cpv == '':
-        return ''
-    return str(portage.cpv_getkey(cpv))
+def _p_to_cp(p):
+    ret = _porttree().dbapi.xmatch("match-all", p)
+    if ret:
+        return portage.cpv_getkey(ret[0])
+    return None
+
+
+def _allnodes():
+    if 'portage._allnodes' in __context__:
+        return __context__['portage._allnodes']
+    else:
+        ret = _porttree().getallnodes()
+        __context__['portage._allnodes'] = ret
+        return ret
+
+
+def _cpv_to_cp(cpv):
+    ret = portage.cpv_getkey(cpv)
+    if ret:
+        return ret
+    else:
+        return cpv
 
 
 def _cpv_to_version(cpv):
-    if cpv == '':
-        return ''
-    return str(cpv[len(_cpv_to_name(cpv) + '-'):])
+    return portage.versions.cpv_getversion(cpv)
 
 
-def available_version(*names):
+def _process_emerge_err(stdout, stderr):
+    '''
+    Used to parse emerge output to provide meaningful output when emerge fails
+    '''
+    ret = {}
+    changes = {}
+    rexp = re.compile(r'^[<>=][^ ]+/[^ ]+ [^\n]+', re.M)
+
+    slot_conflicts = re.compile(r'^[^ \n]+/[^ ]+:[^ ]', re.M).findall(stderr)
+    if slot_conflicts:
+        changes['slot conflicts'] = slot_conflicts
+
+    blocked = re.compile(r'(?m)^\[blocks .+\] '
+                         r'([^ ]+/[^ ]+-[0-9]+[^ ]+)'
+                         r'.*$').findall(stdout)
+
+    unsatisfied = re.compile(
+            r'Error: The above package list contains').findall(stderr)
+
+    # If there were blocks and emerge could not resolve it.
+    if blocked and unsatisfied:
+        changes['blocked'] = blocked
+
+    sections = re.split('\n\n', stderr)
+    for section in sections:
+        if 'The following keyword changes' in section:
+            changes['keywords'] = rexp.findall(section)
+        elif 'The following license changes' in section:
+            changes['license'] = rexp.findall(section)
+        elif 'The following USE changes' in section:
+            changes['use'] = rexp.findall(section)
+        elif 'The following mask changes' in section:
+            changes['mask'] = rexp.findall(section)
+    ret['changes'] = {'Needed changes': changes}
+    return ret
+
+
+def check_db(*names, **kwargs):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns a dict containing the following information for each specified
+    package:
+
+    1. A key ``found``, which will be a boolean value denoting if a match was
+       found in the package database.
+    2. If ``found`` is ``False``, then a second key called ``suggestions`` will
+       be present, which will contain a list of possible matches. This list
+       will be empty if the package name was specified in ``category/pkgname``
+       format, since the suggestions are only intended to disambiguate
+       ambiguous package names (ones submitted without a category).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.check_db <package1> <package2> <package3>
+    '''
+    ### NOTE: kwargs is not used here but needs to be present due to it being
+    ### required in the check_db function in other package providers.
+    ret = {}
+    for name in names:
+        if name in ret:
+            log.warning('pkg.check_db: Duplicate package name {0!r} '
+                        'submitted'.format(name))
+            continue
+        if '/' not in name:
+            ret.setdefault(name, {})['found'] = False
+            ret[name]['suggestions'] = porttree_matches(name)
+        else:
+            ret.setdefault(name, {})['found'] = name in _allnodes()
+            if ret[name]['found'] is False:
+                ret[name]['suggestions'] = []
+    return ret
+
+
+def ex_mod_init(low):
+    '''
+    Enforce a nice tree structure for /etc/portage/package.* configuration files.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.ex_mod_init
+    '''
+    __salt__['portage_config.enforce_nice_config']()
+    return True
+
+
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -68,13 +183,22 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3> ...
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if len(names) == 0:
         return ''
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db()
+
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -82,13 +206,20 @@ def available_version(*names):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed or compare(pkg1=installed, oper='<', pkg2=avail):
+            if not installed \
+                    or salt.utils.compare_versions(ver1=installed,
+                                                   oper='<',
+                                                   ver2=avail,
+                                                   cmp_func=version_cmp):
                 ret[name] = avail
 
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def _get_upgradable():
@@ -99,14 +230,14 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'emerge --pretend --update --newuse --deep --with-bdeps=y world'
+    cmd = 'emerge --pretend --update --newuse --deep --ask n world'
     out = __salt__['cmd.run_stdout'](cmd)
 
-    rexp = re.compile('(?m)^\[.+\] '
-                      '([^ ]+/[^ ]+)'    # Package string
+    rexp = re.compile(r'(?m)^\[.+\] '
+                      r'([^ ]+/[^ ]+)'    # Package string
                       '-'
-                      '([0-9]+[^ ]+)'          # Version
-                      '.*$')
+                      r'([0-9]+[^ ]+)'          # Version
+                      r'.*$')
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 
@@ -115,8 +246,8 @@ def _get_upgradable():
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
-        version = _get(line, 'version')
-        ret[name] = version
+        version_num = _get(line, 'version')
+        ret[name] = version_num
 
     return ret
 
@@ -125,12 +256,13 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if salt.utils.is_true(refresh):
         refresh_db()
     return _get_upgradable()
 
@@ -139,34 +271,29 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name) != ''
+    return latest_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    for name in names:
-        ret[name] = _cpv_to_version(_vartree().dep_bestmatch(name))
-
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def porttree_matches(name):
@@ -176,31 +303,48 @@ def porttree_matches(name):
     provided for packages that have several versions in the portage tree, but
     rather the name of the package (i.e. "dev-python/paramiko").
     '''
-    if not name:
-        return []
-    else:
-        return [x for x in _porttree().getallnodes()
-                if x.endswith('/' + str(name))]
+    matches = []
+    for category in _porttree().dbapi.categories:
+        if _porttree().dbapi.cp_list(category + "/" + name):
+            matches.append(category + "/" + name)
+    return matches
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
-        ret[_cpv_to_name(cpv)] = _cpv_to_version(cpv)
         __salt__['pkg_resource.add_pkg'](ret,
-                                         _cpv_to_name(cpv),
+                                         _cpv_to_cp(cpv),
                                          _cpv_to_version(cpv))
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -208,13 +352,31 @@ def refresh_db():
     '''
     Updates the portage tree (emerge --sync). Uses eix-sync if available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
-    return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
+
+    if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
+        # GPG sign verify is supported only for "webrsync"
+        cmd = 'emerge-webrsync -q'
+        # We prefer 'delta-webrsync' to 'webrsync'
+        if salt.utils.which('emerge-delta-webrsync'):
+            cmd = 'emerge-delta-webrsync -q'
+        return __salt__['cmd.retcode'](cmd) == 0
+    else:
+        if __salt__['cmd.retcode']('emerge --sync --ask n --quiet') == 0:
+            return True
+        # We fall back to "webrsync" if "rsync" fails for some reason
+        cmd = 'emerge-webrsync -q'
+        # We prefer 'delta-webrsync' to 'webrsync'
+        if salt.utils.which('emerge-delta-webrsync'):
+            cmd = 'emerge-delta-webrsync -q'
+        return __salt__['cmd.retcode'](cmd) == 0
 
 
 def install(name=None,
@@ -222,6 +384,8 @@ def install(name=None,
             pkgs=None,
             sources=None,
             slot=None,
+            fromrepo=None,
+            uses=None,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to sync the portage tree
@@ -234,7 +398,10 @@ def install(name=None,
         portage tree. To install a tbz2 package manually, use the "sources"
         option described below.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -249,8 +416,33 @@ def install(name=None,
         will install the latest available version in the specified slot.
         Ignored if "pkgs" or "sources" or "version" is passed.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sys-devel/gcc slot='4.4'
+
+    fromrepo
+        Similar to slot, but specifies the repository from the package will be
+        installed. It will install the latest available version in the
+        specified repository.
+        Ignored if "pkgs" or "sources" or "version" is passed.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install salt fromrepo='gentoo'
+
+    uses
+        Similar to slot, but specifies a list of use flag.
+        Ignored if "pkgs" or "sources" or "version" is passed.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install sys-devel/gcc uses='["nptl","-nossp"]'
 
 
     Multiple Package Installation Options:
@@ -259,15 +451,21 @@ def install(name=None,
         A list of packages to install from the portage tree. Must be passed as
         a python list.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::repository[use]"]'
 
     sources
         A list of tbz2 packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.tbz2"},{"bar": "salt://bar.tbz2"}]'
 
 
@@ -286,21 +484,28 @@ def install(name=None,
             'kwargs': kwargs
         }
     ))
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
-        version = kwargs.get('version')
-        if version:
-            pkg_params = {name: version}
-        elif slot is not None:
-            pkg_params = {name: ':{0}'.format(slot)}
+        version_num = kwargs.get('version')
+        if version_num:
+            pkg_params = {name: version_num}
+        else:
+            version_num = ''
+            if slot is not None:
+                version_num += ':{0}'.format(slot)
+            if fromrepo is not None:
+                version_num += '::{0}'.format(fromrepo)
+            if uses is not None:
+                version_num += '["{0}"]'.format('","'.join(uses))
+            pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -309,35 +514,65 @@ def install(name=None,
     else:
         emerge_opts = ''
 
+    changes = {}
+
     if pkg_type == 'repository':
         targets = list()
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            original_param = param
+            param = _p_to_cp(param)
+            if param is None:
+                raise portage.dep.InvalidAtom(original_param)
+
+            if version_num is None:
                 targets.append(param)
-            elif version.startswith(':'):
-                # Really this 'version' is a slot
-                targets.append('{0}{1}'.format(param, version))
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                keyword = None
+
+                match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', version_num)
                 if match:
-                    gt_lt, eq, verstr = match.groups()
+                    keyword, gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
                     prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    targets.append('"{0}{1}-{2}"'.format(prefix, param, verstr))
+                    # We need to delete quotes around use flag list elements
+                    verstr = verstr.replace("'", "")
+                    # If no prefix characters were supplied and verstr contains a version, use '='
+                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
+                        prefix = prefix or '='
+                        target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                    else:
+                        target = '"{0}{1}"'.format(param, verstr)
+                else:
+                    target = '"{0}"'.format(param)
+
+                if '[' in target:
+                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
+                    __salt__['portage_config.append_use_flags'](target[1:-1])
+                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
+                    if old != new:
+                        changes[param + '-USE'] = {'old': old, 'new': new}
+                    target = target[:target.rfind('[')] + '"'
+
+                if keyword is not None:
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
+                    changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
+
+                targets.append(target)
     else:
         targets = pkg_params
-    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
+    cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
+
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-    if stderr:
-        log.error(stderr)
+    call = __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stdout'], call['stderr'])
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    changes.update(salt.utils.compare_dicts(old, new))
+    return changes
 
 
-def update(pkg, slot=None, refresh=False):
+def update(pkg, slot=None, fromrepo=None, refresh=False):
     '''
     Updates the passed package (emerge --update package)
 
@@ -345,41 +580,40 @@ def update(pkg, slot=None, refresh=False):
         Restrict the update to a particular slot. It will update to the
         latest version within the slot.
 
+    fromrepo
+        Restrict the update to a particular repository. It will update to the
+        latest version within the repository.
+
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.update <package name>
     '''
-    if(refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
+    full_atom = pkg
+
     if slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
-    else:
-        full_atom = pkg
+        full_atom = '{0}:{1}'.format(full_atom, slot)
 
-    ret_pkgs = {}
-    old_pkgs = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
+    if fromrepo is not None:
+        full_atom = '{0}::{1}'.format(full_atom, fromrepo)
 
-    for pkg in new_pkgs:
-        if pkg in old_pkgs:
-            if old_pkgs[pkg] == new_pkgs[pkg]:
-                continue
-            else:
-                ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                                 'new': new_pkgs[pkg]}
-        else:
-            ret_pkgs[pkg] = {'old': '',
-                             'new': new_pkgs[pkg]}
-
-    return ret_pkgs
+    old = list_pkgs()
+    cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0}'.format(full_atom)
+    call = __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stdout'], call['stderr'])
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
 
 def upgrade(refresh=True):
@@ -391,136 +625,250 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if salt.utils.is_true(refresh):
         refresh_db()
 
-    ret_pkgs = {}
-    old_pkgs = list_pkgs()
-    cmd = 'emerge --update --newuse --deep --with-bdeps=y --quiet world'
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
-
-    for pkg in new_pkgs:
-        if pkg in old_pkgs:
-            if old_pkgs[pkg] == new_pkgs[pkg]:
-                continue
-            else:
-                ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                                 'new': new_pkgs[pkg]}
-        else:
-            ret_pkgs[pkg] = {'old': '',
-                             'new': new_pkgs[pkg]}
-
-    return ret_pkgs
+    old = list_pkgs()
+    cmd = 'emerge --update --newuse --deep --ask n --quiet world'
+    call = __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stdout'], call['stderr'])
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
 
-def remove(pkg, slot=None, **kwargs):
+def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
-    Remove a single package via emerge --unmerge
+    Remove packages via emerge --unmerge.
+
+    name
+        The name of the package to be deleted.
 
     slot
-        Restrict the remove to a specific slot.
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
-    Return a list containing the names of the removed packages:
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
-    CLI Example::
+    Multiple Package Options:
+
+    pkgs
+        Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
+
+    .. versionadded:: 0.16.0
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package name> slot=4.4 fromrepo=gentoo
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    ret_pkgs = []
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
+    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+        fullatom = name
+        if slot is not None:
+            targets = ['{0}:{1}'.format(fullatom, slot)]
+        if fromrepo is not None:
+            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+        targets = [fullatom]
     else:
-        full_atom = pkg
+        targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
+    if not targets:
+        return {}
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
+          '{0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
-    for pkg in old_pkgs:
-        if not pkg in new_pkgs:
-            ret_pkgs.append(pkg)
 
-    return ret_pkgs
-
-
-def purge(pkg, **kwargs):
+def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
 
-    CLI Example::
+    slot
+        Restrict the remove to a specific slot. Ignored if name is None.
+
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
+
+    Multiple Package Options:
+
+    pkgs
+        Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
-
+        salt '*' pkg.purge <package name> slot=4.4
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(pkg) + depclean()
+    ret = remove(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs)
+    ret.update(depclean(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs))
+    return ret
 
 
-def depclean(pkg=None, slot=None):
+def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     '''
     Portage has a function to remove unused dependencies. If a package
     is provided, it will only removed the package if no other package
     depends on it.
 
+    name
+        The name of the package to be cleaned.
+
     slot
-        Restrict the remove to a specific slot. Ignored if pkg is None
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
+
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
+
+    pkgs
+        Clean multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
 
     Return a list containing the removed packages:
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.depclean <package name>
     '''
-    ret_pkgs = []
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if pkg is not None and slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
+    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+        fullatom = name
+        if slot is not None:
+            targets = ['{0}:{1}'.format(fullatom, slot)]
+        if fromrepo is not None:
+            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+        targets = [fullatom]
     else:
-        full_atom = pkg
+        targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --depclean --quiet {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
-
-    for pkg in old_pkgs:
-        if not pkg in new_pkgs:
-            ret_pkgs.append(pkg)
-
-    return ret_pkgs
+    cmd = 'emerge --depclean --ask n --quiet {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
 
 
-def perform_cmp(pkg1='', pkg2=''):
+def version_cmp(pkg1, pkg2):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+    regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
+    ver1 = re.match(regex, pkg1)
+    ver2 = re.match(regex, pkg2)
+
+    if ver1 and ver2:
+        return portage.versions.vercmp(ver1.group(1), ver2.group(1))
+    return None
 
 
-def compare(pkg1='', oper='==', pkg2=''):
+def version_clean(version):
     '''
-    Compare two version strings.
+    Clean the version string removing extra data.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    .. code-block:: bash
+
+        salt '*' pkg.version_clean <version_string>
     '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+    return re.match(r'^~?[<>]?=?([^<>=:\[]+).*$', version)
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.check_extra_requirements 'sys-devel/gcc' '~>4.1.2:4.1::gentoo[nls,fortran]'
+    '''
+    keyword = None
+
+    match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', pkgver)
+    if match:
+        keyword, gt_lt, eq, verstr = match.groups()
+        prefix = gt_lt or ''
+        prefix += eq or ''
+        # We need to delete quotes around use flag list elements
+        verstr = verstr.replace("'", "")
+        # If no prefix characters were supplied and verstr contains a version, use '='
+        if verstr[0] != ':' and verstr[0] != '[':
+            prefix = prefix or '='
+            atom = '{0}{1}-{2}'.format(prefix, pkgname, verstr)
+        else:
+            atom = '{0}{1}'.format(pkgname, verstr)
+    else:
+        return True
+
+    cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
+
+    if cpv == '':
+        return False
+
+    try:
+        cur_repo, cur_use = _vartree().dbapi.aux_get(cpv, ['repository', 'USE'])
+    except KeyError:
+        return False
+
+    des_repo = re.match(r'^.+::([^\[]+).*$', atom)
+    if des_repo and des_repo.group(1) != cur_repo:
+        return False
+
+    des_uses = set(portage.dep.dep_getusedeps(atom))
+    cur_use = cur_use.split()
+    if len([x for x in des_uses.difference(cur_use)
+            if x[0] != '-' or x[1:] in cur_use]) > 0:
+        return False
+
+    if keyword:
+        if not __salt__['portage_config.has_flag']('accept_keywords', atom, '~ARCH'):
+            return False
+
+    return True

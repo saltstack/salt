@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return data to the host operating system's syslog facility
 
@@ -8,12 +9,21 @@ facility to log return data
 '''
 
 # Import python libs
-import syslog
 import json
+try:
+    import syslog
+    HAS_SYSLOG = True
+except ImportError:
+    HAS_SYSLOG = False
+
+# Define the module's virtual name
+__virtualname__ = 'syslog'
 
 
 def __virtual__():
-    return 'syslog'
+    if not HAS_SYSLOG:
+        return False
+    return __virtualname__
 
 
 def returner(ret):

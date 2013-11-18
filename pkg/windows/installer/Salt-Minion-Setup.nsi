@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "0.13.0"
+!define PRODUCT_VERSION "0.17.1"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -118,7 +118,7 @@ FunctionEnd
 
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-Setup.exe"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-$%PROCESSOR_ARCHITEW6432%-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -126,10 +126,14 @@ ShowUnInstDetails show
 
 Section "MainSection" SEC01
 
+  ExecWait "net stop salt-minion" ;stopping service before upgrading
+  Sleep 3000
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
   File /r "..\buildenv\"
+  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F' 
+  
 
 SectionEnd
 
@@ -148,7 +152,8 @@ SectionEnd
 
 Function .onInstSuccess
   Exec "nssm.exe install salt-minion $INSTDIR\salt-minion.exe -c $INSTDIR\conf -l quiet"
-  Exec "sc start salt-minion"
+  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+  ExecWait "net start salt-minion"
 FunctionEnd
 
 Function un.onUninstSuccess
@@ -184,8 +189,8 @@ Function .onInit
 FunctionEnd
 
 Section Uninstall
-  Exec "sc stop salt-minion"
-  Exec "sc delete salt-minion"
+  ExecWait "net stop salt-minion"
+  ExecWait "sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\python*"

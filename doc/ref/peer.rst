@@ -110,3 +110,9 @@ To execute the manage.up runner:
 .. code-block:: bash
 
     # salt-call publish.runner manage.up
+    
+To match minions using other matchers, use ``expr_form``:
+
+.. code-block:: bash
+
+    # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping expr_form='compound'

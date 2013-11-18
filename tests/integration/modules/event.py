@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.integration.modules.event
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -13,13 +14,17 @@ import time
 import threading
 from Queue import Queue, Empty
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
 from salt.utils import event
 
 
 class EventModuleTest(integration.ModuleCase):
-    def test_event_fire_master(self):
+    def __test_event_fire_master(self):
         events = Queue()
 
         def get_event(events):

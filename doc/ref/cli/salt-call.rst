@@ -20,9 +20,7 @@ Options
 
 .. program:: salt-call
 
-.. option:: -h, --help
-
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/common-options.rst
 
 .. option:: -g, --grains
 
@@ -32,6 +30,18 @@ Options
 
     Specify an additional directories to pull modules from, multiple
     directories can be delimited by commas
+
+.. option:: -d, --doc, --documentation
+
+    Return the documentation for the specified module or for all modules if
+    none are specified
+
+.. option:: --master=MASTER
+
+    Specify the master to use. The minion must be authenticated with the 
+    master. If this option is omitted, the master options from the minion 
+    config will be used. If multi masters are set up the first listed master 
+    that responds will be used.
 
 .. option:: --return RETURNER
 
@@ -43,51 +53,12 @@ Options
 
     Run salt-call locally, as if there was no master running.
 
-.. option:: -d, --doc
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``info``
 
-    Return the documentation for the specified module or for all modules if
-    none are specified
+.. include:: _includes/output-options.rst
 
-.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
-
-    Console log level. One of ``info``, ``none``, ``garbage``,
-    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
-    settings see the config file. Default: ``info``.
-
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
-
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
-
-.. option:: --out
-
-    Pass in an alternative outputter to display the return of data. This
-    outputter can be any of the available outputters:
-    grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
-    Some outputters are formatted only for data returned from specific
-    functions, for instance the grains outputter will not work for non grains
-    data.
-    If an outputter is used that does not support the data passed into it, then
-    Salt will fall back on the pprint outputter and display the return data
-    using the python pprint library.
-
-.. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
-
-    Print the output indented by the provided value in spaces. Negative values
-    disables indentation. Only applicable in outputters that support indentation.
-
-.. option:: --no-color
-
-    Disable all colored output
-
-.. option:: --version
-
-    Show program's version number and exit
-
-.. option:: --versions-report
-
-    Show program's dependencies version number and exit
 
 See also
 ========

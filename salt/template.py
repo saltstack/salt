@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage basic template commands
 '''
@@ -6,12 +7,15 @@ Manage basic template commands
 import time
 import os
 import codecs
+import logging
 from cStringIO import StringIO as cStringIO
 from StringIO import StringIO as pyStringIO
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+
+log = logging.getLogger(__name__)
 
 
 def string_io(data=None):  # cStringIO can't handle unicode
@@ -27,7 +31,12 @@ SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
-def compile_template(template, renderers, default, env='', sls='', **kwargs):
+def compile_template(template,
+                     renderers,
+                     default,
+                     saltenv='base',
+                     sls='',
+                     **kwargs):
     '''
     Take the path to a template and return the high data structure
     derived from the template.
@@ -54,16 +63,28 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
+        try:
+            input_data.seek(0)
+        except Exception:
+            pass
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:
             render_kwargs['argline'] = argline
-        ret = render(input_data, env, sls, **render_kwargs)
+        ret = render(input_data, saltenv, sls, **render_kwargs)
         if ret is None:
             # The file is empty or is being written elsewhere
             time.sleep(0.01)
-            ret = render(input_data, env, sls, **render_kwargs)
+            ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
+        if log.isEnabledFor(logging.GARBAGE):
+            try:
+                log.debug('Rendered data from file: {0}:\n{1}'.format(
+                    template,
+                    ret.read()))
+                ret.seek(0)
+            except Exception:
+                pass
     return ret
 
 
@@ -151,4 +172,5 @@ def check_render_pipe_str(pipestr, renderers):
             results.append((renderers[name], argline.strip()))
         return results
     except KeyError:
+        log.error('The renderer "{0}" is not available'.format(pipestr))
         return []

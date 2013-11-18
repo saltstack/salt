@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
+A Python-based DSL
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
@@ -26,19 +29,19 @@ a few objects are defined for you, including the usual(with ``__`` added)
 ``__env__``, and ``__sls__``, plus a few more:
 
   ``__file__``
-    
+
     local file system path to the sls module.
 
   ``__pydsl__``
-  
+
     Salt PyDSL object, useful for configuring DSL behavior per sls rendering.
 
   ``include``
-  
+
     Salt PyDSL function for creating :term:`include declaration`'s.
 
   ``extend``
-    
+
     Salt PyDSL function for creating :term:`extend declaration`'s.
 
   ``state``
@@ -48,16 +51,16 @@ a few objects are defined for you, including the usual(with ``__`` added)
 
 A state :term:`ID declaration` is created with a ``state(id)`` function call.
 Subsequent ``state(id)`` call with the same id returns the same object. This
-singleton access pattern applys to all declaration objects created with the DSL.
+singleton access pattern applies to all declaration objects created with the DSL.
 
 .. code-block:: python
-    
+
     state('example')
     assert state('example') is state('example')
     assert state('example').cmd is state('example').cmd
     assert state('example').cmd.running is state('example').cmd.running
 
-The `id` argument is optional. If ommitted, an UUID will be generated and used as
+The `id` argument is optional. If omitted, an UUID will be generated and used as
 the `id`.
 
 ``state(id)`` returns an object under which you can create a :term:`state declaration`
@@ -112,7 +115,7 @@ also a :term:`function declaration` object, so you can chain several requisite c
 together.
 
 Arguments to a requisite call can be a list of :term:`state declaration` objects and/or
-a set of keyword arguments whose names are state modules and values are IDs of 
+a set of keyword arguments whose names are state modules and values are IDs of
 :term:`ID declaration`'s or names of :term:`name declaration`'s.
 
 .. code-block:: python
@@ -133,7 +136,7 @@ a set of keyword arguments whose names are state modules and values are IDs of
     apache2.service.require(state('libapache2-mod-wsgi').pkg,
                             pkg='apache2') \\
                    .watch(file='/etc/apache2/httpd.conf')
-     
+
     # we still need to set the name of the function declaration.
     apache2.service.running()
 
@@ -177,7 +180,7 @@ argument to ``include``.
 .. code-block:: python
 
     include('edit.vim', 'http.server', delayed=True)
-    
+
 Above will just create a :term:`include declaration` in the rendered result, and
 such call always returns ``None``.
 
@@ -193,7 +196,7 @@ state that calls a pre-defined Python function when the state is executed.
     def helper(something, *args, **kws):
         print greeting                # hello world
         print something, args, kws    # test123 ['a', 'b', 'c'] {'x': 1, 'y': 2}
-        
+
     state().cmd.call(helper, "test123", 'a', 'b', 'c', x=1, y=2)
 
 The `cmd.call` state function takes care of calling our ``helper`` function
@@ -256,7 +259,7 @@ configured :term:`ID declaration` object.
 .. code-block:: python
 
     #!pydsl
-    
+
     s = state() # save for later invocation
 
     # configure it
@@ -313,7 +316,8 @@ from salt.utils import pydsl
 
 __all__ = ['render']
 
-def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
+
+def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
     mod = imp.new_module(sls)
     # Note: mod object is transient. It's existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
@@ -324,7 +328,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
 
-    dsl_sls = pydsl.Sls(sls, env, rendered_sls)
+    dsl_sls = pydsl.Sls(sls, saltenv, rendered_sls)
     mod.__dict__.update(
         __pydsl__=dsl_sls,
         include=_wrap_sls(dsl_sls.include),
@@ -334,7 +338,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
         __grains__=__grains__,
         __opts__=__opts__,
         __pillar__=__pillar__,
-        __env__=env,
+        __env__=saltenv,
         __sls__=sls,
         __file__=tmplpath,
         **kws)
@@ -344,12 +348,10 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate
-    
+
 
 def _wrap_sls(method):
     def _sls_method(*args, **kws):
         sls = pydsl.Sls.get_render_stack()[-1]
         return getattr(sls, method.__name__)(*args, **kws)
     return _sls_method
-
-

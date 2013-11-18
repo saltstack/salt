@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
@@ -35,6 +36,7 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
+        self.opts['caller'] = True
         self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
@@ -52,23 +54,31 @@ class Caller(object):
         fun = self.opts['fun']
         ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
         proc_fn = os.path.join(
-                salt.minion.get_proc_dir(self.opts['cachedir']),
-                ret['jid'])
+            salt.minion.get_proc_dir(self.opts['cachedir']),
+            ret['jid']
+        )
         if fun not in self.minion.functions:
             sys.stderr.write('Function {0} is not available\n'.format(fun))
-            sys.exit(1)
+            sys.exit(-1)
         try:
-            args, kwargs = salt.minion.detect_kwargs(
-                self.minion.functions[fun], self.opts['arg'])
             sdata = {
                     'fun': fun,
                     'pid': os.getpid(),
                     'jid': ret['jid'],
                     'tgt': 'salt-call'}
-            with salt.utils.fopen(proc_fn, 'w+') as fp_:
-                fp_.write(self.serial.dumps(sdata))
-            ret['return'] = self.minion.functions[fun](*args, **kwargs)
-        except (TypeError, CommandExecutionError) as exc:
+            args, kwargs = salt.minion.parse_args_and_kwargs(
+                self.minion.functions[fun], self.opts['arg'], data=sdata)
+            try:
+                with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                    fp_.write(self.serial.dumps(sdata))
+            except NameError:
+                # Don't require msgpack with local
+                pass
+            func = self.minion.functions[fun]
+            ret['return'] = func(*args, **kwargs)
+            ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode', 0)
+        except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
                 self.opts['log_level'].lower(), logging.ERROR)
@@ -88,13 +98,13 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-            if oput == 'highstate':
-                ret['return'] = {'local': ret['return']}
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
             ret['fun'] = fun
+            ret['fun_args'] = self.opts['arg']
             for returner in self.opts['return'].split(','):
                 try:
+                    ret['success'] = True
                     self.minion.returners['{0}.returner'.format(returner)](ret)
                 except Exception:
                     pass
@@ -124,15 +134,10 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
-
         ret = self.call()
-        out = ret['return']
-        # If the type of return is not a dict we wrap the return data
-        # This will ensure that --local and local functions will return the
-        # same data structure as publish commands.
-        if type(ret['return']) != type({}):
-            out = {'local': ret['return']}
         salt.output.display_output(
-                out,
+                {'local': ret.get('return', {})},
                 ret.get('out', 'nested'),
                 self.opts)
+        if self.opts.get('retcode_passthrough', False):
+            sys.exit(ret['retcode'])

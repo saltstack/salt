@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 import logging
 import os
@@ -9,6 +10,13 @@ import sys
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+HAS_PSUTIL = False
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    pass
 
 
 def set_pidfile(pidfile, user):
@@ -43,13 +51,21 @@ def set_pidfile(pidfile, user):
             )
         )
         sys.exit(2)
+
+    if os.getuid() == uid:
+        # The current user already owns the pidfile. Return!
+        return
+
     try:
         os.chown(pidfile, uid, gid)
     except OSError as err:
-        msg = ('Failed to set the ownership of PID file {0} '
-               'to user {1}\n').format(pidfile, user)
-        log.debug(msg, exc_info=True)
-        sys.stderr.write(msg)
+        msg = (
+            'Failed to set the ownership of PID file {0} to user {1}.'.format(
+                pidfile, user
+            )
+        )
+        log.debug('{0} Traceback follows:\n'.format(msg), exc_info=True)
+        sys.stderr.write('{0}\n'.format(msg))
         sys.exit(err.errno)
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 
@@ -79,3 +95,17 @@ def clean_proc(proc, wait_for_kill=10):
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
         pass
+
+
+def os_is_running(pid):
+    '''
+    Use OS facilities to determine if a process is running
+    '''
+    if HAS_PSUTIL:
+        return psutil.pid_exists(pid)
+    else:
+        try:
+            os.kill(pid, 0)  # SIG 0 is the "are you alive?" signal
+            return True
+        except OSError:
+            return False

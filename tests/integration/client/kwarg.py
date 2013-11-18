@@ -1,10 +1,9 @@
-# Import python libs
-import sys
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class StdTest(integration.ModuleCase):
@@ -88,10 +87,25 @@ class StdTest(integration.ModuleCase):
         self.assertEqual(data['ret']['baz'], 'quo')
         self.assertEqual(data['ret']['qux'], 'quux')
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(StdTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    def test_kwarg_type(self):
+        '''
+        Test that kwargs end up on the client as the same type
+        '''
+        terrible_yaml_string = 'foo: ""\n# \''
+        ret = self.client.cmd_full_return(
+                'minion',
+                'test.arg_type',
+                ['a', 1],
+                kwarg={'outer': {'a': terrible_yaml_string},
+                       'inner': 'value'}
+                )
+        data = ret['minion']['ret']
+        self.assertIn('str', data['args'][0])
+        self.assertIn('int', data['args'][1])
+        self.assertIn('dict', data['kwargs']['outer'])
+        self.assertIn('str', data['kwargs']['inner'])
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StdTest)

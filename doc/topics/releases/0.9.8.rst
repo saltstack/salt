@@ -7,8 +7,8 @@ well as a number of precursors to advanced future developments.
 
 This version of Salt adds much more power to the command line, making the
 old hard timeout issues a thing of the past and adds keyword argument
-support. These additions are also available in the salt client api, making
-the available api tools much more powerful.
+support. These additions are also available in the salt client API, making
+the available API tools much more powerful.
 
 The new pillar system allows for data to be stored on the master and
 assigned to minions in a granular way similar to the state system. It also
@@ -32,7 +32,7 @@ default behavior of grain matching has changed slightly to reflect the rest
 of salt and the compound matcher system has been refined.
 
 A number of impressive features with keyword arguments have been added to both
-the cli and to the state system. This makes states much more powerful and
+the CLI and to the state system. This makes states much more powerful and
 flexible while maintaining the simple configuration everyone loves.
 
 The new batch size capability allows for executions to be rolled through a
@@ -79,7 +79,7 @@ And on any Syndics:
 
     # apt-get install salt-syndic
 
-The official salt stack ppa for Ubuntu is located at:
+The official Salt PPA for Ubuntu is located at:
 https://launchpad.net/~saltstack/+archive/salt
 
 
@@ -123,7 +123,7 @@ has just become portable, allowing minions to have a local copy of states
 or to manage states without a master entirely.
 
 This is accomplished via the new file client interface in Salt that allows
-for the ``salt://`` uri to be redirected to custom interfaces. This means that
+for the ``salt://`` URI to be redirected to custom interfaces. This means that
 there are now two interfaces for the salt file server, calling the master
 or looking in a local, minion defined ``file_roots``.
 
@@ -302,7 +302,7 @@ take a percentage or a finite number:
 
 .. code-block:: bash
 
-    salt \* -b 10 test.ping
+    salt '*' -b 10 test.ping
 
     salt -G 'os:RedHat' --batch-size 25% apache.signal restart
 
@@ -342,7 +342,7 @@ issues when package installation waits for confirmation.
 A :doc:`pkg </ref/modules/all/salt.modules.zypper>` module for OpenSUSE's
 zypper was added.
 
-The :doc:`service </ref/modules/all/salt.modules.upstart>` module on ubuntu
+The :doc:`service </ref/modules/all/salt.modules.upstart>` module on Ubuntu
 natively supports upstart.
 
 A new :doc:`debconf </ref/modules/all/salt.modules.debconfmod>` module was

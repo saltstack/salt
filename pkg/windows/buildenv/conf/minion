@@ -91,6 +91,11 @@ pki_dir: /conf/pki/minion
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
+# If this is set, the time between reconnection attempts will increase by 
+# acceptance_wait_time seconds per iteration, up to this maximum. If this
+# is not set, the time between reconnection attempts will stay constant.
+#acceptance_wait_time_max: None
+
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
 # your environment, set this value to False.
@@ -282,6 +287,7 @@ pki_dir: /conf/pki/minion
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
 #multiprocessing: True
+multiprocessing: False
 
 ######         Logging settings       #####
 ###########################################
@@ -378,7 +384,7 @@ pki_dir: /conf/pki/minion
 # Enabling TCP Keepalives prevents this from happening.
 #
 # Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
-# or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
+# or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300

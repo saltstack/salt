@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return data to a redis server
 
@@ -20,11 +21,14 @@ try:
 except ImportError:
     HAS_REDIS = False
 
+# Define the module's virtual name
+__virtualname__ = 'redis'
+
 
 def __virtual__():
     if not HAS_REDIS:
         return False
-    return 'redis'
+    return __virtualname__
 
 
 def _get_serv():

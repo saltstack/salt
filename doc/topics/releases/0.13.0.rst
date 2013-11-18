@@ -2,7 +2,7 @@
 Salt 0.13.0 Release Notes
 =========================
 
-The lucky number 13 has turned the corner! From cli notifications when quitting
+The lucky number 13 has turned the corner! From CLI notifications when quitting
 a salt command, to substantial improvements on Windows, Salt 0.13.0 has
 arrived!
 
@@ -48,10 +48,12 @@ and ``state.highstate``. This allows for on the fly changes or settings to
 pillar and makes parameterizing state formulas even easier. This is done via
 the keyword argument:
 
-    salt \* state.highstate pillar='{"cheese": "spam"}'
+.. code-block:: bash
 
-The above example will extend the existing pillar to hold the `cheese` key
-with a value of `spam`. If the `cheese` key is already specified in the
+    salt '*' state.highstate pillar='{"cheese": "spam"}'
+
+The above example will extend the existing pillar to hold the ``cheese`` key
+with a value of ``spam``. If the ``cheese`` key is already specified in the
 minion's pillar then it will be overwritten.
 
 CLI Notifications
@@ -63,8 +65,8 @@ remote executions to also quit. Now a message is displayed showing what
 command can be used to track the execution and what the job id is for the
 execution.
 
-Version Specification in Muliple-Package States
------------------------------------------------
+Version Specification in Multiple-Package States
+------------------------------------------------
 
 Versions can now be specified within multiple-package :mod:`pkg.installed
 <salt.states.pkg.installed>` states. An example can be found below:
@@ -87,5 +89,5 @@ incompatible change with salt-cloud, and salt-cloud will need to be updated
 to the latest git to work with Salt 0.13.0. Salt Cloud 0.8.5 will also require
 Salt 0.13.0 or later to function.
 
-The Salt Stack team is sorry for the inconvenience here, we work hard to make
+The SaltStack team is sorry for the inconvenience here, we work hard to make
 sure these sorts of things do not happen, but sometimes hard changes get in.

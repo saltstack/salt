@@ -1,28 +1,50 @@
+# -*- coding: utf-8 -*-
 '''
 Manage groups on FreeBSD
 '''
+
+# Import python libs
+import logging
+
+# Import salt libs
+import salt.utils
+
+
+log = logging.getLogger(__name__)
+
 
 try:
     import grp
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'group' if __grains__['kernel'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
 
 
-def add(name, gid=None, system=False):
+def add(name, gid=None, **kwargs):
     '''
     Add the specified group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.add foo 3456
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    if salt.utils.is_true(kwargs.pop('system', False)):
+        log.warning('pw_group module does not support the \'system\' argument')
+    if kwargs:
+        log.warning('Invalid kwargs passed to group.add')
+
     cmd = 'pw groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
@@ -36,7 +58,9 @@ def delete(name):
     '''
     Remove the named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.delete foo
     '''
@@ -49,7 +73,9 @@ def info(name):
     '''
     Return information about a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.info foo
     '''
@@ -64,17 +90,23 @@ def info(name):
                 'members': grinfo.gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.getent
     '''
+    if 'group.getent' in __context__ and not refresh:
+        return __context__['group.getent']
+
     ret = []
     for grinfo in grp.getgrall():
         ret.append(info(grinfo.gr_name))
+    __context__['group.getent'] = ret
     return ret
 
 
@@ -82,7 +114,9 @@ def chgid(name, gid):
     '''
     Change the gid for a named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.chgid foo 4376
     '''

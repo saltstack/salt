@@ -11,11 +11,14 @@ Full list of runner modules
     :template: autosummary.rst.tmpl
 
     cache
+    doc
+    fileserver
     jobs
     launchd
     manage
     network
     search
     state
-    sysmod
+    thin
+    virt
     winrepo

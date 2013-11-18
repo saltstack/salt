@@ -30,8 +30,6 @@ class Mock(object):
     def __getattr__(self, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
-        elif name[0] == name[0].upper():
-            return type(name, (), {})
         else:
             return Mock()
 # pylint: enable=R0903
@@ -48,7 +46,15 @@ MOCK_MODULES = [
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
+    'yaml.scanner',
     'zmq',
+    # salt.cloud
+    'libcloud',
+    'libcloud.compute',
+    'libcloud.compute.base',
+    'libcloud.compute.deployment',
+    'libcloud.compute.providers',
+    'libcloud.compute.types',
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
@@ -65,6 +71,8 @@ MOCK_MODULES = [
     'rpmUtils',
     'rpmUtils.arch',
     'yum',
+    'OpenSSL',
+    'zfs'
 ]
 
 for mod_name in MOCK_MODULES:
@@ -72,8 +80,13 @@ for mod_name in MOCK_MODULES:
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
+try:
+    docs_basepath = os.path.abspath(os.path.dirname(__file__))
+except NameError:
+    # sphinx-intl and six execute some code which will raise this NameError
+    # assume we're in the doc/ directory
+    docs_basepath = os.path.abspath(os.path.dirname('.'))
 
-docs_basepath = os.path.abspath(os.path.dirname(__file__))
 addtl_paths = (
         os.pardir, # salt itself (for autodoc)
         '_ext', # custom Sphinx extensions
@@ -82,28 +95,46 @@ addtl_paths = (
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
-from salt.version import __version__
+
+# We're now able to import salt
+import salt.version
 
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
-# -- General configuration -----------------------------------------------------
+# ----- Intersphinx Settings ------------------------------------------------>
+intersphinx_mapping = {
+        'python2': ('http://docs.python.org/2', None),
+        'python3': ('http://docs.python.org/3', None)
+}
+# <---- Intersphinx Settings -------------------------------------------------
+
+# -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2013, Thomas S. Hatch'
+copyright = '2013 SaltStack, Inc.'
 
-version = __version__
-release = version
+version = salt.version.__version__
+#release = '.'.join(map(str, salt.version.__version_info__))
+release = '0.17.2'
+
+language = 'en'
+locale_dirs = [
+    '_locale',
+]
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build', '_incl/*']
+exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
     'saltdocs',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
+    'sphinx.ext.intersphinx',
+    'youtube',
+    'saltautodoc'   # Needs to be listed AFTER sphunx.ext.autodoc
 ]
 
 modindex_common_prefix = ['salt.']
@@ -114,19 +145,28 @@ autosummary_generate = True
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
-""" % __version__
+""" % salt.version.__version__
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
+    'formula': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
 
+# ----- Localization -------------------------------------------------------->
+locale_dirs = ['locale/']
+gettext_compact = False
+# <---- Localization ---------------------------------------------------------
 ### HTML options
-html_theme = 'default'
+if on_rtd:
+    html_theme = 'default'
+else:
+    html_theme = 'saltstack'
 
+html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
@@ -139,9 +179,15 @@ html_additional_pages = {
     '404': '404.html',
 }
 
+html_default_sidebars = [
+    'localtoc.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html',
+]
 html_sidebars = {
     'ref/**/all/salt.*': [
-        'autosummarysidebar.html',
+        'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
@@ -150,6 +196,7 @@ html_sidebars = {
 }
 
 html_context = {
+    'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
@@ -165,7 +212,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
+  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
 latex_logo = '_static/saltstack_logo.png'
@@ -179,8 +226,8 @@ authors = [
 ]
 
 man_pages = [
-    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('contents', 'salt', 'Salt Documentation', authors, 7),
+    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('ref/cli/salt-master', 'salt-master', 'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', 'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
@@ -188,14 +235,16 @@ man_pages = [
     ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
+    ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
+    ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
 ]
 
 
 ### epub options
 epub_title = 'Salt Documentation'
-epub_author = 'Thomas S. Hatch'
+epub_author = 'SaltStack, Inc.'
 epub_publisher = epub_author
-epub_copyright = '2013, Thomas S. Hatch'
+epub_copyright = copyright
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'

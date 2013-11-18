@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to set up a minion
 '''
@@ -9,11 +10,11 @@ import sys
 import salt
 import logging
 import tempfile
-import traceback
 
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
+from salt.utils.decorators import Depends
 
 log = logging.getLogger(__name__)
 
@@ -25,21 +26,22 @@ def _create_loader(
         opts,
         ext_type,
         tag,
+        int_type=None,
         ext_dirs=True,
         ext_type_dirs=None,
-        base_path=None):
+        base_path=None,
+        loaded_base_name=None,
+        mod_type_check=None):
     '''
     Creates Loader instance
 
     Order of module_dirs:
+        cli flag -m MODULE_DIRS
         opts[ext_type_dirs],
         extension types,
         base types.
     '''
-    if base_path:
-        sys_types = os.path.join(base_path, ext_type)
-    else:
-        sys_types = os.path.join(SALT_BASE_PATH, ext_type)
+    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
@@ -49,12 +51,37 @@ def _create_loader(
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
 
-    module_dirs = ext_type_types + [ext_types, sys_types]
-    _generate_module('{0}.int'.format(LOADED_BASE_NAME))
-    _generate_module('{0}.int.{1}'.format(LOADED_BASE_NAME, tag))
-    _generate_module('{0}.ext'.format(LOADED_BASE_NAME))
-    _generate_module('{0}.ext.{1}'.format(LOADED_BASE_NAME, tag))
-    return Loader(module_dirs, opts, tag)
+    cli_module_dirs = []
+    # The dirs can be any module dir, or a in-tree _{ext_type} dir
+    for _dir in opts.get('module_dirs', []):
+        # Prepend to the list to match cli argument ordering
+        maybe_dir = os.path.join(_dir, ext_type)
+        if (os.path.isdir(maybe_dir)):
+            cli_module_dirs.insert(0, maybe_dir)
+            continue
+
+        maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
+        if (os.path.isdir(maybe_dir)):
+            cli_module_dirs.insert(0, maybe_dir)
+
+    if loaded_base_name is None:
+        loaded_base_name = LOADED_BASE_NAME
+
+    if mod_type_check is None:
+        mod_type_check = _mod_type
+
+    module_dirs = cli_module_dirs + ext_type_types + [ext_types, sys_types]
+    _generate_module('{0}.int'.format(loaded_base_name))
+    _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
+    _generate_module('{0}.ext'.format(loaded_base_name))
+    _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+    return Loader(
+        module_dirs,
+        opts,
+        tag,
+        loaded_base_name=loaded_base_name,
+        mod_type_check=mod_type_check
+    )
 
 
 def minion_mods(opts, context=None, whitelist=None):
@@ -69,17 +96,12 @@ def minion_mods(opts, context=None, whitelist=None):
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     functions = load.gen_functions(
-                    pack,
-                    whitelist=whitelist
-                )
-    if opts.get('providers', False):
-        if isinstance(opts['providers'], dict):
-            for mod, provider in opts['providers'].items():
-                funcs = raw_mod(opts, provider, functions)
-                if funcs:
-                    for func in funcs:
-                        f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
-                        functions[f_key] = funcs[func]
+        pack,
+        whitelist=whitelist,
+        provider_overrides=True
+    )
+    # Enforce dependencies of module functions from "functions"
+    Depends.enforce_dependencies(functions)
     return functions
 
 
@@ -103,7 +125,7 @@ def returners(opts, functions, whitelist=None):
 
 def pillars(opts, functions):
     '''
-    Returns the returner modules
+    Returns the pillars modules
     '''
     load = _create_loader(opts, 'pillar', 'pillar')
     pack = {'name': '__salt__',
@@ -113,15 +135,18 @@ def pillars(opts, functions):
 
 def tops(opts):
     '''
-    Returns the returner modules
+    Returns the tops modules
     '''
+    if not 'master_tops' in opts:
+        return {}
+    whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return load.filter_func('top')
+    return load.filter_func('top', whitelist=whitelist)
 
 
 def wheels(opts, whitelist=None):
     '''
-    Returns the returner modules
+    Returns the wheels modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
     return load.gen_functions(whitelist=whitelist)
@@ -129,7 +154,7 @@ def wheels(opts, whitelist=None):
 
 def outputters(opts):
     '''
-    Returns the returner modules
+    Returns the outputters modules
     '''
     load = _create_loader(
         opts,
@@ -141,7 +166,7 @@ def outputters(opts):
 
 def auth(opts, whitelist=None):
     '''
-    Returns the returner modules
+    Returns the auth modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
     return load.gen_functions(whitelist=whitelist)
@@ -153,6 +178,15 @@ def fileserver(opts, backends):
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
     ret = load.gen_functions(whitelist=backends)
+    return ret
+
+
+def roster(opts, whitelist=None):
+    '''
+    Returns the roster modules
+    '''
+    load = _create_loader(opts, 'roster', 'roster')
+    ret = load.gen_functions(whitelist=whitelist)
     return ret
 
 
@@ -168,12 +202,45 @@ def states(opts, functions, whitelist=None):
 
 def search(opts, returners, whitelist=None):
     '''
-    Returns the state modules
+    Returns the search modules
     '''
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
     return load.gen_functions(pack, whitelist=whitelist)
+
+
+def log_handlers(opts):
+    '''
+    Returns the custom logging handler modules
+    '''
+    load = _create_loader(
+        opts,
+        'log_handlers',
+        'log_handlers',
+        int_type='handlers',
+        base_path=os.path.join(SALT_BASE_PATH, 'log')
+    )
+    return load.filter_func('setup_handlers')
+
+
+def ssh_wrapper(opts, functions=None):
+    '''
+    Returns the custom logging handler modules
+    '''
+    if functions is None:
+        functions = {}
+    load = _create_loader(
+        opts,
+        'wrapper',
+        'wrapper',
+        base_path=os.path.join(SALT_BASE_PATH, os.path.join(
+            'client',
+            'ssh'))
+    )
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.gen_functions(pack)
 
 
 def render(opts, functions):
@@ -199,10 +266,11 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
-    if not 'grains' in opts:
+    if 'conf_file' in opts:
         pre_opts = {}
         pre_opts.update(salt.config.load_config(
-            opts['conf_file'], 'SALT_MINION_CONFIG'
+            opts['conf_file'], 'SALT_MINION_CONFIG',
+            salt.config.DEFAULT_MINION_OPTS['conf_file']
         ))
         default_include = pre_opts.get(
             'default_include', opts['default_include']
@@ -218,11 +286,13 @@ def grains(opts):
             opts['grains'] = pre_opts['grains']
         else:
             opts['grains'] = {}
+    else:
+        opts['grains'] = {}
 
     load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
-    grains = load.gen_grains()
-    grains.update(opts['grains'])
-    return grains
+    grains_info = load.gen_grains()
+    grains_info.update(opts['grains'])
+    return grains_info
 
 
 def call(fun, **kwargs):
@@ -290,10 +360,15 @@ class Loader(object):
     also be used to only load specific functions from a directory, or to
     call modules in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=dict(), tag='module'):
+    def __init__(self,
+                 module_dirs,
+                 opts=None,
+                 tag='module',
+                 loaded_base_name=None,
+                 mod_type_check=None):
         self.module_dirs = module_dirs
-        if '_' in tag:
-            raise LoaderError('Cannot tag loader with an "_"')
+        if opts is None:
+            opts = {}
         self.tag = tag
         if 'grains' in opts:
             self.grains = opts['grains']
@@ -304,6 +379,8 @@ class Loader(object):
         else:
             self.pillar = {}
         self.opts = self.__prep_mod_opts(opts)
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        self.mod_type_check = mod_type_check or _mod_type
 
     def __prep_mod_opts(self, opts):
         '''
@@ -316,10 +393,12 @@ class Loader(object):
             mod_opts[key] = val
         return mod_opts
 
-    def call(self, fun, arg=list()):
+    def call(self, fun, arg=None):
         '''
         Call a function in the load path.
         '''
+        if arg is None:
+            arg = []
         name = fun[:fun.rindex('.')]
         try:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
@@ -386,18 +465,28 @@ class Loader(object):
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
                     '{0}.{1}.{2}.{3}'.format(
-                        LOADED_BASE_NAME, _mod_type(path), self.tag, name
+                        self.loaded_base_name,
+                        self.mod_type_check(path),
+                        self.tag,
+                        name
                     ), fn_, path, desc
                 )
-        except ImportError as exc:
-            log.debug('Failed to import {0} {1}: {2}'.format(
-                self.tag, name, exc)
-                )
+        except ImportError:
+            log.debug(
+                'Failed to import {0} {1}:\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
             return mod
         except Exception:
-            trb = traceback.format_exc()
-            log.warning('Failed to import {0} {1}, this is due most likely '
-                        'to a syntax error: {2}'.format(self.tag, name, trb))
+            log.warning(
+                'Failed to import {0} {1}, this is due most likely to a '
+                'syntax error:\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -424,8 +513,17 @@ class Loader(object):
                 except TypeError:
                     pass
         funcs = {}
-        for attr in dir(mod):
+        module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
+        if getattr(mod, '__load__', False) is not False:
+            log.info(
+                'The functions from module {0!r} are being loaded from the '
+                'provided __load__ attribute'.format(
+                    module_name
+                )
+            )
+        for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
+                # private functions are skipped
                 continue
             if callable(getattr(mod, attr)):
                 func = getattr(mod, attr)
@@ -434,17 +532,29 @@ class Loader(object):
                         # the callable object is an exception, don't load it
                         continue
 
-                funcs[
-                    '{0}.{1}'.format(
-                        mod.__name__[mod.__name__.rindex('.') + 1:], attr
-                    )
-                ] = func
+                # Let's get the function name.
+                # If the module has the __func_alias__ attribute, it must be a
+                # dictionary mapping in the form of(key -> value):
+                #   <real-func-name> -> <desired-func-name>
+                #
+                # It default's of course to the found callable attribute name
+                # if no alias is defined.
+                funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+                funcs['{0}.{1}'.format(module_name, funcname)] = func
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
+        try:
+            context = sys.modules[
+                functions[functions.keys()[0]].__module__
+            ].__context__
+        except AttributeError:
+            context = {}
+        mod.__context__ = context
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
+                      provider_overrides=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -465,12 +575,18 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
-                log.debug(('Skipping {0}, it is not an abosolute '
-                           'path').format(mod_dir))
+                log.debug(
+                    'Skipping {0}, it is not an absolute path'.format(
+                        mod_dir
+                    )
+                )
                 continue
             if not os.path.isdir(mod_dir):
-                log.debug(('Skipping {0}, it is not a '
-                           'directory').format(mod_dir))
+                log.debug(
+                    'Skipping {0}, it is not a directory'.format(
+                        mod_dir
+                    )
+                )
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
@@ -478,12 +594,15 @@ class Loader(object):
                     # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
-                    log.debug(('Skipping {0}, it is disabled by '
-                               'configuration').format(fn_))
+                    log.debug(
+                        'Skipping {0}, it is disabled by configuration'.format(
+                            fn_
+                        )
+                    )
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
-                    or (cython_enabled and fn_.endswith('.pyx'))
-                    or os.path.isdir(os.path.join(mod_dir, fn_))):
+                        or (cython_enabled and fn_.endswith('.pyx'))
+                        or os.path.isdir(os.path.join(mod_dir, fn_))):
 
                     extpos = fn_.rfind('.')
                     if extpos > 0:
@@ -492,8 +611,12 @@ class Loader(object):
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
-                    log.debug(('Skipping {0}, it does not end with an '
-                               'expected extension').format(fn_))
+                    log.debug(
+                        'Skipping {0}, it does not end with an expected '
+                        'extension'.format(
+                            fn_
+                        )
+                    )
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
@@ -501,8 +624,8 @@ class Loader(object):
                     # cython_enabled is True. Continue...
                     mod = pyximport.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            LOADED_BASE_NAME,
-                            _mod_type(names[name]),
+                            self.loaded_base_name,
+                            self.mod_type_check(names[name]),
                             self.tag,
                             name
                         ), names[name], tempfile.gettempdir()
@@ -511,7 +634,10 @@ class Loader(object):
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            LOADED_BASE_NAME, _mod_type(path), self.tag, name
+                            self.loaded_base_name,
+                            self.mod_type_check(path),
+                            self.tag,
+                            name
                         ), fn_, path, desc
                     )
                     # reload all submodules if necessary
@@ -525,24 +651,35 @@ class Loader(object):
                     for submodule in submodules:
                         try:
                             smname = '{0}.{1}.{2}'.format(
-                                    LOADED_BASE_NAME,
-                                    self.tag,
-                                    name)
-                            smfile = os.path.splitext(submodule.__file__)[0] + '.py'
-                            if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
+                                self.loaded_base_name,
+                                self.tag,
+                                name
+                            )
+                            smfile = '{0}.py'.format(
+                                os.path.splitext(submodule.__file__)[0]
+                            )
+                            if submodule.__name__.startswith(smname) and \
+                                    os.path.isfile(smfile):
                                 reload(submodule)
                         except AttributeError:
                             continue
-            except ImportError as exc:
-                log.debug('Failed to import {0} {1}, this is most likely '
-                          'NOT a problem: {2}'.format(self.tag, name, exc))
+            except ImportError:
+                log.debug(
+                    'Failed to import {0} {1}, this is most likely NOT a '
+                    'problem:\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
+                )
                 continue
             except Exception:
-                trb = traceback.format_exc()
-                log.warning('Failed to import {0} {1}, this is due most '
-                            'likely to a syntax error: {2}'.format(
-                                self.tag, name, trb)
-                            )
+                log.warning(
+                    'Failed to import {0} {1}, this is due most likely to a '
+                    'syntax error. Traceback raised:\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
+                )
                 continue
             modules.append(mod)
         for mod in modules:
@@ -606,40 +743,82 @@ class Loader(object):
                                     log.warning(
                                         '{0}.__virtual__() is wrongly '
                                         'returning `None`. It should either '
-                                        'return `True` or `False`. If '
-                                        'you\'re the developer of the module '
-                                        '{1!r}, please fix this.'.format(
+                                        'return `True`, `False` or a new '
+                                        'name. If you\'re the developer '
+                                        'of the module {1!r}, please fix '
+                                        'this.'.format(
                                             mod.__name__,
                                             module_name
                                         )
                                     )
                                 continue
 
-                            if module_name != virtual:
-                                # update the module name with the new name
+                            if virtual is not True and module_name != virtual:
+                                # If __virtual__ returned True the module will
+                                # be loaded with the same name, if it returned
+                                # other value than `True`, it should be a new
+                                # name for the module.
+                                # Update the module name with the new name
                                 log.debug(
                                     'Loaded {0} as virtual {1}'.format(
                                         module_name, virtual
                                     )
                                 )
+
+                                if not hasattr(mod, '__virtualname__'):
+                                    salt.utils.warn_until(
+                                        'Hydrogen',
+                                        'The {0!r} module is renaming itself '
+                                        'in it\'s __virtual__() function ({1} '
+                                        '=> {2}). Please set it\'s virtual '
+                                        'name as the \'__virtualname__\' '
+                                        'module attribute. Example: '
+                                        '"__virtualname__ = {2!r}"'.format(
+                                            mod.__name__,
+                                            module_name,
+                                            virtual
+                                        )
+                                    )
                                 module_name = virtual
+
+                            elif virtual and hasattr(mod, '__virtualname__'):
+                                module_name = mod.__virtualname__
+
+                except KeyError:
+                    # Key errors come out of the virtual function when passing
+                    # in incomplete grains sets, these can be safely ignored
+                    # and logged to debug, still, it includes the traceback to
+                    # help debugging.
+                    log.debug(
+                        'KeyError when loading {0}'.format(module_name),
+                        exc_info=True
+                    )
 
                 except Exception:
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
-                    log.exception(('Failed to read the virtual function for '
-                                   '{0}: {1}').format(self.tag, module_name))
+                    log.exception(
+                        'Failed to read the virtual function for '
+                        '{0}: {1}'.format(
+                            self.tag, module_name
+                        )
+                    )
                     continue
 
             if whitelist:
-                # It a whitelist is defined then only load the module if it is
+                # If a whitelist is defined then only load the module if it is
                 # in the whitelist
                 if module_name not in whitelist:
                     continue
 
-            for attr in dir(mod):
-                # functions are namespaced with their module name
-                attr_name = '{0}.{1}'.format(module_name, attr)
+            if getattr(mod, '__load__', False) is not False:
+                log.info(
+                    'The functions from module {0!r} are being loaded from '
+                    'the provided __load__ attribute'.format(
+                        module_name
+                    )
+                )
+            for attr in getattr(mod, '__load__', dir(mod)):
 
                 if attr.startswith('_'):
                     # skip private attributes
@@ -656,17 +835,48 @@ class Loader(object):
                             continue
                     # now that callable passes all the checks, add it to the
                     # library of available functions of this type
-                    funcs[attr_name] = func
-                    log.trace('Added {0} to {1}'.format(attr_name, self.tag))
+
+                    # Let's get the function name.
+                    # If the module has the __func_alias__ attribute, it must
+                    # be a dictionary mapping in the form of(key -> value):
+                    #   <real-func-name> -> <desired-func-name>
+                    #
+                    # It default's of course to the found callable attribute
+                    # name if no alias is defined.
+                    funcname = getattr(mod, '__func_alias__', {}).get(
+                        attr, attr
+                    )
+
+                    # functions are namespaced with their module name
+                    module_func_name = '{0}.{1}'.format(module_name, funcname)
+                    funcs[module_func_name] = func
+                    log.trace(
+                        'Added {0} to {1}'.format(module_func_name, self.tag)
+                    )
                     self._apply_outputter(func, mod)
+
+        # Handle provider overrides
+        if provider_overrides and self.opts.get('providers', False):
+            if isinstance(self.opts['providers'], dict):
+                for mod, provider in self.opts['providers'].items():
+                    newfuncs = raw_mod(self.opts, provider, funcs)
+                    if newfuncs:
+                        for newfunc in newfuncs:
+                            f_key = '{0}{1}'.format(
+                                mod, newfunc[newfunc.rindex('.'):]
+                            )
+                            funcs[f_key] = newfuncs[newfunc]
 
         # now that all the functions have been collected, iterate back over
         # the available modules and inject the special __salt__ namespace that
         # contains these functions.
         for mod in modules:
-            if not hasattr(mod, '__salt__'):
+            if not hasattr(mod, '__salt__') or (
+                not in_pack(pack, '__salt__') and
+                not str(mod.__name__).startswith('salt.loaded.int.grain')
+            ):
                 mod.__salt__ = funcs
-            elif not in_pack(pack, '__salt__'):
+            elif not in_pack(pack, '__salt__') and str(mod.__name__).startswith('salt.loaded.int.grain'):
                 mod.__salt__.update(funcs)
         return funcs
 
@@ -679,13 +889,16 @@ class Loader(object):
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
-    def filter_func(self, name, pack=None):
+    def filter_func(self, name, pack=None, whitelist=None):
         '''
         Filter a specific function out of the functions, this is used to load
         the returners for the salt minion
         '''
         funcs = {}
-        gen = self.gen_functions(pack) if pack else self.gen_functions()
+        if pack:
+            gen = self.gen_functions(pack, whitelist=whitelist)
+        else:
+            gen = self.gen_functions(whitelist=whitelist)
         for key, fun in gen.items():
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
@@ -707,27 +920,30 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
-        grains = {}
+        grains_data = {}
         funcs = self.gen_functions()
-        for key, fun in funcs.items():
-            if not key[key.index('.') + 1:] == 'core':
-                continue
-            ret = fun()
-            if not isinstance(ret, dict):
-                continue
-            grains.update(ret)
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
             try:
                 ret = fun()
             except Exception:
-                trb = traceback.format_exc()
-                log.critical(('Failed to load grains defined in grain file '
-                              '{0} in function {1}, error:\n{2}').format(
-                                  key, fun, trb))
+                log.critical(
+                    'Failed to load grains defined in grain file {0} in '
+                    'function {1}, error:\n'.format(
+                        key, fun
+                    ),
+                    exc_info=True
+                )
                 continue
             if not isinstance(ret, dict):
                 continue
-            grains.update(ret)
-        return grains
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key[key.index('.') + 1:] != 'core':
+                continue
+            ret = fun()
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        return grains_data

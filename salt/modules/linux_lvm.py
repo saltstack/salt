@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Linux LVM2
 '''
@@ -5,13 +6,16 @@ Support for Linux LVM2
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'lvm'
+
 
 def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
     if salt.utils.which('lvm'):
-        return 'lvm'
+        return __virtualname__
     return False
 
 
@@ -19,7 +23,9 @@ def version():
     '''
     Return LVM version from lvm version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lvm.version
     '''
@@ -33,7 +39,9 @@ def fullversion():
     '''
     Return all version info from lvm version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lvm.fullversion
     '''
@@ -42,53 +50,68 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split(':')
-	ret[comps[0].strip()] = comps[1].strip()
+    ret[comps[0].strip()] = comps[1].strip()
     return ret
 
 
 def pvdisplay(pvname=''):
     '''
     Return information about the physical volume(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lvm.pvdisplay
         salt '*' lvm.pvdisplay /dev/md0
     '''
     ret = {}
     cmd = 'pvdisplay -c {0}'.format(pvname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        comps = line.strip().split(':')
-        ret[comps[0]] = {
-            'Physical Volume Device': comps[0],
-            'Volume Group Name': comps[1],
-            'Physical Volume Size (kB)': comps[2],
-            'Internal Physical Volume Number': comps[3],
-            'Physical Volume Status': comps[4],
-            'Physical Volume (not) Allocatable': comps[5],
-            'Current Logical Volumes Here': comps[6],
-            'Physical Extent Size (kB)': comps[7],
-            'Total Physical Extents': comps[8],
-            'Free Physical Extents': comps[9],
-            'Allocated Physical Extents': comps[10],
-            }
+        if 'is a new physical volume' not in line:
+            comps = line.strip().split(':')
+            ret[comps[0]] = {
+                'Physical Volume Device': comps[0],
+                'Volume Group Name': comps[1],
+                'Physical Volume Size (kB)': comps[2],
+                'Internal Physical Volume Number': comps[3],
+                'Physical Volume Status': comps[4],
+                'Physical Volume (not) Allocatable': comps[5],
+                'Current Logical Volumes Here': comps[6],
+                'Physical Extent Size (kB)': comps[7],
+                'Total Physical Extents': comps[8],
+                'Free Physical Extents': comps[9],
+                'Allocated Physical Extents': comps[10],
+                }
     return ret
 
 
 def vgdisplay(vgname=''):
     '''
     Return information about the volume group(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lvm.vgdisplay
         salt '*' lvm.vgdisplay nova-volumes
     '''
     ret = {}
     cmd = 'vgdisplay -c {0}'.format(vgname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        if 'No volume groups found' in line:
-            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Volume Group Name': comps[0],
@@ -99,7 +122,7 @@ def vgdisplay(vgname=''):
             'Current Logical Volumes': comps[5],
             'Open Logical Volumes': comps[6],
             'Maximum Logical Volume Size': comps[7],
-            'Maximum Phisical Volumes': comps[8],
+            'Maximum Physical Volumes': comps[8],
             'Current Physical Volumes': comps[9],
             'Actual Physical Volumes': comps[10],
             'Volume Group Size (kB)': comps[11],
@@ -115,17 +138,23 @@ def vgdisplay(vgname=''):
 def lvdisplay(lvname=''):
     '''
     Return information about the logical volume(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lvm.lvdisplay
         salt '*' lvm.lvdisplay /dev/vg_myserver/root
     '''
     ret = {}
     cmd = 'lvdisplay -c {0}'.format(lvname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        if 'No volume groups found' in line:
-            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Logical Volume Name': comps[0],
@@ -149,7 +178,9 @@ def pvcreate(devices, **kwargs):
     '''
     Set a physical device to be used as an LVM physical volume
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt mymachine lvm.pvcreate /dev/sdb1,/dev/sdb2
         salt mymachine lvm.pvcreate /dev/sdb1 dataalignmentoffset=7s
@@ -175,7 +206,9 @@ def vgcreate(vgname, devices, **kwargs):
     '''
     Create an LVM volume group
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt mymachine lvm.vgcreate my_vg /dev/sdb1,/dev/sdb2
         salt mymachine lvm.vgcreate my_vg /dev/sdb1 clustered=y
@@ -201,7 +234,9 @@ def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
         salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
@@ -226,7 +261,9 @@ def vgremove(vgname):
     '''
     Remove an LVM volume group
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt mymachine lvm.vgremove vgname
         salt mymachine lvm.vgremove vgname force=True
@@ -240,7 +277,9 @@ def lvremove(lvname, vgname):
     '''
     Remove a given existing logical volume from a named existing volume group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lvm.lvremove lvname vgname force=True
     '''

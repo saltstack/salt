@@ -50,7 +50,7 @@ A new API was added to the Salt Master which allows the master to be managed
 via an external API. This new system allows Salt API to easily hook into the
 Salt Master and manage configs, modify the state tree, manage the pillar and
 more. The main motivation for the wheel system is to enable features needed
-in the upcoming web ui so users can manage the master just as easily as they
+in the upcoming web UI so users can manage the master just as easily as they
 manage minions.
 
 The wheel system has also been hooked into the external auth system. This
@@ -64,17 +64,17 @@ Jack Kuan has added a substantial new feature. The render pipes system allows
 Salt to treat the render system like unix pipes. This new system enables sls
 files to be passed through specific render engines. While the default renderer
 is still recommended, different engines can now be more easily merged. So to
-pipe the output of mako used in YAML use this shebang line:
+pipe the output of Mako used in YAML use this shebang line:
 
 #!mako|yaml
 
 Salt Key Overhaul
 -----------------
 
-The Salt Key system was originally developed as only a cli interface, but as
+The Salt Key system was originally developed as only a CLI interface, but as
 time went on it was pressed into becoming a clumsy API. This release marks a
 complete overhaul of Salt Key. Salt Key has been rewritten to function purely
-from an api and to use the outputter system. The benefit here is that the
+from an API and to use the outputter system. The benefit here is that the
 outputter system works much more cleanly with Salt Key now, and the internals
 of Salt Key can be used much more cleanly.
 

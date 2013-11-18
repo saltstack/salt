@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
+A flexible renderer that takes a templating engine and a data format
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
@@ -6,11 +9,9 @@
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
+# FIXME: I really need to review and simplify this renderer, it's getting out of hand!
+#
 # TODO:
-#
-#   - support exclude declarations
-#   - support include declarations with env
-#
 #   - sls meta/info state: Eg,
 #
 #       sls_info:
@@ -97,23 +98,23 @@ Options(for this renderer):
 )
 
 
-def render(input, env='', sls='', argline='', **kws):
+def render(input, saltenv='base', sls='', argline='', **kws):
     gen_start_state = False
     no_goal_state = False
     implicit_require = False
 
     def process_sls_data(data, context=None, extract=False):
-        sls_dir = ospath.dirname(sls.replace('.', ospath.sep))
+        sls_dir = ospath.dirname(sls.replace('.', ospath.sep)) if '.' in sls else sls
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
 
         if context:
             ctx.update(context)
 
         tmplout = render_template(
-                StringIO(data), env, sls, context=ctx,
+                StringIO(data), saltenv, sls, context=ctx,
                 argline=rt_argline.strip(), **kws
         )
-        high = render_data(tmplout, env, sls, argline=rd_argline.strip())
+        high = render_data(tmplout, saltenv, sls, argline=rd_argline.strip())
         return process_high_data(high, extract)
 
     def process_high_data(high, extract):
@@ -123,7 +124,7 @@ def render(input, env='', sls='', argline='', **kws):
         data = copy.deepcopy(high)
         try:
             rewrite_single_shorthand_state_decl(data)
-            rewrite_sls_includes_excludes(data, sls, env)
+            rewrite_sls_includes_excludes(data, sls, saltenv)
 
             if not extract and implicit_require:
                 sid = has_names_decls(data)
@@ -144,16 +145,15 @@ def render(input, env='', sls='', argline='', **kws):
 
             rename_state_ids(data, sls)
 
-            if extract:
-                extract_state_confs(data)
-
-        except Exception, err:
+            # We must extract no matter what so extending a stateconf sls file
+            # works!
+            extract_state_confs(data)
+        except SaltRenderError:
             raise
-            if isinstance(err, SaltRenderError):
-                raise
+        except Exception as err:
             log.exception(
-                'Error found while pre-processing the salt file, '
-                '{0}.\n'.format(sls)
+                'Error found while pre-processing the salt file '
+                '{0}:\n{1}'.format(sls, err)
             )
             from salt.state import State
             state = State(__opts__)
@@ -196,7 +196,7 @@ def render(input, env='', sls='', argline='', **kws):
                     )
             name, rt_argline = (args[1] + ' ').split(' ', 1)
             render_template = renderers[name]  # eg, the mako renderer
-        except KeyError, err:
+        except KeyError as err:
             raise SaltRenderError('Renderer: {0} is not available!'.format(err))
         except IndexError:
             raise INVALID_USAGE_ERROR
@@ -243,7 +243,7 @@ def has_names_decls(data):
             return sid
 
 
-def rewrite_single_shorthand_state_decl(data):  # pylint: disable-msg=C0103
+def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
     '''
     Rewrite all state declarations that look like this::
 
@@ -265,7 +265,7 @@ def _parent_sls(sls):
     return sls[:i] + '.' if i != -1 else ''
 
 
-def rewrite_sls_includes_excludes(data, sls, env):
+def rewrite_sls_includes_excludes(data, sls, saltenv):
     # if the path of the included/excluded sls starts with a leading dot(.)
     # then it's taken to be relative to the including/excluding sls.
     sls = _parent_sls(sls)
@@ -276,10 +276,10 @@ def rewrite_sls_includes_excludes(data, sls, env):
                 if isinstance(each, dict):
                     slsenv, incl = each.popitem()
                 else:
-                    slsenv = env
+                    slsenv = saltenv
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: sls+incl[1:]}
+                    includes[i] = {slsenv: (sls + incl[1:])}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
@@ -334,7 +334,7 @@ def nvlist2(thelist, names=None):
             yield each
 
 
-def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
+def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
     for sid, states in states_dict.iteritems():
         if sid.startswith('__'):
             continue
@@ -375,7 +375,9 @@ def rename_state_ids(data, sls, is_extend=False):
                     'already exists!'.format(sid, newsid)
                 )
             # add a '- name: sid' to those states without '- name'.
-            for args in data[sid].itervalues():
+            for sname, args in data[sid].iteritems():
+                if state_name(sname) == STATE_NAME:
+                    continue
                 for arg in args:
                     if isinstance(arg, dict) and iter(arg).next() == 'name':
                         break
@@ -384,7 +386,6 @@ def rename_state_ids(data, sls, is_extend=False):
                     args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]
-
 
 
 REQUIRE = set(['require', 'watch'])
@@ -400,7 +401,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
 
-    def T(sid, state):  # pylint: disable-msg=C0103
+    def T(sid, state):  # pylint: disable=C0103
         return '{0}:{1}'.format(sid, state_name(state))
 
     states_before = set()
@@ -479,7 +480,7 @@ def add_start_state(data, sls):
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
     reqin = {state_name(data[sid].iterkeys().next()): sid}
-    data[start_sid] = { STATE_FUNC: [ {'require_in': [reqin]} ] }
+    data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
 def add_goal_state(data):

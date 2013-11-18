@@ -10,6 +10,9 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# Set whether the minion should connect to the master via IPv6
+#ipv6: False
+
 # Set the number of seconds to wait before attempting to resolve
 # the master hostname if name resolution fails. Defaults to 30 seconds.
 # Set to zero if the minion should shutdown and not retry.
@@ -86,7 +89,7 @@
 # /etc/ssh/sshd_config:
 #   file.managed:
 #     - source: salt://ssh/sshd_config
-#       - backup: minion
+#     - backup: minion
 #
 #backup_mode: minion
 
@@ -95,11 +98,101 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
+# If this is nonzero, the time between reconnection attempts will increase by
+# acceptance_wait_time seconds per iteration, up to this maximum. If this is
+# set to zero, the time between reconnection attempts will stay constant.
+#acceptance_wait_time_max: 0
+
+# When the master key changes, the minion will try to re-auth itself to receive
+# the new master key. In larger environments this can cause a SYN flood on the
+# master because all minions try to re-auth immediately. To prevent this and
+# have a minion wait for a random amount of time, use this optional parameter.
+# The wait-time will be a random number of seconds between
+# 0 and the defined value.
+#random_reauth_delay: 60
+
+
+# If you don't have any problems with syn-floods, dont bother with the
+# three recon_* settings described below, just leave the defaults!
+#
+# The ZeroMQ pull-socket that binds to the masters publishing interface tries
+# to reconnect immediately, if the socket is disconnected (for example if
+# the master processes are restarted). In large setups this will have all
+# minions reconnect immediately which might flood the master (the ZeroMQ-default
+# is usually a 100ms delay). To prevent this, these three recon_* settings
+# can be used.
+#
+# recon_default: the interval in milliseconds that the socket should wait before
+#                trying to reconnect to the master (100ms = 1 second)
+#
+# recon_max: the maximum time a socket should wait. each interval the time to wait
+#            is calculated by doubling the previous time. if recon_max is reached,
+#            it starts again at recon_default. Short example:
+#
+#            reconnect 1: the socket will wait 'recon_default' milliseconds
+#            reconnect 2: 'recon_default' * 2
+#            reconnect 3: ('recon_default' * 2) * 2
+#            reconnect 4: value from previous interval * 2
+#            reconnect 5: value from previous interval * 2
+#            reconnect x: if value >= recon_max, it starts again with recon_default
+#
+# recon_randomize: generate a random wait time on minion start. The wait time will
+#                  be a random value between recon_default and recon_default +
+#                  recon_max. Having all minions reconnect with the same recon_default
+#                  and recon_max value kind of defeats the purpose of being able to
+#                  change these settings. If all minions have the same values and your
+#                  setup is quite large (several thousand minions), they will still
+#                  flood the master. The desired behaviour is to have timeframe within
+#                  all minions try to reconnect.
+
+# Example on how to use these settings:
+# The goal: have all minions reconnect within a 60 second timeframe on a disconnect
+#
+# The settings:
+#recon_default: 1000
+#recon_max: 59000
+#recon_randomize: True
+#
+# Each minion will have a randomized reconnect value between 'recon_default'
+# and 'recon_default + recon_max', which in this example means between 1000ms
+# 60000ms (or between 1 and 60 seconds). The generated random-value will be
+# doubled after each attempt to reconnect. Lets say the generated random
+# value is 11 seconds (or 11000ms).
+#
+# reconnect 1: wait 11 seconds
+# reconnect 2: wait 22 seconds
+# reconnect 3: wait 33 seconds
+# reconnect 4: wait 44 seconds
+# reconnect 5: wait 55 seconds
+# reconnect 6: wait time is bigger than 60 seconds (recon_default + recon_max)
+# reconnect 7: wait 11 seconds
+# reconnect 8: wait 22 seconds
+# reconnect 9: wait 33 seconds
+# reconnect x: etc.
+#
+# In a setup with ~6000 thousand hosts these settings would average the reconnects
+# to about 100 per second and all hosts would be reconnected within 60 seconds.
+#recon_default: 100
+#recon_max: 5000
+#recon_randomize: False
+
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
 # often lower this value
 #loop_interval: 60
+
+# The grains_refresh_every setting allows for a minion to periodically check
+# its grains to see if they have changed and, if so, to inform the master
+# of the new grains. This operation is moderately expensive, therefore
+# care should be taken not to set this value too low.
+#
+# Note: This value is expressed in __minutes__!
+#
+# A value of 10 minutes is a reasonable default.
+#
+# If the value is set to zero, this check is disabled.
+#grains_refresh_every = 1
 
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
@@ -126,7 +219,7 @@
 # include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-# include:
+#include:
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
 
@@ -151,12 +244,19 @@
 # overwritten by the specified module. In this example the pkg module will
 # be provided by the yumpkg5 module instead of the system default.
 #
-# providers:
-#   pkg: yumpkg5
+#providers:
+#  pkg: yumpkg5
 #
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
 #
+#
+#
+# Specify a max size (in bytes) for modules on import
+# this feature is currently only supported on *nix OSs and requires psutil
+# modules_max_memory: -1
+
+
 
 #####    State Management Settings    #####
 ###########################################
@@ -202,11 +302,11 @@
 # Run states when the minion daemon starts. To enable, set startup_states to:
 # 'highstate' -- Execute state.highstate
 # 'sls' -- Read in the sls_list option and execute the named sls files
-# 'top' -- Read top_file option and execute based on that file on the Master 
+# 'top' -- Read top_file option and execute based on that file on the Master
 #startup_states: ''
 #
 # list of states to run when the minion starts up if startup_states is 'sls'
-#sls_list: 
+#sls_list:
 #  - edit.vim
 #  - hyper
 #
@@ -220,7 +320,7 @@
 # copied completely onto the minion. This is a literal copy of the settings on
 # the master but used to reference a local directory on the minion.
 
-# Set the file client, the client defaults to looking on the master server for
+# Set the file client. The client defaults to looking on the master server for
 # files, but can be directed to look at the local file directory setting
 # defined below by setting it to local.
 #file_client: remote
@@ -240,13 +340,22 @@
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
 #
-# Default:
 #file_roots:
 #  base:
 #    - /srv/salt
 
+# By default, the Salt fileserver recurses fully into all defined environments
+# to attempt to find files. To limit this behavior so that the fileserver only
+# traverses directories with SLS files and special Salt directories like _modules,
+# enable the option below. This might be useful for installations where a file root
+# has a very large number of files and performance is negatively impacted.
+#
+# Default is False.
+#
+# fileserver_limit_traversal: False
+
 # The hash_type is the hash to use when discovering the hash of a file in
-# the minion directory, the default is md5, but sha1, sha224, sha256, sha384
+# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #hash_type: md5
 
@@ -300,9 +409,9 @@
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-#	log_file: /var/log/salt/minion
-#	log_file: file:///dev/log
-#	log_file: udp://loghost:10514
+#log_file: /var/log/salt/minion
+#log_file: file:///dev/log
+#log_file: udp://loghost:10514
 #
 #log_file: /var/log/salt/minion
 #key_logfile: /var/log/salt/key
@@ -323,12 +432,12 @@
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
-# be seen here	http://docs.python.org/library/logging.html#logrecord-attributes
+# be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 #
 # This can be used to control logging levels more specificically.  This
-# example sets the main salt library at the 'warning' level, but sets 
+# example sets the main salt library at the 'warning' level, but sets
 # 'salt.modules' to log at the 'debug' level:
 #   log_granular_levels:
 #     'salt': 'warning',
@@ -379,12 +488,12 @@
 # without informing either party that their connection has been taken away.
 # Enabling TCP Keepalives prevents this from happening.
 #
-# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
-# or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
+# or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300
-# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds 
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
 # on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
 #tcp_keepalive_idle: 300
 #
@@ -392,8 +501,8 @@
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
 #tcp_keepalive_cnt: -1
 #
-# How often, in seconds, to send keepalives after the first one. Default -1 to 
-# use OS defaults, typically 75 seconds on Linux, see 
+# How often, in seconds, to send keepalives after the first one. Default -1 to
+# use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
 
@@ -401,4 +510,4 @@
 ######      Windows Software settings ######
 ############################################
 # Location of the repository cache file on the master
-# win_repo_cachefile: 'salt://win/repo/winrepo.p'
+#win_repo_cachefile: 'salt://win/repo/winrepo.p'

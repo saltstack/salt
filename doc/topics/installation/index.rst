@@ -15,9 +15,18 @@ goals of Salt.
 Quick Install
 -------------
 
-Many popular distributions will be able to install the salt minion by executing the bootstrap script::
+Many popular distributions will be able to install the salt minion by executing
+the bootstrap script:
 
-  wget -O - http://bootstrap.saltstack.org | sudo sh
+.. code-block:: bash
+
+    wget -O - http://bootstrap.saltstack.org | sudo sh
+
+Run the following script to install just the Salt Master:
+
+.. code-block:: bash
+
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M -N
 
 The script should also make it simple to install a salt master, if desired.
 
@@ -53,6 +62,7 @@ These guides go into detail how to install salt on a given platform.
     solaris
     ubuntu
     windows
+    suse
 
 
 Dependencies
@@ -71,7 +81,8 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 Optional Dependencies
 ---------------------
 
-* `mako`_ - an optional parser for Salt States (configurable in the master settings)
+* `mako`_ - an optional parser for Salt States (configurable in the master
+  settings)
 * gcc - dynamic `Cython`_ module compiling
 
 .. _`Python 2.6`: http://python.org/download/
@@ -80,6 +91,7 @@ Optional Dependencies
 .. _`msgpack-python`:  http://pypi.python.org/pypi/msgpack-python/0.1.12
 .. _`YAML`: http://pyyaml.org/
 .. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
+.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
 .. _`Cython`: http://cython.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`mako`: http://www.makotemplates.org/

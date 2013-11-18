@@ -1,87 +1,59 @@
+==================
+What is SaltStack?
+==================
+
+Salt is a new approach to infrastructure management. Easy enough to get
+running in minutes, scalable enough to manage tens of thousands of servers,
+and fast enough to communicate with them in *seconds*.
+
+Salt delivers a dynamic communication bus for infrastructures that can be used
+for orchestration, remote execution, configuration management and much more.
+
+Documentation
 =============
-What is Salt?
-=============
 
-.. rubric:: We are not just talking about NaCl.
+Installation instructions, getting started guides, and in-depth API
+documention.
 
-Distributed Remote Execution
-============================
+http://docs.saltstack.com
 
-Salt is a distributed remote execution system used to execute commands and
-query data. It was developed in order to bring the best solutions found in the
-world of remote execution together and make them better, faster and more
-malleable. Salt accomplishes this via its ability to handle larger loads of
-information, and not just dozens, but hundreds, or even thousands of individual
-servers. It handles them quickly and through a simple yet manageable interface.
+IRC Chat
+========
 
-Simplicity
-==========
+Join the vibrant, helpful and positive SaltStack chat room in Freenode at
+#salt. There is no need to introduce yourself, or ask permission to join in,
+just help and be helped! Make sure to wait for an answer, sometimes it may take
+a few moments for someone to reply.
 
-Versatility between massive scale deployments and smaller systems may seem
-daunting, but Salt is very simple to set up and maintain, regardless of the
-size of the project. The architecture of Salt is designed to work with any
-number of servers, from a handful of local network systems to international
-deployments across disparate datacenters. The topology is a simple
-server/client model with the needed functionality built into a single set of
-daemons. While the default configuration will work with little to no
-modification, Salt can be fine-tuned to meet specific needs.
+http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
 
-Granular Controls
-=================
+Salt Air
+========
 
-Salt also introduces powerful granular controls to the realm of remote execution. 
-By default, commands are executed in parallel. However, using more advanced 
-options, commands can be executed in batch groups or even in serial. By using 
-simple built-in filters or regular expression matching, systems can be targeted by 
-hostname, metadata or system properties such as number of cpus or OS type.
+The SaltStack YouTube channel is filled with Salt videos and presentations.
+Watch the latest Salt Air episodes for updates from Thomas on development,
+catch tutorials, and stay on the cutting edge of Salt.
 
-Building on Proven Technology
-=============================
+http://www.youtube.com/user/saltstack
 
-Salt takes advantage of a number of technologies and techniques. The networking
-layer is built with the excellent `ZeroMQ`_ networking library. Salt itself
-contains a viable, and transparent, ZeroMQ broker inside the daemon. Salt uses
-public keys for authentication with the master daemon, then uses faster AES
-encryption for payload communication. This means that authentication and
-encryption are also built into Salt. Salt takes advantage of communication via
-the most excellent `msgpack`_ library, enabling fast and light network traffic.
+Mailing List
+============
 
-.. _`ZeroMQ`: http://www.zeromq.org/
+The SaltStack community users mailing list is hosted by Google groups. Anyone
+can post to ask questions about SaltStack products and anyone can help answer.
+Join the conversation!
 
-.. _`msgpack`: http://msgpack.org/
+https://groups.google.com/forum/#!forum/salt-users
 
+You may subscribe the the list without a Google account by emailing
+salt-users+subscribe@googlegroups.com and you may post to the list by emailing
+salt-users@googlegroups.com
 
-Python Client Interface
-=======================
+Developing Salt
+===============
 
-Salt execution routines can be written as plain Python modules and the data
-collected from execution can be sent back to the master server, or any
-arbitrary program. Salt can be called from a simple Python API, or from the
-command line. This makes it easy to execute one-off commands as well as
-operate as an integral part of a larger application.
+The Salt development team is welcoming, positive, and dedicated to helping
+people get new code and fixes into SaltStack projects. Log into GitHub and get
+started with one of the largest developer communities in the world.
 
-
-Fast, Flexible, Scalable, Secure
-================================
-
-The result is a system that can execute commands across groups of
-varying size, from very few to very many servers at considerably high
-speed. We consider speed to be a feature, not an afterthought. Salt’s
-unique architecture brings together the best of the remote execution
-world, amplifies its capabilities and expands its range, resulting in
-this system that is as versatile as it is practical. Last but not least,
-security is an intrinsic part of Salt and something not just
-influencing how source code is written and how tests are done, but
-also something that defines the overall architecture and has heavy
-influence on the core design tenets.
-
-Open
-====
-
-Salt is developed under the `Apache 2.0 license`_, and can be used for
-open and proprietary projects. Please submit your expansions back to
-the Salt project so that we can all benefit together as Salt grows.
-Finally, please sprinkle some Salt around your systems and let the
-deliciousness come forth.
-
-.. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+https://github.com/saltstack

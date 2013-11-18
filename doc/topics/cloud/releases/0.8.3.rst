@@ -1,0 +1,134 @@
+==============================
+Salt Cloud 0.8.3 Release Notes
+==============================
+
+Welcome to 0.8.3! While there are some new features, this release of Salt
+Cloud is primarily targeted at stability. Read on to see what's happened.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+http://salt-cloud.readthedocs.org
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.3.tar.gz
+
+https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.3.tar.gz
+
+Some packages have been made available for salt-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+
+No Deploy
+=========
+Salt Cloud was originally intended to spin up machines and deploy Salt on them,
+but several use cases have arisen in which this is not the appropriate action.
+For instance, when booting into new platforms which may not even support Salt
+just yet, it makes no sense to try and install a non-existant package. In these
+instances, you can add the --no-deploy argument to the salt-cloud command to
+skip running the deploy script.
+
+It is also possible to configure Salt Cloud to default to never deploying:
+
+.. code-block:: yaml
+
+    deploy: False
+
+Firing Events
+=============
+Salt Cloud is starting to make use of Salt's event system. If you are watching
+the event bus on the Salt Master, you can now watch for events to fire when
+minions are created or destroyed.
+
+Start Actions
+=============
+This is an experimental feature which some users may find handy. You may now
+configure a start_action for a deployed VM:
+
+.. code-block:: yaml
+
+    start_action: state.highstate
+
+If configured, when the salt-cloud command runs the deploy script, it will open
+a subprocess to wait for the salt-minion service to start, and check in with
+the master (via the salt event bus). This feature does not currently work
+smoothly with all providers, particularly the ones which do not use "root" as
+the default login users. Your mileage will vary.
+
+Exception Handling
+==================
+There were a handful of spots in the code which would exit when an error
+occurred, sometimes without any meaningful error messages. This was was neither
+helpful to the user, nor Pythonic. Errors now should fire an exception of some
+sort, and if the error is Salt- or Salt Cloud-specific, a SaltException will be
+fired. This also helps pave the way for API usage of Salt Cloud.
+
+Provider-Specific Actions
+=========================
+This is largely a programmatic addition at this point, which will continue to
+expand into userland. All providers supported by libcloud provide a minimum
+level of functionality that Salt Cloud takes advantage of. Most providers also
+include a number of "extra" functions which are non-standard. Some of these
+are critical in certain instances. For instance, most providers will shut down
+a VM for you when you send a destroy command, but Joyent requires you to
+manually shut it down first. This was previously only doable via their web
+interface. You may now pass a supported --action (or -a) to a cloud provider:
+
+.. code-block:: bash
+
+    salt-cloud --action stop joyentvm1
+
+All cloud providers support the destroy command via an action:
+
+.. code-block:: bash
+
+    salt-cloud -a destroy mymachine1 mymachine2 mymachine2
+
+Human-Readable States
+=====================
+Most of our cloud providers are accessed via libcloud, which provides a
+numerical code declaring the current state of the machine. This state is
+viewable via the various query options. Unfortunately, if you don't know what
+the codes mean, they're largely useless to you. Now, with the -Q or --query
+option, a human-readable state (i.e. RUNNING) will de displayed instead).
+
+It should be noted that because some users are running salt-cloud via another
+script, the -F/--full-query and -S/--select-query options still return the
+numerical code.
+
+Various other Features and Stability Fixes
+==========================================
+The above features addressed many stability issues. Additionally, the following
+have been addressed.
+
+Salt Cloud requires at least libcloud 0.11.4. If you are not running at least
+this version, an exception will be fired.
+
+A certain amount of minion configuration is required for all VMs. If you fail
+to specify any, a (mostly empty) minion config will be created for you. The
+default master for this config will be "salt".
+
+Previously, Joyent supported all Salt Cloud features without using Salt Cloud's
+own built-in deploy function. This is no longer the case, and so the Joyent
+module has been updated appropriately.
+
+Some log settings where previously ignored. This has been fixed.
+
+The Rackspace module previously would silently strip certain characters from
+a VM name. It now has a base set of characters that it will verify against, and
+raise an exception if an illegal character was specified. This functionality is
+also available for other cloud providers, but not currently set up for them.
+
+AWS introduced a new region in Sydney. This region is not available in the
+latest official libcloud release, but if you happen to be running libcloud out
+of trunk, it will be supported by Salt Cloud.
+
+Additional logging and PEP-8 fixes have also been applied. This should only
+affect developers.
+

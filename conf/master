@@ -13,6 +13,10 @@
 # The address of the interface to bind to
 #interface: 0.0.0.0
 
+# Whether the master should listen for IPv6 connections. If this is set to True,
+# the interface option must be adjusted too (for example: "interface: '::'")
+#ipv6: False
+
 # The tcp port used by the publisher
 #publish_port: 4505
 
@@ -86,6 +90,12 @@
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
+# The master can take a while to start up when lspci and/or dmidecode is used
+# to populate the grains for the master. Enable if you want to see GPU hardware
+# data for your master.
+#
+# enable_gpu_grains: False
+
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
 # Disabling the job cache will make previously executed jobs unavailable to
@@ -105,11 +115,11 @@
 #
 #
 # Include a config file from some other path:
-# include: /etc/salt/extra_config
+#include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-# include:
-#   - /etc/salt/extra_config
+#include:
+#  - /etc/salt/extra_config
 
 
 #####        Security settings       #####
@@ -142,10 +152,10 @@
 # capabilities to non root users. By default this capability is completely
 # disabled.
 #
-# client_acl:
-#   larry:
-#     - test.ping
-#     - network.*
+#client_acl:
+#  larry:
+#    - test.ping
+#    - network.*
 #
 
 # Blacklist any of the following users or modules
@@ -155,24 +165,28 @@
 # module.
 # This is completely disabled by default.
 #
-# client_acl_blacklist:
-#   users:
-#     - root
-#     - '^(?!sudo_).*$'   #  all non sudo users
-#   modules:
-#     - cmd
+#client_acl_blacklist:
+#  users:
+#    - root
+#    - '^(?!sudo_).*$'   #  all non sudo users
+#  modules:
+#    - cmd
 
 # The external auth system uses the Salt auth modules to authenticate and
-# validate users to access areas of the Salt system
+# validate users to access areas of the Salt system.
 #
-# external_auth:
-#   pam:
-#     fred:
-#       - test.*
+#external_auth:
+#  pam:
+#    fred:
+#      - test.*
 #
-# Time (in seconds) for a newly generated token to live. Default: 12 hours
-# token_expire: 43200
 
+# Time (in seconds) for a newly generated token to live. Default: 12 hours
+#token_expire: 43200
+
+# Allow minions to push files to the master. This is disabled by default, for
+# security purposes.
+#file_recv: False 
 
 #####    Master Module Management    #####
 ##########################################
@@ -211,6 +225,19 @@
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
+# The Jinja renderer can strip extra carriage returns and whitespace
+# See http://jinja.pocoo.org/docs/api/#high-level-api
+#
+# If this is set to True the first newline after a Jinja block is removed
+# (block, not variable tag!). Defaults to False, corresponds to the Jinja
+# environment init variable "trim_blocks". 
+# jinja_trim_blocks: False
+#
+# If this is set to True leading spaces and tabs are stripped from the start
+# of a line to a block. Defaults to False, corresponds to the Jinja
+# environment init variable "lstrip_blocks".
+# jinja_lstrip_blocks: False
+
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
@@ -223,7 +250,8 @@
 
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.
+# the output will be shortened to a single line.  If set to 'mixed', the output
+# will be terse unless a state failed, in which case that output will be full.
 #state_output: full
 
 
@@ -253,7 +281,7 @@
 #    - /srv/salt
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server, the default is md5, but sha1, sha224, sha256, sha384
+# the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #hash_type: md5
 
@@ -266,17 +294,20 @@
 # For example, if you manage your custom modules and states in subversion
 # and don't want all the '.svn' folders and content synced to your minions,
 # you could set this to '/\.svn($|/)'. By default nothing is ignored.
-# file_ignore_regex:
-#   - '/\.svn($|/)'
-#   - '/\.git($|/)'
+#
+#file_ignore_regex:
+#  - '/\.svn($|/)'
+#  - '/\.git($|/)'
 
 # A file glob (or list of file globs) that will be matched against the file
 # path before syncing the modules and states to the minions. This is similar
 # to file_ignore_regex above, but works on globs instead of regex. By default
 # nothing is ignored.
+#
 # file_ignore_glob:
-#   - '*.pyc'
-#   - '*/somefolder/*.bak'
+#  - '*.pyc'
+#  - '*/somefolder/*.bak'
+#  - '*.swp'
 
 # File Server Backend
 # Salt supports a modular fileserver backend system, this system allows
@@ -285,40 +316,74 @@
 # configured and will be searched for the requested file in the order in which
 # they are defined here. The default setting only enables the standard backend
 # "roots" which uses the "file_roots" option.
+#
 #fileserver_backend:
 #  - roots
+#
 # To use multiple backends list them in the order they are searched:
-# fileserver_backend:
-#   - git
-#   - roots
-
+#
+#fileserver_backend:
+#  - git
+#  - roots
+#
+# Uncomment the line below if you do not want the file_server to follow
+# symlinks when walking the filesystem tree. This is set to True
+# by default. Currently this only applies to the default roots 
+# fileserver_backend.
+#
+#fileserver_followsymlinks: False
+#
+# Uncomment the line below if you do not want symlinks to be
+# treated as the files they are pointing to. By default this is set to
+# False. By uncommenting the line below, any detected symlink while listing
+# files on the Master will not be returned to the Minion.
+#
+#fileserver_ignoresymlinks: True
+#
+# By default, the Salt fileserver recurses fully into all defined environments
+# to attempt to find files. To limit this behavior so that the fileserver only
+# traverses directories with SLS files and special Salt directories like _modules,
+# enable the option below. This might be useful for installations where a file root
+# has a very large number of files and performance is impacted. Default is False.
+#
+# fileserver_limit_traversal: False
+#
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
-# gitfs_remotes:
-#   - git://github.com/saltstack/salt-states.git
-#   - file:///var/git/saltmaster
+#
+#gitfs_remotes:
+#  - git://github.com/saltstack/salt-states.git
+#  - file:///var/git/saltmaster
+#
 # The repos will be searched in order to find the file requested by a client
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
 # environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
+#     
+# The gitfs_root option gives the ability to serve files from a subdirectory
+# within the repository. The path is defined relative to the root of the
+# repository and defaults to the repository root.
+#gitfs_root: somefolder/otherfolder
 
 
 #####         Pillar settings        #####
 ##########################################
 # Salt Pillars allow for the building of global data that can be made selectively
-# available to different minions based on minion grain filtering. The Salt 
-# Pillar is laid out in the same fashion as the file server, with environments, 
-# a top file and sls files. However, pillar data does not need to be in the 
+# available to different minions based on minion grain filtering. The Salt
+# Pillar is laid out in the same fashion as the file server, with environments,
+# a top file and sls files. However, pillar data does not need to be in the
 # highstate format, and is generally just key/value pairs.
 
 #pillar_roots:
 #  base:
 #    - /srv/pillar
 
-# ext_pillar:
-#   - hiera: /etc/hiera.yaml
-#   - cmd_yaml: cat /etc/salt/yaml
+#ext_pillar:
+#  - hiera: /etc/hiera.yaml
+#  - cmd_yaml: cat /etc/salt/yaml
 
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
@@ -343,6 +408,14 @@
 # this master where to receive commands from.
 #syndic_master: masterofmaster
 
+# This is the 'ret_port' of the MasterOfMaster
+#syndic_master_port: 4506
+
+# PID file of the syndic daemon
+#syndic_pidfile: /var/run/salt-syndic.pid
+
+# LOG file of the syndic daemon
+#syndic_log_file: syndic.log
 
 #####      Peer Publish settings     #####
 ##########################################
@@ -355,15 +428,18 @@
 # of regular expressions to match functions. The following will allow the
 # minion authenticated as foo.example.com to execute functions from the test
 # and pkg modules.
-# peer:
-#   foo.example.com:
-#       - test.*
-#       - pkg.*
+#
+#peer:
+#  foo.example.com:
+#    - test.*
+#    - pkg.*
 #
 # This will allow all minions to execute all commands:
-# peer:
-#   .*:
-#       - .*
+#
+#peer:
+#  .*:
+#    - .*
+#
 # This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 
@@ -375,16 +451,36 @@
 # All peer runner support is turned off by default and must be enabled before
 # using. This will enable all peer runners for all minions:
 #
-# peer_run:
-#   .*:
-#     - .*
+#peer_run:
+#  .*:
+#    - .*
 #
 # To enable just the manage.up runner for the minion foo.example.com:
 #
-# peer_run:
-#   foo.example.com:
-#     - manage.up
+#peer_run:
+#  foo.example.com:
+#    - manage.up
 
+#####         Mine settings     #####
+##########################################
+# Restrict mine.get access from minions. By default any minion has a full access
+# to get all mine data from master cache. In acl definion below, only pcre matches
+# are allowed.
+#
+# mine_get:
+#   .*:
+#     - .*
+#
+# Example below enables minion foo.example.com to get  'network.interfaces' mine data only
+# , minions web* to get all network.* and disk.* mine data and all other minions won't get
+# any mine data.
+#
+# mine_get:
+#   foo.example.com:
+#     - network.inetrfaces
+#   web.*:
+#     - network.*
+#     - disk.*
 
 #####         Logging settings       #####
 ##########################################
@@ -393,9 +489,9 @@
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-#	log_file: /var/log/salt/master
-#	log_file: file:///dev/log
-#	log_file: udp://loghost:10514
+#log_file: /var/log/salt/master
+#log_file: file:///dev/log
+#log_file: udp://loghost:10514
 
 #log_file: /var/log/salt/master
 #key_logfile: /var/log/salt/key
@@ -414,7 +510,7 @@
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 # The format of the console logging messages. Allowed formatting options can
-# be seen here	http://docs.python.org/library/logging.html#logrecord-attributes
+# be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
@@ -433,9 +529,9 @@
 # Node groups allow for logical groupings of minion nodes.
 # A group consists of a group name and a compound target.
 #
-# nodegroups:
-#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-#   group2: 'G@os:Debian and foo.domain.com'
+#nodegroups:
+#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#  group2: 'G@os:Debian and foo.domain.com'
 
 
 #####     Range Cluster settings     #####
@@ -443,17 +539,17 @@
 # The range server (and optional port) that serves your cluster information
 # https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 #
-# range_server: range:80
+#range_server: range:80
 
 
 #####     Windows Software Repo settings #####
 ##############################################
 # Location of the repo on the master
-# win_repo: '/srv/salt/win/repo'
+#win_repo: '/srv/salt/win/repo'
 
 # Location of the master's repo cache file
-# win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+#win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
 
 # List of git repositories to include with the local repo
-# win_gitrepos:
-#   - 'https://github.com/saltstack/salt-winrepo.git'
+#win_gitrepos:
+#  - 'https://github.com/saltstack/salt-winrepo.git'

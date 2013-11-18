@@ -2,93 +2,120 @@
 
 .. _contents:
 
-.. |vid| image:: /_static/film_link.png
-    :class: math
+.. image:: _static/saltconf.jpg
+    :target: http://saltconf.com/
 
-Get started with Salt
-=====================
+What is SaltStack?
+==================
 
-.. sidebar:: Presentations
+Salt is a new approach to infrastructure management. Easy enough to get
+running in minutes, scalable enough to manage tens of thousands of servers,
+and fast enough to communicate with them in *seconds*.
 
-    A list of `presentations and interviews on Salt`_ (including the FLOSS
-    Weekly interview).
+Salt delivers a dynamic communication bus for infrastructures that can be used
+for orchestration, remote execution, configuration management and much more.
 
-.. _`presentations and interviews on Salt`: http://saltstack.org/learn/
+.. seealso:: Other Documentation
 
-Salt is an open source tool to manage your infrastructure. Easy enough to get
-running in minutes and fast enough to manage tens of thousands of servers (and
-still get a response back in *seconds*).
+    Download an offline copy of the latest Salt documentation:
 
-Execute arbitrary shell commands or choose from dozens of pre-built modules of
-common (or complex) commands. Target individual servers or groups of servers
-based on name, defined roles, or a variety of system information such as
-hardware, software, operating system, current version, current environment, and
-many more.
+    * `PDF`_
+    * `ePub`_
+    * `Dash Docset`_
 
-Bring your servers up to a known configured state by writing simple lists of
-items and defining attributes on those lists—no need to learn yet another
-language.
+    See documentation for past Salt releases at http://salt.readthedocs.org.
+    Download offline copies on the `ReadTheDocs download page`_.
 
-Read the :doc:`Salt overview <topics/index>` for a more thorough description.
+    Watch announcements, demonstrations, and video tutorials on the `SaltStack
+    YouTube channel`_.
 
-Salt (Masterless) Quickstart
-----------------------------
+.. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
+.. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
+.. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
+.. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
+.. _`SaltStack YouTube channel`: http://youtube.com/saltstack
 
-Install salt-minion and provision a webserver in 3 easy steps. The fastest way to start
-using salt's configuration management.
+Download
+========
 
-:doc:`Salt Quickstart </topics/tutorials/quickstart>`
+Salt source releases are available for download via PyPI:
 
+    https://pypi.python.org/pypi/salt
 
-Tutorial 1: Remote execution
-----------------------------
+The installation documents outline where to obtain packages and installation
+specifics for platforms:
 
-.. sidebar:: |vid| Screencasts
+    :doc:`Installation </topics/installation/index>`
 
-    Watch the `remote execution screencast`__.
+The Salt Bootstrap project is a single shell script which aims to automate
+the install correctly on platforms:
 
-.. __: http://blip.tv/saltstack/salt-installation-configuration-and-remote-execution-5713423
+    https://github.com/saltstack/salt-bootstrap
 
-The quickest way to see Salt in action is to run a command on a :term:`minion`
-host from the :term:`master` host. This is widely known as :term:`remote
-execution` — executing commands on remote hosts.
+Getting Started
+===============
 
-1.  :doc:`Installation </topics/installation/index>`
-2.  :doc:`Configure the minion <topics/configuration>`
-3.  :doc:`Run remote commands <topics/tutorials/modules>`
+This walkthrough is made to help individuals get started quickly and gain a
+foundational knowledge of Salt:
 
-Tutorial 2: Configuration management
-------------------------------------
+:doc:`Official Salt Walkthrough</topics/tutorials/walkthrough>`
 
-Now that you have the basics out of the way, learn to use Salt to configure
-your servers. This is widely known as :term:`configuration management` —
-installing packages, configuring users and services, and much more.
+Additional tutorials are available when getting started with Salt
 
-1.  :doc:`Getting Started with States<topics/tutorials/starting_states>`
-2.  :doc:`Basic config management <topics/tutorials/states_pt1>`
-3.  :doc:`Less basic config management <topics/tutorials/states_pt2>`
-4.  :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+States - Configuration Management with Salt:
+    - :doc:`Getting Started with States<topics/tutorials/starting_states>`
+    - :doc:`Basic config management <topics/tutorials/states_pt1>`
+    - :doc:`Less basic config management <topics/tutorials/states_pt2>`
+    - :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+    - :doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`
+
+Masterless Quickstart:
+    :doc:`Salt Quickstart </topics/tutorials/quickstart>`
+
+A list of all tutorials can be found here:
+    :doc:`All Salt tutorials <topics/tutorials/index>`
 
 Salt in depth
 =============
 
 Setting up and using Salt is a simple task but its capabilities run much, much
-deeper. Gaining a better understanding of how Salt works will allow you to
-truly make it work for you.
+deeper. These documents will lead to a greater understating of how Salt will
+empower infrastructure management.
 
-.. sidebar:: More tutorials!
+Remote execution
+----------------
 
-    * :doc:`All Salt tutorials <topics/tutorials/index>`
+Remote execution is the core function of Salt. Running pre-defined or
+arbitrary commands on remote hosts.
 
-.. contents:: The components of Salt
-    :local:
-    :depth: 2
+**Modules**
+    Salt modules are the core of remote execution. They provide
+    functionality such as installing packages, restarting a service,
+    running a remote command, transferring files, and infinitely more.
 
-:doc:`Targeting </topics/targeting/index>`
-------------------------------------------
+    :doc:`Full list of modules </ref/modules/all/index>`
+        The giant list of core modules that ship with Salt
 
-Targeting is specifying which minions should execute commands or manage server
-configuration.
+    :doc:`Writing modules <ref/modules/index>`
+        A guide on how to write Salt modules.
+
+**Returners**
+    Salt returners allow saving minion responses in various datastores or
+    to various locations in addition to display at the CLI.
+
+    :doc:`Full list of returners </ref/returners/all/index>`
+        Store minion responses in Redis, Mongo, Cassandra, SQL or more.
+
+    :doc:`Writing returners <ref/returners/index>`
+        Extending Salt to communicate with more interfaces is easy, new
+        databases can be supported or custom interfaces can be easily
+        communicated with.
+
+Targeting
+---------
+
+:doc:`Targeting </topics/targeting/index>` is specifying which minions
+should execute commands or manage server configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
     Match minions using globbing and regular expressions.
@@ -107,103 +134,81 @@ configuration.
     Loop through all matching minions so that only a subset are executing a
     command at one time.
 
-Remote execution
-----------------
-
-Remote execution is the core functionality of Salt. Running pre-defined or
-arbitrary commands on remote hosts.
-
-**Modules**
-    Salt modules are the core of remote execution. They provide
-    functionality such as installing a package, restarting a service,
-    running a remote command, transferring a file — and the list goes on.
-
-    :doc:`Full list of modules </ref/modules/all/index>`
-        The giant list of core modules that ship with Salt
-        (And there are even more in the `salt-contrib`_ repository!)
-
-    :doc:`Writing modules <ref/modules/index>`
-        A guide on how to write Salt modules.
-
-**Returners**
-    Salt returners allow saving minion responses in various datastores or
-    to various locations in addition to display at the CLI.
-
-    :doc:`Full list of returners </ref/returners/all/index>`
-        Store minion responses in Redis, Mongo, Cassandra or more.
-
-    :doc:`Writing returners <ref/returners/index>`
-        If we're missing your favorite storage backend, webservice, or you
-        need a custom endpoint returners are *tiny* and simple to write.
-
 Configuration management
 ------------------------
 
-Building on the remote execution core is a robust and flexible config
-management framework. Execution happens on the minions allowing
-effortless, simultaneous configuration of thousands of hosts.
+Building on the remote execution core is a robust and flexible configuration
+management framework. Execution happens on the minions allowing effortless,
+simultaneous configuration of tens of thousands of hosts.
 
 **States**
     Express the state of a host using small, easy to read, easy to
-    understand configuration files. No programming required (unless you
-    want to).
+    understand configuration files. *No programming required*.
 
     :doc:`Full list of states <ref/states/all/index>`
         Install packages, create users, transfer files, start services, and
         much more.
 
-    :doc:`Using states <ref/states/index>`
-        You've seen the big list of available states, now learn how to call
-        them.
+    :doc:`Pillar System <topics/pillar/index>`
+        Salt's Pillar system
+
+    :doc:`States Overview<ref/states/index>`
+        An overview of States and some of the core components.
 
     :doc:`Highstate data structure <ref/states/highstate>`
         A dry vocabulary and technical representation of the configuration
         format that states represent.
 
     :doc:`Writing states <ref/states/writing>`
-        A guide on how to write Salt states.
+        A guide on how to write Salt state modules. Extending Salt to directly
+        manage in more software is easy.
 
 **Renderers**
     Write state configuration files in the language, templating engine, or
-    file type of your choice. The world doesn't need yet another DSL.
+    file type of choice. Salt's configuration management system is, under the
+    hood, language agnostic.
 
     :doc:`Full list of renderers <ref/renderers/all/index>`
-        YAML? JSON? Jinja? Mako? Wempy? Python? We got you covered. (And if
-        we don't, new renderers are *tiny* and easy to write.)
+        YAML is not the only choice, many systems are available, from
+        alternative templating engines to the PyDSL language for rendering
+        sls formulas.
 
     :doc:`Renderers <ref/renderers/index>`
         Salt states are only concerned with the ultimate highstate data
-        structure. How you create that data structure isn't our business.
-        Tweak a config option and use whatever you're most comfortable
-        with.
+        structure. How that data structure is created is not important.
 
 Miscellaneous topics
 --------------------
 
 Salt is many splendid things.
 
+:doc:`Salt Cloud <topics/cloud/index>`
+    Salt Cloud is a public cloud provisioning tool that integrates Salt with
+    many cloud providers.
+
 :doc:`File Server <ref/file_server/index>`
     Salt can easily and quickly transfer files (in fact, that's how Salt
-    States work). Even under load, files are chunked and served.
+    States work). Even under heavy load, files are chunked and served.
 
 :doc:`Syndic <ref/syndic>`
-    A seamless master of masters. Scale Salt to thousands of hosts or
+    A seamless master of masters. Scale Salt to tens of thousands of hosts or
     across many different networks.
 
-:doc:`Peer communication <ref/peer>`
+:doc:`Peer Communication <ref/peer>`
     Allow minions to communicate amongst themselves. For example, configure
     one minion by querying live data from all the others. With great power
     comes great responsibility.
 
-:doc:`Running Salt without root <topics/nonroot>`
-    The Salt daemons can be run as an unprivileged user.
+:doc:`Reactor System <topics/reactor/index>`
+    The reactor system allows for Salt to create a self aware environment
+    by hooking infrastructure events into actions.
 
-:doc:`Firewall settings and Salt <topics/tutorials/firewall>`
+:doc:`Firewall Settings and Salt <topics/tutorials/firewall>`
     A tutorial covering how to properly firewall a Salt Master server.
 
-:doc:`Cron and Salt States <topics/tutorials/cron>`
-    A tutorial covering how to properly use cron to schedule when a 
-    minion updates its state.
+:doc:`Scheduling Executions (like states)<topics/jobs/schedule>`
+    The schedule system in Salt allows for executions to be run of all sorts
+    from the master or minion at automatic intervals.
 
 :doc:`Network topology <ref/topology>`
     At it's core, Salt is a highly scalable communication layer built on
@@ -214,21 +219,20 @@ Salt is many splendid things.
 :doc:`Testing Salt <topics/tests/index>`
     A howto for writing unit tests and integration tests.
 
-:doc:`Python API interface <ref/python-api>`
-    Use Salt programmatically from your own scripts and programs easily and
+:ref:`Python API interface <python-api>`
+    Use Salt programmatically from scripts and programs easily and
     simply via ``import salt``.
 
 :doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or
-    take advantage of automatic updates to keep your minions running your
-    latest builds.
+    take advantage of automatic updates to keep minions running the latest
+    builds.
 
 :doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
-    Looking for an easy way to manage software on all your Windows machines? Do
-    you feel left out of all the package manager magic found in yum and apt?
-    Search no more! Salt has an integrated software package manager for your
-    Windows machines! Install software hosted on your master, somewhere on your
-    network, or anywhere http, https, and ftp work.
+    Looking for an easy way to manage software on Windows machines?
+    Search no more! Salt has an integrated software package manager for
+    Windows machines! Install software hosted on the master, somewhere on the
+    network, or any HTTP, HTTPS, or ftp server.
 
 Reference
 ---------
@@ -245,17 +249,25 @@ Reference
 :doc:`Full table of contents </contents>`
     Dense but complete.
 
+FAQ
+===
+
+See :doc:`here <faq>` for a list of Frequently Asked Questions.
+
 More information about the project
-----------------------------------
+==================================
 
 :doc:`Release notes </topics/releases/index>`
-    Where we've been.
+    Living history of SaltStack.
 
 :doc:`Community </topics/community>`
-    How you can get involved.
+    How to get involved.
 
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt
+
+:doc:`Translate Documentation </topics/translating>`
+    How to help out translating Salt to your language.
 
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states

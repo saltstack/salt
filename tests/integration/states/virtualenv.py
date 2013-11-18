@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.integration.states.virtualenv
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
 import shutil
 
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest, ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-
-from saltunittest import skipIf, destructiveTest
 
 
 class VirtualenvTest(integration.ModuleCase,
@@ -27,7 +31,7 @@ class VirtualenvTest(integration.ModuleCase,
             self.skipTest('virtualenv not installed')
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):
@@ -68,13 +72,12 @@ class VirtualenvTest(integration.ModuleCase,
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
 
-        # Out state template
+        # Our state template
         template = [
             '{0}:'.format(venv_path),
             '  virtualenv.managed:',
-            '    - no_site_packages: True',
+            '    - system_site_packages: False',
             '    - clear: false',
-            '    - mirrors: http://testpypi.python.org/pypi',
             '    - requirements: salt://issue-2594-requirements.txt',
         ]
 
@@ -88,7 +91,7 @@ class VirtualenvTest(integration.ModuleCase,
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Created new virtualenv')
+            self.assertInSaltComment('Created new virtualenv', ret)
             self.assertSaltStateChangesEqual(
                 ret, ['pep8==1.3.3'], keys=('packages', 'new')
             )
@@ -115,7 +118,7 @@ class VirtualenvTest(integration.ModuleCase,
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'virtualenv exists')
+            self.assertInSaltComment('virtualenv exists', ret)
             self.assertSaltStateChangesEqual(
                 ret, ['zope.interface==4.0.1'], keys=('packages', 'new')
             )
@@ -137,3 +140,8 @@ class VirtualenvTest(integration.ModuleCase,
             shutil.rmtree(venv_path)
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VirtualenvTest)

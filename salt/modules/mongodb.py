@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to provide MongoDB functionality to Salt
 
@@ -5,7 +6,7 @@ Module to provide MongoDB functionality to Salt
     parameters as well as configuration settings::
 
         mongodb.host: 'localhost'
-        mongodb.port: '27017'
+        mongodb.port: 27017
         mongodb.user: ''
         mongodb.password: ''
 
@@ -15,6 +16,9 @@ Module to provide MongoDB functionality to Salt
 
 # Import python libs
 import logging
+
+# Import salt libs
+from salt._compat import string_types
 
 # Import third party libs
 try:
@@ -56,7 +60,7 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
         if user and password:
             mdb.authenticate(user, password)
     except pymongo.errors.PyMongoError:
-        log.error('Error connecting to database {0}'.format(database.message))
+        log.error('Error connecting to database {0}'.format(database))
         return False
 
     return conn
@@ -65,35 +69,56 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
 def db_list(user=None, password=None, host=None, port=None):
     '''
     List all Mongodb databases
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.db_list <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Listing databases")
+        log.info('Listing databases')
         return conn.database_names()
     except pymongo.errors.PyMongoError as err:
         log.error(err)
         return err.message
 
 
-def db_exists(name, user=None, password=None, host=None, port=None,
-              database='admin'):
+def db_exists(name, user=None, password=None, host=None, port=None):
     '''
     Checks if a database exists in Mongodb
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     '''
     dbs = db_list(user, password, host, port)
-    for mdb in dbs:
-        if name == mdb:
-            return True
 
-    return False
+    if isinstance(dbs, string_types):
+        return False
+
+    return name in dbs
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
     '''
     Remove a Mongodb database
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Removing database {0}'.format(name))
@@ -112,8 +137,16 @@ def db_remove(name, user=None, password=None, host=None, port=None):
 def user_list(user=None, password=None, host=None, port=None, database='admin'):
     '''
     List users of a Mongodb database
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_list <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Listing users')
@@ -141,6 +174,12 @@ def user_exists(name, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Checks if a user exists in Mongodb
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
     users = user_list(user, password, host, port, database)
     for user in users:
@@ -154,8 +193,16 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Create a Mongodb user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Creating user {0}'.format(name))
@@ -175,8 +222,16 @@ def user_remove(name, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Remove a Mongodb user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Removing user {0}'.format(name))

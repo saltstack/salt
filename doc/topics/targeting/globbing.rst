@@ -22,45 +22,57 @@ configuration setting.
 Globbing
 ========
 
-The default matching that Salt utilizes is `shell-style globbing`_ around the
-:term:`minion id`. This also works for states in the :term:`top file`.
+The default matching that Salt utilizes is :py:mod:`shell-style globbing
+<python2:fnmatch>` around the :term:`minion id`. This also works for states
+in the :term:`top file`.
 
 .. note::
 
     You must wrap :command:`salt` calls that use globbing in single-quotes to
     prevent the shell from expanding the globs before Salt is invoked.
 
-Match all minions::
+Match all minions:
+
+.. code-block:: bash
 
     salt '*' test.ping
 
-Match all minions in the example.net domain or any of the example domains::
+Match all minions in the example.net domain or any of the example domains:
+
+.. code-block:: bash
 
     salt '*.example.net' test.ping
     salt '*.example.*' test.ping
 
-Match all the ``webN`` minions in the example.net domain
-(``web1.example.net``, ``web2.example.net`` … ``webN.example.net``)::
+Match all the ``webN`` minions in the example.net domain (``web1.example.net``,
+``web2.example.net`` … ``webN.example.net``):
+
+.. code-block:: bash
 
     salt 'web?.example.net' test.ping
 
-Match the ``web1`` through ``web5`` minions::
+Match the ``web1`` through ``web5`` minions:
+
+.. code-block:: bash
 
     salt 'web[1-5]' test.ping
 
-Match the ``web-x``, ``web-y``, and ``web-z`` minions::
+Match the ``web-x``, ``web-y``, and ``web-z`` minions:
+
+.. code-block:: bash
 
     salt 'web-[x-z]' test.ping
-    
-.. _`shell-style globbing`: http://docs.python.org/library/fnmatch.html
+
 
 Regular Expressions
 ===================
 
-Minions can be matched using Perl-compatible `regular expressions`_ (which is
-globbing on steroids and a ton of caffeine).
+Minions can be matched using Perl-compatible :py:mod:`regular expressions
+<python2:re>` (which is globbing on steroids and a ton of caffeine).
 
-Match both ``web1-prod`` and ``web1-devel`` minions::
+Match both ``web1-prod`` and ``web1-devel`` minions:
+
+.. code-block:: bash
 
     salt -E 'web1-(prod|devel)' test.ping
 
@@ -75,11 +87,12 @@ the matcher as the first option. The following example executes the contents of
       - match: pcre
       - webserver
       
-.. _`regular expressions`: http://docs.python.org/library/re.html#module-re
 
 Lists
 =====
 
-At the most basic level, you can specify a flat list of minion IDs::
+At the most basic level, you can specify a flat list of minion IDs:
+
+.. code-block:: bash
 
     salt -L 'web1,web2,web3' test.ping

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
 '''
@@ -12,9 +13,13 @@ import logging
 from copy import deepcopy
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'user'
 
 
 def __virtual__():
@@ -22,7 +27,7 @@ def __virtual__():
     Set the user module if the kernel is SunOS
     '''
 
-    return 'user' if __grains__['kernel'] == 'SunOS' else False
+    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
 
 
 def _get_gecos(name):
@@ -34,7 +39,8 @@ def _get_gecos(name):
         return {}
     else:
         # Assign empty strings for any unspecified trailing GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
+        while len(gecos_field) < 4:
+            gecos_field.append('')
         return {'fullname': str(gecos_field[0]),
                 'roomnumber': str(gecos_field[1]),
                 'workphone': str(gecos_field[2]),
@@ -46,31 +52,40 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     '''
-    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname',''),
-                                    gecos_dict.get('roomnumber',''),
-                                    gecos_dict.get('workphone',''),
-                                    gecos_dict.get('homephone',''))
+    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
+                                    gecos_dict.get('roomnumber', ''),
+                                    gecos_dict.get('workphone', ''),
+                                    gecos_dict.get('homephone', ''))
 
 
 def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
-        system=False,
         fullname='',
         roomnumber='',
         workphone='',
-        homephone=''):
+        homephone='',
+        createhome=True,
+        **kwargs):
     '''
     Add a user to the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    if salt.utils.is_true(kwargs.pop('system', False)):
+        log.warning('solaris_user module does not support the \'system\' '
+                    'argument')
+    if kwargs:
+        log.warning('Invalid kwargs passed to user.add')
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'useradd '
@@ -82,15 +97,16 @@ def add(name,
         cmd += '-g {0} '.format(gid)
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
-    if home:
-        if home is not True:
-            if system:
-                cmd += '-d {0} '.format(home)
-            else:
-                cmd += '-m -d {0} '.format(home)
+
+    if home is None:
+        if createhome:
+            cmd += '-m '
+    else:
+        if createhome:
+            cmd += '-m -d {0} '.format(home)
         else:
-            if not system:
-                cmd += '-m '
+            cmd += '-d {0} '.format(home)
+
     if not unique:
         cmd += '-o '
     cmd += name
@@ -121,10 +137,15 @@ def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.delete name remove=True force=True
     '''
+    if salt.utils.is_true(force):
+        log.error('userdel does not support force-deleting user while '
+                  'user is logged in')
     cmd = 'userdel '
     if remove:
         cmd += '-r '
@@ -135,17 +156,23 @@ def delete(name, remove=False, force=False):
     return not ret['retcode']
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return the list of all info for all users
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.getent
     '''
+    if 'user.getent' in __context__ and not refresh:
+        return __context__['user.getent']
+
     ret = []
     for data in pwd.getpwall():
         ret.append(info(data.pw_name))
+    __context__['user.getent'] = ret
     return ret
 
 
@@ -153,7 +180,9 @@ def chuid(name, uid):
     '''
     Change the uid for a named user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chuid foo 4376
     '''
@@ -172,7 +201,9 @@ def chgid(name, gid):
     '''
     Change the default group of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgid foo 4376
     '''
@@ -191,7 +222,9 @@ def chshell(name, shell):
     '''
     Change the default shell of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chshell foo /bin/zsh
     '''
@@ -211,7 +244,9 @@ def chhome(name, home, persist=False):
     Change the home directory of the user, pass true for persist to copy files
     to the new home dir
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhome foo /home/users/foo True
     '''
@@ -234,7 +269,9 @@ def chgroups(name, groups, append=False):
     Change the groups this user belongs to, add append to append the specified
     groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgroups foo wheel,root True
     '''
@@ -244,7 +281,7 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
     if append:
-        groups += ugrps 
+        groups += ugrps
     cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -253,13 +290,16 @@ def chfullname(name, fullname):
     '''
     Change the user's Full Name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
     fullname = str(fullname)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if fullname == pre_info['fullname']:
         return True
     gecos_field = deepcopy(pre_info)
@@ -276,13 +316,16 @@ def chroomnumber(name, roomnumber):
     '''
     Change the user's Room Number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chroomnumber foo 123
     '''
     roomnumber = str(roomnumber)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if roomnumber == pre_info['roomnumber']:
         return True
     gecos_field = deepcopy(pre_info)
@@ -299,13 +342,16 @@ def chworkphone(name, workphone):
     '''
     Change the user's Work Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chworkphone foo "7735550123"
     '''
     workphone = str(workphone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if workphone == pre_info['workphone']:
         return True
     gecos_field = deepcopy(pre_info)
@@ -322,13 +368,16 @@ def chhomephone(name, homephone):
     '''
     Change the user's Home Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhomephone foo "7735551234"
     '''
     homephone = str(homephone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if homephone == pre_info['homephone']:
         return True
     gecos_field = deepcopy(pre_info)
@@ -345,7 +394,9 @@ def info(name):
     '''
     Return user information
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.info root
     '''
@@ -362,23 +413,14 @@ def info(name):
         # Put GECOS info into a list
         gecos_field = data.pw_gecos.split(',', 3)
         # Assign empty strings for any unspecified GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
+        while len(gecos_field) < 4:
+            gecos_field.append('')
         ret['fullname'] = gecos_field[0]
         ret['roomnumber'] = gecos_field[1]
         ret['workphone'] = gecos_field[2]
         ret['homephone'] = gecos_field[3]
     except KeyError:
-        ret['gid'] = ''
-        ret['groups'] = ''
-        ret['home'] = ''
-        ret['name'] = ''
-        ret['passwd'] = ''
-        ret['shell'] = ''
-        ret['uid'] = ''
-        ret['fullname'] = ''
-        ret['roomnumber'] = ''
-        ret['workphone'] = ''
-        ret['homephone'] = ''
+        return {}
     return ret
 
 
@@ -386,15 +428,25 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.list_groups foo
     '''
     ugrp = set()
     # Add the primary user's group
     ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+
+    # If we already grabbed the group list, it's overkill to grab it again
+    if 'user.getgrall' in __context__:
+        groups = __context__['user.getgrall']
+    else:
+        groups = grp.getgrall()
+        __context__['user.getgrall'] = groups
+
     # Now, all other groups the user belongs to
-    for group in grp.getgrall():
+    for group in groups:
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
 

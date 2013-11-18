@@ -27,7 +27,7 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=
+load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
 
 
 [MESSAGES CONTROL]
@@ -41,7 +41,21 @@ load-plugins=
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=W0142
+disable=W0142,
+#  E8121,
+#  E8122,
+#  E8123,
+#  E8124,
+#  E8125,
+#  E8126,
+#  E8127,
+#  E8128
+
+# Disabled Checks
+#
+# W0142 (star-args)
+# E812* All PEP8 E12*
+# E8501 PEP8 line too long
 
 
 [REPORTS]
@@ -143,7 +157,7 @@ no-docstring-rgx=__.*__
 [MISCELLANEOUS]
 
 # List of note tags to take in consideration, separated by a comma.
-notes=FIXME,XXX,TODO
+notes=FIXME,FIX,XXX,TODO
 
 
 [FORMAT]
@@ -170,7 +184,7 @@ dummy-variables-rgx=_|dummy
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__active_provider_name__
 
 
 [SIMILARITIES]
@@ -226,16 +240,19 @@ max-args=35
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=15
+# Let's have max-args + 5
+max-locals=40
 
 # Maximum number of return / yield for function / method body
 max-returns=6
 
 # Maximum number of branch for function / method body
-max-branchs=12
+# We create a lot of branches in salt, 4x the default value
+max-branchs=48
 
 # Maximum number of statements in function / method body
-max-statements=50
+# Again, we have LOTS in salt. Double default
+max-statements=100
 
 # Maximum number of parents for a class (see R0901).
 max-parents=7

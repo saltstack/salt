@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Gentoo make.conf
 ==============================
@@ -11,11 +12,13 @@ A state module to manage Gentoo's make.conf file
             - value: '-j3'
 '''
 
+
 def __virtual__():
     '''
     Only load if the makeconf module is available in __salt__
     '''
     return 'makeconf' if 'makeconf.get_var' in __salt__ else False
+
 
 def _make_set(var):
     '''
@@ -30,6 +33,7 @@ def _make_set(var):
             var = list(var)
     return set(var)
 
+
 def present(name, value=None, contains=None, excludes=None):
     '''
     Verify that the variable is in the make.conf and has the provided
@@ -43,7 +47,7 @@ def present(name, value=None, contains=None, excludes=None):
         Enforce that the value of the variable is set to the provided value
 
     contains
-        Enforce that the value of the variable cotains the provided value
+        Enforce that the value of the variable contains the provided value
 
     excludes
         Enforce that the value of the variable does not contain the provided
@@ -152,6 +156,7 @@ def present(name, value=None, contains=None, excludes=None):
 
     # Now finally return
     return ret
+
 
 def absent(name):
     '''

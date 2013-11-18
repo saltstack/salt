@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.unit.utils.path_join_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -16,17 +17,20 @@ import ntpath
 import platform
 import tempfile
 
-if __name__ == "__main__":
-    sys.path.insert(
-        0, os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    )
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestCase, TextTestRunner
 from salt.utils import path_join
+from salt import syspaths
 
 
 class PathJoinTestCase(TestCase):
+
+    def setUp(self):
+        self.skipTest('Skipped until properly mocked')
 
     PLATFORM_FUNC = platform.system
     BUILTIN_MODULES = sys.builtin_module_names
@@ -117,7 +121,7 @@ class PathJoinTestCase(TestCase):
         for module in (posixpath, os, os.path, tempfile, platform):
             reload(module)
 
-if __name__ == "__main__":
-    loader = PathJoinTestCase()
-    tests = loader.loadTestsFromTestCase(PathJoinTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PathJoinTestCase, needs_daemon=False)

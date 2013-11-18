@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
@@ -15,7 +16,7 @@ Salt PyDSL::
     apache.pkg.installed()
     apache.service.running() \\
                   .watch(pkg='apache',
-                         file='/etc/httpd/conf/httpd.conf', 
+                         file='/etc/httpd/conf/httpd.conf',
                          user='apache')
 
     if __grains__['os'] == 'RedHat':
@@ -56,11 +57,11 @@ Example of a ``cmd`` state calling a python function::
         return dict(result=True, changes=dict(changed=True, output=s))
 
     state('hello').cmd.call(hello, 'pydsl!')
-        
+
 '''
 
 # Implementation note:
-#  - There's a bit of terminology mix-up here: 
+#  - There's a bit of terminology mix-up here:
 #    - what I called a state or state declaration here is actually
 #      an ID declaration.
 #    - what I called a module or a state module actually corresponds
@@ -82,19 +83,21 @@ Example of a ``cmd`` state calling a python function::
 #    - state func and args
 #
 
+# Import python libs
 from uuid import uuid4 as _uuid
 
-try:
-    from collections import OrderedDict
-    Dict = OrderedDict
-except ImportError:
-    Dict = dict
-
+# Import salt libs
+from salt.utils.odict import OrderedDict
+from salt.utils import warn_until
 from salt.state import HighState
 
+
 REQUISITES = set('require watch use require_in watch_in use_in'.split())
+
+
 class PyDslError(Exception):
     pass
+
 
 class Options(dict):
     def __getattr__(self, name):
@@ -106,37 +109,47 @@ SLS_MATCHES = None
 
 class Sls(object):
 
-    def __init__(self, sls, env, rendered_sls):
+    def __init__(self, sls, saltenv, rendered_sls):
         self.name = sls
-        self.env = env
+        self.saltenv = saltenv
         self.includes = []
         self.included_highstate = {}
         self.extends = []
         self.decls = []
         self.options = Options()
         self.funcs = []  # track the ordering of state func declarations
-        self.rendered_sls = rendered_sls # a set of names of rendered sls modules
+        self.rendered_sls = rendered_sls  # a set of names of rendered sls
+                                          # modules
 
         if not HighState.get_active():
             raise PyDslError('PyDSL only works with a running high state!')
 
     @classmethod
-    def get_all_decls(self):
+    def get_all_decls(cls):
         return HighState.get_active()._pydsl_all_decls
 
     @classmethod
-    def get_render_stack(self):
+    def get_render_stack(cls):
         return HighState.get_active()._pydsl_render_stack
-    
+
     def set(self, **options):
         self.options.update(options)
 
     def include(self, *sls_names, **kws):
-        env = kws.get('env', self.env)
+        if kws.get('env', None) is not None:
+            warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt Boron.'
+            )
+            # Backwards compatibility
+            kws['saltenv'] = kws.pop('env')
+
+        saltenv = kws.get('saltenv', self.saltenv)
 
         if kws.get('delayed', False):
             for incl in sls_names:
-                self.includes.append((env, incl))
+                self.includes.append((saltenv, incl))
             return
 
         HIGHSTATE = HighState.get_active()
@@ -146,21 +159,24 @@ class Sls(object):
             SLS_MATCHES = HIGHSTATE.top_matches(HIGHSTATE.get_top())
 
         highstate = self.included_highstate
-        slsmods = [] # a list of pydsl sls modules rendered.
+        slsmods = []  # a list of pydsl sls modules rendered.
         for sls in sls_names:
             if sls not in self.rendered_sls:
-                self.rendered_sls.add(sls) # needed in case the starting sls uses the pydsl renderer.
-                histates, errors = HIGHSTATE.render_state(sls, env, self.rendered_sls, SLS_MATCHES)
+                self.rendered_sls.add(sls)  # needed in case the starting sls
+                                            # uses the pydsl renderer.
+                histates, errors = HIGHSTATE.render_state(
+                    sls, saltenv, self.rendered_sls, SLS_MATCHES
+                )
                 HIGHSTATE.merge_included_states(highstate, histates, errors)
                 if errors:
                     raise PyDslError('\n'.join(errors))
                 HIGHSTATE.clean_duplicate_extends(highstate)
 
-            id = '_slsmod_'+sls
-            if id not in highstate:
+            state_id = '_slsmod_{0}'.format(sls)
+            if state_id not in highstate:
                 slsmods.append(None)
             else:
-                for arg in highstate[id]['stateconf']:
+                for arg in highstate[state_id]['stateconf']:
                     if isinstance(arg, dict) and iter(arg).next() == 'slsmod':
                         slsmods.append(arg['slsmod'])
                         break
@@ -171,20 +187,22 @@ class Sls(object):
 
     def extend(self, *state_funcs):
         if self.options.ordered or self.last_func():
-            raise PyDslError('Cannot extend() after the ordered option was turned on!')
+            raise PyDslError(
+                'Cannot extend() after the ordered option was turned on!'
+            )
         for f in state_funcs:
-            id = f.mod._state_id
-            self.extends.append(self.get_all_decls().pop(id))
+            state_id = f.mod._state_id
+            self.extends.append(self.get_all_decls().pop(state_id))
             i = len(self.decls)
             for decl in reversed(self.decls):
                 i -= 1
-                if decl._id == id:
+                if decl._id == state_id:
                     del self.decls[i]
                     break
-        
+
     def state(self, id=None):
         if not id:
-            id = '.'+str(_uuid()) 
+            id = '.{0}'.format(_uuid())
             # adds a leading dot to make use of stateconf's namespace feature.
         try:
             return self.get_all_decls()[id]
@@ -209,11 +227,11 @@ class Sls(object):
         self.state(slsmod_id).stateconf.set(slsmod=slsmod)
         del self.get_all_decls()[slsmod_id]
 
-        highstate = Dict()
+        highstate = OrderedDict()
         if self.includes:
             highstate['include'] = [{t[0]: t[1]} for t in self.includes]
         if self.extends:
-            highstate['extend'] = extend = Dict()
+            highstate['extend'] = extend = OrderedDict()
             for ext in self.extends:
                 extend[ext._id] = ext._repr(context='extend')
         for decl in self.decls:
@@ -221,11 +239,12 @@ class Sls(object):
 
         if self.included_highstate:
             errors = []
-            HighState.get_active().merge_included_states(highstate, self.included_highstate, errors)
+            HighState.get_active().merge_included_states(
+                highstate, self.included_highstate, errors
+            )
             if errors:
                 raise PyDslError('\n'.join(errors))
         return highstate
-
 
     def load_highstate(self, highstate):
         for sid, decl in highstate.iteritems():
@@ -234,7 +253,9 @@ class Sls(object):
                 if '.' in modname:
                     modname, funcname = modname.rsplit('.', 1)
                 else:
-                    funcname = (x for x in args if isinstance(x, basestring)).next()
+                    funcname = (
+                        x for x in args if isinstance(x, basestring)
+                    ).next()
                     args.remove(funcname)
                 mod = getattr(s, modname)
                 named_args = {}
@@ -243,7 +264,6 @@ class Sls(object):
                         k, v = x.iteritems().next()
                         named_args[k] = v
                 mod(funcname, **named_args)
-
 
 
 class StateDeclaration(object):
@@ -256,10 +276,11 @@ class StateDeclaration(object):
         for m in self._mods:
             if m._name == name:
                 return m
-        else:
-            m = StateModule(name, self._id)
-            self._mods.append(m)
-            return m
+        m = StateModule(name, self._id)
+        self._mods.append(m)
+        return m
+
+    __getitem__ = __getattr__
 
     def __str__(self):
         return self._id
@@ -268,7 +289,7 @@ class StateDeclaration(object):
         return iter(self._mods)
 
     def _repr(self, context=None):
-        return dict(m._repr(context) for m in self)
+        return OrderedDict(m._repr(context) for m in self)
 
     def __call__(self, check=True):
         sls = Sls.get_render_stack()[-1]
@@ -276,12 +297,12 @@ class StateDeclaration(object):
             last_func = sls.last_func()
             if last_func and self._mods[-1]._func is not last_func:
                 raise PyDslError(
-                        ('Cannot run state({0}: {1}) that is required by a runtime '
-                         'state({2}: {3}), at compile time.').format(
-                              self._mods[-1]._name, self._id,
-                              last_func.mod, last_func.mod._state_id
-                          )
-                      )
+                    'Cannot run state({0}: {1}) that is required by a runtime '
+                    'state({2}: {3}), at compile time.'.format(
+                        self._mods[-1]._name, self._id,
+                        last_func.mod, last_func.mod._state_id
+                    )
+                )
             sls.get_all_decls().pop(self._id)
             sls.decls.remove(self)
             self._mods[0]._func._remove_auto_require()
@@ -291,21 +312,19 @@ class StateDeclaration(object):
                 except ValueError:
                     pass
 
-        result = HighState.get_active().state.functions['state.high']({self._id: self._repr()})
+        result = HighState.get_active().state.functions['state.high'](
+            {self._id: self._repr()}
+        )
         result = sorted(result.iteritems(), key=lambda t: t[1]['__run_num__'])
         if check:
             for k, v in result:
                 if not v['result']:
                     import pprint
                     raise PyDslError(
-                            'Failed executing low state at compile time:\n{0}'
-                             .format(pprint.pformat({k:v})))
-        return result            
-        
-
-        
-
-
+                        'Failed executing low state at compile time:\n{0}'
+                        .format(pprint.pformat({k: v}))
+                    )
+        return result
 
 
 class StateModule(object):
@@ -346,7 +365,6 @@ class StateModule(object):
         return (self._name, self._func._repr(context))
 
 
-
 def _generate_requsite_method(t):
     def req(self, *args, **kws):
         for mod in args:
@@ -356,8 +374,9 @@ def _generate_requsite_method(t):
         return self
     return req
 
+
 class StateFunction(object):
-    
+
     def __init__(self, name, parent_mod):
         self.mod = parent_mod
         self.name = name
@@ -390,15 +409,14 @@ class StateFunction(object):
                              '{0}'.format(self.mod._name))
         if not self.name and context == 'extend':
             return self.args
-        return [self.name]+self.args
+        return [self.name] + self.args
 
     def configure(self, args, kws):
         args = list(args)
         if args:
             first = args[0]
             if self.mod._name == 'cmd' and \
-               self.name in ('call', 'wait_call') and \
-               callable(first):
+                    self.name in ('call', 'wait_call') and callable(first):
 
                 args[0] = first.__name__
                 kws = dict(func=first, args=args[1:], kws=kws)
@@ -417,8 +435,10 @@ class StateFunction(object):
             ref = mod._state_id
         elif not (mod and ref):
             raise PyDslError(
-                    'Invalid a requisite reference declaration! {0}: {1}'.format(
-                    mod, ref))
+                'Invalid a requisite reference declaration! {0}: {1}'.format(
+                    mod, ref
+                )
+            )
         self.args.append({req_type: [{str(mod): str(ref)}]})
 
     ns = locals()
@@ -426,5 +446,3 @@ class StateFunction(object):
         ns[req_type] = _generate_requsite_method(req_type)
     del ns
     del req_type
-
-

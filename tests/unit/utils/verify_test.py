@@ -10,17 +10,27 @@ import stat
 import shutil
 import resource
 import tempfile
+import socket
 
-# Import Salt libs
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+    TestsLoggingHandler
+)
+ensure_in_syspath('../../')
+
+# Import salt libs
 import salt.utils
-from saltunittest import skipIf, TestCase, TestsLoggingHandler
-
+import integration
 from salt.utils.verify import (
     check_user,
     verify_env,
     verify_socket,
     zmq_version,
-    check_max_open_files
+    check_max_open_files,
+    valid_id
 )
 
 
@@ -29,10 +39,18 @@ class TestVerify(TestCase):
     Verify module tests
     '''
 
+    def test_valid_id_exception_handler(self):
+        '''
+        Ensure we just return False if we pass in invalid or undefined paths.
+        Refs #8259
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        self.assertFalse(valid_id(opts, None))
+
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
-    def test_zmq_verify_insuficient(self):
+    def test_zmq_verify_insufficient(self):
         import zmq
         zmq.__version__ = '2.1.0'
         self.assertFalse(zmq_version())
@@ -62,7 +80,7 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp()
+        root_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         verify_env([var_dir], getpass.getuser())
         self.assertTrue(os.path.exists(var_dir))
@@ -73,8 +91,13 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
+    @requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
+        if socket.has_ipv6:
+            # Only run if Python is built with IPv6 support; otherwise
+            # this will just fail.
+            self.assertTrue(verify_socket('::', 18000, 18001))
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment does not like too many open files')
@@ -171,7 +194,7 @@ class TestVerify(TestCase):
                     handler.messages
                 )
                 handler.clear()
-            except IOError, err:
+            except IOError as err:
                 if err.errno == 24:
                     # Too many open files
                     self.skipTest('We\'ve hit the max open files setting')
@@ -179,3 +202,8 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestVerify, needs_daemon=False)

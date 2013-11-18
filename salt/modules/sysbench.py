@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The 'sysbench' module is used to analyse the
 performance of the minions, right from the master!
@@ -26,7 +27,7 @@ def _parser(result):
 
     # regexes to match
     _total_time = re.compile(r'total time:\s*(\d*.\d*s)')
-    _total_execution = re.compile(r'event execution:\s*(\d*.\d*s)')
+    _total_execution = re.compile(r'event execution:\s*(\d*.\d*s?)')
     _min_response_time = re.compile(r'min:\s*(\d*.\d*ms)')
     _max_response_time = re.compile(r'max:\s*(\d*.\d*ms)')
     _avg_response_time = re.compile(r'avg:\s*(\d*.\d*ms)')
@@ -44,20 +45,22 @@ def _parser(result):
 
     # returning the data as dictionary
     return {
-           'total time            ': total_time,
-           'total execution time  ': total_execution,
-           'minimum response time ': min_response_time,
-           'maximum response time ': max_response_time,
-           'average response time ': avg_response_time,
-           '95 percentile         ': per_response_time
-           }
+        'total time': total_time,
+        'total execution time': total_execution,
+        'minimum response time': min_response_time,
+        'maximum response time': max_response_time,
+        'average response time': avg_response_time,
+        '95 percentile': per_response_time
+    }
 
 
 def cpu():
     '''
-    Tests for the cpu performance of minions.
+    Tests for the CPU performance of minions.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' sysbench.cpu
     '''
@@ -72,7 +75,7 @@ def cpu():
 
     # Test beings!
     for primes in max_primes:
-        key = 'Primer numbers limit: {0}'.format(primes)
+        key = 'Prime numbers limit: {0}'.format(primes)
         run_command = test_command.format(primes)
         result = __salt__['cmd.run'](run_command)
         ret_val[key] = _parser(result)
@@ -84,9 +87,11 @@ def threads():
     '''
     This tests the performance of the processor's scheduler
 
-    CLI Example::
+    CLI Example:
 
-        salt \* sysbench.threads
+    .. code-block:: bash
+
+        salt '*' sysbench.threads
     '''
 
     # Test data
@@ -113,9 +118,11 @@ def mutex():
     '''
     Tests the implementation of mutex
 
-    CLI Examples::
+    CLI Examples:
 
-        salt \* sysbench.mutex
+    .. code-block:: bash
+
+        salt '*' sysbench.mutex
     '''
 
     # Test options and the values they take
@@ -150,9 +157,11 @@ def memory():
     '''
     This tests the memory for read and write operations.
 
-    CLI Examples::
+    CLI Examples:
 
-        salt \* sysbench.memory
+    .. code-block:: bash
+
+        salt '*' sysbench.memory
     '''
 
     # test defaults
@@ -197,9 +206,11 @@ def fileio():
     The test works with 32 files with each file being 1Gb in size
     The test consumes a lot of time. Be patient!
 
-    CLI Examples::
+    CLI Examples:
 
-        salt \* sysbench.fileio
+    .. code-block:: bash
+
+        salt '*' sysbench.fileio
     '''
 
     # Test data

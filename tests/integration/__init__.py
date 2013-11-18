@@ -3,122 +3,112 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import optparse
-import multiprocessing
+import re
 import os
 import sys
-import shutil
-import tempfile
 import time
-import signal
+import shutil
+import pprint
+import logging
+import tempfile
 import subprocess
+import multiprocessing
 from hashlib import md5
-from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
 try:
     import pwd
 except ImportError:
     pass
 
-# Import Salt libs
-import salt
-import salt.config
-import salt.master
-import salt.minion
-import salt.runner
-import salt.output
-from salt.utils import fopen, get_colors
-from salt.utils.verify import verify_env
-from saltunittest import TestCase, RedirectStdStreams
-
-try:
-    import console
-    width, height = console.getTerminalSize()
-    PNUM = width
-except:
-    PNUM = 70
-
 
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
-SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
+SALT_LIBS = os.path.dirname(CODE_DIR)
 
-PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.case import ShellTestCase
+from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
+from salttesting.parser import PNUM, print_header, SaltTestcaseParser
+from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
+
+# Update sys.path
+ensure_in_syspath(CODE_DIR, SALT_LIBS)
+
+# Import Salt libs
+import salt
+import salt._compat
+import salt.config
+import salt.master
+import salt.minion
+import salt.runner
+import salt.output
+import salt.version
+from salt.utils import fopen, get_colors
+from salt.utils.verify import verify_env
+
+# Import 3rd-party libs
+import yaml
 
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
-
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
+SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
+TMP_CONF_DIR = os.path.join(TMP, 'config')
+
+log = logging.getLogger(__name__)
 
 
-def print_header(header, sep='~', top=True, bottom=True, inline=False,
-                 centered=False):
+def run_tests(*test_cases, **kwargs):
     '''
-    Allows some pretty printing of headers on the console, either with a
-    "ruler" on bottom and/or top, inline, centered, etc.
-    '''
-    if top and not inline:
-        print(sep * PNUM)
-
-    if centered and not inline:
-        fmt = u'{0:^{width}}'
-    elif inline and not centered:
-        fmt = u'{0:{sep}<{width}}'
-    elif inline and centered:
-        fmt = u'{0:{sep}^{width}}'
-    else:
-        fmt = u'{0}'
-    print(fmt.format(header, sep=sep, width=PNUM))
-
-    if bottom and not inline:
-        print(sep * PNUM)
-
-
-def run_tests(TestCase):
-    '''
-    Run integration tests for a chosen test case.
+    Run integration tests for the chosen test cases.
 
     Function uses optparse to set up test environment
     '''
-    from saltunittest import TestLoader, TextTestRunner
-    opts = parse_opts()
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestCase)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon(clean=opts.clean):
-        runner = TextTestRunner(verbosity=opts.verbosity).run(tests)
-        sys.exit(runner.wasSuccessful())
 
+    needs_daemon = kwargs.pop('needs_daemon', True)
+    if kwargs:
+        raise RuntimeError(
+            'The \'run_tests\' function only accepts \'needs_daemon\' as a '
+            'keyword argument'
+        )
 
-def parse_opts():
-    '''
-    Parse command line options for running integration tests
-    '''
-    parser = optparse.OptionParser()
-    parser.add_option('-v',
-            '--verbose',
-            dest='verbosity',
-            default=1,
-            action='count',
-            help='Verbose test runner output')
-    parser.add_option('--clean',
-            dest='clean',
-            default=True,
-            action='store_true',
-            help=('Clean up test environment before and after '
-                  'integration testing (default behaviour)'))
-    parser.add_option('--no-clean',
-            dest='clean',
-            action='store_false',
-            help=('Don\'t clean up test environment before and after '
-                  'integration testing (speed up test process)'))
-    options, _ = parser.parse_args()
-    return options
+    class TestcaseParser(SaltTestcaseParser):
+        def setup_additional_options(self):
+            self.add_option(
+                '--sysinfo',
+                default=False,
+                action='store_true',
+                help='Print some system information.'
+            )
+            self.output_options_group.add_option(
+                '--no-colors',
+                '--no-colours',
+                default=False,
+                action='store_true',
+                help='Disable colour printing.'
+            )
+
+        def run_testcase(self, testcase, needs_daemon=True):
+            if needs_daemon:
+                print('Setting up Salt daemons to execute tests')
+                with TestDaemon(self):
+                    return SaltTestcaseParser.run_testcase(self, testcase)
+            return SaltTestcaseParser.run_testcase(self, testcase)
+
+    parser = TestcaseParser()
+    parser.parse_args()
+    for case in test_cases:
+        if parser.run_testcase(case, needs_daemon=needs_daemon) is False:
+            parser.finalize(1)
+    parser.finalize(0)
 
 
 class TestDaemon(object):
@@ -127,25 +117,37 @@ class TestDaemon(object):
     '''
     MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
 
-    def __init__(self, opts=None):
-        self.opts = opts
-        self.colors = get_colors(opts.no_colors is False)
+    def __init__(self, parser):
+        self.parser = parser
+        self.colors = get_colors(self.parser.options.no_colors is False)
 
     def __enter__(self):
         '''
         Start a master and minion
         '''
+        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         self.master_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
-        self.minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        self.master_opts['user'] = running_tests_user
+        minion_config_path = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
         )
+        self.minion_opts = salt.config.minion_config(minion_config_path)
+        self.minion_opts['user'] = running_tests_user
+        self.syndic_opts = salt.config.syndic_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'),
+            minion_config_path
+        )
+        self.syndic_opts['user'] = running_tests_user
+
         #if sys.version_info < (2, 7):
         #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
+        self.sub_minion_opts['root_dir'] = os.path.join(TMP, 'subsalt')
+        self.sub_minion_opts['user'] = running_tests_user
         #if sys.version_info < (2, 7):
         #    self.sub_minion_opts['multiprocessing'] = False
         self.smaster_opts = salt.config.master_config(
@@ -153,12 +155,8 @@ class TestDaemon(object):
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
             )
         )
-        self.syndic_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'))
-        self.syndic_opts['_master_conf_file'] = os.path.join(
-            INTEGRATION_TEST_DIR,
-            'files/conf/master'
-        )
+        self.smaster_opts['user'] = running_tests_user
+
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
@@ -169,16 +167,26 @@ class TestDaemon(object):
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
                 TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                TMP_PRODENV_STATE_TREE
             ]
         }
-        self.master_opts['ext_pillar'] = [
+        self.master_opts['ext_pillar'].append(
             {'cmd_yaml': 'cat {0}'.format(
                 os.path.join(
                     FILES,
                     'ext.yaml'
                 )
             )}
-        ]
+        )
+
+        self.master_opts['extension_modules'] = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+        )
+
         # clean up the old files
         self._clean()
 
@@ -209,9 +217,10 @@ class TestDaemon(object):
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
                     TMP_STATE_TREE,
-                    TMP
+                    TMP_PRODENV_STATE_TREE,
+                    TMP,
                     ],
-                   pwd.getpwuid(os.getuid()).pw_name)
+                   running_tests_user)
 
         # Set up PATH to mockbin
         self._enter_mockbin()
@@ -241,16 +250,13 @@ class TestDaemon(object):
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
             from copy import deepcopy
             try:
-                import yaml
                 os.makedirs('/tmp/salttest/conf')
             except OSError:
                 pass
             master_opts = deepcopy(self.master_opts)
             minion_opts = deepcopy(self.minion_opts)
             master_opts.pop('conf_file', None)
-            master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
 
-            minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
             minion_opts.pop('conf_file', None)
             minion_opts.pop('grains', None)
             minion_opts.pop('pillar', None)
@@ -265,15 +271,18 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
-        if self.opts.sysinfo:
-            from salt import version
+        if self.parser.options.sysinfo:
             print_header('~~~~~~~ Versions Report ', inline=True)
-            print('\n'.join(version.versions_report()))
+            print('\n'.join(salt.version.versions_report()))
 
             print_header(
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
+            grains = self.client.cmd('minion', 'grains.items')
 
+            minion_opts = self.minion_opts.copy()
+            minion_opts['color'] = self.parser.options.no_colors is False
+            salt.output.display_output(grains, 'grains', minion_opts)
 
         print_header('', sep='=', inline=True)
 
@@ -300,11 +309,18 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
+        import integration
+        integration.SYNDIC = None
         self.sub_minion_process.terminate()
+        self.sub_minion_process.join()
         self.minion_process.terminate()
+        self.minion_process.join()
         self.master_process.terminate()
+        self.master_process.join()
         self.syndic_process.terminate()
+        self.syndic_process.join()
         self.smaster_process.terminate()
+        self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
 
@@ -330,10 +346,10 @@ class TestDaemon(object):
             )
             return False
 
-        del(wait_minion_connections)
+        del wait_minion_connections
 
-        sync_needed = self.opts.clean
-        if self.opts.clean is False:
+        sync_needed = self.parser.options.clean
+        if self.parser.options.clean is False:
             def sumfile(fpath):
                 # Since we will be do'in this for small files, it should be ok
                 fobj = fopen(fpath)
@@ -374,7 +390,7 @@ class TestDaemon(object):
             if sync_minions.exitcode > 0:
                 return False
             sync_minions.terminate()
-            del(sync_minions)
+            del sync_minions
 
         return True
 
@@ -403,7 +419,7 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
-        if not self.opts.clean:
+        if not self.parser.options.clean:
             return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
@@ -411,8 +427,10 @@ class TestDaemon(object):
             shutil.rmtree(self.master_opts['root_dir'])
         if os.path.isdir(self.smaster_opts['root_dir']):
             shutil.rmtree(self.smaster_opts['root_dir'])
-        if os.path.isdir(TMP):
-            shutil.rmtree(TMP)
+
+        for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
@@ -489,7 +507,6 @@ class TestDaemon(object):
             for target in responses:
                 if target not in expected_connections:
                     # Someone(minion) else "listening"?
-                    print target
                     continue
                 expected_connections.remove(target)
                 sys.stdout.write('\r' + ' ' * PNUM + '\r')
@@ -545,6 +562,14 @@ class TestDaemon(object):
                         syncing.remove(name)
                         continue
 
+                    if isinstance(output['ret'], salt._compat.string_types):
+                        # An errors has occurred
+                        print(
+                            ' {RED_BOLD}*{ENDC} {0} Failed so sync modules: '
+                            '{1}'.format(name, output['ret'], **self.colors)
+                        )
+                        return False
+
                     print(
                         '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
                         '{1}'.format(
@@ -562,7 +587,47 @@ class TestDaemon(object):
         return True
 
 
-class SaltClientTestCaseMixIn(object):
+class AdaptedConfigurationTestCaseMixIn(object):
+
+    __slots__ = ()
+
+    def get_config_dir(self):
+        integration_config_dir = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf'
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_dir
+
+        for fname in os.listdir(integration_config_dir):
+            self.get_config_file_path(fname)
+        return TMP_CONF_DIR
+
+    def get_config_file_path(self, filename):
+        integration_config_file = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf', filename
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_file
+
+        if not os.path.isdir(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+
+        updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        if not os.path.isfile(updated_config_path):
+            self.__update_config(integration_config_file, updated_config_path)
+        return updated_config_path
+
+    def __update_config(self, source, dest):
+        if not os.path.isfile(dest):
+            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
+            configuration = yaml.load(open(source).read())
+            configuration['user'] = running_tests_user
+            open(dest, 'w').write(yaml.dump(configuration))
+
+
+class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
     __slots__ = ('client', '_salt_client_config_file_name_')
@@ -570,10 +635,7 @@ class SaltClientTestCaseMixIn(object):
     @property
     def client(self):
         return salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR, 'files', 'conf',
-                self._salt_client_config_file_name_
-            )
+            self.get_config_file_path(self._salt_client_config_file_name_)
         )
 
 
@@ -589,13 +651,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=30,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=25,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = ('file.chown', 'file.chgrp')
+        know_to_return_none = (
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+        )
         orig = self.client.cmd(
             minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
@@ -628,7 +692,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+            self.get_config_file_path('minion')
         )
 
     @property
@@ -637,7 +701,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
+            self.get_config_file_path('sub_minion')
         )
 
     @property
@@ -646,7 +710,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
 
 
@@ -661,7 +725,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=30)
+        orig = self.client.cmd('minion', function, arg, timeout=25)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
@@ -670,130 +734,28 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         return orig['minion']
 
 
-class ShellCase(TestCase):
+class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str, catch_stderr=False, timeout=None):
-        '''
-        Execute a script with the given argument string
-        '''
-        path = os.path.join(SCRIPT_DIR, script)
-        if not os.path.isfile(path):
-            return False
-        ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
-        cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
 
-        popen_kwargs = {
-            'shell': True,
-            'stdout': PIPE
-        }
+    _code_dir_ = CODE_DIR
+    _script_dir_ = SCRIPT_DIR
+    _python_executable_ = PYEXEC
 
-        if catch_stderr is True:
-            popen_kwargs['stderr'] = PIPE
-
-        if not sys.platform.lower().startswith('win'):
-            popen_kwargs['close_fds'] = True
-
-            def detach_from_parent_group():
-                # detach from parent group (no more inherited signals!)
-                os.setpgrp()
-
-            popen_kwargs['preexec_fn'] = detach_from_parent_group
-
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
-        process = Popen(cmd, **popen_kwargs)
-
-        if timeout is not None:
-            stop_at = datetime.now() + timedelta(seconds=timeout)
-            term_sent = False
-            while True:
-                process.poll()
-                if process.returncode is not None:
-                    break
-
-                if datetime.now() > stop_at:
-                    if term_sent is False:
-                        # Kill the process group since sending the term signal
-                        # would only terminate the shell, not the command
-                        # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                        term_sent = True
-                        continue
-
-                    # As a last resort, kill the process group
-                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-
-                    out = [
-                        'Process took more than {0} seconds to complete. '
-                        'Process Killed!'.format(timeout)
-                    ]
-                    if catch_stderr:
-                        return out, [
-                            'Process killed, unable to catch stderr output'
-                        ]
-                    return out
-
-        if catch_stderr:
-            if sys.version_info < (2, 7):
-                # On python 2.6, the subprocess'es communicate() method uses
-                # select which, is limited by the OS to 1024 file descriptors
-                # We need more available descriptors to run the tests which
-                # need the stderr output.
-                # So instead of .communicate() we wait for the process to
-                # finish, but, as the python docs state "This will deadlock
-                # when using stdout=PIPE and/or stderr=PIPE and the child
-                # process generates enough output to a pipe such that it
-                # blocks waiting for the OS pipe buffer to accept more data.
-                # Use communicate() to avoid that." <- a catch, catch situation
-                #
-                # Use this work around were it's needed only, python 2.6
-                process.wait()
-                out = process.stdout.read()
-                err = process.stderr.read()
-            else:
-                out, err = process.communicate()
-            # Force closing stderr/stdout to release file descriptors
-            process.stdout.close()
-            process.stderr.close()
-            try:
-                return out.splitlines(), err.splitlines()
-            finally:
-                try:
-                    process.terminate()
-                except OSError, err:
-                    # process already terminated
-                    pass
-
-        data = process.communicate()
-        process.stdout.close()
-
-        try:
-            return data[0].splitlines()
-        finally:
-            try:
-                process.terminate()
-            except OSError, err:
-                # process already terminated
-                pass
-
-    def run_salt(self, arg_str):
+    def run_salt(self, arg_str, with_retcode=False):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt', arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode)
 
-    def run_run(self, arg_str):
+    def run_run(self, arg_str, with_retcode=False):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-run', arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
 
     def run_run_plus(self, fun, options='', *arg):
         '''
@@ -805,7 +767,7 @@ class ShellCase(TestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
         with RedirectStdStreams():
@@ -813,50 +775,46 @@ class ShellCase(TestCase):
             ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script(
+            'salt-key',
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode
+        )
 
-    def run_cp(self, arg_str):
+    def run_cp(self, arg_str, with_retcode=False):
         '''
         Execute salt-cp
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-cp', arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
 
-    def run_call(self, arg_str):
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-call', arg_str)
+    def run_call(self, arg_str, with_retcode=False):
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
 
 
-class ShellCaseCommonTestsMixIn(object):
+class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
-    def test_version_includes_binary_name(self):
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
-
-        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(self._call_binary_, out)
-        self.assertIn(salt.__version__, out)
+    _call_binary_expected_version_ = salt.__version__
 
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
         from salt.utils import which
-        from salt.version import __version_info__
+        from salt.version import __version_info__, SaltStackVersion
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
 
         # Let's get the output of git describe
         process = subprocess.Popen(
-            [git, 'describe'],
+            [git, 'describe', '--tags', '--match', 'v[0-9]*'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -871,18 +829,16 @@ class ShellCaseCommonTestsMixIn(object):
                 )
             )
 
-        parsed_version = '{0}'.format(out.strip().lstrip('v'))
-        parsed_version_info = tuple([
-            int(i) for i in parsed_version.split('-', 1)[0].split('.')
-        ])
-        if parsed_version_info and parsed_version_info < __version_info__:
+        parsed_version = SaltStackVersion.parse(out)
+
+        if parsed_version.info < __version_info__:
             self.skipTest(
-                'We\'re likely about to release a new version. '
-                'This test would fail. Parsed({0!r}) < Expected({1!r})'.format(
-                    parsed_version_info, __version_info__
+                'We\'re likely about to release a new version. This test '
+                'would fail. Parsed({0!r}) < Expected({1!r})'.format(
+                    parsed_version.info, __version_info__
                 )
             )
-        elif parsed_version_info != __version_info__:
+        elif parsed_version.info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
@@ -892,7 +848,7 @@ class ShellCaseCommonTestsMixIn(object):
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version, out)
+        self.assertIn(parsed_version.string, out)
 
 
 class SaltReturnAssertsMixIn(object):
@@ -956,28 +912,32 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
-                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                    'Failed to get result. Salt Returned:\n{0}'.format(
+                        pprint.pformat(ret)
+                    )
                 )
 
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
@@ -986,23 +946,24 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
 
-    def assertInSaltComment(self, ret, in_comment):
+    def assertInSaltComment(self, in_comment, ret):
         return self.assertIn(
             in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
 
-    def assertNotInSaltComment(self, ret, not_in_comment):
+    def assertNotInSaltComment(self, not_in_comment, ret):
         return self.assertNotIn(
             not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
@@ -1010,12 +971,22 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
-    def assertInSaltReturn(self, ret, item_to_check, keys):
+    def assertInSalStatetWarning(self, in_comment, ret):
+        return self.assertIn(
+            in_comment, self.__getWithinSaltReturn(ret, 'warnings')
+        )
+
+    def assertNotInSaltStateWarning(self, not_in_comment, ret):
+        return self.assertNotIn(
+            not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
+        )
+
+    def assertInSaltReturn(self, item_to_check, ret, keys):
         return self.assertIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )
 
-    def assertNotInSaltReturn(self, ret, item_to_check, keys):
+    def assertNotInSaltReturn(self, item_to_check, ret, keys):
         return self.assertNotIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )

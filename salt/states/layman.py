@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Mangement of Gentoo Overlays using layman
-=========================================
+Management of Gentoo Overlays using layman
+==========================================
 
 A state module to manage Gentoo package overlays via layman
 
@@ -10,11 +11,13 @@ A state module to manage Gentoo package overlays via layman
         layman.present
 '''
 
+
 def __virtual__():
     '''
     Only load if the layman module is available in __salt__
     '''
     return 'layman' if 'layman.add' in __salt__ else False
+
 
 def present(name):
     '''
@@ -43,12 +46,13 @@ def present(name):
         if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to add'.format(name)
             ret['result'] = False
-        # Sucess
+        # Success
         else:
             ret['changes']['added'] = changes
             ret['comment'] = 'Overlay {0} added.'.format(name)
 
     return ret
+
 
 def absent(name):
     '''
@@ -77,7 +81,7 @@ def absent(name):
         if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to delete'.format(name)
             ret['result'] = False
-        # Sucess
+        # Success
         else:
             ret['changes']['deleted'] = changes
             ret['comment'] = 'Overlay {0} deleted.'.format(name)

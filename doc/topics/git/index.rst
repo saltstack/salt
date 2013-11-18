@@ -1,21 +1,21 @@
-=====================
-Salt Stack Git Policy
-=====================
+====================
+SaltStack Git Policy
+====================
 
-The Salt Stack team follows a git policy to maintain stability and consistency
+The SaltStack team follows a git policy to maintain stability and consistency
 with the repository. The git policy has been developed to encourage
 contributions and make contributing to Salt as easy as possible. Code 
-contributors to Salt Stack projects DO NOT NEED TO READ THIS DOCUMENT, because
-all contributions come into Salt Stack via a single gateway to make it as
+contributors to SaltStack projects DO NOT NEED TO READ THIS DOCUMENT, because
+all contributions come into SaltStack via a single gateway to make it as
 easy as possible for contributors to give us code.
 
-The primary rule of git management in Salt Stack is to make life easy on
+The primary rule of git management in SaltStack is to make life easy on
 contributors and developers to send in code. Simplicity is always a goal!
 
 New Code Entry
 ==============
 
-All new Salt Stack code is posted to the `develop` branch, this is the single
+All new SaltStack code is posted to the `develop` branch, this is the single
 point of entry. The only exception here is when a bugfix to develop cannot be
 cleanly merged into a release branch and the bugfix needs to be rewritten for
 the release branch.
@@ -23,7 +23,7 @@ the release branch.
 Release Branching
 =================
 
-Salt Stack maintains two types of releases, `Feature Releases` and
+SaltStack maintains two types of releases, `Feature Releases` and
 `Point Releases`. A feature release is managed by incrementing the first or
 second release point number, so 0.10.5 -> 0.11.0 signifies a feature release
 and 0.11.0 -> 0.11.1 signifies a point release, also a hypothetical
@@ -74,4 +74,4 @@ if there is a security fix they can be made sooner.
 The point release is only designated by tagging the commit on the release
 branch with release number using the existing convention (version 0.11.1 is
 tagged with v0.11.1). From the tag point a new source tarball is generated
-and published to Pypi, and a release announcement is made.
+and published to PyPI, and a release announcement is made.

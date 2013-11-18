@@ -46,7 +46,7 @@ like so:
     # salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
 
 This example would instruct all Salt minions to download the vimrc from a
-directory with the same name as their os grain and copy it to /etc/vimrc
+directory with the same name as their OS grain and copy it to /etc/vimrc
 
 For larger files, the cp.get_file module also supports gzip compression.
 Because gzip is CPU-intensive, this should only be used in

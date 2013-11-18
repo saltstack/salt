@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 import os
 
 # Import third party libs
 import yaml
+
+# Import salt libs
+import salt.utils
 
 
 def shell():
@@ -12,6 +16,7 @@ def shell():
     # Provides:
     #   shell
     return {'shell': os.environ.get('SHELL', '/bin/sh')}
+
 
 def config():
     '''
@@ -30,7 +35,7 @@ def config():
                 'grains'
                 )
     if os.path.isfile(gfn):
-        with open(gfn, 'rb') as fp_:
+        with salt.utils.fopen(gfn, 'rb') as fp_:
             try:
                 return yaml.safe_load(fp_.read())
             except Exception:

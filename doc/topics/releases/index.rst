@@ -7,3 +7,5 @@ Release notes and upgrade instructions
     :glob:
 
     *
+
+.. seealso:: :doc:`Legacy salt-cloud release docs <../cloud/releases/index>`

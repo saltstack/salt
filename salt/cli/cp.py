@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The cp module is used to execute the logic used by the salt-cp command
 line application, salt-cp is NOT intended to broadcast large files, it is

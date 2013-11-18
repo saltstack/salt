@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Set up the correct search system
 '''
@@ -20,15 +21,15 @@ def iter_ret(opts, ret):
     get_load = '{0}.get_load'.format(opts['ext_job_cache'])
     get_jid = '{0}.get_jid'.format(opts['ext_job_cache'])
     get_jids = '{0}.get_jids'.format(opts['ext_job_cache'])
-    if not get_load in ret:
+    if get_load not in ret:
         raise StopIteration
     else:
         get_load = ret[get_load]
-    if not get_jid in ret:
+    if get_jid not in ret:
         raise StopIteration
     else:
         get_jid = ret[get_jid]
-    if not get_jids in ret:
+    if get_jids not in ret:
         raise StopIteration
     else:
         get_jids = ret[get_jids]
@@ -40,42 +41,43 @@ def iter_ret(opts, ret):
         yield jids
 
 
-def _iter_dir(dir_, env):
+def _iter_dir(dir_, saltenv):
     ret = []
     for fn_ in os.listdir(dir_):
         path = os.path.join(dir_, fn_)
         if os.path.isdir(path):
-            yield _iter_dir(path, env)
+            yield _iter_dir(path, saltenv)
         elif os.path.isfile(path):
-            with open(path) as fp_:
+            with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
                         {'path': unicode(path),
-                         'env': unicode(env),
+                         'saltenv': unicode(saltenv),
                          'content': unicode(fp_.read())}
                         )
                 else:
                     ret.append(
                         {'path': unicode(path),
-                         'env': unicode(env),
+                         'saltenv': unicode(saltenv),
                          'content': u'bin'}
                         )
     yield ret
-                    
+
 
 def iter_roots(roots):
     '''
     Accepts the file_roots or the pillar_roots structures and yields
     {'path': <path>,
-     'env': <env>,
+     'saltenv': <saltenv>,
      'cont': <contents>}
     '''
-    for env, dirs in roots.items():
+    for saltenv, dirs in roots.items():
         for dir_ in dirs:
             if not os.path.isdir(dir_):
                 continue
-            for ret in _iter_dir(dir_, env):
+            for ret in _iter_dir(dir_, saltenv):
                 yield ret
+
 
 class Search(object):
     '''
@@ -95,7 +97,7 @@ class Search(object):
         Execute a search index run
         '''
         ifun = '{0}.index'.format(self.opts.get('search', ''))
-        if not ifun in self.search:
+        if ifun not in self.search:
             return
         return self.search[ifun]()
 
@@ -104,6 +106,6 @@ class Search(object):
         Search the index for the given term
         '''
         qfun = '{0}.query'.format(self.opts.get('search', ''))
-        if not qfun in self.search:
+        if qfun not in self.search:
             return
         return self.search[qfun](term)

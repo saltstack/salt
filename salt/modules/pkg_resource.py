@@ -1,14 +1,21 @@
+# -*- coding: utf-8 -*-
 '''
 Resources needed by pkg providers
 '''
 
 # Import python libs
-import os
-import re
-import yaml
-import pprint
+import fnmatch
 import logging
-import distutils.version
+import os
+import pprint
+import re
+import sys
+
+# Import third party libs
+import yaml
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -19,30 +26,23 @@ def _parse_pkg_meta(path):
     version number.
     '''
     def parse_rpm(path):
-        name = ''
-        version = ''
-        rel = ''
-        result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    match = re.match('^Name\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
-                        continue
-                if not version:
-                    match = re.match('^Version\s*:\s*(\S+)', line)
-                    if match:
-                        version = match.group(1)
-                        continue
-                if not rel:
-                    match = re.match('^Release\s*:\s*(\S+)', line)
-                    if match:
-                        rel = match.group(1)
-                        continue
-        if rel:
-            version += '-{0}'.format(rel)
-        return name, version
+        try:
+            import collections  # needed by _parse_pkginfo, DO NOT REMOVE
+            from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
+            from salt.utils import namespaced_function as _namespaced_function
+            _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
+        except ImportError:
+            log.critical('Error importing helper functions. This is almost '
+                         'certainly a bug.')
+            return '', ''
+        pkginfo = __salt__['cmd.run_all'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(__QUERYFORMAT, path)
+        ).get('stdout', '').strip()
+        pkginfo = _parse_pkginfo(pkginfo)
+        if pkginfo is None:
+            return '', ''
+        else:
+            return pkginfo.name, pkginfo.version
 
     def parse_pacman(path):
         name = ''
@@ -51,12 +51,12 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^Name\s*:\s*(\S+)', line)
+                    match = re.match(r'^Name\s*:\s*(\S+)', line)
                     if match:
                         name = match.group(1)
                         continue
                 if not version:
-                    match = re.match('^Version\s*:\s*(\S+)', line)
+                    match = re.match(r'^Version\s*:\s*(\S+)', line)
                     if match:
                         version = match.group(1)
                         continue
@@ -65,19 +65,46 @@ def _parse_pkg_meta(path):
     def parse_deb(path):
         name = ''
         version = ''
+        arch = ''
+        # This is ugly, will have to try to find a better way of accessing the
+        # __grains__ global.
+        cpuarch = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__grains__.get('cpuarch', '')
+        osarch = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__grains__.get('osarch', '')
+
         result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^\s*Package\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
+                    try:
+                        name = re.match(
+                            r'^\s*Package\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
                         continue
                 if not version:
-                    match = re.match('^\s*Version\s*:\s*(\S+)', line)
-                    if match:
-                        version = match.group(1)
+                    try:
+                        version = re.match(
+                            r'^\s*Version\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
                         continue
+                if cpuarch == 'x86_64' and not arch:
+                    try:
+                        arch = re.match(
+                            r'^\s*Architecture\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
+                        continue
+        if arch and cpuarch == 'x86_64':
+            if arch != 'all' and osarch == 'amd64' and osarch != arch:
+                name += ':{0}'.format(arch)
         return name, version
 
     if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):
@@ -93,46 +120,17 @@ def _parse_pkg_meta(path):
     return metaparser(path)
 
 
-def pack_pkgs(pkgs):
+def _repack_pkgs(pkgs):
     '''
-    Accepts a list of packages or package/version pairs (or a string
-    representing said list) and returns a dict of name/version pairs. For a
-    given package, if no version was specified (i.e. the value is a string and
-    not a dict, then the dict returned will use None as the value for that
-    package.
-
-    Example: '["foo", {"bar": 1.2}, "baz"]' would become
-             {'foo': None, 'bar': 1.2, 'baz': None}
-
-    CLI Example::
-
-        salt '*' pkg_resource.pack_pkgs '["foo", {"bar": 1.2}, "baz"]'
+    Repack packages specified using "pkgs" argument to pkg states into a single
+    dictionary
     '''
-    if isinstance(pkgs, basestring):
-        try:
-            pkgs = yaml.safe_load(pkgs)
-        except yaml.parser.ParserError as err:
-            log.error(err)
-            return {}
-    if not isinstance(pkgs, list) \
-            or [x for x in pkgs if not isinstance(x, (basestring, int,
-                                                      float, dict))]:
-        log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
-        log.error('Input must be a list of strings/dicts')
-        return {}
-    ret = {}
-    for pkg in pkgs:
-        if isinstance(pkg, (basestring, int, float)):
-            ret[pkg] = None
-        else:
-            if len(pkg) != 1:
-                log.error('Invalid input: package name/version pairs must '
-                          'contain only one element (data passed: '
-                          '{0}).'.format(pkg))
-                return {}
-            ret.update(pkg)
-    return dict([(str(x), str(y) if y is not None else y)
-                 for x, y in ret.iteritems()])
+    return dict(
+        [
+            (str(x), str(y) if y is not None else y)
+            for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
+        ]
+    )
 
 
 def pack_sources(sources):
@@ -140,10 +138,12 @@ def pack_sources(sources):
     Accepts list of dicts (or a string representing a list of dicts) and packs
     the key/value pairs into a single dict.
 
-    Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
-    become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
+    ``'[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'`` would become
+    ``{"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
@@ -191,80 +191,47 @@ def _verify_binary_pkg(srcinfo):
     return problems
 
 
-def check_desired(desired=None):
-    '''
-    Examines desired package names to make sure they were formatted properly.
-    Returns a list of problems encountered.
-
-    CLI Examples::
-
-        salt '*' pkg_resource.check_desired
-    '''
-    problems = []
-
-    # If minion is Gentoo-based, ensure packages are properly submitted as
-    # category/pkgname. For any package that does not follow this format, offer
-    # matches from the portage tree.
-    if __grains__['os_family'] == 'Gentoo':
-        for pkg in (desired or []):
-            if '/' not in pkg:
-                matches = __salt__['pkg.porttree_matches'](pkg)
-                if matches:
-                    msg = 'Package category missing for "{0}" (possible ' \
-                          'matches: {1}).'.format(pkg, ', '.join(matches))
-                else:
-                    msg = 'Package category missing for "{0}" and no match ' \
-                          'found in portage tree.'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
-
-    return problems
-
-
-def parse_targets(name=None, pkgs=None, sources=None):
+def parse_targets(name=None,
+                  pkgs=None,
+                  sources=None,
+                  saltenv='base',
+                  **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
     the packages are to come from a repository or a binary package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.parse_targets
     '''
+    if '__env__' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'__env__\'. This functionality will be removed in Salt '
+            'Boron.'
+        )
+        # Backwards compatibility
+        saltenv = kwargs['__env__']
 
-    # For Solaris, there is no repository, and only the "sources" param can be
-    # used. Warn if "name" or "pkgs" is provided, and require that "sources" is
-    # present.
-    if __grains__['os_family'] == 'Solaris':
-        if name:
-            log.warning('Parameter "name" ignored on Solaris hosts.')
-        if pkgs:
-            log.warning('Parameter "pkgs" ignored on Solaris hosts.')
-        if not sources:
-            log.error('"sources" option required with Solaris pkg installs')
-            return None, None
-    elif __grains__['os'] == 'MacOS' and sources:
+    if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    # "pkgs" is always ignored on Solaris.
-    if pkgs and sources and __grains__['os_family'] != 'Solaris':
+    if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
         return None, None
 
-    elif pkgs and __grains__['os_family'] != 'Solaris':
-        if name:
-            log.warning('"name" parameter will be ignored in favor of "pkgs"')
-        pkgs = pack_pkgs(pkgs)
+    elif pkgs:
+        pkgs = _repack_pkgs(pkgs)
         if not pkgs:
             return None, None
         else:
             return pkgs, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
-        # No need to warn for Solaris, warning taken care of above.
-        if name and __grains__['os_family'] != 'Solaris':
-            log.warning('"name" parameter will be ignored in favor of '
-                        '"sources".')
         sources = pack_sources(sources)
         if not sources:
             return None, None
@@ -272,10 +239,10 @@ def parse_targets(name=None, pkgs=None, sources=None):
         srcinfo = []
         for pkg_name, pkg_src in sources.iteritems():
             if __salt__['config.valid_fileproto'](pkg_src):
-                # Cache package from remote source (salt master, http, ftp)
+                # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
                                 pkg_src,
-                               __salt__['cp.cache_file'](pkg_src),
+                               __salt__['cp.cache_file'](pkg_src, saltenv),
                                'remote'))
             else:
                 # Package file local to the minion
@@ -297,33 +264,65 @@ def parse_targets(name=None, pkgs=None, sources=None):
         # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo], 'file'
 
-    elif name and __grains__['os_family'] != 'Solaris':
-        return {name: None}, 'repository'
+    elif name:
+        return dict([(x, None) for x in name.split(',')]), 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')
         return None, None
 
 
+def version(*names, **kwargs):
+    '''
+    Common interface for obtaining the version of installed packages.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg_resource.version vim
+        salt '*' pkg_resource.version foo bar baz
+        salt '*' pkg_resource.version 'python*'
+    '''
+    ret = {}
+    versions_as_list = \
+        salt.utils.is_true(kwargs.pop('versions_as_list', False))
+    pkg_glob = False
+    if len(names) != 0:
+        pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        for name in names:
+            if '*' in name:
+                pkg_glob = True
+                for match in fnmatch.filter(pkgs.keys(), name):
+                    ret[match] = pkgs.get(match, [])
+            else:
+                ret[name] = pkgs.get(name, [])
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    # Return a string if no globbing is used, and there is one item in the
+    # return dict
+    if len(ret) == 1 and not pkg_glob:
+        try:
+            return ret.values()[0]
+        except IndexError:
+            return ''
+    return ret
+
+
 def add_pkg(pkgs, name, version):
     '''
     Add a package to a dict of installed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.add_pkg '{}' bind 9
     '''
-
-    ''' multiple-version support (not yet implemented)
-    cur = pkgs.get(name)
-    if cur is None:
-        pkgs[name] = version
-    elif isinstance(cur, basestring):
-        pkgs[name] = [cur, version]
-    else:
-        pkgs[name].append(version)
-    '''
-    pkgs[name] = version
+    try:
+        pkgs.setdefault(name, []).append(version)
+    except AttributeError as e:
+        log.exception(e)
 
 
 def sort_pkglist(pkgs):
@@ -332,90 +331,68 @@ def sort_pkglist(pkgs):
     versions for any packages that have multiple versions installed, so that
     two package lists can be compared to one another.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.sort_pkglist '["3.45", "2.13"]'
     '''
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
-    for key in pkgs.keys():
-        if isinstance(pkgs[key], list):
+    try:
+        for key in pkgs.keys():
             pkgs[key].sort()
+    except AttributeError as e:
+        log.exception(e)
 
 
-def find_changes(old=None, new=None):
+def stringify(pkgs):
     '''
-    Compare before and after results from pkg.list_pkgs() to determine what
-    changes were made to the packages installed on the minion.
+    Takes a dict of package name/version information and joins each list of
+    installed versions into a string.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg_resource.find_changes
-    '''
-    pkgs = {}
-    for npkg in set((new or {}).keys()).union((old or {}).keys()):
-        if npkg not in old:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-        elif npkg not in new:
-            # the package is removed
-            pkgs[npkg] = {'new': '',
-                          'old': old[npkg]}
-        elif new[npkg] != old[npkg]:
-            # the package was here before and the version has changed
-            pkgs[npkg] = {'old': old[npkg],
-                          'new': new[npkg]}
-    return pkgs
+    .. code-block:: bash
 
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Compares two version strings using distutils.version.LooseVersion. This is
-    a fallback for providers which don't have a version comparison utility
-    built into them.  Return -1 if version1 < version2, 0 if version1 ==
-    version2, and 1 if version1 > version2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg_resource.perform_cmp
+        salt '*' pkg_resource.stringify 'vim: 7.127'
     '''
     try:
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
-            return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
-            return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
-            return 1
-    except Exception as e:
+        for key in pkgs.keys():
+            pkgs[key] = ','.join(pkgs[key])
+    except AttributeError as e:
         log.exception(e)
-    return None
 
 
-def compare(pkg1='', oper='==', pkg2=''):
+def version_clean(version):
     '''
-    Package version comparison function.
+    Clean the version string removing extra data.
+    This function will simply try to call ``pkg.version_clean``.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg_resource.compare
+    .. code-block:: bash
+
+        salt '*' pkg_resource.version_clean <version_string>
     '''
-    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
-               '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
-        log.error('Invalid operator "{0}" for package '
-                  'comparison'.format(oper))
-        return False
+    if version and 'pkg.version_clean' in __salt__:
+        return __salt__['pkg.version_clean'](version)
 
-    cmp_result = __salt__['pkg.perform_cmp'](pkg1, pkg2)
-    if cmp_result is None:
-        return False
+    return version
 
-    if oper == '!=':
-        return cmp_result not in cmp_map['==']
-    else:
-        return cmp_result in cmp_map[oper]
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+    This function will simply try to call "pkg.check_extra_requirements".
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirements>
+    '''
+    if pkgver and 'pkg.check_extra_requirements' in __salt__:
+        return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
+
+    return True

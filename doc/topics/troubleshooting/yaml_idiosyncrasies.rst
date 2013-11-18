@@ -31,14 +31,17 @@ but YAML will follow whatever indentation system that the individual file
 uses. Indentation of two spaces works very well for SLS files given the
 fact that the data is uniform and not deeply nested.
 
+.. _nested-dict-indentation:
+
 Nested Dicts (key=value)
 ------------------------
 
-When `dicts`_: are more deeply nested, they no longer follow the same
-indentation logic. This is rarely something that comes up in Salt,
-since deeply nested options like these are discouraged when making State
-modules, but some do exist. A good example is the context and default options
-in the :doc:`file.managed</ref/states/all/salt.states.file>` state:
+When :ref:`dicts <python2:typesmapping>` are more deeply nested, they no longer
+follow the same indentation logic. This is rarely something that comes up in
+Salt, since deeply nested options like these are discouraged when making State
+modules, but some do exist. A good example of this can be found in the
+``context`` and ``default`` options from the :doc:`file.managed
+</ref/states/all/salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -56,10 +59,11 @@ in the :doc:`file.managed</ref/states/all/salt.states.file>` state:
             custom_var: "default value"
             other_var: 123
 
-Notice that the spacing used is 2 spaces, and that when defining the context
-and defaults options there is a 4 space indent. If only a 2 space indent is
-used then the information will not be loaded correctly. If using double spacing
-is not desirable, then a deeply nested dict can be declared with curly braces:
+Notice that while the indentation is two spaces per level, for the values under
+the ``context`` and ``defaults`` options there is a four-space indent. If only
+two spaces are used to indent, then the information will not be loaded
+correctly. If using a double indent is not desirable, then a deeply-nested dict
+can be declared with curly braces:
 
 .. code-block:: yaml
 
@@ -77,7 +81,15 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
           custom_var: "default value",
           other_var: 123 }
 
-.. _`dicts`: http://docs.python.org/library/stdtypes.html#dict
+
+True/False, Yes/No, On/Off
+==========================
+
+PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
+versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
+``on``, and ``off``). This can be especially problematic when constructing
+Pillar data. Make sure that your Pillars which need to use the string versions
+of these values are enclosed in quotes.
 
 Integers are Parsed as Integers
 ===============================
@@ -85,9 +97,10 @@ Integers are Parsed as Integers
 NOTE: This has been fixed in salt 0.10.0, as of this release passing an
 integer that is preceded by a 0 will be correctly parsed
 
-When passing `integers`_ into an SLS file, they are passed as integers. This means
-that if a state accepts a string value and an integer is passed, that an
-integer will be sent. The solution here is to send the integer as a string.
+When passing :func:`integers <python2:int>` into an SLS file, they are
+passed as integers. This means that if a state accepts a string value
+and an integer is passed, that an integer will be sent. The solution here
+is to send the integer as a string.
 
 This is best explained when setting the mode for a file:
 
@@ -115,8 +128,7 @@ preceded by a 0 then it needs to be passed as a string:
         - user: root
         - group: root
         - mode: '0644'
-        
-.. _`integers`: http://docs.python.org/library/functions.html#int
+
 
 YAML does not like "Double Short Decs"
 ======================================
@@ -219,8 +231,8 @@ Examples:
     - Alef: "\u05d0"
 
 
-    
-List of useable `Unicode characters`_  will help you to identify correct numbers.
+
+List of usable `Unicode characters`_  will help you to identify correct numbers.
 
 .. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
 
@@ -237,3 +249,22 @@ This shell command can find wrong characters in your SLS files:
 
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 
+
+Underscores stripped in Integer Definitions
+===========================================
+
+If a definition only includes numbers and underscores, it is parsed by YAML as
+an integer and all underscores are stripped.  To ensure the object becomes a
+string, it should be surrounded by quotes.  `More information here`_.
+
+.. _`More information here`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
+
+Here's an example:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('2013_05_10')
+    20130510
+    >>> yaml.safe_load('"2013_05_10"')
+    '2013_05_10'

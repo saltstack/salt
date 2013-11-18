@@ -1,9 +1,16 @@
 '''
 Tests for the file state
 '''
+
+# Import python libs
+import tempfile
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-import tempfile
 
 
 class CMDTest(integration.ModuleCase,

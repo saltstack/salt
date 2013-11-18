@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 Support for modifying make.conf under Gentoo
 
 '''
+
 
 def __virtual__():
     '''
@@ -10,6 +12,7 @@ def __virtual__():
     if __grains__['os'] == 'Gentoo':
         return 'makeconf'
     return False
+
 
 def _get_makeconf():
     '''
@@ -22,6 +25,7 @@ def _get_makeconf():
         return old_conf
     elif __salt__['file.file_exists'](new_conf):
         return new_conf
+
 
 def _add_var(var, value):
     '''
@@ -36,13 +40,14 @@ def _add_var(var, value):
     if __salt__['file.contains'](makeconf, layman):
         # TODO perhaps make this a function in the file module?
         cmd = r"sed -i '/{0}/ i\{1}' {2}".format(
-            layman.replace("/", "\/"),
+            layman.replace("/", "\\/"),
             fullvar,
             makeconf)
         print cmd
         __salt__['cmd.run'](cmd)
     else:
         __salt__['file.append'](makeconf, fullvar)
+
 
 def set_var(var, value):
     '''
@@ -53,7 +58,9 @@ def set_var(var, value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.set_var 'LINGUAS' 'en'
     '''
@@ -63,13 +70,15 @@ def set_var(var, value):
 
     # If var already in file, replace its value
     if old_value is not None:
-        __salt__['file.sed'](makeconf, '^{0}=.*'.format(var),
-                             '{0}="{1}"'.format(var, value))
+        __salt__['file.sed'](
+            makeconf, '^{0}=.*'.format(var), '{0}="{1}"'.format(var, value)
+        )
     else:
         _add_var(var, value)
 
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
+
 
 def remove_var(var):
     '''
@@ -80,7 +89,9 @@ def remove_var(var):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.remove_var 'LINGUAS'
     '''
@@ -95,6 +106,7 @@ def remove_var(var):
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
 
+
 def append_var(var, value):
     '''
     Add to or create a new variable in the make.conf
@@ -104,7 +116,9 @@ def append_var(var, value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.append_var 'LINGUAS' 'en'
     '''
@@ -123,6 +137,7 @@ def append_var(var, value):
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
 
+
 def trim_var(var, value):
     '''
     Remove a value from a variable in the make.conf
@@ -132,7 +147,9 @@ def trim_var(var, value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.trim_var 'LINGUAS' 'en'
     '''
@@ -147,14 +164,17 @@ def trim_var(var, value):
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
 
+
 def get_var(var):
     '''
-    Get the value of a variable in the make.conf
+    Get the value of a variable in make.conf
 
-    Return the value of the variable or None if the variable is
-    not in the make.conf
+    Return the value of the variable or None if the variable is not in
+    make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_var 'LINGUAS'
     '''
@@ -167,13 +187,16 @@ def get_var(var):
     except IndexError:
         return None
 
+
 def var_contains(var, value):
     '''
     Verify if variable contains a value in make.conf
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.var_contains 'LINGUAS' 'en'
     '''
@@ -184,6 +207,7 @@ def var_contains(var, value):
         return False
     return value in setval.split()
 
+
 def set_cflags(value):
     '''
     Set the CFLAGS variable
@@ -193,11 +217,14 @@ def set_cflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.set_cflags '\-march=native \-O2 \-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.set_cflags '-march=native -O2 -pipe'
     '''
     return set_var('CFLAGS', value)
+
 
 def get_cflags():
     '''
@@ -206,11 +233,14 @@ def get_cflags():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_cflags
     '''
     return get_var('CFLAGS')
+
 
 def append_cflags(value):
     '''
@@ -221,11 +251,14 @@ def append_cflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.append_cflags '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.append_cflags '-pipe'
     '''
     return append_var('CFLAGS', value)
+
 
 def trim_cflags(value):
     '''
@@ -236,11 +269,14 @@ def trim_cflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.trim_cflags '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.trim_cflags '-pipe'
     '''
-    return trim_cflags('CFLAGS', value)
+    return trim_var('CFLAGS', value)
+
 
 def cflags_contains(value):
     '''
@@ -248,11 +284,14 @@ def cflags_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.cflags_contains '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.cflags_contains '-pipe'
     '''
     return var_contains('CFLAGS', value)
+
 
 def set_cxxflags(value):
     '''
@@ -263,11 +302,14 @@ def set_cxxflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.set_cxxflags '\-march=native \-O2 \-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.set_cxxflags '-march=native -O2 -pipe'
     '''
     return set_var('CXXFLAGS', value)
+
 
 def get_cxxflags():
     '''
@@ -276,11 +318,14 @@ def get_cxxflags():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_cxxflags
     '''
     return get_var('CXXFLAGS')
+
 
 def append_cxxflags(value):
     '''
@@ -291,11 +336,14 @@ def append_cxxflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.append_cxxflags '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.append_cxxflags '-pipe'
     '''
     return append_var('CXXFLAGS', value)
+
 
 def trim_cxxflags(value):
     '''
@@ -306,11 +354,14 @@ def trim_cxxflags(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.trim_cxxflags '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.trim_cxxflags '-pipe'
     '''
-    return trim_cxxflags('CXXFLAGS', value)
+    return trim_var('CXXFLAGS', value)
+
 
 def cxxflags_contains(value):
     '''
@@ -318,11 +369,14 @@ def cxxflags_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.cxxflags_contains '\-pipe'
+    .. code-block:: bash
+
+        salt '*' makeconf.cxxflags_contains '-pipe'
     '''
     return var_contains('CXXFLAGS', value)
+
 
 def set_chost(value):
     '''
@@ -333,11 +387,14 @@ def set_chost(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.set_chost 'x86_64-pc-linux-gnu'
     '''
     return set_var('CHOST', value)
+
 
 def get_chost():
     '''
@@ -346,11 +403,14 @@ def get_chost():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_chost
     '''
     return get_var('CHOST')
+
 
 def chost_contains(value):
     '''
@@ -358,11 +418,14 @@ def chost_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.chost_contains 'x86_64-pc-linux-gnu'
     '''
     return var_contains('CHOST', value)
+
 
 def set_makeopts(value):
     '''
@@ -373,11 +436,14 @@ def set_makeopts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.set_makeopts '\-j3'
+    .. code-block:: bash
+
+        salt '*' makeconf.set_makeopts '-j3'
     '''
     return set_var('MAKEOPTS', value)
+
 
 def get_makeopts():
     '''
@@ -386,11 +452,14 @@ def get_makeopts():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_makeopts
     '''
     return get_var('MAKEOPTS')
+
 
 def append_makeopts(value):
     '''
@@ -401,11 +470,14 @@ def append_makeopts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.append_makeopts '\-j3'
+    .. code-block:: bash
+
+        salt '*' makeconf.append_makeopts '-j3'
     '''
     return append_var('MAKEOPTS', value)
+
 
 def trim_makeopts(value):
     '''
@@ -416,11 +488,14 @@ def trim_makeopts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.trim_makeopts '\-j3'
+    .. code-block:: bash
+
+        salt '*' makeconf.trim_makeopts '-j3'
     '''
-    return trim_makeopts('MAKEOPTS', value)
+    return trim_var('MAKEOPTS', value)
+
 
 def makeopts_contains(value):
     '''
@@ -428,11 +503,14 @@ def makeopts_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.makeopts_contains '\-j3'
+    .. code-block:: bash
+
+        salt '*' makeconf.makeopts_contains '-j3'
     '''
     return var_contains('MAKEOPTS', value)
+
 
 def set_emerge_default_opts(value):
     '''
@@ -443,11 +521,14 @@ def set_emerge_default_opts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.set_emerge_default_opts '\-\-jobs'
+    .. code-block:: bash
+
+        salt '*' makeconf.set_emerge_default_opts '--jobs'
     '''
     return set_var('EMERGE_DEFAULT_OPTS', value)
+
 
 def get_emerge_default_opts():
     '''
@@ -456,11 +537,14 @@ def get_emerge_default_opts():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_emerge_default_opts
     '''
     return get_var('EMERGE_DEFAULT_OPTS')
+
 
 def append_emerge_default_opts(value):
     '''
@@ -471,11 +555,14 @@ def append_emerge_default_opts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.append_emerge_default_opts '\-\-jobs'
+    .. code-block:: bash
+
+        salt '*' makeconf.append_emerge_default_opts '--jobs'
     '''
     return append_var('EMERGE_DEFAULT_OPTS', value)
+
 
 def trim_emerge_default_opts(value):
     '''
@@ -486,11 +573,14 @@ def trim_emerge_default_opts(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.trim_emerge_default_opts '\-\-jobs'
+    .. code-block:: bash
+
+        salt '*' makeconf.trim_emerge_default_opts '--jobs'
     '''
-    return trim_emerge_default_opts('EMERGE_DEFAULT_OPTS', value)
+    return trim_var('EMERGE_DEFAULT_OPTS', value)
+
 
 def emerge_default_opts_contains(value):
     '''
@@ -498,11 +588,14 @@ def emerge_default_opts_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' makeconf.emerge_default_opts_contains '\-\-jobs'
+    .. code-block:: bash
+
+        salt '*' makeconf.emerge_default_opts_contains '--jobs'
     '''
     return var_contains('EMERGE_DEFAULT_OPTS', value)
+
 
 def set_gentoo_mirrors(value):
     '''
@@ -513,11 +606,14 @@ def set_gentoo_mirrors(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.set_gentoo_mirrors 'http://distfiles.gentoo.org'
     '''
     return set_var('GENTOO_MIRRORS', value)
+
 
 def get_gentoo_mirrors():
     '''
@@ -526,11 +622,14 @@ def get_gentoo_mirrors():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_gentoo_mirrors
     '''
     return get_var('GENTOO_MIRRORS')
+
 
 def append_gentoo_mirrors(value):
     '''
@@ -541,11 +640,14 @@ def append_gentoo_mirrors(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.append_gentoo_mirrors 'http://distfiles.gentoo.org'
     '''
     return append_var('GENTOO_MIRRORS', value)
+
 
 def trim_gentoo_mirrors(value):
     '''
@@ -556,11 +658,14 @@ def trim_gentoo_mirrors(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.trim_gentoo_mirrors 'http://distfiles.gentoo.org'
     '''
-    return trim_gentoo_mirrors('GENTOO_MIRRORS', value)
+    return trim_var('GENTOO_MIRRORS', value)
+
 
 def gentoo_mirrors_contains(value):
     '''
@@ -568,11 +673,14 @@ def gentoo_mirrors_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.gentoo_mirrors_contains 'http://distfiles.gentoo.org'
     '''
     return var_contains('GENTOO_MIRRORS', value)
+
 
 def set_sync(value):
     '''
@@ -583,11 +691,14 @@ def set_sync(value):
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.set_sync 'rsync://rsync.namerica.gentoo.org/gentoo-portage'
     '''
     return set_var('SYNC', value)
+
 
 def get_sync():
     '''
@@ -596,11 +707,14 @@ def get_sync():
     Return the value of the variable or None if the variable is
     not in the make.conf
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.get_sync
     '''
     return get_var('SYNC')
+
 
 def sync_contains(value):
     '''
@@ -608,8 +722,77 @@ def sync_contains(value):
 
     Return True if value is set for var
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' makeconf.sync_contains 'rsync://rsync.namerica.gentoo.org/gentoo-portage'
     '''
     return var_contains('SYNC', value)
+
+
+def get_features():
+    '''
+    Get the value of FEATURES variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' makeconf.get_features
+    '''
+    return get_var('FEATURES')
+
+
+def append_features(value):
+    '''
+    Add to or create a new FEATURES in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' makeconf.append_features 'webrsync-gpg'
+    '''
+    return append_var('FEATURES', value)
+
+
+def trim_features(value):
+    '''
+    Remove a value from FEATURES variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' makeconf.trim_features 'webrsync-gpg'
+    '''
+    return trim_var('FEATURES', value)
+
+
+def features_contains(value):
+    '''
+    Verify if FEATURES variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' makeconf.features_contains 'webrsync-gpg'
+    '''
+    return var_contains('FEATURES', value)

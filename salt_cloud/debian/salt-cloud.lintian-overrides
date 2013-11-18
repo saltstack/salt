@@ -1,0 +1,16 @@
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Arch-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Arch.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Fedora-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Fedora.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/FreeBSD-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/FreeBSD.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/None.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/RHEL5-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/RHEL5.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/RHEL6-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/RHEL6.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/SmartOS.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Ubuntu-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Ubuntu.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Debian-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Debian.sh

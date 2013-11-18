@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 '''
 Salt compatibility code
 '''
+# pylint: disable=W0611
 
 # Import python libs
 import sys
@@ -9,6 +11,23 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+try:
+    # Python >2.5
+    import xml.etree.cElementTree as ElementTree
+except ImportError:
+    try:
+        # Python >2.5
+        import xml.etree.ElementTree as ElementTree
+    except ImportError:
+        try:
+            # normal cElementTree install
+            import elementtree.cElementTree as ElementTree
+        except ImportError:
+            try:
+                # normal ElementTree install
+                import elementtree.ElementTree as ElementTree
+            except ImportError:
+                raise
 
 
 # True if we are running on Python 3.
@@ -19,7 +38,7 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 if PY3:
     string_types = str,
     integer_types = int,
@@ -110,20 +129,26 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 '''
 
 if PY3:
-    from urllib import parse
+    # pylint: disable=E0611
+    from urllib.parse import urlparse
+    from urllib.parse import urlunparse
     from urllib.error import URLError
     import http.server as BaseHTTPServer
     from urllib.error import HTTPError
-    urlparse = parse
     from urllib.parse import quote as url_quote
     from urllib.parse import quote_plus as url_quote_plus
     from urllib.parse import unquote as url_unquote
     from urllib.parse import urlencode as url_encode
     from urllib.request import urlopen as url_open
+    from urllib.request import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
+    from urllib.request import HTTPBasicAuthHandler as url_auth_handler
+    from urllib.request import build_opener as url_build_opener
+    from urllib.request import install_opener as url_install_opener
     url_unquote_text = url_unquote
     url_unquote_native = url_unquote
 else:
     from urlparse import urlparse
+    from urlparse import urlunparse
     import BaseHTTPServer
     from urllib2 import HTTPError, URLError
     from urllib import quote as url_quote
@@ -131,9 +156,15 @@ else:
     from urllib import unquote as url_unquote
     from urllib import urlencode as url_encode
     from urllib2 import urlopen as url_open
+    from urllib2 import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
+    from urllib2 import HTTPBasicAuthHandler as url_auth_handler
+    from urllib2 import build_opener as url_build_opener
+    from urllib2 import install_opener as url_install_opener
+
     def url_unquote_text(v, encoding='utf-8', errors='replace'):
         v = url_unquote(v)
         return v.decode(encoding, errors)
+
     def url_unquote_native(v, encoding='utf-8', errors='replace'):
         return native_(url_unquote_text(v, encoding, errors))
 
@@ -146,4 +177,9 @@ if PY3:
     from io import StringIO
 else:
     from StringIO import StringIO
-# pylint: enable-msg=C0103
+
+if PY3:
+    import queue as Queue
+else:
+    import Queue
+# pylint: enable=C0103

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 External Nodes Classifier
 =========================
@@ -64,4 +65,4 @@ def top(**kwargs):
             ret[env] = ndata['classes']
         else:
             return ret
-    return ret 
+    return ret

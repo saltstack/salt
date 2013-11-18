@@ -1,41 +1,73 @@
+# -*- coding: utf-8 -*-
 '''
 Manage PHP pecl extensions.
 '''
 
 # Import python libs
 import re
+import logging
 
+# Import salt libs
+import salt.utils
 
 __opts__ = {}
 __pillar__ = {}
 
+__func_alias__ = {
+    'list_': 'list'
+}
 
-def _pecl(command):
+log = logging.getLogger(__name__)
+
+
+def _pecl(command, defaults=False):
     '''
     Execute the command passed with pecl
     '''
     cmdline = 'pecl {0}'.format(command)
+    if salt.utils.is_true(defaults):
+        cmdline = "printf '\n' | " + cmdline
 
     ret = __salt__['cmd.run_all'](cmdline)
 
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
-        return False
+        log.error('Problem running pecl. Is php-pear installed?')
+        return ''
 
 
-def install(pecls):
+def install(pecls, defaults=False, force=False, preferred_state='stable'):
     '''
     Installs one or several pecl extensions.
 
     pecls
         The pecl extensions to install.
 
-    CLI Example::
+    defaults
+        Use default answers for extensions such as pecl_http which ask
+        questions before installation. Without this option, the pecl.installed
+        state will hang indefinitely when trying to install these extensions.
+
+    force
+        Whether to force the installed version or not
+
+    .. note::
+        The ``defaults`` option will be available in version 0.17.0.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.install fuse
     '''
-    return _pecl('install {0}'.format(pecls))
+    preferred_state = '-d preferred_state={0}'.format(preferred_state)
+    if force:
+        return _pecl('{0} install -f {1}'.format(preferred_state, pecls),
+                     defaults=defaults)
+    else:
+        return _pecl('{0} install {1}'.format(preferred_state, pecls),
+                     defaults=defaults)
 
 
 def uninstall(pecls):
@@ -45,7 +77,9 @@ def uninstall(pecls):
     pecls
         The pecl extensions to uninstall.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.uninstall fuse
     '''
@@ -54,23 +88,27 @@ def uninstall(pecls):
 
 def update(pecls):
     '''
-    Update one or several pecl exntesions.
+    Update one or several pecl extensions.
 
     pecls
         The pecl extensions to update.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.update fuse
     '''
     return _pecl('install -U {0}'.format(pecls))
 
 
-def list():
+def list_():
     '''
     List installed pecl extensions.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.list
     '''

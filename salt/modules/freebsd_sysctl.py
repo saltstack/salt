@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for viewing and modifying sysctl parameters
 '''
@@ -6,12 +7,15 @@ Module for viewing and modifying sysctl parameters
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Define the module's virtual name
+__virtualname__ = 'sysctl'
+
 
 def __virtual__():
     '''
     Only run on FreeBSD systems
     '''
-    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
 
 
 def _formatfor(name, value, config, tail=''):
@@ -25,7 +29,9 @@ def show():
     '''
     Return a list of sysctl parameters for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.show
     '''
@@ -63,7 +69,9 @@ def get(name):
     '''
     Return a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.get hw.physmem
     '''
@@ -76,7 +84,9 @@ def assign(name, value):
     '''
     Assign a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.assign net.inet.icmp.icmplim 50
     '''
@@ -96,7 +106,9 @@ def persist(name, value, config='/etc/sysctl.conf'):
     '''
     Assign and persist a simple sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.persist net.inet.icmp.icmplim 50
         salt '*' sysctl.persist coretemp_load NO config=/boot/loader.conf

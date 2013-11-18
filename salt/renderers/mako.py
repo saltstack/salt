@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 # Import python libs
@@ -8,7 +9,7 @@ import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
 
-def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
+def render(template_file, saltenv='base', sls='', context=None, tmplpath=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
     Mako rendering system.
@@ -20,7 +21,7 @@ def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
                     grains=__grains__,
                     opts=__opts__,
                     pillar=__pillar__,
-                    env=env,
+                    saltenv=saltenv,
                     sls=sls,
                     context=context,
                     tmplpath=tmplpath,

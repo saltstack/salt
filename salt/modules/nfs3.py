@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing NFS version 3.
 '''
@@ -5,6 +6,7 @@ Module for managing NFS version 3.
 # Import python libs
 import logging
 
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -12,7 +14,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
     if not salt.utils.which('showmount'):
         return False
@@ -23,32 +25,33 @@ def list_exports(exports='/etc/exports'):
     '''
     List configured exports
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nfs.list_exports
     '''
     ret = {}
-    f = open(exports, 'r')
-    for line in f.read().splitlines():
-        if not line:
-            continue
-        if line.startswith('#'):
-            continue
-        comps = line.split()
-        ret[comps[0]] = []
-        newshares = []
-        for perm in comps[1:]:
-            if perm.startswith('/'):
-                newshares.append(perm)
+    with salt.utils.fopen(exports, 'r') as efl:
+        for line in efl.read().splitlines():
+            if not line:
                 continue
-            permcomps = perm.split('(')
-            permcomps[1] = permcomps[1].replace(')', '')
-            hosts = permcomps[0].split(',')
-            options = permcomps[1].split(',')
-            ret[comps[0]].append({'hosts': hosts, 'options': options})
-        for share in newshares:
-            ret[share] = ret[comps[0]]
-    f.close()
+            if line.startswith('#'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = []
+            newshares = []
+            for perm in comps[1:]:
+                if perm.startswith('/'):
+                    newshares.append(perm)
+                    continue
+                permcomps = perm.split('(')
+                permcomps[1] = permcomps[1].replace(')', '')
+                hosts = permcomps[0].split(',')
+                options = permcomps[1].split(',')
+                ret[comps[0]].append({'hosts': hosts, 'options': options})
+            for share in newshares:
+                ret[share] = ret[comps[0]]
     return ret
 
 
@@ -56,7 +59,9 @@ def del_export(exports='/etc/exports', path=None):
     '''
     Remove an export
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nfs.del_export /media/storage
     '''
@@ -79,12 +84,11 @@ def _write_exports(exports, edict):
         /media/storage *(ro,sync,no_subtree_check)
         /media/data *(ro,sync,no_subtree_check)
     '''
-    f = open(exports, 'w')
-    for export in edict:
-        line = export
-        for perms in edict[export]:
-            hosts = ','.join(perms['hosts'])
-            options = ','.join(perms['options'])
-            line += ' {0}({1})'.format(hosts, options)
-        f.write('{0}\n'.format(line))
-    f.close()
+    with salt.utils.fopen(exports, 'w') as efh:
+        for export in edict:
+            line = export
+            for perms in edict[export]:
+                hosts = ','.join(perms['hosts'])
+                options = ','.join(perms['options'])
+                line += ' {0}({1})'.format(hosts, options)
+            efh.write('{0}\n'.format(line))

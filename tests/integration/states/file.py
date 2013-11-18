@@ -5,10 +5,18 @@ Tests for the file state
 # Import python libs
 import os
 import shutil
+import tempfile
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+
+# Import Python libs
+import stat
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -29,7 +37,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.symlink test interface
         '''
-        name = os.path.join(integration.TMP, 'symlink')
+        name = os.path.join(integration.TMP, 'symlink2')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
         self.assertSaltNoneReturn(ret)
@@ -104,16 +112,53 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_dir_mode(self):
+        '''
+        Tests to ensure that file.managed creates directories with the
+        permissions requested with the dir_mode argument
+        '''
+        desired_mode = 511  # 0777 in octal
+        name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://grail/scene33',
+            mode=600,
+            makedirs=True,
+            dir_mode=oct(desired_mode)  # 0777
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(os.path.join(integration.TMP, 'a')).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
     def test_test_managed(self):
         '''
         file.managed test interface
         '''
-        name = os.path.join(integration.TMP, 'grail_not_scene33')
+        name = os.path.join(integration.TMP, 'grail_not_not_scene33')
         ret = self.run_state(
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(name))
+
+    def test_managed_show_diff_false(self):
+        '''
+        file.managed test interface
+        '''
+        name = os.path.join(integration.TMP, 'grail_not_scene33')
+        with open(name, 'wb') as fp_:
+            fp_.write('test_managed_show_diff_false\n')
+
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://grail/scene33',
+            show_diff=False
+        )
+
+        changes = ret.values()[0]['changes']
+        self.assertEqual('<show_diff=False>', changes['diff'])
 
     def test_directory(self):
         '''
@@ -133,6 +178,106 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isdir(name))
 
+    def test_directory_clean(self):
+        '''
+        file.directory with clean=True
+        '''
+        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+
+        strayfile = os.path.join(name, 'strayfile')
+        salt.utils.fopen(strayfile, 'w').close()
+
+        straydir = os.path.join(name, 'straydir')
+        if not os.path.isdir(straydir):
+            os.makedirs(straydir)
+
+        salt.utils.fopen(os.path.join(straydir, 'strayfile2'), 'w').close()
+
+        ret = self.run_state('file.directory', name=name, clean=True)
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.exists(strayfile))
+            self.assertFalse(os.path.exists(straydir))
+            self.assertTrue(os.path.isdir(name))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_directory_clean_exclude(self):
+        '''
+        file.directory with clean=True and exclude_pat set
+        '''
+        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+
+        strayfile = os.path.join(name, 'strayfile')
+        salt.utils.fopen(strayfile, 'w').close()
+
+        straydir = os.path.join(name, 'straydir')
+        if not os.path.isdir(straydir):
+            os.makedirs(straydir)
+
+        strayfile2 = os.path.join(straydir, 'strayfile2')
+        salt.utils.fopen(strayfile2, 'w').close()
+
+        keepfile = os.path.join(straydir, 'keepfile')
+        salt.utils.fopen(keepfile, 'w').close()
+
+        ret = self.run_state('file.directory',
+                             name=name,
+                             clean=True,
+                             exclude_pat='E@^straydir(|/keepfile)$')
+
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.exists(strayfile))
+            self.assertFalse(os.path.exists(strayfile2))
+            self.assertTrue(os.path.exists(keepfile))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_test_directory_clean_exclude(self):
+        '''
+        file.directory test with clean=True and exclude_pat set
+        '''
+        name = os.path.join(integration.TMP, 'directory_clean_dir')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+
+        strayfile = os.path.join(name, 'strayfile')
+        salt.utils.fopen(strayfile, 'w').close()
+
+        straydir = os.path.join(name, 'straydir')
+        if not os.path.isdir(straydir):
+            os.makedirs(straydir)
+
+        strayfile2 = os.path.join(straydir, 'strayfile2')
+        salt.utils.fopen(strayfile2, 'w').close()
+
+        keepfile = os.path.join(straydir, 'keepfile')
+        salt.utils.fopen(keepfile, 'w').close()
+
+        ret = self.run_state('file.directory',
+                             test=True,
+                             name=name,
+                             clean=True,
+                             exclude_pat='E@^straydir(|/keepfile)$')
+
+        comment = ret.values()[0]['comment']
+        try:
+            self.assertSaltNoneReturn(ret)
+            self.assertTrue(os.path.exists(strayfile))
+            self.assertTrue(os.path.exists(strayfile2))
+            self.assertTrue(os.path.exists(keepfile))
+
+            self.assertIn(strayfile, comment)
+            self.assertIn(strayfile2, comment)
+            self.assertNotIn(keepfile, comment)
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
     def test_recurse(self):
         '''
         file.recurse
@@ -142,6 +287,34 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_specific_env(self):
+        '''
+        file.recurse passing __env__
+        '''
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             __env__='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             saltenv='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
         finally:
             if os.path.isdir(name):
                 shutil.rmtree(name, ignore_errors=True)
@@ -156,6 +329,32 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
+        self.assertFalse(os.path.exists(name))
+
+    def test_test_recurse_specific_env(self):
+        '''
+        file.recurse test interface
+        '''
+        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             test=True,
+                             name=name,
+                             source='salt://holy',
+                             __env__='prod'
+        )
+        self.assertSaltNoneReturn(ret)
+        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
+        self.assertFalse(os.path.exists(name))
+
+        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             test=True,
+                             name=name,
+                             source='salt://holy',
+                             saltenv='prod'
+        )
+        self.assertSaltNoneReturn(ret)
+        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertFalse(os.path.exists(name))
 
     def test_recurse_template(self):
@@ -198,6 +397,51 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_clean_specific_env(self):
+        '''
+        file.recurse with clean=True and __env__=prod
+        '''
+        name = os.path.join(integration.TMP, 'recurse_clean_dir_prod_env')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+        strayfile = os.path.join(name, 'strayfile')
+        salt.utils.fopen(strayfile, 'w').close()
+
+        # Corner cases: replacing file with a directory and vice versa
+        salt.utils.fopen(os.path.join(name, '32'), 'w').close()
+        os.makedirs(os.path.join(name, 'scene34'))
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             clean=True,
+                             __env__='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.exists(strayfile))
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+            self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_replace(self):
+        '''
+        file.replace
+        '''
+        name = os.path.join(integration.TMP, 'replace_test')
+        with salt.utils.fopen(name, 'w+') as fp_:
+            fp_.write('change_me')
+
+        ret = self.run_state('file.replace',
+                name=name, pattern='change', repl='salt', backup=False)
+
+        try:
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('salt', fp_.read())
+
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_sed(self):
         '''
@@ -347,7 +591,13 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
+        try:
+            self.assertFalse(os.path.exists(name))
+        except AssertionError:
+            os.remove(name)
+
         ret = self.run_state('file.append', name=name, text='cheese')
+        # A non existing file is touched, the text is NOT appended.
         self.assertSaltFalseReturn(ret)
 
         try:
@@ -407,7 +657,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 # left behind... Don't fail because of this!
                 os.makedirs(name)
         except OSError:
-            self.skipTest("Failed to create directory {0}".format(name))
+            self.skipTest('Failed to create directory {0}'.format(name))
 
         self.assertTrue(os.path.isdir(name))
         ret = self.run_state('file.touch', name=name)
@@ -457,7 +707,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isfile(tmp_file_append):
                 os.remove(tmp_file_append)
 
-    def do_patch(self, patch_name='hello', src="Hello\n"):
+    def do_patch(self, patch_name='hello', src='Hello\n'):
         if not self.run_function('cmd.has_exec', ['patch']):
             self.skipTest('patch is not installed')
         src_file = os.path.join(integration.TMP, 'src.txt')
@@ -481,15 +731,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         src_file, ret = self.do_patch('hello_dolly')
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            ret, 'File {0} hash mismatch after patch was applied'.format(
-                src_file
-            )
+            'File {0} hash mismatch after patch was applied'.format(src_file),
+            ret
         )
 
     def test_patch_already_applied(self):
         src_file, ret = self.do_patch(src='Hello world\n')
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(ret, 'Patch is already applied')
+        self.assertInSaltComment('Patch is already applied', ret)
 
     def test_issue_2401_file_comment(self):
         # Get a path to the temporary file
@@ -498,9 +747,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         salt.utils.fopen(tmp_file, 'w').write('hello\nworld\n')
         # create the sls template
         template_lines = [
-            "{0}:".format(tmp_file),
-            "  file.comment:",
-            "    - regex: ^world"
+            '{0}:'.format(tmp_file),
+            '  file.comment:',
+            '    - regex: ^world'
         ]
         template = '\n'.join(template_lines)
         try:
@@ -508,8 +757,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 'state.template_str', [template], timeout=120
             )
             self.assertSaltTrueReturn(ret)
-            self.assertNotInSaltComment(ret, 'Pattern already commented')
-            self.assertInSaltComment(ret, 'Commented lines successfully')
+            self.assertNotInSaltComment('Pattern already commented', ret)
+            self.assertInSaltComment('Commented lines successfully', ret)
 
             # This next time, it is already commented.
             ret = self.run_function(
@@ -517,7 +766,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Pattern already commented')
+            self.assertInSaltComment('Pattern already commented', ret)
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
@@ -536,16 +785,16 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         # create the sls template
         template_lines = [
-            "{0}:".format(tmp_file),
-            "  file.append:",
-            "    - text: PermitRootLogin yes"
+            '{0}:'.format(tmp_file),
+            '  file.append:',
+            '    - text: PermitRootLogin yes'
         ]
         template = '\n'.join(template_lines)
         try:
             ret = self.run_function('state.template_str', [template])
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Appended 1 lines')
+            self.assertInSaltComment('Appended 1 lines', ret)
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
@@ -571,14 +820,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                ret,
                 '\'mode\' is not allowed in \'file.recurse\'. Please use '
-                '\'file_mode\' and \'dir_mode\'.'
+                '\'file_mode\' and \'dir_mode\'.',
+                ret
             )
             self.assertNotInSaltComment(
-                ret,
                 'TypeError: managed() got multiple values for keyword '
-                'argument \'mode\''
+                'argument \'mode\'',
+                ret
             )
         finally:
             if os.path.isdir(testcase_temp_dir):

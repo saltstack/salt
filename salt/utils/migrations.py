@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Migration tools
 '''
@@ -6,12 +7,15 @@ Migration tools
 import os.path
 import shutil
 
+# Import salt libs
+import salt.syspaths as syspaths
+
 
 def migrate_paths(opts):
     '''
     Migrate old minion and master pki file paths to new ones.
     '''
-    oldpki_dir = '/etc/salt/pki'
+    oldpki_dir = os.path.join(syspaths.CONFIG_DIR, 'pki')
 
     if not os.path.exists(oldpki_dir):
         # There's not even a pki directory, don't bother migrating

@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Configuration of network interfaces.
-====================================
+Configuration of network interfaces
+===================================
 
 The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
@@ -31,6 +32,20 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - dns:
           - 8.8.8.8
           - 8.8.4.4
+
+    routes:
+      network.routes:
+        - name: eth0
+        - routes:
+          - name: secure_network
+            ipaddr: 10.2.0.0
+            netmask: 255.255.255.0
+            gateway: 10.1.0.3
+          - name: HQ_network
+            ipaddr: 10.100.0.0
+            netmask: 255.255.0.0
+            gateway: 10.1.0.10
+
     eth2:
       network.managed:
         - type: slave
@@ -137,6 +152,21 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
 # Import python libs
 import difflib
+import salt.utils
+from salt.loader import _create_loader
+
+# Define the module's virtual name
+__virtualname__ = 'network'
+
+
+def __virtual__():
+    '''
+    Confine this module to non-Windows systems with the required execution
+    module available.
+    '''
+    if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+        return __virtualname__
+    return False
 
 
 def managed(name, type, enabled=True, **kwargs):
@@ -157,7 +187,7 @@ def managed(name, type, enabled=True, **kwargs):
 
     '''
     # For this function we are purposefully overwriting a bif
-    # to enance the user experience. This does not look like
+    # to enhance the user experience. This does not look like
     # it will cause a problem. Just giving a heads up in case
     # it does create a problem.
 
@@ -165,24 +195,26 @@ def managed(name, type, enabled=True, **kwargs):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'Interface {0} is up to date.'.format(name)
+        'comment': 'Interface {0} is up to date.'.format(name),
     }
     kwargs['test'] = __opts__['test']
 
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
+        new = __salt__['ip.build_interface'](name, type, enabled, **kwargs)
         if __opts__['test']:
             if old == new:
                 pass
             if not old and new:
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be added.'.format(name)
+                ret['comment'] = 'Interface {0} is set to be ' \
+                                 'added.'.format(name)
             elif old != new:
                 diff = difflib.unified_diff(old, new)
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be updated.'.format(name)
+                ret['comment'] = 'Interface {0} is set to be ' \
+                                 'updated.'.format(name)
                 ret['changes']['interface'] = ''.join(diff)
         else:
             if not old and new:
@@ -199,17 +231,19 @@ def managed(name, type, enabled=True, **kwargs):
     if type == 'bond':
         try:
             old = __salt__['ip.get_bond'](name)
-            new = __salt__['ip.build_bond'](name, kwargs)
+            new = __salt__['ip.build_bond'](name, **kwargs)
             if __opts__['test']:
                 if old == new:
                     pass
                 if not old and new:
                     ret['result'] = None
-                    ret['comment'] = 'Bond interface {0} is set to be added.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be ' \
+                                     'added.'.format(name)
                 elif old != new:
                     diff = difflib.unified_diff(old, new)
                     ret['result'] = None
-                    ret['comment'] = 'Bond interface {0} is set to be updated.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be ' \
+                                     'updated.'.format(name)
                     ret['changes']['bond'] = ''.join(diff)
             else:
                 if not old and new:
@@ -226,16 +260,79 @@ def managed(name, type, enabled=True, **kwargs):
     if __opts__['test']:
         return ret
 
-    #Bring up/shutdown interface
+    # Bring up/shutdown interface
     try:
         if enabled:
-            __salt__['ip.up'](name, type, kwargs)
+            __salt__['ip.up'](name, type)
         else:
-            __salt__['ip.down'](name, type, kwargs)
+            __salt__['ip.down'](name, type)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret
+
+    load = _create_loader(__opts__, 'grains', 'grain', ext_dirs=False)
+    grains_info = load.gen_grains()
+    __grains__.update(grains_info)
+    __salt__['saltutil.refresh_modules']()
+    return ret
+
+
+def routes(name, **kwargs):
+    '''
+    Manage network interface static routes.
+
+    name
+        Interface name to apply the route to.
+
+    kwargs
+        Named routes
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'Interface {0} routes are up to date.'.format(name),
+    }
+    apply_routes = False
+    kwargs['test'] = __opts__['test']
+    # Build interface routes
+    try:
+        old = __salt__['ip.get_routes'](name)
+        new = __salt__['ip.build_routes'](name, **kwargs)
+        if __opts__['test']:
+            if old == new:
+                return ret
+            if not old and new:
+                ret['result'] = None
+                ret['comment'] = 'Interface {0} routes are set to be added.'.format(name)
+                return ret
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['result'] = None
+                ret['comment'] = 'Interface {0} routes are set to be updated.'.format(name)
+                ret['changes']['network_routes'] = ''.join(diff)
+                return ret
+        if not old and new:
+            apply_routes = True
+            ret['changes']['network_routes'] = 'Added interface {0} routes.'.format(name)
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            apply_routes = True
+            ret['changes']['network_routes'] = ''.join(diff)
+    except AttributeError as error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
+
+    # Apply interface routes
+    if apply_routes:
+        try:
+            __salt__['ip.apply_network_settings'](**kwargs)
+        except AttributeError as error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     return ret
 
@@ -251,19 +348,18 @@ def system(name, **kwargs):
         The global parameters for the system.
 
     '''
-
     ret = {
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'Global network settings are up to date.'
+        'comment': 'Global network settings are up to date.',
     }
     apply_net_settings = False
     kwargs['test'] = __opts__['test']
     # Build global network settings
     try:
         old = __salt__['ip.get_network_settings']()
-        new = __salt__['ip.build_network_settings'](kwargs)
+        new = __salt__['ip.build_network_settings'](**kwargs)
         if __opts__['test']:
             if old == new:
                 return ret
@@ -292,7 +388,7 @@ def system(name, **kwargs):
     # Apply global network settings
     if apply_net_settings:
         try:
-            __salt__['ip.apply_network_settings'](kwargs)
+            __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
             ret['comment'] = error.message
