@@ -45,6 +45,7 @@ Using the new format, set up the cloud configuration at
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
+import copy
 import time
 import pprint
 import logging
@@ -313,7 +314,7 @@ def create(vm_):
             )
 
         # Store what was used to the deploy the VM
-        event_kwargs = deploy_kwargs
+        event_kwargs = copy.deepcopy(deploy_kwargs)
         del(event_kwargs['minion_pem'])
         ret['deploy_kwargs'] = event_kwargs
 
