@@ -70,6 +70,8 @@ def query(hyper=None, quiet=False):
             continue
         if 'ret' not in info[id_]:
             continue
+        if not isinstance(info[id_]['ret'], dict):
+            continue
         chunk[id_] = info[id_]['ret']
         ret.update(chunk)
         if not quiet:
