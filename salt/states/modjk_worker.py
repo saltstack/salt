@@ -9,7 +9,7 @@ deploying/restarting service
 Mandatory Settings:
 
 - The minion needs to have permission to publish the :strong:`modjk.*`
-  functions (see :doc:`here </ref/peer>` here for information on configuring
+  functions (see :doc:`here </ref/peer>` for information on configuring
   peer publishing permissions)
 
 - The modjk load balancer must be configured as stated in the :strong:`modjk`

@@ -55,6 +55,11 @@ def genrepo():
                             if not isinstance(version, string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
+                            if not isinstance(repodata, dict):
+                                log.debug('Failed to compile'
+                                          '{0}.'.format(os.path.join(root, name)))
+                                print 'Failed to compile {0}.'.format(os.path.join(root, name))
+                                continue
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)

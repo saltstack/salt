@@ -241,7 +241,7 @@ def unmounted(name,
               persist=False):
     '''
     .. note::
-        This state will be available in verion 0.17.0.
+        This state will be available in version 0.17.0.
 
     Verify that a device is not mounted
 

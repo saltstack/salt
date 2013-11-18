@@ -1,0 +1,3 @@
+/etc/salt/cloud.conf.d/
+/etc/salt/cloud.profiles.d/
+/etc/salt/cloud.providers.d/

@@ -35,7 +35,7 @@ def display_output(data, out, opts=None):
     output_filename = opts.get('output_file', None)
     try:
         if output_filename is not None:
-            with salt.utils.fopen(output_filename, 'w') as ofh:
+            with salt.utils.fopen(output_filename, 'a') as ofh:
                 ofh.write(display_data)
                 ofh.write('\n')
             return

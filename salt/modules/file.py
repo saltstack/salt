@@ -62,7 +62,7 @@ def __clean_tmp(sfn):
     Clean out a template temp file
     '''
     if sfn.startswith(tempfile.gettempdir()):
-        # Don't remove if it exists in file_roots (any env)
+        # Don't remove if it exists in file_roots (any saltenv)
         all_roots = itertools.chain.from_iterable(
                 __opts__['file_roots'].itervalues())
         in_roots = any(sfn.startswith(root) for root in all_roots)
@@ -424,7 +424,7 @@ def check_hash(path, hash):
     '''
     hash_parts = hash.split('=', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {!r}'.format(hash))
+        raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -882,7 +882,9 @@ def _get_flags(flags):
             _flag = getattr(re, flag.upper())
 
             if not isinstance(_flag, int):
-                raise SaltInvocationError("Invalid re flag given: %s", flag)
+                raise SaltInvocationError(
+                    'Invalid re flag given: {0}'.format(flag)
+                )
 
             _flags_acc.append(_flag)
 
@@ -913,10 +915,12 @@ def replace(path,
     :param pattern: The PCRE search
     :param repl: The replacement text
     :param count: Maximum number of pattern occurrences to be replaced
-    :param flags: A list of flags defined in :ref:`contents-of-module-re`. Each
-        list item should be a string that will correlate to the human-friendly
-        flag name. E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline
-        searches must specify ``file`` as the ``bufsize`` argument below.
+    :param flags: A list of flags defined in the :ref:`re module documentation
+        <contents-of-module-re>`. Each list item should be a string that will
+        correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
+        'MULTILINE']``. Note: multiline searches must specify ``file`` as the
+        ``bufsize`` argument below.
+
     :type flags: list or int
     :param bufsize: How much of the file to buffer into memory at once. The
         default value ``1`` processes one line at a time. The special value
@@ -945,11 +949,13 @@ def replace(path,
         salt '*' file.replace /some/file 'before' 'after' flags='[MULTILINE, IGNORECASE]'
     '''
     if not os.path.exists(path):
-        raise SaltInvocationError("File not found: %s", path)
+        raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
-            "Cannot perform string replacements on a binary file: %s", path)
+            'Cannot perform string replacements on a binary file: {0}'
+            .format(path)
+        )
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(pattern, flags_num)
@@ -960,6 +966,10 @@ def replace(path,
     has_changes = False
     orig_file = []  # used if show_changes
     new_file = []  # used if show_changes
+    if not salt.utils.is_windows():
+        pre_user = get_user(path)
+        pre_group = get_group(path)
+        pre_mode = __salt__['config.manage_mode'](get_mode(path))
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
@@ -983,6 +993,9 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+
+    if not dry_run and not salt.utils.is_windows():
+        check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
         return ''.join(difflib.unified_diff(orig_file, new_file))
@@ -1056,11 +1069,13 @@ def blockreplace(path,
 
     '''
     if not os.path.exists(path):
-        raise SaltInvocationError("File not found: %s", path)
+        raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
-            "Cannot perform string replacements on a binary file: %s", path)
+            'Cannot perform string replacements on a binary file: {0}'
+            .format(path)
+        )
 
     # Search the file; track if any changes have been made for the return val
     has_changes = False
@@ -1109,7 +1124,9 @@ def blockreplace(path,
 
     if in_block:
         # unterminated block => bad, always fail
-        raise CommandExecutionError("Unterminated marked block. End of file reached before marker_end.")
+        raise CommandExecutionError(
+            'Unterminated marked block. End of file reached before marker_end.'
+        )
 
     if not done:
         if append_if_not_found:
@@ -1119,7 +1136,9 @@ def blockreplace(path,
             new_file.append(marker_end + '\n')
             done = True
         else:
-            raise CommandExecutionError("Cannot edit marked block. Markers were not found in file.")
+            raise CommandExecutionError(
+                'Cannot edit marked block. Markers were not found in file.'
+            )
 
     if done:
         diff = ''.join(difflib.unified_diff(orig_file, new_file))
@@ -1436,7 +1455,7 @@ def symlink(src, link):
         os.symlink(src, link)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create "{0}"'.format(link))
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
     return False
 
 
@@ -1457,8 +1476,9 @@ def rename(src, dst):
         os.rename(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not rename "{0}" to "{1}"'
-                                    .format(src, dst))
+        raise CommandExecutionError(
+            'Could not rename {0!r} to {1!r}'.format(src, dst)
+        )
     return False
 
 
@@ -1475,13 +1495,21 @@ def copy(src, dst):
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
 
+    if not salt.utils.is_windows():
+        pre_user = get_user(src)
+        pre_group = get_group(src)
+        pre_mode = __salt__['config.manage_mode'](get_mode(src))
+
     try:
         shutil.copyfile(src, dst)
-        return True
     except OSError:
-        raise CommandExecutionError('Could not copy "{0}" to "{1}"'
-                                    .format(src, dst))
-    return False
+        raise CommandExecutionError(
+            'Could not copy {0!r} to {1!r}'.format(src, dst)
+        )
+
+    if not salt.utils.is_windows():
+        check_perms(dst, None, pre_user, pre_group, pre_mode)
+    return True
 
 
 def stats(path, hash_type='md5', follow_symlink=False):
@@ -1551,8 +1579,10 @@ def remove(path):
         elif os.path.isdir(path):
             shutil.rmtree(path)
             return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not remove "{0}"'.format(path))
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            'Could not remove {0!r}: {1}'.format(path, exc)
+        )
     return False
 
 
@@ -1650,7 +1680,7 @@ def set_selinux_context(path,
         return ret
 
 
-def source_list(source, source_hash, env):
+def source_list(source, source_hash, saltenv):
     '''
     Check the source list and return the source to use
 
@@ -1662,19 +1692,29 @@ def source_list(source, source_hash, env):
     '''
     # get the master file list
     if isinstance(source, list):
-        mfiles = __salt__['cp.list_master'](env)
-        mdirs = __salt__['cp.list_master_dirs'](env)
+        mfiles = __salt__['cp.list_master'](saltenv)
+        mdirs = __salt__['cp.list_master_dirs'](saltenv)
         for single in source:
             if isinstance(single, dict):
                 single = next(iter(single))
+
+            env_splitter = '?saltenv='
+            if '?env=' in single:
+                salt.utils.warn_until(
+                    'Boron',
+                    'Passing a salt environment should be done using '
+                    '\'saltenv\' not \'env\'. This functionality will be '
+                    'removed in Salt Boron.'
+                )
+                env_splitter = '?env='
             try:
-                sname, senv = single.split('?env=')
+                sname, senv = single.split(env_splitter)
             except ValueError:
                 continue
             else:
-                mfiles += ["{0}?env={1}".format(f, senv)
+                mfiles += ['{0}?saltenv={1}'.format(f, senv)
                            for f in __salt__['cp.list_master'](senv)]
-                mdirs += ["{0}?env={1}".format(d, senv)
+                mdirs += ['{0}?saltenv={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
         for single in source:
@@ -1713,7 +1753,7 @@ def get_managed(
         user,
         group,
         mode,
-        env,
+        saltenv,
         context,
         defaults,
         **kwargs):
@@ -1731,7 +1771,7 @@ def get_managed(
     sfn = ''
     source_sum = {}
     if template and source:
-        sfn = __salt__['cp.cache_file'](source, env)
+        sfn = __salt__['cp.cache_file'](source, saltenv)
         if not os.path.exists(sfn):
             return sfn, {}, 'Source file {0} not found'.format(source)
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -1745,7 +1785,7 @@ def get_managed(
                 user=user,
                 group=group,
                 mode=mode,
-                env=env,
+                saltenv=saltenv,
                 context=context_dict,
                 salt=__salt__,
                 pillar=__pillar__,
@@ -1768,14 +1808,14 @@ def get_managed(
         # Copy the file down if there is a source
         if source:
             if salt._compat.urlparse(source).scheme == 'salt':
-                source_sum = __salt__['cp.hash_file'](source, env)
+                source_sum = __salt__['cp.hash_file'](source, saltenv)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
-                protos = ['salt', 'http', 'ftp']
+                protos = ['salt', 'http', 'https', 'ftp']
                 if salt._compat.urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                             source_hash)
@@ -1918,7 +1958,7 @@ def check_managed(
         makedirs,
         context,
         defaults,
-        env,
+        saltenv,
         contents=None,
         **kwargs):
     '''
@@ -1931,7 +1971,7 @@ def check_managed(
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
     # If the source is a list then find which file exists
-    source, source_hash = source_list(source, source_hash, env)
+    source, source_hash = source_list(source, source_hash, saltenv)
 
     sfn = ''
     source_sum = None
@@ -1946,7 +1986,7 @@ def check_managed(
             user,
             group,
             mode,
-            env,
+            saltenv,
             context,
             defaults,
             **kwargs)
@@ -1954,7 +1994,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env, template, contents)
+                              group, mode, saltenv, template, contents)
     __clean_tmp(sfn)
     if changes:
         log.info(changes)
@@ -1973,7 +2013,7 @@ def check_file_meta(
         user,
         group,
         mode,
-        env,
+        saltenv,
         template=None,
         contents=None):
     '''
@@ -1995,7 +2035,7 @@ def check_file_meta(
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:
-                sfn = __salt__['cp.cache_file'](source, env)
+                sfn = __salt__['cp.cache_file'](source, saltenv)
             if sfn:
                 if __salt__['config.option']('obfuscate_templates'):
                     changes['diff'] = '<Obfuscated Template>'
@@ -2051,7 +2091,8 @@ def check_file_meta(
 def get_diff(
         minionfile,
         masterfile,
-        env='base'):
+        env=None,
+        saltenv='base'):
     '''
     Return unified diff of file compared to file on master
 
@@ -2063,11 +2104,20 @@ def get_diff(
     '''
     ret = ''
 
+    if isinstance(env, salt._compat.string_types):
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
         return ret
 
-    sfn = __salt__['cp.cache_file'](masterfile, env)
+    sfn = __salt__['cp.cache_file'](masterfile, saltenv)
     if sfn:
         with contextlib.nested(salt.utils.fopen(sfn, 'r'),
                                salt.utils.fopen(minionfile, 'r')) \
@@ -2095,11 +2145,12 @@ def manage_file(name,
                 user,
                 group,
                 mode,
-                env,
+                saltenv,
                 backup,
                 template=None,
                 show_diff=True,
-                contents=None):
+                contents=None,
+                dir_mode=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2125,7 +2176,7 @@ def manage_file(name,
         # Check if file needs to be replaced
         if source and source_sum['hsum'] != name_sum:
             if not sfn:
-                sfn = __salt__['cp.cache_file'](source, env)
+                sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
@@ -2227,7 +2278,7 @@ def manage_file(name,
             ret['changes']['diff'] = 'New file'
             # Apply the new file
             if not sfn:
-                sfn = __salt__['cp.cache_file'](source, env)
+                sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
@@ -2246,7 +2297,7 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group, mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')

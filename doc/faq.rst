@@ -21,6 +21,12 @@ Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
+I'm seeing weird behavior (including but not limited to packages not installing their users properly)
+-----------------------------------------------------------------------------------------------------
+
+This is often caused by SELinux.  Try disabling SELinux or putting it in
+permissive mode and see if the weird behavior goes away.
+
 My script runs every time I run a *state.highstate*. Why?
 ---------------------------------------------------------
 
@@ -125,3 +131,12 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
     /usr/bin/foo:
       file.symlink:
         - target: /usr/local/bin/foo
+
+Can I run different versions of Salt on my Master and Minion?
+-------------------------------------------------------------
+
+As of release 0.17.1 backwards compatibility was broken (specifically for
+0.17.1 trying to interface with older releases) due to a protocol change for
+security purposes. The Salt team continues to emphasize backwards compatiblity
+as an important feature and plans to support it to the best of our ability to
+do so.

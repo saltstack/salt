@@ -29,6 +29,13 @@ which makes use of the jinja templating system would look like this:
             custom_var: "override"
     {% endif %}
 
+.. note::
+
+    When using both the ``defaults`` and ``context`` arguments, note the extra
+    indentation (four spaces instead of the normal two). This is due to an
+    idiosyncrasy of how PyYAML loads nested dictionaries, and is explained in
+    greater detail :ref:`here <nested-dict-indentation>`.
+
 If using a template, any user-defined template variables in the file defined in
 ``source`` must be passed in using the ``defaults`` and/or ``context``
 arguments. The general best practice is to place default values in
@@ -58,7 +65,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
     /etc/foo.conf:
       file.managed:
         - source:
-          - salt://foo.conf?env=dev
+          - salt://foo.conf?saltenv=dev
         - user: foo
         - group: users
         - mode: '0644'
@@ -499,7 +506,7 @@ def _set_symlink_ownership(path, uid, gid):
         path,
         __salt__['file.uid_to_user'](uid),
         __salt__['file.gid_to_group'](gid)
-   )
+    )
 
 
 def _symlink_check(name, target, force, user, group):
@@ -528,8 +535,8 @@ def _symlink_check(name, target, force, user, group):
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
-                          'make way for a new symlink targeting {1}').format(
-                              name, target)
+                          'make way for a new symlink targeting {1}'
+                          .format(name, target))
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
 
@@ -633,7 +640,6 @@ def _get_template_texts(source_list=None,
                         template='jinja',
                         defaults=None,
                         context=None,
-                        env='base',
                         **kwargs):
     '''
     Iterate a list of sources and process them as templates.
@@ -658,7 +664,7 @@ def _get_template_texts(source_list=None,
         if context:
             tmpctx.update(context)
         rndrd_templ_fn = __salt__['cp.get_template'](source, '',
-                                  template=template, env=env,
+                                  template=template, env=__env__,
                                   context=tmpctx, **kwargs)
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
@@ -927,6 +933,7 @@ def managed(name,
             mode=None,
             template=None,
             makedirs=False,
+            dir_mode=None,
             context=None,
             replace=True,
             defaults=None,
@@ -993,6 +1000,11 @@ def managed(name,
         directories will be created to facilitate the creation of the named
         file.
 
+    dir_mode
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions from the 'mode' argument.
+
     replace
         If this file should be replaced.  If false, this command will
         not overwrite file contents but will enforce permissions if the file
@@ -1050,8 +1062,17 @@ def managed(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Boron', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
@@ -1106,7 +1127,7 @@ def managed(name,
             makedirs,
             context,
             defaults,
-            env,
+            __env__,
             contents,
             **kwargs
         )
@@ -1116,7 +1137,7 @@ def managed(name,
     source, source_hash = __salt__['file.source_list'](
         source,
         source_hash,
-        env
+        __env__
     )
 
     # Gather the source file from the server
@@ -1128,7 +1149,7 @@ def managed(name,
         user,
         group,
         mode,
-        env,
+        __env__,
         context,
         defaults,
         **kwargs
@@ -1144,11 +1165,12 @@ def managed(name,
                                             user,
                                             group,
                                             mode,
-                                            env,
+                                            __env__,
                                             backup,
                                             template,
                                             show_diff,
-                                            contents)
+                                            contents,
+                                            dir_mode)
 
 
 def directory(name,
@@ -1506,15 +1528,24 @@ def recurse(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Boron', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
 
     # Verify the source exists.
     _src_proto, _src_path = source.split('://', 1)
 
     if not _src_path:
         pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](env):
+    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](__env__):
         ret['result'] = False
         ret['comment'] = (
             'The source: {0} does not exist on the master'.format(source)
@@ -1584,7 +1615,6 @@ def recurse(name,
             context=context,
             replace=True,
             defaults=defaults,
-            env=env,
             backup=backup,
             **pass_kwargs)
         merge_ret(path, _ret)
@@ -1656,7 +1686,7 @@ def recurse(name,
             keep.add(os.path.join(name, srelpath))
         return filenames
     # If source is a list, find which in the list actually exists
-    source, source_hash = __salt__['file.source_list'](source, '', env)
+    source, source_hash = __salt__['file.source_list'](source, '', __env__)
 
     keep = set()
     vdir = set()
@@ -1665,11 +1695,11 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    fns_ = __salt__['cp.list_master'](env, srcpath)
+    fns_ = __salt__['cp.list_master'](__env__, srcpath)
     # If we are instructed to keep symlinks, then process them.
     if keep_symlinks:
         # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
+        symlinks = __salt__['cp.list_master_symlinks'](__env__, srcpath)
         fns_ = process_symlinks(fns_, symlinks)
     for fn_ in fns_:
         if not fn_.strip():
@@ -1711,7 +1741,7 @@ def recurse(name,
         manage_file(dest, src)
 
     if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](env, srcpath)
+        mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
         for mdir in mdirs:
             if not _check_include_exclude(os.path.relpath(mdir, srcpath),
                                           include_pat,
@@ -1722,7 +1752,8 @@ def recurse(name,
             if keep_symlinks:
                 for link in symlinks:
                     if mdir.startswith(link, 0):
-                        log.debug('** skipping empty dir ** {0}, it intersects a symlink'.format(mdir))
+                        log.debug('** skipping empty dir ** {0}, it intersects'
+                                  ' a symlink'.format(mdir))
                     continue
             manage_directory(mdest)
             keep.add(mdest)
@@ -1860,7 +1891,7 @@ def blockreplace(name,
             - name: my-accumulator-{{ myvar }}
             - text: "text 2"
             - require_in:
-              - file: foobar-config-block-{{ myvar }}
+              - file: hosts-config-block-{{ myvar }}
 
         hosts-config-block-{{ myvar }}-accumulated2:
           file.accumulated:
@@ -1870,7 +1901,7 @@ def blockreplace(name,
                  text 3
                  text 4
             - require_in:
-              - file: foobar-config-block-{{ myvar }}
+              - file: hosts-config-block-{{ myvar }}
 
     will generate and maintain a block of content in ``/etc/hosts``::
 
@@ -2213,7 +2244,6 @@ def append(name,
            makedirs=False,
            source=None,
            source_hash=None,
-           __env__='base',
            template='jinja',
            sources=None,
            source_hashes=None,
@@ -2295,8 +2325,7 @@ def append(name,
         tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
                                      defaults=defaults,
-                                     context=context,
-                                     env=__env__)
+                                     context=context)
         if not tmpret['result']:
             return tmpret
         text = tmpret['data']
@@ -2408,10 +2437,19 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Boron', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
+
     # get cached file or copy it to cache
-    if env is None:
-        env = kwargs.get('__env__', 'base')
-    cached_source_path = __salt__['cp.cache_file'](source, env)
+    cached_source_path = __salt__['cp.cache_file'](source, __env__)
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
             source, cached_source_path
@@ -2814,6 +2852,17 @@ def serialize(name,
            'name': name,
            'result': True}
 
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Boron', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
+
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
@@ -2847,7 +2896,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
-                                        env=env,
+                                        env=__env__,
                                         backup=backup,
                                         template=None,
                                         show_diff=show_diff,
@@ -2937,13 +2986,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Character device {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the major/minor
         else:
@@ -2978,13 +3033,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Block device {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the major/minor
         else:
@@ -3018,13 +3079,19 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #  if it is a fifo
         elif not __salt__['file.is_fifo'](name):
-            ret = __salt__['file.mknod'](name,
-                                         ntype,
-                                         major,
-                                         minor,
-                                         user,
-                                         group,
-                                         mode)
+            if __opts__['test']:
+                ret['comment'] = 'Fifo pipe {0} is set to be created'.format(
+                    name
+                )
+                ret['result'] = None
+            else:
+                ret = __salt__['file.mknod'](name,
+                                             ntype,
+                                             major,
+                                             minor,
+                                             user,
+                                             group,
+                                             mode)
 
         #  check the perms
         else:

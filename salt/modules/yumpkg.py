@@ -23,10 +23,12 @@ import yaml
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
     import yum
+    import yum.logginglevels
     import rpmUtils.arch
     HAS_YUMDEPS = True
 
@@ -97,6 +99,32 @@ try:
             # Will sometimes contain more detailed error messages.
             self.messages[package] = msgs
 
+    class _YumBase(yum.YumBase):
+        def doLoggingSetup(self, debuglevel, errorlevel,
+                           syslog_indent=None,
+                           syslog_facility=None,
+                           syslog_device='/dev/log'):
+            '''
+            This method is overridden in salt because we don't want syslog
+            logging to happen.
+
+            Additionally, no logging will be setup for yum.
+            The logging handlers configure for yum were to ``sys.stdout``,
+            ``sys.stderr`` and ``syslog``. We don't want none of those.
+            Any logging will go through salt's logging handlers.
+            '''
+
+            # Just set the log levels to yum
+            if debuglevel is not None:
+                logging.getLogger('yum.verbose').setLevel(
+                    yum.logginglevels.logLevelFromDebugLevel(debuglevel)
+                )
+            if errorlevel is not None:
+                logging.getLogger('yum.verbose').setLevel(
+                    yum.logginglevels.logLevelFromErrorLevel(errorlevel)
+                )
+            logging.getLogger('yum.filelogging').setLevel(logging.INFO)
+
 except (ImportError, AttributeError):
     HAS_YUMDEPS = False
 
@@ -154,7 +182,7 @@ def list_upgrades(refresh=True):
 
     pkgs = list_pkgs()
 
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     versions_list = {}
     for pkgtype in ['updates']:
         pkglist = yumbase.doPackageLists(pkgtype)
@@ -173,7 +201,7 @@ def list_upgrades(refresh=True):
 
 def _set_repo_options(yumbase, **kwargs):
     '''
-    Accepts a yum.YumBase() object and runs member functions to enable/disable
+    Accepts a _YumBase() object and runs member functions to enable/disable
     repos as needed.
     '''
     # Get repo options from the kwargs
@@ -256,7 +284,7 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     error = _set_repo_options(yumbase, **kwargs)
     if error:
         log.error(error)
@@ -342,7 +370,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    yb = yum.YumBase()
+    yb = _YumBase()
     for p in yb.rpmdb:
         name = p.name
         if __grains__.get('cpuarch', '') == 'x86_64' \
@@ -382,7 +410,7 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3>
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
     '''
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     error = _set_repo_options(yumbase, **kwargs)
     if error:
         log.error(error)
@@ -421,7 +449,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     yumbase.cleanMetadata()
     return True
 
@@ -617,7 +645,7 @@ def install(name=None,
 
     old = list_pkgs()
 
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
@@ -709,7 +737,7 @@ def upgrade(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
 
     old = list_pkgs()
@@ -768,7 +796,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
 
     # same comments as in upgrade for remove.
@@ -785,6 +813,13 @@ def remove(name=None, pkgs=None, **kwargs):
         else:
             arch = None
         yumbase.remove(name=target, arch=arch)
+
+    log.info('Performing transaction test')
+    try:
+        callback = yum.callbacks.ProcessTransNoOutputCallback()
+        result = yumbase._doTestTransaction(callback)
+    except yum.Errors.YumRPMCheckError as exc:
+        raise CommandExecutionError('\n'.join(exc.__dict__['value']))
 
     log.info('Resolving dependencies')
     yumbase.resolveDeps()
@@ -854,7 +889,7 @@ def group_list():
         salt '*' pkg.group_list
     '''
     ret = {'installed': [], 'available': [], 'available languages': {}}
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     (installed, available) = yumbase.doGroupLists()
     for group in installed:
         ret['installed'].append(group.name)
@@ -878,7 +913,7 @@ def group_info(groupname):
 
         salt '*' pkg.group_info 'Perl Support'
     '''
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     (installed, available) = yumbase.doGroupLists()
     for group in installed + available:
         if group.name.lower() == groupname.lower():
@@ -906,7 +941,7 @@ def group_diff(groupname):
         'conditional packages': {'installed': [], 'not installed': []},
     }
     pkgs = list_pkgs()
-    yumbase = yum.YumBase()
+    yumbase = _YumBase()
     (installed, available) = yumbase.doGroupLists()
     for group in installed:
         if group.name == groupname:

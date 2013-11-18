@@ -1,5 +1,5 @@
-## Name: Salt Stack
-## Description: Open ports for Salt Stack
+## Name: SaltStack
+## Description: Open ports for SaltStack
 
 # space separated list of allowed TCP ports
 TCP="4505 4506"

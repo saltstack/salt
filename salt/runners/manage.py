@@ -17,6 +17,7 @@ import urllib
 import salt.key
 import salt.client
 import salt.output
+import salt.utils.minions
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -128,6 +129,23 @@ def up():  # pylint: disable=C0103
     for minion in ret:
         salt.output.display_output(minion, '', __opts__)
     return ret
+
+
+def present():
+    '''
+    Print a list of all minions that are up according to Salt's presense
+    detection, no commands will be sent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.present
+    '''
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+    connected = sorted(ckminions.connected_ids())
+    salt.output.display_output(connected, '', __opts__)
+    return connected
 
 
 def safe_accept(target, expr_form='glob'):
@@ -278,7 +296,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        http://saltstack.com/downloads
+        http://docs.saltstack.com/downloads
 
     username
         Optional user name for login on remote computer.
@@ -297,7 +315,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
     '''
 
     if not installer_url:
-        base_url = 'http://saltstack.com/downloads/'
+        base_url = 'http://docs.saltstack.com/downloads/'
         source = urllib.urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
         source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
@@ -372,9 +390,9 @@ objShell.Exec("{1}{2}")'''
     # from a file. Glue it together line by line.
     for x, y in ((vb_vcrunexec, vb_vcrun), (vb_saltexec, vb_salt)):
         vb_lines = y.split('\n')
-        batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'>'+x+'.vbs\n@echo ' + \
-                 ('>>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
-                 '>>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
+        batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'  >'+x+'.vbs\n@echo ' + \
+                 ('  >>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
+                 '  >>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
     batch_file = open(batch_path, 'wb')
@@ -387,5 +405,5 @@ objShell.Exec("{1}{2}")'''
             argv += ['-u', username]
             if password:
                 argv += ['-p', password]
-        argv += ['-c', batch_path]
+        argv += ['-h', '-c', batch_path]
         subprocess.call(argv)

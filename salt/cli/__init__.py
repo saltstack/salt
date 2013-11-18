@@ -287,6 +287,11 @@ class SaltCall(parsers.SaltCallOptionParser):
             file_root = os.path.abspath(self.options.file_root)
             self.config['file_roots'] = {'base':  [file_root]}
 
+        if self.options.pillar_root:
+            # check if the argument is pointing to a file on disk
+            pillar_root = os.path.abspath(self.options.pillar_root)
+            self.config['pillar_roots'] = {'base':  [pillar_root]}
+
         if self.options.local:
             self.config['file_client'] = 'local'
         if self.options.master:

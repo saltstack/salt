@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for handling openstack nova calls.
+Module for handling OpenStack Nova calls.
 
 :depends:   - novaclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
@@ -14,7 +14,7 @@ Module for handling openstack nova calls.
         # Optional
         keystone.region_name: 'regionOne'
 
-    If configuration for multiple openstack accounts is required, they can be
+    If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
     For example::
 

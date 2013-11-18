@@ -1,0 +1,10 @@
+Document: salt-cloud-doc
+Title: Welcome to Salt Cloud!
+Author: Joseph Hall
+Abstract: This documention provides details about Salt Cloud.
+ Salt Cloud is ...
+Section: System/Administration
+
+Format: HTML
+Index: /usr/share/doc/salt-cloud/html/index.html
+Files: /usr/share/doc/salt-cloud/html/*/*.html

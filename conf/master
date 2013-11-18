@@ -225,6 +225,19 @@
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
+# The Jinja renderer can strip extra carriage returns and whitespace
+# See http://jinja.pocoo.org/docs/api/#high-level-api
+#
+# If this is set to True the first newline after a Jinja block is removed
+# (block, not variable tag!). Defaults to False, corresponds to the Jinja
+# environment init variable "trim_blocks". 
+# jinja_trim_blocks: False
+#
+# If this is set to True leading spaces and tabs are stripped from the start
+# of a line to a block. Defaults to False, corresponds to the Jinja
+# environment init variable "lstrip_blocks".
+# jinja_lstrip_blocks: False
+
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
@@ -326,6 +339,14 @@
 # files on the Master will not be returned to the Minion.
 #
 #fileserver_ignoresymlinks: True
+#
+# By default, the Salt fileserver recurses fully into all defined environments
+# to attempt to find files. To limit this behavior so that the fileserver only
+# traverses directories with SLS files and special Salt directories like _modules,
+# enable the option below. This might be useful for installations where a file root
+# has a very large number of files and performance is impacted. Default is False.
+#
+# fileserver_limit_traversal: False
 #
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be

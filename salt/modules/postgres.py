@@ -20,7 +20,7 @@ Module to provide Postgres compatibility to salt.
 
 # Import python libs
 import datetime
-import distutils.version
+import distutils.version  # pylint: disable=E0611
 import logging
 import StringIO
 import os

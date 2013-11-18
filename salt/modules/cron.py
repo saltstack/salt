@@ -44,6 +44,8 @@ def _render_tab(lst):
         else:
             ret.append('{0}={1}\n'.format(env['name'], env['value']))
     for cron in lst['crons']:
+        if cron['comment'] is not None:
+            ret.append('# {0}\n'.format(cron['comment']))
         ret.append('{0} {1} {2} {3} {4} {5}\n'.format(cron['minute'],
                                                       cron['hour'],
                                                       cron['daymonth'],
@@ -151,6 +153,7 @@ def list_tab(user):
            'special': [],
            'env': []}
     flag = False
+    comment = None
     for line in data.splitlines():
         if line == '# Lines below here are managed by Salt, do not edit':
             flag = True
@@ -166,17 +169,21 @@ def list_tab(user):
                 dat['spec'] = comps[0]
                 dat['cmd'] = ' '.join(comps[1:])
                 ret['special'].append(dat)
+            elif line.startswith('#'):
+                # It's a comment! Catch it!
+                comment = line.lstrip('# ')
             elif len(line.split()) > 5:
                 # Appears to be a standard cron line
                 comps = line.split()
-                dat = {}
-                dat['minute'] = comps[0]
-                dat['hour'] = comps[1]
-                dat['daymonth'] = comps[2]
-                dat['month'] = comps[3]
-                dat['dayweek'] = comps[4]
-                dat['cmd'] = ' '.join(comps[5:])
+                dat = {'minute': comps[0],
+                       'hour': comps[1],
+                       'daymonth': comps[2],
+                       'month': comps[3],
+                       'dayweek': comps[4],
+                       'cmd': ' '.join(comps[5:]),
+                       'comment': comment}
                 ret['crons'].append(dat)
+                comment = None
             elif line.find('=') > 0:
                 # Appears to be a ENV setup line
                 comps = line.split('=')
@@ -254,7 +261,7 @@ def _get_cron_date_time(**kwargs):
     return ret
 
 
-def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
+def set_job(user, minute, hour, daymonth, month, dayweek, cmd, comment):
     '''
     Sets a cron job up for a specified user.
 
@@ -276,7 +283,7 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek))]):
+                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
                 rm_job(user, cmd)
 
                 # Use old values when setting the new job if there was no
@@ -291,15 +298,18 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
                     month = cron['month']
                 if not _needs_change(cron['dayweek'], dayweek):
                     dayweek = cron['dayweek']
+                if not _needs_change(cron['comment'], comment):
+                    comment = cron['comment']
 
                 jret = set_job(user, minute, hour, daymonth,
-                               month, dayweek, cmd)
+                               month, dayweek, cmd, comment)
                 if jret == 'new':
                     return 'updated'
                 else:
                     return jret
             return 'present'
-    cron = {'cmd': cmd}
+    cron = {'cmd': cmd,
+            'comment': comment}
     cron.update(_get_cron_date_time(minute=minute, hour=hour,
                                     daymonth=daymonth, month=month,
                                     dayweek=dayweek))

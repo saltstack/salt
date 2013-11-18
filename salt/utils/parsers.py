@@ -527,7 +527,7 @@ class LogLevelMixIn(object):
                     logfile_basename = os.path.basename(
                         self._default_logging_logfile_
                     )
-                    logging.getLogger(__name__).warning(
+                    logging.getLogger(__name__).debug(
                         'The user {0!r} is not allowed to write to {1!r}. '
                         'The log file will be stored in '
                         '\'~/.salt/{2!r}.log\''.format(
@@ -874,6 +874,19 @@ class OutputOptionsMixIn(object):
 
     def process_output(self):
         self.selected_output_option = self.options.output
+
+    def process_output_file(self):
+        if self.options.output_file is not None:
+            if os.path.isfile(self.options.output_file):
+                try:
+                    os.remove(self.options.output_file)
+                except (IOError, OSError) as exc:
+                    self.error(
+                        '{0}: Access denied: {1}'.format(
+                            self.options.output_file,
+                            exc
+                        )
+                    )
 
     def _mixin_after_parsed(self):
         group_options_selected = filter(
@@ -1488,6 +1501,11 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '--file-root',
             default=None,
             help='Set this directory as the base file root.'
+        )
+        self.add_option(
+            '--pillar-root',
+            default=None,
+            help='Set this directory as the base pillar root.'
         )
         self.add_option(
             '--retcode-passthrough',

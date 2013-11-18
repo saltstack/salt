@@ -1,11 +1,11 @@
-======================
-Salt Stack Walkthrough
-======================
+=====================
+SaltStack Walkthrough
+=====================
 
 Welcome!
 ========
 
-Welcome to Salt Stack! I am excited that you are interested in Salt and
+Welcome to SaltStack! I am excited that you are interested in Salt and
 starting down the path to better infrastructure management. I developed
 (and am continuing to develop) Salt with the goal of making the best
 software available to manage computers of almost any kind. I hope you enjoy
@@ -13,7 +13,7 @@ working with Salt and that the software can solve your real world needs!
 
 - Thomas S Hatch
 - Salt creator and chief developer
-- CTO of Salt Stack, Inc.
+- CTO of SaltStack, Inc.
 
 .. note::
 
@@ -56,7 +56,7 @@ infrastructures as small as just a few systems.
 Installing Salt
 ---------------
 
-Salt Stack has been made to be very easy to install and get started. Setting up
+SaltStack has been made to be very easy to install and get started. Setting up
 Salt should be as easy as installing Salt via distribution packages on Linux or
 via the Windows installer. The :doc:`installation documents
 </topics/installation/index>` cover specific platform installation in depth.

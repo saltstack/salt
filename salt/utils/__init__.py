@@ -32,7 +32,6 @@ import warnings
 import yaml
 from calendar import month_abbr as months
 
-
 try:
     import timelib
     HAS_TIMELIB = True
@@ -100,8 +99,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$', re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(.*)$')
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -178,8 +177,48 @@ def get_colors(use=True):
     if not use:
         for color in colors:
             colors[color] = ''
+    if isinstance(use, str):
+        # Try to set all of the colors to the passed color
+        if use in colors:
+            for color in colors:
+                colors[color] = colors[use]
 
     return colors
+
+
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # in test, a single line template would return a crazy line number like,
+    # 357.  do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 def daemonize(redirect_out=True):
@@ -790,7 +829,7 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # We'll be showing errors to the users until Salt Lithium comes out, after
     # which, errors will be raised instead.
     warn_until(
         'Lithium',
@@ -829,7 +868,7 @@ def format_call(fun,
         ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
+            '\'key: value\' pairs. Your approach will work until Salt Lithium '
             'is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'

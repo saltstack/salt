@@ -26,6 +26,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 import pip
 
+pip_state.__env__ = 'base'
 pip_state.__opts__ = {'test': False}
 pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
@@ -277,6 +278,20 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'Package was successfully installed',
                     {'test': ret}
                 )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_install = MagicMock(return_value={ 'retcode': 0 })
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            with patch.dict(pip_state.__opts__, {'test': False}):
+                ret = pip_state.installed(
+                    'arbitrary ID that should be ignored due to requirements specified',
+                    requirements='/tmp/non-existing-requirements.txt'
+                )
+                self.assertSaltTrueReturn({'test': ret})
+
 
         # Test VCS installations using git+git://
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})

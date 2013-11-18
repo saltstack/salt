@@ -142,26 +142,47 @@ def parse_args_and_kwargs(func, args, data=None):
     This is to prevent things like 'echo "Hello: world"' to be parsed as
     dictionaries.
     '''
-    spec_args, _, has_kwargs, _ = salt.utils.get_function_argspec(func)
+    argspec = salt.utils.get_function_argspec(func)
     _args = []
     kwargs = {}
+    invalid_kwargs = []
+
     for arg in args:
+        # support old yamlify syntax
         if isinstance(arg, string_types):
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
-                if has_kwargs or arg_name in spec_args:
+                if argspec.keywords or arg_name in argspec.args:
+                    # Function supports **kwargs or is a positional argument to
+                    # the function.
                     kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
-            else:
-                # Not a kwarg
-                pass
+
+                # **kwargs not in argspec and parsed argument name not in
+                # list of positional arguments. This keyword argument is
+                # invalid.
+                invalid_kwargs.append(arg)
+
+        # if the arg is a dict with __kwarg__ == True, then its a kwarg
+        elif isinstance(arg, dict) and arg.get('__kwarg__') is True:
+            for key, val in arg.iteritems():
+                if key == '__kwarg__':
+                    continue
+                kwargs[key] = val
+            continue
         _args.append(yamlify_arg(arg))
-    if has_kwargs and isinstance(data, dict):
+    if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
+
     log.debug('Parsed args: {0}'.format(_args))
     log.debug('Parsed kwargs: {0}'.format(kwargs))
+    if invalid_kwargs:
+        raise SaltInvocationError(
+            'The following keyword arguments are not valid: {0}'
+            .format(', '.join(invalid_kwargs))
+        )
     return _args, kwargs
 
 
@@ -215,6 +236,8 @@ class SMinion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+
+        # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']

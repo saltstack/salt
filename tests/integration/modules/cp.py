@@ -277,6 +277,41 @@ class CPModuleTest(integration.ModuleCase):
                     hashlib.md5(fn_.read()).hexdigest()
                     )
 
+    def test_get_file_from_env_predefined(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'cheese')
+        try:
+            self.run_function('cp.get_file', ['salt://cheese', tgt])
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertNotIn('Comte', data)
+        finally:
+            os.unlink(tgt)
+
+    def test_get_file_from_env_in_url(self):
+        tgt = os.path.join(integration.TMP, 'cheese')
+        try:
+            self.run_function('cp.get_file', ['salt://cheese?env=prod', tgt])
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertIn('Comte', data)
+        finally:
+            os.unlink(tgt)
+
+        try:
+            self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
+            with salt.utils.fopen(tgt, 'r') as cheese:
+                data = cheese.read()
+                self.assertIn('Gromit', data)
+                self.assertIn('Comte', data)
+        finally:
+            os.unlink(tgt)
+
+
 
 if __name__ == '__main__':
     from integration import run_tests

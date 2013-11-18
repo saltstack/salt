@@ -70,7 +70,7 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
 
         salt ns1 ddns.delete_host example.com host1
     '''
-    fqdn = '{}.{}'.format(name, zone)
+    fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, 'A')
     answer = dns.query.udp(request, nameserver)
     try:
@@ -112,7 +112,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False)
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     '''
     name = str(name)
-    fqdn = '{}.{}'.format(name, zone)
+    fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver)
 
@@ -153,7 +153,8 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1'):
 
         salt ns1 ddns.delete example.com host1 A
     '''
-    fqdn = '{}.{}'.format(name, zone)
+    name = str(name)
+    fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
 
     answer = dns.query.udp(request, nameserver)

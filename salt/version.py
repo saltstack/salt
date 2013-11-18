@@ -57,8 +57,8 @@ class SaltStackVersion(object):
         'Hydrogen': (sys.maxint - 108, 0, 0, 0),
         'Helium': (sys.maxint - 107, 0, 0, 0),
         'Lithium': (sys.maxint - 106, 0, 0, 0),
-        #'Beryllium'    : (sys.maxint - 105, 0, 0, 0),
-        #'Boron'        : (sys.maxint - 104, 0, 0, 0),
+        'Beryllium': (sys.maxint - 105, 0, 0, 0),
+        'Boron': (sys.maxint - 104, 0, 0, 0),
         #'Carbon'       : (sys.maxint - 103, 0, 0, 0),
         #'Nitrogen'     : (sys.maxint - 102, 0, 0, 0),
         #'Oxygen'       : (sys.maxint - 101, 0, 0, 0),
@@ -221,7 +221,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version {0!r} is not know'.format(name)
+                'Named version {0!r} is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
@@ -358,19 +358,17 @@ def __get_version(version, version_info):
     import warnings
     import subprocess
 
-    try:
+    if 'SETUP_DIRNAME' in globals():
+        # This is from the exec() call in Salt's setup.py
+        cwd = SETUP_DIRNAME  # pylint: disable=E0602
+        if not os.path.exists(os.path.join(cwd, '.git')):
+            # This is not a Salt git checkout!!! Don't even try to parse...
+            return version, version_info
+    else:
         cwd = os.path.abspath(os.path.dirname(__file__))
-    except NameError:
-        # We're most likely being frozen and __file__ triggered this NameError
-        # Let's work around that
-        import inspect
-        cwd = os.path.abspath(
-            os.path.dirname(inspect.getsourcefile(__get_version))
-        )
-
-    if not os.path.exists(os.path.join(os.path.dirname(cwd), '.git')):
-        # This is not a Salt git checkout!!! Don't even try to parse...
-        return version, version_info
+        if not os.path.exists(os.path.join(os.path.dirname(cwd), '.git')):
+            # This is not a Salt git checkout!!! Don't even try to parse...
+            return version, version_info
 
     try:
         kwargs = dict(

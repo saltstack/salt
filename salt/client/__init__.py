@@ -61,10 +61,10 @@ def condition_kwarg(arg, kwarg):
     Return a single arg structure for the publisher to safely use
     '''
     if isinstance(kwarg, dict):
-        kw_ = []
+        kw_ = {'__kwarg__': True}
         for key, val in kwarg.items():
-            kw_.append('{0}={1}'.format(key, val))
-        return list(arg) + kw_
+            kw_[key] = val
+        return list(arg) + [kw_]
     return arg
 
 
@@ -1030,12 +1030,14 @@ class LocalClient(object):
         syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
-            if raw is not None and 'id' in raw:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
+                    continue
+                if 'return' not in raw:
                     continue
                 found.add(raw.get('id'))
                 ret = {raw['id']: {'ret': raw['return']}}

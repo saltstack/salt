@@ -70,18 +70,18 @@ def lowstate_file_refs(chunks):
     '''
     refs = {}
     for chunk in chunks:
-        env = 'base'
+        saltenv = 'base'
         crefs = []
         for state in chunk:
             if state == '__env__':
-                env = chunk[state]
+                saltenv = chunk[state]
             elif state.startswith('__'):
                 continue
             crefs.extend(salt_refs(chunk[state]))
         if crefs:
-            if not env in refs:
-                refs[env] = []
-            refs[env].append(crefs)
+            if not saltenv in refs:
+                refs[saltenv] = []
+            refs[saltenv].append(crefs)
     return refs
 
 
@@ -104,7 +104,7 @@ def salt_refs(data):
 
 def prep_trans_tar(opts, chunks, file_refs):
     '''
-    Generate the execution package from the env file refs and a low state
+    Generate the execution package from the saltenv file refs and a low state
     data structure
     '''
     gendir = tempfile.mkdtemp()
@@ -113,14 +113,14 @@ def prep_trans_tar(opts, chunks, file_refs):
     lowfn = os.path.join(gendir, 'lowstate.json')
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
-    for env in file_refs:
-        env_root = os.path.join(gendir, env)
+    for saltenv in file_refs:
+        env_root = os.path.join(gendir, saltenv)
         if not os.path.isdir(env_root):
             os.makedirs(env_root)
-        for ref in file_refs[env]:
+        for ref in file_refs[saltenv]:
             for name in ref:
                 short = name[7:]
-                path = file_client.cache_file(name, env)
+                path = file_client.cache_file(name, saltenv)
                 if path:
                     tgt = os.path.join(env_root, short)
                     tgt_dir = os.path.dirname(tgt)
@@ -128,7 +128,7 @@ def prep_trans_tar(opts, chunks, file_refs):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
                     break
-                files = file_client.cache_dir(name, env, True)
+                files = file_client.cache_dir(name, saltenv, True)
                 if files:
                     for filename in files:
                         tgt = os.path.join(

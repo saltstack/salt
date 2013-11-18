@@ -38,7 +38,8 @@ def __virtual__():
         'SUSE  Enterprise Server',
         'OEL',
         'Linaro',
-        'elementary OS'
+        'elementary OS',
+        'McAfee  OS Server'
     ))
     if __grains__.get('os', '') in disable:
         return False
@@ -150,6 +151,21 @@ def available(name):
         salt '*' service.available sshd
     '''
     return name in get_all()
+
+
+def missing(name):
+    '''
+    The inverse of service.available.
+    Returns ``True`` if the specified service is not available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing sshd
+    '''
+    return not name in get_all()
 
 
 def get_all():

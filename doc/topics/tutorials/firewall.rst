@@ -65,15 +65,17 @@ The firewall module in YaST2 provides a text-based interface to modifying the fi
 
    yast2 firewall
 
+.. _linux-iptables:
 
 iptables
 ========
 
-Different Linux distributions store their `iptables`_ rules in different places,
-which makes it difficult to standardize firewall documentation. Included are
-some of the more common locations, but your mileage may vary.
+Different Linux distributions store their `iptables` (also known as
+`netfilter`_) rules in different places, which makes it difficult to
+standardize firewall documentation. Included are some of the more
+common locations, but your mileage may vary.
 
-.. _`iptables`: http://www.netfilter.org/
+.. _`netfilter`: http://www.netfilter.org/
 
 **Fedora / RHEL / CentOS**:
 
@@ -128,3 +130,36 @@ be reloaded. This can be done using the ``pfctl`` command.
     pfctl -vf /etc/pf.conf
 
 .. _`packet filter (pf)`: http://openbsd.org/faq/pf/
+
+=================================
+Whitelist communication to Master
+=================================
+
+There are situations where you want to selectively allow Minon traffic
+from specific hosts or networks into your Salt Master. The first
+scenario which comes to mind is to prevent unwanted traffic to your
+Master out of security concerns, but another scenario is to handle
+Minion upgrades when there are backwards incompatible changes between
+the installed Salt versions in your environment.
+
+Here is an example :ref:`Linux iptables <linux-iptables>` ruleset to
+be set on the Master:
+
+.. code-block:: bash
+
+    # Allow Minions from these networks
+    -I INPUT -s 10.1.2.0/24 -p tcp -m multiport --dports 4505,4506 -j ACCEPT
+    -I INPUT -s 10.1.3.0/24 -p tcp -m multiport --dports 4505,4506 -j ACCEPT
+    # Allow Salt to communicate with Master on the loopback interface
+    -A INPUT -i lo -p tcp -m multiport --dports 4505,4506 -j ACCEPT
+    # Reject everything else
+    -A INPUT -p tcp -m multiport --dports 4505,4506 -j REJECT
+
+.. note::
+
+    The important thing to note here is that the ``salt`` command
+    needs to communicate with the listening network socket of
+    ``salt-master`` on the *loopback* interface. Without this you will
+    see no outgoing Salt traffic from the master, even for a simple
+    ``salt '*' test.ping``, because the ``salt`` client never reached
+    the ``salt-master`` to tell it to carry out the execution.

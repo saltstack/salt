@@ -182,6 +182,12 @@ A basic Formula repository should have the following layout::
     |-- README.rst
     `-- VERSION
 
+.. seealso:: :formula:`template-formula`
+
+    The :formula:`template-formula` repository has a pre-built layout that
+    serves as the basic structure for a new formula repository. Just copy the
+    files from there and edit them.
+
 ``README.rst``
 --------------
 
@@ -242,13 +248,21 @@ parameterized information that can be reused throughout a Formula. See
 a file should be named :file:`map.jinja` and live alongside the state
 files.
 
-The following is an example from the MySQL Formula.
+The following is an example from the MySQL Formula that has been slightly
+modified to be more readable and less terse.
+
+In essence, it is a simple dictionary that serves as a lookup table. The
+:py:func:`grains.filter_by <salt.modules.grains.filter_by>` function then does
+a lookup on that table using the ``os_family`` grain (by default) and sets the
+result to a variable that can be used throughout the formula.
+
+.. seealso:: :py:func:`grains.filter_by <salt.modules.grains.filter_by>`
 
 :file:`map.jinja`:
 
 .. code-block:: jinja
 
-    {% set mysql = salt['grains.filter_by']({
+    {% set mysql_lookup_table = {
         'Debian': {
             'server': 'mysql-server',
             'client': 'mysql-client',
@@ -267,7 +281,23 @@ The following is an example from the MySQL Formula.
             'service': 'mysql',
             'config': '/etc/mysql/my.cnf',
         },
-    }, merge=salt['pillar.get']('mysql:lookup')) %}
+    } %}
+
+    {% set mysql = salt['grains.filter_by'](mysql_lookup_table,
+        merge=salt['pillar.get']('mysql:lookup')) 
+
+The ``merge`` keyword specifies the location of a dictionary in Pillar that can
+be used to override values returned from the lookup table. If the value exists
+in Pillar it will take precedence, otherwise ``merge`` will be ignored. This is
+useful when software or configuration files is installed to non-standard
+locations. For example, the following Pillar would replace the ``config`` value
+from the call above.
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        config: /usr/local/etc/mysql/my.cnf
 
 Any of the values defined above can be fetched for the current platform in any
 state file using the following syntax:

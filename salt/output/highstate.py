@@ -26,7 +26,6 @@ import pprint
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
 
 
 def output(data):
@@ -125,22 +124,15 @@ def output(data):
                     changes += 'Invalid Changes data: {0}'.format(
                             ret['changes'])
                 else:
-                    for key in ret['changes']:
-                        if isinstance(ret['changes'][key], string_types):
-                            changes += (key + ': ' + ret['changes'][key] +
-                                        '\n                   ')
-                        elif isinstance(ret['changes'][key], dict):
-                            innerdict = '{ '
-                            for k, v in ret['changes'][key].iteritems():
-                                innerdict += '{0} : {1}\n'.format(k, v)
-                            innerdict += '}'
-                            changes += (key + ': ' +
-                                        innerdict +
-                                        '\n                   ')
-                        else:
-                            changes += (key + ': ' +
-                                        pprint.pformat(ret['changes'][key]) +
-                                        '\n                   ')
+                    pass_opts = __opts__
+                    if __opts__['color']:
+                        pass_opts['color'] = 'CYAN'
+                    pass_opts['nested_indent'] = 19
+                    changes += '\n'
+                    changes += salt.output.out_format(
+                            ret['changes'],
+                            'nested',
+                            pass_opts)
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
 

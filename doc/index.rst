@@ -2,11 +2,11 @@
 
 .. _contents:
 
-.. image:: _static/images/saltconf.jpg
+.. image:: _static/saltconf.jpg
     :target: http://saltconf.com/
 
-What is Salt Stack?
-===================
+What is SaltStack?
+==================
 
 Salt is a new approach to infrastructure management. Easy enough to get
 running in minutes, scalable enough to manage tens of thousands of servers,
@@ -15,15 +15,25 @@ and fast enough to communicate with them in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Offline documentation
+.. seealso:: Other Documentation
 
-    Download a copy of the Salt documentation:
+    Download an offline copy of the latest Salt documentation:
 
     * `PDF`_
     * `ePub`_
+    * `Dash Docset`_
+
+    See documentation for past Salt releases at http://salt.readthedocs.org.
+    Download offline copies on the `ReadTheDocs download page`_.
+
+    Watch announcements, demonstrations, and video tutorials on the `SaltStack
+    YouTube channel`_.
 
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
+.. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
+.. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
+.. _`SaltStack YouTube channel`: http://youtube.com/saltstack
 
 Download
 ========
@@ -172,6 +182,10 @@ Miscellaneous topics
 
 Salt is many splendid things.
 
+:doc:`Salt Cloud <topics/cloud/index>`
+    Salt Cloud is a public cloud provisioning tool that integrates Salt with
+    many cloud providers.
+
 :doc:`File Server <ref/file_server/index>`
     Salt can easily and quickly transfer files (in fact, that's how Salt
     States work). Even under heavy load, files are chunked and served.
@@ -244,7 +258,7 @@ More information about the project
 ==================================
 
 :doc:`Release notes </topics/releases/index>`
-    Living history of Salt Stack.
+    Living history of SaltStack.
 
 :doc:`Community </topics/community>`
     How to get involved.

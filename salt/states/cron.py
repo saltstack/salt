@@ -9,9 +9,11 @@ Cron declarations require a number of parameters. The timing parameters need
 to be declared: minute, hour, daymonth, month, and dayweek. The user whose
 crontab is to be edited also needs to be defined.
 
-By default, the timing arguments are all ``*`` and the user is root. When
-making changes to an existing cron job, the name declaration is the unique
-factor, so if an existing cron that looks like this:
+By default, the timing arguments are all ``*`` (**Caution**: This means just
+setting ``hour`` to ``5`` and not defining minute will execute the cron entry
+every minute between 5 and 6 am!) and the user is root. When making changes to
+an existing cron job, the name declaration is the unique factor, so if an
+existing cron that looks like this:
 
 .. code-block:: yaml
 
@@ -63,7 +65,8 @@ keyword will not modify it.
 import os
 
 # Import salt libs
-from salt.utils import mkstemp, fopen
+import salt._compat
+import salt.utils
 from salt.modules.cron import _needs_change
 
 
@@ -73,7 +76,8 @@ def _check_cron(user,
                 hour=None,
                 daymonth=None,
                 month=None,
-                dayweek=None):
+                dayweek=None,
+                comment=None):
     '''
     Return the changes
     '''
@@ -93,7 +97,7 @@ def _check_cron(user,
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek))]):
+                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -125,7 +129,8 @@ def present(name,
             hour='*',
             daymonth='*',
             month='*',
-            dayweek='*'):
+            dayweek='*',
+            comment=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -156,6 +161,9 @@ def present(name,
 
     dayweek
         The information to be set in the day of week section. Default is ``*``
+
+    comment
+        User comment to be added on line previous the cron job
     '''
     name = ' '.join(name.strip().split())
     ret = {'changes': {},
@@ -169,7 +177,8 @@ def present(name,
                              hour,
                              daymonth,
                              month,
-                             dayweek)
+                             dayweek,
+                             comment)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -186,7 +195,8 @@ def present(name,
                                     daymonth=daymonth,
                                     month=month,
                                     dayweek=dayweek,
-                                    cmd=name)
+                                    cmd=name,
+                                    comment=comment)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -311,8 +321,8 @@ def file(name,
     mode = __salt__['config.manage_mode'](600)
     owner, group, crontab_dir = _get_cron_info()
 
-    cron_path = mkstemp()
-    with fopen(cron_path, 'w+') as fp_:
+    cron_path = salt.utils.mkstemp()
+    with salt.utils.fopen(cron_path, 'w+') as fp_:
         fp_.write(__salt__['cron.raw_cron'](user))
 
     ret = {'changes': {},
@@ -321,11 +331,19 @@ def file(name,
            'result': True}
 
     # Avoid variable naming confusion in below module calls, since ID
-    # delclaration for this state will be a source URI.
+    # declaration for this state will be a source URI.
     source = name
 
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+    if isinstance(env, salt._compat.string_types):
+        msg = (
+            'Passing a salt environment should be done using \'saltenv\' not '
+            '\'env\'. This warning will go away in Salt Boron and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
+        )
+        salt.utils.warn_until('Boron', msg)
+        ret.setdefault('warnings', []).append(msg)
+        # No need to set __env__ = env since that's done in the state machinery
 
     if not replace and os.stat(cron_path).st_size > 0:
         ret['comment'] = 'User {0} already has a crontab. No changes ' \
@@ -344,7 +362,7 @@ def file(name,
                                              False,  # makedirs = False
                                              context,
                                              defaults,
-                                             env,
+                                             __env__,
                                              **kwargs
                                              )
         ret['result'], ret['comment'] = fcm

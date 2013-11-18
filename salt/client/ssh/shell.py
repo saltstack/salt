@@ -125,7 +125,9 @@ class Shell(object):
         Return the string to execute ssh-copy-id
         '''
         if self.passwd and salt.utils.which('sshpass'):
-            return 'sshpass -p "{0}" {1} {2} "{3} -p {4} {5}@{6}"'.format(
+            # Using single quotes prevents shell expansion and
+            # passwords containig '$'
+            return "sshpass -p '{0}' {1} {2} '{3} -p {4} {5}@{6}'".format(
                     self.passwd,
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
@@ -141,7 +143,9 @@ class Shell(object):
         have two commands
         '''
         if self.passwd and salt.utils.which('sshpass'):
-            return 'sshpass -p "{0}" {1} {2} {3} -p {4} {5}@{6}'.format(
+            # Using single quotes prevents shell expansion and
+            # passwords containig '$'
+            return "sshpass -p '{0}' {1} {2} {3} -p {4} {5}@{6}".format(
                     self.passwd,
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
@@ -169,6 +173,8 @@ class Shell(object):
 
         if self.passwd and salt.utils.which('sshpass'):
             opts = self._passwd_opts()
+            # Using single quotes prevents shell expansion and
+            # passwords containig '$'
             return "sshpass -p '{0}' {1} {2} {3} {4} {5}".format(
                     self.passwd,
                     ssh,

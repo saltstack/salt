@@ -22,7 +22,7 @@ import salt.utils
 
 _PKG_TARGETS = {
     'Arch': ['python2-django', 'finch'],
-    'Debian': ['python-plist', 'finch'],
+    'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'finch']

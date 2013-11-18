@@ -255,7 +255,7 @@ strftime
   valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
   :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
   the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
-  module. Some exemples are available on this pages.
+  module. Some examples are available on this pages.
 
   .. code-block:: yaml
 

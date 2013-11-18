@@ -141,7 +141,7 @@ def create_ca(
         C='US',
         ST='Utah',
         L='Salt Lake City',
-        O='Salt Stack',
+        O='SaltStack',
         OU=None,
         emailAddress='xyz@pdq.net'):
     '''
@@ -162,7 +162,7 @@ def create_ca(
     L
         locality, default is "Centerville", the city where SaltStack originated
     O
-        organization, default is "Salt Stack"
+        organization, default is "SaltStack"
     OU
         organizational unit, default is None
     emailAddress
@@ -284,7 +284,7 @@ def create_csr(
         C='US',
         ST='Utah',
         L='Salt Lake City',
-        O='Salt Stack',
+        O='SaltStack',
         OU=None,
         emailAddress='xyz@pdq.net'):
     '''
@@ -304,7 +304,7 @@ def create_csr(
     L
         locality, default is "Centerville", the city where SaltStack originated
     O
-        organization, default is "Salt Stack"
+        organization, default is "SaltStack"
         NOTE: Must the same as CA certificate or an error will be raised
     OU
         organizational unit, default is None
@@ -408,7 +408,7 @@ def create_self_signed_cert(
         C='US',
         ST='Utah',
         L='Salt Lake City',
-        O='Salt Stack',
+        O='SaltStack',
         OU=None,
         emailAddress='xyz@pdq.net'):
 
@@ -428,7 +428,7 @@ def create_self_signed_cert(
     L
         locality, default is "Centerville", the city where SaltStack originated
     O
-        organization, default is "Salt Stack"
+        organization, default is "SaltStack"
         NOTE: Must the same as CA certificate or an error will be raised
     OU
         organizational unit, default is None
@@ -729,7 +729,7 @@ if __name__ == '__main__':
             C="US",
             ST="Utah",
             L="Centerville",
-            O="Salt Stack",
+            O="SaltStack",
             OU=None,
             emailAddress='test_system@saltstack.org'
             )

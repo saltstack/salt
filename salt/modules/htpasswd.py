@@ -15,13 +15,15 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'webutil'
+
 
 def __virtual__():
     '''
     Only load the module if htpasswd is installed
     '''
     if salt.utils.which('htpasswd'):
-        return 'webutil'
+        return __virtualname__
     return False
 
 

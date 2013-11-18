@@ -87,6 +87,24 @@ class StdTest(integration.ModuleCase):
         self.assertEqual(data['ret']['baz'], 'quo')
         self.assertEqual(data['ret']['qux'], 'quux')
 
+    def test_kwarg_type(self):
+        '''
+        Test that kwargs end up on the client as the same type
+        '''
+        terrible_yaml_string = 'foo: ""\n# \''
+        ret = self.client.cmd_full_return(
+                'minion',
+                'test.arg_type',
+                ['a', 1],
+                kwarg={'outer': {'a': terrible_yaml_string},
+                       'inner': 'value'}
+                )
+        data = ret['minion']['ret']
+        self.assertIn('str', data['args'][0])
+        self.assertIn('int', data['args'][1])
+        self.assertIn('dict', data['kwargs']['outer'])
+        self.assertIn('str', data['kwargs']['inner'])
+
 
 if __name__ == '__main__':
     from integration import run_tests

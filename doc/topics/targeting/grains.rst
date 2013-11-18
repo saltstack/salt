@@ -102,15 +102,9 @@ same way as in the above example, only without a top-level ``grains:`` key:
     cabinet: 13
     cab_u: 14-15
 
-.. admonition:: Precedece of Custom Static Grains
 
-    Be careful when defining grains both in ``/etc/salt/grains`` and within the
-    minion config file. If a grain is defined in both places, the value in the
-    minion config file takes precedence, and will always be used over its
-    counterpart in ``/etc/salt/grains``.
-
-Grains in Top file
-==================
+Matching Grains in the Top File
+===============================
 
 With correctly setup grains on the Minion, the Top file used in Pillar or during Highstate can be made really efficient.  Like for example, you could do:
 
@@ -168,8 +162,27 @@ grains need to be static data. If the data is something that is likely to
 change, consider using :doc:`Pillar <../pillar/index>` instead.
 
 
+Precedence
+==========
+
+Core grains can be overriden by custom grains. As there are several ways of
+defining custom grains, there is an order of precedence which should be kept in
+mind when defining them. The order of evaluation is as follows:
+
+1. Core grains.
+2. Custom grains in ``/etc/salt/grains``.
+3. Custom grains in ``/etc/salt/minion``.
+4. Custom grain modules in ``_grains`` directory, synced to minions.
+
+Each successive evaluation overrides the previous ones, so any grains defined
+in ``/etc/salt/grains`` that have the same name as a core grain will override
+that core grain. Similarly, ``/etc/salt/minion`` overrides both core grains and
+grains set in ``/etc/salt/grains``, and custom grain modules will override
+*any* grains of the same name.
+
+
 Examples of Grains
-------------------
+==================
 
 The core module in the grains package is where the main grains are loaded by
 the Salt minion and provides the principal example of how to write grains:
@@ -178,7 +191,7 @@ the Salt minion and provides the principal example of how to write grains:
 
 
 Syncing Grains
---------------
+==============
 
 Syncing grains can be done a number of ways, they are automatically synced when
 :mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted

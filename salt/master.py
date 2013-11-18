@@ -190,6 +190,7 @@ class Master(SMaster):
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
+        ckminions = salt.utils.minions.CkMinions(self.opts)
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
@@ -241,6 +242,11 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
+            log.debug(
+                'ckminions.connected_ids: {0}'.format(
+                    ckminions.connected_ids()
+                )
+            )
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -798,6 +804,7 @@ class AESFuncs(object):
                 ).format(clear_load['id'])
             )
             return False
+        clear_load.pop('tok')
         perms = []
         for match in self.opts['peer']:
             if re.match(match, clear_load['id']):
@@ -848,6 +855,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
         # and should be removed within 3-5 releases in favor of the
@@ -866,15 +874,15 @@ class AESFuncs(object):
                         stdout=subprocess.PIPE
                         ).communicate()[0])
             if 'environment' in ndata:
-                env = ndata['environment']
+                saltenv = ndata['environment']
             else:
-                env = 'base'
+                saltenv = 'base'
 
             if 'classes' in ndata:
                 if isinstance(ndata['classes'], dict):
-                    ret[env] = list(ndata['classes'])
+                    ret[saltenv] = list(ndata['classes'])
                 elif isinstance(ndata['classes'], list):
-                    ret[env] = ndata['classes']
+                    ret[saltenv] = ndata['classes']
                 else:
                     return ret
         # Evaluate all configured master_tops interfaces
@@ -907,9 +915,9 @@ class AESFuncs(object):
         mopts = {}
         file_roots = {}
         envs = self._file_envs()
-        for env in envs:
-            if env not in file_roots:
-                file_roots[env] = []
+        for saltenv in envs:
+            if saltenv not in file_roots:
+                file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
         if load.get('env_only'):
             return mopts
@@ -919,6 +927,8 @@ class AESFuncs(object):
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
+        mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
+        mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
     def _mine_get(self, load):
@@ -945,6 +955,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -1005,6 +1016,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1047,6 +1059,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1090,6 +1103,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1134,6 +1148,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         cpath = os.path.join(
                 self.opts['cachedir'],
                 'minions',
@@ -1160,7 +1175,7 @@ class AESFuncs(object):
         '''
         Return the pillar data for the minion
         '''
-        if any(key not in load for key in ('id', 'grains', 'env')):
+        if any(key not in load for key in ('id', 'grains', 'saltenv')):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
@@ -1168,7 +1183,7 @@ class AESFuncs(object):
                 self.opts,
                 load['grains'],
                 load['id'],
-                load['env'],
+                load['saltenv'],
                 load.get('ext'))
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
@@ -1211,6 +1226,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
         if 'events' in load:
@@ -1357,6 +1373,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        clear_load.pop('tok')
         perms = set()
         for match in self.opts['peer_run']:
             if re.match(match, clear_load['id']):
@@ -1395,6 +1412,7 @@ class AESFuncs(object):
                 )
             )
             return {}
+        load.pop('tok')
         # Check that this minion can access this data
         auth_cache = os.path.join(
                 self.opts['cachedir'],
@@ -1604,7 +1622,9 @@ class AESFuncs(object):
 
             pret = {}
             pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(ret)
+            pret['pillar'] = pcrypt.dumps(
+                ret if ret is not False else {}
+            )
             return pret
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
@@ -1921,8 +1941,10 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from {id}'.format(**load))
-        # only write to disk if you are adding the file
-        if not os.path.isfile(pubfn):
+        # only write to disk if you are adding the file, and in open mode,
+        # which implies we accept any key from a minion (key needs to be
+        # written every time because what's on disk is used for encrypting)
+        if not os.path.isfile(pubfn) or self.opts['open_mode']:
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
         pub = None
@@ -1976,16 +1998,6 @@ class ClearFuncs(object):
                  'pub': load['pub']}
         self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
-
-    def cloud(self, clear_load):
-        '''
-        Hook into the salt-cloud libs and execute cloud routines
-        # NOT HOOKED IN YET
-        '''
-        authorize = salt.auth.Authorize(self.opts, clear_load, self.loadauth)
-        if not authorize.rights('cloud', clear_load):
-            return False
-        return True
 
     def runner(self, clear_load):
         '''

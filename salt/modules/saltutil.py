@@ -19,6 +19,7 @@ import sys
 import salt.payload
 import salt.state
 import salt.client
+import salt.utils
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
@@ -32,29 +33,29 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def _sync(form, env=None):
+def _sync(form, saltenv=None):
     '''
     Sync the given directory in the given environment
     '''
-    if env is None:
+    if saltenv is None:
         # No environment passed, detect them based on gathering the top files
         # from the master
-        env = 'base'
+        saltenv = 'base'
         st_ = salt.state.HighState(__opts__)
         top = st_.get_top()
         if top:
-            env = st_.top_matches(top).keys()
-    if isinstance(env, string_types):
-        env = env.split(',')
+            saltenv = st_.top_matches(top).keys()
+    if isinstance(saltenv, string_types):
+        saltenv = saltenv.split(',')
     ret = []
     remote = set()
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
-        log.info('Creating module dir \'{0}\''.format(mod_dir))
+        log.info('Creating module dir {0!r}'.format(mod_dir))
         os.makedirs(mod_dir)
-    for sub_env in env:
-        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
+    for sub_env in saltenv:
+        log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
@@ -64,7 +65,7 @@ def _sync(form, env=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
-        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
+        log.debug('Local cache dir: {0!r}'.format(local_cache_dir))
         for fn_ in cache:
             if __opts__.get('file_client', '') == 'local':
                 for fn_root in __opts__['file_roots'].get(sub_env, []):
@@ -81,7 +82,7 @@ def _sync(form, env=None):
                 relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
                 remote.add(relpath)
                 dest = os.path.join(mod_dir, relpath)
-            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
+            log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 srch = hashlib.md5(
@@ -185,7 +186,7 @@ def update(version=None):
             'restarted': restarted}
 
 
-def sync_modules(env=None, refresh=True):
+def sync_modules(saltenv=None, refresh=True):
     '''
     Sync the modules from the _modules directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -198,13 +199,13 @@ def sync_modules(env=None, refresh=True):
 
         salt '*' saltutil.sync_modules
     '''
-    ret = _sync('modules', env)
+    ret = _sync('modules', saltenv)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_states(env=None, refresh=True):
+def sync_states(saltenv=None, refresh=True):
     '''
     Sync the states from the _states directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -217,13 +218,13 @@ def sync_states(env=None, refresh=True):
 
         salt '*' saltutil.sync_states
     '''
-    ret = _sync('states', env)
+    ret = _sync('states', saltenv)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_grains(env=None, refresh=True):
+def sync_grains(saltenv=None, refresh=True):
     '''
     Sync the grains from the _grains directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -236,14 +237,14 @@ def sync_grains(env=None, refresh=True):
 
         salt '*' saltutil.sync_grains
     '''
-    ret = _sync('grains', env)
+    ret = _sync('grains', saltenv)
     if refresh:
         refresh_modules()
         refresh_pillar()
     return ret
 
 
-def sync_renderers(env=None, refresh=True):
+def sync_renderers(saltenv=None, refresh=True):
     '''
     Sync the renderers from the _renderers directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -256,13 +257,13 @@ def sync_renderers(env=None, refresh=True):
 
         salt '*' saltutil.sync_renderers
     '''
-    ret = _sync('renderers', env)
+    ret = _sync('renderers', saltenv)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_returners(env=None, refresh=True):
+def sync_returners(saltenv=None, refresh=True):
     '''
     Sync the returners from the _returners directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -275,13 +276,13 @@ def sync_returners(env=None, refresh=True):
 
         salt '*' saltutil.sync_returners
     '''
-    ret = _sync('returners', env)
+    ret = _sync('returners', saltenv)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_outputters(env=None, refresh=True):
+def sync_outputters(saltenv=None, refresh=True):
     '''
     Sync the outputters from the _outputters directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -294,13 +295,13 @@ def sync_outputters(env=None, refresh=True):
 
         salt '*' saltutil.sync_outputters
     '''
-    ret = _sync('outputters', env)
+    ret = _sync('outputters', saltenv)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_all(env=None, refresh=True):
+def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
     environment
@@ -313,12 +314,12 @@ def sync_all(env=None, refresh=True):
     '''
     log.debug('Syncing all')
     ret = {}
-    ret['modules'] = sync_modules(env, False)
-    ret['states'] = sync_states(env, False)
-    ret['grains'] = sync_grains(env, False)
-    ret['renderers'] = sync_renderers(env, False)
-    ret['returners'] = sync_returners(env, False)
-    ret['outputters'] = sync_outputters(env, False)
+    ret['modules'] = sync_modules(saltenv, False)
+    ret['states'] = sync_states(saltenv, False)
+    ret['grains'] = sync_grains(saltenv, False)
+    ret['renderers'] = sync_renderers(saltenv, False)
+    ret['returners'] = sync_returners(saltenv, False)
+    ret['outputters'] = sync_outputters(saltenv, False)
     if refresh:
         refresh_modules()
     return ret
@@ -379,7 +380,7 @@ def running():
 
         salt '*' saltutil.running
     '''
-    procs = __salt__['status.procs']()
+
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
@@ -400,7 +401,7 @@ def running():
         if not isinstance(data, dict):
             # Invalid serial object
             continue
-        if not procs.get(str(data['pid'])):
+        if not salt.utils.process.os_is_running(data['pid']):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)

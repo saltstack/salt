@@ -26,6 +26,7 @@ def compound(tgt):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
+    __opts__['grains'] = __grains__
     matcher = salt.minion.Matcher(__opts__, __salt__)
     try:
         return matcher.compound_match(tgt)

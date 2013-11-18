@@ -176,7 +176,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def install(name=None, sources=None, **kwargs):
+def install(name=None, sources=None, saltenv='base', **kwargs):
     '''
     Install the passed package. Can install packages from the following
     sources::
@@ -294,7 +294,7 @@ def install(name=None, sources=None, **kwargs):
         return {}
 
     if 'admin_source' in kwargs:
-        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
+        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], saltenv)
     else:
         adminfile = _write_adminfile(kwargs)
 
@@ -320,7 +320,7 @@ def install(name=None, sources=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, saltenv='base', **kwargs):
     '''
     Remove packages with pkgrm
 
@@ -382,7 +382,7 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     if 'admin_source' in kwargs:
-        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
+        adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], saltenv)
     else:
         # Set the adminfile default variables
         email = kwargs.get('email', '')

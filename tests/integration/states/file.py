@@ -15,6 +15,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+# Import Python libs
+import stat
+
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
@@ -107,6 +110,27 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
         self.assertEqual(master_data, minion_data)
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_dir_mode(self):
+        '''
+        Tests to ensure that file.managed creates directories with the
+        permissions requested with the dir_mode argument
+        '''
+        desired_mode = 511  # 0777 in octal
+        name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://grail/scene33',
+            mode=600,
+            makedirs=True,
+            dir_mode=oct(desired_mode)  # 0777
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(os.path.join(integration.TMP, 'a')).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
     def test_test_managed(self):
@@ -267,6 +291,34 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(name):
                 shutil.rmtree(name, ignore_errors=True)
 
+    def test_recurse_specific_env(self):
+        '''
+        file.recurse passing __env__
+        '''
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             __env__='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             saltenv='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
     def test_test_recurse(self):
         '''
         file.recurse test interface
@@ -277,6 +329,32 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
+        self.assertFalse(os.path.exists(name))
+
+    def test_test_recurse_specific_env(self):
+        '''
+        file.recurse test interface
+        '''
+        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             test=True,
+                             name=name,
+                             source='salt://holy',
+                             __env__='prod'
+        )
+        self.assertSaltNoneReturn(ret)
+        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
+        self.assertFalse(os.path.exists(name))
+
+        name = os.path.join(integration.TMP, 'recurse_test_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             test=True,
+                             name=name,
+                             source='salt://holy',
+                             saltenv='prod'
+        )
+        self.assertSaltNoneReturn(ret)
+        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertFalse(os.path.exists(name))
 
     def test_recurse_template(self):
@@ -317,6 +395,32 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertFalse(os.path.exists(strayfile))
             self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
             self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_clean_specific_env(self):
+        '''
+        file.recurse with clean=True and __env__=prod
+        '''
+        name = os.path.join(integration.TMP, 'recurse_clean_dir_prod_env')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+        strayfile = os.path.join(name, 'strayfile')
+        salt.utils.fopen(strayfile, 'w').close()
+
+        # Corner cases: replacing file with a directory and vice versa
+        salt.utils.fopen(os.path.join(name, '32'), 'w').close()
+        os.makedirs(os.path.join(name, 'scene34'))
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy',
+                             clean=True,
+                             __env__='prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.exists(strayfile))
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+            self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
 

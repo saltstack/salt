@@ -61,17 +61,20 @@ def present(name,
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
-    if __opts__['test']:
+    if user_exists and not force:
+        ret['comment'] = 'User {0} already exists'.format(name)
+
+    elif __opts__['test']:
         ret['result'] = None
 
         if not user_exists:
             ret['comment'] = 'User {0} is set to be created'
         elif force:
             ret['comment'] = 'User {0} is set to be updated'
-        else:
-            ret['comment'] = 'User {0} is not going to be modified'
         ret['comment'] = ret['comment'].format(name)
+
     else:
+        changes = {'old': '', 'new': ''}
         if not user_exists:
             log.debug(
                 "User doesn't exist - Creating")
@@ -85,24 +88,29 @@ def present(name,
                 for vhost, perm in element.items():
                     result = __salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
+            changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
                     name, password, runas=runas)
+                changes['new'] = ' New password'
             else:
                 log.debug('Password is not set - Clearing password')
                 result = __salt__['rabbitmq.clear_password'](
                     name, runas=runas)
+                changes['old'] += ' Old password removed'
             if tags:
                 result.update(__salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
                 )
+                changes['new'] += tags
             for element in perms:
                 for vhost, perm in element.items():
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
+                    changes['new'] += ' {0} {1}'.format(vhost, perm)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)
@@ -112,10 +120,13 @@ def present(name,
             ret['comment'] = result['Error']
         elif 'Added' in result:
             ret['comment'] = result['Added']
+            ret['changes'] = changes
         elif 'Password Changed' in result:
             ret['comment'] = result['Password Changed']
+            ret['changes'] = changes
         elif 'Password Cleared' in result:
             ret['comment'] = result['Password Cleared']
+            ret['changes'] = changes
 
     return ret
 
@@ -134,21 +145,19 @@ def absent(name,
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
-    if __opts__['test']:
+    if not user_exists:
+        ret['comment'] = 'User {0} is not present'.format(name)
+    elif __opts__['test']:
         ret['result'] = None
         if user_exists:
             ret['comment'] = 'Removing user {0}'.format(name)
-        else:
-            ret['comment'] = 'User {0} is not present'.format(name)
     else:
-        if user_exists:
-            result = __salt__['rabbitmq.delete_user'](name, runas=runas)
-            if 'Error' in result:
-                ret['result'] = False
-                ret['comment'] = result['Error']
-            elif 'Deleted' in result:
-                ret['comment'] = 'Deleted'
-        else:
-            ret['comment'] = 'User {0} is not present'.format(name)
+        result = __salt__['rabbitmq.delete_user'](name, runas=runas)
+        if 'Error' in result:
+            ret['result'] = False
+            ret['comment'] = result['Error']
+        elif 'Deleted' in result:
+            ret['comment'] = 'Deleted'
+            ret['changes'] = {'new': '', 'old': name}
 
     return ret

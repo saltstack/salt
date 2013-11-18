@@ -443,7 +443,7 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
     return value_data
 
 
-def refresh_db():
+def refresh_db(saltenv='base'):
     '''
     Just recheck the repository and return a dict::
 
@@ -457,18 +457,18 @@ def refresh_db():
     '''
     __context__.pop('winrepo.data', None)
     repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache)
+    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
     if not cached_repo:
         # It's not cached. Cache it, mate.
-        cached_repo = __salt__['cp.cache_file'](repocache)
+        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
         return True
     # Check if the master's cache file has changed
-    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo):
-        cached_repo = __salt__['cp.cache_file'](repocache)
+    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo, saltenv):
+        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
     return True
 
 
-def install(name=None, refresh=False, pkgs=None, **kwargs):
+def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     '''
     Install the passed package
 
@@ -527,10 +527,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 or installer.startswith('http:') \
                 or installer.startswith('https:') \
                 or installer.startswith('ftp:'):
-            cached_pkg = __salt__['cp.is_cached'](installer)
+            cached_pkg = __salt__['cp.is_cached'](installer, saltenv)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
-                cached_pkg = __salt__['cp.cache_file'](installer)
+                cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
         else:
             cached_pkg = installer
 
@@ -680,7 +680,7 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
     return remove(name=name, pkgs=pkgs, version=version, **kwargs)
 
 
-def get_repo_data():
+def get_repo_data(saltenv='base'):
     '''
     Returns the cached winrepo data
 
@@ -693,7 +693,7 @@ def get_repo_data():
     #if 'winrepo.data' in __context__:
     #    return __context__['winrepo.data']
     repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache)
+    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
     if not cached_repo:
         __salt__['pkg.refresh_db']()
     try:

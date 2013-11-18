@@ -146,6 +146,7 @@ VALID_OPTS = {
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
+    'fileserver_limit_traversal': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
@@ -167,6 +168,10 @@ VALID_OPTS = {
     'modules_max_memory': int,
     'grains_refresh_every': int,
     'enable_lspci': bool,
+    'syndic_wait': int,
+    'jinja_lstrip_blocks': bool,
+    'jinja_trim_blocks': bool,
+    'minion_id_caching': bool,
 }
 
 # default configurations
@@ -195,6 +200,7 @@ DEFAULT_MINION_OPTS = {
     'file_roots': {
         'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
+    'fileserver_limit_traversal': False,
     'pillar_roots': {
         'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
@@ -256,6 +262,7 @@ DEFAULT_MINION_OPTS = {
     'tcp_keepalive_intvl': -1,
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
+    'minion_id_caching': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -307,6 +314,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
+    'fileserver_limit_traversal': False,
     'max_open_files': 100000,
     'hash_type': 'md5',
     'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),
@@ -358,6 +366,9 @@ DEFAULT_MASTER_OPTS = {
     'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'syndic_wait': 1,
+    'jinja_lstrip_blocks': False,
+    'jinja_trim_blocks': False,
 }
 
 
@@ -370,9 +381,9 @@ def _validate_file_roots(opts):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
-    for env, dirs in list(opts['file_roots'].items()):
+    for saltenv, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
-            opts['file_roots'][env] = []
+            opts['file_roots'][saltenv] = []
     return opts['file_roots']
 
 
@@ -436,6 +447,14 @@ def _read_conf_file(path):
         except yaml.YAMLError as err:
             log.error(
                 'Error parsing configuration file: {0} - {1}'.format(path, err)
+            )
+            conf_opts = {}
+        # only interpret documents as a valid conf, not things like strings,
+        # which might have been caused by invalid yaml syntax
+        if not isinstance(conf_opts, dict):
+            log.error(
+                'Error parsing configuration file: {0} - conf should be a '
+                'document, not {1}.'.format(path, type(conf_opts))
             )
             conf_opts = {}
         # allow using numeric ids: convert int to string
@@ -664,7 +683,7 @@ def syndic_config(master_config_path,
     return opts
 
 
-def get_id(root_dir=None, minion_id=False):
+def get_id(root_dir=None, minion_id=False, cache=True):
     '''
     Guess the id of the minion.
 
@@ -685,21 +704,23 @@ def get_id(root_dir=None, minion_id=False):
         root_dir = syspaths.ROOT_DIR
 
     config_dir = syspaths.CONFIG_DIR
-    if config_dir.startswith(root_dir):
-        config_dir = config_dir.split(root_dir, 1)[-1]
+    if config_dir.startswith(syspaths.ROOT_DIR):
+        config_dir = config_dir.split(syspaths.ROOT_DIR, 1)[-1]
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
                             config_dir.lstrip('\\'),
                             'minion_id')
-    try:
-        with salt.utils.fopen(id_cache) as idf:
-            name = idf.read().strip()
-        if name:
-            log.info('Using cached minion ID: {0}'.format(name))
-            return name, False
-    except (IOError, OSError):
-        pass
+
+    if cache:
+        try:
+            with salt.utils.fopen(id_cache) as idf:
+                name = idf.read().strip()
+            if name:
+                log.info('Using cached minion ID: {0}'.format(name))
+                return name, False
+        except (IOError, OSError):
+            pass
 
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
@@ -708,7 +729,7 @@ def get_id(root_dir=None, minion_id=False):
     fqdn = socket.getfqdn()
     if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
-        if minion_id:
+        if minion_id and cache:
             try:
                 with salt.utils.fopen(id_cache, 'w') as idf:
                     idf.write(fqdn)
@@ -725,7 +746,7 @@ def get_id(root_dir=None, minion_id=False):
                         'This file should not contain any whitespace.')
         else:
             if name != 'localhost':
-                if minion_id:
+                if minion_id and cache:
                     try:
                         with salt.utils.fopen(id_cache, 'w') as idf:
                             idf.write(name)
@@ -746,7 +767,7 @@ def get_id(root_dir=None, minion_id=False):
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
-                            if minion_id:
+                            if minion_id and cache:
                                 try:
                                     with salt.utils.fopen(id_cache, 'w') as idf:
                                         idf.write(name)
@@ -759,7 +780,7 @@ def get_id(root_dir=None, minion_id=False):
 
     # Can Windows 'hosts' file help?
     try:
-        windir = os.getenv("WINDIR")
+        windir = os.getenv('WINDIR')
         with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
             for line in hfl:
                 # skip commented or blank lines
@@ -773,7 +794,7 @@ def get_id(root_dir=None, minion_id=False):
                             if name != 'localhost':
                                 log.info('Found minion id in hosts file: {0}'
                                          .format(name))
-                                if minion_id:
+                                if minion_id and cache:
                                     try:
                                         with salt.utils.fopen(id_cache, 'w') as idf:
                                             idf.write(name)
@@ -839,8 +860,10 @@ def apply_minion_config(overrides=None,
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
     if opts['id'] is None:
-        opts['id'], using_ip_for_id = get_id(opts['root_dir'],
-                                             minion_id=minion_id)
+        opts['id'], using_ip_for_id = get_id(
+                opts['root_dir'],
+                minion_id=minion_id,
+                cache=opts.get('minion_id_caching', True))
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
@@ -874,7 +897,9 @@ def apply_minion_config(overrides=None,
             '__mine_interval':
             {
                 'function': 'mine.update',
-                'minutes': opts['mine_interval']
+                'minutes': opts['mine_interval'],
+                'jid_include': True,
+                'maxrunning': 2
             }
         })
     return opts

@@ -12,13 +12,20 @@ Nodegroups are declared using a compound target specification. The compound
 target documentation can be found :doc:`here <compound>`.
 
 The :conf_master:`nodegroups` master config file parameter is used to define
-nodegroups. Here's an example nodegroup configuration:
+nodegroups. Here's an example nodegroup configuration within
+``/etc/salt/master``:
 
 .. code-block:: yaml
 
     nodegroups:
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
+
+.. note::
+
+    The 'L' within group1 is matching a list of minions, while the 'G' in
+    group2 is matching specific grains. See the
+    :doc:`compound matchers <compound>` documentation for more details.
 
 To match a nodegroup on the CLI, use the ``-N`` command-line option:
 

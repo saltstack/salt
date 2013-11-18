@@ -191,7 +191,11 @@ def _verify_binary_pkg(srcinfo):
     return problems
 
 
-def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
+def parse_targets(name=None,
+                  pkgs=None,
+                  sources=None,
+                  saltenv='base',
+                  **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
@@ -203,6 +207,16 @@ def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
 
         salt '*' pkg_resource.parse_targets
     '''
+    if '__env__' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'__env__\'. This functionality will be removed in Salt '
+            'Boron.'
+        )
+        # Backwards compatibility
+        saltenv = kwargs['__env__']
+
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
@@ -228,9 +242,7 @@ def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
                 # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
                                 pkg_src,
-                               __salt__['cp.cache_file'](pkg_src,
-                                                         kwargs.get('__env__',
-                                                                    'base')),
+                               __salt__['cp.cache_file'](pkg_src, saltenv),
                                'remote'))
             else:
                 # Package file local to the minion
