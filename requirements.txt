@@ -4,5 +4,5 @@ msgpack-python
 pycrypto
 PyYAML
 pyzmq >= 2.1.9
-markupsafe
+MarkupSafe
 apache-libcloud
