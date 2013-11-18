@@ -77,8 +77,7 @@ class CustomLoader(yaml.SafeLoader):
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                warnings.warn(
-                    'Duplicate Key: "{0}"'.format(key), DuplicateKeyWarning)
+                raise ConstructorError('Conflicting ID "{0}"'.format(key))
             mapping[key] = value
         return mapping
 
