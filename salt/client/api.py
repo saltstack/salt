@@ -280,12 +280,10 @@ class APIClient(object):
 
     def get_event(self, wait=0.25, tag='', full=False):
         '''
-        Returns next available event with tag tag from event bus
-        If any within wait seconds
+        Get a single salt event.
+        If no events are available, then block for up to ``wait`` seconds.
+        Return the event if it matches the tag (or ``tag`` is empty)
         Otherwise return None
-
-        If tag is empty then return events for all tags
-        If full then add tag field to returned data
 
         If wait is 0 then block forever or until next event becomes available.
         '''
