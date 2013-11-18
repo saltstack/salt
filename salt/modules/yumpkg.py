@@ -240,7 +240,10 @@ def _pkg_arch(name):
         pkgname, pkgarch = name.rsplit('.', 1)
     except ValueError:
         return name, __grains__['cpuarch']
-    if pkgarch in rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']:
+    
+    # if the split arch is not in the list of "good" architectures, we
+    # assume the given package name is the package to use
+    if pkgarch not in rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']:
         pkgname = name
     return pkgname, pkgarch
 
