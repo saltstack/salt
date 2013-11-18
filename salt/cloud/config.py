@@ -18,6 +18,7 @@ import salt.cloud.exceptions
 
 
 CLOUD_CONFIG_DEFAULTS = {
+    'conf_dir': '/etc/salt',
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults

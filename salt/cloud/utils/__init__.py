@@ -81,7 +81,15 @@ def os_script(os_, vm_=None, opts=None, minion=''):
         # extension was provided. Let's use it anyway.
         return __render_script('{0}.sh'.format(os_), vm_, opts, minion)
 
+    if type(opts['deploy_scripts_search_path']) is str:
+        opts['deploy_scripts_search_path'] = [
+            opts['deploy_scripts_search_path'],
+        ]
+
     for search_path in opts['deploy_scripts_search_path']:
+        if not os.path.isabs(search_path):
+            search_path = os.path.join(opts['conf_dir'], search_path)
+
         if os.path.isfile(os.path.join(search_path, os_)):
             return __render_script(
                 os.path.join(search_path, os_), vm_, opts, minion
