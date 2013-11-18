@@ -263,8 +263,11 @@ class ConfigDirMixIn(object):
     _config_filename_ = None
 
     def _mixin_setup(self):
+        config_dir = os.environ.get('SALT_CONFIG_DIR', None)
+        if not config_dir:
+            config_dir = syspaths.CONFIG_DIR
         self.add_option(
-            '-c', '--config-dir', default=syspaths.CONFIG_DIR,
+            '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
                   '%default')
         )
