@@ -27,8 +27,11 @@ from salt.cloud.exceptions import (
 )
 
 # Import salt libs
+import salt._compat
 import salt.client
 import salt.utils
+from salt import syspaths
+from salt.utils.client import BaseClient
 
 # Import third party libs
 import yaml
@@ -45,15 +48,15 @@ except ImportError:
     MAKO_AVAILABLE = False
 
 
-class CloudClient(object):
+class CloudClient(BaseClient):
     '''
     The client class to wrap cloud interactions
     '''
-    def __init__(self, path=None, opts=None, config_dir=None):
-        if opts:
-            self.opts = opts
-        else:
-            self.opts = salt.cloud.config.cloud_config(path)
+    _client_name_ = _config_filename_ = 'cloud'
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
+
+    def load_config(self):
+        return salt.cloud.config.cloud_config(self.config_file)
 
     def _opts_defaults(self, **kwargs):
         '''
@@ -133,7 +136,7 @@ class CloudClient(object):
         Pass in a profile to create, names is a list of vm names to allocate
         '''
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
-        if isinstance(names, str):
+        if isinstance(names, salt._compat.string_types):
             names = names.split(',')
         return salt.cloud.utils.simple_types_filter(
                 mapper.run_profile(profile, names))
@@ -143,7 +146,7 @@ class CloudClient(object):
         Destroy the named vms
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        if isinstance(names, str):
+        if isinstance(names, salt._compat.string_types):
             names = names.split(',')
         return salt.cloud.utils.simple_types_filter(
                 mapper.destroy(names))
