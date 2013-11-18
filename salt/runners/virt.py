@@ -136,7 +136,15 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True, nic='default', install=True):
+def init(
+        name,
+        cpu,
+        mem,
+        image,
+        hyper=None,
+        seed=True,
+        nic='default',
+        install=True):
     '''
     Initialize a new vm
     '''
