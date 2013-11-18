@@ -368,9 +368,14 @@ VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
 
-with open(SALT_REQS) as f:
-    REQUIREMENTS = [line for line in f.read().split('\n') if line]
-
+REQUIREMENTS = []
+with open(SALT_REQS) as rfh:
+    for line in rfh.readlines():
+        if not line or line.startswith('#'):
+            continue
+        if IS_WINDOWS_PLATFORM and 'libcloud' in line:
+            continue
+        REQUIREMENTS.append(line.strip())
 
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
