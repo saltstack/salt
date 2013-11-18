@@ -1130,6 +1130,9 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         # Detect compound command and set up the data for it
         if self.args:
+            if len(self.args) < 2:
+                self.error('The wrong number of arguments were used')
+
             if ',' in self.args[1]:
                 self.config['fun'] = self.args[1].split(',')
                 self.config['arg'] = [[]]
