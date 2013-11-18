@@ -608,11 +608,12 @@ def minion_config(path,
         # No valid setting was given using the configuration variable.
         # Lets see is SALT_CONFIG_DIR is of any use
         salt_config_dir = os.environ.get('SALT_CONFIG_DIR', None)
-        env_config_file_path = os.path.join(salt_config_dir, 'minion')
-        if salt_config_dir and os.path.isfile(env_config_file_path):
-            # We can get a configuration file using SALT_CONFIG_DIR, let's
-            # update the environment with this information
-            os.environ[env_var] = env_config_file_path
+        if salt_config_dir:
+            env_config_file_path = os.path.join(salt_config_dir, 'minion')
+            if salt_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
 
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
@@ -926,11 +927,12 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
         # No valid setting was given using the configuration variable.
         # Lets see is SALT_CONFIG_DIR is of any use
         salt_config_dir = os.environ.get('SALT_CONFIG_DIR', None)
-        env_config_file_path = os.path.join(salt_config_dir, 'master')
-        if salt_config_dir and os.path.isfile(env_config_file_path):
-            # We can get a configuration file using SALT_CONFIG_DIR, let's
-            # update the environment with this information
-            os.environ[env_var] = env_config_file_path
+        if salt_config_dir:
+            env_config_file_path = os.path.join(salt_config_dir, 'master')
+            if salt_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
 
     overrides = load_config(path, env_var, DEFAULT_MASTER_OPTS['conf_file'])
     default_include = overrides.get('default_include',
