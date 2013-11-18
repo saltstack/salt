@@ -49,6 +49,7 @@ associated with that vm. An example profile might look like:
 
 # Import python libs
 import os
+import copy
 import urllib
 import httplib
 import urllib2
@@ -346,7 +347,7 @@ def create(vm_):
             )
 
         # Store what was used to the deploy the VM
-        event_kwargs = deploy_kwargs
+        event_kwargs = copy.deepcopy(deploy_kwargs)
         del(event_kwargs['minion_pem'])
         ret['deploy_kwargs'] = event_kwargs
 
