@@ -567,7 +567,10 @@ def init(name,
             sfn = __salt__['cp.cache_file'](image, saltenv)
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
-            salt.utils.copyfile(sfn, img_dest)
+            try:
+                salt.utils.copyfile(sfn, img_dest)
+            except os.error:
+                return False
             seedable = True
         else:
             log.error('unsupported hypervisor when handling disk image')
