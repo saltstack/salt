@@ -94,14 +94,14 @@ the discrete states are split or groups into separate sls files:
 
 In this example, the httpd sevice running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
-installed AND the network state is satistifed.
+installed AND the network state is satisfied.
 
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
     Therefore, if using the ``pkgs`` or ``sources`` argument to install
     a list of packages in a pkg state, it's important to note that it is
-    imposible to match an individual package in the list, since all packages
+    impossible to match an individual package in the list, since all packages
     are installed as a single state.
 
 
@@ -293,7 +293,7 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beginning.
-Certain circimstances will present a situation where it is desireable to send
+Certain circumstances will present a situation where it is desirable to send
 a state to the end of the line. To do this, set the order to ``last``:
 
 .. code-block:: yaml
@@ -302,7 +302,7 @@ a state to the end of the line. To do this, set the order to ``last``:
       pkg.installed:
         - order: last
 
-Remember that requisite statements override the order option. So the order
+Remember that requisite statements overrid<e the order option. So the order
 option should be applied to the highest component of the requisite chain:
 
 .. code-block:: yaml
