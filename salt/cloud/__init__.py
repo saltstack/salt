@@ -17,7 +17,6 @@ from itertools import groupby
 # Import salt.cloud libs
 import salt.cloud.config
 import salt.cloud.utils
-import salt.cloud.loader
 import salt.utils.event
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
@@ -28,6 +27,7 @@ from salt.cloud.exceptions import (
 
 # Import salt libs
 import salt.client
+import salt.loader
 import salt.utils
 
 # Import third party libs
@@ -185,7 +185,7 @@ class Cloud(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.clouds = salt.cloud.loader.clouds(self.opts)
+        self.clouds = salt.loader.clouds(self.opts)
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
 
