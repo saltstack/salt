@@ -33,8 +33,8 @@ Setting a Provider in the Minion Config File
 
 .. _`issue tracker`: https://github.com/saltstack/salt/issues
 
-Sometimes, when running Salt on custom Linux spins, or distros that are derived
-from other distros, Salt does not successfully detect providers. The providers
+Sometimes, when running Salt on custom Linux spins, or distribution that are derived
+from other distributions, Salt does not successfully detect providers. The providers
 which are most likely to be affected by this are:
 
 - pkg
