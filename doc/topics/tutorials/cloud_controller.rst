@@ -112,7 +112,7 @@ a hypervisor connecting the bridge to eth0:
 Virtual Machine Network Setup
 -----------------------------
 
-Salt virt comes with a system to model the network interfaces used by the
+Salt Virt comes with a system to model the network interfaces used by the
 deployed virtual machines, by default a single interface is created for the
 deployed virtual machine and is bridged to ``br0``. To get going with the
 default networking setup ensure that the bridge interface named ``br0`` exists
@@ -139,7 +139,7 @@ date:
 
 .. note::
 
-    The above formula includes the calls needed to set up libvirt keys
+    The above formula includes the calls needed to set up libvirt keys.
 
 .. code-block:: yaml
 
@@ -163,17 +163,17 @@ vm-builder:
   http://wiki.debian.org/VMBuilder
 
 Once virtual machines images are available the easiest way to make them available
-to salt virt is to place them in the salt file server. Just copy an image into
-/srv/salt and it can now be used by Salt Virt.
+to Salt Virt is to place them in the Salt file server. Just copy an image into
+``/srv/salt`` and it can now be used by Salt Virt.
 
-For purposes of this demo, the file name centos.img will be used.
+For purposes of this demo, the file name ``centos.img`` will be used.
 
 Existing Virtual Machine Images
 -------------------------------
 
 Many existing Linux distributions distribute virtual machine images which
-can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE NOT
-SUPPORTED BY SALTSTACK
+can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE 
+SUPPORTED BY SALTSTACK.
 
 CentOS
 ~~~~~~
@@ -185,7 +185,7 @@ http://wiki.centos.org/Cloud/OpenNebula
 Fedora Linux
 ~~~~~~~~~~~~
 
-Images for Fedor Linux can be found here:
+Images for Fedora Linux can be found here:
 http://cloud.fedoraproject.org
 
 Ubuntu Linux
@@ -200,39 +200,39 @@ Using Salt Virt
 With hypervisors set up and virtual machine images ready, Salt can start
 issuing cloud commands.
 
-Start by running a Salt Virt hyper info command:
+Start by running a Salt Virt hypervisor info command:
 
 .. code-block:: bash
 
     salt-run virt.hyper_info
 
 This will query what the running hypervisor stats are and display information
-for all configured hypervisors. This command will also ensure that the
+for all configured hypervisors. This command will also validate that the
 hypervisors are properly configured.
 
 Now that hypervisors are available a virtual machine can be provisioned. The
-virt.init routine will create a new virtual machine:
+``virt.init`` routine will create a new virtual machine:
 
 .. code-block:: bash
 
     salt-run virt.init centos1 2 512 salt://centos.img
 
-This command assumes that the centos virtual machine image is sitting in the
-root of the salt fileserver. Salt Virt will now select a hypervisor to deploy
+This command assumes that the CentOS virtual machine image is sitting in the
+root of the Salt fileserver. Salt Virt will now select a hypervisor to deploy
 the new virtual machine on and copy the virtual machine image down to the
 hypervisor.
 
-Once the vm image has been copied down the new virtual machine will be seeded.
-Seeding the vms involves setting pre-authenticated salt keys on the new vm and
-if needed, will install the Salt Minion on the new vm before the vm is started.
+Once the VM image has been copied down the new virtual machine will be seeded.
+Seeding the VMs involves setting pre-authenticated Salt keys on the new VM and
+if needed, will install the Salt Minion on the new VM before it is started.
 
 .. note::
 
-    The biggest bottleneck in starting vms is when the salt minion needs to be
-    installed. Making sure that the source vm images already have Salt
+    The biggest bottleneck in starting VMs is when the Salt Minion needs to be
+    installed. Making sure that the source VM images already have Salt
     installed will GREATLY speed up virtual machine deployment.
 
-Now that the new vm has been prepared, it can be seen via the virt.query
+Now that the new VM has been prepared, it can be seen via the ``virt.query``
 command:
 
 .. code-block:: bash
@@ -242,8 +242,8 @@ command:
 This command will return data about all of the hypervisors and respective
 virtual machines.
 
-Now that the new vm is booted it should have contacted the Salt Master, a
-``test.ping`` will reveal if the new vm is running.
+Now that the new VM is booted it should have contacted the Salt Master, a
+``test.ping`` will reveal if the new VM is running.
 
 Migrating Virtual Machines
 ==========================
@@ -261,10 +261,16 @@ opened on hypervisors:
 
     iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 16514 -j ACCEPT
 
-Salt also needs an additional flag to be turned on as well. The `virt.tunnel`
+.. note::
+
+    More in-depth information regarding distribution specific firewall settings can read in:
+    
+    :doc:`Opening the Firewall up for Salt </topics/tutorials/firewall>`
+
+Salt also needs an additional flag to be turned on as well. The ``virt.tunnel``
 option needs to be turned on. This flag tells Salt to run migrations securely
-via the libvirt tls tunnel and to use port 16514. Without `virt.tunnel` libvirt
-tries to bind to random ports when running migrations. To turn on `virt.tunnel`
+via the libvirt TLS tunnel and to use port 16514. Without ``virt.tunnel`` libvirt
+tries to bind to random ports when running migrations. To turn on ``virt.tunnel``
 simple apply it to the master config file:
 
 .. code-block:: yaml
@@ -278,7 +284,7 @@ to the minions to refresh the pillar to pick up on the change:
 
     salt \* saltutil.refresh_modules
 
-Now, migration routines can be run! To migrate a vm, simply run the Salt Virt
+Now, migration routines can be run! To migrate a VM, simply run the Salt Virt
 migrate routine:
 
 .. code-block:: bash
@@ -289,7 +295,7 @@ VNC Consoles
 ============
 
 Salt Virt also sets up VNC consoles by default, allowing for remote visual
-consoles to be oped up. The information from a `virt.query` routine will
+consoles to be oped up. The information from a ``virt.query`` routine will
 display the vnc console port for the specific vms:
 
 .. code-block:: yaml
@@ -315,10 +321,10 @@ Once the port is open, then the console can be easily opened via vncviewer:
 
     vncviewer hyper6:5900
 
-By default there is no vnc security set up on these ports, which suggests that
-keeping them firewalled and mandating that ssh tunnels be used to access these
-vnc interfaces. Keep in mind that activity on a vnc interface that is accessed
-can be viewed by any other user that accesses the vnc interface, and any other
+By default there is no VNC security set up on these ports, which suggests that
+keeping them firewalled and mandating that SSH tunnels be used to access these
+VNC interfaces. Keep in mind that activity on a VNC interface that is accessed
+can be viewed by any other user that accesses that same VNC interface, and any other
 user logging in can also operate with the logged in user on the virtual
 machine.
 
@@ -326,5 +332,5 @@ Conclusion
 ==========
 
 Now with Salt Virt running, new hypervisors can be seamlessly added just by
-running the above states on new bare meta machines, and these machines will be
+running the above states on new bare metal machines, and these machines will be
 instantly available to Salt Virt.
