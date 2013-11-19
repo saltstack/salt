@@ -102,7 +102,7 @@ have to do it all over again. It also lets you *uninstall* things easily.
 
 .. tip:: 
 
-    Use the keyboard shortcut ``cmd + shift + comma`` in the "open" Mac OS X
+    Use the keyboard shortcut ``cmd + shift + period`` in the "open" Mac OS X
     dialog box to display hidden files and folders, such as .profile.
 
 
