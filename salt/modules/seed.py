@@ -171,6 +171,8 @@ def _check_resolv(mpt):
     replace = False
     if os.path.islink(resolv):
         resolv = os.path.realpath(resolv)
+        if not os.path.isdir(os.path.dirname(resolv)):
+            os.makedirs(os.path.dirname(resolv))
     if not os.path.isfile(resolv):
         replace = True
     if not replace:
