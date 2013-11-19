@@ -352,8 +352,10 @@ def managed(name,
 
         if changes.get('ip_proto') == 'dhcp':
             __salt__['ip.set_dhcp_ip'](name)
-        elif changes.get('ip_addrs') or changes.get('gateway'):
+        elif changes.get('ip_addrs') or changes.get('gateway') or changes.get('ip_proto') == 'static':
             if changes.get('gateway') and not changes.get('ip_addrs'):
+                changes['ip_addrs'] = ip_addrs
+            if changes.get('ip_proto') == 'static' and not changes.get('ip_addrs'):
                 changes['ip_addrs'] = ip_addrs
             for idx in xrange(len(changes['ip_addrs'])):
                 if idx == 0:
