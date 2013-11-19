@@ -293,7 +293,7 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beginning.
-Certian circimstances will present a situation where it is desireable to send
+Certain circimstances will present a situation where it is desireable to send
 a state to the end of the line. To do this, set the order to ``last``:
 
 .. code-block:: yaml
