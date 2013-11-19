@@ -217,3 +217,11 @@ The pass the signal to the master or minion when it seems to be unresponsive:
 
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon this information can be invaluable.
+
+Salt 0.16.x minions cannot communicate with a 0.17.x master
+===========================================================
+
+As of release 0.17.1 you can no longer run different versions of Salt on your
+Master and Minion servers. This is due to a protocol change for security
+purposes. The Salt team will continue to attempt to ensure versions are as
+backwards compatible as possible.
