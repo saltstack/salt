@@ -831,6 +831,7 @@ def os_data():
                   patch = open('/etc/SuSE-release').read().split('\n')[2]
                   rel = re.sub("[^0-9]", "", rel)
                   patch = re.sub("[^0-9]", "", patch)
+                  release = rel + " SP" + patch
                   grains['lsb_distrib_release'] = release
                   grains['lsb_distrib_codename'] = "n.a"
             elif os.path.isfile('/etc/altlinux-release'):
