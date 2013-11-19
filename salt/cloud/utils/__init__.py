@@ -473,6 +473,10 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             win_cmd('smbclient {0}/c$ -c "rmdir /S salttemp; prompt; exit;"'.format(
                 creds,
             ))
+        # Shell out to winexe to execute ensure salt-minion service started
+        win_cmd('winexe {0} "sc start salt-minion"'.format(
+            creds,
+        ))
 
         # Fire deploy action
         fire_event(
