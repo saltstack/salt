@@ -1284,8 +1284,8 @@ class State(object):
                 # Let's use the default environment
                 saltenv = 'base'
 
-            with context.state_call_context(self.states[cdata['full']],
-                                            __env__=saltenv):
+            with context.func_globals_inject(self.states[cdata['full']],
+                                             __env__=saltenv):
                 ret = self.states[cdata['full']](*cdata['args'],
                                                  **cdata['kwargs'])
                 self.verify_ret(ret)
