@@ -578,6 +578,8 @@ already set) in order to find the name of the location that you want to use.
 configuration.
 
 
+.. _config_saltify:
+
 Saltify
 -------
 
