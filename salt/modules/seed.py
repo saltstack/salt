@@ -156,10 +156,27 @@ def _install(mpt):
     # Apply the minion config
     # Copy script into tmp
     shutil.copy(bs_, os.path.join(mpt, 'tmp'))
+    _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
     return (not _chroot_exec(mpt, cmd))
+
+
+def _check_resolv(mpt):
+    '''
+    Check that the resolv.conf is present and populated
+    '''
+    resolv = os.path.join(mpt, 'etc/resolv.conf')
+    replace = False
+    if not os.path.isfile(resolv):
+        replace = True
+    with salt.utils.fopen(resolv, 'rb') as fp_:
+        conts = fp_.read()
+        if not 'nameserver' in conts:
+            replace = True
+    if replace:
+        shutil.copy('/etc/resolv.conf', resolv)
 
 
 def _check_install(root):
