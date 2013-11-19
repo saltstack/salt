@@ -90,7 +90,7 @@ Provider: ``service``
 ======================= =======================================================
 Execution Module        Used for
 ======================= =======================================================
-debian_service          Debian Linux (non-systemd)
+debian_service          Debian (non-systemd)
 freebsdservice          FreeBSD-based OSes using ``service(8)``
 gentoo_service          Gentoo Linux using :program:`sysvinit` and
                         ``rc-update(8)``
