@@ -169,12 +169,15 @@ def _check_resolv(mpt):
     '''
     resolv = os.path.join(mpt, 'etc/resolv.conf')
     replace = False
+    if os.path.islink(resolv):
+        resolv = os.path.realpath(resolv)
     if not os.path.isfile(resolv):
         replace = True
-    with salt.utils.fopen(resolv, 'rb') as fp_:
-        conts = fp_.read()
-        if not 'nameserver' in conts:
-            replace = True
+    if not replace:
+        with salt.utils.fopen(resolv, 'rb') as fp_:
+            conts = fp_.read()
+            if not 'nameserver' in conts:
+                replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)
 
