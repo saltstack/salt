@@ -50,7 +50,6 @@ BuildRequires: python26-devel
 BuildRequires: python26-jinja2
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
-BuildRequires: python26-pip
 BuildRequires: python26-zmq
 BuildRequires: python26-PyYAML
 
