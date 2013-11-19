@@ -9,7 +9,6 @@ import logging
 import hashlib
 import os
 import shutil
-import string
 import subprocess
 
 # Import third party libs
@@ -415,14 +414,12 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
-        # TODO: We need to get rid of using the string lib in here
-
         ret = []
         # Strip trailing slash
-        path = string.rstrip(self._check_proto(path), '/')
+        path = self._check_proto(path).rstrip('/')
         # Break up the path into a list containing the bottom-level directory
         # (the one being recursively copied) and the directories preceding it
-        separated = string.rsplit(path, '/', 1)
+        separated = path.rsplit('/', 1)
         if len(separated) != 2:
             # No slashes in path. (This means all files in env will be copied)
             prefix = ''
@@ -441,7 +438,7 @@ class Client(object):
                     continue
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):], '/')
+                minion_relpath = fn_[len(prefix):].lstrip('/')
                 ret.append(
                     self.get_file(
                         'salt://{0}'.format(fn_),
@@ -462,7 +459,7 @@ class Client(object):
                         continue
                     # Remove the leading directories from path to derive
                     # the relative path on the minion.
-                    minion_relpath = string.lstrip(fn_[len(prefix):], '/')
+                    minion_relpath = fn_[len(prefix):].lstrip('/')
                     minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
                     if not os.path.isdir(minion_mkdir):
                         os.makedirs(minion_mkdir)
