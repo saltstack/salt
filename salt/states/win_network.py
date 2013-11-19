@@ -187,9 +187,11 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     if ip_proto != cur_ip_proto:
         changes['ip_proto'] = ip_proto
     if set(ip_addrs or []) != set(cur_ip_addrs):
-        changes['ip_addrs'] = ip_addrs
+        if ip_proto == 'static':
+            changes['ip_addrs'] = ip_addrs
     if gateway != cur_gateway:
-        changes['gateway'] = gateway
+        if ip_proto == 'static':
+            changes['gateway'] = gateway
     return changes
 
 
