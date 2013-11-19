@@ -170,7 +170,7 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     changes = {}
     cur_dns_proto = (
         'static' if 'Statically Configured DNS Servers' in cur
-        else 'static'
+        else 'dhcp'
     )
     if cur_dns_proto == 'static':
         cur_dns_servers = cur['Statically Configured DNS Servers']
