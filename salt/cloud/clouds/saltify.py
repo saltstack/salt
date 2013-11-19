@@ -7,8 +7,8 @@ bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
 Use of this module requires no configuration in the main cloud configuration
-file. However, profiles must still be configured, as described in the saltify
-documentation.
+file. However, profiles must still be configured, as described in the
+:ref:`core config documentation <config-saltify>`.
 '''
 
 # Import python libs
