@@ -2342,10 +2342,12 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
+            current_umask = os.umask(63)
             salt.utils.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
+            os.umask(current_umask)
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
