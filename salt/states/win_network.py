@@ -169,11 +169,14 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     '''
     changes = {}
     cur_dns_proto = (
-        'dhcp' if cur['Statically Configured DNS Servers'] == ['None']
-        else 'static'
+        'static' if 'Statically Configured DNS Servers' in cur
+        else 'dhcp'
     )
-    cur_dns_servers = cur['Statically Configured DNS Servers']
-    cur_ip_proto = 'static' if 'ip_addrs' in cur else 'dhcp'
+    if cur_dns_proto == 'static':
+        cur_dns_servers = cur['Statically Configured DNS Servers']
+    elif 'DNS servers configured through DHCP' in cur:
+        cur_dns_servers = cur['DNS servers configured through DHCP']
+    cur_ip_proto = 'static' if cur['DHCP enabled'] == 'No' else 'dhcp'
     cur_ip_addrs = _addrdict_to_ip_addrs(cur.get('ip_addrs', []))
     cur_gateway = cur.get('Default Gateway')
 
@@ -184,9 +187,11 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     if ip_proto != cur_ip_proto:
         changes['ip_proto'] = ip_proto
     if set(ip_addrs or []) != set(cur_ip_addrs):
-        changes['ip_addrs'] = ip_addrs
+        if ip_proto == 'static':
+            changes['ip_addrs'] = ip_addrs
     if gateway != cur_gateway:
-        changes['gateway'] = gateway
+        if ip_proto == 'static':
+            changes['gateway'] = gateway
     return changes
 
 
@@ -347,8 +352,10 @@ def managed(name,
 
         if changes.get('ip_proto') == 'dhcp':
             __salt__['ip.set_dhcp_ip'](name)
-        elif changes.get('ip_addrs') or changes.get('gateway'):
+        elif changes.get('ip_addrs') or changes.get('gateway') or changes.get('ip_proto') == 'static':
             if changes.get('gateway') and not changes.get('ip_addrs'):
+                changes['ip_addrs'] = ip_addrs
+            if changes.get('ip_proto') == 'static' and not changes.get('ip_addrs'):
                 changes['ip_addrs'] = ip_addrs
             for idx in xrange(len(changes['ip_addrs'])):
                 if idx == 0:
