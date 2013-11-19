@@ -353,7 +353,11 @@ def migrate(name, target=''):
     client = salt.client.LocalClient(__opts__['conf_file'])
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
-    origin_hyper = origin_data.keys()[0]
+    try:
+        origin_hyper = origin_data.keys()[0]
+    except IndexError:
+        print('Named vm {0} was not found to migrate'.format(name))
+        return ''
     disks = origin_data[origin_hyper][name]['disks']
     if not origin_data:
         print('Named vm {0} was not found to migrate'.format(name))
