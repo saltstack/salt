@@ -266,7 +266,7 @@ Since we installed `pip`_ using :mod:`cmd <salt.states.cmd>`, salt has no way
 to know that a system-wide package was installed. On the second execution, 
 since the required `pip`_ package was installed, the state executed perfectly.
 
-To those thinking, couldn't salt reload modules on every state step since it 
+To those thinking, could not salt reload modules on every state step since it
 already does for some cases?  It could, but it should not since it would 
 greatly slow down state execution.
 
