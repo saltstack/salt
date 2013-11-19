@@ -16,9 +16,9 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def state_call_context(func, **overrides):
+def func_globals_inject(func, **overrides):
     '''
-    Override specific variable within a state call context.
+    Override specific variables within a function's global context.
     '''
     # recognize methods
     if hasattr(func, "im_func"):
