@@ -619,10 +619,10 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             result[opt] = opts[opt]
 
     if 'ipv6_autoconf' in opts:
-        result['ipv6_autoconf'] = opts['ipv6_autoconf'] 
+        result['ipv6_autoconf'] = opts['ipv6_autoconf']
 
     if 'enable_ipv6' in opts:
-        result['enable_ipv6'] = opts['enable_ipv6'] 
+        result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for opt in ['peerdns', 'slave', 'vlan', 'defroute']:
