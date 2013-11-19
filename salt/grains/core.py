@@ -825,6 +825,14 @@ def os_data():
                             name, value = match.groups()
                             if name.lower() == 'name':
                                 grains['lsb_distrib_id'] = value.strip()
+            elif os.path.isfile('/etc/SuSE-release'):
+                  grains['lsb_distrib_id'] = 'SUSE'
+                  rel = open('/etc/SuSE-release').read().split('\n')[1]
+                  patch = open('/etc/SuSE-release').read().split('\n')[2]
+                  rel = re.sub("[^0-9]", "", rel)
+                  patch = re.sub("[^0-9]", "", patch)
+                  grains['lsb_distrib_release'] = release
+                  grains['lsb_distrib_codename'] = "n.a"
             elif os.path.isfile('/etc/altlinux-release'):
                 # ALT Linux
                 grains['lsb_distrib_id'] = 'altlinux'
