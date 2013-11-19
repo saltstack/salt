@@ -63,7 +63,7 @@ These requisite statements are applied to a specific state declaration:
         - require:
           - pkg: httpd
 
-In this example the **require** requisite is used to declare that the file
+In this example, the **require** requisite is used to declare that the file
 /etc/httpd/conf/httpd.conf should only be set up if the pkg state executes
 successfully.
 
@@ -134,7 +134,7 @@ more requisites. Both requisite types can also be separately declared:
       group:
         - present
 
-In this example the httpd service is only going to be started if the package,
+In this example, the httpd service is only going to be started if the package,
 user, group and file are executed successfully.
 
 The Require Requisite
@@ -190,7 +190,7 @@ Perhaps an example can better explain the behavior:
           - file: /etc/redis.conf
           - pkg: redis
 
-In this example the redis service will only be started if the file
+In this example, the redis service will only be started if the file
 /etc/redis.conf is applied, and the file is only applied if the package is
 installed. This is normal require behavior, but if the watched file changes,
 or the watched package is installed or upgraded, then the redis service is
@@ -293,7 +293,7 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beginning.
-Certian circimstances will present a situation where it is desireable to send
+Certain circimstances will present a situation where it is desireable to send
 a state to the end of the line. To do this, set the order to ``last``:
 
 .. code-block:: yaml

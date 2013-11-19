@@ -1066,9 +1066,9 @@ def top(container, *args, **kwargs):
        {
             'Titles': top titles list,
             'processes': list of ordered by
-                         titles processes informations,
-            'mprocesses': list of mappings processes informations
-            constructed above the upon informations
+                         titles processes information,
+            'mprocesses': list of mappings processes information
+            constructed above the upon information
        }
 
     CLI Example:
