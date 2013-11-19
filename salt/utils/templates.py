@@ -26,9 +26,6 @@ from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 
 log = logging.getLogger(__name__)
 
-
-TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
-
 # FIXME: also in salt/template.py
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
