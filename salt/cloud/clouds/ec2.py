@@ -88,7 +88,7 @@ from salt._compat import ElementTree as ET
 # Import salt.cloud libs
 import salt.cloud.utils
 import salt.cloud.config as config
-from salt.cloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
+from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
