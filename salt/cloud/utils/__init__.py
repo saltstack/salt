@@ -494,7 +494,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   display_ssh_output=True, preseed_minion_keys=None,
                   parallel=False, sudo_password=None, sudo=False, tty=None,
                   deploy_command='/tmp/.saltcloud/deploy.sh',
-                  tmp_dir='/tmp/.saltcloud/', **kwargs):
+                  tmp_dir='/tmp/.saltcloud', **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
