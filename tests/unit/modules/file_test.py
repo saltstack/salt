@@ -11,11 +11,13 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import file as filemod
-from salt.modules import cmdmod
+from salt.modules import config, cmdmod
 
+filemod.__opts__ = {'test': False}
 filemod.__salt__ = {
     'cmd.run': cmdmod.run,
-    'cmd.run_all': cmdmod.run_all
+    'cmd.run_all': cmdmod.run_all,
+    'config.manage_mode': config.manage_mode
 }
 
 SED_CONTENT = """test
@@ -124,4 +126,4 @@ class FileModuleTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(FileModuleTestCase, needs_daemon=False)
+    run_tests(FileModuleTestCase, FileReplaceTestCase, needs_daemon=False)

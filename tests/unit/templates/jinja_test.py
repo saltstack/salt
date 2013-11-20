@@ -272,14 +272,24 @@ class TestGetTemplate(TestCase):
     def test_render_with_syntax_error(self):
         template = 'hello\n\n{{ bad\n\nfoo'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo    <======================\n---'
-        self.assertRaisesRegexp(SaltTemplateRenderError, expected,
-                render_jinja_tmpl, template, dict(opts=self.local_opts, env='other'))
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, env='other')
+        )
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
-        expected = r'Undefined jinja variable.*\n\n---\nhello\n\n{{ foo }}.*'
-        self.assertRaisesRegexp(SaltTemplateRenderError, expected,
-                render_jinja_tmpl, template, dict(opts=self.local_opts, env='other'))
+        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, env='other')
+        )
 
 
 class TestCustomExtensions(TestCase):
