@@ -25,7 +25,6 @@ from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
-import salt.cloud.config
 from salt.utils import parsers
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 try:

@@ -54,7 +54,7 @@ import logging
 
 # Import salt.cloud libs
 import salt.cloud.utils
-import salt.cloud.config as config
+import salt.config as config
 from salt.cloud.utils import namespaced_function
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.cloud.libcloudfuncs import destroy as libcloudfuncs_destroy
