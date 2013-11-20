@@ -391,7 +391,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    minion_pub=None, minion_pem=None, minion_conf=None,
                    keep_tmp=False, script_args=None, script_env=None,
                    port_timeout=15, preseed_minion_keys=None,
-                   win_installer=None, master=None, tmp_dir='C:\salttmp',
+                   win_installer=None, master=None, tmp_dir='C:\\salttmp',
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
