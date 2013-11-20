@@ -455,8 +455,12 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
+            'tmp_dir': config.get_config_value(
+                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
+            ),
             'deploy_command': config.get_config_value(
-                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+                'deploy_command', vm_, __opts__,
+                default='/tmp/.saltcloud/deploy.sh',
             ),
             'tty': config.get_config_value(
                 'tty', vm_, __opts__, default=True

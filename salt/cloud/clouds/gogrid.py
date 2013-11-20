@@ -177,8 +177,12 @@ def create(vm_):
             'password': data.extra['password'],
             'script': deploy_script.script,
             'name': vm_['name'],
+            'tmp_dir': config.get_config_value(
+                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
+            ),
             'deploy_command': config.get_config_value(
-                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+                'deploy_command', vm_, __opts__,
+                default='/tmp/.saltcloud/deploy.sh',
             ),
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],

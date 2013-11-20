@@ -391,7 +391,8 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    minion_pub=None, minion_pem=None, minion_conf=None,
                    keep_tmp=False, script_args=None, script_env=None,
                    port_timeout=15, preseed_minion_keys=None,
-                   win_installer=None, master=None, **kwargs):
+                   win_installer=None, master=None, tmp_dir='C:\salttmp',
+                   **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
@@ -484,7 +485,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
 
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
-                  deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
                   name=None, pub_key=None, sock_dir=None, provider=None,
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
@@ -492,7 +492,9 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
-                  parallel=False, sudo_password=None, **kwargs):
+                  parallel=False, sudo_password=None, sudo=False, tty=None,
+                  deploy_command='/tmp/.saltcloud/deploy.sh',
+                  tmp_dir='/tmp/.saltcloud', **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -548,13 +550,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 root_cmd(subsys_command, tty, sudo, **kwargs)
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
 
+            root_cmd('mkdir -p {0}'.format(tmp_dir), tty, sudo, **kwargs)
+            root_cmd('chmod 700 {0}'.format(tmp_dir), tty, sudo, **kwargs)
+
             # Minion configuration
             if minion_pem:
-                scp_file('/tmp/minion.pem', minion_pem, kwargs)
-                root_cmd('chmod 600 /tmp/minion.pem', tty, sudo, **kwargs)
+                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
+                         tty, sudo, **kwargs)
 
             if minion_pub:
-                scp_file('/tmp/minion.pub', minion_pub, kwargs)
+                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -568,23 +574,24 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
                     scp_file(
-                        '/tmp/grains',
+                        '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         kwargs
                     )
                 scp_file(
-                    '/tmp/minion',
+                    '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     kwargs
                 )
 
             # Master configuration
             if master_pem:
-                scp_file('/tmp/master.pem', master_pem, kwargs)
-                root_cmd('chmod 600 /tmp/master.pem', tty, sudo, **kwargs)
+                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
+                         tty, sudo, **kwargs)
 
             if master_pub:
-                scp_file('/tmp/master.pub', master_pub, kwargs)
+                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -597,13 +604,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     )
 
                 scp_file(
-                    '/tmp/master',
+                    '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     kwargs
                 )
 
             # XXX: We need to make these paths configurable
-            preseed_minion_keys_tempdir = '/tmp/preseed-minion-keys'
+            preseed_minion_keys_tempdir = '{0}/preseed-minion-keys'.format(
+                                                                    tmp_dir)
             if preseed_minion_keys is not None:
                 # Create remote temp dir
                 root_cmd(
@@ -639,8 +647,9 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # The actual deploy script
             if script:
-                scp_file('/tmp/deploy.sh', script, kwargs)
-                root_cmd('chmod +x /tmp/deploy.sh', tty, sudo, **kwargs)
+                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                root_cmd('chmod +x {0}/deploy.sh'.format(tmp_dir),
+                         tty, sudo, **kwargs)
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -662,7 +671,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Run the deploy script
             if script:
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'
+                    deploy_command += ' -c {0}'.format(tmp_dir)
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
@@ -696,16 +705,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                     # Upload our environ setter wrapper
                     scp_file(
-                        '/tmp/environ-deploy-wrapper.sh',
+                        '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         kwargs
                     )
                     root_cmd(
-                        'chmod +x /tmp/environ-deploy-wrapper.sh',
+                        'chmod +x {0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         tty, sudo, **kwargs
                     )
                     # The deploy command is now our wrapper
-                    deploy_command = '/tmp/environ-deploy-wrapper.sh'
+                    deploy_command = '{0}/environ-deploy-wrapper.sh'.format(
+                        tmp_dir,
+                    )
 
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
@@ -717,42 +728,57 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                 # Remove the deploy script
                 if not keep_tmp:
-                    root_cmd('rm -f /tmp/deploy.sh', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/deploy.sh')
+                    root_cmd('rm -f {0}/deploy.sh'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/deploy.sh'.format(tmp_dir))
                     if script_env:
                         root_cmd(
-                            'rm -f /tmp/environ-deploy-wrapper.sh',
+                            'rm -f {0}/environ-deploy-wrapper.sh'.format(
+                                tmp_dir
+                            ),
                             tty, sudo, **kwargs
                         )
-                        log.debug('Removed /tmp/environ-deploy-wrapper.sh')
+                        log.debug(
+                            'Removed {0}/environ-deploy-wrapper.sh'.format(
+                                tmp_dir
+                            )
+                        )
 
             if keep_tmp:
-                log.debug('Not removing deployment files from /tmp/')
-
-            # Remove minion configuration
-            if not keep_tmp:
+                log.debug(
+                    'Not removing deployment files from {0}/'.format(tmp_dir)
+                )
+            else:
+                # Remove minion configuration
                 if minion_pub:
-                    root_cmd('rm -f /tmp/minion.pub', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/minion.pub')
+                    root_cmd('rm -f {0}/minion.pub'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/minion.pub'.format(tmp_dir))
                 if minion_pem:
-                    root_cmd('rm -f /tmp/minion.pem', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/minion.pem')
+                    root_cmd('rm -f {0}/minion.pem'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/minion.pem'.format(tmp_dir))
                 if minion_conf:
-                    root_cmd('rm -f /tmp/grains', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/grains')
-                    root_cmd('rm -f /tmp/minion', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/minion')
+                    root_cmd('rm -f {0}/grains'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/grains'.format(tmp_dir))
+                    root_cmd('rm -f {0}/minion'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/minion'.format(tmp_dir))
 
                 # Remove master configuration
                 if master_pub:
-                    root_cmd('rm -f /tmp/master.pub', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/master.pub')
+                    root_cmd('rm -f {0}/master.pub'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/master.pub'.format(tmp_dir))
                 if master_pem:
-                    root_cmd('rm -f /tmp/master.pem', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/master.pem')
+                    root_cmd('rm -f {0}/master.pem'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/master.pem'.format(tmp_dir))
                 if master_conf:
-                    root_cmd('rm -f /tmp/master', tty, sudo, **kwargs)
-                    log.debug('Removed /tmp/master')
+                    root_cmd('rm -f {0}/master'.format(tmp_dir),
+                             tty, sudo, **kwargs)
+                    log.debug('Removed {0}/master'.format(tmp_dir))
 
                 # Remove pre-seed keys directory
                 if preseed_minion_keys is not None:
