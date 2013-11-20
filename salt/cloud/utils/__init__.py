@@ -969,7 +969,10 @@ def root_cmd(command, tty, sudo, **kwargs):
     '''
     if sudo:
         if 'sudo_password' in kwargs and kwargs['sudo_password'] is not None:
-            command = 'echo "{1}" | sudo -S {0}'.format(command, sudo_password)
+            command = 'echo "{1}" | sudo -S {0}'.format(
+                command,
+                kwargs['sudo_password'],
+            )
         else:
             command = 'sudo {0}'.format(command)
         log.debug('Using sudo to run command {0}'.format(command))
