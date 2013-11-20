@@ -530,11 +530,10 @@ def server_show(server_id, profile=None):
         salt '*' nova.server_show <server_id>
     '''
     ret = {}
-    server_list = server_list_detailed(profile)
-    for item in server_list:
-        id_ = server_list[item]['id']
-        if str(id_) == server_id:
-            ret[server_list[item]['name']] = server_list[item]
+    servers = server_list_detailed(profile)
+    for server_name, server in servers.iteritems():
+        if str(server['id']) == server_id:
+            ret[server_name] = server
     return ret
 
 
