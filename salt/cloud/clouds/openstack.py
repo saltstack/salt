@@ -148,7 +148,7 @@ import salt.utils
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.utils.cloud import namespaced_function
+from salt.utils import namespaced_function
 from salt.cloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
