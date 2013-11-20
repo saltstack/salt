@@ -380,7 +380,7 @@ def _refresh_buckets_cache_file(cache_file):
     key, keyid = _get_s3_key()
     metadata = {}
 
-    # helper s3 query fuction
+    # helper s3 query function
     def __get_s3_meta(bucket, key=key, keyid=keyid):
         return s3.query(
                 key=key,
