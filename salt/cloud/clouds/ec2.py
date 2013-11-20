@@ -86,7 +86,7 @@ import urllib2
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
-import salt.cloud.utils
+import salt.utils.cloud
 import salt.config as config
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import (
@@ -546,12 +546,12 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    return salt.cloud.utils.os_script(
+    return salt.utils.cloud.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_,
         __opts__,
-        salt.cloud.utils.salt_config_to_yaml(
-            salt.cloud.utils.minion_config(__opts__, vm_)
+        salt.utils.cloud.salt_config_to_yaml(
+            salt.utils.cloud.minion_config(__opts__, vm_)
         )
     )
 
@@ -825,7 +825,7 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -1034,7 +1034,7 @@ def create(vm_=None, call=None):
 
     tags['Name'] = vm_['name']
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -1100,7 +1100,7 @@ def create(vm_=None, call=None):
                           'Nothing else we can do here.')
                 return False
 
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
@@ -1134,7 +1134,7 @@ def create(vm_=None, call=None):
     # Pull the instance ID, valid for both spot and normal instances
     instance_id = data[0]['instanceId']
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
@@ -1200,7 +1200,7 @@ def create(vm_=None, call=None):
             return data
 
     try:
-        data = salt.cloud.utils.wait_for_ip(
+        data = salt.utils.cloud.wait_for_ip(
             __query_ip_address,
             update_args=(params, requesturl),
             timeout=config.get_config_value(
@@ -1217,7 +1217,7 @@ def create(vm_=None, call=None):
         finally:
             raise SaltCloudSystemExit(exc.message)
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
@@ -1241,7 +1241,7 @@ def create(vm_=None, call=None):
         'display_ssh_output', vm_, __opts__, default=True
     )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
@@ -1252,9 +1252,9 @@ def create(vm_=None, call=None):
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
 
-    if salt.cloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):
+    if salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
-            if salt.cloud.utils.wait_for_passwd(
+            if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
                 username=user,
                 ssh_timeout=config.get_config_value(
@@ -1307,7 +1307,7 @@ def create(vm_=None, call=None):
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
             'display_ssh_output': display_ssh_output,
-            'minion_conf': salt.cloud.utils.minion_config(__opts__, vm_),
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
             'script_args': config.get_config_value(
                 'script_args', vm_, __opts__
             ),
@@ -1321,7 +1321,7 @@ def create(vm_=None, call=None):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.cloud.utils.master_config(__opts__, vm_)
+            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
@@ -1335,7 +1335,7 @@ def create(vm_=None, call=None):
         win_installer = config.get_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
-            minion = salt.cloud.utils.minion_config(__opts__, vm_)
+            minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
             deploy_kwargs['username'] = config.get_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
@@ -1353,7 +1353,7 @@ def create(vm_=None, call=None):
             del(event_kwargs['password'])
         ret['deploy_kwargs'] = event_kwargs
 
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -1362,9 +1362,9 @@ def create(vm_=None, call=None):
 
         deployed = False
         if win_installer:
-            deployed = salt.cloud.utils.deploy_windows(**deploy_kwargs)
+            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
-            deployed = salt.cloud.utils.deploy_script(**deploy_kwargs)
+            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
 
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
@@ -1388,7 +1388,7 @@ def create(vm_=None, call=None):
         'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
@@ -1408,7 +1408,7 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -1667,7 +1667,7 @@ def rename(name, kwargs, call=None):
 
     set_tags(name, {'Name': kwargs['newname']}, call='action')
 
-    salt.cloud.utils.rename_key(
+    salt.utils.cloud.rename_key(
         __opts__['pki_dir'], name, kwargs['newname']
     )
 
@@ -1690,7 +1690,7 @@ def destroy(name, call=None):
         quiet=True
     )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -1735,7 +1735,7 @@ def destroy(name, call=None):
         result = query(params)
         ret['spotInstance'] = result[0]
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
