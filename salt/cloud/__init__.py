@@ -1074,10 +1074,10 @@ class Map(Cloud):
             temp_ = Template(fp.read())
             # render as yaml
             yaml_str_ = temp_.render()
-            map = yaml.safe_load(yaml_str_)
+            map_ = yaml.safe_load(yaml_str_)
         except MakoException:
-            map = yaml.safe_load(fp.read())
-        return map
+            map_ = yaml.safe_load(fp.read())
+        return map_
 
     def read(self):
         '''
