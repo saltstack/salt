@@ -455,7 +455,6 @@ SETUP_KWARGS = {'name': NAME,
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
     SETUP_KWARGS['packages'].extend(['salt.cloud',
-                                     'salt.cloud.utils',
                                      'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
     SETUP_KWARGS['data_files'][0][1].extend([
