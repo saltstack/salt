@@ -840,7 +840,7 @@ class Cloud(object):
                     continue
                 if self.opts.get('show_deploy_args', False) is False:
                     ret[name].pop('deploy_kwargs', None)
-            except (SaltCloudSystemExit, SaltCloudConfigError), exc:
+            except (SaltCloudSystemExit, SaltCloudConfigError) as exc:
                 if len(names) == 1:
                     raise
                 ret[name] = {'Error': exc.message}

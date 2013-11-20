@@ -255,7 +255,7 @@ def create(vm_):
                     )
                 )
             )
-        except Exception, err:
+        except Exception as err:
             log.error(
                 'Failed to get nodes list: {0}'.format(
                     err

@@ -58,7 +58,7 @@ def present(name, filename, section, value, parameter=None):
                     'result': True,
                     'comment': 'The value is already set to the correct value'}
 
-    except salt.exceptions.CommandExecutionError, e:
+    except salt.exceptions.CommandExecutionError as e:
         if not e.message.lower().startswith('parameter not found:'):
             raise
 
@@ -95,7 +95,7 @@ def absent(name, filename, section, parameter=None):
         old_value = __salt__['openstack_config.get'](filename=filename,
                                                      section=section,
                                                      parameter=parameter)
-    except salt.exceptions.CommandExecutionError, e:
+    except salt.exceptions.CommandExecutionError as e:
         if e.message.lower().startswith('parameter not found:'):
             return {'name': name,
                     'changes': {},
