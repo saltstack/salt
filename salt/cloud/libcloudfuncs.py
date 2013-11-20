@@ -26,7 +26,7 @@ import salt._compat
 import salt.utils.event
 
 # Import salt cloud libs
-import salt.cloud.utils
+import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
@@ -266,12 +266,12 @@ def script(vm_):
     Return the script deployment object
     '''
     return ScriptDeployment(
-        salt.cloud.utils.os_script(
+        salt.utils.cloud.os_script(
             config.get_config_value('os', vm_, __opts__),
             vm_,
             __opts__,
-            salt.cloud.utils.salt_config_to_yaml(
-                salt.cloud.utils.minion_config(__opts__, vm_)
+            salt.utils.cloud.salt_config_to_yaml(
+                salt.utils.cloud.minion_config(__opts__, vm_)
             )
         )
     )
@@ -281,7 +281,7 @@ def destroy(name, conn=None):
     '''
     Delete a single VM
     '''
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -300,14 +300,14 @@ def destroy(name, conn=None):
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
         event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
         )
         if __opts__['delete_sshkeys'] is True:
-            salt.cloud.utils.remove_sshkey(node.public_ips[0])
+            salt.utils.cloud.remove_sshkey(node.public_ips[0])
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))

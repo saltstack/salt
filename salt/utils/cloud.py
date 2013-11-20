@@ -399,7 +399,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 # Let's not just fail regarding this change, specially
                 # since we can handle it
                 raise DeprecationWarning(
-                    '`salt.cloud.utils.deploy_windows` now only accepts '
+                    '`salt.utils.cloud.deploy_windows` now only accepts '
                     'dictionaries for its `minion_conf` parameter. '
                     'Loading YAML...'
                 )
@@ -558,7 +558,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`salt.cloud.utils.deploy_script now only accepts '
+                        '`salt.utils.cloud.deploy_script now only accepts '
                         'dictionaries for it\'s `minion_conf` parameter. '
                         'Loading YAML...'
                     )
@@ -589,7 +589,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`salt.cloud.utils.deploy_script now only accepts '
+                        '`salt.utils.cloud.deploy_script now only accepts '
                         'dictionaries for it\'s `master_conf` parameter. '
                         'Loading from YAML ...'
                     )
