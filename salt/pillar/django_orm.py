@@ -66,10 +66,13 @@ Module Documentation
 ====================
 '''
 
+# Import python libs
 import logging
 import os
 import sys
 
+# Import salt libs
+import salt.exceptions
 
 HAS_VIRTUALENV = False
 
