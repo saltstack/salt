@@ -13,6 +13,7 @@ from datetime import datetime
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
+from distutils.command.sdist import sdist
 
 # Change to salt source's directory prior to running any command
 try:
@@ -40,6 +41,7 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
         from setuptools.command.install import install
+        from setuptools.command.sdist import sdist
         WITH_SETUPTOOLS = True
     except ImportError:
         WITH_SETUPTOOLS = False
@@ -80,6 +82,8 @@ SALT_SYSPATHS = os.path.join(
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 
+
+class SaltSdist(sdist):
     def write_manifest(self):
         if IS_WINDOWS_PLATFORM:
             # Remove un-necessary scripts grabbed by MANIFEST.in
@@ -287,7 +291,8 @@ SETUP_KWARGS = {'name': NAME,
                     'test': TestCommand,
                     'clean': Clean,
                     'build': Build,
-                    'install': Install
+                    'install': Install,
+                    'sdist': SaltSdist,
                 },
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
