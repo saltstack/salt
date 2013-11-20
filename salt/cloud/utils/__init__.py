@@ -500,7 +500,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
-                  parallel=False, **kwargs):
+                  parallel=False, sudo_password=None, **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -525,11 +525,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 )
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            kwargs = {'hostname': host,
-                      'port': port,
-                      'username': username,
-                      'timeout': ssh_timeout,
-                      'display_ssh_output': display_ssh_output}
+            kwargs = {
+                'hostname': host,
+                'port': port,
+                'username': username,
+                'timeout': ssh_timeout,
+                'display_ssh_output': display_ssh_output,
+                'sudo_password': sudo_password,
+            }
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
@@ -947,7 +950,10 @@ def root_cmd(command, tty, sudo, **kwargs):
     Wrapper for commands to be run as root
     '''
     if sudo:
-        command = 'sudo {0}'.format(command)
+        if 'sudo_password' in kwargs and kwargs['sudo_password'] is not None:
+            command = 'echo "{1}" | sudo -S {0}'.format(command, sudo_password)
+        else:
+            command = 'sudo {0}'.format(command)
         log.debug('Using sudo to run command {0}'.format(command))
 
     ssh_args = []

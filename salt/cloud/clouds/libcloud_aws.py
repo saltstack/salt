@@ -455,12 +455,19 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': '/tmp/deploy.sh',
-            'tty': True,
+            'deploy_command': config.get_config_value(
+                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+            ),
+            'tty': config.get_config_value(
+                'tty', vm_, __opts__, default=True
+            ),
             'script': deploy_script.script,
             'name': vm_['name'],
             'sudo': config.get_config_value(
                 'sudo', vm_, __opts__, default=(username != 'root')
+            ),
+            'sudo_password': config.get_config_value(
+                'sudo_password', vm_, __opts__, default=None
             ),
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
