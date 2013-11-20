@@ -309,7 +309,6 @@ def create(vm_):
                 'deploy_command', vm_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',
             ),
-            'tty': True,
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
@@ -325,7 +324,7 @@ def create(vm_):
                 'sudo_password', vm_, __opts__, default=None
             ),
             'tty': config.get_config_value(
-                'tty', vm_, __opts__, default=False
+                'tty', vm_, __opts__, default=True
             ),
             'display_ssh_output': config.get_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
