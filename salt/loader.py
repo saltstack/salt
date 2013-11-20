@@ -21,6 +21,20 @@ log = logging.getLogger(__name__)
 SALT_BASE_PATH = os.path.dirname(salt.__file__)
 LOADED_BASE_NAME = 'salt.loaded'
 
+# Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
+# which simplifies code readability, it adds some unsupported functions into
+# the driver's module scope.
+# We list un-supported functions here. These will be removed from the loaded.
+LIBCLOUD_FUNCS_NOT_SUPPORTED = (
+    'parallels.avail_sizes',
+    'parallels.avail_locations',
+    'saltify.destroy',
+    'saltify.avail_sizes',
+    'saltify.avail_images',
+    'saltify.avail_locations',
+    'rackspace.reboot'
+)
+
 
 def _create_loader(
         opts,
@@ -314,6 +328,36 @@ def runner(opts):
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
     return load.gen_functions()
+
+
+def clouds(opts):
+    '''
+    Return the cloud functions
+    '''
+    load = _create_loader(opts,
+                          'clouds',
+                          'cloud',
+                          base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
+                          int_type='clouds')
+
+    # Let's bring __active_provider_name__, defaulting to None, to all cloud
+    # drivers. This will get temporarily updated/overridden with a context
+    # manager when needed.
+    pack = {
+        'name': '__active_provider_name__',
+        'value': None
+    }
+
+    functions = load.gen_functions(pack)
+    for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
+        log.debug(
+            '{0!r} has been marked as not supported. Removing from the list '
+            'of supported cloud functions'.format(
+                funcname
+            )
+        )
+        functions.pop(funcname, None)
+    return functions
 
 
 def _generate_module(name):
