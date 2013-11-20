@@ -49,7 +49,7 @@ import pprint
 from libcloud.compute.base import NodeState
 
 # Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
+from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
 # Import salt libs
 import salt.utils

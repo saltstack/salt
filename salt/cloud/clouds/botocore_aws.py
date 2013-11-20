@@ -52,7 +52,7 @@ import logging
 # Import salt.cloud libs
 import salt.cloud.config as config
 from salt.cloud.utils import namespaced_function
-from salt.cloud.libcloudfuncs import *        # pylint: disable-msg=W0614,W0401
+from salt.cloud.libcloudfuncs import *        # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
@@ -61,7 +61,7 @@ from salt.cloud.clouds import libcloud_aws
 # Import libcloud_aws, storing pre and post locals so we can namespace any
 # callable to this module.
 PRE_IMPORT_LOCALS_KEYS = locals().copy()
-from salt.cloud.clouds.libcloud_aws import *  # pylint: disable-msg=W0614,W0401
+from salt.cloud.clouds.libcloud_aws import *  # pylint: disable=W0614,W0401
 POST_IMPORT_LOCALS_KEYS = locals().copy()
 
 # Get logging started
