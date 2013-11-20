@@ -107,7 +107,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     # We were able to update, no need to continue trying to
                     # write up the search path
                     self.exit(0)
-                except (OSError, IOError), err:
+                except (OSError, IOError) as err:
                     log.debug(
                         'Failed to write the updated script: {0}'.format(err)
                     )
