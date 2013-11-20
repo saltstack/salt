@@ -82,7 +82,7 @@ the discrete states are split or groups into separate sls files:
 
     include:
       - network
-      
+
     httpd:
       pkg:
         - installed
@@ -273,9 +273,10 @@ earlier ``service.running`` example above,  the service can be set to
 The Order Option
 ================
 
-Before using the order option, remember that the majority of state ordering
+Before using the `order` option, remember that the majority of state ordering
 should be done with a :term:`requisite declaration`, and that a requisite
-declaration will override an order option.
+declaration will override an `order` option, so a state with order option
+should not require or required by other states.
 
 The order option is used by adding an order number to a state declaration
 with the option `order`:
@@ -302,17 +303,3 @@ a state to the end of the line. To do this, set the order to ``last``:
       pkg.installed:
         - order: last
 
-Remember that requisite statements overrid<e the order option. So the order
-option should be applied to the highest component of the requisite chain:
-
-.. code-block:: yaml
-
-    vim:
-      pkg.installed:
-        - order: last
-        - require:
-          - file: /etc/vimrc
-
-    /etc/vimrc:
-      file.managed:
-        - source: salt://edit/vimrc
