@@ -23,6 +23,11 @@ elif hasattr(pipes, 'quote'):
 else:
     _quote = None
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def __virtual__():
     if _quote is None:
@@ -35,7 +40,7 @@ def _fallback(*args, **kw):
 
 
 @_which('openstack-config')
-def set(filename, section, parameter, value):
+def set_(filename, section, parameter, value):
     '''
     Set a value in an OpenStack configuration file.
 
