@@ -319,5 +319,6 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
         self.publisher.send(formatted_object)
 
     def close(self):
-        # One second to send any queued messages
-        self._context.destroy(1 * 1000)
+        if self._context is not None:
+            # One second to send any queued messages
+            self._context.destroy(1 * 1000)
