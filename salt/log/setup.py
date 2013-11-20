@@ -33,7 +33,6 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
-from salt._compat import string_types
 from salt.log.handlers import TemporaryLoggingHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
