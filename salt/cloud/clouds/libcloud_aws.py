@@ -726,7 +726,7 @@ def rename(name, kwargs, call=None):
         salt.cloud.utils.rename_key(
             __opts__['pki_dir'], name, kwargs['newname']
         )
-    except Exception, exc:
+    except Exception as exc:
         log.error(
             'Failed to rename {0} to {1}: {2}\n'.format(
                 name, kwargs['newname'], exc
