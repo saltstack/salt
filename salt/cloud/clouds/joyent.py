@@ -66,7 +66,8 @@ from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.utils.cloud import namespaced_function, is_public_ip
+from salt.utils import namespaced_function
+from salt.utils.cloud import is_public_ip
 from salt.cloud.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
