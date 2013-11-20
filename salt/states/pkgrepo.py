@@ -230,9 +230,9 @@ def managed(name, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use.  Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    sanitizedkwargs = __salt__['pkg.expand_repo_def'](repokwargs)
     if __grains__['os_family'] == 'Debian':
-        kwargs['repo'] = _strip_uri(kwargs['repo'])
+        repokwargs['repo'] = _strip_uri(repokwargs['repo'])
 
     if repo:
         notset = False
