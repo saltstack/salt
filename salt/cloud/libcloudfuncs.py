@@ -27,7 +27,7 @@ import salt.utils.event
 
 # Import salt cloud libs
 import salt.cloud.utils
-import salt.cloud.config as config
+import salt.config as config
 from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
