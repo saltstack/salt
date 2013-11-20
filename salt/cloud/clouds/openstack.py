@@ -640,6 +640,9 @@ def create(vm_):
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
+    ssh_username = config.get_config_value(
+        'ssh_username', vm_, __opts__, default='root'
+    )
     deploy_kwargs = {
         'host': ip_address,
         'name': vm_['name'],
@@ -669,9 +672,6 @@ def create(vm_):
         'minion_conf': salt.cloud.utils.minion_config(__opts__, vm_)
     }
 
-    ssh_username = config.get_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
     if ssh_username != 'root':
         deploy_kwargs['username'] = ssh_username
         deploy_kwargs['tty'] = True

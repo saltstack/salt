@@ -537,7 +537,7 @@ def create(vm_):
     response['password'] = passwd
     response['public_ip'] = ip_address
 
-    ssh_username = 'username': config.get_config_value(
+    ssh_username = config.get_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 

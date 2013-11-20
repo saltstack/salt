@@ -339,7 +339,7 @@ def create(vm_):
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
 
-    ssh_username = 'username': config.get_config_value(
+    ssh_username = config.get_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
