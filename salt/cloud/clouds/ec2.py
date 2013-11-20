@@ -1280,8 +1280,12 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': '/tmp/deploy.sh',
-            'tty': True,
+            'deploy_command': config.get_config_value(
+                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+            ),
+            'tty': config.get_config_value(
+                'tty', vm_, __opts__, default=True
+            ),
             'script': deploy_script,
             'name': vm_['name'],
             'sudo': config.get_config_value(
