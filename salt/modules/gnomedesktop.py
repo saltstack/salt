@@ -28,7 +28,7 @@ def __virtual__():
     return False
 
 
-class _GSettings:
+class _GSettings(object):
     def __init__(self, user, schema, key):
         self.SCHEMA = schema
         self.KEY = key
