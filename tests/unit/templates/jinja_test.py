@@ -277,7 +277,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, env='other')
         )
 
     def test_render_with_undefined_variable(self):
@@ -288,7 +288,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, env='other')
         )
 
 
