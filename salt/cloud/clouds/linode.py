@@ -171,16 +171,22 @@ def create(vm_):
         )
         return False
 
+    ssh_username = 'username': config.get_config_value(
+        'ssh_username', vm_, __opts__, default='root'
+    )
+
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
-            'username': 'root',
+            'username': ssh_username,
             'password': get_password(vm_),
             'script': deploy_script.script,
             'name': vm_['name'],
-            'deploy_command': '/tmp/deploy.sh',
+            'deploy_command': config.get_config_value(
+                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+            ),
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
@@ -189,6 +195,15 @@ def create(vm_):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+            'sudo': config.get_config_value(
+                'sudo', vm_, __opts__, default=(ssh_username != 'root')
+            ),
+            'sudo_password': config.get_config_value(
+                'sudo_password', vm_, __opts__, default=None
+            ),
+            'tty': config.get_config_value(
+                'tty', vm_, __opts__, default=False
+            ),
             'display_ssh_output': config.get_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
             ),
