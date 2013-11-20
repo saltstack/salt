@@ -1349,7 +1349,7 @@ def create(vm_=None, call=None):
         del(event_kwargs['minion_pem'])
         del(event_kwargs['minion_pub'])
         del(event_kwargs['sudo_password'])
-        if 'password' in kwargs:
+        if 'password' in event_kwargs:
             del(event_kwargs['password'])
         ret['deploy_kwargs'] = event_kwargs
 
