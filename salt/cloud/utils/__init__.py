@@ -158,30 +158,6 @@ def rename_key(pki_dir, id_, new_id):
         os.rename(oldkey, newkey)
 
 
-def get_option(option, opts, vm_):
-    '''
-    Convenience function to return the dominant option to be used. Always
-    default to options set in the VM structure, but if the option is not
-    present there look for it in the main configuration file
-    '''
-    # Make the next warning visible at least once.
-    warnings.filterwarnings(
-        'once', category=DeprecationWarning, module='salt.cloud'
-    )
-    warnings.warn(
-        '`salt.cloud.utils.get_option() was deprecated in favour of '
-        '`salt.cloud.config.get_config_value()`. Please stop using it '
-        'since it will be removed in version 0.8.8.',
-        DeprecationWarning,
-        stacklevel=2
-    )
-
-    if option in vm_:
-        return vm_[option]
-    if option in opts:
-        return opts[option]
-
-
 def minion_config(opts, vm_):
     '''
     Return a minion's configuration for the provided options and VM
