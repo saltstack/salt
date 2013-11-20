@@ -47,7 +47,6 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import os
-import copy
 import stat
 import uuid
 import pprint
