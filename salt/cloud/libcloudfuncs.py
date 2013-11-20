@@ -28,7 +28,7 @@ import salt.utils.event
 # Import salt cloud libs
 import salt.cloud.utils
 import salt.cloud.config as config
-from salt.cloud.exceptions import SaltCloudNotFound
+from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -284,7 +284,7 @@ def destroy(name, conn=None):
     salt.cloud.utils.fire_event(
         'event',
         'destroying instance',
-        'salt.cloud.destroy',
+        'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
     )
 
@@ -300,19 +300,12 @@ def destroy(name, conn=None):
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
         event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
-        try:
-            salt.cloud.utils.fire_event(
-                'event',
-                'destroyed instance',
-                'salt.cloud.destroy',
-                {'name': name},
-            )
-
-        except ValueError:
-            # We're using develop or a 0.17.x version of salt
-            event.fire_event(
-                {name: '{0} has been destroyed'.format(name)}, 'salt-cloud'
-            )
+        salt.cloud.utils.fire_event(
+            'event',
+            'destroyed instance',
+            'salt/cloud/{0}/destroyed'.format(name),
+            {'name': name},
+        )
         if __opts__['delete_sshkeys'] is True:
             salt.cloud.utils.remove_sshkey(node.public_ips[0])
         return True
@@ -411,6 +404,19 @@ def list_nodes_select(conn=None):
                 pairs[key] = value
         ret[node.name] = pairs
     return ret
+
+
+def show_instance(name, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    nodes = list_nodes_full()
+    return nodes[name]
 
 
 def conn_has_method(conn, method_name):

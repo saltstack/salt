@@ -165,11 +165,11 @@ class Authorize(object):
         '''
         Gather and create the autorization data sets
         '''
-        auth_data = [self.opts['external_auth']]
-        for auth_back in self.opts.get('external_auth_sources'):
-            fstr = '{0}.perms'.format(auth_back)
-            if fstr in self.loadauth.auth:
-                auth_data.append(getattr(self.loadauth.auth)())
+        auth_data = self.opts['external_auth']
+        #for auth_back in self.opts.get('external_auth_sources', []):
+        #    fstr = '{0}.perms'.format(auth_back)
+        #    if fstr in self.loadauth.auth:
+        #        auth_data.append(getattr(self.loadauth.auth)())
         return auth_data
 
     def token(self, adata, load):
@@ -189,8 +189,9 @@ class Authorize(object):
             log.warning('Authentication failure of type "token" occurred.')
             yield {}
         for sub_auth in adata:
-            if token['eauth'] not in adata:
-                continue
+            for sub_adata in adata:
+                if token['eauth'] not in adata:
+                    continue
             if not ((token['name'] in adata[token['eauth']]) |
                     ('*' in adata[token['eauth']])):
                 continue
@@ -201,7 +202,7 @@ class Authorize(object):
         '''
         Determine if the given eauth is valid and yield the adata
         '''
-        for sub_auth in adata:
+        for sub_auth in [adata]:
             if load['eauth'] not in sub_auth:
                 continue
             try:
@@ -226,7 +227,7 @@ class Authorize(object):
         '''
         if load.get('eauth'):
             sub_auth = sub_auth[load['eauth']]
-        good = self.ckminions.any_check(
+        good = self.ckminions.any_auth(
                 form,
                 sub_auth[name] if name in sub_auth else sub_auth['*'],
                 load.get('fun', None),
@@ -244,13 +245,14 @@ class Authorize(object):
         authorization
         '''
         adata = self.auth_data()
+        good = False
         if load.get('token', False):
             good = False
             for sub_auth in self.token(adata, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
-                            sub_auth['sub_auth'],
+                            adata[sub_auth['token']['eauth']],
                             sub_auth['token']['name'],
                             load,
                             sub_auth['token']['eauth']):

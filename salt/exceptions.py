@@ -3,6 +3,12 @@
 This module is a central location for all salt exceptions
 '''
 
+# Import python libs
+import copy
+
+# Import salt libs
+import salt.utils
+
 
 class SaltException(Exception):
     '''
@@ -59,19 +65,6 @@ class MinionError(SaltException):
     '''
 
 
-class RenderError(SaltException):
-    '''
-    Problems rendering data
-    '''
-    def __init__(self, error, line_num, buf):
-        self.error = error
-        self.line_num = line_num
-        self.buffer = buf
-        SaltException.__init__(
-            self, 'Problem rendering data: {0}'.format(error)
-        )
-
-
 class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
@@ -88,8 +81,31 @@ class PkgParseError(SaltException):
 
 class SaltRenderError(SaltException):
     '''
-    Used when a renderer needs to raise an explicit error
+    Used when a renderer needs to raise an explicit error. If a line number and
+    buffer string are passed, get_context will be invoked to get the location
+    of the error.
     '''
+    def __init__(self,
+                 error,
+                 line_num=None,
+                 buf='',
+                 marker='    <======================'):
+        self.error = error
+        exc_str = copy.deepcopy(error)
+        self.line_num = line_num
+        self.buffer = buf
+        self.context = ''
+        if self.line_num and self.buffer:
+            self.context = salt.utils.get_context(
+                self.buffer,
+                self.line_num,
+                marker=marker
+            )
+            exc_str += '; line {0}\n\n{1}'.format(
+                    self.line_num,
+                    self.context
+            )
+        SaltException.__init__(self, exc_str)
 
 
 class SaltReqTimeoutError(SaltException):

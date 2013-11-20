@@ -13774,7 +13774,7 @@ work on all hosts, but some functions require (for example) a service to be inst
 Instead of trying to wrap much of the code in large try/except blocks you can use
 a simple decorator to do this. If the dependencies passed to the decorator don\(aqt
 exist, then the salt minion will remove those functions from the module on that host.
-If a "fallback_funcion" is defined, it will replace the function instead of removing it
+If a "fallback_function" is defined, it will replace the function instead of removing it
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -13800,7 +13800,7 @@ def _fallback():
     \(aq\(aq\(aq
     return \(aq"dependency_that_sometimes_exists" needs to be installed for this function to exist\(aq
 
-@depends(\(aqdependency_that_sometimes_exists\(aq, fallback_funcion=_fallback)
+@depends(\(aqdependency_that_sometimes_exists\(aq, fallback_function=_fallback)
 def foo():
     \(aq\(aq\(aq
     Function with a dependency on the "dependency_that_sometimes_exists" module.
@@ -54499,7 +54499,7 @@ _
 T{
 debian_service
 T}	T{
-Debian Linux (non\-systemd)
+Debian (non\-systemd)
 T}
 _
 T{

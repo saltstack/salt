@@ -57,6 +57,9 @@
 
         <p>Current Salt release: <a href="{{ pathto('topics/releases/{0}'.format(release)) }}">{{ release }}</a></p>
 
+        <p class="muted">Docs for previous releases on
+            <a href="http://salt.readthedocs.org">salt.rtfd.org</a>.</p>
+
         {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
             {%- include sidebartemplate %}
         {%- endfor %}
@@ -119,6 +122,7 @@
 
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="google-site-verification" content="1Y-ojT3ndjxA9coB77iUDyXPWxeuQ3T4_r0j-QG6QHg" />
 
         {{ css() }}
 

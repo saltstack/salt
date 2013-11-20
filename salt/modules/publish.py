@@ -48,6 +48,7 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         # Need to log something here
         return {}
+
     arg = _normalize_arg(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
@@ -144,8 +145,26 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
 
+
+    .. admonition:: Attention
+
+        If you need to pass a value to a function argument and that value
+        contains an equal sign, you **must** include the argument name.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' publish.publish test.kwarg arg='cheese=spam'
+
+
     '''
-    return _publish(tgt, fun, arg, expr_form, returner, timeout, 'clean')
+    return _publish(tgt,
+                    fun,
+                    arg=arg,
+                    expr_form=expr_form,
+                    returner=returner,
+                    timeout=timeout,
+                    form='clean')
 
 
 def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -158,8 +177,25 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     .. code-block:: bash
 
         salt system.example.com publish.full_data '*' cmd.run 'ls -la /tmp'
+
+    .. admonition:: Attention
+
+        If you need to pass a value to a function argument and that value
+        contains an equal sign, you **must** include the argument name.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' publish.full_data test.kwarg arg='cheese=spam'
+
     '''
-    return _publish(tgt, fun, arg, expr_form, returner, timeout, 'full')
+    return _publish(tgt,
+                    fun,
+                    arg=arg,
+                    expr_form=expr_form,
+                    returner=returner,
+                    timeout=timeout,
+                    form='full')
 
 
 def runner(fun, arg=None):

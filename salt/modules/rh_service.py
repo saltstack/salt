@@ -287,16 +287,16 @@ def get_all(limit=''):
 
 def available(name, limit=''):
     '''
-    Return True is the named service is available.  Use the ``limit`` param to
+    Return True if the named service is available.  Use the ``limit`` param to
     restrict results to services of that type.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' service.get_enabled
-        salt '*' service.get_enabled limit=upstart
-        salt '*' service.get_enabled limit=sysvinit
+        salt '*' service.available sshd
+        salt '*' service.available sshd limit=upstart
+        salt '*' service.available sshd limit=sysvinit
     '''
     if limit == 'upstart':
         return _service_is_upstart(name)
@@ -304,6 +304,31 @@ def available(name, limit=''):
         return _service_is_sysv(name)
     else:
         return _service_is_upstart(name) or _service_is_sysv(name)
+
+
+def missing(name, limit=''):
+    '''
+    The inverse of service.available.
+    Return True if the named service is not available.  Use the ``limit`` param to
+    restrict results to services of that type.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' service.missing sshd
+        salt '*' service.missing sshd limit=upstart
+        salt '*' service.missing sshd limit=sysvinit
+    '''
+    if limit == 'upstart':
+        return not _service_is_upstart(name)
+    elif limit == 'sysvinit':
+        return not _service_is_sysv(name)
+    else:
+        if _service_is_upstart(name) or _service_is_sysv(name):
+            return False
+        else:
+            return True
 
 
 def start(name):

@@ -7,12 +7,13 @@ bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
 Use of this module requires no configuration in the main cloud configuration
-file. However, profiles must still be configured, as described in the saltify
-documentation.
+file. However, profiles must still be configured, as described in the
+:ref:`core config documentation <config-saltify>`.
 '''
 
 # Import python libs
 import os
+import copy
 import logging
 
 # Import salt libs
@@ -148,13 +149,15 @@ def create(vm_):
         )
 
     # Store what was used to the deploy the VM
-    ret['deploy_kwargs'] = deploy_kwargs
+    event_kwargs = copy.deepcopy(deploy_kwargs)
+    del(event_kwargs['minion_pem'])
+    ret['deploy_kwargs'] = event_kwargs
 
     salt.cloud.utils.fire_event(
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        {'kwargs': deploy_kwargs},
+        {'kwargs': event_kwargs},
     )
 
     deployed = False

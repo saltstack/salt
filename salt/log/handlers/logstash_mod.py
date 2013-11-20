@@ -18,7 +18,7 @@
 
         logstash_udp_handler:
           host: 127.0.0.1
-          port = 9999
+          port: 9999
 
 
     On the `Logstash`_ configuration file you need something like:

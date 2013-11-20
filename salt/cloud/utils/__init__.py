@@ -81,7 +81,15 @@ def os_script(os_, vm_=None, opts=None, minion=''):
         # extension was provided. Let's use it anyway.
         return __render_script('{0}.sh'.format(os_), vm_, opts, minion)
 
+    if type(opts['deploy_scripts_search_path']) is str:
+        opts['deploy_scripts_search_path'] = [
+            opts['deploy_scripts_search_path'],
+        ]
+
     for search_path in opts['deploy_scripts_search_path']:
+        if not os.path.isabs(search_path):
+            search_path = os.path.join(opts['conf_dir'], search_path)
+
         if os.path.isfile(os.path.join(search_path, os_)):
             return __render_script(
                 os.path.join(search_path, os_), vm_, opts, minion
@@ -465,11 +473,19 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             win_cmd('smbclient {0}/c$ -c "rmdir /S salttemp; prompt; exit;"'.format(
                 creds,
             ))
+        # Shell out to winexe to ensure salt-minion service started
+        win_cmd('winexe {0} "sc start salt-minion"'.format(
+            creds,
+        ))
 
         # Fire deploy action
-        fire_event(name,
-                   '{0} has been deployed at {1}'.format(name, host),
-                   tag='salt.cloud.deploy_script')
+        fire_event(
+            'event',
+            '{0} has been deployed at {1}'.format(name, host),
+            'salt/cloud/{0}/deploy_windows'.format(name),
+            {'name': name},
+        )
+
         return True
     return False
 
@@ -779,9 +795,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         )
                     )
             # Fire deploy action
-            fire_event(name,
-                       '{0} has been deployed at {1}'.format(name, host),
-                       tag='salt.cloud.deploy_script')
+            fire_event(
+                'event',
+                '{0} has been deployed at {1}'.format(name, host),
+                'salt/cloud/{0}/deploy_script'.format(name),
+            )
             return True
     return False
 
@@ -969,7 +987,6 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-
     try:
         proc = NonBlockingPopen(
             cmd,

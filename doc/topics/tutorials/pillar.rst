@@ -13,9 +13,10 @@ for specific minions. The data generated in pillar is made available to almost
 every component of Salt and is used for a number of purposes:
 
 Highly Sensitive Data:
-    Information transferred via pillar is guaranteed to only be presented to the
-    minions that are targeted, this makes pillar the engine to use in Salt for
-    managing security information, such as cryptographic keys and passwords.
+    Information transferred via pillar is guaranteed to only be presented to
+    the minions that are targeted, this makes pillar the engine to use in Salt
+    for managing security information, such as cryptographic keys and
+    passwords.
 Minion Configuration:
     Minion modules such as the execution modules, states, and returners can
     often be configured via data stored in pillar.
@@ -272,9 +273,9 @@ Where the vimrc source location can now be changed via pillar:
 
 .. code-block:: jinja
 
-    {% if grain['id'].startswith('dev') %}
+    {% if grains['id'].startswith('dev') %}
     vimrc: salt://edit/dev_vimrc
-    {% elif grain['id'].startswith('qa') %}
+    {% elif grains['id'].startswith('qa') %}
     vimrc: salt://edit/qa_vimrc
     {% else %}
     vimrc: salt://edit/vimrc

@@ -5,9 +5,16 @@ Module for configuring DNS Client on Windows systems
 
 # Import python libs
 import re
+import logging
 
 # Import salt libs
 import salt.utils
+try:
+    import wmi
+except ImportError:
+    pass
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -21,17 +28,25 @@ def __virtual__():
 
 def get_dns_servers(interface='Local Area Connection'):
     '''
-    Return a list of the configured DNS servers of the specific interface
+    Return a list of the configured DNS servers of the specified interface
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_dns_client.get_dns_servers <interface>
+        salt '*' win_dns_client.get_dns_servers 'Local Area Connection'
     '''
-    out = __salt__['cmd.run'](
-            'netsh interface ip show dns "{0}"'.format(interface))
-    return re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", out)
+    # remove any escape characters
+    interface = interface.split('\\')
+    interface = ''.join(interface)
+
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+            if interface == iface.Description:
+                return list(iface.DNSServerSearchOrder)
+    log.debug('Interface "{0}" not found'.format(interface))
+    return False
 
 
 def rm_dns(ip, interface='Local Area Connection'):
@@ -107,12 +122,14 @@ def get_dns_config(interface='Local Area Connection'):
 
     .. code-block:: bash
 
-        salt '*' win_dns_client.get_dns_config <interface>
+        salt '*' win_dns_client.get_dns_config 'Local Area Connection'
     '''
-    out = __salt__['cmd.run'](
-            'netsh interface ip show dns "{0}"'.format(interface)
-            )
-    if re.search('DNS servers configured through DHCP', out):
-        return 'dhcp'
-    else:
-        return 'static'
+    # remove any escape characters
+    interface = interface.split('\\')
+    interface = ''.join(interface)
+
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+            if interface == iface.Description:
+                return iface.DHCPEnabled

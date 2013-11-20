@@ -248,7 +248,7 @@ only the cache for the mine system.
 ``sock_dir``
 ------------
 
-Default:: :file:`/tmp/salt-unix`
+Default: :file:`/tmp/salt-unix`
 
 Set the location to use for creating Unix sockets for master process
 communication
@@ -500,7 +500,7 @@ The renderer to use on the minions to render the state data
 ``failhard``
 ------------
 
-Default:: ``False``
+Default: ``False``
 
 Set the global failhard flag, this informs all states to stop running states
 at the moment a single state fails
@@ -514,7 +514,7 @@ at the moment a single state fails
 ``test``
 --------
 
-Default:: ``False``
+Default: ``False``
 
 Set all state calls to only test if they are going to actually make changes
 or just post what changes are going to be made
@@ -658,7 +658,7 @@ functions. The available ext_pillar functions can be found herein:
 
 By default, the ext_pillar interface is not configured to run.
 
-Default:: ``None``
+Default: ``None``
 
 .. code-block:: yaml
 

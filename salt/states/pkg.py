@@ -58,7 +58,7 @@ if salt.utils.is_windows():
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     import msgpack
-    from distutils.version import LooseVersion  # pylint: disable=E0611
+    from distutils.version import LooseVersion  # pylint: disable=E0611,F0401
 
 log = logging.getLogger(__name__)
 
@@ -491,8 +491,11 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in modified])
-        comment.append('The following packages were installed/updated: '
-                       '{0}.'.format(summary))
+        if len(summary) < 10:
+            comment.append('The following packages were installed/updated: '
+                           '{0}.'.format(summary))
+        else:
+            comment.append('{0} packages were installed/updated.'.format(len(summary)))
 
     if not_modified:
         if sources:
@@ -500,8 +503,11 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in not_modified])
-        comment.append('The following packages were already installed: '
-                       '{0}.'.format(summary))
+        if len(summary) <= 10:
+            comment.append('The following packages were already installed: '
+                           '{0}.'.format(summary))
+        else:
+            comment.append('{0} packages were already installed.'.format(len(summary)))
 
     if failed:
         if sources:
@@ -647,7 +653,8 @@ def latest(
                     comment += ' The following packages are already ' \
                         'up-to-date: {0}.'.format(', '.join(sorted(up_to_date)))
                 else:
-                    comment += ' {} packages are already up-to-date.'.format(len(up_to_date))
+                    comment += ' {0} packages are already up-to-date.'.format(
+                        len(up_to_date))
 
             return {'name': name,
                     'changes': {},
@@ -687,7 +694,8 @@ def latest(
                     msg = 'The following packages were already up-to-date: ' \
                         '{0}.'.format(', '.join(sorted(up_to_date)))
                 else:
-                    msg = '{} packages were already up-to-date. '.format(len(up_to_date))
+                    msg = '{0} packages were already up-to-date. '.format(
+                        len(up_to_date))
                 comments.append(msg)
 
             return {'name': name,
@@ -696,7 +704,7 @@ def latest(
                     'comment': ' '.join(comments)}
         else:
             if len(targets) > 10:
-                comment = 'All targeted {} packages failed to update.'\
+                comment = 'All targeted {0} packages failed to update.'\
                     .format(len(targets))
             elif len(targets) > 1:
                 comment = 'All targeted packages failed to update: ' \
@@ -710,7 +718,7 @@ def latest(
                         'up-to-date: ' \
                         '{0}'.format(', '.join(sorted(up_to_date)))
                 else:
-                    comment += '{} packages were already ' \
+                    comment += '{0} packages were already ' \
                         'up-to-date.'.format(len(up_to_date))
 
             return {'name': name,
@@ -719,7 +727,8 @@ def latest(
                     'comment': comment}
     else:
         if len(desired_pkgs) > 10:
-            comment = 'All {} packages are up-to-date.'.format(len(desired_pkgs))
+            comment = 'All {0} packages are up-to-date.'.format(
+                len(desired_pkgs))
         elif len(desired_pkgs) > 1:
             comment = 'All packages are up-to-date ' \
                 '({0}).'.format(', '.join(sorted(desired_pkgs)))

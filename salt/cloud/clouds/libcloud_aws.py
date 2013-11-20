@@ -143,6 +143,7 @@ def __virtual__():
     libcloudfuncs_destroy = namespaced_function(
         libcloudfuncs_destroy, globals(), (conn,)
     )
+    show_instance = namespaced_function(show_instance, globals())
 
     log.debug('Loading Libcloud AWS cloud module')
     return __virtualname__
@@ -227,8 +228,9 @@ def iam_profile(vm_):
 
 def block_device_mappings(vm_):
     '''
-    Return the block device mapping
-    e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+    Return the block device mapping::
+
+        [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
     '''
     return config.get_config_value(
@@ -362,6 +364,11 @@ def create(vm_):
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
                 '\'tag\' should be a dict.'
+        )
+    kwargs['ex_metadata'] = config.get_config_value('metadata', vm_, __opts__, default={}, search_global=False)
+    if not isinstance(kwargs['ex_metadata'], dict):
+        raise SaltCloudConfigError(
+                '\'metadata\' should be a dict.'
         )
 
     try:
@@ -718,7 +725,7 @@ def rename(name, kwargs, call=None):
         salt.cloud.utils.rename_key(
             __opts__['pki_dir'], name, kwargs['newname']
         )
-    except Exception, exc:
+    except Exception as exc:
         log.error(
             'Failed to rename {0} to {1}: {2}\n'.format(
                 name, kwargs['newname'], exc

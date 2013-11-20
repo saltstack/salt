@@ -1,7 +1,7 @@
 Developing Salt
 ===============
 
-There is a great need for contributions to salt and patches are welcome! The goal
+There is a great need for contributions to Salt and patches are welcome! The goal
 here is to make contributions clear, make sure there is a trail for where the code
 has come from, and most importantly, to give credit where credit is due!
 
@@ -335,8 +335,8 @@ and 103 characters on BSD-based systems.
     </topics/installation/osx>` instructions.
 
 
-Using easy_install to Install Salt
-----------------------------------
+Installing Salt from the Python Package Index
+---------------------------------------------
 
 If you are installing using ``easy_install``, you will need to define a
 :strong:`USE_SETUPTOOLS` environment variable, otherwise dependencies will not
@@ -345,56 +345,6 @@ be installed:
 .. code-block:: bash
 
     USE_SETUPTOOLS=1 easy_install salt
-
-Running the tests
-~~~~~~~~~~~~~~~~~
-
-You will need ``mock`` to run the tests:
-
-.. code-block:: bash
-
-    pip install mock
-
-If you are on Python < 2.7 then you will also need unittest2:
-
-.. code-block:: bash
-
-    pip install unittest2
-
-
-.. note::
-
-    In Salt 0.17, testing libraries were migrated into their own repo. To install them:
-
-     .. code-block:: bash
-
-         pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
-
-
-    Failure to install SaltTesting will result in import errors similar to the following:
-
-     .. code-block:: bash
-
-        ImportError: No module named salttesting
-
-Finally you use setup.py to run the tests with the following command:
-
-.. code-block:: bash
-
-    ./setup.py test
-
-For greater control while running the tests, please try something like:
-
-.. code-block:: bash
-
-    ./tests/runtests.py -n integration.modules.virt -vv
-    ./tests/runtests.py -n unit.modules.virt_test -vv
-
-Also see the help for all options:
-
-.. code-block:: bash
-
-    ./tests/runtests.py -h
 
 
 Editing and previewing the documentation
@@ -445,3 +395,14 @@ launch a simple Python HTTP server to see your changes:
 .. code-block:: bash
 
     cd _build/html; python -m SimpleHTTPServer
+
+Running unit and integration tests
+----------------------------------
+
+Run the test suite with following command:
+
+.. code-block:: bash
+
+    ./setup.py test
+
+See :doc:`here <tests/index>` for more information regarding the test suite.

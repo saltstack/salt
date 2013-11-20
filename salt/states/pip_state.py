@@ -117,17 +117,61 @@ def installed(name,
     Make sure the package is installed
 
     name
-        The name of the python package to install
+        The name of the python package to install. You can also specify version
+        numbers here using the standard operators ``==, >=, <=``. If
+        ``requirements`` is given, this parameter will be ignored.
+
+    Example::
+
+        django:
+          pip.installed:
+            - name: django >= 1.6, <= 1.7
+            - require:
+              - pkg: python-pip
+
+    This will install the latest Django version greater than 1.6 but less
+    than 1.7.
+
     user
         The user under which to run pip
-    pip_bin : None
-        Deprecated, use bin_env
+
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
-    env : None
-        Deprecated, use bin_env
+
     bin_env : None
-        the pip executable or virtualenv to use
+        Absolute path to a virtual environment directory or absolute path to
+        a pip executable. The example below assumes a virtual environment
+        has been created at ``/foo/.virtualenvs/bar``.
+
+    Example::
+
+        django:
+          pip.installed:
+            - name: django >= 1.6, <= 1.7
+            - bin_env: /foo/.virtualenvs/bar
+            - require:
+              - pkg: python-pip
+
+    Or
+
+    Example::
+
+        django:
+          pip.installed:
+            - name: django >= 1.6, <= 1.7
+            - bin_env: /foo/.virtualenvs/bar/bin/pip
+            - require:
+              - pkg: python-pip
+
+    .. admonition:: Attention
+
+        The following arguments are deprecated, do not use.
+
+    pip_bin : None
+        Deprecated, use ``bin_env``
+
+    env : None
+        Deprecated, use ``bin_env``
 
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
@@ -180,7 +224,7 @@ def installed(name,
 
     from_vcs = False
 
-    if name:
+    if name and not requirements:
         try:
             try:
                 # With pip < 1.2, the __version__ attribute does not exist and
@@ -338,6 +382,7 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
+        saltenv=__env__
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):

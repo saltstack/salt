@@ -3128,3 +3128,273 @@ source_file = _build/locale/topics/tutorials/states_ordering.pot
 source_lang = en
 source_name = topics/tutorials/states_ordering.rst
 
+[salt.ref--cli--salt-cloud]
+file_filter = locale/<lang>/LC_MESSAGES/ref/cli/salt-cloud.po
+source_file = _build/locale/ref/cli/salt-cloud.pot
+source_lang = en
+source_name = ref/cli/salt-cloud.rst
+
+[salt.ref--clouds--all--index]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/index.po
+source_file = _build/locale/ref/clouds/all/index.pot
+source_lang = en
+source_name = ref/clouds/all/index.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_botocore_aws]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.botocore_aws.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.botocore_aws.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.botocore_aws.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_cloudstack]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.cloudstack.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.cloudstack.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.cloudstack.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_digital_ocean]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.digital_ocean.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.digital_ocean.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.digital_ocean.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_ec2]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.ec2.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.ec2.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.ec2.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_gogrid]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.gogrid.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.gogrid.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.gogrid.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_ibmsce]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.ibmsce.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.ibmsce.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.ibmsce.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_joyent]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.joyent.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.joyent.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.joyent.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_libcloud_aws]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.libcloud_aws.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.libcloud_aws.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.libcloud_aws.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_linode]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.linode.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.linode.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.linode.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_nova]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.nova.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.nova.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.nova.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_openstack]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.openstack.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.openstack.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.openstack.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_parallels]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.parallels.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.parallels.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.parallels.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_rackspace]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.rackspace.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.rackspace.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.rackspace.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_saltify]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.saltify.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.saltify.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.saltify.rst
+
+[salt.ref--clouds--all--salt_cloud_clouds_softlayer]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.softlayer.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.softlayer.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.softlayer.rst
+
+[salt.topics--cloud--action]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/action.po
+source_file = _build/locale/topics/cloud/action.pot
+source_lang = en
+source_name = topics/cloud/action.rst
+
+[salt.topics--cloud--aws]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/aws.po
+source_file = _build/locale/topics/cloud/aws.pot
+source_lang = en
+source_name = topics/cloud/aws.rst
+
+[salt.topics--cloud--cloud]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/cloud.po
+source_file = _build/locale/topics/cloud/cloud.pot
+source_lang = en
+source_name = topics/cloud/cloud.rst
+
+[salt.topics--cloud--config]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/config.po
+source_file = _build/locale/topics/cloud/config.pot
+source_lang = en
+source_name = topics/cloud/config.rst
+
+[salt.topics--cloud--deploy]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/deploy.po
+source_file = _build/locale/topics/cloud/deploy.pot
+source_lang = en
+source_name = topics/cloud/deploy.rst
+
+[salt.topics--cloud--features]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/features.po
+source_file = _build/locale/topics/cloud/features.pot
+source_lang = en
+source_name = topics/cloud/features.rst
+
+[salt.topics--cloud--function]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/function.po
+source_file = _build/locale/topics/cloud/function.pot
+source_lang = en
+source_name = topics/cloud/function.rst
+
+[salt.topics--cloud--index]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/index.po
+source_file = _build/locale/topics/cloud/index.pot
+source_lang = en
+source_name = topics/cloud/index.rst
+
+[salt.topics--cloud--install--index]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/install/index.po
+source_file = _build/locale/topics/cloud/install/index.pot
+source_lang = en
+source_name = topics/cloud/install/index.rst
+
+[salt.topics--cloud--map]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/map.po
+source_file = _build/locale/topics/cloud/map.pot
+source_lang = en
+source_name = topics/cloud/map.rst
+
+[salt.topics--cloud--misc]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/misc.po
+source_file = _build/locale/topics/cloud/misc.pot
+source_lang = en
+source_name = topics/cloud/misc.rst
+
+[salt.topics--cloud--parallels]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/parallels.po
+source_file = _build/locale/topics/cloud/parallels.pot
+source_lang = en
+source_name = topics/cloud/parallels.rst
+
+[salt.topics--cloud--profiles]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/profiles.po
+source_file = _build/locale/topics/cloud/profiles.pot
+source_lang = en
+source_name = topics/cloud/profiles.rst
+
+[salt.topics--cloud--rackspace]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/rackspace.po
+source_file = _build/locale/topics/cloud/rackspace.pot
+source_lang = en
+source_name = topics/cloud/rackspace.rst
+
+[salt.topics--cloud--releases--0_6_0]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.6.0.po
+source_file = _build/locale/topics/cloud/releases/0.6.0.pot
+source_lang = en
+source_name = topics/cloud/releases/0.6.0.rst
+
+[salt.topics--cloud--releases--0_7_0]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.7.0.po
+source_file = _build/locale/topics/cloud/releases/0.7.0.pot
+source_lang = en
+source_name = topics/cloud/releases/0.7.0.rst
+
+[salt.topics--cloud--releases--0_8_0]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.0.po
+source_file = _build/locale/topics/cloud/releases/0.8.0.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.0.rst
+
+[salt.topics--cloud--releases--0_8_1]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.1.po
+source_file = _build/locale/topics/cloud/releases/0.8.1.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.1.rst
+
+[salt.topics--cloud--releases--0_8_2]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.2.po
+source_file = _build/locale/topics/cloud/releases/0.8.2.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.2.rst
+
+[salt.topics--cloud--releases--0_8_3]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.3.po
+source_file = _build/locale/topics/cloud/releases/0.8.3.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.3.rst
+
+[salt.topics--cloud--releases--0_8_4]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.4.po
+source_file = _build/locale/topics/cloud/releases/0.8.4.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.4.rst
+
+[salt.topics--cloud--releases--0_8_5]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.5.po
+source_file = _build/locale/topics/cloud/releases/0.8.5.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.5.rst
+
+[salt.topics--cloud--releases--0_8_6]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.6.po
+source_file = _build/locale/topics/cloud/releases/0.8.6.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.6.rst
+
+[salt.topics--cloud--releases--0_8_7]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.7.po
+source_file = _build/locale/topics/cloud/releases/0.8.7.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.7.rst
+
+[salt.topics--cloud--releases--0_8_9]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/0.8.9.po
+source_file = _build/locale/topics/cloud/releases/0.8.9.pot
+source_lang = en
+source_name = topics/cloud/releases/0.8.9.rst
+
+[salt.topics--cloud--releases--index]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/releases/index.po
+source_file = _build/locale/topics/cloud/releases/index.pot
+source_lang = en
+source_name = topics/cloud/releases/index.rst
+
+[salt.topics--cloud--softlayer]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/softlayer.po
+source_file = _build/locale/topics/cloud/softlayer.pot
+source_lang = en
+source_name = topics/cloud/softlayer.rst
+
+[salt.topics--cloud--windows]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/windows.po
+source_file = _build/locale/topics/cloud/windows.pot
+source_lang = en
+source_name = topics/cloud/windows.rst
+

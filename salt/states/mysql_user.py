@@ -61,6 +61,7 @@ def present(name,
             password=None,
             password_hash=None,
             allow_passwordless=False,
+            unix_socket=False,
             **connection_args):
     '''
     Ensure that the named user is present with the specified properties. A
@@ -93,6 +94,9 @@ def present(name,
     allow_passwordless
         If ``True``, then ``password`` and ``password_hash`` can be omitted to
         permit a passwordless login.
+
+    unix_socket
+        If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
 
     .. note::
         The ``allow_passwordless`` option will be available in version 0.16.2.

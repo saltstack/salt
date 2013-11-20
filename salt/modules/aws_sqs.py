@@ -6,7 +6,6 @@ import json
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 _OUTPUT = '--output json'
 

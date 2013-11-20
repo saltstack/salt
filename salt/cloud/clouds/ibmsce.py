@@ -45,6 +45,7 @@ Using the new format, set up the cloud configuration at
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
+import copy
 import time
 import pprint
 import logging
@@ -82,6 +83,7 @@ destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
+show_instance = namespaced_function(show_instance, globals())
 
 
 # Only load in this module is the IBMSCE configurations are in place
@@ -312,13 +314,15 @@ def create(vm_):
             )
 
         # Store what was used to the deploy the VM
-        ret['deploy_kwargs'] = deploy_kwargs
+        event_kwargs = copy.deepcopy(deploy_kwargs)
+        del(event_kwargs['minion_pem'])
+        ret['deploy_kwargs'] = event_kwargs
 
         salt.cloud.utils.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': deploy_kwargs},
+            {'kwargs': event_kwargs},
         )
 
         deployed = False

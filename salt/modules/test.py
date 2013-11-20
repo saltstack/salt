@@ -190,6 +190,12 @@ def arg_type(*args, **kwargs):
     '''
     Print out the types of the args and kwargs. This is used to test the types
     of the args and kwargs passed down to the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+           salt '*' test.arg_type 1 'int'
     '''
     ret = {'args': [], 'kwargs': {}}
     # all the args

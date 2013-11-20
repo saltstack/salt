@@ -17,7 +17,7 @@ the requisite and ordering systems inside of states.
     deprecate the overstate system in favor of this new, substantially more
     powerful system.
 
-    The Overstate will still be maintained for the forseable future.
+    The Overstate will still be maintained for the foreseeable future.
 
 Creating States Trigger Remote Executions
 =========================================
@@ -38,7 +38,7 @@ or `salt.function` states:
         - highstate: True
 
 This sls file can now be referenced by the `state.sls` runner the same way
-an sls is normally referenced, assuming the default configurtion with /srv/salt
+an sls is normally referenced, assuming the default configuration with /srv/salt
 as the root of the state tree and the above file being saved as
 /srv/salt/webserver.sls, the state can be run from the master with the salt-run
 command:

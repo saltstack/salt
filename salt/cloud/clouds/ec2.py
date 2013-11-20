@@ -65,6 +65,7 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import os
+import copy
 import sys
 import stat
 import time
@@ -756,8 +757,9 @@ def list_availability_zones():
 
 def block_device_mappings(vm_):
     '''
-    Return the block device mapping
-    e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+    Return the block device mapping::
+
+        [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
     '''
     return config.get_config_value(
@@ -1331,13 +1333,16 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
-        ret['deploy_kwargs'] = deploy_kwargs
+        # Store what was used to the deploy the VM
+        event_kwargs = copy.deepcopy(deploy_kwargs)
+        del(event_kwargs['minion_pem'])
+        ret['deploy_kwargs'] = event_kwargs
 
         salt.cloud.utils.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': deploy_kwargs},
+            {'kwargs': event_kwargs},
         )
 
         deployed = False

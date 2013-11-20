@@ -55,6 +55,7 @@ Full Table of Contents
     ref/wheel/all/index
     ref/auth/all/index
     ref/output/all/index
+    ref/clouds/all/index
     ref/clients/index
     ref/peer
     ref/clientacl

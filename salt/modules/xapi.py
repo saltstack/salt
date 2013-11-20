@@ -55,8 +55,8 @@ def _check_xenapi():
     try:
         if HAS_IMPORTLIB:
             return importlib.import_module('xen.xm.XenAPI')
-        return __import__('xen.xm.XenAPI')
-    except ImportError:
+        return __import__('xen.xm.XenAPI').xm.XenAPI
+    except (ImportError, AttributeError):
         return False
 
 

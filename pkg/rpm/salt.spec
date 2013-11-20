@@ -12,10 +12,10 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.1
+%define _salttesting_ver 0.5.3
 
 Name: salt
-Version: 0.17.1
+Version: 0.17.2
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -50,7 +50,6 @@ BuildRequires: python26-devel
 BuildRequires: python26-jinja2
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
-BuildRequires: python26-pip
 BuildRequires: python26-zmq
 BuildRequires: python26-PyYAML
 
@@ -319,6 +318,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Nov 18 2013 Erik Johnson <erik@saltstack.com> - 0.17.2-1
+- Update to bugfix release 0.17.2
+
 * Thu Oct 17 2013 Erik Johnson <erik@saltstack.com> - 0.17.1-1
 - Update to bugfix release 0.17.1
 

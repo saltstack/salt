@@ -317,7 +317,7 @@ from salt.utils import pydsl
 __all__ = ['render']
 
 
-def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
+def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
     mod = imp.new_module(sls)
     # Note: mod object is transient. It's existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
@@ -328,7 +328,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
 
-    dsl_sls = pydsl.Sls(sls, env, rendered_sls)
+    dsl_sls = pydsl.Sls(sls, saltenv, rendered_sls)
     mod.__dict__.update(
         __pydsl__=dsl_sls,
         include=_wrap_sls(dsl_sls.include),
@@ -338,7 +338,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
         __grains__=__grains__,
         __opts__=__opts__,
         __pillar__=__pillar__,
-        __env__=env,
+        __env__=saltenv,
         __sls__=sls,
         __file__=tmplpath,
         **kws)

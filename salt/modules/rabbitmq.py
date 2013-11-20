@@ -458,7 +458,7 @@ def list_policies(runas=None):
                 'definition': parts[3],
                 'priority': parts[4]
             }
-    log.debug('Listing policies: {}'.format(ret))
+    log.debug('Listing policies: {0}'.format(ret))
     return ret
 
 
@@ -478,7 +478,7 @@ def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
         "rabbitmqctl set_policy -p {0} {1} '{2}' '{3}' {4}".format(
             vhost, name, pattern, definition.replace("'", '"'), priority),
         runas=runas)
-    log.debug('Set policy: {}'.format(res))
+    log.debug('Set policy: {0}'.format(res))
     return _format_response(res, 'Set')
 
 
@@ -498,7 +498,7 @@ def delete_policy(vhost, name, runas=None):
         'rabbitmqctl clear_policy -p {0} {1}'.format(
             vhost, name),
         runas=runas)
-    log.debug('Delete policy: {}'.format(res))
+    log.debug('Delete policy: {0}'.format(res))
     return _format_response(res, 'Deleted')
 
 

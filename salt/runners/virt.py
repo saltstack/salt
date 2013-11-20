@@ -70,6 +70,8 @@ def query(hyper=None, quiet=False):
             continue
         if 'ret' not in info[id_]:
             continue
+        if not isinstance(info[id_]['ret'], dict):
+            continue
         chunk[id_] = info[id_]['ret']
         ret.update(chunk)
         if not quiet:
@@ -136,7 +138,15 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True, nic='default', install=True):
+def init(
+        name,
+        cpu,
+        mem,
+        image,
+        hyper=None,
+        seed=True,
+        nic='default',
+        install=True):
     '''
     Initialize a new vm
     '''
@@ -343,7 +353,11 @@ def migrate(name, target=''):
     client = salt.client.LocalClient(__opts__['conf_file'])
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
-    origin_hyper = origin_data.keys()[0]
+    try:
+        origin_hyper = origin_data.keys()[0]
+    except IndexError:
+        print('Named vm {0} was not found to migrate'.format(name))
+        return ''
     disks = origin_data[origin_hyper][name]['disks']
     if not origin_data:
         print('Named vm {0} was not found to migrate'.format(name))

@@ -261,6 +261,21 @@ def available(name):
     return name in get_all()
 
 
+def missing(name):
+    '''
+    The inverse of service.available.
+    Returns ``True`` if the specified service is not available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing sshd
+    '''
+    return not name in get_all()
+
+
 def get_all():
     '''
     Return a list of all available services

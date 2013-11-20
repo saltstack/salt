@@ -1891,7 +1891,7 @@ def blockreplace(name,
             - name: my-accumulator-{{ myvar }}
             - text: "text 2"
             - require_in:
-              - file: foobar-config-block-{{ myvar }}
+              - file: hosts-config-block-{{ myvar }}
 
         hosts-config-block-{{ myvar }}-accumulated2:
           file.accumulated:
@@ -1901,7 +1901,7 @@ def blockreplace(name,
                  text 3
                  text 4
             - require_in:
-              - file: foobar-config-block-{{ myvar }}
+              - file: hosts-config-block-{{ myvar }}
 
     will generate and maintain a block of content in ``/etc/hosts``::
 

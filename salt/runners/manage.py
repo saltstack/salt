@@ -17,6 +17,7 @@ import urllib
 import salt.key
 import salt.client
 import salt.output
+import salt.utils.minions
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -128,6 +129,23 @@ def up():  # pylint: disable=C0103
     for minion in ret:
         salt.output.display_output(minion, '', __opts__)
     return ret
+
+
+def present():
+    '''
+    Print a list of all minions that are up according to Salt's presense
+    detection, no commands will be sent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.present
+    '''
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+    connected = sorted(ckminions.connected_ids())
+    salt.output.display_output(connected, '', __opts__)
+    return connected
 
 
 def safe_accept(target, expr_form='glob'):

@@ -34,6 +34,7 @@ Using the new format, set up the cloud configuration at
 '''
 
 # Import python libs
+import copy
 import time
 import pprint
 import urllib
@@ -396,13 +397,14 @@ def create(vm_):
             )
 
         # Store what was used to the deploy the VM
-        data['deploy_kwargs'] = deploy_kwargs
+        event_kwargs = copy.deepcopy(deploy_kwargs)
+        del(event_kwargs['minion_pem'])
 
         salt.cloud.utils.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': deploy_kwargs},
+            {'kwargs': event_kwargs},
         )
 
         deployed = False

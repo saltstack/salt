@@ -73,8 +73,8 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
 
     .. code-block:: bash
 
-        salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \\
-            jump=ACCEPT
+        salt '*' iptables.build_rule match=state \\
+            connstate=RELATED,ESTABLISHED jump=ACCEPT
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
     '''
@@ -182,7 +182,8 @@ def get_saved_policy(table='filter', chain=None, conf_file=None):
     .. code-block:: bash
 
         salt '*' iptables.get_saved_policy filter INPUT
-        salt '*' iptables.get_saved_policy filter INPUT conf_file=/etc/iptables.saved
+        salt '*' iptables.get_saved_policy filter INPUT \\
+            conf_file=/etc/iptables.saved
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -262,7 +263,8 @@ def check(table='filter', chain=None, rule=None):
 
     .. code-block:: bash
 
-        salt '*' iptables.check filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.check filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -271,7 +273,11 @@ def check(table='filter', chain=None, rule=None):
 
     if __grains__['os_family'] == 'RedHat':
         cmd = 'iptables-save'
-        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(table, chain, rule))
+        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
+            table,
+            chain,
+            rule,
+        ))
         if out != -1:
             out = ''
     else:
@@ -280,6 +286,78 @@ def check(table='filter', chain=None, rule=None):
 
     if not out:
         return True
+    return out
+
+
+def check_chain(table='filter', chain=None):
+    '''
+
+    Check for the existance of a chain in the table
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' iptables.check_chain filter INPUT
+    '''
+
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables-save -t {0}'.format(table)
+    out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
+
+    if out != -1:
+        out = True
+    else:
+        out = False
+
+    return out
+
+
+def new_chain(table='filter', chain=None):
+    '''
+
+    Create new custom chain to the specified table.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' iptables.new_chain filter CUSTOM_CHAIN
+    '''
+
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables -t {0} -N {1}'.format(table, chain)
+    out = __salt__['cmd.run'](cmd)
+
+    if not out:
+        out = True
+    return out
+
+
+def delete_chain(table='filter', chain=None):
+    '''
+
+    Delete custom chain to the specified table.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' iptables.delete_chain filter CUSTOM_CHAIN
+    '''
+
+    if not chain:
+        return 'Error: Chain needs to be specified'
+
+    cmd = 'iptables -t {0} -X {1}'.format(table, chain)
+    out = __salt__['cmd.run'](cmd)
+
+    if not out:
+        out = True
     return out
 
 
@@ -296,7 +374,8 @@ def append(table='filter', chain=None, rule=None):
 
     .. code-block:: bash
 
-        salt '*' iptables.append filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.append filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -321,7 +400,8 @@ def insert(table='filter', chain=None, position=None, rule=None):
 
     .. code-block:: bash
 
-        salt '*' iptables.insert filter INPUT position=3 rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.insert filter INPUT position=3 \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -350,7 +430,8 @@ def delete(table, chain=None, position=None, rule=None):
     .. code-block:: bash
 
         salt '*' iptables.delete filter INPUT position=3
-        salt '*' iptables.delete filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.delete filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
 
     if position and rule:
@@ -364,18 +445,22 @@ def delete(table, chain=None, position=None, rule=None):
     return out
 
 
-def flush(table='filter'):
+def flush(table='filter', chain=''):
     '''
-    Flush all chains in the specified table.
+    Flush the chain in the specified table, flush all chains in the specified
+    table if not specified chain.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' iptables.flush filter
+        salt '*' iptables.flush filter INPUT
     '''
 
-    cmd = 'iptables -t {0} -F'.format(table)
+    if chain:
+        cmd = 'iptables -t {0} -F {1}'.format(table, chain)
+    else:
+        cmd = 'iptables -t {0} -F'.format(table)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -425,6 +510,8 @@ def _parse_conf(conf_file=None, in_mem=False):
                 parsed_args = vars(parser.parse_args(shlex.split(line)))
             ret_args = {}
             chain = parsed_args['append']
+            if isinstance(chain, list):
+                chain = chain[0]
             for arg in parsed_args:
                 if parsed_args[arg] and arg is not 'append':
                     ret_args[arg] = parsed_args[arg]
@@ -452,7 +539,7 @@ def _parser():
         add_arg = parser.add_argument
 
     # COMMANDS
-    add_arg('-A', '--append', dest='append', action='append')
+    add_arg('-A', '--append', dest='append', action='append', nargs='*')
     add_arg('-D', '--delete', dest='delete', action='append')
     add_arg('-I', '--insert', dest='insert', action='append')
     add_arg('-R', '--replace', dest='replace', action='append')
@@ -466,8 +553,8 @@ def _parser():
 
     # PARAMETERS
     add_arg('-p', '--protocol', dest='protocol', action='append')
-    add_arg('-s', '--source', dest='source', action='append')
-    add_arg('-d', '--destination', dest='destination', action='append')
+    add_arg('-s', '--source', dest='source', action='append', nargs='*')
+    add_arg('-d', '--destination', dest='destination', action='append', nargs='*')
     add_arg('-j', '--jump', dest='jump', action='append')
     add_arg('-g', '--goto', dest='goto', action='append')
     add_arg('-i', '--in-interface', dest='in-interface', action='append')
@@ -485,9 +572,13 @@ def _parser():
     ## ah
     add_arg('--ahspi', dest='ahspi', action='append')
     ## cluster
-    add_arg('--cluster-total-nodes', dest='cluster-total-nodes', action='append')
+    add_arg('--cluster-total-nodes',
+            dest='cluster-total-nodes',
+            action='append')
     add_arg('--cluster-local-node', dest='cluster-local-node', action='append')
-    add_arg('--cluster-local-nodemask', dest='cluster-local-nodemask', action='append')
+    add_arg('--cluster-local-nodemask',
+            dest='cluster-local-nodemask',
+            action='append')
     add_arg('--cluster-hash-seed', dest='cluster-hash-seed', action='append')
     add_arg('--h-length', dest='h-length', action='append')
     add_arg('--mangle-mac-s', dest='mangle-mac-s', action='append')
@@ -518,7 +609,10 @@ def _parser():
     add_arg('--ctexpire', dest='ctexpire', action='append')
     ## dccp
     add_arg('--sport', '--source-port', dest='source_port', action='append')
-    add_arg('--dport', '--destination-port', dest='destination_port', action='append')
+    add_arg('--dport',
+            '--destination-port',
+            dest='destination_port',
+            action='append')
     add_arg('--dccp-types', dest='dccp-types', action='append')
     add_arg('--dccp-option', dest='dccp-option', action='append')
     ## dscp
@@ -538,10 +632,18 @@ def _parser():
     add_arg('--hashlimit-srcmask', dest='hashlimit-srcmask', action='append')
     add_arg('--hashlimit-dstmask', dest='hashlimit-dstmask', action='append')
     add_arg('--hashlimit-name', dest='hashlimit-name', action='append')
-    add_arg('--hashlimit-htable-size', dest='hashlimit-htable-size', action='append')
-    add_arg('--hashlimit-htable-max', dest='hashlimit-htable-max', action='append')
-    add_arg('--hashlimit-htable-expire', dest='hashlimit-htable-expire', action='append')
-    add_arg('--hashlimit-htable-gcinterval', dest='hashlimit-htable-gcinterval', action='append')
+    add_arg('--hashlimit-htable-size',
+            dest='hashlimit-htable-size',
+            action='append')
+    add_arg('--hashlimit-htable-max',
+            dest='hashlimit-htable-max',
+            action='append')
+    add_arg('--hashlimit-htable-expire',
+            dest='hashlimit-htable-expire',
+            action='append')
+    add_arg('--hashlimit-htable-gcinterval',
+            dest='hashlimit-htable-gcinterval',
+            action='append')
     ## helper
     add_arg('--helper', dest='helper', action='append')
     ## icmp
@@ -558,7 +660,10 @@ def _parser():
     add_arg('--mac-source', dest='mac-source', action='append')
     ## multiport
     add_arg('--sports', '--source-ports', dest='source-ports', action='append')
-    add_arg('--dports', '--destination-ports', dest='destination-ports', action='append')
+    add_arg('--dports',
+            '--destination-ports',
+            dest='destination-ports',
+            action='append')
     add_arg('--ports', dest='ports', action='append')
     ## owner
     add_arg('--uid-owner', dest='uid-owner', action='append')

@@ -63,7 +63,7 @@ These requisite statements are applied to a specific state declaration:
         - require:
           - pkg: httpd
 
-In this example the **require** requisite is used to declare that the file
+In this example, the **require** requisite is used to declare that the file
 /etc/httpd/conf/httpd.conf should only be set up if the pkg state executes
 successfully.
 
@@ -94,14 +94,14 @@ the discrete states are split or groups into separate sls files:
 
 In this example, the httpd sevice running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
-installed AND the network state is satistifed.
+installed AND the network state is satisfied.
 
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
     Therefore, if using the ``pkgs`` or ``sources`` argument to install
     a list of packages in a pkg state, it's important to note that it is
-    imposible to match an individual package in the list, since all packages
+    impossible to match an individual package in the list, since all packages
     are installed as a single state.
 
 
@@ -134,7 +134,7 @@ more requisites. Both requisite types can also be separately declared:
       group:
         - present
 
-In this example the httpd service is only going to be started if the package,
+In this example, the httpd service is only going to be started if the package,
 user, group and file are executed successfully.
 
 The Require Requisite
@@ -190,7 +190,7 @@ Perhaps an example can better explain the behavior:
           - file: /etc/redis.conf
           - pkg: redis
 
-In this example the redis service will only be started if the file
+In this example, the redis service will only be started if the file
 /etc/redis.conf is applied, and the file is only applied if the package is
 installed. This is normal require behavior, but if the watched file changes,
 or the watched package is installed or upgraded, then the redis service is
@@ -293,7 +293,7 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beginning.
-Certian circimstances will present a situation where it is desireable to send
+Certain circumstances will present a situation where it is desirable to send
 a state to the end of the line. To do this, set the order to ``last``:
 
 .. code-block:: yaml
@@ -302,7 +302,7 @@ a state to the end of the line. To do this, set the order to ``last``:
       pkg.installed:
         - order: last
 
-Remember that requisite statements override the order option. So the order
+Remember that requisite statements overrid<e the order option. So the order
 option should be applied to the highest component of the requisite chain:
 
 .. code-block:: yaml

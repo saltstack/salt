@@ -190,6 +190,21 @@ def available(name):
     return _canonical_template_unit_name(name) in get_all()
 
 
+def missing(name):
+    '''
+    The inverse of service.available.
+    Returns ``True`` if the specified service is not available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing sshd
+    '''
+    return not _canonical_template_unit_name(name) in get_all()
+
+
 def start(name):
     '''
     Start the specified service with systemd

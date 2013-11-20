@@ -759,7 +759,7 @@ def os_data():
     grains = {
         'num_gpus': 0,
         'gpus': [],
-    }
+        }
 
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
@@ -825,6 +825,15 @@ def os_data():
                             name, value = match.groups()
                             if name.lower() == 'name':
                                 grains['lsb_distrib_id'] = value.strip()
+            elif os.path.isfile('/etc/SuSE-release'):
+                grains['lsb_distrib_id'] = 'SUSE'
+                rel = open('/etc/SuSE-release').read().split('\n')[1]
+                patch = open('/etc/SuSE-release').read().split('\n')[2]
+                rel = re.sub("[^0-9]", "", rel)
+                patch = re.sub("[^0-9]", "", patch)
+                release = rel + " SP" + patch
+                grains['lsb_distrib_release'] = release
+                grains['lsb_distrib_codename'] = "n.a"
             elif os.path.isfile('/etc/altlinux-release'):
                 # ALT Linux
                 grains['lsb_distrib_id'] = 'altlinux'
@@ -951,12 +960,12 @@ def os_data():
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
 
         grains['osfinger'] = '{os}-{ver}'.format(
-                os=grains['osfullname'],
-                ver=grains['osrelease'].partition('.')[0])
+            os=grains['osfullname'],
+            ver=grains['osrelease'].partition('.')[0])
     elif grains.get('osfullname') == 'Ubuntu':
         grains['osfinger'] = '{os}-{ver}'.format(
-                os=grains['osfullname'],
-                ver=grains['osrelease'])
+            os=grains['osfullname'],
+            ver=grains['osrelease'])
 
     return grains
 
