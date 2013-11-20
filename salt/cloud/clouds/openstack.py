@@ -644,6 +644,9 @@ def create(vm_):
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
+        'deploy_command': config.get_config_value(
+            'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+        ),
         'start_action': __opts__['start_action'],
         'parallel': __opts__['parallel'],
         'minion_pem': vm_['priv_key'],
@@ -664,7 +667,6 @@ def create(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
     if ssh_username != 'root':
-        deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
         deploy_kwargs['username'] = ssh_username
         deploy_kwargs['tty'] = True
 
