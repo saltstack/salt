@@ -266,6 +266,9 @@ def create(vm_):
             'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
+            'tmp_dir': config.get_config_value(
+                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
+            ),
             'deploy_command': config.get_config_value(
                 'deploy_command', vm_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',

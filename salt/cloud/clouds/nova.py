@@ -555,6 +555,9 @@ def create(vm_):
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
+        'tmp_dir': config.get_config_value(
+            'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
+        ),
         'deploy_command': config.get_config_value(
             'deploy_command', vm_, __opts__,
             default='/tmp/.saltcloud/deploy.sh',
