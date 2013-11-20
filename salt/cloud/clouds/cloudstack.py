@@ -252,7 +252,7 @@ def create(vm_):
         )
         return False
 
-    ssh_username = 'username': config.get_config_value(
+    ssh_username = config.get_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
