@@ -466,6 +466,9 @@ def create(vm_):
             'sudo': config.get_config_value(
                 'sudo', vm_, __opts__, default=(username != 'root')
             ),
+            'sudo_password': config.get_config_value(
+                'sudo_password', vm_, __opts__, default=None
+            ),
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
             'conf_file': __opts__['conf_file'],

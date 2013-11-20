@@ -560,6 +560,12 @@ def create(vm_):
         'minion_pub': vm_['pub_key'],
         'keep_tmp': __opts__['keep_tmp'],
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+        'sudo': config.get_config_value(
+            'sudo', vm_, __opts__, default=(ssh_username != 'root')
+        ),
+        'sudo_password': config.get_config_value(
+            'sudo_password', vm_, __opts__, default=None
+        ),
         'tty': config.get_config_value(
             'tty', vm_, __opts__, default=False
         ),
@@ -592,13 +598,6 @@ def create(vm_):
         log.debug('Logging into SSH using password')
 
     ret = {}
-    sudo = config.get_config_value(
-        'sudo', vm_, __opts__, default=(ssh_username != 'root')
-    )
-    if sudo is not None:
-        deploy_kwargs['sudo'] = sudo
-        log.debug('Running root commands using sudo')
-
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs['script'] = deploy_script.script

@@ -191,6 +191,9 @@ def create(vm_):
             'sudo': config.get_config_value(
                 'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
+            'sudo_password': config.get_config_value(
+                'sudo_password', vm_, __opts__, default=None
+            ),
             'tty': config.get_config_value(
                 'tty', vm_, __opts__, default=False
             ),
