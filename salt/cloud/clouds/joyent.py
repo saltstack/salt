@@ -303,7 +303,8 @@ def create(vm_):
             'script': deploy_script.script,
             'name': vm_['name'],
             'deploy_command': config.get_config_value(
-                'deploy_command', vm_, __opts__, default='/tmp/deploy.sh'
+                'deploy_command', vm_, __opts__,
+                default='/tmp/.saltcloud/deploy.sh',
             ),
             'tty': True,
             'start_action': __opts__['start_action'],
