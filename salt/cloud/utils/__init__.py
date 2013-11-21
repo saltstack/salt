@@ -467,7 +467,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 creds,
                 installer,
             ))
-        if not keep_tmp:
             win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
                 creds,
             ))
