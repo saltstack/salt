@@ -354,6 +354,10 @@ def install(name=None,
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
+    force_yes
+        Passes ``--force-yes`` to the apt-get command.  Don't use this unless
+        you know what you're doing.
+
 
     Returns a dict containing the new package names and versions::
 
@@ -407,7 +411,7 @@ def install(name=None,
         if fromrepo:
             log.info('Targeting repo {0!r}'.format(fromrepo))
         cmd = ['apt-get', '-q', '-y']
-        if downgrade:
+        if downgrade or kwargs.get('force_yes', False):
             cmd.append('--force-yes')
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
