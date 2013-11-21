@@ -158,30 +158,6 @@ def rename_key(pki_dir, id_, new_id):
         os.rename(oldkey, newkey)
 
 
-def get_option(option, opts, vm_):
-    '''
-    Convenience function to return the dominant option to be used. Always
-    default to options set in the VM structure, but if the option is not
-    present there look for it in the main configuration file
-    '''
-    # Make the next warning visible at least once.
-    warnings.filterwarnings(
-        'once', category=DeprecationWarning, module='salt.cloud'
-    )
-    warnings.warn(
-        '`salt.cloud.utils.get_option() was deprecated in favour of '
-        '`salt.cloud.config.get_config_value()`. Please stop using it '
-        'since it will be removed in version 0.8.8.',
-        DeprecationWarning,
-        stacklevel=2
-    )
-
-    if option in vm_:
-        return vm_[option]
-    if option in opts:
-        return opts[option]
-
-
 def minion_config(opts, vm_):
     '''
     Return a minion's configuration for the provided options and VM
@@ -197,7 +173,7 @@ def minion_config(opts, vm_):
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
-    master_finger = salt.cloud.config.get_config_value('master_finger', vm_, opts)
+    master_finger = salt.config.get_cloud_config_value('master_finger', vm_, opts)
     if master_finger is not None:
         minion['master_finger'] = master_finger
     minion.update(
@@ -205,12 +181,12 @@ def minion_config(opts, vm_):
         # 1. VM config
         # 2. Profile config
         # 3. Global configuration
-        salt.cloud.config.get_config_value(
+        salt.config.get_cloud_config_value(
             'minion', vm_, opts, default={}, search_global=True
         )
     )
 
-    make_master = salt.cloud.config.get_config_value('make_master', vm_, opts)
+    make_master = salt.config.get_cloud_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
         raise SaltCloudConfigError(
             'A master setting was not defined in the minion\'s configuration.'
@@ -221,7 +197,7 @@ def minion_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     minion.setdefault('grains', {}).update(
-        salt.cloud.config.get_config_value(
+        salt.config.get_cloud_config_value(
             'grains', vm_, opts, default={}, search_global=True
         )
     )
@@ -245,7 +221,7 @@ def master_config(opts, vm_):
     # 2. Profile config
     # 3. Global configuration
     master.update(
-        salt.cloud.config.get_config_value(
+        salt.config.get_cloud_config_value(
             'master', vm_, opts, default={}, search_global=True
         )
     )
@@ -423,7 +399,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 # Let's not just fail regarding this change, specially
                 # since we can handle it
                 raise DeprecationWarning(
-                    '`salt.cloud.utils.deploy_windows` now only accepts '
+                    '`salt.utils.cloud.deploy_windows` now only accepts '
                     'dictionaries for its `minion_conf` parameter. '
                     'Loading YAML...'
                 )
@@ -582,7 +558,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`salt.cloud.utils.deploy_script now only accepts '
+                        '`salt.utils.cloud.deploy_script now only accepts '
                         'dictionaries for it\'s `minion_conf` parameter. '
                         'Loading YAML...'
                     )
@@ -613,7 +589,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     # Let's not just fail regarding this change, specially
                     # since we can handle it
                     raise DeprecationWarning(
-                        '`salt.cloud.utils.deploy_script now only accepts '
+                        '`salt.utils.cloud.deploy_script now only accepts '
                         'dictionaries for it\'s `master_conf` parameter. '
                         'Loading from YAML ...'
                     )
@@ -1122,23 +1098,6 @@ def check_name(name, safe_chars):
         )
 
 
-def namespaced_function(function, global_dict, defaults=None):
-    '''
-    Redefine(clone) a function under a different globals() namespace scope
-    '''
-    if defaults is None:
-        defaults = function.__defaults__
-
-    new_namespaced_function = types.FunctionType(
-        function.__code__,
-        global_dict,
-        name=function.__name__,
-        argdefs=defaults
-    )
-    new_namespaced_function.__dict__.update(function.__dict__)
-    return new_namespaced_function
-
-
 def remove_sshkey(host, known_hosts=None):
     '''
     Remove a host from the known_hosts file
@@ -1251,41 +1210,6 @@ def simple_types_filter(datadict):
             value = repr(value)
         simpledict[key] = value
     return simpledict
-
-
-class CloudProviderContext(object):
-    '''
-    This context manager is responsible for overriding the value of
-    ``__active_provider_name__`` at the module level, reseting to the previous
-    value afterwards.
-    '''
-
-    def __init__(self, function, provider_alias=None, provider_driver=None):
-        self.__function = function
-        if provider_alias is None and provider_driver is None:
-            raise SaltCloudSystemExit(
-                'Either `provider_alias` and/or `provider_driver` needs to '
-                'be passed'
-            )
-        elif provider_alias is not None and provider_driver is not None:
-            self.__provider = '{0}:{1}'.format(provider_alias, provider_driver)
-        elif provider_alias is not None:
-            self.__provider = provider_alias
-        elif provider_driver is not None:
-            self.__provider = provider_driver
-        self.__default = None
-
-    def __enter__(self):
-        # Let's store what the module is defining, if anything
-        mod = sys.modules[self.__function.__module__]
-        self.__default = mod.__active_provider_name__
-        # Override the provided provider within this context
-        mod.__active_provider_name__ = self.__provider
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        # Reset to previous value
-        mod = sys.modules[self.__function.__module__]
-        mod.__active_provider_name__ = self.__default
 
 
 def salt_cloud_force_ascii(exc):

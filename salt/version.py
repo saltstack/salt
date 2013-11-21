@@ -436,11 +436,11 @@ del __get_version
 # <---- Dynamic/Runtime Salt Version Information -----------------------------
 
 
-def versions_information():
+def versions_information(include_salt_cloud=False):
     '''
     Report on all of the versions for dependent software
     '''
-    libs = (
+    libs = [
         ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
@@ -451,7 +451,13 @@ def versions_information():
         ('PyYAML', 'yaml', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version')
-    )
+    ]
+
+    if include_salt_cloud:
+        libs.append(
+            ('Apache Libcloud', 'libcloud', '__version__'),
+        )
+
     for name, imp, attr in libs:
         if imp is None:
             yield name, attr
@@ -468,11 +474,11 @@ def versions_information():
             yield name, None
 
 
-def versions_report():
+def versions_report(include_salt_cloud=False):
     '''
     Yield each library properly formatted for a console clean output.
     '''
-    libs = list(versions_information())
+    libs = list(versions_information(include_salt_cloud=include_salt_cloud))
 
     padding = max(len(lib[0]) for lib in libs) + 1
 
