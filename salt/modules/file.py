@@ -1008,6 +1008,7 @@ def blockreplace(path,
         marker_end='#-- end managed zone --',
         content='',
         append_if_not_found=False,
+        prepend_if_not_found=False,
         backup='.bak',
         dry_run=False,
         show_changes=True,
@@ -1049,6 +1050,11 @@ def blockreplace(path,
         If markers are not found and set to ``True`` then, the markers and
         content will be appended to the file.
 
+    prepend_if_not_found : False
+        If markers are not found and set to ``True`` then, the markers and
+        content will be prepended to the file.
+
+
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set to ``False`` to skip making a backup.
@@ -1070,6 +1076,9 @@ def blockreplace(path,
     '''
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if append_if_not_found and prepend_if_not_found:
+        raise SaltInvocationError('Choose between append or prepend_if_not_found')
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1129,7 +1138,13 @@ def blockreplace(path,
         )
 
     if not done:
-        if append_if_not_found:
+        if prepend_if_not_found:
+            # add the markers and content at the beginning of file
+            new_file.insert(0, marker_end + '\n')
+            new_file.insert(0, content + '\n')
+            new_file.insert(0, marker_start + '\n')
+            done = True
+        elif append_if_not_found:
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
             new_file.append(content + '\n')

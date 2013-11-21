@@ -1835,6 +1835,7 @@ def blockreplace(name,
             marker_end='#-- end managed zone --',
             content='',
             append_if_not_found=False,
+            prepend_if_not_found=False,
             backup='.bak',
             show_changes=True):
     '''
@@ -1864,6 +1865,8 @@ def blockreplace(name,
         marker_start and marker_stop.
     :param append_if_not_found: False by default, if markers are not found and
         set to True then the markers and content will be appended to the file
+    :param prepend_if_not_found: False by default, if markers are not found and
+        set to True then the markers and content will be prepended to the file
     :param backup: The file extension to use for a backup of the file if any
         edit is made. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -1931,6 +1934,7 @@ def blockreplace(name,
                                        marker_end,
                                        content=content,
                                        append_if_not_found=append_if_not_found,
+                                       prepend_if_not_found=prepend_if_not_found,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes)
