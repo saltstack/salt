@@ -409,7 +409,8 @@ def run(name,
         timeout=None,
         **kwargs):
     '''
-    Run a command if certain circumstances are met
+    Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
+    want to use the ``watch`` requisite.
 
     name
         The command to execute, remember that the command will execute with the
