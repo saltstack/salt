@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of MySQL grants (user permissions).
-==============================================
+Management of MySQL grants (user permissions)
+=============================================
 
 :depends:   - MySQLdb Python module
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.

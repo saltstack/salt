@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of MySQL databases (schemas).
-========================================
+Management of MySQL databases (schemas)
+=======================================
 
 :depends:   - MySQLdb Python module
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.
