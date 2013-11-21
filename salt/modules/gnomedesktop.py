@@ -244,7 +244,7 @@ def setIdleActivation(kvalue, **kwargs):
     return _gsession._set(kvalue)
 
 
-def get(schema=None, key=None, user=None, value=None, **kwargs):
+def get(schema=None, key=None, user=None, **kwargs):
     '''
     Get key in a particular GNOME schema
 
