@@ -644,7 +644,7 @@ class Minions(LowDataAdapter):
             'return': job_data,
             '_links': {
                 'jobs': [{'href': '/jobs/{0}'.format(i['jid'])}
-                    for i in job_data],
+                    for i in job_data if i],
             },
         }
 
