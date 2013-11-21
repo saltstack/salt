@@ -1448,13 +1448,13 @@ class AESFuncs(object):
             return {}
         # Set up the publication payload
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'expr_form': clear_load.get('tgt_type', 'glob'),
-                'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
-                'id': clear_load['id'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'expr_form': clear_load.get('tgt_type', 'glob'),
+            'tgt': clear_load['tgt'],
+            'ret': clear_load['ret'],
+            'id': clear_load['id'],
+        }
         if 'tgt_type' in clear_load:
             if clear_load['tgt_type'].startswith('node'):
                 if clear_load['tgt'] in self.opts['nodegroups']:
@@ -1502,13 +1502,13 @@ class AESFuncs(object):
             return {}
         # Set up the publication payload
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'expr_form': clear_load.get('tgt_type', 'glob'),
-                'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
-                'id': clear_load['id'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'expr_form': clear_load.get('tgt_type', 'glob'),
+            'tgt': clear_load['tgt'],
+            'ret': clear_load['ret'],
+            'id': clear_load['id'],
+        }
         if 'tmo' in clear_load:
             try:
                 load['timeout'] = int(clear_load['tmo'])
@@ -1746,25 +1746,19 @@ class ClearFuncs(object):
 
         return False
 
-    def _check_autosign(self, keyid):
+    def _check_signing_file(self, keyid, signing_file):
         '''
-        Checks if the specified keyid should automatically be signed.
+        Check a keyid for membership in a signing file
         '''
-
-        if self.opts['auto_accept']:
-            return True
-
-        autosign_file = self.opts.get('autosign_file', None)
-
-        if not autosign_file or not os.path.exists(autosign_file):
+        if not signing_file or not os.path.exists(signing_file):
             return False
 
-        if not self._check_permissions(autosign_file):
+        if not self._check_permissions(signing_file):
             message = 'Wrong permissions for {0}, ignoring content'
-            log.warn(message.format(autosign_file))
+            log.warn(message.format(signing_file))
             return False
 
-        with salt.utils.fopen(autosign_file, 'r') as fp_:
+        with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
 
@@ -1781,13 +1775,31 @@ class ClearFuncs(object):
                 except re.error:
                     log.warn(
                         '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(
-                            line, autosign_file
-                        )
+                        'in {1}'.format(line, signing_file)
                     )
                     continue
 
         return False
+
+    def _check_autoreject(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be rejected.
+        '''
+        return self._check_signing_file(
+            keyid,
+            self.opts.get('autoreject_file', None)
+        )
+
+    def _check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+        if self.opts['auto_accept']:
+            return True
+        return self._check_signing_file(
+            keyid,
+            self.opts.get('autosign_file', None)
+        )
 
     def _auth(self, load):
         '''
@@ -1814,6 +1826,11 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
+
+        # Check if key is configured to be auto-rejected/signed
+        auto_reject = self._check_autoreject(load['id'])
+        auto_sign = self._check_autosign(load['id'])
+
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
@@ -1830,106 +1847,145 @@ class ClearFuncs(object):
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
             log.info('Public key rejected for {id}'.format(**load))
-            ret = {'enc': 'clear',
-                   'load': {'ret': False}}
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
             self.event.fire_event(eload, tagify(prefix='auth'))
-            return ret
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
         elif os.path.isfile(pubfn):
-            # The key has been accepted check it
+            # The key has been accepted, check it
             if salt.utils.fopen(pubfn, 'r').read() != load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
                     'the Salt cluster.'.format(**load)
                 )
-                ret = {'enc': 'clear',
-                       'load': {'ret': False}}
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
-                return ret
-        elif not os.path.isfile(pubfn_pend)\
-                and not self._check_autosign(load['id']):
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+
+        elif not os.path.isfile(pubfn_pend):
+            # The key has not been accepted, this is a new minion
             if os.path.isdir(pubfn_pend):
                 # The key path is a directory, error out
                 log.info(
-                    'New public key id is a directory {id}'.format(**load)
+                    'New public key {id} is a directory'.format(**load)
                 )
-                ret = {'enc': 'clear',
-                       'load': {'ret': False}}
                 eload = {'result': False,
+                        'id': load['id'],
+                        'pub': load['pub']}
+                self.event.fire_event(eload, tagify(prefix='auth'))
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+
+            if auto_reject:
+                key_path = pubfn_rejected
+                log.info('New public key for {id} rejected via autoreject_file'
+                         .format(**load))
+                key_act = 'reject'
+                key_result = False
+            elif not auto_sign:
+                key_path = pubfn_pend
+                log.info('New public key for {id} placed in pending'
+                         .format(**load))
+                key_act = 'pend'
+                key_result = True
+            else:
+                # The key is being automatically accepted, don't do anything
+                # here and let the auto accept logic below handle it.
+                key_path = None
+
+            if key_path is not None:
+                # Write the key to the appropriate location
+                with salt.utils.fopen(key_path, 'w+') as fp_:
+                    fp_.write(load['pub'])
+                ret = {'enc': 'clear',
+                       'load': {'ret': key_result}}
+                eload = {'result': key_result,
+                         'act': key_act,
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
-            # This is a new key, stick it in pre
-            log.info(
-                'New public key placed in pending for {id}'.format(**load)
-            )
-            with salt.utils.fopen(pubfn_pend, 'w+') as fp_:
-                fp_.write(load['pub'])
-            ret = {'enc': 'clear',
-                   'load': {'ret': True}}
-            eload = {'result': True,
-                     'act': 'pend',
-                     'id': load['id'],
-                     'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix='auth'))
-            return ret
-        elif os.path.isfile(pubfn_pend)\
-                and not self._check_autosign(load['id']):
-            # This key is in pending, if it is the same key ret True, else
-            # ret False
-            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                log.error(
-                    'Authentication attempt from {id} failed, the public '
-                    'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.'.format(**load)
-                )
+
+        elif os.path.isfile(pubfn_pend):
+            # This key is in the pending dir and is awaiting acceptance
+            if auto_reject:
+                # We don't care if the keys match, this minion is being
+                # auto-rejected. Move the key file from the pending dir to the
+                # rejected dir.
+                try:
+                    shutil.move(pubfn_pend, pubfn_rejected)
+                except (IOError, OSError):
+                    pass
+                log.info('Pending public key for {id} rejected via '
+                         'autoreject_file'.format(**load))
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
                 eload = {'result': False,
+                         'act': 'reject',
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
+                return ret
+
+            elif not auto_sign:
+                # This key is in the pending dir and is not being auto-signed.
+                # Check if the keys are the same and error out if this is the
+                # case. Otherwise log the fact that the minion is still
+                # pending.
+                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
+                    log.error(
+                        'Authentication attempt from {id} failed, the public '
+                        'key in pending did not match. This may be an '
+                        'attempt to compromise the Salt cluster.'
+                        .format(**load)
+                    )
+                    eload = {'result': False,
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': False}}
+                else:
+                    log.info(
+                        'Authentication failed from host {id}, the key is in '
+                        'pending and needs to be accepted with salt-key '
+                        '-a {id}'.format(**load)
+                    )
+                    eload = {'result': True,
+                             'act': 'pend',
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': True}}
             else:
-                log.info(
-                    'Authentication failed from host {id}, the key is in '
-                    'pending and needs to be accepted with salt-key '
-                    '-a {id}'.format(**load)
-                )
-                eload = {'result': True,
-                         'act': 'pend',
-                         'id': load['id'],
-                         'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': True}}
-        elif os.path.isfile(pubfn_pend)\
-                and self._check_autosign(load['id']):
-            # This key is in pending, if it is the same key auto accept it
-            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                log.error(
-                    'Authentication attempt from {id} failed, the public '
-                    'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.'.format(**load)
-                )
-                eload = {'result': False,
-                         'id': load['id'],
-                         'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
-            else:
-                pass
-        elif not os.path.isfile(pubfn_pend)\
-                and self._check_autosign(load['id']):
-            # This is a new key and it should be automatically be accepted
-            pass
+                # This key is in pending and has been configured to be
+                # auto-signed. Check to see if it is the same key, and if
+                # so, pass on doing anything here, and let it get automatically
+                # accepted below.
+                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
+                    log.error(
+                        'Authentication attempt from {id} failed, the public '
+                        'keys in pending did not match. This may be an '
+                        'attempt to compromise the Salt cluster.'
+                        .format(**load)
+                    )
+                    eload = {'result': False,
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': False}}
+                else:
+                    pass
+
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warn('Unaccounted for authentication failure')
@@ -2526,12 +2582,12 @@ class ClearFuncs(object):
         # touching this stuff, we can probably do what you want to do another
         # way that won't have a negative impact.
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'tgt': clear_load['tgt'],
-                'jid': clear_load['jid'],
-                'ret': clear_load['ret'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'tgt': clear_load['tgt'],
+            'jid': clear_load['jid'],
+            'ret': clear_load['ret'],
+        }
 
         if 'id' in extra:
             load['id'] = extra['id']
