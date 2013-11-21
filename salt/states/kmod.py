@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Loading and unloading of kernel modules.
-========================================
+Loading and unloading of kernel modules
+=======================================
 
 The Kernel modules on a system can be managed cleanly with the kmod state
 module:
