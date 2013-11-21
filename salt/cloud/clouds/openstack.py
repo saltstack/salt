@@ -692,6 +692,13 @@ def create(vm_):
         log.debug('Logging into SSH using password')
 
     ret = {}
+    sudo = config.get_config_value(
+        'sudo', vm_, __opts__, default=(ssh_username != 'root')
+    )
+    if sudo is not None:
+        deploy_kwargs['sudo'] = sudo
+        log.debug('Running root commands using sudo')
+
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs['script'] = deploy_script.script
@@ -729,7 +736,7 @@ def create(vm_):
         del(event_kwargs['minion_pem'])
         del(event_kwargs['minion_pub'])
         del(event_kwargs['sudo_password'])
-        if 'password' in kwargs:
+        if 'password' in event_kwargs:
             del(event_kwargs['password'])
         ret['deploy_kwargs'] = event_kwargs
 
