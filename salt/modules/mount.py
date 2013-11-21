@@ -18,7 +18,16 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 log = logging.getLogger(__name__)
 
 
+def _list_mounts():
+    ret = {}
+    for line in __salt__['cmd.run_stdout']('mount -l').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        ret[comps[2]] = comps[0]
+    return ret
+
+
 def _active_mountinfo(ret):
+    _list = _list_mounts()
     filename = '/proc/self/mountinfo'
     if not os.access(filename, os.R_OK):
         msg = 'File not readable {0}'
@@ -36,11 +45,13 @@ def _active_mountinfo(ret):
                              'opts': comps[5].split(','),
                              'fstype': comps[7],
                              'device': comps[8],
+                             'alt_device': _list.get(comps[4], None),
                              'superopts': comps[9].split(',')}
     return ret
 
 
 def _active_mounts(ret):
+    _list = _list_mounts()
     filename = '/proc/self/mounts'
     if not os.access(filename, os.R_OK):
         msg = 'File not readable {0}'
@@ -50,6 +61,7 @@ def _active_mounts(ret):
         for line in ifile:
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
+                             'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
                              'opts': comps[3].split(',')}
     return ret
