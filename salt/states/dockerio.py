@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Management of dockers
-=====================
+Manage Docker containers
+========================
+
+A Docker is a light-weight, portable, self-sufficient container.
 
 .. note::
 
