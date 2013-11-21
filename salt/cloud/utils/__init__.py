@@ -550,8 +550,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 root_cmd(subsys_command, tty, sudo, **kwargs)
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
 
-            root_cmd('mkdir -p {0}'.format(tmp_dir), tty, sudo, **kwargs)
-            root_cmd('chmod 700 {0}'.format(tmp_dir), tty, sudo, **kwargs)
+            root_cmd(
+                '[ ! -d {0} ] && (mkdir -p {0}; chown 700 {0}) || '
+                'echo "Directory {0!r} already exists..."'.format(tmp_dir),
+                tty, sudo, **kwargs
+            )
+            if sudo:
+                comps = tmp_dir.lstrip('/').rstrip('/').split('/')
+                if len(comps) > 0:
+                    if len(comps) > 1 or comps[0] != 'tmp':
+                        root_cmd(
+                            'chown {0}. {1}'.format(username, tmp_dir),
+                            tty, sudo, **kwargs
+                        )
 
             # Minion configuration
             if minion_pem:
@@ -1014,6 +1025,7 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
+
     try:
         proc = NonBlockingPopen(
             cmd,
