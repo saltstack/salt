@@ -80,7 +80,7 @@ def ssh_pub(vm_):
     '''
     Deploy the primary ssh authentication key
     '''
-    ssh = config.get_config_value('ssh_auth', vm_, __opts__)
+    ssh = config.get_cloud_config_value('ssh_auth', vm_, __opts__)
     if not ssh:
         return None
 
@@ -190,7 +190,7 @@ def get_location(conn, vm_):
     Return the location object to use
     '''
     locations = conn.list_locations()
-    vm_location = config.get_config_value('location', vm_, __opts__).encode(
+    vm_location = config.get_cloud_config_value('location', vm_, __opts__).encode(
         'ascii', 'salt-cloud-force-ascii'
     )
 
@@ -221,7 +221,7 @@ def get_image(conn, vm_):
     '''
     images = conn.list_images()
 
-    vm_image = config.get_config_value('image', vm_, __opts__).encode(
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
         'ascii', 'salt-cloud-force-ascii'
     )
 
@@ -249,7 +249,7 @@ def get_size(conn, vm_):
     Return the VM's size object
     '''
     sizes = conn.list_sizes()
-    vm_size = config.get_config_value('size', vm_, __opts__)
+    vm_size = config.get_cloud_config_value('size', vm_, __opts__)
     if not vm_size:
         return sizes[0]
 
@@ -267,7 +267,7 @@ def script(vm_):
     '''
     return ScriptDeployment(
         salt.utils.cloud.os_script(
-            config.get_config_value('os', vm_, __opts__),
+            config.get_cloud_config_value('os', vm_, __opts__),
             vm_,
             __opts__,
             salt.utils.cloud.salt_config_to_yaml(

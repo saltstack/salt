@@ -179,11 +179,11 @@ def get_conn():
     Return a conn object for the passed VM data
     '''
     vm_ = get_configured_provider()
-    auth_minion = config.get_config_value(
+    auth_minion = config.get_cloud_config_value(
         'auth_minion', vm_, __opts__, search_global=False
     )
 
-    config_profile = config.get_config_value(
+    config_profile = config.get_cloud_config_value(
         'config_profile', vm_, __opts__, search_global=False
     )
     if config_profile:
@@ -197,7 +197,7 @@ def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = config.get_config_value(
+    proto = config.get_cloud_config_value(
         'protocol', vm_, __opts__, default='ipv4', search_global=False
     )
 
@@ -222,7 +222,7 @@ def ignore_cidr(vm_, ip):
         log.error('Error: netaddr is not installed')
         return 'Error: netaddr is not installed'
 
-    cidr = config.get_config_value(
+    cidr = config.get_cloud_config_value(
         'ignore_cidr', vm_, __opts__, default='', search_global=False
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
@@ -237,7 +237,7 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_config_value(
+    return config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
@@ -248,7 +248,7 @@ def rackconnect(vm_):
     Determine if we should wait for rackconnect automation before running.
     Either 'False' (default) or 'True'.
     '''
-    return config.get_config_value(
+    return config.get_cloud_config_value(
         'rackconnect', vm_, __opts__, default='False',
         search_global=False
     )
@@ -259,7 +259,7 @@ def managedcloud(vm_):
     Determine if we should wait for the managed cloud automation before
     running. Either 'False' (default) or 'True'.
     '''
-    return config.get_config_value(
+    return config.get_cloud_config_value(
         'managedcloud', vm_, __opts__, default='False',
         search_global=False
     )
@@ -269,8 +269,8 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    deploy = config.get_config_value('deploy', vm_, __opts__)
-    key_filename = config.get_config_value(
+    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
+    key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
     if key_filename is not None and not os.path.isfile(key_filename):
@@ -332,11 +332,11 @@ def create(vm_):
         )
         return False
 
-    kwargs['ex_keyname'] = config.get_config_value(
+    kwargs['ex_keyname'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
 
-    security_groups = config.get_config_value(
+    security_groups = config.get_cloud_config_value(
         'security_groups', vm_, __opts__, search_global=False
     )
     if security_groups is not None:
@@ -356,7 +356,7 @@ def create(vm_):
             g for g in avail_groups if g.name in group_list
         ]
 
-    networks = config.get_config_value(
+    networks = config.get_cloud_config_value(
         'networks', vm_, __opts__, search_global=False
     )
 
@@ -386,7 +386,7 @@ def create(vm_):
                         net['floating']
                     )
 
-    userdata_file = config.get_config_value(
+    userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
 
@@ -520,9 +520,9 @@ def create(vm_):
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
             update_args=(vm_, data, floating),
-            timeout=config.get_config_value(
+            timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
-            interval=config.get_config_value(
+            interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
@@ -547,7 +547,7 @@ def create(vm_):
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
-    ssh_username = config.get_config_value(
+    ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
@@ -555,10 +555,10 @@ def create(vm_):
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
-        'tmp_dir': config.get_config_value(
+        'tmp_dir': config.get_cloud_config_value(
             'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
         ),
-        'deploy_command': config.get_config_value(
+        'deploy_command': config.get_cloud_config_value(
             'deploy_command', vm_, __opts__,
             default='/tmp/.saltcloud/deploy.sh',
         ),
@@ -568,22 +568,22 @@ def create(vm_):
         'minion_pub': vm_['pub_key'],
         'keep_tmp': __opts__['keep_tmp'],
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-        'sudo': config.get_config_value(
+        'sudo': config.get_cloud_config_value(
             'sudo', vm_, __opts__, default=(ssh_username != 'root')
         ),
-        'sudo_password': config.get_config_value(
+        'sudo_password': config.get_cloud_config_value(
             'sudo_password', vm_, __opts__, default=None
         ),
-        'tty': config.get_config_value(
+        'tty': config.get_cloud_config_value(
             'tty', vm_, __opts__, default=False
         ),
-        'display_ssh_output': config.get_config_value(
+        'display_ssh_output': config.get_cloud_config_value(
             'display_ssh_output', vm_, __opts__, default=True
         ),
-        'script_args': config.get_config_value(
+        'script_args': config.get_cloud_config_value(
             'script_args', vm_, __opts__
         ),
-        'script_env': config.get_config_value('script_env', vm_, __opts__),
+        'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
         'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
     }
 
@@ -603,12 +603,12 @@ def create(vm_):
         log.debug('Logging into SSH using password')
 
     ret = {}
-    if config.get_config_value('deploy', vm_, __opts__) is True:
+    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs['script'] = deploy_script.script
 
         # Deploy salt-master files, if necessary
-        if config.get_config_value('make_master', vm_, __opts__) is True:
+        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -618,20 +618,20 @@ def create(vm_):
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
-        deploy_kwargs['make_minion'] = config.get_config_value(
+        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
             'make_minion', vm_, __opts__, default=True
         )
 
         # Check for Windows install params
-        win_installer = config.get_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_config_value(
+            deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_config_value(
+            deploy_kwargs['password'] = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
 

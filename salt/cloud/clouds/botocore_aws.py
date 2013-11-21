@@ -217,10 +217,10 @@ def _toggle_term_protect(name, enabled):
     vm_ = get_configured_provider()
     session = botocore.session.get_session()  # pylint: disable=E0602
     session.set_credentials(
-        access_key=config.get_config_value(
+        access_key=config.get_cloud_config_value(
             'id', vm_, __opts__, search_global=False
         ),
-        secret_key=config.get_config_value(
+        secret_key=config.get_cloud_config_value(
             'key', vm_, __opts__, search_global=False
         )
     )
