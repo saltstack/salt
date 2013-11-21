@@ -173,6 +173,28 @@ class FileBlockReplaceTestCase(TestCase):
         with open(self.tfile.name, 'rb') as fp:
             self.assertIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
 
+    def test_replace_prepend(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            '#-- START BLOCK 2',
+            '#-- END BLOCK 2',
+            new_content,
+            prepend_if_not_found=False,
+            backup=False
+        )
+        with open(self.tfile.name, 'rb') as fp:
+            self.assertNotIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
+
+        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False,prepend_if_not_found=True)
+
+        with open(self.tfile.name, 'rb') as fp:
+            self.assertTrue(fp.read().startswith('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2'))
+
+
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 1', backup=False)
