@@ -460,10 +460,14 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
-        # Shell out to smbclient to deltree C:\salttmp\
+        # Shell out to smbclient to delete C:\salttmp\ and installer file
         ## Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "rmdir /S salttemp; prompt; exit;"'.format(
+            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
+                creds,
+                installer,
+            ))
+            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
                 creds,
             ))
         # Shell out to winexe to ensure salt-minion service started
