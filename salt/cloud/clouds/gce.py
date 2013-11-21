@@ -49,7 +49,7 @@ Supported commands:
   - salt-cloud -a show_instance inst2
   # List available locations (aka 'zones') for provider 'gce'
   - salt-cloud --list-locations gce
-  # List available machine types (aka 'sizes') for provider 'gce'
+  # List available instance sizes (aka 'machine types') for provider 'gce'
   - salt-cloud --list-sizes gce
   # List available images for provider 'gce'
   - salt-cloud --list-images gce
@@ -249,7 +249,7 @@ def avail_images(conn=None):
     return ret
 
 
-def get_image(conn, vm_):
+def __get_image(conn, vm_):
     '''
     The get_image for GCE allows partial name matching and returns a
     libcloud object.
@@ -259,7 +259,7 @@ def get_image(conn, vm_):
     return conn.ex_get_image(img)
 
 
-def get_location(conn, vm_):
+def __get_location(conn, vm_):
     '''
     Need to override libcloud to find the zone.
     '''
@@ -268,16 +268,16 @@ def get_location(conn, vm_):
     return conn.ex_get_zone(location)
 
 
-def get_size(conn, vm_):
+def __get_size(conn, vm_):
     '''
     Need to override libcloud to find the machine type in the proper zone.
     '''
     size = config.get_cloud_config_value(
         'size', vm_, __opts__, default='n1-standard-1', search_global=False)
-    return conn.ex_get_size(size, get_location(conn, vm_))
+    return conn.ex_get_size(size, __get_location(conn, vm_))
 
 
-def get_tags(vm_):
+def __get_tags(vm_):
     '''
     Get configured tags.
     '''
@@ -295,7 +295,7 @@ def get_tags(vm_):
     return tags
 
 
-def get_metadata(vm_):
+def __get_metadata(vm_):
     '''
     Get configured metadata and add 'salt-cloud-profile'.
     '''
@@ -322,7 +322,7 @@ def get_metadata(vm_):
     return metadata
 
 
-def get_network(conn, vm_):
+def __get_network(conn, vm_):
     '''
     Return a GCE libcloud network object with matching name
     '''
@@ -332,7 +332,7 @@ def get_network(conn, vm_):
     return conn.ex_get_network(network)
 
 
-def get_pd(vm_):
+def __get_pd(vm_):
     '''
     Return boolean setting for using a persistent disk
     '''
@@ -341,7 +341,7 @@ def get_pd(vm_):
         default=True, search_global=False)
 
 
-def get_ssh_credentials(vm_):
+def __get_ssh_credentials(vm_):
     '''
     Get configured SSH credentials.
     '''
@@ -491,13 +491,13 @@ def create(vm_=None, call=None):
 
     kwargs = {
         'name': vm_['name'],
-        'size': get_size(conn, vm_),
-        'image': get_image(conn, vm_),
-        'location': get_location(conn, vm_),
-        'ex_network': get_network(conn, vm_),
-        'ex_tags': get_tags(vm_),
-        'ex_metadata': get_metadata(vm_),
-        'ex_persistent_disk': get_pd(vm_),
+        'size': __get_size(conn, vm_),
+        'image': __get_image(conn, vm_),
+        'location': __get_location(conn, vm_),
+        'ex_network': __get_network(conn, vm_),
+        'ex_tags': __get_tags(vm_),
+        'ex_metadata': __get_metadata(vm_),
+        'ex_persistent_disk': __get_pd(vm_),
     }
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
@@ -534,7 +534,7 @@ def create(vm_=None, call=None):
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
-        ssh_user, ssh_key = get_ssh_credentials(vm_)
+        ssh_user, ssh_key = __get_ssh_credentials(vm_)
         deploy_kwargs = {
             'host': node_data.public_ips[0],
             'ssh_username': ssh_user,
