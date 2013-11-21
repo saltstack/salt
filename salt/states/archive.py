@@ -9,7 +9,12 @@ import os
 
 log = logging.getLogger(__name__)
 
-def extracted(name, source, archive_format, tar_options=None, source_hash=None,
+
+def extracted(name,
+              source,
+              archive_format,
+              tar_options=None,
+              source_hash=None,
               if_missing=None):
     '''
     State that make sure an archive is extracted in a directory.
