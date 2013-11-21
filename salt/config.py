@@ -1390,7 +1390,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     return providers
 
 
-def get_config_value(name, vm_, opts, default=None, search_global=True):
+def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     '''
     Search and return a setting in a known order:
 

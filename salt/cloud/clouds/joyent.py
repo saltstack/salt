@@ -141,7 +141,7 @@ def get_image(vm_):
     '''
     images = avail_images()
 
-    vm_image = config.get_config_value('image', vm_, __opts__)
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
     if vm_image and str(vm_image) in images.keys():
         return images[vm_image]
@@ -156,7 +156,7 @@ def get_size(vm_):
     Return the VM's size object
     '''
     sizes = avail_sizes()
-    vm_size = config.get_config_value('size', vm_, __opts__)
+    vm_size = config.get_cloud_config_value('size', vm_, __opts__)
     if not vm_size:
         raise SaltCloudNotFound('No size specified for this VM.')
 
@@ -178,8 +178,8 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-    deploy = config.get_config_value('deploy', vm_, __opts__)
-    key_filename = config.get_config_value(
+    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
+    key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     if deploy is True and key_filename is None and \
@@ -271,9 +271,9 @@ def create(vm_):
                     data['id'],
                     vm_.get('location', DEFAULT_LOCATION)
                 ),
-                timeout=config.get_config_value(
+                timeout=config.get_cloud_config_value(
                     'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
-                interval=config.get_config_value(
+                interval=config.get_cloud_config_value(
                     'wait_for_ip_interval', vm_, __opts__, default=1),
             )
         except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
@@ -287,11 +287,11 @@ def create(vm_):
 
     data = reformat_node(data)
 
-    ssh_username = config.get_config_value(
+    ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    if config.get_config_value('deploy', vm_, __opts__) is True:
+    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
             host = data['private_ips'][0]
@@ -303,10 +303,10 @@ def create(vm_):
             'key_filename': key_filename,
             'script': deploy_script.script,
             'name': vm_['name'],
-            'tmp_dir': config.get_config_value(
+            'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
             ),
-            'deploy_command': config.get_config_value(
+            'deploy_command': config.get_cloud_config_value(
                 'deploy_command', vm_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',
             ),
@@ -318,27 +318,27 @@ def create(vm_):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_config_value(
+            'sudo': config.get_cloud_config_value(
                 'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
-            'sudo_password': config.get_config_value(
+            'sudo_password': config.get_cloud_config_value(
                 'sudo_password', vm_, __opts__, default=None
             ),
-            'tty': config.get_config_value(
+            'tty': config.get_cloud_config_value(
                 'tty', vm_, __opts__, default=True
             ),
-            'display_ssh_output': config.get_config_value(
+            'display_ssh_output': config.get_cloud_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
             ),
-            'script_args': config.get_config_value(
+            'script_args': config.get_cloud_config_value(
                 'script_args', vm_, __opts__
             ),
-            'script_env': config.get_config_value('script_env', vm_, __opts__),
+            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
-        if config.get_config_value('make_master', vm_, __opts__) is True:
+        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -348,20 +348,20 @@ def create(vm_):
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
-        deploy_kwargs['make_minion'] = config.get_config_value(
+        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
             'make_minion', vm_, __opts__, default=True
         )
 
         # Check for Windows install params
-        win_installer = config.get_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_config_value(
+            deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_config_value(
+            deploy_kwargs['password'] = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
 
@@ -593,7 +593,7 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_config_value(
+    return config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
@@ -608,7 +608,7 @@ def get_location(vm_=None):
     '''
     return __opts__.get(
         'location',
-        config.get_config_value(
+        config.get_cloud_config_value(
             'location',
             vm_ or get_configured_provider(),
             __opts__,
@@ -950,7 +950,7 @@ def query(action=None, command=None, args=None, method='GET', data=None,
     location = get_location()
     path = 'https://{0}.api.joyentcloud.com/{1}/'.format(
         location,
-        config.get_config_value(
+        config.get_cloud_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
         ),
     )
@@ -958,10 +958,10 @@ def query(action=None, command=None, args=None, method='GET', data=None,
     auth_handler.add_password(
         realm='SmartDataCenter',
         uri=path,
-        user=config.get_config_value(
+        user=config.get_cloud_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
         ),
-        passwd=config.get_config_value(
+        passwd=config.get_cloud_config_value(
             'password', get_configured_provider(), __opts__,
             search_global=False
         )
@@ -1045,11 +1045,11 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     Make a web call to Joyent
     '''
 
-    user = config.get_config_value(
+    user = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
     )
 
-    password = config.get_config_value(
+    password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__,
         search_global=False
     )

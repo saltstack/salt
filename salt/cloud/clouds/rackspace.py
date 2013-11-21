@@ -115,14 +115,14 @@ def get_conn():
     '''
     Return a conn object for the passed VM data
     '''
-    force_first_gen = config.get_config_value(
+    force_first_gen = config.get_cloud_config_value(
         'force_first_gen',
         get_configured_provider(),
         __opts__,
         search_global=False,
         default=False
     )
-    compute_region = config.get_config_value(
+    compute_region = config.get_cloud_config_value(
         'compute_region',
         get_configured_provider(),
         __opts__,
@@ -149,13 +149,13 @@ def get_conn():
             driver = get_driver(Provider.RACKSPACE)
 
     return driver(
-        config.get_config_value(
+        config.get_cloud_config_value(
             'user',
             get_configured_provider(),
             __opts__,
             search_global=False
         ),
-        config.get_config_value(
+        config.get_cloud_config_value(
             'apikey',
             get_configured_provider(),
             __opts__,
@@ -168,7 +168,7 @@ def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = config.get_config_value(
+    proto = config.get_cloud_config_value(
         'protocol', vm_, __opts__, default='ipv4', search_global=False
     )
     family = socket.AF_INET
@@ -188,7 +188,7 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_config_value(
+    return config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
@@ -198,7 +198,7 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    deploy = config.get_config_value('deploy', vm_, __opts__)
+    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     if deploy is True and salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
@@ -311,9 +311,9 @@ def create(vm_):
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
             update_args=(vm_, data),
-            timeout=config.get_config_value(
+            timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=25 * 60),
-            interval=config.get_config_value(
+            interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
@@ -337,7 +337,7 @@ def create(vm_):
             'No IP addresses could be found.'
         )
 
-    ssh_username = config.get_config_value(
+    ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
@@ -350,10 +350,10 @@ def create(vm_):
             'password': data.extra['password'],
             'script': deploy_script.script,
             'name': vm_['name'],
-            'tmp_dir': config.get_config_value(
+            'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
             ),
-            'deploy_command': config.get_config_value(
+            'deploy_command': config.get_cloud_config_value(
                 'deploy_command', vm_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',
             ),
@@ -365,27 +365,27 @@ def create(vm_):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_config_value(
+            'sudo': config.get_cloud_config_value(
                 'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
-            'sudo_password': config.get_config_value(
+            'sudo_password': config.get_cloud_config_value(
                 'sudo_password', vm_, __opts__, default=None
             ),
-            'tty': config.get_config_value(
+            'tty': config.get_cloud_config_value(
                 'tty', vm_, __opts__, default=False
             ),
-            'display_ssh_output': config.get_config_value(
+            'display_ssh_output': config.get_cloud_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
             ),
-            'script_args': config.get_config_value(
+            'script_args': config.get_cloud_config_value(
                 'script_args', vm_, __opts__
             ),
-            'script_env': config.get_config_value('script_env', vm_, __opts__),
+            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
-        if config.get_config_value('make_master', vm_, __opts__) is True:
+        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -395,20 +395,20 @@ def create(vm_):
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
-        deploy_kwargs['make_minion'] = config.get_config_value(
+        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
             'make_minion', vm_, __opts__, default=True
         )
 
         # Check for Windows install params
-        win_installer = config.get_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_config_value(
+            deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_config_value(
+            deploy_kwargs['password'] = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
 

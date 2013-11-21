@@ -171,7 +171,7 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = config.get_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     )
     for image in images:
@@ -193,46 +193,46 @@ def create_node(vm_):
 
     # Description, defaults to name
     desc = ET.SubElement(content, 'description')
-    desc.text = config.get_config_value(
+    desc.text = config.get_cloud_config_value(
         'desc', vm_, __opts__, default=vm_['name'], search_global=False
     )
 
     # How many CPU cores, and how fast they are
     cpu = ET.SubElement(content, 'cpu')
-    cpu.attrib['number'] = config.get_config_value(
+    cpu.attrib['number'] = config.get_cloud_config_value(
         'cpu_number', vm_, __opts__, default='1', search_global=False
     )
-    cpu.attrib['power'] = config.get_config_value(
+    cpu.attrib['power'] = config.get_cloud_config_value(
         'cpu_power', vm_, __opts__, default='1000', search_global=False
     )
 
     # How many megabytes of RAM
     ram = ET.SubElement(content, 'ram-size')
-    ram.text = config.get_config_value(
+    ram.text = config.get_cloud_config_value(
         'ram', vm_, __opts__, default='256', search_global=False
     )
 
     # Bandwidth available, in kbps
     bandwidth = ET.SubElement(content, 'bandwidth')
-    bandwidth.text = config.get_config_value(
+    bandwidth.text = config.get_cloud_config_value(
         'bandwidth', vm_, __opts__, default='100', search_global=False
     )
 
     # How many public IPs will be assigned to this instance
     ip_num = ET.SubElement(content, 'no-of-public-ip')
-    ip_num.text = config.get_config_value(
+    ip_num.text = config.get_cloud_config_value(
         'ip_num', vm_, __opts__, default='1', search_global=False
     )
 
     # Size of the instance disk
     disk = ET.SubElement(content, 've-disk')
     disk.attrib['local'] = 'true'
-    disk.attrib['size'] = config.get_config_value(
+    disk.attrib['size'] = config.get_cloud_config_value(
         'disk_size', vm_, __opts__, default='10', search_global=False
     )
 
     # Attributes for the image
-    vm_image = config.get_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     )
     image = show_image({'image': vm_image}, call='function')
@@ -245,10 +245,10 @@ def create_node(vm_):
 
     # Username and password
     admin = ET.SubElement(content, 'admin')
-    admin.attrib['login'] = config.get_config_value(
+    admin.attrib['login'] = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
-    admin.attrib['password'] = config.get_config_value(
+    admin.attrib['password'] = config.get_cloud_config_value(
         'password', vm_, __opts__, search_global=False
     )
 
@@ -269,7 +269,7 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    deploy = config.get_config_value('deploy', vm_, __opts__)
+    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     if deploy is True and salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
@@ -322,9 +322,9 @@ def create(vm_):
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
             update_args=(vm_['name'],),
-            timeout=config.get_config_value(
+            timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
-            interval=config.get_config_value(
+            interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=5),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
@@ -339,24 +339,24 @@ def create(vm_):
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
 
-    ssh_username = config.get_config_value(
+    ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    if config.get_config_value('deploy', vm_, __opts__) is True:
+    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': public_ip,
             'username': ssh_username,
-            'password': config.get_config_value(
+            'password': config.get_cloud_config_value(
                 'password', vm_, __opts__, search_global=False
             ),
             'script': deploy_script,
             'name': vm_['name'],
-            'tmp_dir': config.get_config_value(
+            'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
             ),
-            'deploy_command': config.get_config_value(
+            'deploy_command': config.get_cloud_config_value(
                 'deploy_command', vm_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',
             ),
@@ -368,27 +368,27 @@ def create(vm_):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_config_value(
+            'sudo': config.get_cloud_config_value(
                 'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
-            'sudo_password': config.get_config_value(
+            'sudo_password': config.get_cloud_config_value(
                 'sudo_password', vm_, __opts__, default=None
             ),
-            'tty': config.get_config_value(
+            'tty': config.get_cloud_config_value(
                 'tty', vm_, __opts__, default=False
             ),
-            'display_ssh_output': config.get_config_value(
+            'display_ssh_output': config.get_cloud_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
             ),
-            'script_args': config.get_config_value(
+            'script_args': config.get_cloud_config_value(
                 'script_args', vm_, __opts__
             ),
-            'script_env': config.get_config_value('script_env', vm_, __opts__),
+            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
-        if config.get_config_value('make_master', vm_, __opts__) is True:
+        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -398,20 +398,20 @@ def create(vm_):
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
-        deploy_kwargs['make_minion'] = config.get_config_value(
+        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
             'make_minion', vm_, __opts__, default=True
         )
 
         # Check for Windows install params
-        win_installer = config.get_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_config_value(
+            deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_config_value(
+            deploy_kwargs['password'] = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
 
@@ -470,17 +470,17 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     '''
     Make a web call to a Parallels provider
     '''
-    path = config.get_config_value(
+    path = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
     auth_handler = urllib2.HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='Parallels Instance Manager',
         uri=path,
-        user=config.get_config_value(
+        user=config.get_cloud_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
         ),
-        passwd=config.get_config_value(
+        passwd=config.get_cloud_config_value(
             'password', get_configured_provider(), __opts__,
             search_global=False
         )
@@ -548,7 +548,7 @@ def script(vm_):
     Return the script deployment object
     '''
     return salt.utils.cloud.os_script(
-        config.get_config_value('script', vm_, __opts__),
+        config.get_cloud_config_value('script', vm_, __opts__),
         vm_,
         __opts__,
         salt.utils.cloud.salt_config_to_yaml(
