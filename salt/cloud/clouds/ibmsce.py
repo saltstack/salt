@@ -317,7 +317,7 @@ def create(vm_):
         event_kwargs = copy.deepcopy(deploy_kwargs)
         del(event_kwargs['minion_pem'])
         del(event_kwargs['minion_pub'])
-        if 'password' in kwargs:
+        if 'password' in event_kwargs:
             del(event_kwargs['password'])
         ret['deploy_kwargs'] = event_kwargs
 
