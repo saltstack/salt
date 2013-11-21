@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of cron, the Unix command scheduler.
-===============================================
+Management of cron, the Unix command scheduler
+==============================================
 
 The cron state module allows for user crontabs to be cleanly managed.
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of SELinux rules.
-============================
+Management of SELinux rules
+===========================
 
 If SELinux is available for the running system, the mode can be managed and
 booleans can be set.

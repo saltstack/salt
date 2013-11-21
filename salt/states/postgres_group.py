@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of PostgreSQL groups (roles).
-========================================
+Management of PostgreSQL groups (roles)
+=======================================
 
 The postgres_group module is used to create and manage Postgres groups.
 

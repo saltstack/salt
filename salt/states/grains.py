@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Manage grains on the minion.
-============================
+Manage grains on the minion
+===========================
 
 This state allows for grains to be set. If a grain with the
 given name exists, its value is updated to the new value. If

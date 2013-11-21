@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Starting or restarting of services and daemons.
-===============================================
+Starting or restarting of services and daemons
+==============================================
 
 Services are defined as system daemons typically started with system init or
 rc scripts, services can be defined as running or dead.

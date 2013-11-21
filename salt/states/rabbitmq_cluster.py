@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage RabbitMQ Clusters
+========================
+
+Example:
 
 .. code-block:: yaml
 

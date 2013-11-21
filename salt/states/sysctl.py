@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of the Linux kernel using sysctrl.
-================================================
+Configuration of the Linux kernel using sysctrl
+===============================================
 
-Control the kernel sysctl system
+Control the kernel sysctl system.
 
 .. code-block:: yaml
 
