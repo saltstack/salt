@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of PostgreSQL databases.
-=============================================
+Management of PostgreSQL databases
+==================================
 
 The postgres_database module is used to create and manage Postgres databases.
 Databases can be set as either absent or present

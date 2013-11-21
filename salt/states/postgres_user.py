@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of PostgreSQL users (roles).
-=======================================
+Management of PostgreSQL users (roles)
+======================================
 
 The postgres_users module is used to create and manage Postgres users.
 
