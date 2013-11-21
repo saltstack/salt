@@ -558,7 +558,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
                 if len(comps) > 0:
-                    if len(comps) > 1 or comps[0] == 'tmp':
+                    if len(comps) > 1 or comps[0] != 'tmp':
                         root_cmd(
                             'chown {0}. {1}'.format(username, tmp_dir),
                             tty, sudo, **kwargs
