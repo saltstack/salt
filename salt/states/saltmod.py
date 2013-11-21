@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
+Control the Salt command interface
+==================================
+
 The Salt state is used to control the salt command interface. This state is
 intended for use primarily from the state runner from the master.
 
