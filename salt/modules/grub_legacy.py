@@ -75,8 +75,14 @@ def conf():
                         stanzas.append(stanza)
                     stanza = ''
                     continue
-                if line.startswith('title'):
-                    in_stanza = True
+                if line.strip().startswith('title'):
+                    if in_stanza:
+                        stanza += 'order {0}'.format(pos)
+                        pos += 1
+                        stanzas.append(stanza)
+                        stanza = ''
+                    else:
+                        in_stanza = True
                 if in_stanza:
                     stanza += line
                 if not in_stanza:
