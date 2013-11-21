@@ -68,21 +68,23 @@ As another example, data from multiple database tables can be fetched using
 Django's regular lookup syntax. Note, using ManyToManyFields will not currently
 work since the return from values() changes if a ManyToMany is present.
 
-ext_pillar:
-  - django_orm:
-      pillar_name: djangotutorial
-      project_path: /path/to/mysite
-      settings_module: mysite.settings
+.. code-block:: yaml
 
-      django_app:
-        mysite.polls:
-          Choices:
-            name: poll__question
-            fields:
-              - poll__question
-              - poll__id
-              - choice_text
-              - votes
+    ext_pillar:
+      - django_orm:
+          pillar_name: djangotutorial
+          project_path: /path/to/mysite
+          settings_module: mysite.settings
+
+          django_app:
+            mysite.polls:
+              Choices:
+                name: poll__question
+                fields:
+                  - poll__question
+                  - poll__id
+                  - choice_text
+                  - votes
 
 Module Documentation
 ====================
