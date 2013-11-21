@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Interaction with Git repositories.
-==================================
+Interaction with Git repositories
+=================================
 
 Important: Before using git over ssh, make sure your remote host fingerprint
 exists in "~/.ssh/known_hosts" file. To avoid requiring password

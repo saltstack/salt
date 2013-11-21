@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of MySQL users.
-==========================
+Management of MySQL users
+=========================
 
 :depends:   - MySQLdb Python module
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.

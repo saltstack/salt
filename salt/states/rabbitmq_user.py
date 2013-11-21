@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Users.
+Manage RabbitMQ Users
+=====================
+
+Example:
 
 .. code-block:: yaml
 

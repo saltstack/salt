@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Virtual Hosts.
+Manage RabbitMQ Virtual Hosts
+=============================
+
+Example:
 
 .. code-block:: yaml
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Setup of Python virtualenv sandboxes.
-=====================================
+Setup of Python virtualenv sandboxes
+====================================
 
 '''
 

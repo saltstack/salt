@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of addresses and names in hosts file.
-================================================
+Management of addresses and names in hosts file
+===============================================
 
 The /etc/hosts file can be managed to contain definitions for specific hosts:
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of Keystone users.
-=============================
+Management of Keystone users
+============================
 
 :depends:   - keystoneclient Python module
 :configuration: See :py:mod:`salt.modules.keystone` for setup instructions.
