@@ -14,6 +14,7 @@ Full list of builtin state modules
     alternatives
     apt
     augeas
+    aws_sqs
     cmd
     cron
     ddns
