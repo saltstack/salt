@@ -170,3 +170,68 @@ Use the ``expr_form`` argument to specify a matcher:
         - expr_form: compound
         - arg:
           - rm -rf /tmp/*
+
+An interesting trick to pass data from the Reactor script to
+``state.highstate`` or ``state.sls`` is to pass it as inline Pillar data since
+both functions take a keyword argument named ``pillar``.
+
+The following example uses Salt's Reactor to listen for the event that is fired
+when the key for a new minion is accepted on the master using ``salt-key``.
+
+:file:`/etc/salt/master.d/reactor.conf`:
+
+.. code-block:: yaml
+
+    reactor:
+      - 'salt/key':
+        - /srv/salt/haproxy/react_new_minion.sls
+
+The Reactor then fires a ``state.sls`` command targeted to the HAProxy servers
+and passes the ID of the new minion from the event to the state file via inline
+Pillar.
+
+Note, the Pillar data will need to be passed as a string since that is how it
+is passed at the CLI. That string will be parsed as YAML on the minion (same as
+how it works at the CLI).
+
+:file:`/srv/salt/haproxy/react_new_minion.sls`:
+
+.. code-block:: yaml
+
+    {% if data['act'] == 'accept' and data['id'].startswith('web') %}
+    add_new_minion_to_pool:
+      cmd.state.sls:
+        - tgt: 'haproxy*'
+        - arg:
+          - haproxy.refresh_pool
+          - 'pillar={new_minion: {{ data['id'] }}}'
+    {% endif %}
+
+The above command is equivalent to the following command at the CLI:
+
+.. code-block:: bash
+
+    salt 'haproxy*' state.sls haproxy.refresh_pool 'pillar={new_minion: minionid}'
+
+Finally that data is availabe in the state file using the normal Pillar lookup
+syntax. The following example is grabbing web server names and IP addresses
+from :ref:`Salt Mine <salt-mine>`. If this state is invoked from the Reactor
+then the custom Pillar value from above will be available and the new minion
+will be added to the pool but with the ``disabled`` flag so that HAProxy won't
+yet direct traffic to it.
+
+:file:`/srv/salt/haproxy/refresh_pool.sls`:
+
+.. code-block:: yaml
+
+    {% set new_minion = salt['pillar.get']('new_minion') %}
+
+    listen web *:80
+        balance source
+        {% for server,ip in salt['mine.get']('web*', 'network.interfaces', ['eth0']).items() %}
+        {% if server == new_minion %}
+        server {{ server }} {{ ip }}:80 disabled
+        {% else %}
+        server {{ server }} {{ ip }}:80 check
+        {% endif %}
+        {% endfor %}
