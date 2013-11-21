@@ -56,7 +56,8 @@
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file, extension_modules, key_logfile, pidfile.
+# sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
+# key_logfile, pidfile.
 #root_dir: /
 
 # Directory used to store public key data
@@ -134,9 +135,14 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# If the autosign_file is specified only incoming keys specified in
-# the autosign_file will be automatically accepted. This is insecure.
-# Regular expressions as well as globing lines are supported.
+# If the autosign_file is specified, incoming keys specified in the
+# autosign_file will be automatically accepted. This is insecure.  Regular
+# expressions as well as globing lines are supported.
+#autosign_file: /etc/salt/autosign.conf
+
+# Works like autosign_file, but instead allows you to specify minion IDs for
+# which keys will automatically be rejected. Will override both membership in
+# the autosign_file and the auto_accept setting.
 #autosign_file: /etc/salt/autosign.conf
 
 # Enable permissive access to the salt keys.  This allows you to run the
