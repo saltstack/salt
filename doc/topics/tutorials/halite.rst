@@ -201,10 +201,27 @@ the .crt and .key files.
 If you want to use a self-signed cert, you can create one using the Salt.tls
 module:
 
+.. note::
+
+    You might wish to target only a specific minion. The example below
+    targets all connected minions.
+
 .. code-block:: bash
 
     salt '*' tls.create_self_signed_cert test 
 
+You can use ``salt-call`` to create a self-signed cert on the box running
+Halite. That way you can create the cert directly on the Halite box without
+having to go through the master.
+
+.. note::
+
+    The following command requires that you have the ``salt-minion`` package
+    installed.
+
+.. code-block:: bash
+
+    salt-call tls.create_self_signed_cert tls
 
 When using self-signed certs, browsers will need approval before accepting the
 cert. If the web application page has been cached with a non-HTTPS version of
