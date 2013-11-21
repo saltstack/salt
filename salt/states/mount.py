@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Mounting of filesystems.
-========================
+Mounting of filesystems
+=======================
 
 Mount any type of mountable filesystem with the mounted function:
 

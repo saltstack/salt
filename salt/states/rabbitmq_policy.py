@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Policies.
+Manage RabbitMQ Policies
+========================
 
 :maintainer:    Benn Eichhorn <benn@getlocalmeasure.com>
 :maturity:      new
 :platform:      all
+
+Example:
 
 .. code-block:: yaml
 

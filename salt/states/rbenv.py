@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Managing Ruby installations with rbenv.
-========================================
+Managing Ruby installations with rbenv
+======================================
 
 This module is used to install and manage ruby installations with rbenv.
 Different versions of ruby can be installed, and uninstalled. Rbenv will

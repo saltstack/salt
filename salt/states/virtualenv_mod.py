@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Setup of Python virtualenv sandboxes.
-=====================================
+Setup of Python virtualenv sandboxes
+====================================
 
 '''
 
 # Import python libs
 import logging
 import os
-import salt.utils
 
 # Import salt libs
 import salt.version
+import salt.utils
 
 log = logging.getLogger(__name__)
 

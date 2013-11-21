@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Send commands to a :strong:`modjk` load balancer via the peer system
+Manage modjk workers
+====================
+
+Send commands to a :strong:`modjk` load balancer via the peer system.
 
 This module can be used with the :doc:`prereq </ref/states/requisites>`
 requisite to remove/add the worker from the load balancer before
-deploying/restarting service
+deploying/restarting service.
 
 Mandatory Settings:
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Control of SSH known_hosts entries.
-===================================
+Control of SSH known_hosts entries
+==================================
 
-Manage the information stored in the known_hosts files
+Manage the information stored in the known_hosts files.
 
 .. code-block:: yaml
 

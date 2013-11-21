@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Control of entries in SSH authorized_key files.
-===============================================
+Control of entries in SSH authorized_key files
+==============================================
 
 The information stored in a user's SSH authorized key file can be easily
 controlled via the ssh_auth state. Defaults can be set by the enc, options,

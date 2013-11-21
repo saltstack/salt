@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Plugins.
+Manage RabbitMQ Plugins
+=======================
+
+Example:
 
 .. code-block:: yaml
 

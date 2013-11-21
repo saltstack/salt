@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Interaction with Mercurial repositories.
-========================================
+Interaction with Mercurial repositories
+=======================================
 
 Before using hg over ssh, make sure the remote host fingerprint already exists
 in ~/.ssh/known_hosts, and the remote host has this host's public key.
