@@ -233,6 +233,7 @@ log = logging.getLogger(__name__)
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 _ACCUMULATORS = {}
+_ACCUMULATORS_DEPS = {}
 
 
 def _check_user(user, group):
@@ -1836,7 +1837,8 @@ def blockreplace(name,
             content='',
             append_if_not_found=False,
             backup='.bak',
-            show_changes=True):
+            show_changes=True,
+            __id__=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
@@ -1920,7 +1922,14 @@ def blockreplace(name,
 
     if name in _ACCUMULATORS:
         accumulator = _ACCUMULATORS[name]
-        for acc, acc_content in accumulator.iteritems():
+        # if we have multiple accumulators for a file, only apply the one required
+        # at a time
+        deps = _ACCUMULATORS_DEPS.get(name, [])
+        filtered = [a for a in deps if __id__ in deps[a] and a in accumulator]
+        if not filtered:
+            filtered = [a for a in accumulator]
+        for acc in filtered:
+            acc_content = accumulator[acc]
             for line in acc_content:
                 if content == '':
                     content = line
@@ -2751,7 +2760,8 @@ def accumulated(name, filename, text, require_in=None, watch_in=None, __id__=Non
         require_in = []
     if not watch_in:
         watch_in = []
-    if not filter(lambda x: 'file' in x, require_in + watch_in):
+    deps = require_in + watch_in
+    if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
@@ -2763,6 +2773,12 @@ def accumulated(name, filename, text, require_in=None, watch_in=None, __id__=Non
         text = (text,)
     if filename not in _ACCUMULATORS:
         _ACCUMULATORS[filename] = {}
+    if filename not in _ACCUMULATORS_DEPS:
+        _ACCUMULATORS_DEPS[filename] = {}
+    if name not in _ACCUMULATORS_DEPS[filename]:
+        _ACCUMULATORS_DEPS[filename][name] = []
+    for a in deps:
+        _ACCUMULATORS_DEPS[filename][name].extend(a.values())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:
