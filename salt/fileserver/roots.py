@@ -190,6 +190,7 @@ def file_hash(load, fnd):
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    ret['hsum'] = None
                     file_hash(load, fnd)
                     return(ret)
                 if os.path.getmtime(path) == mtime:
