@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Clone a remote git repository and use the filesystem as a pillar directory.
+Clone a remote git repository and use the filesystem as a Pillar source
 
-This external pillar source can be configured in the master config file like
+This external Pillar source can be configured in the master config file like
 so:
 
 .. code-block:: yaml
