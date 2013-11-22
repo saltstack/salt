@@ -29,12 +29,13 @@ Getting Started
 
 * :doc:`Installing salt cloud <install/index>`
 
-Some quick guides covering getting started with Amazon AWS, Rackspace, and
-Parallels.
+Some quick guides covering getting started with Amazon AWS, Google Compute
+Engine, Parallels, Rackspace, and Softlayer.
 
 * :doc:`Getting Started With AWS <aws>`
-* :doc:`Getting Started With Rackspace <rackspace>`
+* :doc:`Getting Started With Google Compute Engine <gce>`
 * :doc:`Getting Started With Parallels <parallels>`
+* :doc:`Getting Started With Rackspace <rackspace>`
 * :doc:`Getting Started With SoftLayer <softlayer>`
 
 Core Configuration
