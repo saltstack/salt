@@ -44,7 +44,7 @@ class RunnerClient(object):
         event.fire_event(data, tagify('new', base=tag))
 
         try:
-            data['ret'] = self.low(fun, low)
+            data['return'] = self.low(fun, low)
             data['success'] = True
         except Exception as exc:
             data['ret'] = 'Exception occured in runner {0}: {1}'.format(
