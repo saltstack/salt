@@ -196,7 +196,7 @@ def add_server(protocol=None, service_address=None, server_address=None, packet_
     server_address
         The real server address.
     
-    method
+    packet_forward_method
         The LVS packet forwarding method(``dr`` for direct routing, ``tunnel`` for tunneling, ``nat`` for network access translation).
 
     weight
@@ -241,7 +241,7 @@ def edit_server(protocol=None, service_address=None, server_address=None, packet
     server_address
         The real server address.
     
-    method
+    packet_forward_method
         The LVS packet forwarding method(``dr`` for direct routing, ``tunnel`` for tunneling, ``nat`` for network access translation).
 
     weight
