@@ -504,7 +504,7 @@ def pid(sig):
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
         __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')
-    
+
 
 def version():
     '''
@@ -522,6 +522,3 @@ def version():
     ret = salt.utils.fopen(procf, 'r').read().strip()
 
     return ret
-
-
-
