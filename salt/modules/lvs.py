@@ -406,7 +406,7 @@ def zero(protocol=None, service_address=None):
     return ret
 
 
-def check_service(protocol=None, service_address=None):
+def check_service(protocol=None, service_address=None, **kwargs):
     '''
 
     Check the virtual service exists.
@@ -418,8 +418,13 @@ def check_service(protocol=None, service_address=None):
         salt '*' lvs.check_service tcp 1.1.1.1:80
     '''
 
-    cmd = '{0} '.format(_build_cmd(protocol=protocol,
-                                   service_address=service_address))
+    cmd = '{0}'.format(_build_cmd(protocol=protocol,
+                                   service_address=service_address,
+                                   **kwargs))
+    # Exact match
+    if not kwargs:
+         cmd += ' '
+
     all_rules = get_rules()
     out = all_rules.find(cmd)
 
@@ -429,7 +434,7 @@ def check_service(protocol=None, service_address=None):
         ret = 'Error: service not exists'
     return ret
 
-def check_server(protocol=None, service_address=None, server_address=None):
+def check_server(protocol=None, service_address=None, server_address=None, **kwargs):
     '''
 
     Check the real server exists in the specified service.
@@ -441,9 +446,14 @@ def check_server(protocol=None, service_address=None, server_address=None):
          salt '*' lvs.check_server tcp 1.1.1.1:80 192.168.0.11:8080
     '''
 
-    cmd = '{0} '.format(_build_cmd(protocol=protocol,
+    cmd = '{0}'.format(_build_cmd(protocol=protocol,
                                    service_address=service_address,
-                                   server_address=server_address))
+                                   server_address=server_address,
+                                   **kwargs))
+    # Exact match
+    if not kwargs:
+        cmd += ' '
+
     all_rules = get_rules()
     out = all_rules.find(cmd)
 
