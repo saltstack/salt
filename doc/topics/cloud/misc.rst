@@ -13,8 +13,8 @@ to pass arguments to the deploy script:
 
 .. code-block:: yaml
 
-    aws-amazon:
-        provider: aws
+    ec2-amazon:
+        provider: ec2
         image: ami-1624987f
         size: Micro Instance
         ssh_username: ec2-user
