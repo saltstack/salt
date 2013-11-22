@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Copyright 2013 Google Inc. All Rights Reserved.
 
@@ -70,8 +71,8 @@ Supported commands:
 :depends: libcloud >= 0.14.0-beta3
 '''
 # custom UA
-_UA_PRODUCT = "salt-cloud"
-_UA_VERSION = "0.1.0"
+_UA_PRODUCT = 'salt-cloud'
+_UA_VERSION = '0.1.0'
 
 # The import section is mostly libcloud boilerplate
 from libcloud.compute.types import Provider
@@ -85,11 +86,13 @@ import os
 import stat
 from ast import literal_eval
 
+# Import salt libs
+from salt.utils import namespaced_function
+
 # Import saltcloud libs
-import salt.cloud.utils
+import salt.utils.cloud
 import salt.config as config
-from salt.cloud.libcloudfuncs import * # pylint: disable=W0401,W0614
-from salt.cloud.utils import namespaced_function
+from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
 from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -107,6 +110,7 @@ destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
+
 
 # Only load in this module if the GCE configurations are in place
 def __virtual__():
@@ -173,7 +177,8 @@ def get_conn():
     private_key = config.get_cloud_config_value('service_account_private_key',
             provider, __opts__)
     gce = driver(email, private_key, project=project)
-    gce.connection.user_agent_append("%s/%s" % (_UA_PRODUCT, _UA_VERSION))
+    gce.connection.user_agent_append('{0}/{1}'.format(_UA_PRODUCT,
+                                                      _UA_VERSION))
     return gce
 
 
@@ -208,7 +213,7 @@ def avail_sizes(conn=None):
     '''
     if not conn:
         conn = get_conn()
-    raw_sizes = conn.list_sizes('all') # get *all* the machine types!
+    raw_sizes = conn.list_sizes('all')  # get *all* the machine types!
     sizes = []
     for size in raw_sizes:
         zone = size.extra['zone']
@@ -283,12 +288,12 @@ def __get_tags(vm_):
     '''
     t = config.get_cloud_config_value(
         'tags', vm_, __opts__,
-        default="[]", search_global=False)
+        default='[]', search_global=False)
     # Consider warning the user that the tags in the cloud profile
     # could not be interpreted, bad formatting?
     try:
         tags = literal_eval(t)
-    except Exception: # pylint: disable=W0703
+    except Exception:  # pylint: disable=W0703
         tags = None
     if not tags or not isinstance(tags, list):
         tags = None
@@ -301,12 +306,12 @@ def __get_metadata(vm_):
     '''
     md = config.get_cloud_config_value(
         'metadata', vm_, __opts__,
-        default="{}", search_global=False)
+        default='{}', search_global=False)
     # Consider warning the user that the metadata in the cloud profile
     # could not be interpreted, bad formatting?
     try:
         metadata = literal_eval(md)
-    except Exception: # pylint: disable=W0703
+    except Exception:  # pylint: disable=W0703
         metadata = None
     if not metadata or not isinstance(metadata, dict):
         metadata = {'items': [{
@@ -317,7 +322,7 @@ def __get_metadata(vm_):
         metadata['salt-cloud-profile'] = vm_['profile']
         items = []
         for k, v in metadata.items():
-            items.append({"key": k, "value": v})
+            items.append({'key': k, 'value': v})
         metadata = {'items': items}
     return metadata
 
@@ -375,25 +380,25 @@ def destroy(vm_name, call=None):
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d or "-a destroy".'
         )
-    
+
     conn = get_conn()
 
     try:
         node = conn.ex_get_node(vm_name)
-    except Exception as exc: # pylint: disable=W0703
+    except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Could not locate instance {0}\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc.message
             ),
-            exc_info = log.isEnabledFor(logging.DEBUG)
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         raise SaltCloudSystemExit(
             'Could not find instance {0}.'.format(vm_name)
         )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(vm_name),
@@ -405,32 +410,32 @@ def destroy(vm_name, call=None):
     # to see if the 'delete_boot_pd' value is set to delete the disk
     # along with the instance.
     profile = None
-    if node.extra['metadata'] and node.extra['metadata'].has_key('items'):
+    if node.extra['metadata'] and 'items' in node.extra['metadata']:
         for md in node.extra['metadata']['items']:
-            if md["key"] == "salt-cloud-profile":
-                profile = md["value"]
+            if md['key'] == 'salt-cloud-profile':
+                profile = md['value']
     vm_ = get_configured_provider()
     delete_boot_pd = False
-    if profile is not None and vm_['profiles'].has_key(profile):
-        if vm_['profiles'][profile].has_key('delete_boot_pd'):
+    if profile is not None and profile in vm_['profiles']:
+        if 'delete_boot_pd' in vm_['profiles'][profile]:
             delete_boot_pd = vm_['profiles'][profile]['delete_boot_pd']
 
     try:
         inst_deleted = conn.destroy_node(node)
-    except Exception as exc: # pylint: disable=W0703
+    except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Could not destroy instance {0}\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc.message
             ),
-            exc_info = log.isEnabledFor(logging.DEBUG)
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
         )
     if delete_boot_pd:
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'destroying persistent disk',
             'salt/cloud/{0}/destroying-disk'.format(vm_name),
@@ -438,26 +443,26 @@ def destroy(vm_name, call=None):
         )
         try:
             conn.destroy_volume(conn.ex_get_volume(vm_name))
-        except Exception as exc: # pylint: disable=W0703
+        except Exception as exc:  # pylint: disable=W0703
             # Note that we don't raise a SaltCloudSystemExit here in order
             # to allow completion of instance deletion.  Just log the error
             # and keep going.
             log.error(
                 'Could not destroy disk {0}\n\n'
-                'The following exception was thrown by libcloud when trying to '
-                'run the initial deployment: \n{1}'.format(
+                'The following exception was thrown by libcloud when trying '
+                'to run the initial deployment: \n{1}'.format(
                     vm_name, exc.message
                 ),
-                exc_info = log.isEnabledFor(logging.DEBUG)
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'destroyed persistent disk',
             'salt/cloud/{0}/destroyed-disk'.format(vm_name),
             {'name': vm_name},
         )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(vm_name),
@@ -476,7 +481,7 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -505,7 +510,7 @@ def create(vm_=None, call=None):
     )
     log.debug('Create instance kwargs {0}'.format(str(kwargs)))
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -516,17 +521,17 @@ def create(vm_=None, call=None):
             'image': kwargs['image'].name,
         },
     )
-   
+
     try:
-        node_data = conn.create_node(**kwargs) # pylint: disable=W0142
-    except Exception as exc: # pylint: disable=W0703
+        node_data = conn.create_node(**kwargs)  # pylint: disable=W0142
+    except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on GCE\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc.message
             ),
-            exc_info = log.isEnabledFor(logging.DEBUG)
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -573,7 +578,7 @@ def create(vm_=None, call=None):
             'script_env': config.get_cloud_config_value(
                 'script_env', vm_, __opts__
             ),
-            'minion_conf': salt.cloud.utils.minion_config(__opts__, vm_)
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
@@ -581,7 +586,7 @@ def create(vm_=None, call=None):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.cloud.utils.master_config(__opts__, vm_)
+            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
@@ -596,11 +601,11 @@ def create(vm_=None, call=None):
         del(event_kwargs['minion_pem'])
         del(event_kwargs['minion_pub'])
         del(event_kwargs['sudo_password'])
-        if 'password' in kwargs:
+        if 'password' in event_kwargs:
             del(event_kwargs['password'])
         node_dict['deploy_kwargs'] = event_kwargs
 
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -608,7 +613,7 @@ def create(vm_=None, call=None):
         )
 
         # pylint: disable=W0142
-        deployed = salt.cloud.utils.deploy_script(**deploy_kwargs)
+        deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
@@ -625,7 +630,7 @@ def create(vm_=None, call=None):
         )
     )
 
-    salt.cloud.utils.fire_event(
+    salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
