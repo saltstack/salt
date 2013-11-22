@@ -84,7 +84,7 @@ def present(name,
                                                           weight=weight)
                 if server_edit is True:
                     ret['comment'] = 'LVS Server {0} in service {1}({2}) has been updated'.format(name, service_address, protocol)
-                    ret['change'][name] = 'Update'
+                    ret['changes'][name] = 'Update'
                     return ret
                 else:
                     ret['result'] = False
