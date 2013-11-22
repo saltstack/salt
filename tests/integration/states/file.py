@@ -853,6 +853,73 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(testcase_temp_dir):
                 shutil.rmtree(testcase_temp_dir)
 
+    def test_issue_8343_accumulated_require_in(self):
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-8343.sls')
+        testcase_filedest = os.path.join(integration.TMP, 'issue-8343.txt')
+        sls_template = [
+            '{0}:',
+            '  file.managed:',
+            '    - contents: |',
+            '                #',
+            '',
+            'prepend-foo-accumulator-from-pillar:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: prepend-foo-management',
+            '    - filename: {0}',
+            '    - text: |',
+            '            foo',
+            '',
+            'append-foo-accumulator-from-pillar:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: append-foo-management',
+            '    - filename: {0}',
+            '    - text: |',
+            '            bar',
+            '',
+            'prepend-foo-management:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start salt managed zonestart -- PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end salt managed zonestart --"',
+            "    - content: ''",
+            '    - append_if_not_found: True',
+            "    - backup: '.bak'",
+            '    - show_changes: True',
+            '',
+            'append-foo-management:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start salt managed zoneend -- PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end salt managed zoneend --"',
+            "    - content: ''",
+            '    - append_if_not_found: True',
+            "    - backup: '.bak'",
+            '    - show_changes: True',
+            '']
+        open(template_path, 'w').write(
+                '\n'.join(sls_template).format(testcase_filedest))
+        try:
+            ret = self.run_function('state.sls', mods='issue-8343')
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(
+                ['#',
+                 '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                 'foo',
+                 '',
+                 '#-- end salt managed zonestart --',
+                 '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+                 'bar',
+                 '',
+                 '#-- end salt managed zoneend --',
+                 ''],
+                open(testcase_filedest).read().split('\n')
+            )
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+
 
 if __name__ == '__main__':
     from integration import run_tests

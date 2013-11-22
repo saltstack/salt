@@ -1927,7 +1927,8 @@ def blockreplace(name,
         # if we have multiple accumulators for a file, only apply the one required
         # at a time
         deps = _ACCUMULATORS_DEPS.get(name, [])
-        filtered = [a for a in deps if __id__ in deps[a] and a in accumulator]
+        filtered = [a for a in deps if
+                    __state__['__id__'] in deps[a] and a in accumulator]
         if not filtered:
             filtered = [a for a in accumulator]
         for acc in filtered:
@@ -1937,6 +1938,7 @@ def blockreplace(name,
                     content = line
                 else:
                     content += "\n" + line
+
     changes = __salt__['file.blockreplace'](name,
                                        marker_start,
                                        marker_end,
@@ -2759,16 +2761,15 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-
-    require_in = kwargs.get('require_in', [])
-    watch_in = kwargs.get('watch_in', [])
+    require_in = __state__.get('require_in', [])
+    watch_in = __state__.get('watch_in', [])
     deps = require_in + watch_in
     if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
-            __sls__,
-            __id__
+            __state__['__sls__'],
+            __state__['__id__']
         )
         return ret
     if isinstance(text, string_types):
@@ -2779,8 +2780,8 @@ def accumulated(name, filename, text, **kwargs):
         _ACCUMULATORS_DEPS[filename] = {}
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
-    for a in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(a.values())
+    for accumulator in deps:
+        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:

@@ -1035,7 +1035,7 @@ class State(object):
                     ex_id.add(exc['id'])
         # Now the excludes have been simplified, use them
         if ex_sls:
-            # There are sls excludes, find the associtaed ids
+            # There are sls excludes, find the associated ids
             for name, body in high.items():
                 if name.startswith('__'):
                     continue
@@ -1054,14 +1054,14 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
+        req_in = {
             'require_in',
             'watch_in',
             'use',
             'use_in',
             'prereq',
             'prereq_in',
-            ])
+            }
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
@@ -1258,6 +1258,11 @@ class State(object):
             initial_ret={'full': state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
+        inject_globals = {
+            # Pass a copy of the state data dictionary
+            '__state__': copy.deepcopy(data),
+        }
+
         if data.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
@@ -1273,19 +1278,19 @@ class State(object):
             if cdata['kwargs'].get('env', None) is not None:
                 # User is using a deprecated env setting which was parsed by
                 # format_call
-                saltenv = cdata['kwargs']['env']
+                inject_globals['__env__'] = cdata['kwargs']['env']
             elif '__env__' in data:
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
-                saltenv = data['__env__']
+                inject_globals['__env__'] = data['__env__']
             elif 'saltenv' in data:
-                saltenv = data['saltenv']
+                inject_globals['__env__'] = data['saltenv']
             else:
                 # Let's use the default environment
-                saltenv = 'base'
+                inject_globals['__env__'] = 'base'
 
             with context.func_globals_inject(self.states[cdata['full']],
-                                             __env__=saltenv):
+                                             **inject_globals):
                 ret = self.states[cdata['full']](*cdata['args'],
                                                  **cdata['kwargs'])
                 self.verify_ret(ret)
@@ -1708,10 +1713,11 @@ class State(object):
 
 class BaseHighState(object):
     '''
-    The BaseHighState is an abstract base class that is the foundation of running a highstate, extend it and
-    add a self.state object of type State.
+    The BaseHighState is an abstract base class that is the foundation of
+    running a highstate, extend it and add a self.state object of type State.
 
-    When extending this class, please note that self.client and self.matcher should be instantiated and handled.
+    When extending this class, please note that ``self.client`` and
+    ``self.matcher`` should be instantiated and handled.
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
