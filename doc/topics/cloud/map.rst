@@ -13,17 +13,17 @@ machines to make from said profile:
 .. code-block:: yaml
 
     fedora_small:
-        - web1
-        - web2
-        - web3
+      - web1
+      - web2
+      - web3
     fedora_high:
-        - redis1
-        - redis2
-        - redis3
+      - redis1
+      - redis2
+      - redis3
     cent_high:
-        - riak1
-        - riak2
-        - riak3
+      - riak1
+      - riak2
+      - riak3
 
 This map file can then be called to roll out all of these virtual machines. Map
 files are called from the salt-cloud command with the -m option:
