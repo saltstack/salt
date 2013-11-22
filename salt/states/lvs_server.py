@@ -148,7 +148,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
                                                       service_address=service_address,
                                                       server_address=server_address)
         if server_delete is True:
-            ret['comment'] = 'LVS Server {0} in service {1}(2) has been removed'.format(name, service_address, protocol)
+            ret['comment'] = 'LVS Server {0} in service {1}({2}) has been removed'.format(name, service_address, protocol)
             ret['changes'][name] = 'Absent'
             return ret
         else:
