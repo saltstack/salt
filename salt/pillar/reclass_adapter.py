@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+Use the "reclass" database as a Pillar source
+
 .. |reclass| replace:: **reclass**
 
 This ``ext_pillar`` plugin provides access to the |reclass| database, such
