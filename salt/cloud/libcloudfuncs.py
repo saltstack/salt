@@ -18,7 +18,7 @@ from libcloud.compute.deployment import (
     ScriptDeployment,
     SSHKeyDeployment
 )
-# pylint: enable-msg=W0611
+# pylint: enable=W0611
 
 
 # Import salt libs
