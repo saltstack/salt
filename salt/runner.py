@@ -108,7 +108,7 @@ class RunnerClient(object):
                 target=self._proc_runner,
                 args=(fun, low, user, tag, jid))
         proc.start()
-        return tag
+        return {'tag': tag}
 
     def master_call(self, **kwargs):
         '''
