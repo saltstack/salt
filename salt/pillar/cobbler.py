@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Cobbler Pillar
-==============
-A pillar module to pull data from Cobbler via its API into the pillar dictionary.
+A module to pull data from Cobbler via its API into the Pillar dictionary
 
 
 Configuring the Cobbler ext_pillar
