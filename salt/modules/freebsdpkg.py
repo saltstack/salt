@@ -7,12 +7,13 @@ Package support for FreeBSD
 import copy
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 
-
+PKG_NAME_VERSION_RE = re.compile(r'(?P<name>.*)-(?P<version>[0-9_\-.]+)')
 log = logging.getLogger(__name__)
 
 
@@ -89,7 +90,8 @@ def latest_version(*names, **kwargs):
                 pkg = _words[1].rstrip(':')
                 ver = _words[2] if _words[0] == 'Installing' else _words[4]
             elif _words[0] in ('Reinstalling'):
-                pkg, ver = _words[1].split('-')
+                # Because of packages like 'xen-tools-4.1.3_3', let's use regex
+                pkg, ver = PKG_NAME_VERSION_RE.match(_words[1]).groups()
             else:
                 # unexpected string
                 continue
