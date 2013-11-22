@@ -504,3 +504,24 @@ def pid(sig):
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
         __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')
+    
+
+def version():
+    '''
+    Return the system version for this minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.version
+    '''
+    procf = '/proc/version'
+    if not os.path.isfile(procf):
+        return {}
+    ret = salt.utils.fopen(procf, 'r').read().strip()
+
+    return ret
+
+
+
