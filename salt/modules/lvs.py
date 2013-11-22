@@ -11,6 +11,7 @@ import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import SaltException
 
+
 # Cache the output of running which('ipvsadm')
 @decorators.memoize
 def __detect_os():
@@ -25,6 +26,7 @@ def __virtual__():
         return False
 
     return 'lvs'
+
 
 def _build_cmd(**kwargs):
     '''
@@ -59,26 +61,24 @@ def _build_cmd(**kwargs):
         if kwargs['server_address']:
             cmd += ' -r {0}'.format(kwargs['server_address'])
             if 'packet_forward_method' in kwargs and kwargs['packet_forward_method']:
-                 if kwargs['packet_forward_method'] == 'dr':
-                     cmd += ' -g'
-                 elif kwargs['packet_forward_method'] == 'tunnel':
-                     cmd += ' -i'
-                 elif kwargs['packet_forward_method'] == 'nat':
-                     cmd += ' -m'
-                 else:
-                     raise SaltException('Error: only support dr, tunnel and nat')
-                 del kwargs['packet_forward_method']
+                if kwargs['packet_forward_method'] == 'dr':
+                    cmd += ' -g'
+                elif kwargs['packet_forward_method'] == 'tunnel':
+                    cmd += ' -i'
+                elif kwargs['packet_forward_method'] == 'nat':
+                    cmd += ' -m'
+                else:
+                    raise SaltException('Error: only support dr, tunnel and nat')
+                del kwargs['packet_forward_method']
             if 'weight' in kwargs and kwargs['weight']:
-                 cmd += ' -w {0}'.format(kwargs['weight'])
-                 del kwargs['weight']
+                cmd += ' -w {0}'.format(kwargs['weight'])
+                del kwargs['weight']
         else:
             raise SaltException('Error: server_address should specified')
         del kwargs['server_address']
 
     return cmd
 
-    
-            
 
 def add_service(protocol=None, service_address=None, scheduler='wlc'):
     '''
@@ -100,7 +100,7 @@ def add_service(protocol=None, service_address=None, scheduler='wlc'):
 
         salt '*' lvs.add_service tcp 1.1.1.1:80 rr
     '''
-    
+
     cmd = '{0} -A {1}'.format(__detect_os(),
                               _build_cmd(protocol=protocol,
                                          service_address=service_address,
@@ -135,7 +135,7 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
 
         salt '*' lvs.edit_service tcp 1.1.1.1:80 rr
     '''
-    
+
     cmd = '{0} -E {1}'.format(__detect_os(),
                               _build_cmd(protocol=protocol,
                                          service_address=service_address,
@@ -160,12 +160,12 @@ def delete_service(protocol=None, service_address=None):
 
     service_address
         The LVS service address.
-    
+
 
     CLI Example:
-      
+
     .. code-block:: bash
-     
+
         salt '*' lvs.delete_service tcp 1.1.1.1:80
     '''
 
@@ -195,18 +195,18 @@ def add_server(protocol=None, service_address=None, server_address=None, packet_
 
     server_address
         The real server address.
-    
+
     packet_forward_method
         The LVS packet forwarding method(``dr`` for direct routing, ``tunnel`` for tunneling, ``nat`` for network access translation).
 
     weight
         The capacity  of a server relative to the others in the pool.
 
-    
+
     CLI Example:
-    
+
     .. code-block:: bash
-     
+
         salt '*' lvs.add_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
     '''
 
@@ -240,18 +240,18 @@ def edit_server(protocol=None, service_address=None, server_address=None, packet
 
     server_address
         The real server address.
-    
+
     packet_forward_method
         The LVS packet forwarding method(``dr`` for direct routing, ``tunnel`` for tunneling, ``nat`` for network access translation).
 
     weight
         The capacity  of a server relative to the others in the pool.
 
-    
+
     CLI Example:
-    
+
     .. code-block:: bash
-     
+
         salt '*' lvs.edit_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
     '''
 
@@ -285,12 +285,12 @@ def delete_server(protocol=None, service_address=None, server_address=None):
 
     server_address
         The real server address.
-    
-    
+
+
     CLI Example:
 
     .. code-block:: bash
-   
+
         salt '*' lvs.delete_server tcp 1.1.1.1:80 192.168.0.11:8080
     '''
 
@@ -310,7 +310,7 @@ def delete_server(protocol=None, service_address=None, server_address=None):
 
 def clear():
     '''
-   
+
     Clear the virtual server table
 
     CLI Example:
@@ -334,11 +334,11 @@ def clear():
 
 def get_rules():
     '''
-    
+
     Get the virtual server rules
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' lvs.get_rules
@@ -356,12 +356,12 @@ def list(protocol=None, service_address=None):
     List the virtual server table if service_address is not specified. If a service_address is selected, list this service only.
 
     CLI Example:
-     
+
     .. code-block:: bash
 
         salt '*' lvs.list
-    ''' 
-    
+    '''
+
     if service_address:
         cmd = '{0} -L {1} -n'.format(__detect_os(),
                                   _build_cmd(protocol=protocol,
@@ -378,15 +378,16 @@ def list(protocol=None, service_address=None):
 
     return ret
 
+
 def zero(protocol=None, service_address=None):
     '''
 
     Zero the packet, byte and rate counters in a service or all services.
 
     CLI Example:
-   
+
     .. code-block:: bash
-   
+
         salt '*' lvs.zero
     '''
 
@@ -410,7 +411,7 @@ def check_service(protocol=None, service_address=None, **kwargs):
     '''
 
     Check the virtual service exists.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -423,7 +424,7 @@ def check_service(protocol=None, service_address=None, **kwargs):
                                    **kwargs))
     # Exact match
     if not kwargs:
-         cmd += ' '
+        cmd += ' '
 
     all_rules = get_rules()
     out = all_rules.find(cmd)
@@ -433,6 +434,7 @@ def check_service(protocol=None, service_address=None, **kwargs):
     else:
         ret = 'Error: service not exists'
     return ret
+
 
 def check_server(protocol=None, service_address=None, server_address=None, **kwargs):
     '''
