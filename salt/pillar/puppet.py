@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Execute an unmodified puppet_node_classifier and read the output as YAML.
-The YAML data is then directly overlaid onto the minion's pillar data.
+Execute an unmodified puppet_node_classifier and read the output as YAML. The YAML data is then directly overlaid onto the minion's Pillar data.
 '''
+
+# Don't "fix" the above docstring to put it on two lines, as the sphinx
+# autosummary pulls only the first line for its description.
 
 # Import python libs
 import logging
