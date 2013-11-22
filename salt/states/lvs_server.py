@@ -103,7 +103,7 @@ def present(name,
                                                     weight=weight)
             if server_add is True:
                 ret['comment'] = 'LVS Server {0} in service {1}({2}) has been created'.format(name, service_address, protocol)
-                ret['change'][name] = 'Present'
+                ret['changes'][name] = 'Present'
                 return ret
             else:
                 ret['comment'] = 'LVS Service {0} in service {1}({2}) create failed({3})'.format(name, service_address, protocol, server_add)
