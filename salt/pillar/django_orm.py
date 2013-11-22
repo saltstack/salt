@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Generate pillar data from Django models through the Django ORM
+Generate Pillar data from Django models through the Django ORM
 
 :maintainer: Micah Hausler <micah.hausler@gmail.com>
 :maturity: new
