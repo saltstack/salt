@@ -971,8 +971,10 @@ def replace(path,
         pre_group = get_group(path)
         pre_mode = __salt__['config.manage_mode'](get_mode(path))
     for line in fileinput.input(path,
-            inplace=not dry_run, backup=False if dry_run else backup,
-            bufsize=bufsize, mode='rb'):
+                                inplace=not dry_run,
+                                backup=False if dry_run else backup,
+                                bufsize=bufsize,
+                                mode='rb'):
 
         if search_only:
             # Just search; bail as early as a match is found
