@@ -10,113 +10,111 @@ been deprecated in favor of the `ec2` provider. Configuration using the old
 `aws` provider will still function, but that driver is no longer in active
 development.
 
-Set up the cloud config at ``/etc/salt/cloud``:
-
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud
+    # Note: This example is for /etc/salt/cloud.providers or any file in the
+    # /etc/salt/cloud.providers.d/ directory.
 
-    providers:
-      my-ec2-southeast-public-ips:
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
+    my-ec2-southeast-public-ips:
+      # Set up the location of the salt master
+      #
+      minion:
+        master: saltmaster.example.com
 
-        # Set up grains information, which will be common for all nodes
-        # using this provider
-        grains:
-          node_type: broker
-          release: 1.0.1
+      # Set up grains information, which will be common for all nodes
+      # using this provider
+      grains:
+        node_type: broker
+        release: 1.0.1
 
-        # Specify whether to use public or private IP for deploy script.
-        #
-        # Valid options are:
-        #     private_ips - The salt-master is also hosted with EC2
-        #     public_ips - The salt-master is hosted outside of EC2
-        #
-        ssh_interface: public_ips
+      # Specify whether to use public or private IP for deploy script.
+      #
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with EC2
+      #     public_ips - The salt-master is hosted outside of EC2
+      #
+      ssh_interface: public_ips
 
-        # Set the EC2 access credentials (see below)
-        #
-        id: HJGRYCILJLKJYG
-        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      # Set the EC2 access credentials (see below)
+      #
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
-        # Make sure this key is owned by root with permissions 0400.
-        #
-        private_key: /etc/salt/my_test_key.pem
-        keyname: my_test_key
-        securitygroup: default
+      # Make sure this key is owned by root with permissions 0400.
+      #
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
 
-        # Optionally configure default region
-        #
-        location: ap-southeast-1
-        availability_zone: ap-southeast-1b
+      # Optionally configure default region
+      #
+      location: ap-southeast-1
+      availability_zone: ap-southeast-1b
 
-        # Configure which user to use to run the deploy script. This setting is
-        # dependent upon the AMI that is used to deploy. It is usually safer to
-        # configure this individually in a profile, than globally. Typical users
-        # are:
-        #
-        # Amazon Linux -> ec2-user
-        # RHEL         -> ec2-user
-        # CentOS       -> ec2-user
-        # Ubuntu       -> ubuntu
-        #
-        ssh_username: ec2-user
+      # Configure which user to use to run the deploy script. This setting is
+      # dependent upon the AMI that is used to deploy. It is usually safer to
+      # configure this individually in a profile, than globally. Typical users
+      # are:
+      #
+      # Amazon Linux -> ec2-user
+      # RHEL         -> ec2-user
+      # CentOS       -> ec2-user
+      # Ubuntu       -> ubuntu
+      #
+      ssh_username: ec2-user
 
-        # Optionally add an IAM profile
-        iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
+      # Optionally add an IAM profile
+      iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
 
-        provider: ec2
+      provider: ec2
 
 
-      my-ec2-southeast-private-ips:
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
+    my-ec2-southeast-private-ips:
+      # Set up the location of the salt master
+      #
+      minion:
+        master: saltmaster.example.com
 
-        # Specify whether to use public or private IP for deploy script.
-        #
-        # Valid options are:
-        #     private_ips - The salt-master is also hosted with EC2
-        #     public_ips - The salt-master is hosted outside of EC2
-        #
-        ssh_interface: private_ips
+      # Specify whether to use public or private IP for deploy script.
+      #
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with EC2
+      #     public_ips - The salt-master is hosted outside of EC2
+      #
+      ssh_interface: private_ips
 
-        # Set the EC2 access credentials (see below)
-        #
-        id: HJGRYCILJLKJYG
-        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      # Set the EC2 access credentials (see below)
+      #
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
-        # Make sure this key is owned by root with permissions 0400.
-        #
-        private_key: /etc/salt/my_test_key.pem
-        keyname: my_test_key
-        securitygroup: default
+      # Make sure this key is owned by root with permissions 0400.
+      #
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
 
-        # Optionally configure default region
-        #
-        location: ap-southeast-1
-        availability_zone: ap-southeast-1b
+      # Optionally configure default region
+      #
+      location: ap-southeast-1
+      availability_zone: ap-southeast-1b
 
-        # Configure which user to use to run the deploy script. This setting is
-        # dependent upon the AMI that is used to deploy. It is usually safer to
-        # configure this individually in a profile, than globally. Typical users
-        # are:
-        #
-        # Amazon Linux -> ec2-user
-        # RHEL         -> ec2-user
-        # CentOS       -> ec2-user
-        # Ubuntu       -> ubuntu
-        #
-        ssh_username: ec2-user
+      # Configure which user to use to run the deploy script. This setting is
+      # dependent upon the AMI that is used to deploy. It is usually safer to
+      # configure this individually in a profile, than globally. Typical users
+      # are:
+      #
+      # Amazon Linux -> ec2-user
+      # RHEL         -> ec2-user
+      # CentOS       -> ec2-user
+      # Ubuntu       -> ubuntu
+      #
+      ssh_username: ec2-user
 
-        # Optionally add an IAM profile
-        iam_profile: 'my other profile name'
+      # Optionally add an IAM profile
+      iam_profile: 'my other profile name'
 
-        provider: ec2
+      provider: ec2
 
 
 Access Credentials
