@@ -2,7 +2,7 @@
 Getting Started With Digtal Ocean
 =================================
 
-Digital Ocean is a public cloud provider that specializes Linux instances.
+Digital Ocean is a public cloud provider that specializes in Linux instances.
 
 
 Dependencies
