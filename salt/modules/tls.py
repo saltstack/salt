@@ -455,6 +455,12 @@ def create_self_signed_cert(
     .. code-block:: bash
 
         salt '*' tls.create_self_signed_cert
+
+    Passing options from the command line:
+
+    .. code-block:: bash
+
+        salt 'minion' tls.create_self_signed_cert CN='test.mysite.org'
     '''
 
     if not os.path.exists('{0}/{1}/certs/'.format(_cert_base_path(), tls_dir)):
