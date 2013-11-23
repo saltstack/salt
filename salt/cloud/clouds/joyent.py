@@ -808,10 +808,24 @@ def avail_images():
 
         salt-cloud --list-images
     '''
-    rcode, items = query2(command='/my/datasets')
-    if rcode not in VALID_RESPONSE_CODES:
-        return {}
-    return key_list(items=items)
+    img_url = 'https://images.joyent.com/images'
+    request = urllib2.Request(img_url)
+    request.get_method = lambda: 'GET'
+    result = urllib2.urlopen(request)
+    content = result.read()
+    result.close()
+
+    ret = {}
+    for image in yaml.safe_load(content):
+        ret[image['name']] = image
+    return ret
+
+    # It appears the API has changed on us again
+    #rcode, items = query2(command='/my/datasets')
+    #log.debug(rcode)
+    #if rcode not in VALID_RESPONSE_CODES:
+    #    return {}
+    #return key_list(items=items)
 
 
 def avail_sizes():
