@@ -9,7 +9,6 @@ This module has been replaced by the EC2 cloud module, and is no longer
 supported. The documentation shown here is for reference only; it is highly
 recommended to change all usages of this driver over to the EC2 driver.
 
-
 To use the AWS cloud module, using the old cloud providers configuration
 syntax, the following configuration parameters need to be set in the main cloud
 configuration file:
