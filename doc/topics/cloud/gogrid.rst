@@ -25,8 +25,6 @@ in the configuration file to enable interfacing with GoGrid:
     # Note: This example is for /etc/salt/cloud.providers or any file in the
     # /etc/salt/cloud.providers.d/ directory.
 
-.. code-block:: yaml
-
     my-gogrid-config:
       provider: gogrid
       apikey: asdff7896asdh789

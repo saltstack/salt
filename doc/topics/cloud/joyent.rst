@@ -24,8 +24,6 @@ send the provisioning commands up to the freshly created virtual machine.
     # Note: This example is for /etc/salt/cloud.providers or any file in the
     # /etc/salt/cloud.providers.d/ directory.
 
-.. code-block:: yaml
-
     my-joyent-config:
         provider: joyent
         user: fred
