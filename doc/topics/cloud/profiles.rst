@@ -63,16 +63,16 @@ Larger Example
 
 .. code-block:: yaml
 
-    rhel_aws:
-        provider: aws
+    rhel_ec2:
+        provider: ec2
         image: ami-e565ba8c
         size: Micro Instance
         script: RHEL6
         minion:
             cheese: edam
 
-    ubuntu_aws:
-        provider: aws
+    ubuntu_ec2:
+        provider: ec2
         image: ami-7e2da54e
         size: Micro Instance
         script: Ubuntu

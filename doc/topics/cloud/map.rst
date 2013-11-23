@@ -78,7 +78,7 @@ A map file may also be used with the various query options:
 .. code-block:: bash
 
     $ salt-cloud -m /path/to/mapfile -Q
-    {'aws': {'web1': {'id': 'i-e6aqfegb',
+    {'ec2': {'web1': {'id': 'i-e6aqfegb',
                          'image': None,
                          'private_ips': [],
                          'public_ips': [],

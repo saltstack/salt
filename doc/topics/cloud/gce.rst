@@ -2,7 +2,7 @@
 Getting Started With Google Compute Engine
 ==========================================
 
-Google Compute Engine (GCE) is Goolge-infrastructure as a service that lets you
+Google Compute Engine (GCE) is Google-infrastructure as a service that lets you
 run your large-scale computing workloads on virtual machines.  This document
 covers how to use Salt Cloud to provision and manage your virtual machines
 hosted within Google's infrastructure.
@@ -14,7 +14,7 @@ at https://cloud.google.com.
 Dependencies
 ============
 * `Libcloud <http://libcloud.apache.org>`_ version 0.14.0-beta3 or greater
-* A Google Cloud Platform account with Copmute Engine enabled
+* A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
 
