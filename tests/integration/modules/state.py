@@ -363,6 +363,67 @@ fi
             'The state "C" in sls syntax.badlist2 is not formed as a list'
         ])
 
+    def test_requisites_require_ordering_and_errors(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result={
+            'cmd_|-A_|-echo A fifth_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo A fifth" run',
+                'result': True},
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True},
+            'cmd_|-C_|-echo C third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo C third" run',
+                'result': True},
+            'cmd_|-D_|-echo D first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo D first" run',
+                'result': True},
+            'cmd_|-E_|-echo E fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo E fourth" run',
+                'result': True},
+            'cmd_|-F_|-echo F_|-run': {
+                '__run_num__': 5,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       foobar: A\n',
+                'result': False},
+            'cmd_|-G_|-echo G_|-run': {
+                '__run_num__': 6,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       cmd: Z\n',
+                'result': False}
+        }
+        result={}
+        ret = self.run_function('state.sls', mods='requisites.require')
+        for item,descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment':descr['comment'],
+                'result':descr['result']
+            }
+        self.assertEqual(expected_result, result)
+        ret = self.run_function('state.sls', mods='requisites.require_error1')
+        self.assertEqual(ret, [
+            'Cannot extend ID W in "base:requisites.require_error1".'
+            + ' It is not part of the high state.'
+        ])
+        # commented until a fix is made for issue #8772
+        #ret = self.run_function('state.sls', mods='requisites.require_error2')
+        #self.assertEqual(ret, [
+        #    'Cannot extend state foobar for ID A in "base:requisites.require_error2".'
+        #    + ' It is not part of the high state.'
+        #])
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
         try:
