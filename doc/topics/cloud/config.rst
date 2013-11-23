@@ -497,9 +497,9 @@ the API Access tab.
 .. code-block:: yaml
 
     my-digitalocean-config:
+      provider: digital_ocean
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-      provider: digital_ocean
       location: New York 1
 
 
