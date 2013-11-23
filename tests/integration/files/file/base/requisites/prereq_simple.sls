@@ -8,7 +8,7 @@
 A:
   cmd.run:
     - name: echo A third
-    # is runing in test mode before C
+    # is running in test mode before C
     # C gets executed first if this states modify something
     - prereq_in:
       - cmd: C
