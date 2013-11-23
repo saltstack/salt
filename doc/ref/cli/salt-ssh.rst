@@ -12,7 +12,7 @@ Synopsis
 Description
 ===========
 
-Salt ssh allows for salt routines to be executed using only ssh for transport
+Salt SSH allows for salt routines to be executed using only SSH for transport
 
 Options
 =======
