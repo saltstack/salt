@@ -310,7 +310,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
     if cidr:
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
-        return ips
+        return addrs
 
 ipaddrs = ip_addrs
 
