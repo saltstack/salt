@@ -27,13 +27,11 @@ send the provisioning commands up to the freshly created virtual machine.
 .. code-block:: yaml
 
     my-joyent-config:
+        provider: joyent
         user: fred
         password: saltybacon
         private_key: /root/joyent.pem
-        provider: joyent
 
-The password needs to be 8 characters and contain lowercase, uppercase and 
-numbers.
 
 Profiles
 ========
@@ -84,7 +82,7 @@ command:
 .. code-block:: bash
 
     # salt-cloud --list-images my-joyent-config
-    techhat-joyent:
+    my-joyent-config:
         ----------
         joyent:
             ----------
