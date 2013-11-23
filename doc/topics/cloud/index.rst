@@ -86,6 +86,11 @@ Miscellaneous Options
 
 * :doc:`Miscellaneous <misc>`
 
+Troubleshooting Steps
+=====================
+
+* :doc:`Troubleshooting <troubleshooting>`
+
 Extending Salt Cloud
 ====================
 
