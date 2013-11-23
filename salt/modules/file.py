@@ -894,15 +894,15 @@ def _get_flags(flags):
 
 
 def replace(path,
-        pattern,
-        repl,
-        count=0,
-        flags=0,
-        bufsize=1,
-        backup='.bak',
-        dry_run=False,
-        search_only=False,
-        show_changes=True,
+            pattern,
+            repl,
+            count=0,
+            flags=0,
+            bufsize=1,
+            backup='.bak',
+            dry_run=False,
+            search_only=False,
+            show_changes=True,
         ):
     '''
     Replace occurances of a pattern in a file
