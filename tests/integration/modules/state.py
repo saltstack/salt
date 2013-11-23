@@ -512,6 +512,16 @@ fi
         #    }
         #self.assertEqual(expected_result_complex, result)
 
+    def test_requisites_use(self):
+        '''
+        Call sls file containing several use_in and use.
+
+        '''
+        # TODO issue #8235 & #8774 some examples are still commented in the test file
+        ret = self.run_function('state.sls', mods='requisites.use')
+        for item,descr in ret.iteritems():
+            self.assertEqual(descr['comment'], 'onlyif execution failed')
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
         try:
