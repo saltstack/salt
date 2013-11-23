@@ -19,6 +19,9 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
+def __virtual__():
+    return True if salt.utils.which('pecl') else False
+
 
 def _pecl(command, defaults=False):
     '''
@@ -66,8 +69,14 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
         return _pecl('{0} install -f {1}'.format(preferred_state, pecls),
                      defaults=defaults)
     else:
-        return _pecl('{0} install {1}'.format(preferred_state, pecls),
+        _pecl('{0} install {1}'.format(preferred_state, pecls),
                      defaults=defaults)
+        installed_pecls = list_()
+        for pecl in installed_pecls:
+            installed_pecl_with_version = '{0}-{1}'.format(pecl, installed_pecls.get(pecl)[0])
+            if pecls in installed_pecl_with_version:
+                return True
+        return False
 
 
 def uninstall(pecls):
