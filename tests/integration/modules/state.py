@@ -456,6 +456,24 @@ fi
                            + '                       foobar: A\n',
                 'result': False}
         }
+        expected_result_complex={
+            'cmd_|-A_|-echo A fourth_|-run': {
+                '__run_num__': 3,
+                'comment':  'Command "echo A fourth" run',
+                'result': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True},
+            'cmd_|-D_|-echo D third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo D third" run',
+                'result': True},
+        }
         result={}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple')
         for item,descr in ret.iteritems():
@@ -481,6 +499,18 @@ fi
             + '                   prereq:\n'
             + '                       foobar: C\n'
         )
+
+        # issue #8211, chaining complex prereq & prereq_in
+        # TODO: Actually this test fails
+        #result={}
+        #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
+        #for item,descr in ret.iteritems():
+        #    result[item] = {
+        #        '__run_num__': descr['__run_num__'],
+        #        'comment':descr['comment'],
+        #        'result':descr['result']
+        #    }
+        #self.assertEqual(expected_result_complex, result)
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
