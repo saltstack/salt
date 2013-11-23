@@ -2940,6 +2940,7 @@ def grep(path,
         salt '*' file.grep /etc/passwd nobody
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i"
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i -B2"
+        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr " -i -l"
     '''
     if args:
         options = ' '.join(args)
@@ -2955,7 +2956,10 @@ def grep(path,
     )
 
 
-    return __salt__['cmd.run_all'](cmd)
+    try:
+        ret = __salt__['cmd.run_all'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
 
-
+    return ret
 
