@@ -424,6 +424,64 @@ fi
         #    + ' It is not part of the high state.'
         #])
 
+    def test_requisites_prereq_simple_ordering_and_errors(self):
+        '''
+        Call sls file containing several prereq_in and prereq.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result_simple={
+            'cmd_|-A_|-echo A third_|-run': {
+                '__run_num__': 2,
+                'comment':  'Command "echo A third" run',
+                'result': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True},
+            'cmd_|-I_|-echo I_|-run': {
+                '__run_num__': 3,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       cmd: Z\n',
+                'result': False},
+            'cmd_|-J_|-echo J_|-run': {
+                '__run_num__': 4,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       foobar: A\n',
+                'result': False}
+        }
+        result={}
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple')
+        for item,descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment':descr['comment'],
+                'result':descr['result']
+            }
+        self.assertEqual(expected_result_simple, result)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_compile_error1')
+        self.assertEqual(
+            ret['cmd_|-B_|-echo B_|-run']['comment'],
+            'The following requisites were not found:\n'
+            + '                   prereq:\n'
+            + '                       foobar: A\n'
+        )
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_compile_error2')
+        self.assertEqual(
+            ret['cmd_|-B_|-echo B_|-run']['comment'],
+            'The following requisites were not found:\n'
+            + '                   prereq:\n'
+            + '                       foobar: C\n'
+        )
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
         try:
