@@ -417,12 +417,20 @@ fi
             'Cannot extend ID W in "base:requisites.require_error1".'
             + ' It is not part of the high state.'
         ])
+
         # commented until a fix is made for issue #8772
+        # TODO: this test actually fails
         #ret = self.run_function('state.sls', mods='requisites.require_error2')
         #self.assertEqual(ret, [
         #    'Cannot extend state foobar for ID A in "base:requisites.require_error2".'
         #    + ' It is not part of the high state.'
         #])
+
+        ret = self.run_function('state.sls', mods='requisites.require_recursion_error1')
+        self.assertEqual(
+            ret,
+            ['A recursive requisite was found, SLS "requisites.require_recursion_error1" ID "B" ID "A"']
+        )
 
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
@@ -511,6 +519,14 @@ fi
         #        'result':descr['result']
         #    }
         #self.assertEqual(expected_result_complex, result)
+
+        # issue #8210 : prereq recursion undetected
+        # TODO: this test fails
+        #ret = self.run_function('state.sls', mods='requisites.prereq_recursion_error')
+        #self.assertEqual(
+        #    ret,
+        #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
+        #)
 
     def test_requisites_use(self):
         '''
