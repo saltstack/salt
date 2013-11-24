@@ -40,6 +40,7 @@ SoftLayer.
 * :doc:`Getting Started With Linode <linode>`
 * :doc:`Getting Started With Joyent <joyent>`
 * :doc:`Getting Started With Parallels <parallels>`
+* :doc:`Getting Started With OpenStack <openstack>`
 * :doc:`Getting Started With Rackspace <rackspace>`
 * :doc:`Getting Started With SoftLayer <softlayer>`
 
