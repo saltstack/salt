@@ -1518,7 +1518,9 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
+        current_umask = os.umask(63)
         shutil.copyfile(src, dst)
+        os.umask = current_umask
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
