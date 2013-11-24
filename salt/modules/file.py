@@ -1518,7 +1518,7 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
-        salt.utils.copyfile(src, dst)
+        shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
@@ -1916,12 +1916,6 @@ def check_perms(name,
                     )
                 else:
                     ret['changes']['mode'] = mode
-    else:
-        # Use umask to determine correct perms
-        current_umask = os.umask(0)
-        os.chmod(name, 0666 - current_umask)
-        os.umask(current_umask)
-
     # user/group changes if needed, then check if it worked
     if user:
         if user != perms['luser']:
@@ -2365,10 +2359,12 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
+            current_umask = os.umask(63)
             salt.utils.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
+            os.umask(current_umask)
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
