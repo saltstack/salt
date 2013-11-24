@@ -894,15 +894,15 @@ def _get_flags(flags):
 
 
 def replace(path,
-        pattern,
-        repl,
-        count=0,
-        flags=0,
-        bufsize=1,
-        backup='.bak',
-        dry_run=False,
-        search_only=False,
-        show_changes=True,
+            pattern,
+            repl,
+            count=0,
+            flags=0,
+            bufsize=1,
+            backup='.bak',
+            dry_run=False,
+            search_only=False,
+            show_changes=True,
         ):
     '''
     Replace occurances of a pattern in a file
@@ -971,8 +971,10 @@ def replace(path,
         pre_group = get_group(path)
         pre_mode = __salt__['config.manage_mode'](get_mode(path))
     for line in fileinput.input(path,
-            inplace=not dry_run, backup=False if dry_run else backup,
-            bufsize=bufsize, mode='rb'):
+                                inplace=not dry_run,
+                                backup=False if dry_run else backup,
+                                bufsize=bufsize,
+                                mode='rb'):
 
         if search_only:
             # Just search; bail as early as a match is found

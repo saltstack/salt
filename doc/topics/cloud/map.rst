@@ -13,17 +13,17 @@ machines to make from said profile:
 .. code-block:: yaml
 
     fedora_small:
-        - web1
-        - web2
-        - web3
+      - web1
+      - web2
+      - web3
     fedora_high:
-        - redis1
-        - redis2
-        - redis3
+      - redis1
+      - redis2
+      - redis3
     cent_high:
-        - riak1
-        - riak2
-        - riak3
+      - riak1
+      - riak2
+      - riak3
 
 This map file can then be called to roll out all of these virtual machines. Map
 files are called from the salt-cloud command with the -m option:
@@ -60,25 +60,25 @@ A map file can include grains and minion configuration options:
 .. code-block:: yaml
 
     fedora_small:
-        - web1:
-            minion:
-                log_level: debug
-                grains:
-                    cheese: tasty
-                    omelet: du fromage
-        - web2:
-            minion:
-                log_level: warn
-                grains:
-                    cheese: more tasty
-                    omelet: with peppers
+      - web1:
+          minion:
+            log_level: debug
+          grains:
+            cheese: tasty
+            omelet: du fromage
+      - web2:
+          minion:
+            log_level: warn
+          grains:
+            cheese: more tasty
+            omelet: with peppers
 
 A map file may also be used with the various query options:
 
 .. code-block:: bash
 
     $ salt-cloud -m /path/to/mapfile -Q
-    {'aws': {'web1': {'id': 'i-e6aqfegb',
+    {'ec2': {'web1': {'id': 'i-e6aqfegb',
                          'image': None,
                          'private_ips': [],
                          'public_ips': [],

@@ -25,7 +25,7 @@ The following is a list of actions currently supported by salt-cloud:
 
     all providers:
         - reboot
-    aws:
+    ec2:
         - start
         - stop
     joyent:

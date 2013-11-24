@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+Read tops data from a reclass database
+
 .. |reclass| replace:: **reclass**
 
 This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
