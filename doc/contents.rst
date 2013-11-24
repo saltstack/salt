@@ -1,5 +1,5 @@
 ======================
-Full Table of Contents
+Salt Table of Contents
 ======================
 
 .. toctree::
