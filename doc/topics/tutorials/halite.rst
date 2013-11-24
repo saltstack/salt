@@ -210,7 +210,19 @@ module:
 
     salt '*' tls.create_self_signed_cert test 
 
+<<<<<<< HEAD
+You can use ``salt-call`` to create a self-signed cert on the box running
+Halite. That way you can create the cert directly on the Halite box without
+having to go through the master.
+
+.. note::
+
+    The following command requires that you have the ``salt-minion`` package
+    installed.
+
+=======
 You can also use ``salt-call`` to create a self-signed cert.
+>>>>>>> upstream/develop
 .. code-block:: bash
 
     salt-call tls.create_self_signed_cert tls

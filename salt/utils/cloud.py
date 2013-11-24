@@ -531,8 +531,13 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
 
             root_cmd(
+<<<<<<< HEAD:salt/utils/cloud.py
+                '[ ! -d {0} ] && (mkdir -p {0}; chown 700 {0}) || '
+                'echo "Directory {0!r} already exists..."'.format(tmp_dir),
+=======
                 '[ ! -d {0} ] && (mkdir -p {0}; chmod 700 {0}) || '
                 'echo "Directory {0} already exists..."'.format(tmp_dir),
+>>>>>>> upstream/develop:salt/utils/cloud.py
                 tty, sudo, **kwargs
             )
             if sudo:

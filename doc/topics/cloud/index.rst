@@ -29,6 +29,14 @@ Getting Started
 
 * :doc:`Installing salt cloud <install/index>`
 
+<<<<<<< HEAD
+Some quick guides covering getting started with Amazon AWS, Google Compute
+Engine, Parallels, Rackspace, and Softlayer.
+
+* :doc:`Getting Started With AWS <aws>`
+* :doc:`Getting Started With Google Compute Engine <gce>`
+* :doc:`Getting Started With Parallels <parallels>`
+=======
 Some quick guides covering getting started with Amazon EC2, Digital Ocean,
 GoGrid, Google Compute Engine, Linode, Joyent, Parallels, Rackspace, and
 SoftLayer.
@@ -41,6 +49,7 @@ SoftLayer.
 * :doc:`Getting Started With Joyent <joyent>`
 * :doc:`Getting Started With Parallels <parallels>`
 * :doc:`Getting Started With OpenStack <openstack>`
+>>>>>>> upstream/develop
 * :doc:`Getting Started With Rackspace <rackspace>`
 * :doc:`Getting Started With SoftLayer <softlayer>`
 
