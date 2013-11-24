@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Read tops data from a mongodb collection.
+Read tops data from a mongodb collection
 
 This module will load tops data from a mongo collection. It uses the node's id
 for lookups.

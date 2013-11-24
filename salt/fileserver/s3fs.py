@@ -419,7 +419,7 @@ def _refresh_buckets_cache_file(cache_file):
             environments = set(environments)
 
             # pull out the files for the environment
-            for env in environments:
+            for saltenv in environments:
                 # grab only files/dirs that match this saltenv
                 env_files = filter(lambda k: k['Key'].startswith(saltenv), files)
 
