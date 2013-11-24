@@ -4,6 +4,7 @@ Tests for the file state
 
 # Import python libs
 import os
+import glob
 import shutil
 import tempfile
 
@@ -884,7 +885,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - marker_start: "#-- start salt managed zonestart -- PLEASE, DO NOT EDIT"',
             '    - marker_end: "#-- end salt managed zonestart --"',
             "    - content: ''",
-            '    - append_if_not_found: True',
+            '    - prepend_if_not_found: True',
             "    - backup: '.bak'",
             '    - show_changes: True',
             '',
@@ -895,20 +896,21 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - marker_end: "#-- end salt managed zoneend --"',
             "    - content: ''",
             '    - append_if_not_found: True',
-            "    - backup: '.bak'",
+            "    - backup: '.bak2'",
             '    - show_changes: True',
             '']
         open(template_path, 'w').write(
                 '\n'.join(sls_template).format(testcase_filedest))
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
-            self.assertSaltTrueReturn(ret)
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
             self.assertEqual(
-                ['#',
-                 '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
                  'foo',
                  '',
                  '#-- end salt managed zonestart --',
+                 '#',
                  '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
                  'bar',
                  '',
@@ -919,6 +921,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             if os.path.isdir(testcase_filedest):
                 os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
 
 
 if __name__ == '__main__':
