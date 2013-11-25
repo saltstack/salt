@@ -676,6 +676,22 @@ fi
             }
         self.assertEqual(expected_result_simple, result)
 
+        # same test, but not using lists in yaml syntax
+        # TODO: issue #8235, prereq ignored when not used in list syntax
+        # Currently fails badly with :
+        # TypeError encountered executing state.sls: string indices must be integers, not str.
+        #result={}
+        #expected_result_simple.pop('cmd_|-I_|-echo I_|-run')
+        #expected_result_simple.pop('cmd_|-J_|-echo J_|-run')
+        #ret = self.run_function('state.sls', mods='requisites.prereq_simple_nolist')
+        #for item,descr in ret.iteritems():
+        #    result[item] = {
+        #        '__run_num__': descr['__run_num__'],
+        #        'comment':descr['comment'],
+        #        'result':descr['result']
+        #    }
+        #self.assertEqual(expected_result_simple, result)
+
         result={}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
         for item,descr in ret.iteritems():
@@ -685,6 +701,13 @@ fi
                 'result':descr['result']
             }
         self.assertEqual(expected_result_simple2, result)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
+        self.assertEqual(
+            ret,
+            ['Cannot extend ID Z in "base:requisites.prereq_error_nolist".'
+            + ' It is not part of the high state.']
+        )
 
         ret = self.run_function('state.sls', mods='requisites.prereq_compile_error1')
         self.assertEqual(
