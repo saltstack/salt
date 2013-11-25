@@ -1011,17 +1011,9 @@ def vm_profiles_config(path,
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
-    try:
-        overrides = salt.config.load_config(
-            path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
-        )
-    except TypeError:
-        log.warning(
-            'Salt version is lower than 0.16.0, as such, loading '
-            'configuration from the {0!r} environment variable will '
-            'fail'.format(env_var)
-        )
-        overrides = salt.config.load_config(path, env_var)
+    overrides = salt.config.load_config(
+        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
+    )
 
     default_include = overrides.get(
         'default_include', defaults['default_include']
@@ -1158,17 +1150,9 @@ def cloud_providers_config(path,
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
-    try:
-        overrides = salt.config.load_config(
-            path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
-        )
-    except TypeError:
-        log.warning(
-            'Salt version is lower than 0.16.0, as such, loading '
-            'configuration from the {0!r} environment variable will '
-            'fail'.format(env_var)
-        )
-        overrides = salt.config.load_config(path, env_var)
+    overrides = salt.config.load_config(
+        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+    )
 
     default_include = overrides.get(
         'default_include', defaults['default_include']
