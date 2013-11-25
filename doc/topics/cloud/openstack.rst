@@ -8,7 +8,7 @@ OpenStack instances.
 
 * Using the new format, set up the cloud configuration at 
   ``/etc/salt/cloud.providers`` or 
-  ``/etc/salt/cloud.providers.d/opestack.conf``:
+  ``/etc/salt/cloud.providers.d/openstack.conf``:
 
 .. code-block:: yaml
 
