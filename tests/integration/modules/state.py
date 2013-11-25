@@ -767,6 +767,25 @@ fi
         for item,descr in ret.iteritems():
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
+        # TODO: issue #8802 : use recursions undetected
+        #ret = self.run_function('state.sls', mods='requisites.use_recursion')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion"'
+        #    + ' ID "B" ID "A"'
+        #])
+
+        #ret = self.run_function('state.sls', mods='requisites.use_recursion2')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion2"'
+        #    + ' ID "C" ID "A"'
+        #])
+
+        #ret = self.run_function('state.sls', mods='requisites.use_auto_recursion')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion"'
+        #    + ' ID "A" ID "A"'
+        #])
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
         try:
