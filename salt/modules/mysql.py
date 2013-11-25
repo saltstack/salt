@@ -862,6 +862,7 @@ def user_chpass(user,
                 password=None,
                 password_hash=None,
                 allow_passwordless=False,
+                unix_socket=None,
                 **connection_args):
     '''
     Change password for a MySQL user
@@ -919,6 +920,11 @@ def user_chpass(user,
     cur = dbc.cursor()
     qry = ('UPDATE mysql.user SET password={0} WHERE User={1!r} AND '
            'Host = {2!r};'.format(password_sql, user, host))
+    if salt.utils.is_true(allow_passwordless) and salt.utils.is_true(unix_socket):
+        if host == 'localhost':
+            qry += ' IDENTIFIED VIA unix_socket'
+        else:
+            log.error('Auth via unix_socket can be set only for host=localhost')
     log.debug('Query: {0}'.format(qry))
     try:
         result = cur.execute(qry)
