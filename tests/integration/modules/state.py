@@ -537,10 +537,22 @@ fi
                 'result':descr['result']
             }
         self.assertEqual(expected_result, result)
+
         ret = self.run_function('state.sls', mods='requisites.require_error1')
         self.assertEqual(ret, [
             'Cannot extend ID W in "base:requisites.require_error1".'
             + ' It is not part of the high state.'
+        ])
+
+        # issue #8235
+        # FIXME: Why is require enforcing list syntax while require_in does not?
+        # And why preventing it?
+        # Currently this state fails, should return C/B/A
+        result={}
+        ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
+        self.assertEqual(ret, [
+            'The require or watch statement in state "B" in sls '
+          + '"requisites.require_simple_nolist" needs to be formed as a list'
         ])
 
         # commented until a fix is made for issue #8772
@@ -584,7 +596,7 @@ fi
                 'result':descr['result']
             }
         self.assertEqual(expected_result, result)
-        
+
         # TODO: not done
         #ret = self.run_function('state.sls', mods='requisites.fullsls_require_in')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
