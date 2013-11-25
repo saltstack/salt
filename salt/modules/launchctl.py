@@ -53,6 +53,7 @@ def _available_services():
                         # Follow symbolic links of files in _launchd_paths
                         true_path = os.path.realpath(file_path)
                         plist = plistlib.readPlist(true_path)
+
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
