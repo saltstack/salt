@@ -788,8 +788,15 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             'Helium',
             'The support for `vm_config` has been deprecated and will be '
             'removed in Salt Helium. Please use `profiles_config`.'
+            'Please update the could configuration file(s).'
+
         )
         overrides['profiles_config'] = overrides.pop('vm_config')
+
+    if path:
+        config_dir = os.path.dirname(path)
+    else:
+        config_dir = syspaths.CONFIG_DIR
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -805,6 +812,34 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
+
+    # The includes have been evaluated, let's see if master, providers and
+    # profiles configuration settings have been included and if not, set the
+    # default value
+    if 'master_config' in overrides and master_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        master_config_path = overrides['master_config']
+    elif 'master_config' not in overrides and not master_config \
+                                                and not master_config_path:
+        # The configuration setting is not being provided in the main cloud
+        # configuration file, and
+        master_config_path = os.path.join(config_dir, 'master')
+
+    if 'providers_config' in overrides and providers_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        providers_config_path = overrides['providers_config']
+    elif 'providers_config' not in overrides and not providers_config \
+                                                and not providers_config_path:
+        providers_config_path = os.path.join(config_dir, 'cloud.providers')
+
+    if 'vm_config' in overrides and vm_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        vm_config_path = overrides['vm_config']
+    elif 'vm_config' not in overrides and not vm_config and not vm_config_path:
+        providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
     # Prepare the deploy scripts search path
     deploy_scripts_search_path = overrides.get(
@@ -831,7 +866,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # It's not a directory? Remove it from the search path
         deploy_scripts_search_path.pop(idx)
 
-    # Add the provided scripts directory to the search path
+    # Add the built-in scripts directory to the search path(last resort)
     deploy_scripts_search_path.append(
         os.path.abspath(
             os.path.join(
