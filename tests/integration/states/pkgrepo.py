@@ -47,4 +47,4 @@ class PkgrepoTest(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(PkgTest)
+    run_tests(PkgrepoTest)
