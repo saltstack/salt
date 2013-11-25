@@ -50,6 +50,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files will be already in XML format
                     with open(file_path):
+                        # Follow symbolic links of files in _launchd_paths
                         true_path = os.path.realpath(file_path)
                         plist = plistlib.readPlist(true_path)
                 except Exception:
