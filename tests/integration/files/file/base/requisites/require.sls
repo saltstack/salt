@@ -1,3 +1,18 @@
+# Complex require/require_in graph
+#
+# Relative order of C>E is given by the definition order
+#
+# D (1) <--+
+#          |
+# B (2) ---+ <-+ <-+ <-+
+#              |   |   |
+# C (3) <--+ --|---|---+
+#          |   |   |
+# E (4) ---|---|---+ <-+
+#          |   |       |
+# A (5) ---+ --+ ------+
+#
+
 A:
   cmd.run:
     - name: echo A fifth
