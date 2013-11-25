@@ -19,6 +19,7 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     return True if salt.utils.which('pecl') else False
 
