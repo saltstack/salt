@@ -1317,7 +1317,9 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
+        current_umask = os.umask(63)
         shutil.copyfile(src, dst)
+        os.umask(current_umask)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
@@ -2010,10 +2012,12 @@ def manage_file(name,
 
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
+                current_umask = os.umask(54)
                 salt.utils.copyfile(sfn,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
+                os.umask(current_umask)
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
@@ -2048,10 +2052,12 @@ def manage_file(name,
 
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
+                    current_umask = os.umask(54)
                     salt.utils.copyfile(tmp,
                                         name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
+                    os.umask(current_umask)
                 except IOError:
                     __clean_tmp(tmp)
                     return _error(
@@ -2147,11 +2153,13 @@ def manage_file(name,
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
+            current_umask = os.umask(54)
             salt.utils.copyfile(sfn,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
             __clean_tmp(sfn)
+            os.umask(current_umask)
 
         # Check and set the permissions if necessary
         ret, perms = check_perms(name, ret, user, group, mode)
