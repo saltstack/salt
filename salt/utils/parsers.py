@@ -946,7 +946,7 @@ class CloudConfigMixIn(object):
         )
         group.add_option(
             '-C', '--cloud-config',
-            default='/etc/salt/cloud',
+            default=os.path.join(syspaths.CONFIG_DIR, 'cloud'),
             help='The location of the salt-cloud config file. Default: %default'
         )
         group.add_option(
@@ -2073,7 +2073,7 @@ class SaltCloudParser(OptionParser,
     _default_logging_level_ = 'info'
     _logfile_config_setting_name_ = 'log_file'
     _loglevel_config_setting_name_ = 'log_level_logfile'
-    _default_logging_logfile_ = '/var/log/salt/cloud'
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
 
     def print_versions_report(self, file=sys.stdout):
         print >> file, '\n'.join(

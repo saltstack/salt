@@ -377,7 +377,6 @@ DEFAULT_MASTER_OPTS = {
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
-    'conf_dir': '/etc/salt',
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -391,7 +390,7 @@ CLOUD_CONFIG_DEFAULTS = {
     # Custom deploy scripts
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
-    'log_file': '/var/log/salt/cloud',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'cloud'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -816,7 +815,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 # use the value from the cloud config file
                 'master_config',
                 # if not found, use the default path
-                '/etc/salt/master'
+                os.path.join(syspaths.CONFIG_DIR, 'master')
             )
         )
     elif master_config_path is not None and master_config is None:
@@ -840,7 +839,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'providers_config',
             # if not found, use the default path
-            '/etc/salt/cloud.providers'
+            os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
         )
 
     if vm_config_path is not None and vm_config is not None:
@@ -852,7 +851,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'vm_config',
             # if not found, use the default path
-            '/etc/salt/cloud.profiles'
+            os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
         )
 
     # Apply the salt-cloud configuration
@@ -878,9 +877,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 raise salt.cloud.exceptions.SaltCloudConfigError(
                     'Do not mix the old cloud providers configuration with '
                     'the new one. The providers configuration should now go '
-                    'in the file `/etc/salt/cloud.providers` or a separate '
-                    '`*.conf` file within `cloud.providers.d/` which is '
-                    'relative to `/etc/salt/cloud.providers`.'
+                    'in the file `{0}` or a separate `*.conf` file within '
+                    '`cloud.providers.d/` which is relative to `{0}`.'.format(
+                        os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+                    )
                 )
         # No exception was raised? It's the old configuration alone
         providers_config = opts['providers']
@@ -1013,7 +1013,7 @@ def vm_profiles_config(path,
 
     try:
         overrides = salt.config.load_config(
-            path, env_var, '/etc/salt/cloud.profiles'
+            path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
         )
     except TypeError:
         log.warning(
@@ -1160,7 +1160,7 @@ def cloud_providers_config(path,
 
     try:
         overrides = salt.config.load_config(
-            path, env_var, '/etc/salt/cloud.providers'
+            path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
         )
     except TypeError:
         log.warning(
