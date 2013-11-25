@@ -403,6 +403,32 @@ fi
                 'comment': 'Command "echo E fourth" run',
                 'result': True}
         }
+        expected_req_use_result={
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo A" run',
+                'result': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo B" run',
+                'result': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo C" run',
+                'result': True},
+            'cmd_|-D_|-echo D_|-run': {
+                '__run_num__': 5,
+                'comment': 'Command "echo D" run',
+                'result': True},
+            'cmd_|-E_|-echo E_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo E" run',
+                'result': True},
+            'cmd_|-F_|-echo F_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo F" run',
+                'result': True}
+        }
         result={}
         ret = self.run_function('state.sls', mods='requisites.mixed_simple')
         for item,descr in ret.iteritems():
@@ -448,6 +474,19 @@ fi
         #        'result':descr['result']
         #    }
         #self.assertEqual(expected_result, result)
+
+        # issue #8796: use does not inherit require
+        # TODO: this test contains actually requires duplication to work
+        # that shoudl be removed when use will be able to inherit require instructions
+        result={}
+        ret = self.run_function('state.sls', mods='requisites.require_and_use')
+        for item,descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment':descr['comment'],
+                'result':descr['result']
+            }
+        self.assertEqual(expected_req_use_result, result)
 
     def test_requisites_require_ordering_and_errors(self):
         '''
