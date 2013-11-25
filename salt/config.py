@@ -272,7 +272,7 @@ DEFAULT_MINION_OPTS = {
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
-    'pub_hwm': 100,
+    'pub_hwm': 1000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
