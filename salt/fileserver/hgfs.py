@@ -46,10 +46,16 @@ def __virtual__():
     Only load if mercurial is available
     '''
     if not isinstance(__opts__['hgfs_remotes'], list):
+        log.error('Mercurial fileserver backend is enabled in configuration '
+                  'but could not be loaded. Did you specify `hgfs_remotes` as a list? It is required.')
         return False
     if not isinstance(__opts__['hgfs_root'], str):
+        log.error('Mercurial fileserver backend is enabled in configuration '
+                  'but could not be loaded. Did you specify `hgfs_root` as a string? It is required.')
         return False
     if not isinstance(__opts__['hgfs_branch_method'], str):
+        log.error('Mercurial fileserver backend is enabled in configuration'
+                  'but could not be loaded. Did you specify `hgfs_branch_method` as a string? It is required')
         return False
     if not 'hg' in __opts__['fileserver_backend']:
         return False
