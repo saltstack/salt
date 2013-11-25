@@ -10,9 +10,6 @@ import logging
 # Import salt libs
 import salt.utils
 
-__opts__ = {}
-__pillar__ = {}
-
 __func_alias__ = {
     'list_': 'list'
 }
@@ -74,7 +71,8 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
                      defaults=defaults)
         installed_pecls = list_()
         for pecl in installed_pecls:
-            installed_pecl_with_version = '{0}-{1}'.format(pecl, installed_pecls.get(pecl)[0])
+            installed_pecl_with_version = '{0}-{1}'.format(pecl,
+                                                  installed_pecls.get(pecl)[0])
             if pecls in installed_pecl_with_version:
                 return True
         return False
