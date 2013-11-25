@@ -27,6 +27,10 @@ class PkgrepoTest(integration.ModuleCase,
         This is a destructive test as it adds a repository.
         '''
         ret = self.run_function('state.sls', mods='pkgrepo.managed')
+        # If the below assert fails then no states were run, and the SLS in
+        # tests/integration/files/file/base/pkgrepo/managed.sls needs to be
+        # corrected.
+        self.assertReturnNonEmptySaltType(ret)
         for state_id, state_result in ret.iteritems():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
@@ -38,6 +42,10 @@ class PkgrepoTest(integration.ModuleCase,
         above test.
         '''
         ret = self.run_function('state.sls', mods='pkgrepo.absent')
+        # If the below assert fails then no states were run, and the SLS in
+        # tests/integration/files/file/base/pkgrepo/absent.sls needs to be
+        # corrected.
+        self.assertReturnNonEmptySaltType(ret)
         for state_id, state_result in ret.iteritems():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
