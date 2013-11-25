@@ -7,7 +7,6 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    requires_system_grains
 )
 ensure_in_syspath('../../')
 
@@ -19,12 +18,11 @@ import salt.utils
 class PkgrepoTest(integration.ModuleCase,
                   integration.SaltReturnAssertsMixIn):
     '''
-    pkgrepo.managed state tests
+    pkgrepo state tests
     '''
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkgrepo_01_managed(self, grains=None):
+    def test_pkgrepo_01_managed(self):
         '''
         This is a destructive test as it adds a repository.
         '''
@@ -34,8 +32,7 @@ class PkgrepoTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkgrepo_02_absent(self, grains=None):
+    def test_pkgrepo_02_absent(self):
         '''
         This is a destructive test as it removes the repository added in the
         above test.
