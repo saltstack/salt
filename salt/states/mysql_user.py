@@ -116,7 +116,7 @@ def present(name,
             ret['result'] = False
             return ret
         else:
-            if __salt__['mysql.user_exists'](name, host, passwordless=True, unix_socket=unix_socket
+            if __salt__['mysql.user_exists'](name, host, passwordless=True, unix_socket=unix_socket,
                                              **connection_args):
                 ret['comment'] += ' with passwordless login'
                 return ret
