@@ -159,7 +159,7 @@ def present(name,
 
         if __salt__['mysql.user_chpass'](name, host,
                                          password, password_hash,
-                                         allow_passwordless,
+                                         allow_passwordless, unix_socket,
                                          **connection_args):
             ret['comment'] = \
                 'Password for user {0}@{1} has been ' \
