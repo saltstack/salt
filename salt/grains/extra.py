@@ -11,6 +11,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def shell():
     '''
     Return the default shell to use on this system
