@@ -8,7 +8,7 @@ OpenStack instances.
 
 * Using the new format, set up the cloud configuration at 
   ``/etc/salt/cloud.providers`` or 
-  ``/etc/salt/cloud.providers.d/rackspace.conf``:
+  ``/etc/salt/cloud.providers.d/opestack.conf``:
 
 .. code-block:: yaml
 
@@ -18,7 +18,7 @@ OpenStack instances.
       minion:
         master: saltmaster.example.com
 
-      # Configure Rackspace using the OpenStack plugin
+      # Configure the OpenStack driver
       #
       identity_url: http://identity.youopenstack.com/v2.0/
       compute_name: nova
@@ -26,7 +26,7 @@ OpenStack instances.
 
       compute_region: RegionOne
 
-      # Configure Rackspace authentication credentials
+      # Configure Openstack authentication credentials
       #
       user: myname
       password: 123456
