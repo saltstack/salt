@@ -147,7 +147,7 @@ typically also include a hard-coded default.
 
       # A 'size', in GCE terms, refers to the instance's 'machine type'.  See
       # the on-line documentation for a complete list of GCE machine types.
-      # 
+      #
       # MANDATORY
       #
       size: n1-standard-1
@@ -204,9 +204,9 @@ Instead, another user must be used to run the deploy script using sudo.
       ssh_keyfile: /home/user/.ssh/google_compute_engine
 
 
-show_instance
-=============
-This action is a thin wrapper around --full-query, which displays details on a
+Single instance details
+=======================
+This action is a thin wrapper around ``--full-query``, which displays details on a
 single instance only. In an environment with several machines, this will save a
 user from having to sort through all instance data, just to examine a single
 instance.
@@ -216,7 +216,7 @@ instance.
     salt-cloud -a show_instance myinstance
 
 
-destroy, persistent disks, and metadata
+Destroy, persistent disks, and metadata
 =======================================
 As noted in the provider configuration, it's possible to force the boot
 persistent disk to be deleted when you destroy the instance.  The way that
@@ -230,8 +230,8 @@ Be aware that any GCE instances created with salt cloud will contain this
 custom ``salt-cloud-profile`` metadata entry.
 
 
-list_things
-===========
+List various resources
+======================
 It's also possible to list several GCE resources similar to what can be done
 with other providers.  The following commands can be used to list GCE zones
 (locations), machine types (sizes), and images.
@@ -241,4 +241,3 @@ with other providers.  The following commands can be used to list GCE zones
     salt-cloud --list-locations gce
     salt-cloud --list-sizes gce
     salt-cloud --list-images gce
-
