@@ -1020,7 +1020,7 @@ class CloudConfigMixIn(object):
                 self.options.cloud_config,
                 master_config_path=self.options.master_config,
                 providers_config_path=self.options.providers_config,
-                vm_config_path=self.options.vm_config
+                profiles_config_path=self.options.vm_config
             )
         except salt.cloud.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
