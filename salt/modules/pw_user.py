@@ -243,6 +243,7 @@ def chhome(name, home, persist=False):
         return post_info['home'] == home
     return False
 
+
 def chgroups(name, groups, append=False):
     '''
     Change the groups this user belongs to, add append to append the specified
