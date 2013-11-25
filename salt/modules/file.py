@@ -598,6 +598,10 @@ def sed(path,
     # XXX:dc: Do we really want to always force escaping?
     #
     # Mandate that before and after are strings
+
+    if not os.path.exists(path):
+        return False
+
     before = str(before)
     after = str(after)
     before = _sed_esc(before, escape_all)
