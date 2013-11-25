@@ -597,11 +597,11 @@ def sed(path,
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
     #
-    # Mandate that before and after are strings
 
     if not os.path.exists(path):
         return False
 
+    # Mandate that before and after are strings
     before = str(before)
     after = str(after)
     before = _sed_esc(before, escape_all)
