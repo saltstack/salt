@@ -234,16 +234,14 @@ def chhome(name, home, persist=False):
     pre_info = info(name)
     if home == pre_info['home']:
         return True
-    cmd = 'pw usermod -d {0} '.format(home)
+    cmd = 'pw usermod {0} -d {1}'.format(name, home)
     if persist:
         cmd += ' -m '
-    cmd += name
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
         return post_info['home'] == home
     return False
-
 
 def chgroups(name, groups, append=False):
     '''
