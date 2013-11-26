@@ -304,8 +304,9 @@ def sls(mods,
         env=None,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment, default
-    environment is base
+    Execute a set list of state modules from an environment. The default
+    environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
+    to specify a different environment
 
     CLI Example:
 
@@ -518,7 +519,9 @@ def show_low_sls(mods,
                  env=None,
                  **kwargs):
     '''
-    Display the low data from a specific sls
+    Display the low data from a specific sls. The default environment is
+    ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older) to specify a
+    different environment.
 
     CLI Example:
 
@@ -570,7 +573,8 @@ def show_low_sls(mods,
 def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
-    master
+    master. The default environment is ``base``, use ``saltenv`` (``env`` in
+    Salt 0.17.x and older) to specify a different environment.
 
     CLI Example:
 
