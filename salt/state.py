@@ -1095,7 +1095,7 @@ class State(object):
                                 if '.' in _state:
                                     log.warning(
                                         'Bad requisite syntax in {0} : {1} for {2},'
-                                        + ' requisites should not contain any dot'
+                                        ' requisites should not contain any dot'
                                         .format(rkey,_state,name)
                                     )
                                     _state = _state.split(".")[0]
@@ -1131,7 +1131,7 @@ class State(object):
                                 if '.' in _state:
                                     log.warning(
                                         'Bad requisite syntax in {0} : {1} for {2},'
-                                        + ' requisites should not contain any dot'
+                                        ' requisites should not contain any dot'
                                         .format(rkey,_state,name)
                                     )
                                     _state = _state.split(".")[0]
