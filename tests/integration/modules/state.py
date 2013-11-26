@@ -756,6 +756,8 @@ fi
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected
+        # issue is closed as use does not actually inherit requisites
+        # if chain-use is added after #8774 resolution theses tests would maybe become useful
         #ret = self.run_function('state.sls', mods='requisites.use_recursion')
         #self.assertEqual(ret, [
         #    'A recursive requisite was found, SLS "requisites.use_recursion"'
