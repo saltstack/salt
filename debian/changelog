@@ -1,3 +1,9 @@
+salt (0.17.2-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Manuel Torrinha <mtorrinha86@gmail.com>  Tue, 26 Nov 2013 18:49:24 -0700
+
 salt (0.16.0-1) unstable; urgency=low
 
   * New upstream version
