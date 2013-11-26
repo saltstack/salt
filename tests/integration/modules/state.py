@@ -514,6 +514,12 @@ fi
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
+                'result': False},
+            'cmd_|-H_|-echo H_|-run': {
+                '__run_num__': 7,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       cmd: Z\n',
                 'result': False}
         }
         result={}
