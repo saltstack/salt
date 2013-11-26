@@ -1221,7 +1221,7 @@ class State(object):
             high['__extend__'].append({key: val})
         return self.reconcile_extend(high)
 
-    def call(self, low, chunks, running):
+    def call(self, low, chunks=None, running=None):
         '''
         Call a state directly with the low data structure, verify data
         before processing.
