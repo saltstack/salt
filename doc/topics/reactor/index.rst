@@ -213,12 +213,12 @@ The above command is equivalent to the following command at the CLI:
 
     salt 'haproxy*' state.sls haproxy.refresh_pool 'pillar={new_minion: minionid}'
 
-Finally that data is availabe in the state file using the normal Pillar lookup
-syntax. The following example is grabbing web server names and IP addresses
-from :ref:`Salt Mine <salt-mine>`. If this state is invoked from the Reactor
-then the custom Pillar value from above will be available and the new minion
-will be added to the pool but with the ``disabled`` flag so that HAProxy won't
-yet direct traffic to it.
+Finally, that data is available in the state file using the normal Pillar
+lookup syntax. The following example is grabbing web server names and IP
+addresses from :ref:`Salt Mine <salt-mine>`. If this state is invoked from the
+Reactor then the custom Pillar value from above will be available and the new
+minion will be added to the pool but with the ``disabled`` flag so that HAProxy
+won't yet direct traffic to it.
 
 :file:`/srv/salt/haproxy/refresh_pool.sls`:
 
