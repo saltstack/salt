@@ -35,6 +35,18 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
+Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+convention of using ``*/5`` to have a job run every five minutes. In Salt, this
+looks like:
+
+..code-block:: yaml
+    
+    data > /tmp/crontest:
+        cron.present:
+            - user: root
+            - minute: '*/5'
+
+The job will now run every 5 minutes.
 
 Additionally, the temporal parameters (minute, hour, etc.) can be randomized by
 using ``random`` instead of using a specific value. For example, by using the
