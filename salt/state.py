@@ -1260,7 +1260,7 @@ class State(object):
         )
         inject_globals = {
             # Pass a copy of the state data dictionary
-            '__state__': copy.deepcopy(data),
+            '__low__': copy.deepcopy(data),
         }
 
         if data.get('__prereq__'):

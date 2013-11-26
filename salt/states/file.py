@@ -1928,7 +1928,7 @@ def blockreplace(name,
         # at a time
         deps = _ACCUMULATORS_DEPS.get(name, [])
         filtered = [a for a in deps if
-                    __state__['__id__'] in deps[a] and a in accumulator]
+                    __low__['__id__'] in deps[a] and a in accumulator]
         if not filtered:
             filtered = [a for a in accumulator]
         for acc in filtered:
@@ -2761,15 +2761,15 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __state__.get('require_in', [])
-    watch_in = __state__.get('watch_in', [])
+    require_in = __low__.get('require_in', [])
+    watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
     if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
-            __state__['__sls__'],
-            __state__['__id__']
+            __low__['__sls__'],
+            __low__['__id__']
         )
         return ret
     if isinstance(text, string_types):
