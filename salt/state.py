@@ -1265,8 +1265,8 @@ class State(object):
             # We pass deep copies here because we don't want any misbehaving
             # state module to change these at runtime.
             '__low__': copy.deepcopy(low),
-            '__running__': copy.deepcopy(running),
-            '__lowstate__': copy.deepcopy(chunks)
+            '__running__': copy.deepcopy(running) if running else {},
+            '__lowstate__': copy.deepcopy(chunks) if chunks else {}
         }
 
         if low.get('__prereq__'):
