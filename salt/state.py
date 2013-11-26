@@ -1132,7 +1132,7 @@ class State(object):
                                     log.warning(
                                         'Bad requisite syntax in {0} : {1} for {2},'
                                         ' requisites should not contain any dot'
-                                        .format(rkey ,_state, name)
+                                        .format(rkey, _state, name)
                                     )
                                     _state = _state.split(".")[0]
                                 if key == 'prereq_in':
