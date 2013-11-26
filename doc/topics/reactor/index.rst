@@ -4,8 +4,8 @@ Reactor System
 
 Salt version 0.11.0 introduced the reactor system. The premise behind the
 reactor system is that with Salt's events and the ability to execute commands,
-a logic engine could be put in place to allow events to trigger actions, or 
-more accurately, reactions. 
+a logic engine could be put in place to allow events to trigger actions, or
+more accurately, reactions.
 
 This system binds sls files to event tags on the master. These sls files then
 define reactions. This means that the reactor system has two parts. First, the
@@ -23,10 +23,9 @@ event bus is an open system used for sending information notifying Salt and
 other systems about operations.
 
 The event system fires events with a very specific criteria. Every event has a
-:strong:`tag` which is comprised of a maximum of 20 characters. Event tags
-allow for fast top level filtering of events. In addition to the tag, each
-event has a data structure. This data structure is a dict, which contains
-information about the event.
+:strong:`tag`. Event tags allow for fast top level filtering of events. In
+addition to the tag, each event has a data structure. This data structure is a
+dict, which contains information about the event.
 
 Mapping Events to Reactor SLS Files
 ===================================
@@ -40,8 +39,8 @@ and each event tag has a list of reactor SLS files to be run.
 .. code-block:: yaml
 
     reactor:                           # Master config section "reactor"
-     
-      - 'minion_start':                # Match tag "minion_start"
+
+      - 'salt/minion/*/start':                # Match tag "salt/minion/*/start"
         - /srv/reactor/start.sls       # Things to do when a minion starts
         - /srv/reactor/monitor.sls     # Other things to do
 
@@ -213,12 +212,12 @@ The above command is equivalent to the following command at the CLI:
 
     salt 'haproxy*' state.sls haproxy.refresh_pool 'pillar={new_minion: minionid}'
 
-Finally that data is availabe in the state file using the normal Pillar lookup
-syntax. The following example is grabbing web server names and IP addresses
-from :ref:`Salt Mine <salt-mine>`. If this state is invoked from the Reactor
-then the custom Pillar value from above will be available and the new minion
-will be added to the pool but with the ``disabled`` flag so that HAProxy won't
-yet direct traffic to it.
+Finally, that data is available in the state file using the normal Pillar
+lookup syntax. The following example is grabbing web server names and IP
+addresses from :ref:`Salt Mine <salt-mine>`. If this state is invoked from the
+Reactor then the custom Pillar value from above will be available and the new
+minion will be added to the pool but with the ``disabled`` flag so that HAProxy
+won't yet direct traffic to it.
 
 :file:`/srv/salt/haproxy/refresh_pool.sls`:
 

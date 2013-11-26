@@ -233,6 +233,7 @@ log = logging.getLogger(__name__)
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 _ACCUMULATORS = {}
+_ACCUMULATORS_DEPS = {}
 
 
 def _check_user(user, group):
@@ -1923,12 +1924,21 @@ def blockreplace(name,
 
     if name in _ACCUMULATORS:
         accumulator = _ACCUMULATORS[name]
-        for acc, acc_content in accumulator.iteritems():
+        # if we have multiple accumulators for a file, only apply the one required
+        # at a time
+        deps = _ACCUMULATORS_DEPS.get(name, [])
+        filtered = [a for a in deps if
+                    __low__['__id__'] in deps[a] and a in accumulator]
+        if not filtered:
+            filtered = [a for a in accumulator]
+        for acc in filtered:
+            acc_content = accumulator[acc]
             for line in acc_content:
                 if content == '':
                     content = line
                 else:
                     content += "\n" + line
+
     changes = __salt__['file.blockreplace'](name,
                                        marker_start,
                                        marker_end,
@@ -2751,19 +2761,27 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    if not filter(lambda x: 'file' in x,
-                  kwargs.get('require_in', []) + kwargs.get('watch_in', [])):
+    require_in = __low__.get('require_in', [])
+    watch_in = __low__.get('watch_in', [])
+    deps = require_in + watch_in
+    if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
-            kwargs['__sls__'],
-            kwargs['__id__']
+            __low__['__sls__'],
+            __low__['__id__']
         )
         return ret
     if isinstance(text, string_types):
         text = (text,)
     if filename not in _ACCUMULATORS:
         _ACCUMULATORS[filename] = {}
+    if filename not in _ACCUMULATORS_DEPS:
+        _ACCUMULATORS_DEPS[filename] = {}
+    if name not in _ACCUMULATORS_DEPS[filename]:
+        _ACCUMULATORS_DEPS[filename][name] = []
+    for accumulator in deps:
+        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:

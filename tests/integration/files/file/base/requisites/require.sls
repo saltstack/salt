@@ -23,11 +23,10 @@ B:
     - name: echo B second
     - require_in:
       - cmd: A
-      # waiting for issue #8773 fix
+      # issue #8773
       # this will generate a warning but will still be done
       # right syntax is cmd: C
-      #- cmd.run: C
-      - cmd: C
+      - cmd.run: C
 
 C:
   cmd.run:
@@ -36,12 +35,11 @@ C:
 D:
   cmd.run:
     - name: echo D first
-    # waiting for issue #8773 fix
+    # issue #8773 fix
     # this will generate a warning but will still be done
     # as in B, here testing the non-list form (no '-')
     - require_in:
-        cmd: B
-        # cmd.foo: B
+        cmd.foo: B
 
 E:
   cmd.run:
@@ -63,4 +61,10 @@ G:
     - name: echo G
     - require:
       - cmd: Z
+# will fail with "The following requisites were not found"
+H:
+  cmd.run:
+    - name: echo H
+    - require:
+      - cmd.run: Z
 

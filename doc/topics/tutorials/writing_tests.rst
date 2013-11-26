@@ -8,8 +8,8 @@ Writing Salt Tests
 
 Salt comes with a powerful integration and unit test suite. The test suite
 allows for the fully automated run of integration and/or unit tests from a
-single interface. The integration tests are suprisingly easy to write and can
-be written to be either destructuve or non-destructive.
+single interface. The integration tests are surprisingly easy to write and can
+be written to be either destructive or non-destructive.
 
 Gettign Set Up For Tests
 ========================
@@ -34,11 +34,11 @@ Destructive vs Non-destructive
 ==============================
 
 Since Salt is used to change the settings and behavior of systems often the
-best approach to run tests is to make acctual changes to an underlying system.
+best approach to run tests is to make actual changes to an underlying system.
 This is where the concept of destructive integration tests comes into play.
 Tests can be written to alter the system they are running on. This capability
 is what fills in the gap needed to properly test aspects of system management
-like package instalation.
+like package installation.
 
 To write a destructive test import and use the `destructiveTest` decorator for
 the test method:
