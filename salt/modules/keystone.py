@@ -72,40 +72,24 @@ def auth(profile=None, **connection_args):
     '''
 
     if profile:
-        user = __salt__['config.get']('{0}:keystone.user'.format(profile), 'admin')
-        password = __salt__['config.get']('{0}:keystone.password'.format(profile), 'ADMIN')
-        tenant = __salt__['config.get']('{0}:keystone.tenant'.format(profile), 'admin')
-        tenant_id = __salt__['config.get']('{0}:keystone.tenant_id'.format(profile))
-        auth_url = __salt__['config.get']('{0}:keystone.auth_url'.format(profile),
-                                             'http://127.0.0.1:35357/v2.0/')
-        insecure = __salt__['config.get']('{0}:keystone.insecure'.format(profile), False)
-        token = __salt__['config.get']('{0}:keystone.token'.format(profile))
-        endpoint = __salt__['config.get']('{0}:keystone.endpoint'.format(profile),
-                                             'http://127.0.0.1:35357/v2.0')
-    if connection_args:
-        user = connection_args.get('connection_user', 'admin')
-        password = connection_args.get('connection_pass', 'ADMIN')
-        tenant = connection_args.get('connection_tenant', 'admin')
-        tenant_id = connection_args.get('connection_tenant_id')
-        auth_url = connection_args.get('connection_auth_url',
-                                       'http://127.0.0.1:35357/v2.0/')
-        token = connection_args.get('connection_token')
-        insecure = connection_args.get('connection_insecure', False)
-        endpoint = connection_args.get('connection_endpoint',
-                                       'http://127.0.0.1:35357/v2.0/')
+        prefix = profile + ":keystone."
     else:
-        user = __salt__['config.get']('keystone.user', 'admin')
-        password = __salt__['config.get']('keystone.password', 'ADMIN')
-        tenant = __salt__['config.get']('keystone.tenant', 'admin')
-        tenant_id = __salt__['config.get']('keystone.tenant_id')
-        auth_url = __salt__['config.get']('keystone.auth_url',
-                                             'http://127.0.0.1:35357/v2.0/')
-        insecure = __salt__['config.get']('keystone.insecure', False)
-        token = __salt__['config.get']('keystone.token')
-        endpoint = __salt__['config.get']('keystone.endpoint',
-                                             'http://127.0.0.1:35357/v2.0')
+        prefix = "keystone."
 
-    kwargs = {}
+    # look in connection_args first, then default to config file
+    def get(key, default=None):
+        return connection_args.get('connection_' + key,
+            __salt__['config.get'](prefix + key, default))
+
+    user = get('user', 'admin')
+    password = get('password', 'ADMIN')
+    tenant = get('tenant', 'admin')
+    tenant_id = get('tenant_id')
+    auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0/')
+    insecure = get('insecure', False)
+    token = get('token')
+    endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
+
     if token:
         kwargs = {'token': token,
                   'endpoint': endpoint}
@@ -118,7 +102,7 @@ def auth(profile=None, **connection_args):
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
         if insecure:
-            kwargs[insecure] = True
+            kwargs['insecure'] = True
 
     return client.Client(**kwargs)
 
