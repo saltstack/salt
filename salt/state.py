@@ -1035,7 +1035,7 @@ class State(object):
                     ex_id.add(exc['id'])
         # Now the excludes have been simplified, use them
         if ex_sls:
-            # There are sls excludes, find the associtaed ids
+            # There are sls excludes, find the associated ids
             for name, body in high.items():
                 if name.startswith('__'):
                     continue
@@ -1235,16 +1235,16 @@ class State(object):
             high['__extend__'].append({key: val})
         return self.reconcile_extend(high)
 
-    def call(self, data):
+    def call(self, low, chunks=None, running=None):
         '''
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        errors = self.verify_data(data)
+        errors = self.verify_data(low)
         if errors:
             ret = {
                 'result': False,
-                'name': data['name'],
+                'name': low['name'],
                 'changes': {},
                 'comment': '',
                 }
@@ -1253,26 +1253,37 @@ class State(object):
             ret['__run_num__'] = self.__run_num
             self.__run_num += 1
             format_log(ret)
-            self.check_refresh(data, ret)
+            self.check_refresh(low, ret)
             return ret
 
-        if not data.get('__prereq__'):
+        if not low.get('__prereq__'):
             log.info(
                     'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
-                        data
+                        low
                         )
                     )
 
-        if 'provider' in data:
-            self.load_modules(data)
+        if 'provider' in low:
+            self.load_modules(low)
 
-        state_func_name = '{0[state]}.{0[fun]}'.format(data)
+        state_func_name = '{0[state]}.{0[fun]}'.format(low)
         cdata = salt.utils.format_call(
-            self.states[state_func_name], data,
+            self.states[state_func_name], low,
             initial_ret={'full': state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
-        if data.get('__prereq__'):
+
+        inject_globals = {
+            # Pass a copy of the running dictionary, the low state chunks and
+            # the current state dictionaries.
+            # We pass deep copies here because we don't want any misbehaving
+            # state module to change these at runtime.
+            '__low__': copy.deepcopy(low),
+            '__running__': copy.deepcopy(running) if running else {},
+            '__lowstate__': copy.deepcopy(chunks) if chunks else {}
+        }
+
+        if low.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
         try:
@@ -1287,19 +1298,19 @@ class State(object):
             if cdata['kwargs'].get('env', None) is not None:
                 # User is using a deprecated env setting which was parsed by
                 # format_call
-                saltenv = cdata['kwargs']['env']
-            elif '__env__' in data:
+                inject_globals['__env__'] = cdata['kwargs']['env']
+            elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
-                saltenv = data['__env__']
-            elif 'saltenv' in data:
-                saltenv = data['saltenv']
+                inject_globals['__env__'] = low['__env__']
+            elif 'saltenv' in low:
+                inject_globals['__env__'] = low['saltenv']
             else:
                 # Let's use the default environment
-                saltenv = 'base'
+                inject_globals['__env__'] = 'base'
 
             with context.func_globals_inject(self.states[cdata['full']],
-                                             __env__=saltenv):
+                                             **inject_globals):
                 ret = self.states[cdata['full']](*cdata['args'],
                                                  **cdata['kwargs'])
                 self.verify_ret(ret)
@@ -1313,24 +1324,24 @@ class State(object):
                     trb)
                 }
         finally:
-            if data.get('__prereq__'):
+            if low.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
             ret.setdefault('warnings', []).extend(cdata['warnings'])
 
-        if 'provider' in data:
+        if 'provider' in low:
             self.load_modules()
 
-        if data.get('__prereq__'):
-            data['__prereq__'] = False
+        if low.get('__prereq__'):
+            low['__prereq__'] = False
             return ret
 
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
-        self.check_refresh(data, ret)
+        self.check_refresh(low, ret)
         return ret
 
     def call_chunks(self, chunks):
@@ -1534,7 +1545,7 @@ class State(object):
                             # Prereq recusive, run this chunk with prereq on
                             if tag not in self.pre:
                                 low['__prereq__'] = True
-                                self.pre[ctag] = self.call(low)
+                                self.pre[ctag] = self.call(low, chunks, running)
                                 return running
                         elif ctag not in running:
                             log.error('Recursive requisite found')
@@ -1552,7 +1563,7 @@ class State(object):
                         return running
             if low.get('__prereq__'):
                 status = self.check_requisite(low, running, chunks)
-                self.pre[tag] = self.call(low)
+                self.pre[tag] = self.call(low, chunks, running)
                 if not self.pre[tag]['changes'] and status == 'change':
                     self.pre[tag]['changes'] = {'watch': 'watch'}
                     self.pre[tag]['result'] = None
@@ -1563,9 +1574,9 @@ class State(object):
                 return running
         elif status == 'met':
             if low.get('__prereq__'):
-                self.pre[tag] = self.call(low)
+                self.pre[tag] = self.call(low, chunks, running)
             else:
-                running[tag] = self.call(low)
+                running[tag] = self.call(low, chunks, running)
         elif status == 'fail':
             running[tag] = {'changes': {},
                             'result': False,
@@ -1573,12 +1584,12 @@ class State(object):
                             '__run_num__': self.__run_num}
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
-            ret = self.call(low)
+            ret = self.call(low, chunks, running)
             if not ret['changes']:
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
-                ret = self.call(low)
+                ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
             running[tag] = {'changes': {},
@@ -1588,9 +1599,9 @@ class State(object):
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
-                self.pre[tag] = self.call(low)
+                self.pre[tag] = self.call(low, chunks, running)
             else:
-                running[tag] = self.call(low)
+                running[tag] = self.call(low, chunks, running)
         if tag in running:
             self.event(running[tag], len(chunks))
         return running
@@ -1722,10 +1733,11 @@ class State(object):
 
 class BaseHighState(object):
     '''
-    The BaseHighState is an abstract base class that is the foundation of running a highstate, extend it and
-    add a self.state object of type State.
+    The BaseHighState is an abstract base class that is the foundation of
+    running a highstate, extend it and add a self.state object of type State.
 
-    When extending this class, please note that self.client and self.matcher should be instantiated and handled.
+    When extending this class, please note that ``self.client`` and
+    ``self.matcher`` should be instantiated and handled.
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
