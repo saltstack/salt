@@ -475,18 +475,6 @@ fi
         #    }
         #self.assertEqual(expected_result, result)
 
-        # issue #8796: use does not inherit require
-        # TODO: this test contains actually requires duplication to work
-        # that shoudl be removed when use will be able to inherit require instructions
-        result={}
-        ret = self.run_function('state.sls', mods='requisites.require_and_use')
-        for item,descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
-            }
-        self.assertEqual(expected_req_use_result, result)
 
     def test_requisites_require_ordering_and_errors(self):
         '''
@@ -768,6 +756,8 @@ fi
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected
+        # issue is closed as use does not actually inherit requisites
+        # if chain-use is added after #8774 resolution theses tests would maybe become useful
         #ret = self.run_function('state.sls', mods='requisites.use_recursion')
         #self.assertEqual(ret, [
         #    'A recursive requisite was found, SLS "requisites.use_recursion"'
