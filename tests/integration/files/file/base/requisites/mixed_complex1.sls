@@ -37,12 +37,10 @@ C:
 D:
   cmd.run:
     - name: echo D first
-    # waiting for issue #8773 fix
+    # issue #8773
     # this will generate a warning but will still be done
-    # as in B, here testing the non-list form (no '-')
     - require_in:
-        cmd: B
-        # cmd.foo: B
+        cmd.foo: B
 
 E:
   cmd.run:

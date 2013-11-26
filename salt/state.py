@@ -1092,6 +1092,13 @@ class State(object):
                                 found = False
                                 if name not in extend:
                                     extend[name] = {}
+                                if '.' in _state:
+                                    log.warning(
+                                        'Bad requisite syntax in {0} : {1} for {2},'
+                                        + ' requisites should not contain any dot'
+                                        .format(rkey,_state,name)
+                                    )
+                                    _state = _state.split(".")[0]
                                 if _state not in extend[name]:
                                     extend[name][_state] = []
                                 extend[name]['__env__'] = body['__env__']
@@ -1121,6 +1128,13 @@ class State(object):
                                     continue
                                 _state = next(iter(ind))
                                 name = ind[_state]
+                                if '.' in _state:
+                                    log.warning(
+                                        'Bad requisite syntax in {0} : {1} for {2},'
+                                        + ' requisites should not contain any dot'
+                                        .format(rkey,_state,name)
+                                    )
+                                    _state = _state.split(".")[0]
                                 if key == 'prereq_in':
                                     # Add prerequired to origin
                                     if id_ not in extend:
