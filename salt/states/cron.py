@@ -39,12 +39,12 @@ Salt also supports running a cron every ``x minutes`` very similarily to the Uni
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
-..code-block:: yaml
-    
-    data > /tmp/crontest:
-        cron.present:
-            - user: root
-            - minute: '*/5'
+.. code-block:: yaml
+
+    date > /tmp/crontest:
+      cron.present:
+        - user: root
+        - minute: '*/5'
 
 The job will now run every 5 minutes.
 
