@@ -25,7 +25,7 @@ class DockerTest(integration.ModuleCase):
     '''
 
     def _get_container_id(self, image_name=None):
-        cmdstring = 'docker ps | grep {}'.format(image_name)
+        cmdstring = 'docker ps | grep {0}'.format(image_name)
         ret_cmdrun = self.run_function('cmd.run_all', cmd=cmdstring)
         ids = []
         for l in ret_cmdrun['stdout'].splitlines():
@@ -41,7 +41,7 @@ class DockerTest(integration.ModuleCase):
         '''
         ret = self.run_function('docker.version')
         ret_cmdrun = self.run_function('cmd.run_all', cmd='docker version | grep "Client version:"')
-        self.assertEqual('Client version: {}'.format(ret['out']['Version']), ret_cmdrun['stdout'])
+        self.assertEqual('Client version: {0}'.format(ret['out']['Version']), ret_cmdrun['stdout'])
 
     def test_build(self):
         '''
@@ -113,13 +113,13 @@ class DockerTest(integration.ModuleCase):
         '''
 
         run_ret = self.run_function('docker.create_container', image='testsuite_image')
-        print "first container: {}".format(run_ret)
+        print "first container: {0}".format(run_ret)
         base_container_id = run_ret['id']
         ret = self.run_function('docker.run_stdout', container=base_container_id, cmd='echo "The cheese shop is now closed." > /tmp/deadcheese')
-        print "second container: {}".format(ret)
+        print "second container: {0}".format(ret)
         run_container_id = ret['id']
         commit_ret = self.run_function('docker.commit', container=base_container_id, repository='testsuite_committed_img', message='This image was created by the testsuite')
-        print "post-commit: {}".format(commit_ret)
+        print "post-commit: {0}".format(commit_ret)
         self.run_function('docker.stop', run_container_id)
         new_container = self.run_function('docker.create_container', image='testsuite_committed_img')
         final_ret = self.run_function('docker.run_stdout', container=new_container['id'], cmd='cat /tmp/cheese')
