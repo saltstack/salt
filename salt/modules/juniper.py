@@ -8,9 +8,15 @@ ALPHA QUALITY code.
 
 # Import python libraries
 import re
+import logging
+
+# Salt libraries
+import salt.roster
 
 # Juniper interface libraries
 # https://github.com/jeremyschulman/py-junos-eznc
+
+
 
 try:
     import jnpr.junos
@@ -19,11 +25,14 @@ try:
 except ImportError:
     HAS_JUNIPER = False
 
+
+
 # Set up logging
-# log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'juniper'
+
 
 def __virtual__():
     '''
@@ -31,6 +40,7 @@ def __virtual__():
     '''
 
     return __virtualname__
+
 
 def _get_conn(user=None, host=None, passwd=None):
 
@@ -44,20 +54,42 @@ def _get_conn(user=None, host=None, passwd=None):
 
         return jdev
 
-def version(user=None, host=None, passwd=None):
+
+def _roster(tgt):
+
+    roster = salt.roster.Roster(opts=__opts__).targets(tgt=tgt, tgt_type='glob')
+    return roster
+
+
+def version(tgt=None, user=None, host=None, passwd=None):
 
     ret = {}
 
-    conn = _get_conn(user=user, host=host, passwd=passwd)
+    hosts = {}
 
-    raw_version = conn.cli('show version')
+    if tgt:
+        hosts = _roster(tgt)
+    else:
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
 
-    matches = re.search('.*Hostname: (.*)\nModel: (.*)\n(.*)\n', raw_version)
-    ret['host-name'] = matches.group(1)
-    ret['model'] = matches.group(2)
+    for hkey in hosts:
+        h = hosts[hkey]
+        single_ret = {}
+        conn = _get_conn(user=h['user'],  host=h['host'], passwd=h['passwd'])
 
-    # Better to use version from facts
-    ret['software-version'] = matches.group(3)
+        raw_version = conn.cli('show version')
+
+        matches = re.search('.*Hostname: (.*)\nModel: (.*)\n(.*)\n', raw_version)
+        single_ret['host-name'] = matches.group(1)
+        single_ret['model'] = matches.group(2)
+
+        # Better to use version from facts
+        single_ret['software-version'] = matches.group(3)
+
+        ret[h['id']] = single_ret
 
     return ret
 
