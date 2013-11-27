@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #/usr/bin/env python
 '''
 The minionswarm script will start a group of salt minions with different ids
