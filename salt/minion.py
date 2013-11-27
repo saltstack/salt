@@ -724,7 +724,6 @@ class Minion(object):
             try:
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
@@ -743,17 +742,17 @@ class Minion(object):
                     ret['return'] = iret
                 else:
                     ret['return'] = return_data
-                ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                    'retcode',
-                    0
-                )
-                ret['success'] = True
+                retcode = sys.modules[func.__module__].__context__.get('retcode', 0)
+                ret['retcode'] = retcode
+                if retcode == 0:
+                    ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for {0!r} not found'.format(
                     function_name
                 )
                 log.debug(msg, exc_info=True)
                 ret['return'] = '{0}: {1}'.format(msg, exc)
+                ret['retcode'] = 1
             except CommandExecutionError as exc:
                 log.error(
                     'A command in {0!r} had a problem: {1}'.format(
@@ -763,6 +762,7 @@ class Minion(object):
                     exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
+                ret['retcode'] = 2
             except SaltInvocationError as exc:
                 log.error(
                     'Problem executing {0!r}: {1}'.format(
@@ -774,6 +774,7 @@ class Minion(object):
                 ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
                 )
+                ret['retcode'] = 3
             except TypeError as exc:
                 trb = traceback.format_exc()
                 aspec = salt.utils.get_function_argspec(
@@ -786,12 +787,15 @@ class Minion(object):
                                                        aspec)
                 log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = msg
+                ret['retcode'] = 4
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
+                ret['retcode'] = 5
         else:
             ret['return'] = '{0!r} is not available.'.format(function_name)
+            ret['retcode'] = 6
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
