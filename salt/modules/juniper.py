@@ -51,6 +51,7 @@ def _get_conn(user=None, host=None, passwd=None):
         jdev.open()
         jdev.bind(cu=jnpr.junos.utils.Config)
         __context__['juniper.conn.{0}.{1}'.format(user, host)] = jdev
+        __context__['juniper.facts.{0}.{1}'.format(user, host)] = jdev.facts
 
         return jdev
 
@@ -94,31 +95,65 @@ def version(tgt=None, user=None, host=None, passwd=None):
     return ret
 
 
-def inventory(user=None, host=None, passwd=None):
+def inventory(tgt=None, user=None, host=None, passwd=None):
 
-    conn = _get_conn(user=user, host=host, passwd=passwd)
+    hosts = {}
 
-    inv = conn.rpc.get_chassis_inventory()
+    if tgt:
+        hosts = _roster(tgt)
+    else:
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
 
-    # Also use facts
-    ret = {}
-    ret['host-name'] = hostname
-    ret['model'] = inv.find('chassis/description').text
-    ret['serial-number'] = inv.find('chassis/serial-number').text
-    ret['host-name'] = inv.find('chassis/host-name').text
+    for hkey in hosts:
+        h = hosts[hkey]
+        single_ret = {}
+
+        conn = _get_conn(user=user, host=host, passwd=passwd)
+
+        inv = conn.rpc.get_chassis_inventory()
+
+        # TODO Also use facts
+        single_ret = {}
+        single_ret['host-name'] = hostname
+        single_ret['model'] = inv.find('chassis/description').text
+        single_ret['serial-number'] = inv.find('chassis/serial-number').text
+        single_ret['host-name'] = inv.find('chassis/host-name').text
+
+        ret[hkey] = single_ret
 
     return ret
 
-def facts(user=None, host=None, passwd=None):
-    conn = _get_conn(user=user, host=host, passwd=passwd)
-    facts = conn.facts
+def facts(tgt=None, user=None, host=None, passwd=None):
 
-    ret = dict()
+    hosts = {}
 
-    ret['facts'] = facts
+    if tgt:
+        hosts = _roster(tgt)
+    else:
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
+
+    for hkey in hosts:
+        h = hosts[hkey]
+        single_ret = {}
+        conn = _get_conn(user=user, host=host, passwd=passwd)
+        facts = conn.facts
+
+        __context__['juniper.facts.{0}.{1}'.format(user, host)] = facts
+
+        single_ret = dict()
+
+        single_ret['facts'] = facts
+        ret['host'] = single_ret
 
     return ret
 
+# TODO add roster support
 def set_hostname(hostname=None, user=None, host=None, passwd=None, commit=True):
 
     conn = _get_conn(user=user, host=host, passwd=passwd)
@@ -140,7 +175,7 @@ def set_hostname(hostname=None, user=None, host=None, passwd=None, commit=True):
 
     return ret
 
-
+# TODO add roster support
 def commit(user=None, host=None, passwd=None):
 
     conn = _get_conn(user=user, host=host, passwd=passwd)
@@ -158,7 +193,7 @@ def commit(user=None, host=None, passwd=None):
 
     return ret
 
-
+# TODO add roster support
 def rollback(user=None, host=None, passwd=None):
 
     conn = _get_conn(user=user, host=host, passwd=passwd)
@@ -175,6 +210,7 @@ def rollback(user=None, host=None, passwd=None):
 
     return ret
 
+# TODO add roster support
 def diff(user=None, host=None, passwd=None):
 
     conn = _get_conn(user=user, host=host, passwd=passwd)
