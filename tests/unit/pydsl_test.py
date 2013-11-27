@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import Python libs
 import os
 import sys

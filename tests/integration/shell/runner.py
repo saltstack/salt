@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Tests for the salt-run command
 '''
@@ -73,7 +75,6 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
 
 
 if __name__ == '__main__':

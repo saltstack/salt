@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 from os.path import join

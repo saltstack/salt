@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import sys
@@ -175,7 +177,7 @@ sys.stdout.write('cheese')
 
         try:
             runas = os.getlogin()
-        except:
+        except:  # pylint: disable=W0702
             # On some distros (notably Gentoo) os.getlogin() fails
             import pwd
             runas = pwd.getpwuid(os.getuid())[0]

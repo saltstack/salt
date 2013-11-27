@@ -103,7 +103,6 @@ class MySQLTestCase(TestCase):
         '''
         self._test_call(mysql.db_tables, 'SHOW TABLES IN testdb', 'testdb')
 
-
     def test_db_exists(self):
         '''
         Test MySQL db_exists function in mysql exec module

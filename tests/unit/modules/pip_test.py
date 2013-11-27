@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import warnings
 
@@ -932,7 +934,6 @@ class PipTestCase(TestCase):
                 runas=None,
                 cwd=None
             )
-
 
     def test_install_deprecated_runas_triggers_warning(self):
         # We *always* want *all* warnings thrown on this module

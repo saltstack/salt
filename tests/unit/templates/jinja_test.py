@@ -200,13 +200,6 @@ class TestGetTemplate(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
-    def test_non_ascii(self):
-        fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = JINJA(fn, opts=self.local_opts, saltenv='other')
-        with salt.utils.fopen(out['data']) as fp:
-            result = fp.read().decode('utf-8')
-            self.assertEqual(u'Assunção\n', result)
-
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
         response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
@@ -483,7 +476,6 @@ class TestCustomExtensions(TestCase):
     #     compiled = env._generate(parsed, name, filename)
     #     print compiled
     #     return
-
 
 
 if __name__ == '__main__':
