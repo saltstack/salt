@@ -147,7 +147,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.RegexOption, 'name', '(.*}'
         )
 
-        option = salt.utils.find.RegexOption('name', '.*\.txt')
+        option = salt.utils.find.RegexOption('name', r'.*\.txt')
         self.assertIs(option.match('', '', ''), None)
         self.assertIs(option.match('', 'hello.txt', '').group(), 'hello.txt')
         self.assertIs(option.match('', 'HELLO.TXT', ''), None)
@@ -157,7 +157,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.IregexOption, 'name', '(.*}'
         )
 
-        option = salt.utils.find.IregexOption('name', '.*\.txt')
+        option = salt.utils.find.IregexOption('name', r'.*\.txt')
         self.assertIs(option.match('', '', ''), None)
         self.assertIs(option.match('', 'hello.txt', '').group(), 'hello.txt')
         self.assertIs(option.match('', 'HELLO.TXT', '').group(), 'HELLO.TXT')
@@ -478,7 +478,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'InameOption'
         )
 
-        finder = salt.utils.find.Finder({'regex': '.*\.txt'})
+        finder = salt.utils.find.Finder({'regex': r'.*\.txt'})
         self.assertEqual(
             str(finder.actions[0].__class__)[-13:-2], 'PrintOption'
         )
@@ -486,7 +486,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'RegexOption'
         )
 
-        finder = salt.utils.find.Finder({'iregex': '.*\.txt'})
+        finder = salt.utils.find.Finder({'iregex': r'.*\.txt'})
         self.assertEqual(
             str(finder.actions[0].__class__)[-13:-2], 'PrintOption'
         )

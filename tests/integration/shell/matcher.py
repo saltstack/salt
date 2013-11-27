@@ -208,7 +208,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt('-d \* user')
+        data = self.run_salt(r'-d \* user')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_arguments_not_assumed(self):

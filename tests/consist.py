@@ -52,7 +52,7 @@ def run(command):
     '''
     Execute a single command and check the returns
     '''
-    cmd = 'salt \* {0} --yaml-out -t 500 > high'.format(command)
+    cmd = r'salt \* {0} --yaml-out -t 500 > high'.format(command)
     subprocess.call(cmd, shell=True)
     data = yaml.load(open('high'))
     hashes = set()
