@@ -175,6 +175,10 @@ can be used on any states in Salt. This made sense for the networking state
 because it can define a long list of options that need to be applied to
 multiple network interfaces.
 
+The ``use`` statement does not inherit the requisites arguments of the
+ targeted state. This means also a chain of ``use`` requisites would not
+inherit inherited options.
+
 .. _requisites-require-in:
 
 Require In
