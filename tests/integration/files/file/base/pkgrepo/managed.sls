@@ -60,6 +60,15 @@ gpodder-ppa:
 nginx-ppa:
   pkgrepo.managed:
     - ppa: nginx/development
+
+pkgrepo-deps:
+  pkg.installed:
+    - pkgs:
+      - python-apt
+      - python-softare-properties
+    - require_in:
+      - pkgrepo: gpodder-ppa
+      - pkgrepo: nginx-ppa
 # END Ubuntu pkgrepo tests
 
 {% else %}
