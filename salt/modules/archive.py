@@ -74,7 +74,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
 
     To unpack a tarfile, for example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' archive.tar foo.tar xf dest=/target/directory
 

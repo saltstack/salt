@@ -369,7 +369,7 @@ def set_dhcp_all(iface):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt -G 'os_family:Windows' ip.set_dhcp_all 'Local Area Connection'
     '''
