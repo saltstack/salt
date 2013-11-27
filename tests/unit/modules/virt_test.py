@@ -284,7 +284,6 @@ class VirtTestCase(TestCase):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
     def test_gen_xml_for_esxi_default_profile(self):
@@ -323,7 +322,6 @@ class VirtTestCase(TestCase):
         mac = iface.find('mac').attrib['address']
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
-
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
@@ -423,7 +421,6 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(root.findall('.//disk')) == 2)
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
-
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
     def test_controller_for_esxi(self):
@@ -443,7 +440,6 @@ class VirtTestCase(TestCase):
         controller = controllers[0]
         self.assertEqual(controller.attrib['model'], 'lsilogic')
 
-
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
     def test_controller_for_kvm(self):
@@ -461,7 +457,6 @@ class VirtTestCase(TestCase):
         controllers = root.findall('.//devices/controller')
         # There should be no controller
         self.assertTrue(len(controllers) == 0)
-
 
     def test_mixed_dict_and_list_as_profile_objects(self):
 

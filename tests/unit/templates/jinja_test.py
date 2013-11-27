@@ -485,7 +485,6 @@ class TestCustomExtensions(TestCase):
     #     return
 
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,

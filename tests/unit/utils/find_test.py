@@ -81,8 +81,6 @@ class TestFind(TestCase):
         self.assertEqual(resolution, 86400)
         self.assertEqual(modifier, '-')
 
-
-
     def test_parse_size(self):
         self.assertRaises(ValueError, salt.utils.find._parse_size, '')
         self.assertRaises(ValueError, salt.utils.find._parse_size, '1s1s')

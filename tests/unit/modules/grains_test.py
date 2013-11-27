@@ -9,9 +9,12 @@ ensure_in_syspath('../../')
 # Import Salt libs
 from salt.exceptions import SaltException
 from salt.modules import grains as grainsmod
+
 grainsmod.__grains__ = {
   'os_family': 'MockedOS'
 }
+
+
 class GrainsModuleTestCase(TestCase):
 
     def test_filter_by(self):

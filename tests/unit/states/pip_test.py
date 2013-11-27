@@ -292,7 +292,6 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
 
-
         # Test VCS installations using git+git://
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})

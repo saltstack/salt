@@ -92,7 +92,6 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
-
     @patch('salt.utils.which', lambda exe: exe)
     def test_gunzip(self):
         mock = MagicMock(return_value='salt')

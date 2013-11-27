@@ -935,7 +935,6 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-
     def test_install_deprecated_runas_triggers_warning(self):
         # We *always* want *all* warnings thrown on this module
         warnings.resetwarnings()

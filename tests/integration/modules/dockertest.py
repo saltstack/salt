@@ -43,7 +43,6 @@ class DockerTest(integration.ModuleCase):
         ret_cmdrun = self.run_function('cmd.run_all', cmd='docker version | grep "Client version:"')
         self.assertEqual('Client version: {}'.format(ret['out']['Version']), ret_cmdrun['stdout'])
 
-
     def test_build(self):
         '''
         dockerio.build
@@ -53,7 +52,6 @@ class DockerTest(integration.ModuleCase):
         '''
         ret = self.run_function('docker.build', timeout=300, source='salt://Dockerfile', tag='testsuite_image')
         self.assertTrue(ret['status'], 'Image built')
-
 
     def test_images(self):
         '''
@@ -70,7 +68,6 @@ class DockerTest(integration.ModuleCase):
                 pass
         self.assertTrue(foundit, 'Could not find created image.')
 
-
     def test_create_container(self):
         '''
         dockerio.create_container
@@ -79,7 +76,6 @@ class DockerTest(integration.ModuleCase):
         ret = self.run_function('docker.create_container', image='testsuite_image')
         self.assertTrue(ret['out']['info']['State']['Running'],
                         'Container does not appear to be running')
-
 
     def test_stop(self):
         '''
@@ -91,7 +87,6 @@ class DockerTest(integration.ModuleCase):
         for i in container_id:
             ret = self.run_function('docker.stop', i)
             self.assertFalse(self.run_function('docker.is_running', i))
-
 
     def test_run_stdout(self):
         '''
@@ -134,4 +129,3 @@ class DockerTest(integration.ModuleCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(DockerTest)
-

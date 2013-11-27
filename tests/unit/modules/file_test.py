@@ -106,6 +106,7 @@ class FileReplaceTestCase(TestCase):
     def test_re_int_flags(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', flags=10)
 
+
 class FileBlockReplaceTestCase(TestCase):
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
@@ -195,8 +196,6 @@ class FileBlockReplaceTestCase(TestCase):
 
         with open(self.tfile.name, 'rb') as fp:
             self.assertTrue(fp.read().startswith('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2'))
-
-
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 1', backup=False)

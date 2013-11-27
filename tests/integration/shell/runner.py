@@ -77,7 +77,6 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 shutil.rmtree(config_dir)
 
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(RunTest)

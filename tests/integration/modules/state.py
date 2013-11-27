@@ -477,7 +477,6 @@ fi
         #    }
         #self.assertEqual(expected_result, result)
 
-
     def test_requisites_require_ordering_and_errors(self):
         '''
         Call sls file containing several require_in and require.
