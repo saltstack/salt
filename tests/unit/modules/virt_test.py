@@ -498,7 +498,7 @@ class VirtTestCase(TestCase):
             self.assertIn('mac', interface_attrs)
             self.assertTrue(
                 re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
-                interface_attrs['mac'] , re.I))
+                interface_attrs['mac'], re.I))
 
 
 if __name__ == '__main__':
