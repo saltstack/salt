@@ -21,6 +21,7 @@ from salt.returners import smtp_return as smtp
 
 smtp.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.returners.smtp_return.smtplib.SMTP')
 class SMTPReturnerTestCase(TestCase):
