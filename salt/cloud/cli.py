@@ -92,7 +92,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 )
 
-            # Get the path to the built-in deploy scripts dircetory
+            # Get the path to the built-in deploy scripts directory
             builtin_deploy_dir = os.path.join(
                 os.path.dirname(__file__),
                 'deploy'
