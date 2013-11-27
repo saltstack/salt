@@ -39,7 +39,10 @@ def ping():
 
         salt '*' test.ping
     '''
-    return True
+    ret = {'result': True,
+           'comment': '',
+           'retcode': 1}
+    return ret
 
 
 def sleep(length):
