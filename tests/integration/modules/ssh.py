@@ -85,7 +85,7 @@ class SSHModuleTest(integration.ModuleCase):
         # auth_keys should skip any keys with invalid encodings.  Internally
         # the minion will throw a CommandExecutionError so the
         # user will get an indicator of what went wrong.
-        self.assertEqual(len(list(ret.items())), 0) # Zero keys found
+        self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
 
     def test_get_known_host(self):
         '''

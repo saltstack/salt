@@ -90,7 +90,7 @@ class FileReplaceTestCase(TestCase):
         ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
                 show_changes=True)
 
-        self.assertTrue(ret.startswith('---')) # looks like a diff
+        self.assertTrue(ret.startswith('---'))  # looks like a diff
 
     def test_noshow_changes(self):
         ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
@@ -244,7 +244,7 @@ class FileBlockReplaceTestCase(TestCase):
     def test_show_changes(self):
         ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 6', backup=False, show_changes=True)
 
-        self.assertTrue(ret.startswith('---')) # looks like a diff
+        self.assertTrue(ret.startswith('---'))  # looks like a diff
 
         ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 7', backup=False, show_changes=False)
 
