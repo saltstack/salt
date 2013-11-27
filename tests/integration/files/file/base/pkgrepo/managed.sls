@@ -44,6 +44,24 @@ epel-salttest:
 {% endif %}
 # END CentOS pkgrepo tests
 
+{% elif grains['os'] == 'Ubuntu' %}
+
+# START Ubuntu pkgrepo tests
+{% set codename = grains['oscodename'] %}
+gpodder-ppa:
+  pkgrepo.managed:
+    - humanname: gPodder PPA
+    - name: deb http://ppa.launchpad.net/thp/gpodder/ubuntu {{ codename }} main
+    - dist: {{ codename }}
+    - file: /etc/apt/sources.list.d/gpodder.list
+    - keyid: 89617F48
+    - keyserver: keyserver.ubuntu.com
+
+nginx-ppa:
+  pkgrepo.managed:
+    - ppa: nginx/development
+# END Ubuntu pkgrepo tests
+
 {% else %}
 
 # No matching OS grain for pkgrepo management, just run something that will
