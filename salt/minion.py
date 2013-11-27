@@ -724,8 +724,9 @@ class Minion(object):
             try:
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
+                retcode = return_data['retcode']
+                sys.modules[func.__module__].__context__['retcode'] = retcode
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
@@ -745,7 +746,7 @@ class Minion(object):
                     ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode',
-                    0
+                    retcode
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
