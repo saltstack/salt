@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
@@ -11,7 +9,7 @@ import resource
 import tempfile
 
 # Import salt libs
-from integration import TestDaemon, TMP
+from integration import TestDaemon, TMP  # pylint: disable=W0403
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
