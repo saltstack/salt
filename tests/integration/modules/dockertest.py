@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
-__author__ = 'cro'
-
 '''
 Tests for integration with Docker's Python library
 '''
+
+__author__ = 'cro'
+
 # Import python libs
 import sys
 import string
