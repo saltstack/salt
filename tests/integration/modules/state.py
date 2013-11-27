@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import shutil
@@ -367,7 +369,7 @@ fi
         '''
         Call sls file containing several requisites.
         '''
-        expected_simple_result={
+        expected_simple_result = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
@@ -381,7 +383,7 @@ fi
                 'comment': 'Command "echo C" run',
                 'result': True}
         }
-        expected_result={
+        expected_result = {
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
@@ -403,7 +405,7 @@ fi
                 'comment': 'Command "echo E fourth" run',
                 'result': True}
         }
-        expected_req_use_result={
+        expected_req_use_result = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo A" run',
@@ -429,13 +431,13 @@ fi
                 'comment': 'Command "echo F" run',
                 'result': True}
         }
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.mixed_simple')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
+                'comment': descr['comment'],
+                'result': descr['result']
             }
         self.assertEqual(expected_simple_result, result)
 
@@ -465,16 +467,15 @@ fi
 
         # undetected infinite loopS prevents this test from running...
         # TODO: this is actually failing badly
-        #result={}
+        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.mixed_complex1')
-        #for item,descr in ret.iteritems():
+        #for item, descr in ret.iteritems():
         #    result[item] = {
         #        '__run_num__': descr['__run_num__'],
-        #        'comment':descr['comment'],
-        #        'result':descr['result']
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
         #    }
         #self.assertEqual(expected_result, result)
-
 
     def test_requisites_require_ordering_and_errors(self):
         '''
@@ -482,7 +483,7 @@ fi
 
         Ensure that some of them are failing and that the order is right.
         '''
-        expected_result={
+        expected_result = {
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
@@ -522,13 +523,13 @@ fi
                            + '                       cmd: Z\n',
                 'result': False}
         }
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
+                'comment': descr['comment'],
+                'result': descr['result']
             }
         self.assertEqual(expected_result, result)
 
@@ -542,7 +543,7 @@ fi
         # FIXME: Why is require enforcing list syntax while require_in does not?
         # And why preventing it?
         # Currently this state fails, should return C/B/A
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
         self.assertEqual(ret, [
             'The require or watch statement in state "B" in sls '
@@ -567,7 +568,7 @@ fi
         '''
         Teste the sls special command in requisites
         '''
-        expected_result={
+        expected_result = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
@@ -581,13 +582,13 @@ fi
                 'comment': 'Command "echo C" run',
                 'result': True},
         }
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.fullsls_require')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
+                'comment': descr['comment'],
+                'result': descr['result']
             }
         self.assertEqual(expected_result, result)
 
@@ -606,7 +607,7 @@ fi
 
         Ensure that some of them are failing and that the order is right.
         '''
-        expected_result_simple={
+        expected_result_simple = {
             'cmd_|-A_|-echo A third_|-run': {
                 '__run_num__': 2,
                 'comment':  'Command "echo A third" run',
@@ -632,7 +633,7 @@ fi
                            + '                       foobar: A\n',
                 'result': False}
         }
-        expected_result_simple2={
+        expected_result_simple2 = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment':  'Command "echo A" run',
@@ -654,7 +655,7 @@ fi
                 'comment': 'Command "echo E" run',
                 'result': True}
         }
-        expected_result_complex={
+        expected_result_complex = {
             'cmd_|-A_|-echo A fourth_|-run': {
                 '__run_num__': 3,
                 'comment':  'Command "echo A fourth" run',
@@ -672,13 +673,13 @@ fi
                 'comment': 'Command "echo D third" run',
                 'result': True},
         }
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
+                'comment': descr['comment'],
+                'result': descr['result']
             }
         self.assertEqual(expected_result_simple, result)
 
@@ -686,25 +687,25 @@ fi
         # TODO: issue #8235, prereq ignored when not used in list syntax
         # Currently fails badly with :
         # TypeError encountered executing state.sls: string indices must be integers, not str.
-        #result={}
+        #result = {}
         #expected_result_simple.pop('cmd_|-I_|-echo I_|-run')
         #expected_result_simple.pop('cmd_|-J_|-echo J_|-run')
         #ret = self.run_function('state.sls', mods='requisites.prereq_simple_nolist')
-        #for item,descr in ret.iteritems():
+        #for item, descr in ret.iteritems():
         #    result[item] = {
         #        '__run_num__': descr['__run_num__'],
-        #        'comment':descr['comment'],
-        #        'result':descr['result']
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
         #    }
         #self.assertEqual(expected_result_simple, result)
 
-        result={}
+        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
-                'comment':descr['comment'],
-                'result':descr['result']
+                'comment': descr['comment'],
+                'result': descr['result']
             }
         self.assertEqual(expected_result_simple2, result)
 
@@ -733,13 +734,13 @@ fi
 
         # issue #8211, chaining complex prereq & prereq_in
         # TODO: Actually this test fails
-        #result={}
+        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
-        #for item,descr in ret.iteritems():
+        #for item, descr in ret.iteritems():
         #    result[item] = {
         #        '__run_num__': descr['__run_num__'],
-        #        'comment':descr['comment'],
-        #        'result':descr['result']
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
         #    }
         #self.assertEqual(expected_result_complex, result)
 
@@ -758,7 +759,7 @@ fi
         '''
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
-        for item,descr in ret.iteritems():
+        for item, descr in ret.iteritems():
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected

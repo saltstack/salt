@@ -53,7 +53,7 @@ def returner(ret):
     port = __salt__['config.option']('smtp.port')
     if not port:
         port = 25
-    log.debug('smtp port has been set to {0}'.format(port))
+    log.debug('SMTP port has been set to {0}'.format(port))
     user = __salt__['config.option']('smtp.username')
     passwd = __salt__['config.option']('smtp.password')
     subject = __salt__['config.option']('smtp.subject')

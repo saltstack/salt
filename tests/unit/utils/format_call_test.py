@@ -42,6 +42,7 @@ class TestFormatCall(TestCase):
     def test_mimic_typeerror_exceptions(self):
         def foo(one, two=2, three=3):
             pass
+
         def foo2(one, two, three=3):
             pass
 
@@ -54,7 +55,6 @@ class TestFormatCall(TestCase):
                 TypeError,
                 r'foo2 takes at least 2 arguments \(1 given\)'):
             format_call(foo2, dict(one=1))
-
 
 
 if __name__ == '__main__':

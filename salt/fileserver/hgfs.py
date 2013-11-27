@@ -234,6 +234,7 @@ def envs():
             # Avoid adding the special 'tip' tag as an env.
             if tag_name != 'tip':
                 ret.add(tag_name)
+        repo.close()
     return list(ret)
 
 
@@ -286,6 +287,7 @@ def find_file(path, short='base', **kwargs):
         ref = _get_ref(repo, short)
         if not ref:
             # Branch or tag not found in repo, try the next
+            repo.close()
             continue
         _wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
@@ -294,10 +296,12 @@ def find_file(path, short='base', **kwargs):
                 if sha == ref[2]:
                     fnd['rel'] = local_path
                     fnd['path'] = dest
+                    repo.close()
                     return fnd
         try:
             repo.cat(['path:{0}'.format(path)], rev=ref[2], output=dest)
         except hglib.error.CommandError:
+            repo.close()
             continue
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
@@ -314,6 +318,7 @@ def find_file(path, short='base', **kwargs):
             pass
         fnd['rel'] = local_path
         fnd['path'] = dest
+        repo.close()
         return fnd
     return fnd
 

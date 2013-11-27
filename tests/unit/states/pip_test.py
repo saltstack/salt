@@ -227,7 +227,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
-            'stderr' :'',
+            'stderr': '',
             'stdout': 'Downloading/unpacking https://pypi.python.org/packages'
                       '/source/S/SaltTesting/SaltTesting-0.5.0.tar.gz\n  '
                       'Downloading SaltTesting-0.5.0.tar.gz\n  Running '
@@ -263,7 +263,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
-            'stderr' :'',
+            'stderr': '',
             'stdout': 'Cloned!'
         })
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
@@ -281,7 +281,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
-        pip_install = MagicMock(return_value={ 'retcode': 0 })
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
                                              'pip.list': pip_list,
                                              'pip.install': pip_install}):
@@ -292,13 +292,12 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
 
-
         # Test VCS installations using git+git://
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
-            'stderr' :'',
+            'stderr': '',
             'stdout': 'Cloned!'
         })
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
@@ -330,7 +329,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
-            'stderr' :'',
+            'stderr': '',
             'stdout': 'Cloned!'
         })
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,

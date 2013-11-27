@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from salttesting import TestCase, expectedFailure
 from salttesting.helpers import ensure_in_syspath
 

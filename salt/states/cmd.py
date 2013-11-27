@@ -279,6 +279,7 @@ def wait(name,
          user=None,
          group=None,
          shell=None,
+         env=(),
          stateful=False,
          umask=None,
          **kwargs):
@@ -309,6 +310,10 @@ def wait(name,
 
     shell
         The shell to use for execution, defaults to /bin/sh
+
+    env
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
 
     umask
          The umask (in octal) to use when running the command.

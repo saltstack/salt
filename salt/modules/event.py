@@ -18,7 +18,7 @@ def fire_master(data, tag, preload=None):
 
     .. code-block:: bash
 
-        salt '*' event.fire_master 'stuff to be in the event' 'tag'
+        salt '*' event.fire_master '{"data":"my event data"}' 'tag'
     '''
     load = {}
     if preload:
@@ -41,13 +41,13 @@ def fire_master(data, tag, preload=None):
 
 def fire(data, tag):
     '''
-    Fire an event on the local minion event bus
+    Fire an event on the local minion event bus. Data must be formed as a dict.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' event.fire 'stuff to be in the event' 'tag'
+        salt '*' event.fire '{"data":"my event data"}' 'tag'
     '''
     try:
         return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)

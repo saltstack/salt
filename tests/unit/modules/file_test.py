@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import tempfile
@@ -88,7 +90,7 @@ class FileReplaceTestCase(TestCase):
         ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
                 show_changes=True)
 
-        self.assertTrue(ret.startswith('---')) # looks like a diff
+        self.assertTrue(ret.startswith('---'))  # looks like a diff
 
     def test_noshow_changes(self):
         ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
@@ -103,6 +105,7 @@ class FileReplaceTestCase(TestCase):
 
     def test_re_int_flags(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', flags=10)
+
 
 class FileBlockReplaceTestCase(TestCase):
     MULTILINE_STRING = textwrap.dedent('''\
@@ -133,7 +136,7 @@ class FileBlockReplaceTestCase(TestCase):
         ''')
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False,prefix='blockrepltmp')
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, prefix='blockrepltmp')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
         manage_mode_mock = MagicMock()
@@ -147,7 +150,7 @@ class FileBlockReplaceTestCase(TestCase):
         filemod.blockreplace(self.tfile.name, '#-- START BLOCK 1', '#-- END BLOCK 1', new_multiline_content, backup=False)
 
         with open(self.tfile.name, 'rb') as fp:
-            filecontent=fp.read()
+            filecontent = fp.read()
         self.assertIn('#-- START BLOCK 1'+"\n"+new_multiline_content+"\n"+'#-- END BLOCK 1', filecontent)
         self.assertNotIn('old content part 1', filecontent)
         self.assertNotIn('old content part 2', filecontent)
@@ -168,7 +171,7 @@ class FileBlockReplaceTestCase(TestCase):
         with open(self.tfile.name, 'rb') as fp:
             self.assertNotIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
 
-        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False,append_if_not_found=True)
+        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False, append_if_not_found=True)
 
         with open(self.tfile.name, 'rb') as fp:
             self.assertIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
@@ -189,18 +192,16 @@ class FileBlockReplaceTestCase(TestCase):
         with open(self.tfile.name, 'rb') as fp:
             self.assertNotIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
 
-        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False,prepend_if_not_found=True)
+        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False, prepend_if_not_found=True)
 
         with open(self.tfile.name, 'rb') as fp:
             self.assertTrue(fp.read().startswith('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2'))
-
-
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 1', backup=False)
 
         with open(self.tfile.name, 'rb') as fp:
-            filecontent=fp.read()
+            filecontent = fp.read()
         self.assertIn('new content 1', filecontent)
         self.assertNotIn('to be removed', filecontent)
         self.assertIn('first part of start line', filecontent)
@@ -243,7 +244,7 @@ class FileBlockReplaceTestCase(TestCase):
     def test_show_changes(self):
         ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 6', backup=False, show_changes=True)
 
-        self.assertTrue(ret.startswith('---')) # looks like a diff
+        self.assertTrue(ret.startswith('---'))  # looks like a diff
 
         ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 7', backup=False, show_changes=False)
 

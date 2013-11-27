@@ -108,7 +108,7 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv()
-    return serv.smembers('jids')
+    return list(serv.smembers('jids'))
 
 
 def get_minions():
@@ -116,4 +116,4 @@ def get_minions():
     Return a list of minions
     '''
     serv = _get_serv()
-    return serv.smembers('minions')
+    return list(serv.smembers('minions'))

@@ -85,4 +85,4 @@ class PwUserModuleTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(UseraddModuleTest)
+    run_tests(PwUserModuleTest)
