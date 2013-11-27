@@ -161,6 +161,10 @@ def create(path,
                 )
             else:
                 cmd.append('--distribute')
+        if not os.access(python, os.X_OK):
+            raise salt.exceptions.CommandExecutionError(
+                'Requested python ({}) does not appear executable.'.format(python)
+            )
         if python is not None and python.strip() != '':
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
