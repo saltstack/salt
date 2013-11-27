@@ -42,14 +42,14 @@ def parse():
         if v is not None:
             opts[k] = v
 
+    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
+
     if 'minion' in options.node:
         if args:
             opts['id'] = args[0]
             return opts
 
         opts['id'] = options.node
-
-    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
 
     return opts
 
