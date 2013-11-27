@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Use this script to dump the event data out to the terminal. It needs to know
 what the sock_dir is.

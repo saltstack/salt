@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Validate the config system
 '''

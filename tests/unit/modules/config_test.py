@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
