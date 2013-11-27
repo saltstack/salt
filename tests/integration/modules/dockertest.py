@@ -9,17 +9,18 @@ import string
 import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
+
+@requires_salt_modules('docker')
 class DockerTest(integration.ModuleCase):
     '''
     Test docker integration
     '''
-
 
     def _get_container_id(self, image_name=None):
         cmdstring = 'docker ps | grep {}'.format(image_name)
