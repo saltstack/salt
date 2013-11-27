@@ -114,16 +114,25 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         kwargs['cli'] = True
                     else:
                         cmd_func = local.cmd_cli
+                    retcode = 0
                     if self.options.static:
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         full_ret = local.cmd_full_return(**kwargs)
+                        for minion, ret in full_ret.items():
+                            if ret['retcode'] != 0:
+                                retcode = ret['retcode']
+                                break
                         ret, out = self._format_ret(full_ret)
                         self._output_ret(ret, out)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
                         for full_ret in local.cmd_cli(**kwargs):
+                            for minion, ret in full_ret.items():
+                                if ret['retcode'] != 0:
+                                    retcode = ret['retcode']
+                                    break
                             ret_, out = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
@@ -131,12 +140,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         for full_ret in cmd_func(**kwargs):
+                            for minion, ret in full_ret.items():
+                                if ret['retcode'] != 0:
+                                    retcode = ret['retcode']
+                                    break
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
+                    return retcode
             except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+                return 1
 
     def _output_ret(self, ret, out):
         '''
