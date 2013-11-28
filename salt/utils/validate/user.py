@@ -9,7 +9,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-VALID_USERNAME= re.compile(r'[a-z_][a-z0-9_-]*[$]?', re.IGNORECASE)
+VALID_USERNAME = re.compile(r'[a-z_][a-z0-9_-]*[$]?', re.IGNORECASE)
 
 
 def valid_username(user):
