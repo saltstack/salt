@@ -33,6 +33,7 @@ DEBUG = True
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase):
+
     def test_user_create_when_user_exists(self):
         '''
         Test to ensure we don't try to create a user when one already exists
