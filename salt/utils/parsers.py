@@ -1611,14 +1611,15 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '-L', '--list-all',
             default=False,
             action='store_true',
-            help='List all public keys. Deprecated: use "--list all"'
+            help='List all public keys. (Deprecated: use "--list all")'
         )
 
         actions_group.add_option(
             '-a', '--accept',
             default='',
             help='Accept the specified public key (use --include-all to '
-                 'match rejected keys in addition to pending keys)'
+                 'match rejected keys in addition to pending keys). Globs are '
+                 'supported.'
         )
 
         actions_group.add_option(
@@ -1632,7 +1633,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '-r', '--reject',
             default='',
             help='Reject the specified public key (use --include-all to '
-                 'match accepted keys in addition to pending keys)'
+                 'match accepted keys in addition to pending keys). Globs are '
+                 'supported.'
         )
 
         actions_group.add_option(
@@ -1665,7 +1667,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-d', '--delete',
             default='',
-            help='Delete the named key'
+            help='Delete the specified key. Globs are supported.'
         )
 
         actions_group.add_option(
@@ -1678,14 +1680,14 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-f', '--finger',
             default='',
-            help='Print the named key\'s fingerprint'
+            help='Print the specified key\'s fingerprint'
         )
 
         actions_group.add_option(
             '-F', '--finger-all',
             default=False,
             action='store_true',
-            help='Print all key\'s fingerprints'
+            help='Print all keys\' fingerprints'
         )
         self.add_option_group(actions_group)
 
