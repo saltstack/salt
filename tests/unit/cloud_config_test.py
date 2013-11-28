@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-\
 '''
-    unit.config_test
-    ~~~~~~~~~~~~~~~~
+    unit.cloud_config_test
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     Configuration related unit testing
 
@@ -15,27 +15,19 @@ import os
 import shutil
 import tempfile
 
-# Import salt libs
-import salt.utils
-import salt.version
-
 # Import salt testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
-# Import salt cloud libs
-from saltcloud import config as cloudconfig
+# Import salt libs
+import salt.utils
+from salt import config as cloudconfig
 
 
 class CloudConfigTestCase(TestCase):
 
     def test_load_cloud_config_from_environ_var(self):
-        if salt.version.__version_info__ < (0, 16, 0):
-            self.skipTest(
-                'This test will always fail if salt >= 0.16.0 is not available'
-            )
-
         original_environ = os.environ.copy()
 
         tempdir = tempfile.mkdtemp()
@@ -70,10 +62,11 @@ class CloudConfigTestCase(TestCase):
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath
             config = cloudconfig.cloud_config(fpath)
             self.assertEqual(config['log_file'], fpath)
+        finally:
+            # Reset the environ
             os.environ.clear()
             os.environ.update(original_environ)
 
-        finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
