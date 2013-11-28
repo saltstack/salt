@@ -3,15 +3,17 @@
 OpenStack Nova Cloud Module
 ===========================
 
+PLEASE NOTE: This module is currently in early development, and considered to be
+experimental and unstable. It is not recommended for production use. Unless you
+are actively developing code in this module, you should use the OpenStack
+module instead.
+
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
 The OpenStack Nova module for Salt Cloud was bootstrapped from the OpenStack
 module for Salt Cloud, which uses a libcloud-based connection. The Nova module
 is designed to use the nova and glance modules already built into Salt.
-
-PLEASE NOTE: This module is currently in early development, and considered to be
-experimental and unstable. It is not recommended for production use.
 
 These modules use the Python novaclient and glanceclient libraries,
 respectively. In order to use this module, the proper salt configuration must
