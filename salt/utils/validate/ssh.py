@@ -57,7 +57,6 @@ def is_clean(options):
                         continue
         if mode == 'path':
             # TODO: Need to put a path checker in here
-            pass
             mode = None
         elif mode == 'bind':
             if not clean_bind(opt):
