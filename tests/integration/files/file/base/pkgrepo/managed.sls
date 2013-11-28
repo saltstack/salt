@@ -61,11 +61,16 @@ nginx-ppa:
   pkgrepo.managed:
     - ppa: nginx/development
 
+{% set osmajor, osminor = salt['grains.get']('osrelease', '12.04').split('.') %}
 pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
-      - python-softare-properties
+{% if osmajor|int > 12 or (osmajor|int == 12 and osminor|int == 10) %}
+      - python-software-properties
+{% else %}
+      - software-properties-common
+{% endif %}
     - require_in:
       - pkgrepo: gpodder-ppa
       - pkgrepo: nginx-ppa
