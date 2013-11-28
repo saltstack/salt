@@ -208,7 +208,7 @@ def fact(name, puppet=False):
     _check_facter()
 
     opt_puppet = '--puppet' if puppet else ''
-    ret = __salt__['cmd.run']('facter {0} {1}'.format(opt_puppet,name))
+    ret = __salt__['cmd.run']('facter {0} {1}'.format(opt_puppet, name))
     if not ret:
         return ''
     return ret
