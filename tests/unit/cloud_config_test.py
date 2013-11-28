@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-\
 '''
-    unit.config_test
-    ~~~~~~~~~~~~~~~~
+    unit.cloud_config_test
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     Configuration related unit testing
 
@@ -15,27 +15,23 @@ import os
 import shutil
 import tempfile
 
-# Import salt libs
-import salt.utils
-import salt.version
+# Import 3rd-party libs
+import yaml
 
 # Import salt testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
-# Import salt cloud libs
-from saltcloud import config as cloudconfig
+# Import salt libs
+import salt.utils
+import integration
+from salt import config as cloudconfig
 
 
 class CloudConfigTestCase(TestCase):
 
     def test_load_cloud_config_from_environ_var(self):
-        if salt.version.__version_info__ < (0, 16, 0):
-            self.skipTest(
-                'This test will always fail if salt >= 0.16.0 is not available'
-            )
-
         original_environ = os.environ.copy()
 
         tempdir = tempfile.mkdtemp()
@@ -70,12 +66,44 @@ class CloudConfigTestCase(TestCase):
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath
             config = cloudconfig.cloud_config(fpath)
             self.assertEqual(config['log_file'], fpath)
+        finally:
+            # Reset the environ
             os.environ.clear()
             os.environ.update(original_environ)
 
-        finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    def test_deploy_search_path_as_string(self):
+        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        config_file_path = os.path.join(temp_conf_dir, 'cloud')
+        deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
+        try:
+            for directory in (temp_conf_dir, deploy_dir_path):
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+
+            default_config = cloudconfig.cloud_config(config_file_path)
+            default_config['deploy_scripts_search_path'] = deploy_dir_path
+            with salt.utils.fopen(config_file_path, 'w') as cfd:
+                cfd.write(yaml.dump(default_config))
+
+            default_config = cloudconfig.cloud_config(config_file_path)
+
+            # Our custom deploy scripts path was correctly added to the list
+            self.assertIn(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path']
+            )
+
+            # And it's even the first occurrence as it should
+            self.assertEqual(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path'][0]
+            )
+        finally:
+            if os.path.isdir(temp_conf_dir):
+                shutil.rmtree(temp_conf_dir)
 
 
 if __name__ == '__main__':
