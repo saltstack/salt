@@ -223,7 +223,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
         None: "Dirty"
     }
     if (tabular):
-        fmt_string = '{0}{2:>10}.{3:<10} {4}   Name: {1}{5}'
+        fmt_string = '{0}{2:>10}.{3:<10} {4:6}   Name: {1}{5}'
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
     msg = fmt_string.format(tcolor,
