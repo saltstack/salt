@@ -42,56 +42,60 @@ Actions
 
 .. option:: -l ARG, --list=ARG
 
-    List the public keys. The args "pre", "un", and "unaccepted" will list
-    unaccepted/unsigned keys. "acc" or "accepted" will list accepted/signed
-    keys. "rej" or "rejected" will list rejected keys. Finally, "all" will list
-    all keys.
+    List the public keys. The args ``pre``, ``un``, and ``unaccepted`` will
+    list unaccepted/unsigned keys. ``acc`` or ``accepted`` will list
+    accepted/signed keys. ``rej`` or ``rejected`` will list rejected keys.
+    Finally, ``all`` will list all keys.
 
 .. option:: -L, --list-all
 
-    List all public keys on this Salt master: accepted, pending,
-    and rejected.
+    List all public keys. (Deprecated: use ``--list all``)
 
 .. option:: -a ACCEPT, --accept=ACCEPT
 
-    Accept the named minion public key for command execution.
+    Accept the specified public key (use --include-all to match rejected keys
+    in addition to pending keys). Globs are supported.
 
 .. option:: -A, --accept-all
 
-    Accepts all pending public keys.
+    Accepts all pending keys.
 
 .. option:: -r REJECT, --reject=REJECT
 
-    Reject the named minion public key.
+    Reject the specified public key (use --include-all to match accepted keys
+    in addition to pending keys). Globs are supported.
 
 .. option:: -R, --reject-all
 
-    Rejects all pending public keys.
+    Rejects all pending keys.
+
+.. option:: --include-all
+
+    Include non-pending keys when accepting/rejecting.
 
 .. option:: -p PRINT, --print=PRINT
 
-   Print the specified public key
+    Print the specified public key.
 
 .. option:: -P, --print-all
 
-   Print all public keys
+    Print all public keys
 
 .. option:: -d DELETE, --delete=DELETE
 
-    Delete the named minion key or minion keys matching a glob for command
-    execution.
+    Delete the specified key. Globs are supported.
 
 .. option:: -D, --delete-all
 
-    Delete all keys
+    Delete all keys.
 
 .. option:: -f FINGER, --finger=FINGER
 
-    Print the named key's fingerprint
+    Print the specified key's fingerprint.
 
 .. option:: -F, --finger-all
 
-    Print all key's fingerprints
+    Print all keys' fingerprints.
 
 
 Key Generation Options
