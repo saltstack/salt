@@ -273,9 +273,12 @@ def clean_bind(addr):
     '''
     comps = addr.split()
     for part in comps:
-        if not int(part):
+        try:
+            int(part)
             if not suvn.ipv4_addr(part):
                 return False
+        except:
+            return False
     return True
 
 
