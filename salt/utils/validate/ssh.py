@@ -145,11 +145,11 @@ def allowed_config(conf):
         'VisualHostKey',
 
         # 'yes', 'no' or other
-        'ControlMaster', # 'yes', 'no', 'ask', 'auto', 'autoask'
-        'RequestTTY', # 'no', 'yes', 'auto', 'forward'
-        'StrictHostKeyChecking', # 'yes', 'no', 'ask'
-        'Tunnel', # 'yes', 'point-to-point', 'ethernet', 'no'
-        'VerifyHostKeyDNS', # 'yes', 'no', 'ask'
+        'ControlMaster',  # 'yes', 'no', 'ask', 'auto', 'autoask'
+        'RequestTTY',  # 'no', 'yes', 'auto', 'forward'
+        'StrictHostKeyChecking',  # 'yes', 'no', 'ask'
+        'Tunnel',  # 'yes', 'point-to-point', 'ethernet', 'no'
+        'VerifyHostKeyDNS',  # 'yes', 'no', 'ask'
 
         # int
         'CompressionLevel',
@@ -161,52 +161,52 @@ def allowed_config(conf):
         'ServerAliveInterval',
 
         # One or more filenames
-        'ControlPath', # pathname
-        'GlobalKnownHostsFile', # one or more filenames
-        'IdentityFile', # filename
-        'UserKnownHostsFile', # one or more filenames
-        'XAuthLocation', # filename
+        'ControlPath',  # pathname
+        'GlobalKnownHostsFile',  # one or more filenames
+        'IdentityFile',  # filename
+        'UserKnownHostsFile',  # one or more filenames
+        'XAuthLocation',  # filename
 
         # Some amount of pre-defined text
-        'AddressFamily', # 'any', 'inet', 'inet6'
-        'IPQoS', # 'af11', 'af12', 'af13', 'af21', 'af22', 'af23', 'af31',
-                 # 'af32', 'af33', 'af41', 'af42', 'af43', 'cs0', 'cs1',
-                 # 'cs2', 'cs3', 'cs4', 'cs5', 'cs6', 'cs7', 'ef', 'lowdelay',
-                 # 'throughput', 'reliability'
-        'KbdInteractiveDevices', # 'bsdauth', 'pam', and/or 'skey'
-        'LogLevel', # 'QUIET', 'FATAL', 'ERROR', 'INFO', 'VERBOSE', 'DEBUG',
-                    # 'DEBUG1', 'DEBUG2', 'DEBUG3'
-        'Protocol', # '2', '1'
+        'AddressFamily',  # 'any', 'inet', 'inet6'
+        'IPQoS',  # 'af11', 'af12', 'af13', 'af21', 'af22', 'af23', 'af31',
+                  # 'af32', 'af33', 'af41', 'af42', 'af43', 'cs0', 'cs1',
+                  # 'cs2', 'cs3', 'cs4', 'cs5', 'cs6', 'cs7', 'ef', 'lowdelay',
+                  # 'throughput', 'reliability'
+        'KbdInteractiveDevices',  # 'bsdauth', 'pam', and/or 'skey'
+        'LogLevel',  # 'QUIET', 'FATAL', 'ERROR', 'INFO', 'VERBOSE', 'DEBUG',
+                     # 'DEBUG1', 'DEBUG2', 'DEBUG3'
+        'Protocol',  # '2', '1'
 
         # Host, port, IP or device
-        'BindAddress', # IP addrs
-        'DynamicForward', # bind_address:port
+        'BindAddress',  # IP addrs
+        'DynamicForward',  # bind_address:port
         'Host',  # Host names, IP addrs
-        'HostName', # hostname, IP addr, or '%h'
-        'LocalForward', # [bind_address:]port host :hostport
-        'RemoteForward', # [bind_address:]port host :hostport
-        'TunnelDevice', # local_tun[:remote_tun]
+        'HostName',  # hostname, IP addr, or '%h'
+        'LocalForward',  # [bind_address:]port host :hostport
+        'RemoteForward',  # [bind_address:]port host :hostport
+        'TunnelDevice',  # local_tun[:remote_tun]
 
         # Crypto
         'Cipher',  # DONE
-        'Ciphers', # DONE
-        'HostKeyAlgorithms', # TODO: Find out what is valid here
-        'KexAlgorithms', # TODO: Find out what is valid here
-        'MACs', # TODO: Find out what is valid here
-        'PKCS11Provider', # TODO: Find out what is valid here
-        'PreferredAuthentications', # TODO: Find out what is valid here
+        'Ciphers',  # DONE
+        'HostKeyAlgorithms',  # TODO: Find out what is valid here
+        'KexAlgorithms',  # TODO: Find out what is valid here
+        'MACs',  # TODO: Find out what is valid here
+        'PKCS11Provider',  # TODO: Find out what is valid here
+        'PreferredAuthentications',  # TODO: Find out what is valid here
 
         # Username
-        'User', # username
+        'User',  # username
 
-        'EscapeChar', # single character + letter, or 'none' TODO, check this
-        'ForwardX11Timeout', # TIME FORMAT
-        'HostKeyAlias', # TODO: Find out what is valid here
-        'IgnoreUnknown', # TODO: Find out what is not invalid here
-        'LocalCommand', # TODO: Find out how to validate this
-        'ProxyCommand', # TODO: Find out what is valid here
-        'RekeyLimit', # '<x>[K|M|G]', optionally followed by int
-        'SendEnv', # TODO: Find out what is valid here
+        'EscapeChar',  # single character + letter, or 'none' TODO, check this
+        'ForwardX11Timeout',  # TIME FORMAT
+        'HostKeyAlias',  # TODO: Find out what is valid here
+        'IgnoreUnknown',  # TODO: Find out what is not invalid here
+        'LocalCommand',  # TODO: Find out how to validate this
+        'ProxyCommand',  # TODO: Find out what is valid here
+        'RekeyLimit',  # '<x>[K|M|G]', optionally followed by int
+        'SendEnv',  # TODO: Find out what is valid here
     ):
         return True
     return False
@@ -277,7 +277,7 @@ def clean_bind(addr):
             int(part)
             if not suvn.ipv4_addr(part):
                 return False
-        except:
+        except ValueError:
             return False
     return True
 
