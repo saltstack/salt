@@ -31,6 +31,8 @@ def _conf():
         return '/etc/sysconfig/iptables'
     elif __grains__['os_family'] == 'Arch':
         return '/etc/iptables/iptables.rules'
+    elif __grains__['os_family'] == 'Debian':
+        return '/etc/iptables/rules.v4'
     elif __grains__['os'] == 'Gentoo':
         return '/var/lib/iptables/rules-save'
     else:
