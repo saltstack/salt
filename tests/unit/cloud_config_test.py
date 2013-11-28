@@ -15,6 +15,9 @@ import os
 import shutil
 import tempfile
 
+# Import 3rd-party libs
+import yaml
+
 # Import salt testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -22,6 +25,7 @@ ensure_in_syspath('../')
 
 # Import salt libs
 import salt.utils
+import integration
 from salt import config as cloudconfig
 
 
@@ -69,6 +73,37 @@ class CloudConfigTestCase(TestCase):
 
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    def test_deploy_search_path_as_string(self):
+        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        config_file_path = os.path.join(temp_conf_dir, 'cloud')
+        deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
+        try:
+            for directory in (temp_conf_dir, deploy_dir_path):
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+
+            default_config = cloudconfig.cloud_config(config_file_path)
+            default_config['deploy_scripts_search_path'] = deploy_dir_path
+            with salt.utils.fopen(config_file_path, 'w') as cfd:
+                cfd.write(yaml.dump(default_config))
+
+            default_config = cloudconfig.cloud_config(config_file_path)
+
+            # Our custom deploy scripts path was correctly added to the list
+            self.assertIn(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path']
+            )
+
+            # And it's even the first occurrence as it should
+            self.assertEqual(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path'][0]
+            )
+        finally:
+            if os.path.isdir(temp_conf_dir):
+                shutil.rmtree(temp_conf_dir)
 
 
 if __name__ == '__main__':
