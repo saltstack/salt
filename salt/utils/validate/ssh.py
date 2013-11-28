@@ -277,7 +277,7 @@ def clean_bind(addr):
             int(part)
             if not suvn.ipv4_addr(part):
                 return False
-        except Exception:
+        except ValueError:
             return False
     return True
 
