@@ -406,11 +406,11 @@ class Publisher(multiprocessing.Process):
         pub_sock = context.socket(zmq.PUB)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
-            pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 100))
+            pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
         # in zmq >= 3.0, there are separate send and receive HWM settings
         except AttributeError:
-            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 100))
-            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 100))
+            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1000))
+            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1000))
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
