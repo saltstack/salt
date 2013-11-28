@@ -6,7 +6,7 @@ python:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install --fix-broken --ignore-missing -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" swig rabbitmq-server ruby
+  - sudo apt-get install --fix-broken --ignore-missing -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" swig rabbitmq-server ruby python-apt
   - (git describe && git fetch --tags) || (git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream)
   - pip install --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io mock timelib
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
