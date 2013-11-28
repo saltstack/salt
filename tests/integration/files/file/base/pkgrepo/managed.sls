@@ -61,12 +61,12 @@ nginx-ppa:
   pkgrepo.managed:
     - ppa: nginx/development
 
-{% set osmajor, osminor = salt['grains.get']('osrelease', '12.04').split('.') %}
+{% set osrelease = salt['grains.get']('osrelease', '12.04') %}
 pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
-{% if osmajor|int > 12 or (osmajor|int == 12 and osminor|int == 10) %}
+{% if osrelease|float >= 12.10 %}
       - python-software-properties
 {% else %}
       - software-properties-common
