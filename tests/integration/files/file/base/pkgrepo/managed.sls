@@ -65,7 +65,7 @@ pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
-      - python-softare-properties
+      - python-software-properties
     - require_in:
       - pkgrepo: gpodder-ppa
       - pkgrepo: nginx-ppa
