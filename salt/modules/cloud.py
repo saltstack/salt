@@ -41,6 +41,8 @@ def list_sizes(provider='all'):
     '''
     List cloud provider sizes for the given providers
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' cloud.list_sizes my-gce-config
