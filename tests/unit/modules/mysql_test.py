@@ -160,7 +160,7 @@ class MySQLTestCase(TestCase):
         '''
         Test grant revoke in mysql exec module
         '''
-        self._test_call(mysql.grant_revoke, '', 'SELECT,INSERT,UPDATE', 'datebase.*', 'frank', 'localhost')
+        self._test_call(mysql.grant_revoke, '', 'SELECT,INSERT,UPDATE', 'database.*', 'frank', 'localhost')
 
     def test_processlist(self):
         '''
