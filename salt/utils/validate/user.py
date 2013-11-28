@@ -9,6 +9,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
+VALID_USERNAME= re.compile(r'[a-z_][a-z0-9_-]*[$]?', re.IGNORECASE)
+
 
 def valid_username(user):
     '''
@@ -20,5 +22,4 @@ def valid_username(user):
     if len(user) > 32:
         return False
 
-    valid = re.compile(r'[a-z_][a-z0-9_-]*[$]?', re.IGNORECASE)
-    return valid.match(user) is not None
+    return VALID_USERNAME.match(user) is not None
