@@ -55,7 +55,18 @@ class MysqlModuleTest(integration.ModuleCase,
             if 'is already installed' in value['comment']:
                 self.present_packages.append(pkg)
 
-            #if ret
+        travis_python_version = os.environ.get('TRAVIS_PYTHON_VERSION', None)
+        if travis_python_version is not None:
+            # we're in Travis, try to add python-mysql via pip
+            # inside the travis python virtualenv
+            # and reload module to get mysql module activated
+            ret = self.run_state('pip.installed',
+                                 name='mysql-python',
+                                 bin_env='/home/travis/virtualenv/python'
+                                         + travis_python_version
+                                         + '/bin/pip',
+                                 reload_modules=True
+            )
         # now ensure we known the mysql root password
         # one of theses two should work
         ret1 = self.run_state(
