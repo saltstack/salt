@@ -611,7 +611,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             result[opt] = opts[opt]
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['peerdns', 'slave', 'vlan', 'defroute']:
+    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
