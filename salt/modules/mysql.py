@@ -217,13 +217,15 @@ def _grant_to_tokens(grant):
                 grant=grant_tokens,
                 database=database)
 
+
 def _quoteIdentifier(identifier):
     '''
     Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
-    
+
     This means surrounded by "`" charecter and escaping this charater inside.
     '''
-    return '`' + identifier.replace('`','``') + '`'
+    return '`' + identifier.replace('`', '``') + '`'
+
 
 def query(database, query, **connection_args):
     '''
@@ -542,7 +544,7 @@ def db_tables(name, **connection_args):
         return []
     cur = dbc.cursor()
     s_name = _quoteIdentifier(name)
-    qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname = s_name)
+    qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -577,10 +579,10 @@ def db_exists(name, **connection_args):
     # Warn: here db identifier is bot backtyped but should be
     #  escaped as a string value
     qry = "SHOW DATABASES LIKE %(dbname)s;"
-    args = { "dbname" : name }
-    log.debug('Doing query: {0} args: {1} '.format(qry,repr(args)))
+    args = {"dbname": name}
+    log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
     try:
-        cur.execute(qry,args)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -596,10 +598,10 @@ def db_create(name, character_set=None, collate=None, **connection_args):
 
     name
         The name of the database to manage
-    
+
     character_set
         The character set, if left empty the MySQL default will be used
-    
+
     collate
         The collation, if left empty the MySQL default will be used
 
@@ -621,17 +623,17 @@ def db_create(name, character_set=None, collate=None, **connection_args):
         return False
     cur = dbc.cursor()
     s_name = _quoteIdentifier(name)
-    qry = 'CREATE DATABASE %(dbname)s' % dict(dbname = s_name)
+    qry = 'CREATE DATABASE %(dbname)s' % dict(dbname=s_name)
     args = {}
     if character_set is not None:
         qry += ' CHARACTER SET %(character_set)s'
-        args['character_set']= character_set
+        args['character_set'] = character_set
     if collate is not None:
         qry += ' COLLATE %(collate)s'
         args['collate'] = collate
     qry += ';'
 
-    log.debug('Query: {0} args: {1}'.format(qry,repr(args)))
+    log.debug('Query: {0} args: {1}'.format(qry, repr(args)))
     try:
         if cur.execute(qry, args):
             log.info('DB {0!r} created'.format(name))
@@ -662,13 +664,13 @@ def db_remove(name, **connection_args):
         log.info('DB {0!r} may not be removed'.format(name))
         return False
 
-    # db does exists, proceed
+    # db doesxists, proceed
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
     cur = dbc.cursor()
     s_name = _quoteIdentifier(name)
-    qry = 'DROP DATABASE %(dbname)s;' % dict(dbname = s_name)
+    qry = 'DROP DATABASE %(dbname)s;' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
