@@ -19,7 +19,7 @@ Available Functions
   .. code-block:: yaml
 
       corp/mysuperdocker_img:
-          docker.build:
+          docker.built:
               - path: /path/to/dir/container/Dockerfile
 
 - pulled
