@@ -222,30 +222,29 @@ class MysqlModuleTest(integration.ModuleCase,
         self.assertTrue(ret)
 
         # Unicode
-        # TODO: failure in salt highstates, so before me
-        #ret = self.run_function(
-        #    'mysql.db_create',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_create',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
         # test db exists
-        #ret = self.run_function(
-        #    'mysql.db_exists',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_exists',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
         # Now remove database
-        #ret = self.run_function(
-        #    'mysql.db_remove',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_remove',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
 
 if __name__ == '__main__':
     from integration import run_tests
