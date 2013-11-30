@@ -19,56 +19,31 @@ import integration
 import salt.utils
 from salt.modules import mysql as mysqlmod
 
-_PKG_MYSQL = {
-    'Debian': ['mysql-server', 'libmysqlclient-dev','python-mysqldb'],
-    'RedHat': ['mysql-server', 'mysql','MySQL-python','python26-mysqldb'],
-}
 
+NO_MYSQL = False
+try:
+    import MySQLdb
+except Exception:
+    NO_MYSQL = True
+
+@skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
 class MysqlModuleTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
 
     user='root'
     password='poney'
-    present_packages=[]
 
 
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'not tested on windows yet')
-    @requires_system_grains
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def setUp(self, grains=None):
+    def setUp(self):
         '''
-        Initialize environnement with a MySQL server, a root password, and python bindings
+        Test presence of MySQL server, enforce a root password
         ''' 
         super(MysqlModuleTest, self).setUp()
-        # Use salt to install MySQL server
-        #os_family = self.run_function('grains.item', ['os_family'])
-        os_family = grains.get('os_family', '')
-        install_pkgs = _PKG_MYSQL.get(os_family, [])
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_MYSQL dict above needs to have an entry added,
-        # with mysql packages and python bindings needed for theses test cases
-        for pkg in install_pkgs:
-            ret = self.run_state('pkg.installed', name=pkg)
-            self.assertSaltTrueReturn(ret)
-            key, value = ret.popitem()
-            if 'is already installed' in value['comment']:
-                self.present_packages.append(pkg)
-
-        travis_python_version = os.environ.get('TRAVIS_PYTHON_VERSION', None)
-        if travis_python_version is not None:
-            # we're in Travis, try to add python-mysql via pip
-            # inside the travis python virtualenv
-            # and reload module to get mysql module activated
-            ret = self.run_state('pip.installed',
-                                 name='mysql-python',
-                                 bin_env='/home/travis/virtualenv/python'
-                                         + travis_python_version
-                                         + '/bin/pip',
-                                 reload_modules=True
-            )
-        # now ensure we known the mysql root password
-        # one of theses two should work
+        NO_MYSQL_SERVER = True
+        # now ensure we know the mysql root password
+        # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run', 
              name='mysqladmin -u '
@@ -87,23 +62,14 @@ class MysqlModuleTest(integration.ModuleCase,
                + self.password
                + '"'
         )
+        key, value = ret2.popitem()
+        if value['result']:
+            NO_MYSQL_SERVER = False
+        else:
+            self.skipTest('No MySQL Server running, or no root access on it.')
 
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'not tested on windows yet')
-    @requires_system_grains
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def tearDown(self, grains=None):
-        # remove ony added mysql packages
-        os_family = grains.get('os_family', '')
-        install_pkgs = _PKG_MYSQL.get(os_family, [])
-        for pkg in install_pkgs:
-            if pkg not in self.present_packages:
-                self.run_state('pkg.removed', name=pkg)
-        super(MysqlModuleTest, self).tearDown()
-
-    @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'not tested on windows yet')
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_database_creation_level1(self):
         '''
         Create database, test it exists and remove it
@@ -146,7 +112,6 @@ class MysqlModuleTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'not tested on windows yet')
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_database_creation_level2(self):
         '''
         Same as level1 with strange names and with character set and collate keywords
