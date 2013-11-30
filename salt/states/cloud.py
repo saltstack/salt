@@ -12,12 +12,67 @@ Use this minion to spin up a cloud instance:
         my-ec2-config
 '''
 
+import pprint
+
 
 def __virtual__():
     '''
     Only load if the cloud module is available in __salt__
     '''
     return 'cloud' if 'cloud.profile' in __salt__ else False
+
+
+def present(name, provider, **kwargs):
+    '''
+    Spin up a single instance on a cloud provider, using salt-cloud. This state
+    does not take a profile argument; rather, it takes the arguments that would
+    normally be configured as part of the state
+
+    name
+        The name of the instance to create
+
+    provider
+        The name of the cloud provider to use
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    prov = str(instance.keys()[0])
+    if instance and 'Not Actioned' not in prov:
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} already exists in {1}'.format(name, prov)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Instance {0} needs to be created'.format(name)
+        return ret
+    info = __salt__['cloud.create'](provider, name, **kwargs)
+    if info and not 'Error' in info:
+        ret['changes'] = info
+        ret['result'] = True
+        ret['comment'] = ('Created instance {0} using provider {1}'
+                          'and the following options: {2}').format(
+            name,
+            provider,
+            pprint.pformat(kwargs)
+        )
+    elif 'Error' in info:
+        ret['result'] = False
+        ret['comment'] = ('Failed to create instance {0}'
+                          'using profile {1}: {2}').format(
+            name,
+            profile,
+            info['Error'],
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = ('Failed to create instance {0}'
+                          'using profile {1}').format(
+            name,
+            profile,
+        )
+    return ret
 
 
 def profile(name, profile):
