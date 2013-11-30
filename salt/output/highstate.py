@@ -21,7 +21,8 @@ state_output:
     state failed, in which case full output will be used.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
-    output format.
+    output format.  If you wish to use a custom format, this can be set to a
+    string.
 '''
 
 # Import python libs
@@ -217,20 +218,25 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     '''
     Terse formatting of a message.
     '''
-    result_map = {
-        True: "Clean",
-        False: "Failed",
-        None: "Dirty"
-    }
-    if (tabular):
-        fmt_string = '{0}{2:>10}.{3:<10} {4:6}   Name: {1}{5}'
+    result = "Clean"
+    if (ret['changes']):
+        result = "Changed"
+    if (ret['result'] == False):
+        result = "Failed"
+    elif (ret['result'] == None):
+        result = "Differs"
+    if (tabular == True):
+        fmt_string = '{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+    elif (isinstance(tabular, str)):
+        fmt_string = tabular
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
     msg = fmt_string.format(tcolor,
                             comps[2],
                             comps[0],
                             comps[-1],
-                            result_map[ret['result']],
-                            colors['ENDC'])
+                            result,
+                            colors['ENDC'],
+                            ret)
 
     return msg
