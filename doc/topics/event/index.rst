@@ -68,20 +68,20 @@ command line:
 
 .. code-block:: bash
 
-    salt-call event.fire 'message to be sent in the event' 'tag'
+    salt-call event.fire '{"data": "message to be sent in the event"}' 'tag'
 
 To fire an event to be sent to the master, from the minion:
 
 .. code-block:: bash
 
-    salt-call event.fire_master 'message for the master' 'tag'
+    salt-call event.fire_master '{"data": "message for the master"}' 'tag'
 
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
 .. code-block:: bash
 
-    salt minionname event.fire 'message for the minion' 'tag'
+    salt minionname event.fire '{"data": "message for the minion"}' 'tag'
 
 
 Firing Events From Code
