@@ -608,9 +608,6 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
     shutil.copyfile(source, tgt)
-    mask = os.umask(0)
-    os.umask(mask)
-    os.chmod(tgt, 0666 - mask)
     bkroot = ''
     if cachedir:
         bkroot = os.path.join(cachedir, 'file_backup')

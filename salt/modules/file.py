@@ -2237,12 +2237,10 @@ def manage_file(name,
 
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
-                current_umask = os.umask(54)
                 salt.utils.copyfile(sfn,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-                os.umask(current_umask)
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
@@ -2277,18 +2275,21 @@ def manage_file(name,
 
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
-                    current_umask = os.umask(54)
                     salt.utils.copyfile(tmp,
                                         name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
-                    os.umask(current_umask)
                 except IOError:
                     __clean_tmp(tmp)
                     return _error(
                         ret, 'Failed to commit change, permission error')
             __clean_tmp(tmp)
 
+        if mode is None:
+            mask = os.umask(0)
+            os.umask(mask)
+            # Apply umask and remove exec bit
+            mode = (0o0777 ^ mask) & 0o0666
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if ret['changes']:
@@ -2369,24 +2370,25 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
-            current_umask = os.umask(63)
             salt.utils.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
-            os.umask(current_umask)
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
-            current_umask = os.umask(54)
             salt.utils.copyfile(sfn,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
             __clean_tmp(sfn)
-            os.umask(current_umask)
 
         # Check and set the permissions if necessary
+        if mode is None:
+            mask = os.umask(0)
+            os.umask(mask)
+            # Apply umask and remove exec bit
+            mode = (0o0777 ^ mask) & 0o0666
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
