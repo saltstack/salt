@@ -1027,6 +1027,12 @@ def tokenize_grant(grant):
     External wrapper function
     :param grant:
     :return: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.grant_to_tokens "GRANT SELECT ON `testdb`.* TO 'testuser'@'localhost'"
     '''
     return _grant_to_tokens(grant)
 
