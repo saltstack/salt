@@ -491,11 +491,17 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in modified])
-        if len(summary) < 10:
+        if len(summary) < 20:
             comment.append('The following packages were installed/updated: '
                            '{0}.'.format(summary))
         else:
-            comment.append('{0} packages were installed/updated.'.format(len(summary)))
+            comment.append(
+                '{0} targeted package{1} {2} installed/updated.'.format(
+                    len(modified),
+                    's' if len(modified) > 1 else '',
+                    'were' if len(modified) > 1 else 'was'
+                )
+            )
 
     if not_modified:
         if sources:
@@ -503,11 +509,17 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in not_modified])
-        if len(summary) <= 10:
+        if len(not_modified) <= 20:
             comment.append('The following packages were already installed: '
                            '{0}.'.format(summary))
         else:
-            comment.append('{0} packages were already installed.'.format(len(summary)))
+            comment.append(
+                '{0} targeted package{1} {2} already installed.'.format(
+                    len(not_modified),
+                    's' if len(not_modified) > 1 else '',
+                    'were' if len(not_modified) > 1 else 'was'
+                )
+            )
 
     if failed:
         if sources:
