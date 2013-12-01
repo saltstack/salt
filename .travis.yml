@@ -6,16 +6,18 @@ python:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install --fix-broken --ignore-missing -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" swig rabbitmq-server ruby python-apt
+  - sudo apt-get install --fix-broken --ignore-missing -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" swig rabbitmq-server ruby python-apt mysql-server libmysqlclient-dev
   - (git describe && git fetch --tags) || (git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream)
-  - pip install --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io mock timelib
+  - pip install --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io mock
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
   - pip install --upgrade --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io pep8 'pylint<1.0.0'
   - pip install --upgrade --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io coveralls
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io unittest2 ordereddict; fi"
   - pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
-install: pip install -r requirements.txt --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io
+install:
+  - pip install -r requirements.txt --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io
+  - pip install -r opt_requirements.txt --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io
 
 before_script:
   - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pylint --rcfile=.testing.pylintrc salt/ && echo 'Finished Pylint Check Cleanly' || echo 'Finished Pylint Check With Errors'"
