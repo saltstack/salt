@@ -228,7 +228,13 @@ def quoteIdentifier(identifier):
     '''
     Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
 
-    This means surrounded by "`" charecter and escaping this charater inside.
+    This means surrounded by "`" character and escaping this charater inside.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.quoteIdentifier 'foo`bar'
     '''
     return '`' + identifier.replace('`', '``') + '`'
 
