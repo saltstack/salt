@@ -69,7 +69,9 @@ def __check_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = _quoteIdentifier(name)
+    s_table = _quoteIdentifier(table)
+    qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -82,7 +84,9 @@ def __repair_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = _quoteIdentifier(name)
+    s_table = _quoteIdentifier(table)
+    qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -95,7 +99,9 @@ def __optimize_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = _quoteIdentifier(name)
+    s_table = _quoteIdentifier(table)
+    qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -1049,6 +1055,7 @@ def db_check(name,
     .. code-block:: bash
 
         salt '*' mysql.db_check dbname
+        salt '*' mysql.db_check dbname dbtable
     '''
     ret = []
     if table is None:
