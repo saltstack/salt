@@ -13,12 +13,14 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has three output modes, `full`, `terse`, and
-    `mixed`. The default is set to full, which will display many lines of
+    The highstate outputter has three output modes, `full`, `terse`, `mixed`,
+    and `changes`. The default is set to full, which will display many lines of
     detailed information for each executed chunk. If the `state_output` option
     is set to `terse` then the output is greatly simplified and shown in only
     one line.  If `mixed` is used, then terse output will be used unless a
-    state failed, in which case full output will be used.
+    state failed, in which case full output will be used.  If `changes` is used,
+    then terse output will be used if there was no error and no changes,
+    otherwise full output will be used.
 '''
 
 # Import python libs
