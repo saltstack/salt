@@ -110,18 +110,23 @@ class MySQLTestCase(TestCase):
         '''
         Test MySQL db_exists function in mysql exec module
         '''
-        self._test_call(mysql.db_exists,
-                       {'sql':"SHOW DATABASES LIKE %(dbname)s;", 'sql_args':{'dbname': 'testdb'}},
-                       'testdb'
+        self._test_call(
+            mysql.db_exists,
+            {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
+             'sql_args': {'dbname': 'testdb'}
+             },
+            'testdb'
         )
 
     def test_db_create(self):
         '''
         Test MySQL db_create function in mysql exec module
         '''
-        self._test_call(mysql.db_create,
-                       {'sql':'CREATE DATABASE `testdb`;', 'sql_args':{}},
-                       'testdb'
+        self._test_call(
+            mysql.db_create,
+            {'sql': 'CREATE DATABASE `testdb`;',
+             'sql_args': {}},
+            'testdb'
         )
 
     def test_user_list(self):
