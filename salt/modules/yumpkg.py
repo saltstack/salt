@@ -236,13 +236,15 @@ def _pkg_arch(name):
     that packages that are for the system architecture should not have the
     architecture specified in the passed string.
     '''
+    all_arches = rpmUtils.arch.getArchList()
+    if not any(name.endswith('.{0}'.format(x)) for x in all_arches):
+        return name, __grains__['cpuarch']
     try:
         pkgname, pkgarch = name.rsplit('.', 1)
     except ValueError:
         return name, __grains__['cpuarch']
-    if pkgarch in rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']:
-        pkgname = name
-    return pkgname, pkgarch
+    else:
+        return pkgname, pkgarch
 
 
 def latest_version(*names, **kwargs):
