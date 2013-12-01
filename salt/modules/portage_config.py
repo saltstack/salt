@@ -103,14 +103,16 @@ def _unify_keywords():
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
                     with salt.utils.fopen(file_path) as fh_:
                         for line in fh_:
-                            if line.strip():
+                            line = line.strip()
+                            if line and not line.startswith('#'):
                                 append_to_package_conf(
                                     'accept_keywords', string=line)
             shutil.rmtree(old_path)
         else:
             with salt.utils.fopen(old_path) as fh_:
                 for line in fh_:
-                    if line.strip():
+                    line = line.strip()
+                    if line and not line.startswith('#'):
                         append_to_package_conf('accept_keywords', string=line)
             os.remove(old_path)
 
@@ -129,7 +131,9 @@ def _package_conf_file_to_dir(file_name):
                 os.mkdir(path, 0755)
                 with salt.utils.fopen(path + '.tmpbak') as fh_:
                     for line in fh_:
-                        append_to_package_conf(file_name, string=line.strip())
+                        line = line.strip()
+                        if line and not line.startswith('#'):
+                            append_to_package_conf(file_name, string=line)
                 os.remove(path + '.tmpbak')
                 return True
         else:
