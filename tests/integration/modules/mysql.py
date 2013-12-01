@@ -26,26 +26,26 @@ try:
 except Exception:
     NO_MYSQL = True
 
+
 @skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
 class MysqlModuleTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
 
-    user='root'
-    password='poney'
-
+    user = 'root'
+    password = 'poney'
 
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'not tested on windows yet')
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
-        ''' 
+        '''
         super(MysqlModuleTest, self).setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
         ret1 = self.run_state(
-            'cmd.run', 
+            'cmd.run',
              name='mysqladmin -u '
                + self.user
                + ' flush-privileges password "'
@@ -53,7 +53,7 @@ class MysqlModuleTest(integration.ModuleCase,
                + '"'
         )
         ret2 = self.run_state(
-            'cmd.run', 
+            'cmd.run',
              name='mysqladmin -u '
                + self.user
                + ' --password="'
@@ -222,30 +222,29 @@ class MysqlModuleTest(integration.ModuleCase,
         self.assertTrue(ret)
 
         # Unicode
-        # TODO: failure in salt highstates, so before me
-        #ret = self.run_function(
-        #    'mysql.db_create',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_create',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
         # test db exists
-        #ret = self.run_function(
-        #    'mysql.db_exists',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_exists',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
         # Now remove database
-        #ret = self.run_function(
-        #    'mysql.db_remove',
-        #    name='標準語',
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertTrue(ret)
+        ret = self.run_function(
+            'mysql.db_remove',
+            name=u'標準語',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertTrue(ret)
 
 if __name__ == '__main__':
     from integration import run_tests
