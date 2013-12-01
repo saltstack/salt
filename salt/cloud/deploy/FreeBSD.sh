@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# This legacy script pre-dates the salt-bootstrap project. In most cases, the
+# bootstrap-salt.sh script is the recommended script for installing salt onto
+# a new minion. However, that may not be appropriate for all situations. This
+# script remains to help fill those needs, and to provide an example for users
+# needing to write their own deploy scripts.
+
 sed -i 's/jot -r 1 0 3600/jot -r 1 0 3/' /usr/sbin/portsnap
 portsnap cron extract update
 sed -i 's/jot -r 1 0 3/jot -r 1 0 3600/' /usr/sbin/portsnap
