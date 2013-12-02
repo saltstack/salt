@@ -2920,3 +2920,52 @@ def delete_backup(path, backup_id):
     return ret
 
 remove_backup = delete_backup
+
+
+def grep(path,
+         pattern,
+         *args):
+    '''
+    grep string from file
+
+    path
+        A file path
+    pattern
+        A string. For example:
+        ``test``
+        ``a[0-5]``
+    args
+        grep options. For example:
+        ``" -v"``
+        ``" -i -B2"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.grep /etc/passwd nobody
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i"
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i -B2"
+        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr " -i -l"
+    '''
+    if args:
+        options = ' '.join(args)
+    else:
+        options = ''
+    cmd = (
+        r'''grep  {options} {pattern} {path}'''
+        .format(
+            options = options,
+            pattern = pattern,
+            path = path,
+        )
+    )
+
+
+    try:
+        ret = __salt__['cmd.run_all'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
+
+    return ret
+
