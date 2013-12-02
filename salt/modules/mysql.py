@@ -147,6 +147,8 @@ def _connect(**kwargs):
     _connarg('connection_unix_socket', 'unix_socket')
     _connarg('connection_default_file', 'read_default_file')
     _connarg('connection_default_group', 'read_default_group')
+    _connarg('connection_use_unicode', 'use_unicode')
+    _connarg('connection_charset', 'charset')
 
     try:
         dbc = MySQLdb.connect(**connargs)
