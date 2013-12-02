@@ -75,6 +75,47 @@ def present(name, provider, **kwargs):
     return ret
 
 
+def absent(name):
+    '''
+    Ensure that no instances with the specified names exist.
+
+    CAUTION: This is a destructive state, which will search all configured cloud
+    providers for the named instance, and destroy it.
+
+    name
+        The name of the instance to destroy
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    if not instance:
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} already absent'.format(name, prov)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
+        return ret
+    info = __salt__['cloud.destroy'](name)
+    if info and not 'Error' in info:
+        ret['changes'] = info
+        ret['result'] = True
+        ret['comment'] = ('Destroyed instance {0}').format(
+            name,
+        )
+    elif 'Error' in info:
+        ret['result'] = False
+        ret['comment'] = ('Failed to destroy instance {0}: {1}').format(
+            name,
+            info['Error'],
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to destroy instance {0}'.format(name)
+    return ret
+
+
 def profile(name, profile):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This is not
