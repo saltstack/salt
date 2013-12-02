@@ -548,7 +548,6 @@ def load_config(path, env_var, default_path=None):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            import salt.utils  # TODO: Need to re-import, need to find out why
             log.debug('Writing {0} based on {1}'.format(path, template))
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as ifile:
