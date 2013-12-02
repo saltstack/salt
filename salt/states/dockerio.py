@@ -209,13 +209,27 @@ def built(name,
     return status
 
 
-def _toggle_container_running_status(cid, started):
+def _toggle_container_running_status(cid, started, binds=None,
+                                     port_bindings=None,
+                                     lxc_conf=None,
+                                     publish_all_ports=None,
+                                     links=None, **kwargs):
     '''
     Start or stop a container
     cid
         Container id
     started
         True if container is meant to be started
+    binds
+        check docker-py Client.start API
+    port_bindings
+        check docker-py Client.start API
+    lxc_conf
+        check docker-py Client.start API
+    publish_all_ports
+        check docker-py Client.start API
+    links
+        check docker-py Client.start API
     '''
     running = __salt('docker.is_running')(cid)
     # if container exists but is not started, try to start it
@@ -223,7 +237,10 @@ def _toggle_container_running_status(cid, started):
         if running:
             return _valid(comment='Container {0} is started'.format(cid))
         else:
-            started = __salt('docker.start')(cid)
+            started = __salt('docker.start')(
+                cid, binds=binds, port_bindings=port_bindings,
+                lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
+                links=links)
             running = __salt('docker.is_running')(cid)
             if running:
                 return _valid(
@@ -313,7 +330,8 @@ def installed(name,
     cinfos = ins_container(existing_cid)
     # if container exists but is not started, try to start it
     if existing_cid and cinfos['status']:
-        return _toggle_container_running_status(existing_cid, started)
+        return _toggle_container_running_status(existing_cid, started,
+                                                **kwargs)
     if not ports:
         ports = []
     if not volumes:

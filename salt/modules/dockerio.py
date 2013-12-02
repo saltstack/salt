@@ -870,7 +870,9 @@ def restart(container, timeout=10, *args, **kwargs):
     return status
 
 
-def start(container, binds=None, ports=None, *args, **kwargs):
+def start(container, binds=None, ports=None, port_bindings=None,
+          lxc_conf=None, publish_all_ports=None, links=None,
+          *args, **kwargs):
     '''
     restart the specified container
 
@@ -895,7 +897,9 @@ def start(container, binds=None, ports=None, *args, **kwargs):
     try:
         dcontainer = _get_container_infos(container)['id']
         if not is_running(container):
-            client.start(dcontainer, binds=binds)
+            client.start(dcontainer, binds=binds, port_bindings=port_bindings,
+                         lxc_conf=lxc_conf,
+                         publish_all_ports=publish_all_ports, links=links)
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
