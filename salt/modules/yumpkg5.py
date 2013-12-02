@@ -58,6 +58,8 @@ def __virtual__():
     elif os_grain == 'XenServer':
         if os_major_version <= 6:
             valid = True
+    elif os_grain == 'Amazon':
+        valid = True
     else:
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
