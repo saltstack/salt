@@ -21,6 +21,10 @@ state_output:
     state failed, in which case full output will be used.  If `changes` is used,
     then terse output will be used if there was no error and no changes,
     otherwise full output will be used.
+state_tabular:
+    If `state_output` uses the terse output, set this to `True` for an aligned
+    output format.  If you wish to use a custom format, this can be set to a
+    string.
 '''
 
 # Import python libs
@@ -37,6 +41,7 @@ def output(data):
     highstate return data.
     '''
     colors = salt.utils.get_colors(__opts__.get('color'))
+    tabular = __opts__.get('state_tabular', False)
     for host in data:
         rcounts = {}
         hcolor = colors['GREEN']
@@ -83,20 +88,20 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = _format_terse(tcolor, comps, ret, colors)
+                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
                 elif __opts__.get('state_output', 'full').lower() == 'mixed':
                     # Print terse unless it failed
                     if ret['result'] is not False:
-                        msg = _format_terse(tcolor, comps, ret, colors)
+                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
                         hstrs.append(msg)
                         continue
                 elif __opts__.get('state_output', 'full').lower() == 'changes':
                     # Print terse if no error and no changes, otherwise, be
                     # verbose
                     if ret['result'] and not ret['changes']:
-                        msg = _format_terse(tcolor, comps, ret, colors)
+                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
                         hstrs.append(msg)
                         continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
@@ -211,16 +216,29 @@ def _strip_clean(returns):
     return returns
 
 
-def _format_terse(tcolor, comps, ret, colors):
+def _format_terse(tcolor, comps, ret, colors, tabular):
     '''
     Terse formatting of a message.
     '''
-    msg = (' {0}Name: {1} - Function: {2}.{3} - '
-           'Result: {4}{5}').format(tcolor,
-                                    comps[2],
-                                    comps[0],
-                                    comps[-1],
-                                    str(ret['result']),
-                                    colors['ENDC'])
+    result = "Clean"
+    if (ret['changes']):
+        result = "Changed"
+    if (ret['result'] == False):
+        result = "Failed"
+    elif (ret['result'] == None):
+        result = "Differs"
+    if (tabular == True):
+        fmt_string = '{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+    elif (isinstance(tabular, str)):
+        fmt_string = tabular
+    else:
+        fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
+    msg = fmt_string.format(tcolor,
+                            comps[2],
+                            comps[0],
+                            comps[-1],
+                            result,
+                            colors['ENDC'],
+                            ret)
 
     return msg
