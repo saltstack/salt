@@ -12,6 +12,8 @@
 # Import python libs
 import os
 import hashlib
+import time
+from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -24,8 +26,24 @@ from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
+@contextmanager
+def eventpublisher_process(sock_dir):
+    proc = event.EventPublisher({'sock_dir':sock_dir})
+    proc.start()
+    try:
+        time.sleep(2)
+        yield
+    finally:
+        proc.terminate()
+        proc.join()
 
 class TestSaltEvent(TestCase):
+
+    def assertGotEvent(self, evt, data, msg=None):
+        self.assertIsNotNone(evt, msg)
+        for k, v in data.items():
+            self.assertIn(k, evt, msg)
+            self.assertEqual(data[k], evt[k], msg)
 
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR)
@@ -87,6 +105,50 @@ class TestSaltEvent(TestCase):
                 )
             )
         )
+
+    def test_event_subscription(self):
+        with eventpublisher_process(sock_dir=SOCK_DIR):
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('')
+            me.fire_event({'data':'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data':'foo1'})
+
+    def test_nested_event_subs(self):
+        '''Test nested event subscriptions do not drop events, issue #8580'''
+        with eventpublisher_process(sock_dir=SOCK_DIR):
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('')
+            me.fire_event({'data':'foo1'}, 'evt1')    
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data':'foo2'})
+            self.assertGotEvent(evt1, {'data':'foo1'})
+
+    def test_event_nodrops(self):
+        '''Test a large number of events, one at a time'''
+        with eventpublisher_process(sock_dir=SOCK_DIR):
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('')
+            for i in xrange(500):
+                me.fire_event({'data':'{0}'.format(i)}, 'testevents')
+                evt = me.get_event(tag='testevents')
+                self.assertGotEvent(evt, {'data':'{0}'.format(i)}, 'Event {0}'.format(i))
+
+    def test_event_nodrop_backlog(self):
+        '''Test a large number of events, send all then recv all'''
+        with eventpublisher_process(sock_dir=SOCK_DIR):
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('')
+            # Must not tp exceed zmq HWM
+            for i in xrange(500):
+                me.fire_event({'data':'{0}'.format(i)}, 'testevents')
+            for i in xrange(500):
+                evt = me.get_event(tag='testevents')
+                self.assertGotEvent(evt, {'data':'{0}'.format(i)}, 'Event {0}'.format(i))
+
+
 
 
 if __name__ == '__main__':
