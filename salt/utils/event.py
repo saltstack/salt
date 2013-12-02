@@ -201,11 +201,16 @@ class SaltEvent(object):
         self.poller.register(self.sub, zmq.POLLIN)
         self.cpub = True
 
-    def connect_pull(self):
+    def connect_pull(self, timeout=1000):
         '''
         Establish a connection with the event pull socket
+        Set the send timeout of the socket options to timeout (in milliseconds)
+        Default timeout is 1000 ms
+        The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
+        # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
+        self.push.setsockopt(zmq.SNDTIMEO, timeout) 
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -249,12 +254,15 @@ class SaltEvent(object):
                 continue
             yield data
 
-    def fire_event(self, data, tag):
+    def fire_event(self, data, tag, timeout=1000):
         '''
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
 
         Supports new style long tags.
+        The 0MQ push timeout on the send is set to timeout in milliseconds
+        The default is 1000 ms
+        Note the linger timeout must be at least as long as this timeout
         '''
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
@@ -263,7 +271,7 @@ class SaltEvent(object):
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
 
         if not self.cpush:
-            self.connect_pull()
+            self.connect_pull(timeout=timeout)
 
         data['_stamp'] = datetime.datetime.now().isoformat('_')
 
@@ -274,18 +282,22 @@ class SaltEvent(object):
             tagend = TAGEND
 
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
-        self.push.send(event)
+        try:
+            self.push.send(event)
+        except Exception as ex:
+            log.debug(ex)
+            raise
         return True
 
-    def destroy(self):
+    def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, 1)
+            self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
-            self.push.setsockopt(zmq.LINGER, 1)
+            self.push.setsockopt(zmq.LINGER, linger)
             self.push.close()
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
@@ -293,13 +305,13 @@ class SaltEvent(object):
         if isinstance(self.poller.sockets, dict):
             for socket in self.poller.sockets.keys():
                 if socket.closed is False:
-                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
                 self.poller.unregister(socket)
         else:
             for socket in self.poller.sockets:
                 if socket[0].closed is False:
-                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].setsockopt(zmq.LINGER, linger)
                     socket[0].close()
                 self.poller.unregister(socket[0])
         if self.context.closed is False:
@@ -374,7 +386,7 @@ class EventPublisher(Process):
         super(EventPublisher, self).__init__()
         self.opts = opts
 
-    def run(self):
+    def run(self, linger=5000):
         '''
         Bind the pub and pull sockets for events
         '''
@@ -421,10 +433,10 @@ class EventPublisher(Process):
                     raise exc
         except KeyboardInterrupt:
             if self.epub_sock.closed is False:
-                self.epub_sock.setsockopt(zmq.LINGER, 1)
+                self.epub_sock.setsockopt(zmq.LINGER, linger)
                 self.epub_sock.close()
             if self.epull_sock.closed is False:
-                self.epull_sock.setsockopt(zmq.LINGER, 1)
+                self.epull_sock.setsockopt(zmq.LINGER, linger)
                 self.epull_sock.close()
             if self.context.closed is False:
                 self.context.term()
