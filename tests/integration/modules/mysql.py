@@ -69,52 +69,65 @@ class MysqlModuleTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
+
+    def _db_creation_loop(self,db_name, returning_name, **kwargs):
+        '''
+        Used in testCase, create, check existence, check name in db list and removes database
+        '''
+        ret = self.run_function(
+            'mysql.db_create',
+            name=db_name,
+            **kwargs
+        )
+        self.assertEqual(True, ret, 'Problem while creating db for db name: {0!r}'.format(db_name))
+        # test db exists
+        ret = self.run_function(
+            'mysql.db_exists',
+            name=db_name,
+            **kwargs
+        )
+        self.assertEqual(True, ret, 'Problem while testing db exists for db name: {0!r}'.format(db_name))
+        # List db names to ensure db is created with the right utf8 string
+        ret = self.run_function(
+            'mysql.db_list',
+            **kwargs
+        )
+        if not isinstance(ret, list):
+            raise AssertionError(
+                    'Unexpected query result while retrieving databases list {0!r} for {1!r} test'.format(
+                         ret,
+                         db_name
+                    )
+                )
+        self.assertIn(returning_name,
+                      ret,
+                      ('Problem while testing presence of db name in db lists'
+                       ' for db name: {0!r} in list {1!r}').format(
+                          db_name,
+                          ret
+                     ))
+        # Now remove database
+        ret = self.run_function(
+            'mysql.db_remove',
+            name=db_name,
+            **kwargs
+        )
+        self.assertEqual(True, ret, 'Problem while removing db for db name: {0!r}'.format(db_name))
+
+
     @destructiveTest
     def test_database_creation_level1(self):
         '''
-        Create database, test it exists and remove it
+        Create database, test presence, then drop db. All theses with complex names.
         '''
-        # create
-        ret = self.run_function(
-          'mysql.db_create',
-          name='foo 1',
-          connection_user=self.user,
-          connection_pass=self.password
+        # name with space
+        db_name= 'foo 1'
+        self._db_creation_loop(db_name=db_name,
+                               returning_name=db_name,
+                               connection_user=self.user,
+                               connection_pass=self.password
         )
-        self.assertEqual(True, ret)
 
-        # test db exists
-        ret = self.run_function(
-          'mysql.db_exists',
-          name='foo 1',
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(True, ret)
-
-        # redoing the same should fail
-        ret = self.run_function(
-          'mysql.db_create',
-          name='foo 1',
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(False, ret)
-
-        # Now remove database
-        ret = self.run_function(
-          'mysql.db_remove',
-          name='foo 1',
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(True, ret)
-
-    @destructiveTest
-    def test_database_creation_level2(self):
-        '''
-        Same as level1 with strange names and with character set and collate keywords
-        '''
         # ```````
         # create
         # also with character_set and collate only
@@ -168,112 +181,81 @@ class MysqlModuleTest(integration.ModuleCase,
         # '''''''
         # create
         # also with character_set only
-        ret = self.run_function(
-          'mysql.db_create',
-          name="foo'3",
-          character_set='utf8',
-          connection_user=self.user,
-          connection_pass=self.password
+        db_name= "foo'3"
+        self._db_creation_loop(db_name=db_name,
+                               returning_name=db_name,
+                               character_set='utf8',
+                               connection_user=self.user,
+                               connection_pass=self.password
         )
-        self.assertEqual(True, ret)
-        # test db exists
-        ret = self.run_function(
-          'mysql.db_exists',
-          name="foo'3",
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(True, ret)
-        # Now remove database
-        ret = self.run_function(
-          'mysql.db_remove',
-          name="foo'3",
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(True, ret)
 
         # """"""""
         # also with collate only
-        ret = self.run_function(
-          'mysql.db_create',
-          name='foo"4',
-          collate='utf8_general_ci',
-          connection_user=self.user,
-          connection_pass=self.password
+        db_name= 'foo"4'
+        self._db_creation_loop(db_name=db_name,
+                               returning_name=db_name,
+                               collate='utf8_general_ci',
+                               connection_user=self.user,
+                               connection_pass=self.password
         )
-        self.assertEqual(True, ret)
-        # test db exists
-        ret = self.run_function(
-          'mysql.db_exists',
-          name='foo"4',
-          connection_user=self.user,
-          connection_pass=self.password
+        # fuzzy
+        db_name= '<foo` --"5>'
+        self._db_creation_loop(db_name=db_name,
+                               returning_name=db_name,
+                               connection_user=self.user,
+                               connection_pass=self.password
         )
-        self.assertEqual(True, ret)
-        # Now remove database
-        ret = self.run_function(
-          'mysql.db_remove',
-          name='foo"4',
-          connection_user=self.user,
-          connection_pass=self.password
-        )
-        self.assertEqual(True, ret)
 
-        # TODO: Simple accents :
-        #db_name=u'notamérican'
-        #ret = self.run_function(
-        #    'mysql.db_create',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
-        # test db exists
-        #ret = self.run_function(
-        #    'mysql.db_exists',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
-        # Now remove database
-        #ret = self.run_function(
-        #    'mysql.db_remove',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
-
-        # TODO: Unicode, currently Failing on :
-        # UnicodeDecodeError: \'ascii\' codec can\'t decode byte 0xe6 in position 1: ordinal not in range(128)
-        # something like: '標準語'
-        #unicode_str=u'\u6a19\u6e96\u8a9e'
-        #db_name=unicode_str.encode('utf8')
-        #ret = self.run_function(
-        #    'mysql.db_create',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
-        # test db exists
-        #ret = self.run_function(
-        #    'mysql.db_exists',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
-        # Now remove database
-        #ret = self.run_function(
-        #    'mysql.db_remove',
-        #    name=db_name,
-        #    connection_user=self.user,
-        #    connection_pass=self.password
-        #)
-        #self.assertEqual(True, ret)
+    @destructiveTest
+    def test_database_creation_utf8(self):
+        '''
+        Test support of utf8 in database names
+        '''
+        # Simple accents : using utf8 string
+        db_name_unicode=u'notam\xe9rican'
+        # same as 'notamérican' because of file encoding
+        # but ensure it on this test
+        db_name_utf8='notam\xc3\xa9rican'
+        db_name= db_name_utf8
+        self._db_creation_loop(db_name=db_name_utf8,
+                               returning_name=db_name_utf8,
+                               connection_user=self.user,
+                               connection_pass=self.password,
+                               connection_use_unicode=True,
+                               connection_charset='utf8',
+                               saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # test unicode entry will also return utf8 name
+        self._db_creation_loop(db_name=db_name_unicode,
+                               returning_name=db_name_utf8,
+                               connection_user=self.user,
+                               connection_pass=self.password,
+                               connection_use_unicode=True,
+                               connection_charset='utf8',
+                               saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # Using more complex unicode characters:
+        db_name_unicode=u'\u6a19\u6e96\u8a9e'
+        # same as '標準語' because of file encoding
+        # but ensure it on this test
+        db_name_utf8='\xe6\xa8\x99\xe6\xba\x96\xe8\xaa\x9e'
+        self._db_creation_loop(db_name=db_name_utf8,
+                               returning_name=db_name_utf8,
+                               connection_user=self.user,
+                               connection_pass=self.password,
+                               connection_use_unicode=True,
+                               connection_charset='utf8',
+                               saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # test unicode entry will also return utf8 name
+        self._db_creation_loop(db_name=db_name_unicode,
+                               returning_name=db_name_utf8,
+                               connection_user=self.user,
+                               connection_pass=self.password,
+                               connection_use_unicode=True,
+                               connection_charset='utf8',
+                               saltenv={"LC_ALL": "en_US.utf8"}
+        )
 
     @destructiveTest
     def test_database_maintenance(self):
