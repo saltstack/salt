@@ -243,15 +243,17 @@ class Schedule(object):
                               'job {0}, defaulting to 1.'.format(job))
                     data['maxrunning'] = 1
 
-            if self.opts.get('multiprocessing', True):
-                thread_cls = multiprocessing.Process
-            else:
-                thread_cls = threading.Thread
-            proc = thread_cls(target=self.handle_func, args=(func, data))
-            proc.start()
-            if self.opts.get('multiprocessing', True):
-                proc.join()
-            self.intervals[job] = int(time.time())
+            try:
+                if self.opts.get('multiprocessing', True):
+                    thread_cls = multiprocessing.Process
+                else:
+                    thread_cls = threading.Thread
+                proc = thread_cls(target=self.handle_func, args=(func, data))
+                proc.start()
+                if self.opts.get('multiprocessing', True):
+                    proc.join()
+            finally:
+                self.intervals[job] = int(time.time())
 
 
 def clean_proc_dir(opts):
