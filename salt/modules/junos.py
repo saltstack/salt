@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for interfacing to Juniper switches
+Module for interfacing to Junos devices
 
 ALPHA QUALITY code.
 
@@ -21,9 +21,9 @@ import salt.roster
 try:
     import jnpr.junos
     import jnpr.junos.utils
-    HAS_JUNIPER = True
+    HAS_JUNOS = True
 except ImportError:
-    HAS_JUNIPER = False
+    HAS_JUNOS = False
 
 
 
@@ -31,16 +31,23 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'juniper'
+__virtualname__ = 'junos'
 
 
 def __virtual__():
     '''
     Not currently any restrictions for this module
     '''
+    if HAS_JUNOS:
+        return __virtualname__
+    else:
+        return False
 
-    return __virtualname__
+def ext_pillar( minion_id, pillar, *args, **kwargs ):
 
+    print "external pillar {} {}".format(minion_id, pillar)
+    my_pillar = { 'junos_hosts': ['junos', 'junos1']}
+    return my_pillar
 
 def _get_conn(user=None, host=None, passwd=None):
 
