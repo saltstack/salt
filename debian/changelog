@@ -1,3 +1,9 @@
+salt-api (0.8.3) precise; urgency=low
+
+  * new release
+
+ -- Seth House <seth@eseth.com>  Tue, 29 Oct 2013 13:40:14 -0700
+
 salt-api (0.8.2) precise; urgency=low
 
   * new bugfix release
