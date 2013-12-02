@@ -548,7 +548,6 @@ def load_config(path, env_var, default_path=None):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            import salt.utils  # TODO: Need to re-import, need to find out why
             log.debug('Writing {0} based on {1}'.format(path, template))
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as ifile:
@@ -877,8 +876,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 'cloud.providers.d', '*'
             )
 
-            if os.path.isfile(providers_config_path) or \
-                    glob.glob(providers_confd):
+            if (os.path.isfile(providers_config_path) or
+                    glob.glob(providers_confd)):
                 raise salt.cloud.exceptions.SaltCloudConfigError(
                     'Do not mix the old cloud providers configuration with '
                     'the new one. The providers configuration should now go '
@@ -1529,6 +1528,17 @@ def is_provider_configured(opts, provider, required_keys=()):
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 
+def _cache_id(minion_id, cache_file):
+    '''
+    Helper function, writes minion id to a cache file.
+    '''
+    try:
+        with salt.utils.fopen(cache_file, 'w') as idf:
+            idf.write(minion_id)
+    except (IOError, OSError) as exc:
+        log.error('Could not cache minion ID: {0}'.format(exc))
+
+
 def get_id(root_dir=None, minion_id=False, cache=True):
     '''
     Guess the id of the minion.
@@ -1576,11 +1586,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
         if minion_id and cache:
-            try:
-                with salt.utils.fopen(id_cache, 'w') as idf:
-                    idf.write(fqdn)
-            except (IOError, OSError) as exc:
-                log.error('Could not cache minion ID: {0}'.format(exc))
+            _cache_id(fqdn, id_cache)
         return fqdn, False
 
     # Check /etc/hostname
@@ -1593,11 +1599,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         else:
             if name != 'localhost':
                 if minion_id and cache:
-                    try:
-                        with salt.utils.fopen(id_cache, 'w') as idf:
-                            idf.write(name)
-                    except (IOError, OSError) as exc:
-                        log.error('Could not cache minion ID: {0}'.format(exc))
+                    _cache_id(name, id_cache)
                 return name, False
     except (IOError, OSError):
         pass
@@ -1614,12 +1616,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
                             if minion_id and cache:
-                                try:
-                                    with salt.utils.fopen(id_cache, 'w') as idf:
-                                        idf.write(name)
-                                except (IOError, OSError) as exc:
-                                    log.error('Could not cache minion ID: {0}'
-                                              .format(exc))
+                                _cache_id(name, id_cache)
                             return name, False
     except (IOError, OSError):
         pass
@@ -1641,12 +1638,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
                                 log.info('Found minion id in hosts file: {0}'
                                          .format(name))
                                 if minion_id and cache:
-                                    try:
-                                        with salt.utils.fopen(id_cache, 'w') as idf:
-                                            idf.write(name)
-                                    except (IOError, OSError) as exc:
-                                        log.error('Could not cache minion ID: {0}'
-                                                  .format(exc))
+                                    _cache_id(name, id_cache)
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
