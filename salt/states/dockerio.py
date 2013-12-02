@@ -105,10 +105,10 @@ def __salt(fn):
 
 
 def _ret_status(exec_status=None,
-               name='',
-               comment='',
-               result=None,
-               changes=None):
+                name='',
+                comment='',
+                result=None,
+                changes=None):
     if not changes:
         changes = {}
     if exec_status is None:
@@ -133,18 +133,18 @@ def _ret_status(exec_status=None,
 
 def _valid(exec_status=None, name='', comment='', changes=None):
     return _ret_status(exec_status=exec_status,
-                      comment=comment,
-                      name=name,
-                      changes=changes,
-                      result=True)
+                       comment=comment,
+                       name=name,
+                       changes=changes,
+                       result=True)
 
 
 def _invalid(exec_status=None, name='', comment='', changes=None):
     return _ret_status(exec_status=exec_status,
-                      comment=comment,
-                      name=name,
-                      changes=changes,
-                      result=False)
+                       comment=comment,
+                       name=name,
+                       changes=changes,
+                       result=False)
 
 
 def pulled(name, force=False, *args, **kwargs):
