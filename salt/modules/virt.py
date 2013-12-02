@@ -569,6 +569,12 @@ def init(name,
                 os.makedirs(img_dir)
             try:
                 salt.utils.copyfile(sfn, img_dest)
+                mask = os.umask(0)
+                os.umask(mask)
+                # Apply umask and remove exec bit
+                mode = (0o0777 ^ mask) & 0o0666
+                os.chmod(img_dest, mode)
+
             except os.error:
                 return False
             seedable = True
