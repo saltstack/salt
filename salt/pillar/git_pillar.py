@@ -117,6 +117,13 @@ def init(branch, repo_location):
             repo.create_remote('origin', repo_location)
         except Exception:
             pass
+
+    # ignore git ssl verification if requested
+    if __opts__.get('pillar_gitfs_ssl_verify', True):
+        repo.git.config('http.sslVerify', 'true')
+    else:
+        repo.git.config('http.sslVerify', 'false')
+
     repo.git.fetch()
     return repo
 
