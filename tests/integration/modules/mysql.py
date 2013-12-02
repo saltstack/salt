@@ -81,7 +81,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
         # test db exists
         ret = self.run_function(
@@ -90,7 +90,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
         # redoing the same should fail
         ret = self.run_function(
@@ -99,7 +99,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(False,ret)
+        self.assertEqual(False, ret)
 
         # Now remove database
         ret = self.run_function(
@@ -108,7 +108,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
     @destructiveTest
     def test_database_creation_level2(self):
@@ -126,7 +126,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -134,7 +134,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # redoing the same should fail
         # even with other character sets or collations
         ret = self.run_function(
@@ -145,7 +145,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(False,ret)
+        self.assertEqual(False, ret)
         # redoing the same should fail
         ret = self.run_function(
           'mysql.db_create',
@@ -155,7 +155,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(False,ret)
+        self.assertEqual(False, ret)
         # Now remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -163,7 +163,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
         # '''''''
         # create
@@ -175,7 +175,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -183,7 +183,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # Now remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -191,7 +191,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
         # """"""""
         # also with collate only
@@ -202,7 +202,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -210,7 +210,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # Now remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -218,7 +218,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
         # TODO: Simple accents :
         #db_name=u'notamérican'
@@ -228,7 +228,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
         # test db exists
         #ret = self.run_function(
         #    'mysql.db_exists',
@@ -236,7 +236,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
         # Now remove database
         #ret = self.run_function(
         #    'mysql.db_remove',
@@ -244,7 +244,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
 
         # TODO: Unicode, currently Failing on :
         # UnicodeDecodeError: \'ascii\' codec can\'t decode byte 0xe6 in position 1: ordinal not in range(128)
@@ -257,7 +257,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
         # test db exists
         #ret = self.run_function(
         #    'mysql.db_exists',
@@ -265,7 +265,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
         # Now remove database
         #ret = self.run_function(
         #    'mysql.db_remove',
@@ -273,7 +273,7 @@ class MysqlModuleTest(integration.ModuleCase,
         #    connection_user=self.user,
         #    connection_pass=self.password
         #)
-        #self.assertEqual(True,ret)
+        #self.assertEqual(True, ret)
 
     @destructiveTest
     def test_database_maintenance(self):
@@ -298,7 +298,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -306,10 +306,10 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
         # Create 3 tables
         tablenames = {'Atable "`1': 'MYISAM', 'Btable \'`2': 'InnoDB', 'Ctable --`3': 'MEMORY'}
-        for tablename,engine in iter(sorted(tablenames.iteritems())):
+        for tablename, engine in iter(sorted(tablenames.iteritems())):
             # prepare queries
             create_query = ('CREATE TABLE %(tblname)s ('
                 ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
@@ -334,14 +334,14 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret,dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
                 raise AssertionError(
                     'Unexpected query result while populating test table {0!r} : {1!r}'.format(
                          tablename,
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'],0)
+            self.assertEqual(ret['rows affected'], 0)
             log.info('Populating table{0!r}'.format(tablename,))
             ret = self.run_function(
               'mysql.query',
@@ -350,14 +350,14 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret,dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
                 raise AssertionError(
                     'Unexpected query result while populating test table {0!r} : {1!r}'.format(
                          tablename,
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'],101)
+            self.assertEqual(ret['rows affected'], 101)
             log.info('Removing some rows on table{0!r}'.format(tablename,))
             ret = self.run_function(
               'mysql.query',
@@ -366,7 +366,7 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret,dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
                 raise AssertionError(
                     ('Unexpected query result while removing rows on test table'
                      ' {0!r} : {1!r}').format(
@@ -374,9 +374,9 @@ class MysqlModuleTest(integration.ModuleCase,
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'],50)
+            self.assertEqual(ret['rows affected'], 50)
         # test check/repair/opimize on 1 table
-        tablename='Atable "`1'
+        tablename = 'Atable "`1'
         ret = self.run_function(
           'mysql.db_check',
           name=dbname,
@@ -385,7 +385,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quoteIdentifier of table and db
-        self.assertEqual(ret,[{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'check'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'check'}])
         ret = self.run_function(
           'mysql.db_repair',
           name=dbname,
@@ -394,7 +394,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quoteIdentifier of table and db
-        self.assertEqual(ret,[{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'repair'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'repair'}])
         ret = self.run_function(
           'mysql.db_optimize',
           name=dbname,
@@ -403,7 +403,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quoteIdentifier of table and db
-        self.assertEqual(ret,[{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'optimize'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'optimize'}])
 
         # test check/repair/opimize on all tables
         ret = self.run_function(
@@ -412,8 +412,8 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        expected=[]
-        for tablename,engine in iter(sorted(tablenames.iteritems())):
+        expected = []
+        for tablename, engine in iter(sorted(tablenames.iteritems())):
             if engine is 'MEMORY':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -428,7 +428,7 @@ class MysqlModuleTest(integration.ModuleCase,
                     'Msg_type': 'status',
                     'Op': 'check'
                 }])
-        self.assertEqual(ret,expected)
+        self.assertEqual(ret, expected)
 
         ret = self.run_function(
           'mysql.db_repair',
@@ -436,8 +436,8 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        expected=[]
-        for tablename,engine in iter(sorted(tablenames.iteritems())):
+        expected = []
+        for tablename, engine in iter(sorted(tablenames.iteritems())):
             if engine is 'MYISAM':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -452,7 +452,7 @@ class MysqlModuleTest(integration.ModuleCase,
                     'Msg_type': 'note',
                     'Op': 'repair'
                 }])
-        self.assertEqual(ret,expected)
+        self.assertEqual(ret, expected)
 
         ret = self.run_function(
           'mysql.db_optimize',
@@ -460,9 +460,9 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        
-        expected=[]
-        for tablename,engine in iter(sorted(tablenames.iteritems())):
+
+        expected = []
+        for tablename, engine in iter(sorted(tablenames.iteritems())):
             if engine is 'MYISAM':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -491,7 +491,7 @@ class MysqlModuleTest(integration.ModuleCase,
                     'Msg_type': 'note',
                     'Op': 'optimize'
                 }])
-        self.assertEqual(ret,expected)
+        self.assertEqual(ret, expected)
         # Teardown, remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -499,7 +499,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True,ret)
+        self.assertEqual(True, ret)
 
 if __name__ == '__main__':
     from integration import run_tests
