@@ -2969,12 +2969,11 @@ def grep(path,
     cmd = (
         r'''grep  {options} {pattern} {path}'''
         .format(
-            options = options,
-            pattern = pattern,
-            path = path,
+            options=options,
+            pattern=pattern,
+            path=path,
         )
     )
-
 
     try:
         ret = __salt__['cmd.run_all'](cmd)
@@ -2982,4 +2981,3 @@ def grep(path,
         raise CommandExecutionError(exc.strerror)
 
     return ret
-
