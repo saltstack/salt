@@ -804,9 +804,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-cloud
         '''
-        arg_str = '-C {0} {1}'.format(
-            os.path.join(self.get_config_dir(), 'cloud'), arg_str
-        )
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
 

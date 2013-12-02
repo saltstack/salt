@@ -377,7 +377,6 @@ DEFAULT_MASTER_OPTS = {
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
-    'conf_dir': '/etc/salt',
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -391,7 +390,7 @@ CLOUD_CONFIG_DEFAULTS = {
     # Custom deploy scripts
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
-    'log_file': '/var/log/salt/cloud',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'cloud'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -736,20 +735,67 @@ def syndic_config(master_config_path,
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
-                 vm_config_path=None, vm_config=None):
+                 vm_config_path=None, vm_config=None,
+                 profiles_config_path=None, profiles_config=None):
     '''
     Read in the salt cloud config and return the dict
     '''
-    # Load the cloud configuration
-    try:
-        overrides = salt.config.load_config(path, env_var, '/etc/salt/cloud')
-    except TypeError:
-        log.warning(
-            'Salt version is lower than 0.16.0, as such, loading '
-            'configuration from the {0!r} environment variable will '
-            'fail'.format(env_var)
+    if vm_config and profiles_config:
+        # This is a bad API usage
+        raise RuntimeError(
+            '`vm_config` and `profiles_config` are mutually exclusive and '
+            '`vm_config` is being deprecated in favor of `profiles_config`.'
         )
-        overrides = salt.config.load_config(path, env_var)
+    elif vm_config:
+        salt.utils.warn_until(
+            'Helium',
+            'The support for `vm_config` has been deprecated and will be '
+            'removed in Salt Helium. Please use `profiles_config`.'
+        )
+        profiles_config = vm_config
+        vm_config = None
+    if vm_config_path and profiles_config_path:
+        # This is a bad API usage
+        raise RuntimeError(
+            '`vm_config_path` and `profiles_config_path` are mutually '
+            'exclusive and `vm_config_path` is being deprecated in favor of '
+            '`profiles_config_path`'
+        )
+    elif vm_config_path:
+        salt.utils.warn_until(
+            'Helium',
+            'The support for `vm_config_path` has been deprecated and will be '
+            'removed in Salt Helium. Please use `profiles_config_path`.'
+        )
+        profiles_config_path = vm_config_path
+        vm_config_path = None
+
+    # Load the cloud configuration
+    overrides = salt.config.load_config(
+        path,
+        env_var,
+        os.path.join(syspaths.CONFIG_DIR, 'cloud')
+    )
+
+    if 'vm_config' in overrides and 'profiles_config' in overrides:
+        raise salt.cloud.exceptions.SaltCloudConfigError(
+            '`vm_config` and `profiles_config` are mutually exclusive and '
+            '`vm_config` is being deprecated in favor of `profiles_config`.'
+        )
+    elif 'vm_config' in overrides:
+        salt.utils.warn_until(
+            'Helium',
+            'The support for `vm_config` has been deprecated and will be '
+            'removed in Salt Helium. Please use `profiles_config`.'
+            'Please update the could configuration file(s).'
+
+        )
+        overrides['profiles_config'] = overrides.pop('vm_config')
+
+    if path:
+        config_dir = os.path.dirname(path)
+    else:
+        config_dir = syspaths.CONFIG_DIR
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -765,6 +811,34 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
+
+    # The includes have been evaluated, let's see if master, providers and
+    # profiles configuration settings have been included and if not, set the
+    # default value
+    if 'master_config' in overrides and master_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        master_config_path = overrides['master_config']
+    elif 'master_config' not in overrides and not master_config \
+                                                and not master_config_path:
+        # The configuration setting is not being provided in the main cloud
+        # configuration file, and
+        master_config_path = os.path.join(config_dir, 'master')
+
+    if 'providers_config' in overrides and providers_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        providers_config_path = overrides['providers_config']
+    elif 'providers_config' not in overrides and not providers_config \
+                                                and not providers_config_path:
+        providers_config_path = os.path.join(config_dir, 'cloud.providers')
+
+    if 'vm_config' in overrides and vm_config_path is None:
+        # The configuration setting is being specified in the main cloud
+        # configuration file
+        vm_config_path = overrides['vm_config']
+    elif 'vm_config' not in overrides and not vm_config and not vm_config_path:
+        providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
     # Prepare the deploy scripts search path
     deploy_scripts_search_path = overrides.get(
@@ -791,7 +865,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # It's not a directory? Remove it from the search path
         deploy_scripts_search_path.pop(idx)
 
-    # Add the provided scripts directory to the search path
+    # Add the built-in scripts directory to the search path(last resort)
     deploy_scripts_search_path.append(
         os.path.abspath(
             os.path.join(
@@ -819,7 +893,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 # use the value from the cloud config file
                 'master_config',
                 # if not found, use the default path
-                '/etc/salt/master'
+                os.path.join(syspaths.CONFIG_DIR, 'master')
             )
         )
     elif master_config_path is not None and master_config is None:
@@ -843,19 +917,19 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'providers_config',
             # if not found, use the default path
-            '/etc/salt/cloud.providers'
+            os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
         )
 
-    if vm_config_path is not None and vm_config is not None:
+    if profiles_config_path is not None and profiles_config is not None:
         raise salt.cloud.exceptions.SaltCloudConfigError(
-            'Only pass `vm_config` or `vm_config_path`, not both.'
+            'Only pass `profiles_config` or `profiles_config_path`, not both.'
         )
-    elif vm_config_path is None and vm_config is None:
-        vm_config_path = overrides.get(
+    elif profiles_config_path is None and profiles_config is None:
+        profiles_config_path = overrides.get(
             # use the value from the cloud config file
-            'vm_config',
+            'profiles_config',
             # if not found, use the default path
-            '/etc/salt/cloud.profiles'
+            os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
         )
 
     # Apply the salt-cloud configuration
@@ -881,9 +955,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 raise salt.cloud.exceptions.SaltCloudConfigError(
                     'Do not mix the old cloud providers configuration with '
                     'the new one. The providers configuration should now go '
-                    'in the file `/etc/salt/cloud.providers` or a separate '
-                    '`*.conf` file within `cloud.providers.d/` which is '
-                    'relative to `/etc/salt/cloud.providers`.'
+                    'in the file `{0}` or a separate `*.conf` file within '
+                    '`cloud.providers.d/` which is relative to `{0}`.'.format(
+                        os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+                    )
                 )
         # No exception was raised? It's the old configuration alone
         providers_config = opts['providers']
@@ -1014,17 +1089,9 @@ def vm_profiles_config(path,
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
-    try:
-        overrides = salt.config.load_config(
-            path, env_var, '/etc/salt/cloud.profiles'
-        )
-    except TypeError:
-        log.warning(
-            'Salt version is lower than 0.16.0, as such, loading '
-            'configuration from the {0!r} environment variable will '
-            'fail'.format(env_var)
-        )
-        overrides = salt.config.load_config(path, env_var)
+    overrides = salt.config.load_config(
+        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
+    )
 
     default_include = overrides.get(
         'default_include', defaults['default_include']
@@ -1161,17 +1228,9 @@ def cloud_providers_config(path,
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
-    try:
-        overrides = salt.config.load_config(
-            path, env_var, '/etc/salt/cloud.providers'
-        )
-    except TypeError:
-        log.warning(
-            'Salt version is lower than 0.16.0, as such, loading '
-            'configuration from the {0!r} environment variable will '
-            'fail'.format(env_var)
-        )
-        overrides = salt.config.load_config(path, env_var)
+    overrides = salt.config.load_config(
+        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+    )
 
     default_include = overrides.get(
         'default_include', defaults['default_include']
