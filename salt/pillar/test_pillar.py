@@ -21,5 +21,16 @@ def ext_pillar(minion_id,
                re_replace='',
                fields=None):
 
-     my_pillar = { 'junos_hosts': ['junos', 'junos2']}
-     return my_pillar
+    my_pillar = { 'junos_hosts':
+                  {
+                      'junos' : {
+                          'user' : 'cro',
+                          'passwd': 'croldham123'
+                      },
+                      'junos1' : {
+                          'user' : 'cro',
+                          'passwd' : 'croldham123'
+                      }
+                  }
+                }
+    return my_pillar

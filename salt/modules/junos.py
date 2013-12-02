@@ -17,14 +17,12 @@ import salt.roster
 # https://github.com/jeremyschulman/py-junos-eznc
 
 
-
 try:
     import jnpr.junos
     import jnpr.junos.utils
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
-
 
 
 # Set up logging
@@ -43,11 +41,6 @@ def __virtual__():
     else:
         return False
 
-def ext_pillar( minion_id, pillar, *args, **kwargs ):
-
-    print "external pillar {} {}".format(minion_id, pillar)
-    my_pillar = { 'junos_hosts': ['junos', 'junos1']}
-    return my_pillar
 
 def _get_conn(user=None, host=None, passwd=None):
 
@@ -87,17 +80,13 @@ def version(tgt=None, user=None, host=None, passwd=None):
         h = hosts[hkey]
         single_ret = {}
         conn = _get_conn(user=h['user'],  host=h['host'], passwd=h['passwd'])
-
         raw_version = conn.cli('show version')
 
-        matches = re.search('.*Hostname: (.*)\nModel: (.*)\n(.*)\n', raw_version)
-        single_ret['host-name'] = matches.group(1)
-        single_ret['model'] = matches.group(2)
+        single_ret['host-name'] = conn.facts['hostname']
+        single_ret['model'] = conn.facts['model']
+        single_ret['software-version'] = conn.facts['version']
 
-        # Better to use version from facts
-        single_ret['software-version'] = matches.group(3)
-
-        ret[h['id']] = single_ret
+        ret[hkey] = single_ret
 
     return ret
 
@@ -118,13 +107,8 @@ def inventory(tgt=None, user=None, host=None, passwd=None):
         h = hosts[hkey]
         single_ret = {}
 
-        conn = _get_conn(user=user, host=host, passwd=passwd)
-
-        inv = conn.rpc.get_chassis_inventory()
-
-        # TODO Also use facts
-        single_ret = {}
-        single_ret['host-name'] = hostname
+        single_ret['host-name'] = \
+            __context__['juniper.facts.{0}.{1}'.format(hkey['user'], hkey['host'])]['host-name']
         single_ret['model'] = inv.find('chassis/description').text
         single_ret['serial-number'] = inv.find('chassis/serial-number').text
         single_ret['host-name'] = inv.find('chassis/host-name').text
@@ -133,7 +117,8 @@ def inventory(tgt=None, user=None, host=None, passwd=None):
 
     return ret
 
-def facts(tgt=None, user=None, host=None, passwd=None):
+
+def facts_refresh(tgt=None, user=None, host=None, passwd=None):
 
     hosts = {}
 
@@ -149,9 +134,9 @@ def facts(tgt=None, user=None, host=None, passwd=None):
         h = hosts[hkey]
         single_ret = {}
         conn = _get_conn(user=user, host=host, passwd=passwd)
-        facts = conn.facts
+        conn.facts_refresh()
 
-        __context__['juniper.facts.{0}.{1}'.format(user, host)] = facts
+        __context__['juniper.facts.{0}.{1}'.format(user, host)] = conn.facts
 
         single_ret = dict()
 
@@ -159,6 +144,7 @@ def facts(tgt=None, user=None, host=None, passwd=None):
         ret['host'] = single_ret
 
     return ret
+
 
 # TODO add roster support
 def set_hostname(hostname=None, user=None, host=None, passwd=None, commit=True):
@@ -171,59 +157,102 @@ def set_hostname(hostname=None, user=None, host=None, passwd=None, commit=True):
 
     conn.cu.load(set_string, format='set')
     if commit:
-        ret['out'] = commit(user=user, host=host, passwd=passwd)
-        if ret['out']:
-            ret['message'] = 'Commit successful'
+        single['out'] = commit(user=user, host=host, passwd=passwd)
+        if single['out']:
+            single['message'] = 'Commit successful'
         else:
-            ret['message'] = 'Commit failed'
+            single['message'] = 'Commit failed'
     else:
-        ret['out'] = True
-        ret['message'] = 'set system host-name {} is queued'.format(hostname)
+        single['out'] = True
+        single['message'] = 'set system host-name {} is queued'.format(hostname)
 
     return ret
 
-# TODO add roster support
-def commit(user=None, host=None, passwd=None):
 
-    conn = _get_conn(user=user, host=host, passwd=passwd)
+def commit(tgt=None, user=None, host=None, passwd=None):
+
+    hosts = dict()
     ret = dict()
 
-    # Could use try/except block here
-    commit_ok = conn.cu.commit_check()
-    if commit_ok:
-        conn.cu.commit(confirm=True)
-        ret['out'] = True
-        ret['message'] = 'Commit Successful.'
+    if tgt:
+        hosts = _roster(tgt)
     else:
-        ret['out'] = False
-        ret['message'] = 'Pre-commit check failed.'
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
+
+    for hkey in hosts:
+        single_ret = dict()
+        conn = _get_conn(user=hkey['user'], host=hkey['host'], passwd=hkey['passwd'])
+
+        commit_ok = conn.cu.commit_check()
+        if commit_ok:
+            try:
+                conn.cu.commit(confirm=True)
+                single_ret['out'] = True
+                single_ret['message'] = 'Commit Successful.'
+            except EzNcException as e:
+                single_ret['out'] = False
+                single_ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{}"'.format(e.message)
+        else:
+            single_ret['out'] = False
+            single_ret['message'] = 'Pre-commit check failed.'
+
+        ret['hkey'] = single_ret
 
     return ret
 
-# TODO add roster support
-def rollback(user=None, host=None, passwd=None):
 
-    conn = _get_conn(user=user, host=host, passwd=passwd)
+def rollback(tgt=None, user=None, host=None, passwd=None):
 
+    hosts = dict()
     ret = dict()
 
-    # Rollback takes parameter
-    result = conn.cu.rollback()
-    ret['out'] = result
-    if result:
-        ret['message'] = 'Rollback successful.'
+    if tgt:
+        hosts = _roster(tgt)
     else:
-        ret['message'] = 'Rollback failed.'
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
+
+    for hkey in hosts:
+        single_ret = dict()
+        conn = _get_conn(user=hkey['user'], host=hkey['host'], passwd=hkey['passwd'])
+
+        single_ret['out'] = conn.cu.rollback(0)
+        if single_ret['out']:
+            single_ret['message'] = 'Rollback successful'
+        else:
+            single_ret['message'] = 'Rollback failed'
+
+        ret['hkey'] = single_ret
 
     return ret
 
-# TODO add roster support
-def diff(user=None, host=None, passwd=None):
 
-    conn = _get_conn(user=user, host=host, passwd=passwd)
+def diff(tgt=None, user=None, host=None, passwd=None):
 
+    hosts = dict()
     ret = dict()
-    ret['out'] = True
-    ret['message'] = conn.cu.diff()
+
+    if tgt:
+        hosts = _roster(tgt)
+    else:
+        hosts[host] = {'id': host,
+                       'host': host,
+                       'user': user,
+                       'passwd': passwd}
+
+    for hkey in hosts:
+        single_ret = dict()
+        conn = _get_conn(user=hkey['user'], host=hkey['host'], passwd=hkey['passwd'])
+        single_ret = dict()
+        single_ret['out'] = True
+        single_ret['message'] = conn.cu.diff()
+
+        ret['hkey'] = single_ret
+
     return ret
 
