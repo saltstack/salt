@@ -69,8 +69,7 @@ class MysqlModuleTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
-
-    def _db_creation_loop(self,db_name, returning_name, **kwargs):
+    def _db_creation_loop(self, db_name, returning_name, **kwargs):
         '''
         Used in testCase, create, check existence, check name in db list and removes database
         '''
@@ -114,14 +113,13 @@ class MysqlModuleTest(integration.ModuleCase,
         )
         self.assertEqual(True, ret, 'Problem while removing db for db name: {0!r}'.format(db_name))
 
-
     @destructiveTest
     def test_database_creation_level1(self):
         '''
         Create database, test presence, then drop db. All theses with complex names.
         '''
         # name with space
-        db_name= 'foo 1'
+        db_name = 'foo 1'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
                                connection_user=self.user,
@@ -181,7 +179,7 @@ class MysqlModuleTest(integration.ModuleCase,
         # '''''''
         # create
         # also with character_set only
-        db_name= "foo'3"
+        db_name = "foo'3"
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
                                character_set='utf8',
@@ -191,7 +189,7 @@ class MysqlModuleTest(integration.ModuleCase,
 
         # """"""""
         # also with collate only
-        db_name= 'foo"4'
+        db_name = 'foo"4'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
                                collate='utf8_general_ci',
@@ -199,7 +197,7 @@ class MysqlModuleTest(integration.ModuleCase,
                                connection_pass=self.password
         )
         # fuzzy
-        db_name= '<foo` --"5>'
+        db_name = '<foo` --"5>'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
                                connection_user=self.user,
@@ -212,11 +210,11 @@ class MysqlModuleTest(integration.ModuleCase,
         Test support of utf8 in database names
         '''
         # Simple accents : using utf8 string
-        db_name_unicode=u'notam\xe9rican'
+        db_name_unicode = u'notam\xe9rican'
         # same as 'notamérican' because of file encoding
         # but ensure it on this test
-        db_name_utf8='notam\xc3\xa9rican'
-        db_name= db_name_utf8
+        db_name_utf8 = 'notam\xc3\xa9rican'
+        db_name = db_name_utf8
         self._db_creation_loop(db_name=db_name_utf8,
                                returning_name=db_name_utf8,
                                connection_user=self.user,
@@ -235,10 +233,10 @@ class MysqlModuleTest(integration.ModuleCase,
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
         # Using more complex unicode characters:
-        db_name_unicode=u'\u6a19\u6e96\u8a9e'
+        db_name_unicode = u'\u6a19\u6e96\u8a9e'
         # same as '標準語' because of file encoding
         # but ensure it on this test
-        db_name_utf8='\xe6\xa8\x99\xe6\xba\x96\xe8\xaa\x9e'
+        db_name_utf8 = '\xe6\xa8\x99\xe6\xba\x96\xe8\xaa\x9e'
         self._db_creation_loop(db_name=db_name_utf8,
                                returning_name=db_name_utf8,
                                connection_user=self.user,
