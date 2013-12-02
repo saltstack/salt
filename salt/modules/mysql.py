@@ -18,11 +18,17 @@ Module to provide MySQL compatibility to salt.
         mysql.pass: ''
         mysql.db: 'mysql'
         mysql.unix_socket: '/tmp/mysql.sock'
+        mysql.unix_socket: '/tmp/mysql.sock'
+        mysql.use_unicode: True
+        mysql.charset: 'utf8'
 
     You can also use a defaults file::
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
+.. versionchanged:: 0.17.3
+    charset and use_unicode connection arguments added, note that charset usage
+    requires use_unicode activated. See MySQLdb documentation for details.
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
     CLI by using the arguments defined :doc:`here
