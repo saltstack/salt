@@ -2151,6 +2151,7 @@ class ClearFuncs(object):
                                             fun,
                                             exc,
                                             )
+                data['success'] = False
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return {'tag': tag}
 
