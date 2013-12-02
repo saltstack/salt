@@ -124,7 +124,10 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
-    kwargs.pop('refresh', True)
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
+    if refresh:
+        refresh_db()
 
     if len(names) <= 1:
         return ''
@@ -177,6 +180,28 @@ def remove(name=None, pkgs=None, **kwargs):
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
+
+
+def refresh_db():
+    '''
+    Update the homebrew package repository.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.refresh_db
+    '''
+    cmd = 'brew update'
+
+    homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
+    user = __salt__['file.get_user'](homebrew_binary)
+
+    if __salt__['cmd.retcode'](cmd, runas=user):
+        log.error('Failed to update')
+        return False
+
+    return True
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
