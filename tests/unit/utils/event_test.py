@@ -14,6 +14,7 @@ import os
 import hashlib
 import time
 from contextlib import contextmanager
+from multiprocessing import Process
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -27,15 +28,48 @@ from salt.utils import event
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
 @contextmanager
-def eventpublisher_process(sock_dir):
-    proc = event.EventPublisher({'sock_dir':sock_dir})
+def eventpublisher_process():
+    proc = event.EventPublisher({'sock_dir':SOCK_DIR})
     proc.start()
     try:
-        time.sleep(2)
+        if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
+            # Travis is slow
+            time.sleep(10)
+        else:
+            time.sleep(2)
         yield
     finally:
         proc.terminate()
         proc.join()
+
+class EventSender(Process):
+    def __init__(self, data, tag, wait):
+        super(EventSender, self).__init__()
+        self.data = data
+        self.tag = tag
+        self.wait = wait
+
+    def run(self):
+        me = event.MasterEvent(sock_dir=SOCK_DIR)
+        time.sleep(self.wait)
+        me.fire_event(self.data, self.tag)
+        # Wait a few seconds before tearing down the zmq context
+        if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
+            # Travis is slow
+            time.sleep(10)
+        else:
+            time.sleep(2)
+
+@contextmanager
+def eventsender_process(data, tag, wait=0):
+    proc = EventSender(data, tag, wait)
+    proc.start()
+    try:
+        yield
+    finally:
+        proc.terminate()
+        proc.join()
+
 
 class TestSaltEvent(TestCase):
 
@@ -107,18 +141,53 @@ class TestSaltEvent(TestCase):
         )
 
     def test_event_subscription(self):
-        with eventpublisher_process(sock_dir=SOCK_DIR):
+        '''Test a single event is reveiced'''
+        with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
-            me.subscribe('')
+            me.subscribe('evt1')
             me.fire_event({'data':'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data':'foo1'})
 
-    def test_nested_event_subs(self):
-        '''Test nested event subscriptions do not drop events, issue #8580'''
-        with eventpublisher_process(sock_dir=SOCK_DIR):
+    def test_event_not_subscribed(self):
+        '''Test get event ignores non-subscribed events'''
+        with eventpublisher_process():
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('evt1')
+            with eventsender_process({'data':'foo1'}, 'evt1', 5):
+                me.fire_event({'data':'foo1'}, 'evt2')
+                evt1 = me.get_event(tag='evt1', wait=10)
+            self.assertGotEvent(evt1, {'data':'foo1'})
+
+    def test_event_multiple_subscriptions(self):
+        '''Test multiple subscriptions do not interfere'''
+        with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe('')
+            with eventsender_process({'data':'foo1'}, 'evt1', 5):
+                me.fire_event({'data':'foo1'}, 'evt2')
+                evt1 = me.get_event(tag='evt1', wait=10)
+            self.assertGotEvent(evt1, {'data':'foo1'})
+
+    def test_event_multiple_clients(self):
+        '''Test event is reveiced by multiple clients'''
+        with eventpublisher_process():
+            me1 = event.MasterEvent(sock_dir=SOCK_DIR)
+            me1.subscribe('evt1')
+            me2 = event.MasterEvent(sock_dir=SOCK_DIR)
+            me2.subscribe('evt1')
+            me1.fire_event({'data':'foo1'}, 'evt1')
+            evt1 = me1.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data':'foo1'})
+            evt2 = me2.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data':'foo1'})
+
+    def test_event_nested_subs(self):
+        '''Test nested event subscriptions do not drop events, issue #8580'''
+        with eventpublisher_process():
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe('evt1')
+            me.subscribe('evt2')
             me.fire_event({'data':'foo1'}, 'evt1')    
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='evt2')
@@ -126,21 +195,21 @@ class TestSaltEvent(TestCase):
             self.assertGotEvent(evt2, {'data':'foo2'})
             self.assertGotEvent(evt1, {'data':'foo1'})
 
-    def test_event_nodrops(self):
+    def test_event_many(self):
         '''Test a large number of events, one at a time'''
-        with eventpublisher_process(sock_dir=SOCK_DIR):
+        with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
-            me.subscribe('')
+            me.subscribe('testevents')
             for i in xrange(500):
                 me.fire_event({'data':'{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data':'{0}'.format(i)}, 'Event {0}'.format(i))
 
-    def test_event_nodrop_backlog(self):
+    def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
-        with eventpublisher_process(sock_dir=SOCK_DIR):
+        with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
-            me.subscribe('')
+            me.subscribe('testevents')
             # Must not tp exceed zmq HWM
             for i in xrange(500):
                 me.fire_event({'data':'{0}'.format(i)}, 'testevents')
