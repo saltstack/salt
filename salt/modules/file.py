@@ -2926,7 +2926,11 @@ def grep(path,
          pattern,
          *args):
     '''
-    grep string from file
+    Grep for a string in the specified file
+
+    .. note::
+        This function's return value is slated for refinement in future
+        versions of Salt
 
     path
         A file path
