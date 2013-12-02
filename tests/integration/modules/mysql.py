@@ -334,7 +334,7 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     'Unexpected query result while populating test table {0!r} : {1!r}'.format(
                          tablename,
@@ -350,7 +350,7 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     'Unexpected query result while populating test table {0!r} : {1!r}'.format(
                          tablename,
@@ -366,7 +366,7 @@ class MysqlModuleTest(integration.ModuleCase,
               connection_user=self.user,
               connection_pass=self.password
             )
-            if not isinstance(ret, dict) or not ret.has_key('rows affected'):
+            if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     ('Unexpected query result while removing rows on test table'
                      ' {0!r} : {1!r}').format(
