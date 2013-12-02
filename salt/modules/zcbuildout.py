@@ -47,16 +47,6 @@ import sys
 import traceback
 import urllib2
 
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
-
-try:
-    from Queue import Queue, Empty
-except ImportError:
-    from queue import Queue, Empty  # python 3.x
-
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
@@ -257,24 +247,6 @@ def _Popen(command,
     if output:
         ret = out
     return ret
-
-
-def _enqueue_output(ret, queue):
-    while True:
-        out = ret.stdout.read()
-        eout = ret.stderr.read()
-        if (
-            (eout == '')
-            and (out == '')
-            and (ret.returncode is not None)
-        ):
-            break
-        queue.put(out)
-        queue.put(eout)
-        sys.stdout.write(out)
-        sys.stdout.write(eout)
-    ret.stdout.close()
-    ret.stderr.close()
 
 
 class ResultTransmission(Exception):
