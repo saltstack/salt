@@ -4,6 +4,7 @@ A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 
 :depends:   - psutil Python module
+            - python-utmp package (optional)
 '''
 
 # Import python libs
@@ -452,19 +453,37 @@ def get_users():
         salt '*' ps.get_users
     '''
     try:
-        return dict(psutil.get_users()._asdict())
+        recs = psutil.get_users()
+        return [dict(x._asdict()) for x in recs]
     except AttributeError:
         # get_users is only present in psutil > v0.5.0
-        ret = []
-        w = __salt__['cmd.run'](
-            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
-        for u in w:
-            u = u.split()
-            started = __salt__['cmd.run'](
-                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
-            rec = {'name': u[0], 'terminal': u[1],
-                   'started': started, 'host': None}
-            if len(u) > 4:
-                rec['host'] = u[4][1:-1]
-            ret.append(rec)
-        return ret
+        # try utmp
+        try:
+            import utmp
+            result = []
+            while True:
+                rec = utmp.utmpaccess.getutent()
+                if rec is None:
+                    return result
+                elif rec[0] == 7:
+                    started = rec[8]
+                    if isinstance(started, tuple):
+                        started = started[0]
+                    result.append({'name': rec[4], 'terminal': rec[2],
+                                   'started': started, 'host': rec[5]})
+        except ImportError:
+            return False
+# This is a possible last ditch method
+#        result = []
+#        w = __salt__['cmd.run'](
+#            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
+#        for u in w:
+#            u = u.split()
+#            started = __salt__['cmd.run'](
+#                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
+#            rec = {'name': u[0], 'terminal': u[1],
+#                   'started': started, 'host': None}
+#            if len(u) > 4:
+#                rec['host'] = u[4][1:-1]
+#            result.append(rec)
+#        return result
