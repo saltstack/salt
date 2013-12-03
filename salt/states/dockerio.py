@@ -305,7 +305,7 @@ def installed(name,
     ins_container = __salt('docker.inspect_container')
     create = __salt('docker.create_container')
     iinfos = ins_image(image)
-    dports, dvolumes, denvironment = [], [], {}
+    dports, dvolumes, denvironment = {}, [], {}
     iinfos = ins_image(image)
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
@@ -327,13 +327,11 @@ def installed(name,
                 for k in p:
                     denvironment[u'%s' % k] = u'%s' % p[k]
     for p in ports:
-        vals = []
         if not isinstance(p, dict):
-            vals.append('%s' % p)
+            dports[str(p)] = {}
         else:
             for k in p:
-                vals.append('{0}:{1}'.format(k, p[k]))
-        dports.extend(vals)
+                dports[str(p)] = {}
     for p in volumes:
         vals = []
         if not isinstance(p, dict):
