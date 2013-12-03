@@ -156,6 +156,17 @@ class TestSaltEvent(TestCase):
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
+    def test_event_timeout(self):
+        '''Test no event is received if the timeout is reached'''
+        with eventpublisher_process():
+            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me.subscribe()
+            me.fire_event({'data':'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data':'foo1'})
+            evt2 = me.get_event(tag='evt1')
+            self.assertIsNone(evt2)
+
     def test_event_subscription_matching(self):
         '''Test a subscription startswith matching'''
         with eventpublisher_process():
