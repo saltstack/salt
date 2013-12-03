@@ -841,11 +841,12 @@ class Loader(object):
                 except Exception:
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
-                    log.exception(
+                    log.error(
                         'Failed to read the virtual function for '
                         '{0}: {1}'.format(
                             self.tag, module_name
-                        )
+                        ),
+                        exc_info=True
                     )
                     continue
 

@@ -196,7 +196,7 @@ def installed(name,
     '''
     try:
         test_release = int(test_release)
-    except:
+    except ValueError:
         test_release = None
     func = __salt('buildout.buildout')
     a, kw = [], dict(

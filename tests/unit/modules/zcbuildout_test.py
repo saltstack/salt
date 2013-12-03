@@ -25,9 +25,7 @@ from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-ROOT = os.path.join(os.path.dirname(integration.__file__),
-                    'files/file/base/buildout')
-
+ROOT = os.path.join(integration.FILES, 'file', 'base', 'buildout')
 
 buildout.__salt__ = {
     'cmd.run_all': cmd.run_all,
@@ -52,7 +50,7 @@ class Base(TestCase):
         cls.tdir = os.path.join(cls.rdir, 'test')
         for i in buildout._url_versions:
             p = os.path.join(
-                cls.rdir, '{}_bootstrap.py'.format(i)
+                cls.rdir, '{0}_bootstrap.py'.format(i)
             )
             fic = open(p, 'w')
             fic.write(
@@ -71,7 +69,7 @@ class Base(TestCase):
 
         for i in boot_init:
             p = os.path.join(
-                self.rdir, '{}_bootstrap.py'.format(i)
+                self.rdir, '{0}_bootstrap.py'.format(i)
             )
             for f in boot_init[i]:
                 shutil.copy2(p, os.path.join(self.tdir, f))
@@ -384,4 +382,3 @@ if __name__ == '__main__':
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)
-
