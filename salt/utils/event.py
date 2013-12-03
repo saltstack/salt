@@ -386,10 +386,11 @@ class EventPublisher(Process):
         super(EventPublisher, self).__init__()
         self.opts = opts
 
-    def run(self, linger=5000):
+    def run(self):
         '''
         Bind the pub and pull sockets for events
         '''
+        linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
         # Prepare the master event publisher
