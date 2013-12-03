@@ -448,6 +448,15 @@ def list_master(saltenv='base', prefix='', env=None):
 
         salt '*' cp.list_master
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     return __context__['cp.fileclient'].file_list(saltenv, prefix)
 
@@ -557,6 +566,15 @@ def hash_file(path, saltenv='base', env=None):
 
         salt '*' cp.hash_file salt://path/to/file
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
