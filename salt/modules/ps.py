@@ -439,3 +439,32 @@ def disk_io_counters():
         salt '*' ps.disk_io_counters
     '''
     return dict(psutil.disk_io_counters()._asdict())
+
+
+def get_users():
+    '''
+    Return logged-in users.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.get_users
+    '''
+    try:
+        return dict(psutil.get_users()._asdict())
+    except AttributeError:
+        # get_users is only present in psutil > v0.5.0
+        ret = []
+        w = __salt__['cmd.run'](
+            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
+        for u in w:
+            u = u.split()
+            started = __salt__['cmd.run'](
+                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
+            rec = {'name': u[0], 'terminal': u[1],
+                   'started': started, 'host': None}
+            if len(u) > 4:
+                rec['host'] = u[4][1:-1]
+            ret.append(rec)
+        return ret
