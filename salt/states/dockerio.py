@@ -305,6 +305,17 @@ def installed(name,
             - a mapping mountpointInContainer:MountpointinHost
     started
         Is the container running (default: true)
+    port_bindings
+        List of ports to expose on host system
+            - a mapping port's guest, hostname's host and port's host.
+
+        .. code-block:: yaml
+
+            - port_bindings:
+                "5000/tcp":
+                    - HostIp: ""
+                    - HostPort: "5000"
+
 
     For other parameters, please look at the module
     documentation
