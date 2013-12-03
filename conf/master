@@ -356,6 +356,13 @@
 #  - git://github.com/saltstack/salt-states.git
 #  - file:///var/git/saltmaster
 #
+# The gitfs_ssl_verify option specifies whether to ignore ssl certificate
+# errors when contacting the gitfs backend. You might want to set this to
+# false if you're using a git backend that uses a self-signed certificate but
+# keep in mind that setting this flag to anything other than the default of True
+# is a security concern, you may want to try using the ssh transport.
+#gitfs_ssl_verify: True
+#
 # The repos will be searched in order to find the file requested by a client
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
@@ -389,7 +396,7 @@
 # errors when contacting the pillar gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
 # keep in mind that setting this flag to anything other than the default of True
-# is a security concern.
+# is a security concern, you may want to try using the ssh transport.
 #pillar_gitfs_ssl_verify: True
 
 # The pillar_opts option adds the master configuration file data to a dict in
