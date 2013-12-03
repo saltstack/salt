@@ -56,6 +56,7 @@ import errno
 import logging
 import datetime
 import multiprocessing
+import time
 from multiprocessing import Process
 from collections import MutableMapping
 
@@ -130,6 +131,7 @@ class SaltEvent(object):
         self.cpub = False
         self.cpush = False
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        self.subscriptions = {}
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
@@ -178,19 +180,37 @@ class SaltEvent(object):
     def subscribe(self, tag):
         '''
         Subscribe to events matching the passed tag.
+        Returns the reference count of the subscription.
         '''
         if not self.cpub:
             self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+        if tag not in self.subscriptions:
+            self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+            self.subscriptions[tag] = {
+                'refcount':1, 
+                'pending_events':[]
+            }
+        else:
+            self.subscriptions[tag]['refcount'] += 1
+        return self.subscriptions[tag]['refcount']
 
     def unsubscribe(self, tag):
         '''
         Un-subscribe to events matching the passed tag.
+        Returns the reference count of the subscription, 0 if the subscription has been deleted.
         '''
         if not self.cpub:
             # There's no way we've even subscribed to this tag
             return
-        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+        if tag in self.subscriptions:
+            self.subscriptions[tag]['refcount'] -= 1
+            if self.subscriptions[tag]['refcount'] <= 0:
+                self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+                del self.subscriptions[tag]
+                return 0
+            else:
+                return self.subscriptions[tag]['refcount']
+        return 0
 
     def connect_pub(self):
         '''
@@ -223,25 +243,39 @@ class SaltEvent(object):
         IF wait is 0 then block forever.
         '''
         self.subscribe(tag)
-        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-            raw = self.sub.recv()
-            if ord(raw[20]) >= 0x80:  # old style
-                mtag = raw[0:20].rstrip('|')
-                mdata = raw[20:]
-            else:  # new style
-                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-
-            data = self.serial.loads(mdata)
-
-            if not mtag.startswith(tag):  # tag not match
-                return None
-
+        # Already subscribed, check if a pending event exists
+        if self.subscriptions[tag]['pending_events']:
             if full:
+                return self.subscriptions[tag]['pending_events'].pop(0)
+            else:
+                return self.subscriptions[tag]['pending_events'].pop(0)['data']
+        start = int(time.time())
+        while not wait or int(time.time()) <= start + wait:
+            socks = dict(self.poller.poll(1000))
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+                if ord(raw[20]) >= 0x80:  # old style
+                    mtag = raw[0:20].rstrip('|')
+                    mdata = raw[20:]
+                else:  # new style
+                    mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+
+                data = self.serial.loads(mdata)
+
                 ret = {'data': data,
                         'tag': mtag}
-                return ret
-            return data
+
+                # other subscribers might be interested
+                for stag in self.subscriptions.keys():
+                    if stag != tag and mtag.startswith(stag):
+                        self.subscriptions[stag]['pending_events'].append(ret)
+
+                if not mtag.startswith(tag):
+                    # tag not match
+                    continue
+                if full:
+                    return ret
+                return data
         return None
 
     def iter_events(self, tag='', full=False):

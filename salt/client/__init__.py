@@ -215,8 +215,6 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         jid = ''
 
-        self.event.subscribe(jid)
-
         pub_data = self.pub(
             tgt,
             fun,
@@ -725,79 +723,13 @@ class LocalClient(object):
         '''
         Watch the event system and return job data as it comes in
         '''
-        if not isinstance(minions, set):
-            if isinstance(minions, basestring):
-                minions = set([minions])
-            elif isinstance(minions, (list, tuple)):
-                minions = set(list(minions))
-
-        if timeout is None:
-            timeout = self.opts['timeout']
-        inc_timeout = timeout
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        start = int(time.time())
-        found = set()
-        wtag = os.path.join(jid_dir, 'wtag*')
-        # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
-            yield {}
-        # Wait for the hosts to check in
-        syndic_wait = 0
-        while True:
-            raw = self.event.get_event(timeout, jid)
-            if raw is not None and 'id' in raw:
-                if 'minions' in raw.get('data', {}):
-                    minions.update(raw['data']['minions'])
-                    continue
-                if 'syndic' in raw:
-                    minions.update(raw['syndic'])
-                    continue
-                if kwargs.get('raw', False):
-                    found.add(raw['id'])
-                    yield raw
-                else:
-                    found.add(raw['id'])
-                    ret = {raw['id']: {'ret': raw['return']}}
-                    if 'out' in raw:
-                        ret[raw['id']]['out'] = raw['out']
-                    yield ret
-                if len(found.intersection(minions)) >= len(minions):
-                    # All minions have returned, break out of the loop
-                    if self.opts['order_masters']:
-                        if syndic_wait < self.opts.get('syndic_wait', 1):
-                            syndic_wait += 1
-                            time.sleep(1)
-                            continue
-                    break
-                continue
-            # Then event system timeout was reached and nothing was returned
-            if len(found.intersection(minions)) >= len(minions):
-                # All minions have returned, break out of the loop
-                if self.opts['order_masters']:
-                    if syndic_wait < self.opts.get('syndic_wait', 1):
-                        syndic_wait += 1
-                        time.sleep(1)
-                        continue
-                break
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
-            if int(time.time()) > start + timeout:
-                # The timeout has been reached, check the jid to see if the
-                # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
-                more_time = False
-                for id_ in jinfo:
-                    if jinfo[id_]:
-                        more_time = True
-                if more_time:
-                    timeout += inc_timeout
-                    continue
-                break
-            time.sleep(0.01)
+        return self.get_cli_event_returns(
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob'
+        )
 
     def get_returns(
             self,
@@ -935,60 +867,16 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
-        minions = set(minions)
-        if verbose:
-            msg = 'Executing job with jid {0}'.format(jid)
-            print(msg)
-            print('-' * len(msg) + '\n')
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        start = int(time.time())
-        found = set()
         ret = {}
-        wtag = os.path.join(jid_dir, 'wtag*')
-        # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
-            return ret
-        # Wait for the hosts to check in
-        while True:
-            raw = self.event.get_event(timeout, jid)
-            if raw is not None and 'return' in raw:
-                if 'minions' in raw.get('data', {}):
-                    minions.update(raw['data']['minions'])
-                    continue
-                found.add(raw['id'])
-                ret[raw['id']] = {'ret': raw['return']}
-                ret[raw['id']]['success'] = raw.get('success', False)
-                if 'out' in raw:
-                    ret[raw['id']]['out'] = raw['out']
-                if len(found.intersection(minions)) >= len(minions):
-                    # All minions have returned, break out of the loop
-                    break
-                continue
-            # Then event system timeout was reached and nothing was returned
-            if len(found.intersection(minions)) >= len(minions):
-                # All minions have returned, break out of the loop
-                break
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
-            if int(time.time()) > start + timeout:
-                if verbose:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found) < len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                ret[minion] = {
-                                    'out': 'no_return',
-                                    'ret': 'Minion did not return'
-                                }
-                break
-            time.sleep(0.01)
+        for mret in self.get_cli_event_returns(
+            jid,
+            minions,
+            timeout,
+            tgt,
+            tgt_type,
+            verbose
+            ):
+            ret.update(mret)
         return ret
 
     def get_cli_event_returns(
@@ -1016,11 +904,11 @@ class LocalClient(object):
             print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
-        inc_timeout = timeout
         jid_dir = salt.utils.jid_dir(jid,
                                      self.opts['cachedir'],
                                      self.opts['hash_type'])
         start = int(time.time())
+        timeout_at = start + timeout
         found = set()
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
@@ -1028,9 +916,13 @@ class LocalClient(object):
             yield {}
         # Wait for the hosts to check in
         syndic_wait = 0
+        one_more_time = True
         while True:
-            raw = self.event.get_event(timeout, jid)
-            if raw is not None:
+            # Process events until timeout is reached or all minions have returned
+            time_left = timeout_at - int(time.time())
+            wait = max(1, time_left)
+            raw = self.event.get_event(wait, jid)
+            if raw is not None and 'id' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -1040,7 +932,10 @@ class LocalClient(object):
                 if 'return' not in raw:
                     continue
                 found.add(raw.get('id'))
-                ret = {raw['id']: {'ret': raw['return']}}
+                ret = {raw['id']: {
+                    'ret': raw['return'],
+                    'success': raw.get('success', False)
+                }}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
@@ -1049,7 +944,7 @@ class LocalClient(object):
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
-                            time.sleep(1)
+                            timeout_at = time.time() + timeout
                             continue
                     break
                 continue
@@ -1059,42 +954,47 @@ class LocalClient(object):
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
-                        time.sleep(1)
+                        timeout_at = time.time() + timeout
                         continue
                 break
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
-            if int(time.time()) > start + timeout:
-                # The timeout has been reached, check the jid to see if the
-                # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
-                more_time = False
-                for id_ in jinfo:
-                    if jinfo[id_]:
-                        if verbose:
-                            print(
-                                'Execution is still running on {0}'.format(id_)
-                            )
-                        more_time = True
-                if more_time:
-                    timeout += inc_timeout
+            if not one_more_time:
+                break
+            # The timeout has been reached, check the jid to see if the
+            # timeout needs to be increased
+            jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+            for id_ in jinfo:
+                if jinfo[id_]:
+                    if verbose:
+                        print(
+                            'Execution is still running on {0}'.format(id_)
+                        )
+                    timeout_at = time.time() + timeout
+                    break
+            else:
+                # Minion may have returned while gather_job_info was running, check once more for an event
+                if one_more_time:
+                    one_more_time = False
+                    timeout_at = time.time() + 1
                     continue
-                if verbose or show_timeout:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found) < len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                yield({
-                                    minion: {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                                })
+                if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
+                    # The timeout +1 has not been reached and there is still a
+                    # write tag for the syndic
+                    timeout_at = time.time() + timeout
+                    continue
                 break
             time.sleep(0.01)
+        if verbose or show_timeout:
+            if self.opts.get('minion_data_cache', False) \
+                    or tgt_type in ('glob', 'pcre', 'list'):
+                if len(found) < len(minions):
+                    fail = sorted(list(minions.difference(found)))
+                    for minion in fail:
+                        yield({
+                            minion: {
+                                'out': 'no_return',
+                                'ret': 'Minion did not return'
+                            }
+                        })
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
         '''
