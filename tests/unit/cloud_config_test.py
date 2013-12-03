@@ -105,6 +105,13 @@ class CloudConfigTestCase(TestCase):
             if os.path.isdir(temp_conf_dir):
                 shutil.rmtree(temp_conf_dir)
 
+    def test_includes_load(self):
+        '''cloud.{providers,profiles}.d directories are loaded even if not directly passed'''
+        config_path = os.path.join(integration.FILES, 'conf', 'cloud')
+        config = cloudconfig.cloud_config(config_path)
+        self.assertIn('ec2-config', config['providers'])
+        self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
+
 
 if __name__ == '__main__':
     from salttesting.parser import run_testcase
