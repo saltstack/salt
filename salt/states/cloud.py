@@ -3,6 +3,8 @@
 Using states instead of maps to deploy clouds
 =============================================
 
+.. versionadded:: Hydrogen
+
 Use this minion to spin up a cloud instance:
 
 .. code-block:: yaml
@@ -26,7 +28,13 @@ def present(name, provider, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
     does not take a profile argument; rather, it takes the arguments that would
-    normally be configured as part of the state
+    normally be configured as part of the state.
+
+    Note that while this function does take any configuration argument that
+    would normally be used to create an instance, it will not verify the state
+    of any of those arguments on an existing instance. Stateful properties of
+    an instance should be configured using their own individual state (i.e.,
+    cloud.tagged, cloud.untagged, etc).
 
     name
         The name of the instance to create
@@ -92,7 +100,7 @@ def absent(name):
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     if not instance:
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already absent'.format(name, prov)
+        ret['comment'] = 'Instance {0} already absent'.format(name)
         return ret
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
@@ -118,10 +126,13 @@ def absent(name):
 
 def profile(name, profile):
     '''
-    Spin up a single instance on a cloud provider, using salt-cloud. This is not
-    the most stateful way to spin up a machine, since it only checks for the
-    existence of the machine by name, and not the other properties of the
-    profile.
+    Create a single instance on a cloud provider, using a salt-cloud profile.
+
+    Note that while profiles used this function do take any configuration
+    argument that would normally be used to create an instance using a profile,
+    this state will not verify the state of any of those arguments on an
+    existing instance. Stateful properties of an instance should be configured
+    using their own individual state (i.e., cloud.tagged, cloud.untagged, etc).
 
     name
         The name of the instance to create
