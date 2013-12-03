@@ -12,7 +12,9 @@ on the singular implementation of individual functions.
 Preparing to Write a Unit Test
 ==============================
 
-Unit tests live in: **salt/tests/unit**.
+Unit tests live in: `tests/unit/`__.
+
+.. __: https://github.com/saltstack/salt/tree/develop/tests/unit
 
 Most commonly, the following imports are necessary to create a unit test:
 
@@ -21,23 +23,30 @@ Most commonly, the following imports are necessary to create a unit test:
     # Import Salt Testing libs
     from salttesting import skipIf, TestCase
     from salttesting.helpers import ensure_in_syspath
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+
+
+If you need mock support to your tests, please also import:
+
+.. code-block:: python
+
+    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, 
+    call
 
 
 A Simple Example
 ================
 
 Let's assume that we're testing a very basic function in an imaginary Salt execution module. Given a module called
-'fib.py' that has a function called 'calculate(num_of_results)', which given a 'num_of_results', produces a list of
-sequential Fibannoci numbers of that length.
+``fib.py`` that has a function called 'calculate(num_of_results)', which given a 'num_of_results', produces a list of 
+sequential Fibonacci numbers of that length.
 
-A unit test to test this function might be commonly placed in a file called tests/modules/fib_test.py`. The convention
-is to place tests for Salt execution modules in 'test/modules/' and to name the set of tests of that module with the
-module name suffixed with '_test.py'.
+A unit test to test this function might be commonly placed in a file called ``tests/unit/modules/fib_test.py``. The 
+convention is to place unit tests for Salt execution modules in ``test/unit/modules/`` and to name the tests module 
+suffixed with ``_test.py``.
 
-Tests are are grouped around test cases, which are logically grouped sets of tests against a piece of functionality in
-the tested software. Test cases are created as Python classes in the unit test module. To return to our example, here's
-how we might write the skeleton for testing fib.py:
+Tests are grouped around test cases, which are logically grouped sets of tests against a piece of functionality in the 
+tested software. Test cases are created as Python classes in the unit test module. To return to our example, here's
+how we might write the skeleton for testing ``fib.py``:
 
 .. code-block:: python
 
@@ -63,19 +72,20 @@ how we might write the skeleton for testing fib.py:
             '''
             self.assertEqual(fib.calculate(5), self.fib_five)
 
-At this point, the test can now be run, either individually or as a part of a full run of the test runner. To ease
+
+At this point, the test can now be run, either individually or as a part of a full run of the test runner. To ease 
 development, a single test can be executed:
 
 .. code-block:: bash
 
-    salt/tests/runtests.py -n unit.modules.fib_test
+    tests/runtests.py -n unit.modules.fib_test
 
 This will produce output indicating the success or failure of the tests in given test case. For more detailed results,
 one can also include a flag to increase verbosity:
 
 .. code-block:: bash
 
-    salt/tests/runtests.py -n unit.modules.fib_test -v
+    tests/runtests.py -n unit.modules.fib_test -v
 
 To review the results of a particular run, take a note of the log location given in the output for each test:
 
@@ -163,16 +173,18 @@ To begin, we set up the skeleton of our class much like we did before, but with 
 
             db.execute_query.assert_has_calls(expected_call)
 
-.. __: http://www.voidspace.org.uk/python/mock/index.html#
 
-Modifying __salt__ In Place
-===========================
+.. __: http://www.voidspace.org.uk/python/mock/index.html
 
-At times, it becomes necessary to make modifications to a module's view of functions in its own __salt__ dictionary.
+
+Modifying ``__salt__`` In Place
+===============================
+
+At times, it becomes necessary to make modifications to a module's view of functions in its own ``__salt__`` dictionary.
 Luckily, this process is quite easy.
 
-Below is an example that uses MagicMock's 'patch' functionality to insert a function into __salt__ that's actually a
-MagicMock instance.
+Below is an example that uses MagicMock's ``patch`` functionality to insert a function into ``__salt__`` that's actually 
+a MagicMock instance.
 
 .. code-block:: python
 
