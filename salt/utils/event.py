@@ -235,6 +235,8 @@ class SaltEvent(object):
             socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
+            else:
+                continue
             if ord(raw[20]) >= 0x80:  # old style
                 mtag = raw[0:20].rstrip('|')
                 mdata = raw[20:]
