@@ -382,4 +382,3 @@ if __name__ == '__main__':
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)
-
