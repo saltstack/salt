@@ -30,7 +30,7 @@ except Exception:
 
 
 @skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
-class MysqlModuleTest(integration.ModuleCase,
+class MysqlModuleDbTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
 
     user = 'root'
@@ -41,7 +41,7 @@ class MysqlModuleTest(integration.ModuleCase,
         '''
         Test presence of MySQL server, enforce a root password
         '''
-        super(MysqlModuleTest, self).setUp()
+        super(MysqlModuleDbTest, self).setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -481,6 +481,656 @@ class MysqlModuleTest(integration.ModuleCase,
         )
         self.assertEqual(True, ret)
 
+
+@skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
+class MysqlModuleUserTest(integration.ModuleCase,
+                      integration.SaltReturnAssertsMixIn):
+
+    user = 'root'
+    password = 'poney'
+
+    @destructiveTest
+    def setUp(self):
+        '''
+        Test presence of MySQL server, enforce a root password
+        '''
+        super(MysqlModuleUserTest, self).setUp()
+        NO_MYSQL_SERVER = True
+        # now ensure we know the mysql root password
+        # one of theses two at least should work
+        ret1 = self.run_state(
+            'cmd.run',
+             name='mysqladmin -u '
+               + self.user
+               + ' flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        ret2 = self.run_state(
+            'cmd.run',
+             name='mysqladmin -u '
+               + self.user
+               + ' --password="'
+               + self.password
+               + '" flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        key, value = ret2.popitem()
+        if value['result']:
+            NO_MYSQL_SERVER = False
+        else:
+            self.skipTest('No MySQL Server running, or no root access on it.')
+
+
+    def _userCreationLop(self, uname, host, password=None, new_password=None, new_password_hash=None, **kwargs):
+        '''
+        Perform some tests around creation of the given user
+        '''
+        # First silently remove it, in case of
+        ret = self.run_function(
+            'mysql.user_remove',
+            user=uname,
+            host=host,
+            **kwargs
+        )
+        # creation
+        ret = self.run_function(
+            'mysql.user_create',
+            user=uname,
+            host=host,
+            password=password,
+            **kwargs
+        )
+        self.assertEqual(True, ret, ('Calling user_create on'
+            ' user {0!r} did not return True: {1}').format(
+            uname,
+            repr(ret)
+        ))
+        # double creation failure
+        ret = self.run_function(
+            'mysql.user_create',
+            user=uname,
+            host=host,
+            password=password,
+            **kwargs
+        )
+        self.assertEqual(False, ret, ('Calling user_create a second time on'
+            ' user {0!r} did not return False: {1}').format(
+            uname,
+            repr(ret)
+        ))
+        # Alter password
+        if not new_password is None or new_password_hash is not None:
+            ret = self.run_function(
+                'mysql.user_chpass',
+                user=uname,
+                host=host,
+                password=new_password,
+                password_hash=new_password_hash,
+                connection_user=self.user,
+                connection_pass=self.password,
+                connection_use_unicode=True,
+                connection_charset='utf8',
+                saltenv={"LC_ALL": "en_US.utf8"}
+            )
+            self.assertEqual(True, ret, ('Calling user_chpass on'
+                ' user {0!r} did not return True: {1}').format(
+                uname,
+                repr(ret)
+            ))
+
+
+    def _chck_userinfo(self, user, host, check_user, check_hash):
+        '''
+        Internal routine to check user_info returned results
+        '''
+        ret = self.run_function(
+            'mysql.user_info',
+            user=user,
+            host=host,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        if not isinstance(ret, dict):
+            raise AssertionError(
+                'Unexpected result while retrieving user_info for {0!r}'.format(
+                    user
+                )
+            )
+        self.assertEqual(ret['Host'],host)
+        self.assertEqual(ret['Password'], check_hash)
+        self.assertEqual(ret['User'], check_user)
+
+    def _chk_remove_user(self, user, host, **kwargs):
+        '''
+        Internal routine to check user_remove
+        '''
+        ret = self.run_function(
+            'mysql.user_remove',
+            user=user,
+            host=host,
+            **kwargs
+        )
+        self.assertEqual(True,ret, ('Assertion failed  while removing user'
+            ' {0!r} on host {1!r}: {2}').format(
+            user,
+            host,
+            repr(ret)
+        ))
+
+    @destructiveTest
+    def test_user_management(self):
+        '''
+        Test various users creation settings
+        '''
+        dbname = u"foo'-- `\"'"
+        # create database
+        # but first silently try to remove it
+        # in case of previous tests failures
+        ret = self.run_function(
+            'mysql.db_remove',
+            name=dbname,
+            connection_user=self.user,
+            connection_pass=self.password,
+            character_set='utf8',
+            collate='utf8_general_ci'
+        )
+        ret = self.run_function(
+            'mysql.db_create',
+            name=dbname,
+            connection_user=self.user,
+            connection_pass=self.password,
+            character_set='utf8',
+            collate='utf8_general_ci'
+        )
+        self.assertEqual(True, ret)
+        
+        # Create users with rights on this database
+        # and rights on other databases
+        user1 = "user '1"
+        # this is : user "2'標
+        user2 = 'user "2\'\xe6\xa8\x99'
+        user3 = 'user "3'
+        # this is : user "4標 in unicode instead of utf-8
+        user4 = u'user "4\u6a19'
+        user4_utf8 = 'user "4\xe6\xa8\x99'
+        user5 = u'user ``"5'
+        user5_utf8 = 'user ``"5'
+        user6 = u'user %--"6'
+        user6_utf8 = 'user %--"6'
+        self._userCreationLop(
+            uname=user1,
+            host='localhost',
+            password='pwd`\'"1',
+            new_password='pwd`\'"1b',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        # Now check for results
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user1,
+            host='localhost',
+            password='pwd`\'"1b',
+            password_hash=None,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' existence failed').format(user1, 'localhost')
+        )
+
+        self._userCreationLop(
+            uname=user2,
+            host='localhost',
+            password=None,
+            # this is his name hash : user "2'標
+            password_hash='*EEF6F854748ACF841226BB1C2422BEC70AE7F1FF',
+            # and this is the same with a 'b' added
+            new_password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # user2 can connect from other places with other password
+        self._userCreationLop(
+            uname=user2,
+            host='10.0.0.1',
+            allow_passwordless=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self._userCreationLop(
+            uname=user2,
+            host='10.0.0.2',
+            allow_passwordless=True,
+            unix_socket=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # Now check for results
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user2,
+            host='localhost',
+            password=None,
+            password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' failed').format(user2, 'localhost')
+        )
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user2,
+            host='10.0.0.1',
+            allow_passwordless=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' without password failed').format(user2, '10.0.0.1')
+        )
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user2,
+            host='10.0.0.2',
+            allow_passwordless=True,
+            unix_socket=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' without password failed').format(user2, '10.0.0.2')
+        )
+
+        # Empty password is not passwordless (or is it a bug?)
+        self._userCreationLop(
+            uname=user3,
+            host='localhost',
+            password='',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        # user 3 on another host with a password
+        self._userCreationLop(
+            uname=user3,
+            host='%',
+            password='foo',
+            new_password='bar',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        # Now check for results
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user3,
+            host='localhost',
+            password='',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' without empty password failed').format(user3, 'localhost')
+        )
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user3,
+            host='%',
+            password='bar',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' with password failed').format(user3, '%')
+        )
+
+        # check unicode name, and password > password_hash
+        self._userCreationLop(
+            uname=user4,
+            host='%',
+            password='foo',
+            password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # Now check for results
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user4_utf8,
+            host='%',
+            password='foo',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' with password take from password and not password_hash'
+            ' failed').format(user4_utf8, '%')
+        )
+        # password is utf-8 version of '標標'
+        self._userCreationLop(
+            uname=user5,
+            host='localhost',
+            password='\xe6\xa8\x99\xe6\xa8\x99',
+            new_password='\xe6\xa8\x99\xe6\xa8\x99b',
+            unix_socket=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user5_utf8,
+            host='localhost',
+            password='\xe6\xa8\x99\xe6\xa8\x99b',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' with utf8 password failed').format(user5_utf8, 'localhost')
+        )
+        # for this one we give password in unicode and check it in utf-8
+        self._userCreationLop(
+            uname=user6,
+            host='10.0.0.1',
+            password=' --\'"% SIX',
+            new_password=u' --\'"% SIX\u6a19b',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        # Now check for results
+        ret = self.run_function(
+            'mysql.user_exists',
+            user=user6_utf8,
+            host='10.0.0.1',
+            password=' --\'"% SIX\xe6\xa8\x99b',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+            ' with unicode password failed').format(user6_utf8,'10.0.0.1')
+        )
+        # Final result should be:
+        # mysql> select Host, User, Password from user where user like 'user%';
+        # +-----------+-------------+-------------------------------------------+
+        # | Host      | User        | Password                                  |
+        # +-----------+-------------+-------------------------------------------+
+        # | 10.0.0.1  | user "2'標  |                                           |
+        # | 10.0.0.2  | user "2'標  |                                           |
+        # | localhost | user "2'標  | *3A38A7B94B024B983687BB9B44FB60B7AA38FE61 |
+        # | %         | user "3     | *E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB |
+        # | localhost | user "3     |                                           |
+        # | %         | user "4標   | *F3A2A51A9B0F2BE2468926B4132313728C250DBF |
+        # | 10.0.0.1  | user %--"6  | *90AE800593E2D407CD9E28CCAFBE42D17EEA5369 |
+        # | localhost | user '1     | *4DF33B3B12E43384677050A818327877FAB2F4BA |
+        # | localhost | user ``"5   | *E2D5734CF0048A1ABEE39E13EA35160DCF249B0C |
+        # +-----------+-------------+-------------------------------------------+
+        self._chck_userinfo(user=user2,
+                            host='10.0.0.1',
+                            check_user=user2,
+                            check_hash=''
+        )
+        self._chck_userinfo(user=user2,
+                            host='10.0.0.2',
+                            check_user=user2,
+                            check_hash=''
+        )
+        self._chck_userinfo(user=user2,
+                            host='localhost',
+                            check_user=user2,
+                            check_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61'
+        )
+        self._chck_userinfo(user=user3,
+                            host='%',
+                            check_user=user3,
+                            check_hash='*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+        )
+        self._chck_userinfo(user=user3,
+                            host='localhost',
+                            check_user=user3,
+                            check_hash=''
+        )
+        self._chck_userinfo(user=user4,
+                            host='%',
+                            check_user=user4_utf8,
+                            check_hash='*F3A2A51A9B0F2BE2468926B4132313728C250DBF'
+        )
+        self._chck_userinfo(user=user6,
+                            host='10.0.0.1',
+                            check_user=user6_utf8,
+                            check_hash='*90AE800593E2D407CD9E28CCAFBE42D17EEA5369'
+        )
+        self._chck_userinfo(user=user1,
+                            host='localhost',
+                            check_user=user1,
+                            check_hash='*4DF33B3B12E43384677050A818327877FAB2F4BA'
+        )
+        self._chck_userinfo(user=user5,
+                            host='localhost',
+                            check_user=user5_utf8,
+                            check_hash='*E2D5734CF0048A1ABEE39E13EA35160DCF249B0C'
+        )
+        # check user_list function
+        ret = self.run_function(
+            'mysql.user_list',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertIn({'Host': 'localhost', 'User': user1}, ret)
+        self.assertIn({'Host': 'localhost', 'User': user2}, ret)
+        self.assertIn({'Host': '10.0.0.1', 'User': user2}, ret)
+        self.assertIn({'Host': '10.0.0.2', 'User': user2}, ret)
+        self.assertIn({'Host': '%', 'User': user3}, ret)
+        self.assertIn({'Host': 'localhost', 'User': user3}, ret)
+        self.assertIn({'Host': '%', 'User': user4_utf8}, ret)
+        self.assertIn({'Host': 'localhost', 'User': user5_utf8}, ret)
+        self.assertIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
+        
+        # And finally, test connections on MySQL with theses users
+        ret = self.run_function(
+            'mysql.query',
+            database='information_schema',
+            query='SELECT 1',
+            connection_user=user1,
+            connection_pass='pwd`\'"1b',
+            connection_host='localhost'
+        )
+        if not isinstance(ret, dict) or not 'results' in ret:
+            raise AssertionError(
+                ('Unexpected result while testing connection'
+                ' with user {0!r}: {1}').format(
+                    user1,
+                    repr(ret)
+                )
+            )
+        self.assertEqual([['1']], ret['results'])
+        
+        # FIXME: still failing, works by hand...
+        # mysql --user="user \"2'標" --password="user \"2'標b" information_schema
+        #ret = self.run_function(
+        #    'mysql.query',
+        #    database='information_schema',
+        #    query='SELECT 1',
+        #    connection_user=user2,
+        #    connection_pass='user "2\'\xe6\xa8\x99b',
+        #    connection_host='localhost',
+        #    connection_use_unicode=True,
+        #    connection_charset='utf8',
+        #    saltenv={"LC_ALL": "en_US.utf8"}
+        #)
+        #if not isinstance(ret, dict) or not 'results' in ret:
+        #    raise AssertionError(
+        #        ('Unexpected result while testing connection'
+        #        ' with user {0!r}: {1}').format(
+        #            user2,
+        #            repr(ret)
+        #        )
+        #    )
+        #self.assertEqual([['1']], ret['results'])
+        ret = self.run_function(
+            'mysql.query',
+            database='information_schema',
+            query='SELECT 1',
+            connection_user=user3,
+            connection_pass='',
+            connection_host='localhost',
+        )
+        if not isinstance(ret, dict) or not 'results' in ret:
+            raise AssertionError(
+                ('Unexpected result while testing connection'
+                ' with user {0!r}: {1}').format(
+                    user3,
+                    repr(ret)
+                )
+            )
+        self.assertEqual([['1']], ret['results'])
+        # FIXME: Failing
+        #ret = self.run_function(
+        #    'mysql.query',
+        #    database='information_schema',
+        #    query='SELECT 1',
+        #    connection_user=user4_utf8,
+        #    connection_pass='foo',
+        #    connection_host='localhost',
+        #    connection_use_unicode=True,
+        #    connection_charset='utf8',
+        #    saltenv={"LC_ALL": "en_US.utf8"}
+        #)
+        #if not isinstance(ret, dict) or not 'results' in ret:
+        #    raise AssertionError(
+        #        ('Unexpected result while testing connection'
+        #        ' with user {0!r}: {1}').format(
+        #            user4_utf8,
+        #            repr(ret)
+        #        )
+        #    )
+        #self.assertEqual([['1']], ret['results'])
+        # FIXME
+        #ret = self.run_function(
+        #    'mysql.query',
+        #    database='information_schema',
+        #    query='SELECT 1',
+        #    connection_user=user5,
+        #    connection_pass='\xe6\xa8\x99\xe6\xa8\x99b',
+        #    connection_host='localhost',
+        #    connection_use_unicode=True,
+        #    connection_charset='utf8',
+        #    saltenv={"LC_ALL": "en_US.utf8"}
+        #)
+        #if not isinstance(ret, dict) or not 'results' in ret:
+        #    raise AssertionError(
+        #        ('Unexpected result while testing connection'
+        #        ' with user {0!r}: {1}').format(
+        #            user5,
+        #            repr(ret)
+        #        )
+        #    )
+        #self.assertEqual([['1']], ret['results'])
+
+        # Teardown by deleting with user_remove
+        self._chk_remove_user(user=user2,
+                              host='10.0.0.1',
+                              connection_use_unicode=True,
+                              connection_charset='utf8',
+                              saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self._chk_remove_user(user=user2,
+                              host='10.0.0.2',
+                              connection_use_unicode=True,
+                              connection_charset='utf8',
+                              saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self._chk_remove_user(user=user2,
+                              host='localhost',
+                              connection_use_unicode=True,
+                              connection_charset='utf8',
+                              saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self._chk_remove_user(user=user3,
+                              host='%'
+        )
+        self._chk_remove_user(user=user3,
+                              host='localhost'
+        )
+        self._chk_remove_user(user=user4,
+                              host='%',
+                              connection_use_unicode=True,
+                              connection_charset='utf8',
+                              saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self._chk_remove_user(user=user6,
+                              host='10.0.0.1'
+        )
+        self._chk_remove_user(user=user1,
+                              host='localhost'
+        )
+        self._chk_remove_user(user=user5,
+                              host='localhost'
+        )
+        # Final verification of the cleanup
+        ret = self.run_function(
+            'mysql.user_list',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        self.assertNotIn({'Host': 'localhost', 'User': user1}, ret)
+        self.assertNotIn({'Host': 'localhost', 'User': user2}, ret)
+        self.assertNotIn({'Host': '10.0.0.1', 'User': user2}, ret)
+        self.assertNotIn({'Host': '10.0.0.2', 'User': user2}, ret)
+        self.assertNotIn({'Host': '%', 'User': user3}, ret)
+        self.assertNotIn({'Host': 'localhost', 'User': user3}, ret)
+        self.assertNotIn({'Host': '%', 'User': user4_utf8}, ret)
+        self.assertNotIn({'Host': 'localhost', 'User': user5_utf8}, ret)
+        self.assertNotIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
+
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MysqlModuleTest)
+    run_tests(MysqlModuleDbTest,MysqlModuleUserTest)
