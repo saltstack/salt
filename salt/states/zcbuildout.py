@@ -38,7 +38,6 @@ Available Functions
 '''
 
 # Import python libs
-import re
 import sys
 
 # Import salt libs
