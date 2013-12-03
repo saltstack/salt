@@ -531,6 +531,9 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
     Display the state data from a specific sls or list of sls files on the
     master
 
+    This function does not support topfiles.  For ``top.sls`` please use
+    ``show_top`` instead.
+
     CLI Example:
 
     .. code-block:: bash
