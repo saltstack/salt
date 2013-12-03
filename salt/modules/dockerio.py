@@ -573,7 +573,7 @@ def create_container(image,
     dns
         list of DNS servers
     ports
-        ports redirections (['222:22'])
+        ports redirections ({'222': {}})
     volumes
         list of volumes mapping::
 
