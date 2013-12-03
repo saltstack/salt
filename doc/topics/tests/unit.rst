@@ -29,8 +29,7 @@ If you need mock support to your tests, please also import:
 
 .. code-block:: python
 
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, 
-    call
+    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 
 A Simple Example
