@@ -192,7 +192,7 @@ class TestSaltEvent(TestCase):
             self.assertGotEvent(evt1, {'data':'foo1'})
 
     def test_event_multiple_clients(self):
-        '''Test event is reveiced by multiple clients'''
+        '''Test event is received by multiple clients'''
         with eventpublisher_process():
             me1 = event.MasterEvent(sock_dir=SOCK_DIR)
             me1.subscribe()
