@@ -53,6 +53,11 @@ A REST API for Salt
         useful for apps that utilize the HTML5 history API.
 
         .. versionadded:: 0.8.2
+    root_prefix : ``/``
+        A URL path to the main entry point for the application. This is useful
+        for serving multiple applications from the same URL.
+
+        .. versionadded:: 0.8.4
 
     Example production configuration block:
 

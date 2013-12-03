@@ -97,4 +97,4 @@ def start():
             sys.exit(0)
     signal.signal(signal.SIGINT, signal_handler)
 
-    cherrypy.quickstart(root, '/', conf)
+    cherrypy.quickstart(root, apiopts.get('root_prefix', '/'), conf)
