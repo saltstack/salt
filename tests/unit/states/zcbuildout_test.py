@@ -3,8 +3,6 @@ import os
 import tempfile
 import textwrap
 
-from distutils.dir_util import copy_tree
-
 # Import third party libs
 import yaml
 

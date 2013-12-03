@@ -1146,7 +1146,7 @@ def login(url=None, username=None, password=None, email=None, *args, **kwargs):
         salt '*' docker.login <container id>
     '''
     client = _get_client()
-    return client.login(url, username=username, password=password, email=email)
+    return client.login(url, username, password, email)
 
 
 def search(term, *args, **kwargs):
