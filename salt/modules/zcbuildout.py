@@ -33,13 +33,14 @@ def __virtual__():
         return __virtualname__
     return False
 
-
+# Import python libs
 import os
 import re
 import sys
 import traceback
 import urllib2
 
+# Import salt libs
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
@@ -102,7 +103,7 @@ def _salt_callback(func):
     return _call_callback
 
 
-class Logger():
+class _Logger():
     levels = ('info', 'warn', 'debug', 'error')
 
     def __init__(self):
@@ -147,7 +148,7 @@ class Logger():
         return self._by_level
 
 
-LOG = Logger()
+LOG = _Logger()
 
 
 def _set_status(m,
