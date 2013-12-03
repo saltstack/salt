@@ -331,7 +331,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
 
         version = source_list[0][1]
         arch = source_list[0][2]
-        installer_url = base_url+source_list[0][0]
+        installer_url = base_url + source_list[0][0]
 
     # It's no secret that Windows is notoriously command-line hostile.
     # Win 7 and newer can use PowerShell out of the box, but to reach
@@ -390,9 +390,10 @@ objShell.Exec("{1}{2}")'''
     # from a file. Glue it together line by line.
     for x, y in ((vb_vcrunexec, vb_vcrun), (vb_saltexec, vb_salt)):
         vb_lines = y.split('\n')
-        batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'  >'+x+'.vbs\n@echo ' + \
-                 ('  >>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
-                 '  >>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
+        batch += '\ndel ' + x + '\n@echo ' + vb_lines[0] + '  >' + \
+                 x + '.vbs\n@echo ' + \
+                 ('  >>' + x + '.vbs\n@echo ').join(vb_lines[1:]) + \
+                 '  >>' + x + '.vbs\ncscript.exe /NoLogo ' + x + '.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
     batch_file = open(batch_path, 'wb')
@@ -400,7 +401,7 @@ objShell.Exec("{1}{2}")'''
     batch_file.close()
 
     for host in hosts.split(","):
-        argv = ['psexec', '\\\\'+host]
+        argv = ['psexec', '\\\\' + host]
         if username:
             argv += ['-u', username]
             if password:

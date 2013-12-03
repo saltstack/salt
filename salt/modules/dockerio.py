@@ -1725,7 +1725,7 @@ def push(repo, *args, **kwargs):
     return status
 
 
-def _run_wrapper(status, container, func, cmd,  *args, **kwargs):
+def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     '''
     Wrapper to a cmdmod function
 
