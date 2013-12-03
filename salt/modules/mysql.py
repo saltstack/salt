@@ -180,6 +180,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `testdb`.* TO 'testuser'@'localhost'"
+        or a dictionnary with 'sql' and 'sql_args' keys.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -187,7 +188,11 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
-    exploded_grant = shlex.split(grant)
+    if isinstance(grant,dict):
+        grant_sql = grant['sql']
+    else:
+        grant_sql = grant
+    exploded_grant = shlex.split(grant_sql)
     grant_tokens = []
     multiword_statement = []
     position_tracker = 1  # Skip the initial 'GRANT' word token
@@ -1052,7 +1057,7 @@ def tokenize_grant(grant):
 
     .. code-block:: bash
 
-        salt '*' mysql.grant_to_tokens "GRANT SELECT ON `testdb`.* TO 'testuser'@'localhost'"
+        salt '*' mysql.tokenize_grant "GRANT SELECT, INSERT ON testdb.* TO 'testuser'@'localhost'"
     '''
     return _grant_to_tokens(grant)
 
@@ -1238,6 +1243,10 @@ def grant_exists(grant,
 
     grants = user_grants(user, host, **connection_args)
 
+    if grants is False:
+        log.debug('Grant does not exist, or is perhaps not ordered properly?')
+        return False
+    
     for grant in grants:
         try:
             target_tokens = None
