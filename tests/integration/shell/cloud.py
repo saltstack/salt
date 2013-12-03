@@ -12,13 +12,22 @@
 
 
 # Import salt testing libs
+from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 # Import salt libs
 import integration
 
+# Import 3rd-party libs
+try:
+    import libcloud
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
+
+@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.11.4')
 class SaltCloudCliTest(integration.ShellCase,
                        integration.ShellCaseCommonTestsMixIn):
 
@@ -87,4 +96,5 @@ class SaltCloudCliTest(integration.ShellCase,
 
 
 if __name__ == '__main__':
-    integration.run_testcase(SaltCloudCliTest)
+    from integration import run_tests
+    run_tests(SaltCloudCliTest)

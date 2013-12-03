@@ -6,6 +6,8 @@ Execute salt convenience routines
 # Import python libs
 import multiprocessing
 import datetime
+import time
+import logging
 
 # Import salt libs
 import salt.loader
@@ -14,6 +16,8 @@ import salt.utils
 import salt.minion
 import salt.utils.event
 from salt.utils.event import tagify
+
+logger = logging.getLogger(__name__)
 
 
 class RunnerClient(object):
@@ -47,12 +51,16 @@ class RunnerClient(object):
             data['return'] = self.low(fun, low)
             data['success'] = True
         except Exception as exc:
-            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
+            data['return'] = 'Exception occured in runner {0}: {1}'.format(
                             fun,
                             exc,
                             )
+            data['success'] = False
         data['user'] = user
         event.fire_event(data, tagify('ret', base=tag))
+        # this is a workaround because process reaping is defeating 0MQ linger
+        time.sleep(2.0)  # delay so 0MQ event gets out before runner process
+                         # reaped
 
     def _verify_fun(self, fun):
         '''

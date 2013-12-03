@@ -15,8 +15,8 @@
 %define _salttesting_ver 0.5.3
 
 Name: salt
-Version: 0.17.2
-Release: 1%{?dist}
+Version: %{salt_version}
+Release: %{buildid}%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons

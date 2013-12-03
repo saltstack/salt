@@ -33,7 +33,7 @@ In this module, a few objects are defined for you, including the usual
                 ],
             }
 
-        config[home + '/.s3cfg'} = {
+        config[home + '/.s3cfg'] = {
             'file.managed': [{
                 'source': 'salt://s3cfg/templates/s3cfg',
                 'template': 'jinja',

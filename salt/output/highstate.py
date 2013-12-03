@@ -13,12 +13,18 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has three output modes, `full`, `terse`, and
-    `mixed`. The default is set to full, which will display many lines of
+    The highstate outputter has three output modes, `full`, `terse`, `mixed`,
+    and `changes`. The default is set to full, which will display many lines of
     detailed information for each executed chunk. If the `state_output` option
     is set to `terse` then the output is greatly simplified and shown in only
     one line.  If `mixed` is used, then terse output will be used unless a
-    state failed, in which case full output will be used.
+    state failed, in which case full output will be used.  If `changes` is used,
+    then terse output will be used if there was no error and no changes,
+    otherwise full output will be used.
+state_tabular:
+    If `state_output` uses the terse output, set this to `True` for an aligned
+    output format.  If you wish to use a custom format, this can be set to a
+    string.
 '''
 
 # Import python libs
@@ -35,6 +41,7 @@ def output(data):
     highstate return data.
     '''
     colors = salt.utils.get_colors(__opts__.get('color'))
+    tabular = __opts__.get('state_tabular', False)
     for host in data:
         rcounts = {}
         hcolor = colors['GREEN']
@@ -81,45 +88,45 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = _format_terse(tcolor, comps, ret, colors)
+                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
                 elif __opts__.get('state_output', 'full').lower() == 'mixed':
                     # Print terse unless it failed
                     if ret['result'] is not False:
-                        msg = _format_terse(tcolor, comps, ret, colors)
+                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
                         hstrs.append(msg)
                         continue
                 elif __opts__.get('state_output', 'full').lower() == 'changes':
                     # Print terse if no error and no changes, otherwise, be
                     # verbose
                     if ret['result'] and not ret['changes']:
-                        msg = _format_terse(tcolor, comps, ret, colors)
+                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
                         hstrs.append(msg)
                         continue
-                hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
-                              .format(tcolor, comps[0], colors)))
-                hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[2],
-                    colors
-                ))
-                hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[-1],
-                    colors
-                ))
-                hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
-                    tcolor,
-                    str(ret['result']),
-                    colors
-                ))
-                hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
-                    tcolor,
-                    ret['comment'],
-                    colors
-                ))
-                changes = '        Changes:   '
+                state_lines = [
+                    '{tcolor}----------{colors[ENDC]}',
+                    '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
+                    '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
+                    '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
+                    '    {tcolor} Comment: {comment}{colors[ENDC]}'
+                ]
+                # This isn't the prettiest way of doing this, but it's readable.
+                if (comps[1] != comps[2]):
+                    state_lines.insert(
+                        3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+                svars = {
+                    'tcolor': tcolor,
+                    'comps': comps,
+                    'ret': ret,
+                    # This nukes any trailing \n and indents the others.
+                    'comment': ret['comment'].strip().replace(
+                        '\n',
+                        '\n' + ' ' * 14),
+                    'colors': colors
+                }
+                hstrs.extend([sline.format(**svars) for sline in state_lines])
+                changes = '     Changes:   '
                 if not isinstance(ret['changes'], dict):
                     changes += 'Invalid Changes data: {0}'.format(
                             ret['changes'])
@@ -127,7 +134,7 @@ def output(data):
                     pass_opts = __opts__
                     if __opts__['color']:
                         pass_opts['color'] = 'CYAN'
-                    pass_opts['nested_indent'] = 19
+                    pass_opts['nested_indent'] = 14
                     changes += '\n'
                     changes += salt.output.out_format(
                             ret['changes'],
@@ -209,16 +216,29 @@ def _strip_clean(returns):
     return returns
 
 
-def _format_terse(tcolor, comps, ret, colors):
+def _format_terse(tcolor, comps, ret, colors, tabular):
     '''
     Terse formatting of a message.
     '''
-    msg = (' {0}Name: {1} - Function: {2}.{3} - '
-           'Result: {4}{5}').format(tcolor,
-                                    comps[2],
-                                    comps[0],
-                                    comps[-1],
-                                    str(ret['result']),
-                                    colors['ENDC'])
+    result = "Clean"
+    if ret['changes']:
+        result = "Changed"
+    if ret['result'] is False:
+        result = "Failed"
+    elif ret['result'] is None:
+        result = "Differs"
+    if tabular is True:
+        fmt_string = '{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+    elif isinstance(tabular, str):
+        fmt_string = tabular
+    else:
+        fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
+    msg = fmt_string.format(tcolor,
+                            comps[2],
+                            comps[0],
+                            comps[-1],
+                            result,
+                            colors['ENDC'],
+                            ret)
 
     return msg

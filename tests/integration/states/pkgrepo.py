@@ -9,6 +9,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
+    requires_system_grains
 )
 ensure_in_syspath('../../')
 
@@ -24,10 +25,18 @@ class PkgrepoTest(integration.ModuleCase,
     '''
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
-    def test_pkgrepo_01_managed(self):
+    @requires_system_grains
+    def test_pkgrepo_01_managed(self, grains):
         '''
         This is a destructive test as it adds a repository.
         '''
+        if grains['os_family'] == 'Debian':
+            try:
+                from aptsources import sourceslist
+            except ImportError:
+                self.skipTest(
+                    'aptsources.sourceslist python module not found'
+                )
         ret = self.run_function('state.sls', mods='pkgrepo.managed')
         # If the below assert fails then no states were run, and the SLS in
         # tests/integration/files/file/base/pkgrepo/managed.sls needs to be

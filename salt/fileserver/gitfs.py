@@ -131,6 +131,11 @@ def init():
         if not repo.remotes:
             try:
                 repo.create_remote('origin', opt)
+                # ignore git ssl verification if requested
+                if __opts__.get('gitfs_ssl_verify', True):
+                    repo.git.config('http.sslVerify', 'true')
+                else:
+                    repo.git.config('http.sslVerify', 'false')
             except Exception:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since

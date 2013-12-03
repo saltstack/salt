@@ -47,6 +47,7 @@ Dashboard. Log in and then go to Project -> Access & security -> API Access and
 download the "OpenStack RC file". Then:
 
 .. code-block:: yaml
+
     source /path/to/your/rcfile
     nova credentials
     nova endpoints
@@ -75,6 +76,7 @@ Profiles
 Here is an example of a profile:
 
 .. code-block:: yaml
+
     openstack_512:
         provider: my-openstack-config
         size: m1.tiny

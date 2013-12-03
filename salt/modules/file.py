@@ -1522,7 +1522,9 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
+        current_umask = os.umask(63)
         shutil.copyfile(src, dst)
+        os.umask(current_umask)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
@@ -2283,6 +2285,11 @@ def manage_file(name,
                         ret, 'Failed to commit change, permission error')
             __clean_tmp(tmp)
 
+        if mode is None:
+            mask = os.umask(0)
+            os.umask(mask)
+            # Apply umask and remove exec bit
+            mode = (0o0777 ^ mask) & 0o0666
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if ret['changes']:
@@ -2363,12 +2370,10 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
-            current_umask = os.umask(63)
             salt.utils.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
-            os.umask(current_umask)
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
@@ -2379,6 +2384,11 @@ def manage_file(name,
             __clean_tmp(sfn)
 
         # Check and set the permissions if necessary
+        if mode is None:
+            mask = os.umask(0)
+            os.umask(mask)
+            # Apply umask and remove exec bit
+            mode = (0o0777 ^ mask) & 0o0666
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
@@ -2920,3 +2930,54 @@ def delete_backup(path, backup_id):
     return ret
 
 remove_backup = delete_backup
+
+
+def grep(path,
+         pattern,
+         *args):
+    '''
+    Grep for a string in the specified file
+
+    .. note::
+        This function's return value is slated for refinement in future
+        versions of Salt
+
+    path
+        A file path
+    pattern
+        A string. For example:
+        ``test``
+        ``a[0-5]``
+    args
+        grep options. For example:
+        ``" -v"``
+        ``" -i -B2"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.grep /etc/passwd nobody
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i"
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i -B2"
+        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr " -i -l"
+    '''
+    if args:
+        options = ' '.join(args)
+    else:
+        options = ''
+    cmd = (
+        r'''grep  {options} {pattern} {path}'''
+        .format(
+            options=options,
+            pattern=pattern,
+            path=path,
+        )
+    )
+
+    try:
+        ret = __salt__['cmd.run_all'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
+
+    return ret

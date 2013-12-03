@@ -69,7 +69,9 @@ def __check_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
+    qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -82,7 +84,9 @@ def __repair_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
+    qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -95,7 +99,9 @@ def __optimize_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
+    qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -141,6 +147,8 @@ def _connect(**kwargs):
     _connarg('connection_unix_socket', 'unix_socket')
     _connarg('connection_default_file', 'read_default_file')
     _connarg('connection_default_group', 'read_default_group')
+    _connarg('connection_use_unicode', 'use_unicode')
+    _connarg('connection_charset', 'charset')
 
     try:
         dbc = MySQLdb.connect(**connargs)
@@ -216,6 +224,21 @@ def _grant_to_tokens(grant):
                 host=host,
                 grant=grant_tokens,
                 database=database)
+
+
+def quote_identifier(identifier):
+    '''
+    Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
+
+    This means surrounded by "`" character and escaping this charater inside.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.quote_identifier 'foo`bar'
+    '''
+    return '`' + identifier.replace('`', '``') + '`'
 
 
 def query(database, query, **connection_args):
@@ -534,7 +557,8 @@ def db_tables(name, **connection_args):
     if dbc is None:
         return []
     cur = dbc.cursor()
-    qry = 'SHOW TABLES IN {0}'.format(name)
+    s_name = quote_identifier(name)
+    qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -566,10 +590,13 @@ def db_exists(name, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'SHOW DATABASES LIKE {0!r}'.format(name)
-    log.debug('Doing query: {0}'.format(qry))
+    # Warn: here db identifier is bot backtyped but should be
+    #  escaped as a string value
+    qry = "SHOW DATABASES LIKE %(dbname)s;"
+    args = {"dbname": name}
+    log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -579,15 +606,25 @@ def db_exists(name, **connection_args):
     return cur.rowcount == 1
 
 
-def db_create(name, **connection_args):
+def db_create(name, character_set=None, collate=None, **connection_args):
     '''
     Adds a databases to the MySQL server.
+
+    name
+        The name of the database to manage
+
+    character_set
+        The character set, if left empty the MySQL default will be used
+
+    collate
+        The collation, if left empty the MySQL default will be used
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mysql.db_create 'dbname'
+        salt '*' mysql.db_create 'dbname' 'utf8' 'utf8_general_ci'
     '''
     # check if db exists
     if db_exists(name, **connection_args):
@@ -599,10 +636,20 @@ def db_create(name, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'CREATE DATABASE `{0}`;'.format(name)
-    log.debug('Query: {0}'.format(qry))
+    s_name = quote_identifier(name)
+    qry = 'CREATE DATABASE %(dbname)s' % dict(dbname=s_name)
+    args = {}
+    if character_set is not None:
+        qry += ' CHARACTER SET %(character_set)s'
+        args['character_set'] = character_set
+    if collate is not None:
+        qry += ' COLLATE %(collate)s'
+        args['collate'] = collate
+    qry += ';'
+
+    log.debug('Query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        if cur.execute(qry):
+        if cur.execute(qry, args):
             log.info('DB {0!r} created'.format(name))
             return True
     except MySQLdb.OperationalError as exc:
@@ -631,12 +678,13 @@ def db_remove(name, **connection_args):
         log.info('DB {0!r} may not be removed'.format(name))
         return False
 
-    # db doesn't exist, proceed
+    # db doesxists, proceed
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'DROP DATABASE `{0}`;'.format(name)
+    s_name = quote_identifier(name)
+    qry = 'DROP DATABASE %(dbname)s;' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -993,6 +1041,12 @@ def tokenize_grant(grant):
     External wrapper function
     :param grant:
     :return: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.grant_to_tokens "GRANT SELECT ON `testdb`.* TO 'testuser'@'localhost'"
     '''
     return _grant_to_tokens(grant)
 
@@ -1009,6 +1063,7 @@ def db_check(name,
     .. code-block:: bash
 
         salt '*' mysql.db_check dbname
+        salt '*' mysql.db_check dbname dbtable
     '''
     ret = []
     if table is None:

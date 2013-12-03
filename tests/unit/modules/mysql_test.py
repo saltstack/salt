@@ -33,6 +33,7 @@ DEBUG = True
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase):
+
     def test_user_create_when_user_exists(self):
         '''
         Test to ensure we don't try to create a user when one already exists
@@ -47,7 +48,9 @@ class MySQLTestCase(TestCase):
         '''
         Test the creation of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_create, "CREATE USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW'", 'testuser',
+        self._test_call(mysql.user_create,
+                        "CREATE USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW'",
+                        'testuser',
                         password='BLUECOW')
 
     def test_user_chpass(self):
@@ -76,44 +79,55 @@ class MySQLTestCase(TestCase):
         '''
         Test MySQL db check function in mysql exec module
         '''
-        self._test_call(mysql.db_check, 'CHECK TABLE `testdb`.`mytable`', 'testdb', 'mytable')
+        self._test_call(mysql.db_check, 'CHECK TABLE `test``\'" db`.`my``\'" table`', 'test`\'" db', 'my`\'" table')
 
     def test_db_repair(self):
         '''
         Test MySQL db repair function in mysql exec module
         '''
-        self._test_call(mysql.db_repair, 'REPAIR TABLE `testdb`.`mytable`', 'testdb', 'mytable')
+        self._test_call(mysql.db_repair, 'REPAIR TABLE `test``\'" db`.`my``\'" table`', 'test`\'" db', 'my`\'" table')
 
     def test_db_optimize(self):
         '''
         Test MySQL db optimize function in mysql exec module
         '''
-        self._test_call(mysql.db_optimize, 'OPTIMIZE TABLE `testdb`.`mytable`', 'testdb', 'mytable')
+        self._test_call(mysql.db_optimize, 'OPTIMIZE TABLE `test``\'" db`.`my``\'" table`', 'test`\'" db', 'my`\'" table')
 
     def test_db_remove(self):
         '''
         Test MySQL db remove function in mysql exec module
         '''
         mysql.db_exists = MagicMock(return_value=True)
-        self._test_call(mysql.db_remove, 'DROP DATABASE `testdb`;', 'testdb')
+        self._test_call(mysql.db_remove, 'DROP DATABASE `test``\'" db`;', 'test`\'" db')
 
     def test_db_tables(self):
         '''
         Test MySQL db_tables function in mysql exec module
         '''
-        self._test_call(mysql.db_tables, 'SHOW TABLES IN testdb', 'testdb')
+        self._test_call(mysql.db_tables, 'SHOW TABLES IN `test``\'" db`', 'test`\'" db')
 
     def test_db_exists(self):
         '''
         Test MySQL db_exists function in mysql exec module
         '''
-        self._test_call(mysql.db_exists, "SHOW DATABASES LIKE 'testdb'", 'testdb')
+        self._test_call(
+            mysql.db_exists,
+            {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
+             'sql_args': {'dbname': 'test`\'" db'}
+             },
+            'test`\'" db'
+        )
 
     def test_db_create(self):
         '''
         Test MySQL db_create function in mysql exec module
         '''
-        self._test_call(mysql.db_create, 'CREATE DATABASE `testdb`;', 'testdb')
+        self._test_call(
+            mysql.db_create,
+            {'sql': 'CREATE DATABASE `test``\'" db`;',
+             'sql_args': {}},
+            'test`\'" db'
+        )
 
     def test_user_list(self):
         '''
@@ -133,7 +147,9 @@ class MySQLTestCase(TestCase):
         Test to see if the mysql execution module correctly forms the SQL for information on a MySQL user.
         '''
         self._test_call(mysql.user_info,
-                        "SELECT * FROM mysql.user WHERE User = 'mytestuser' AND Host = 'localhost'", 'mytestuser')
+                        "SELECT * FROM mysql.user WHERE User = 'mytestuser' AND Host = 'localhost'",
+                       'mytestuser'
+        )
 
     def test_user_grants(self):
         '''
@@ -160,7 +176,7 @@ class MySQLTestCase(TestCase):
         '''
         Test grant revoke in mysql exec module
         '''
-        self._test_call(mysql.grant_revoke, '', 'SELECT,INSERT,UPDATE', 'datebase.*', 'frank', 'localhost')
+        self._test_call(mysql.grant_revoke, '', 'SELECT,INSERT,UPDATE', 'database.*', 'frank', 'localhost')
 
     def test_processlist(self):
         '''
@@ -192,5 +208,8 @@ class MySQLTestCase(TestCase):
         mysql._connect = connect_mock
         with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
             function(*args, **kwargs)
-            calls = (call().cursor().execute('{0}'.format(expected_sql)))
+            if isinstance(expected_sql, dict):
+                calls = (call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args']))
+            else:
+                calls = (call().cursor().execute('{0}'.format(expected_sql)))
             connect_mock.assert_has_calls(calls)

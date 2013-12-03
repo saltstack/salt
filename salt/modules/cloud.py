@@ -41,6 +41,8 @@ def list_sizes(provider='all'):
     '''
     List cloud provider sizes for the given providers
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' cloud.list_sizes my-gce-config
@@ -172,4 +174,21 @@ def action(
     '''
     client = _get_client()
     info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    return info
+
+
+def create(provider, names, **kwargs):
+    '''
+    Create an instance using Salt Cloud
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.create my-ec2-config myinstance \
+            image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+            securitygroup=default delvol_on_destroy=True
+    '''
+    client = _get_client()
+    info = client.create(provider, names, **kwargs)
     return info

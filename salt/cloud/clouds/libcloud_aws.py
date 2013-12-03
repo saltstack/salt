@@ -232,7 +232,9 @@ def iam_profile(vm_):
 
 def block_device_mappings(vm_):
     '''
-    Return the block device mapping::
+    Return the block device mapping:
+
+    ::
 
         [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]

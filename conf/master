@@ -186,7 +186,7 @@
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
-#file_recv: False 
+#file_recv: False
 
 #####    Master Module Management    #####
 ##########################################
@@ -230,7 +230,7 @@
 #
 # If this is set to True the first newline after a Jinja block is removed
 # (block, not variable tag!). Defaults to False, corresponds to the Jinja
-# environment init variable "trim_blocks". 
+# environment init variable "trim_blocks".
 # jinja_trim_blocks: False
 #
 # If this is set to True leading spaces and tabs are stripped from the start
@@ -328,7 +328,7 @@
 #
 # Uncomment the line below if you do not want the file_server to follow
 # symlinks when walking the filesystem tree. This is set to True
-# by default. Currently this only applies to the default roots 
+# by default. Currently this only applies to the default roots
 # fileserver_backend.
 #
 #fileserver_followsymlinks: False
@@ -356,13 +356,20 @@
 #  - git://github.com/saltstack/salt-states.git
 #  - file:///var/git/saltmaster
 #
+# The gitfs_ssl_verify option specifies whether to ignore ssl certificate
+# errors when contacting the gitfs backend. You might want to set this to
+# false if you're using a git backend that uses a self-signed certificate but
+# keep in mind that setting this flag to anything other than the default of True
+# is a security concern, you may want to try using the ssh transport.
+#gitfs_ssl_verify: True
+#
 # The repos will be searched in order to find the file requested by a client
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
 # environments.
 # Note:  file:// repos will be treated as a remote, so refs you want used must
 # exist in that repo as *local* refs.
-#     
+#
 # The gitfs_root option gives the ability to serve files from a subdirectory
 # within the repository. The path is defined relative to the root of the
 # repository and defaults to the repository root.
@@ -384,6 +391,13 @@
 #ext_pillar:
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
+
+# The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
+# errors when contacting the pillar gitfs backend. You might want to set this to
+# false if you're using a git backend that uses a self-signed certificate but
+# keep in mind that setting this flag to anything other than the default of True
+# is a security concern, you may want to try using the ssh transport.
+#pillar_gitfs_ssl_verify: True
 
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the

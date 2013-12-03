@@ -3,11 +3,10 @@
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 
-:depends:   - psutil Python module
+:depends:   - psutil Python module, version 0.3.0 or later
 '''
 
 # Import python libs
-import sys
 import time
 
 # Import third party libs
@@ -17,20 +16,24 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
+# Define the module's virtual name
+__virtualname__ = 'ps'
+
 
 def __virtual__():
     if not HAS_PSUTIL:
         return False
 
-    # The python 2.6 version of psutil lacks several functions
-    # used in this salt module so instead of spaghetti  string
-    # code to try to bring sanity to everything, disable it.
-    try:
-        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-            return False
-    except Exception:
-        return False
-    return 'ps'
+    # Functions and attributes used in this execution module seem to have been
+    # added as of psutil 0.3.0, from an inspection of the source code. Only
+    # make this module available if the version of psutil is >= 0.3.0. Note
+    # that this may need to be tweaked if we find post-0.3.0 versions which
+    # also have problems running the functions in this execution module, but
+    # most distributions have already moved to later versions (for example,
+    # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
+    if psutil.version_info >= (0, 3, 0):
+        return __virtualname__
+    return False
 
 
 def top(num_processes=5, interval=3):
