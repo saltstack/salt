@@ -104,29 +104,29 @@ def output(data):
                         msg = _format_terse(tcolor, comps, ret, colors, tabular)
                         hstrs.append(msg)
                         continue
-                hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
-                              .format(tcolor, comps[0], colors)))
-                hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[2],
-                    colors
-                ))
-                hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[-1],
-                    colors
-                ))
-                hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
-                    tcolor,
-                    str(ret['result']),
-                    colors
-                ))
-                hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
-                    tcolor,
-                    ret['comment'],
-                    colors
-                ))
-                changes = '        Changes:   '
+                state_lines = [
+                    '{tcolor}----------{colors[ENDC]}',
+                    '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
+                    '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
+                    '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
+                    '    {tcolor} Comment: {comment}{colors[ENDC]}'
+                ]
+                # This isn't the prettiest way of doing this, but it's readable.
+                if (comps[1] != comps[2]):
+                    state_lines.insert(
+                        3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+                svars = {
+                    'tcolor': tcolor,
+                    'comps': comps,
+                    'ret': ret,
+                    # This nukes any trailing \n and indents the others.
+                    'comment': ret['comment'].strip().replace(
+                        '\n',
+                        '\n' + ' ' * 14),
+                    'colors': colors
+                }
+                hstrs.extend([sline.format(**svars) for sline in state_lines])
+                changes = '     Changes:   '
                 if not isinstance(ret['changes'], dict):
                     changes += 'Invalid Changes data: {0}'.format(
                             ret['changes'])
@@ -134,7 +134,7 @@ def output(data):
                     pass_opts = __opts__
                     if __opts__['color']:
                         pass_opts['color'] = 'CYAN'
-                    pass_opts['nested_indent'] = 19
+                    pass_opts['nested_indent'] = 14
                     changes += '\n'
                     changes += salt.output.out_format(
                             ret['changes'],
@@ -221,15 +221,15 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     Terse formatting of a message.
     '''
     result = "Clean"
-    if (ret['changes']):
+    if ret['changes']:
         result = "Changed"
-    if (ret['result'] == False):
+    if ret['result'] is False:
         result = "Failed"
-    elif (ret['result'] == None):
+    elif ret['result'] is None:
         result = "Differs"
-    if (tabular == True):
+    if tabular is True:
         fmt_string = '{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
-    elif (isinstance(tabular, str)):
+    elif isinstance(tabular, str):
         fmt_string = tabular
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'

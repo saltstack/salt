@@ -294,13 +294,13 @@ class MysqlModuleTest(integration.ModuleCase,
             create_query = ('CREATE TABLE %(tblname)s ('
                 ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
                 ' data VARCHAR(100)) ENGINE=%(engine)s;') % dict(
-                    tblname=mysqlmod.quoteIdentifier(tablename),
+                    tblname=mysqlmod.quote_identifier(tablename),
                     engine=engine,
                 )
             insert_query = ('INSERT INTO %(tblname)s (data)'
-                ' VALUES ') % dict(tblname=mysqlmod.quoteIdentifier(tablename))
+                ' VALUES ') % dict(tblname=mysqlmod.quote_identifier(tablename))
             delete_query = ('DELETE from  %(tblname)s'
-                ' order by rand() limit 50;') % dict(tblname=mysqlmod.quoteIdentifier(tablename))
+                ' order by rand() limit 50;') % dict(tblname=mysqlmod.quote_identifier(tablename))
             for x in range(100):
                 insert_query += "('foo"+str(x)+"'),"
             insert_query += "('bar');"
@@ -364,7 +364,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        # Note that returned result does not quoteIdentifier of table and db
+        # Note that returned result does not quote_identifier of table and db
         self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'check'}])
         ret = self.run_function(
           'mysql.db_repair',
@@ -373,7 +373,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        # Note that returned result does not quoteIdentifier of table and db
+        # Note that returned result does not quote_identifier of table and db
         self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'repair'}])
         ret = self.run_function(
           'mysql.db_optimize',
@@ -382,7 +382,7 @@ class MysqlModuleTest(integration.ModuleCase,
           connection_user=self.user,
           connection_pass=self.password
         )
-        # Note that returned result does not quoteIdentifier of table and db
+        # Note that returned result does not quote_identifier of table and db
         self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'optimize'}])
 
         # test check/repair/opimize on all tables

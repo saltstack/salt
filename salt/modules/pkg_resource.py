@@ -27,7 +27,8 @@ def _parse_pkg_meta(path):
     '''
     def parse_rpm(path):
         try:
-            import collections  # needed by _parse_pkginfo, DO NOT REMOVE
+            global __SUFFIX_NOT_NEEDED  # needed by _parse_pkginfo, DO NOT REMOVE
+            __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
             from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
             from salt.utils import namespaced_function as _namespaced_function
             _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())

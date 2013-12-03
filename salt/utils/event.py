@@ -54,6 +54,7 @@ import glob
 import hashlib
 import errno
 import logging
+import time
 import datetime
 import multiprocessing
 from multiprocessing import Process
@@ -130,6 +131,7 @@ class SaltEvent(object):
         self.cpub = False
         self.cpush = False
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        self.pending_events = []
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
@@ -175,22 +177,18 @@ class SaltEvent(object):
         )
         return puburi, pulluri
 
-    def subscribe(self, tag):
+    def subscribe(self, tag=None):
         '''
         Subscribe to events matching the passed tag.
         '''
         if not self.cpub:
             self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
 
-    def unsubscribe(self, tag):
+    def unsubscribe(self, tag=None):
         '''
         Un-subscribe to events matching the passed tag.
         '''
-        if not self.cpub:
-            # There's no way we've even subscribed to this tag
-            return
-        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+        return
 
     def connect_pub(self):
         '''
@@ -199,6 +197,7 @@ class SaltEvent(object):
         self.sub = self.context.socket(zmq.SUB)
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
+        self.sub.setsockopt(zmq.SUBSCRIBE, '')
         self.cpub = True
 
     def connect_pull(self, timeout=1000):
@@ -210,7 +209,7 @@ class SaltEvent(object):
         '''
         self.push = self.context.socket(zmq.PUSH)
         # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
-        self.push.setsockopt(zmq.SNDTIMEO, timeout) 
+        self.push.setsockopt(zmq.SNDTIMEO, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -222,10 +221,22 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        self.subscribe(tag)
-        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-            raw = self.sub.recv()
+        self.subscribe()
+
+        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
+            self.pending_events.remove(evt)
+            if full:
+                return evt
+            else:
+                return evt['data']
+
+        start = int(time.time())
+        while not wait or int(time.time()) <= start + wait:
+            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+            else:
+                continue
             if ord(raw[20]) >= 0x80:  # old style
                 mtag = raw[0:20].rstrip('|')
                 mdata = raw[20:]
@@ -233,13 +244,14 @@ class SaltEvent(object):
                 mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
             data = self.serial.loads(mdata)
+            ret = {'data': data,
+                    'tag': mtag}
 
             if not mtag.startswith(tag):  # tag not match
-                return None
+                self.pending_events.append(ret)
+                continue
 
             if full:
-                ret = {'data': data,
-                        'tag': mtag}
                 return ret
             return data
         return None
@@ -386,10 +398,11 @@ class EventPublisher(Process):
         super(EventPublisher, self).__init__()
         self.opts = opts
 
-    def run(self, linger=5000):
+    def run(self):
         '''
         Bind the pub and pull sockets for events
         '''
+        linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
         # Prepare the master event publisher

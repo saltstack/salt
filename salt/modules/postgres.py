@@ -529,7 +529,7 @@ def _role_create(name,
         sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, escaped_password)
     if createdb:
         sub_cmd = '{0} CREATEDB'.format(sub_cmd)
-    if createuser:
+    if createuser and not superuser:
         sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
     if superuser:
         sub_cmd = '{0} SUPERUSER'.format(sub_cmd)

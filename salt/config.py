@@ -568,6 +568,7 @@ def include_config(include, orig_path, verbose):
     main config file.
     '''
     # Protect against empty option
+
     if not include:
         return {}
 
@@ -833,12 +834,13 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                                                 and not providers_config_path:
         providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
-    if 'vm_config' in overrides and vm_config_path is None:
+    if 'profiles_config' in overrides and profiles_config_path is None:
         # The configuration setting is being specified in the main cloud
         # configuration file
-        vm_config_path = overrides['vm_config']
-    elif 'vm_config' not in overrides and not vm_config and not vm_config_path:
-        providers_config_path = os.path.join(config_dir, 'cloud.providers')
+        profiles_config_path = overrides['profiles_config']
+    elif 'profiles_config' not in overrides and not profiles_config \
+            and not profiles_config_path:
+        profiles_config_path = os.path.join(config_dir, 'cloud.profiles')
 
     # Prepare the deploy scripts search path
     deploy_scripts_search_path = overrides.get(
@@ -972,10 +974,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     opts['providers'] = providers_config
 
     # 4th - Include VM profiles config
-    if vm_config is None:
+    if profiles_config is None:
         # Load profiles configuration from the provided file
-        vm_config = vm_profiles_config(vm_config_path, providers_config)
-    opts['profiles'] = vm_config
+        profiles_config = vm_profiles_config(profiles_config_path,
+                                             providers_config)
+    opts['profiles'] = profiles_config
 
     # Return the final options
     return opts
