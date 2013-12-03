@@ -120,7 +120,9 @@ def output(data):
                     'comps': comps,
                     'ret': ret,
                     # This nukes any trailing \n and indents the others.
-                    'comment': ret['comment'].strip().replace('\n','\n'+' '*14),
+                    'comment': ret['comment'].strip().replace(
+                        '\n',
+                        '\n' + ' ' * 14),
                     'colors': colors
                 }
                 hstrs.extend([sline.format(**svars) for sline in state_lines])
