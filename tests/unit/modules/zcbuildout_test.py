@@ -25,9 +25,7 @@ from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-ROOT = os.path.join(os.path.dirname(integration.__file__),
-                    'files/file/base/buildout')
-
+ROOT = os.path.join(integration.FILES, 'file', 'base', 'buildout')
 
 buildout.__salt__ = {
     'cmd.run_all': cmd.run_all,
