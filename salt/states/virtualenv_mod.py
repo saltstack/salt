@@ -41,7 +41,8 @@ def managed(name,
             cwd=None,
             index_url=None,
             extra_index_url=None,
-            pre_releases=False):
+            pre_releases=False,
+            no_deps=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -54,6 +55,8 @@ def managed(name,
         Path to the working directory where "pip install" is executed.
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
+    no_deps: False
+        Pass `--no-deps` to `pip`.
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -198,7 +201,8 @@ def managed(name,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
-            pre_releases=pre_releases
+            pre_releases=pre_releases,
+            no_deps=no_deps,
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
