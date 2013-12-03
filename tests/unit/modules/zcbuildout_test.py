@@ -45,7 +45,6 @@ boot_init = {
     ]}
 
 
-
 class Base(TestCase):
     @classmethod
     def setUpClass(cls):
