@@ -31,8 +31,7 @@ def __virtual__():
     # also have problems running the functions in this execution module, but
     # most distributions have already moved to later versions (for example,
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
-    major, minor = psutil.version_info[:2]
-    if (major >= 1) or (major == 0 and minor >= 3):
+    if psutil.version_info >= (0, 3, 0):
         return __virtualname__
     return False
 
