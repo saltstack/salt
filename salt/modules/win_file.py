@@ -241,24 +241,24 @@ def chown(path, user, group):
 
         salt '*' file.chown c:\\temp\\test.txt myusername administrators
     '''
-    err = '' 
+    err = ''
     # get SID object for user
     try:
         userSID, domainName, objectType = win32security.LookupAccountName(None, user)
     except pywinerror:
         err += 'User does not exist\n'
-    
+
     # get SID object for group
     try:
         groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
     except pywinerror:
         err += 'Group does not exist\n'
-    
+
     if not os.path.exists(path):
         err += 'File not found\n'
     if err:
         return err
-        
+
     # set owner and group
     securityInfo = win32security.OWNER_SECURITY_INFORMATION + win32security.GROUP_SECURITY_INFORMATION
     win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, securityInfo, userSID, groupSID, None, None)
@@ -275,18 +275,18 @@ def chgrp(path, group):
 
         salt '*' file.chgrp c:\\temp\\test.txt administrators
     '''
-    err = '' 
+    err = ''
     # get SID object for group
     try:
         groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
     except pywinerror:
         err += 'Group does not exist\n'
-    
+
     if not os.path.exists(path):
         err += 'File not found\n'
     if err:
         return err
-        
+
     # set group
     securityInfo = win32security.GROUP_SECURITY_INFORMATION
     win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, securityInfo, None, groupSID, None, None)
