@@ -210,7 +210,7 @@ class SaltEvent(object):
         '''
         self.push = self.context.socket(zmq.PUSH)
         # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
-        self.push.setsockopt(zmq.SNDTIMEO, timeout) 
+        self.push.setsockopt(zmq.SNDTIMEO, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
 
