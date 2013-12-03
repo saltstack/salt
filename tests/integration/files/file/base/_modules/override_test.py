@@ -5,6 +5,7 @@ Module for running arbitrary tests
 
 __virtualname__ = 'test'
 
+
 def __virtual__():
     return __virtualname__
 

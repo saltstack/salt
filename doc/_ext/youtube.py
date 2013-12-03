@@ -6,21 +6,21 @@
 
 # If not otherwise noted, the extensions in this package are licensed
 # under the following license.
-# 
+#
 # Copyright (c) 2009 by the contributors (see AUTHORS file).
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-# 
+#
 # * Redistributions of source code must retain the above copyright
 #   notice, this list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright
 #   notice, this list of conditions and the following disclaimer in the
 #   documentation and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,6 +42,7 @@ from sphinx.util.compat import Directive
 
 CONTROL_HEIGHT = 30
 
+
 def get_size(d, key):
     if key not in d:
         return None
@@ -50,10 +51,14 @@ def get_size(d, key):
         raise ValueError("invalid size %r" % d[key])
     return int(m.group(1)), m.group(2) or "px"
 
+
 def css(d):
     return "; ".join(sorted("%s: %s" % kv for kv in d.iteritems()))
 
-class youtube(nodes.General, nodes.Element): pass
+
+class youtube(nodes.General, nodes.Element):
+    pass
+
 
 def visit_youtube_node(self, node):
     aspect = node["aspect"]
@@ -105,8 +110,10 @@ def visit_youtube_node(self, node):
         self.body.append(self.starttag(node, "iframe", **attrs))
         self.body.append("</iframe>")
 
+
 def depart_youtube_node(self, node):
     pass
+
 
 class YouTube(Directive):
     has_content = True
@@ -131,6 +138,7 @@ class YouTube(Directive):
         width = get_size(self.options, "width")
         height = get_size(self.options, "height")
         return [youtube(id=self.arguments[0], aspect=aspect, width=width, height=height)]
+
 
 def setup(app):
     app.add_node(youtube, html=(visit_youtube_node, depart_youtube_node))

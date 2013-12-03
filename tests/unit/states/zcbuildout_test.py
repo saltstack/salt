@@ -3,8 +3,6 @@ import os
 import tempfile
 import textwrap
 
-from distutils.dir_util import copy_tree
-
 # Import third party libs
 import yaml
 
@@ -77,16 +75,16 @@ class BuildoutTestCase(Base):
     def test_installed(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir, onlyif='/bin/false')
-        self.assertEqual(ret['comment'],  '\nonlyif execution failed')
-        self.assertEqual(ret['result'],  True)
+        self.assertEqual(ret['comment'], '\nonlyif execution failed')
+        self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir, unless='/bin/true')
-        self.assertEqual(ret['comment'],  '\nunless execution succeeded')
-        self.assertEqual(ret['result'],  True)
+        self.assertEqual(ret['comment'], '\nunless execution succeeded')
+        self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         ret = buildout.installed(b_dir)
-        self.assertEqual(ret['result'],  True)
+        self.assertEqual(ret['result'], True)
         self.assertTrue('OUTPUT:' in ret['comment'])
         self.assertTrue('Log summary:' in ret['comment'])
 

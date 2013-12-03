@@ -9,7 +9,7 @@ from shutil import copy
 from subprocess import check_call
 
 parser = argparse.ArgumentParser(
-        description = 'Build salt rpms',
+        description='Build salt rpms',
         )
 parser.add_argument('buildid',
         help='The build id to use i.e. the bit after the salt version in the package name',
@@ -38,8 +38,8 @@ def srcfilter(ti):
     return ti
 
 with tarfile.open(join(rpmbuild, 'SOURCES/salt-%s.tar.gz' % salt_version), 'w|gz') as tf:
-    tf.add(src, arcname = 'salt-%s' % salt_version,
-           filter = srcfilter)
+    tf.add(src, arcname='salt-%s' % salt_version,
+           filter=srcfilter)
 
 
 cmd = ['rpmbuild', '-bb',
@@ -47,4 +47,4 @@ cmd = ['rpmbuild', '-bb',
        '--define=buildid %s' % args.buildid,
        'salt.spec']
 print('Executing: %s' % ' '.join('"%s"' % c for c in cmd))
-check_call(cmd, cwd = join(rpmbuild, 'SPECS'))
+check_call(cmd, cwd=join(rpmbuild, 'SPECS'))
