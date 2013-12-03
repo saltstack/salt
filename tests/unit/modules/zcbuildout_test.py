@@ -9,7 +9,10 @@ from distutils.dir_util import copy_tree
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+)
 from salttesting.mock import MagicMock
 
 ensure_in_syspath('../../')
@@ -45,6 +48,8 @@ class Base(TestCase):
 
 
 class BuildoutTestCase(Base):
+
+    @requires_network()
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, onlyif='/bin/false')
@@ -54,6 +59,7 @@ class BuildoutTestCase(Base):
         self.assertTrue(ret['comment'] == 'unless execution succeeded')
         self.assertTrue(ret['status'] is True)
 
+    @requires_network()
     def test_salt_callback(self):
         @buildout._salt_callback
         def callback1(a, b=1):
@@ -103,6 +109,7 @@ class BuildoutTestCase(Base):
         for l in buildout.LOG.levels:
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))
 
+    @requires_network()
     def test_get_bootstrap_url(self):
         for p in [
             os.path.join(self.tdir, 'var/ver/1/dumppicked'),
@@ -122,6 +129,7 @@ class BuildoutTestCase(Base):
                              buildout._get_bootstrap_url(p),
                              "b2 url for {0}".format(p))
 
+    @requires_network()
     def test_get_buildout_ver(self):
         for p in [
             os.path.join(self.tdir, 'var/ver/1/dumppicked'),
@@ -141,6 +149,7 @@ class BuildoutTestCase(Base):
                              buildout._get_buildout_ver(p),
                              "2 for {0}".format(p))
 
+    @requires_network()
     def test_get_bootstrap_content(self):
         self.assertEqual(
             '',
@@ -156,6 +165,7 @@ class BuildoutTestCase(Base):
             buildout._get_bootstrap_content(
                 os.path.join(self.tdir, 'var/tb/2')))
 
+    @requires_network()
     def test_logger_clean(self):
         buildout.LOG.clear()
         # nothing in there
@@ -174,6 +184,7 @@ class BuildoutTestCase(Base):
             [len(buildout.LOG.by_level[a]) > 0
              for a in buildout.LOG.by_level])
 
+    @requires_network()
     def test_logger_loggers(self):
         buildout.LOG.clear()
         # nothing in there
@@ -185,6 +196,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(buildout.LOG.by_level[i][0], 'foo')
             self.assertEqual(buildout.LOG.by_level[i][-1], 'moo')
 
+    @requires_network()
     def test__find_cfgs(self):
         self.assertEqual(
             [a.replace(ROOT, '')
@@ -198,6 +210,7 @@ class BuildoutTestCase(Base):
              '/b/b2/buildout.cfg',
              '/foo/buildout.cfg'])
 
+    @requires_network()
     def test_upgrade_bootstrap(self):
         b_dir = os.path.join(self.tdir, 'b')
         bpy = os.path.join(b_dir, 'bootstrap.py')
@@ -253,6 +266,7 @@ class BuildoutOnlineTestCase(Base):
         assert ret2['retcode'] == 0
         assert ret3['retcode'] == 0
 
+    @requires_network()
     def test_buildout_bootstrap(self):
         b_dir = os.path.join(self.tdir, 'b')
         bd_dir = os.path.join(self.tdir, 'b', 'bdistribute')
@@ -290,6 +304,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('setuptools' in comment)
         self.assertTrue('Creating directory' in comment)
 
+    @requires_network()
     def test_run_buildout(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
@@ -300,6 +315,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('Installing a' in out)
         self.assertTrue('Installing b' in out)
 
+    @requires_network()
     def test_buildout(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, buildout_ver=2, python=self.py_st)

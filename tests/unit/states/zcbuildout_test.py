@@ -10,7 +10,10 @@ import yaml
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+)
 from salttesting.mock import MagicMock
 
 ensure_in_syspath('../../')
@@ -59,6 +62,7 @@ class Base(TestCase):
 
 class BuildoutTestCase(Base):
 
+    @requires_network()
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, 'c')
         cret = buildout.installed(c_dir, quiet=True)
@@ -66,6 +70,7 @@ class BuildoutTestCase(Base):
         self.assertFalse('OUTPUT:' in cret['comment'])
         self.assertFalse('Log summary:' in cret['comment'])
 
+    @requires_network()
     def test_error(self):
         b_dir = os.path.join(self.tdir, 'e')
         ret = buildout.installed(b_dir)
@@ -79,6 +84,7 @@ class BuildoutTestCase(Base):
             in ret['comment'])
         self.assertFalse(ret['result'])
 
+    @requires_network()
     def test_installed(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir, onlyif='/bin/false')
