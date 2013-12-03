@@ -602,6 +602,8 @@ class AdaptedConfigurationTestCaseMixIn(object):
             return integration_config_dir
 
         for fname in os.listdir(integration_config_dir):
+            if fname.startswith(('.', '_')):
+                continue
             self.get_config_file_path(fname)
         return TMP_CONF_DIR
 
