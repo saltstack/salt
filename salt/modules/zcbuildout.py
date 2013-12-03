@@ -178,7 +178,7 @@ def _set_status(m,
         outlog_by_level += hr
         for level, msg in m['logs']:
             outlog += '\n{0}: {1}\n'.format(level.upper(), msg)
-        for logger in 'error',  'warn', 'info', 'debug':
+        for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
                 outlog_by_level += '\n{0}:\n'.format(logger.upper())
@@ -860,6 +860,7 @@ def buildout(directory=".",
                                 debug=debug)
     # signal the decorator or our return
     raise ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
+    return True  # make pylint happy
 
 
 def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
@@ -874,7 +875,7 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                     _valid(status, 'onlyif execution failed')
             elif isinstance(onlyif, string_types):
                 if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
-                    _valid(status,  'onlyif execution failed')
+                    _valid(status, 'onlyif execution failed')
         if unless is not None:
             if not isinstance(unless, string_types):
                 if unless:
