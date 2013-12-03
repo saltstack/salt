@@ -150,9 +150,7 @@ def __virtual__():
     except ValueError:
         os_major = 0
 
-    if os_grain == 'Amazon':
-        return __virtualname__
-    elif os_grain == 'Fedora':
+    if os_grain == 'Fedora':
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
             return __virtualname__

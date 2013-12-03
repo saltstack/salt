@@ -27,6 +27,7 @@ Full list of builtin execution modules
     brew
     bridge
     bsd_shadow
+    buildout
     cassandra
     chocolatey
     cmdmod

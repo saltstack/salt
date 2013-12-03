@@ -69,8 +69,8 @@ def __check_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    s_name = quoteIdentifier(name)
-    s_table = quoteIdentifier(table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
     qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
@@ -84,8 +84,8 @@ def __repair_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    s_name = quoteIdentifier(name)
-    s_table = quoteIdentifier(table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
     qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
@@ -99,8 +99,8 @@ def __optimize_table(name, table, **connection_args):
     if dbc is None:
         return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    s_name = quoteIdentifier(name)
-    s_table = quoteIdentifier(table)
+    s_name = quote_identifier(name)
+    s_table = quote_identifier(table)
     qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
@@ -226,7 +226,7 @@ def _grant_to_tokens(grant):
                 database=database)
 
 
-def quoteIdentifier(identifier):
+def quote_identifier(identifier):
     '''
     Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
 
@@ -236,7 +236,7 @@ def quoteIdentifier(identifier):
 
     .. code-block:: bash
 
-        salt '*' mysql.quoteIdentifier 'foo`bar'
+        salt '*' mysql.quote_identifier 'foo`bar'
     '''
     return '`' + identifier.replace('`', '``') + '`'
 
@@ -557,7 +557,7 @@ def db_tables(name, **connection_args):
     if dbc is None:
         return []
     cur = dbc.cursor()
-    s_name = quoteIdentifier(name)
+    s_name = quote_identifier(name)
     qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
@@ -636,7 +636,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    s_name = quoteIdentifier(name)
+    s_name = quote_identifier(name)
     qry = 'CREATE DATABASE %(dbname)s' % dict(dbname=s_name)
     args = {}
     if character_set is not None:
@@ -683,7 +683,7 @@ def db_remove(name, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    s_name = quoteIdentifier(name)
+    s_name = quote_identifier(name)
     qry = 'DROP DATABASE %(dbname)s;' % dict(dbname=s_name)
     log.debug('Doing query: {0}'.format(qry))
     try:
