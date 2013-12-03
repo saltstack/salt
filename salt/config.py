@@ -972,10 +972,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     opts['providers'] = providers_config
 
     # 4th - Include VM profiles config
-    if vm_config is None:
+    if profiles_config is None:
         # Load profiles configuration from the provided file
-        vm_config = vm_profiles_config(vm_config_path, providers_config)
-    opts['profiles'] = vm_config
+        profiles_config = vm_profiles_config(profiles_config_path,
+                                             providers_config)
+    opts['profiles'] = profiles_config
 
     # Return the final options
     return opts
