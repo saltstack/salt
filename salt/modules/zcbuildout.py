@@ -33,24 +33,15 @@ def __virtual__():
         return __virtualname__
     return False
 
-from threading import Thread
-import copy
-import fcntl
-import logging
+
 import os
-import pkg_resources
 import re
-import shutil
-import subprocess
 import sys
 import traceback
 import urllib2
 
-from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
-import salt.utils
-from salt.utils.odict import OrderedDict
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
@@ -218,7 +209,8 @@ def _Popen(command,
            runas=None,
            env=(),
            exitcode=0):
-    """Run a command
+    '''
+    Run a command
     output
         return output if true
     directory
@@ -231,7 +223,7 @@ def _Popen(command,
         fails if cmd does not return this exit code
         (set to None to disable check)
 
-    """
+    '''
     ret = None
     directory = os.path.abspath(directory)
     if isinstance(command, list):
@@ -248,15 +240,15 @@ def _Popen(command,
 
 
 class ResultTransmission(Exception):
-    """General Buildout Error."""
+    '''General Buildout Error.'''
 
 
 class BuildoutError(CommandExecutionError):
-    """General Buildout Error."""
+    '''General Buildout Error.'''
 
 
 class MrDeveloperError(BuildoutError):
-    """Arrives when mr.developer fails"""
+    '''Arrives when mr.developer fails'''
 
 
 def _has_old_distribute(python=sys.executable, runas=None, env=()):
