@@ -60,7 +60,9 @@ how we might write the skeleton for testing ``fib.py``:
     class FibTestCase(TestCase):
 
         '''
-        If we want to set up variables common to all unit tests, we can do so by defining a setUp method, which will be run automatically before tests begin.
+        If we want to set up variables common to all unit tests, we can do so
+        by defining a setUp method, which will be run automatically before
+        tests begin.
         '''
         def setUp(self):
             # Declare a simple set of five Fibonacci numbers starting at zero that we know are correct.
@@ -161,10 +163,12 @@ To begin, we set up the skeleton of our class much like we did before, but with 
             We want to test to ensure that the correct query was formed.
             This is a contrived example, just designed to illustrate the concepts at hand.
 
-            We're going to first contruct a call() object that represents the way we expect our mocked execute_query() function to have been called.
+            We're going to first contruct a call() object that represents the way we expect
+            our mocked execute_query() function to have been called.
             Then, we'll examine the list of calls that were actually made to to execute_function().
 
-            By comparing our expected call to execute_query() with create_user()'s call to execute_query(), we can determine the success or failure of our unit test.
+            By comparing our expected call to execute_query() with create_user()'s call to
+            execute_query(), we can determine the success or failure of our unit test.
             '''
 
             expected_call = call('CREATE USER testuser')
