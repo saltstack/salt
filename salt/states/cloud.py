@@ -100,7 +100,7 @@ def absent(name):
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     if not instance:
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already absent'.format(name, prov)
+        ret['comment'] = 'Instance {0} already absent'.format(name)
         return ret
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
