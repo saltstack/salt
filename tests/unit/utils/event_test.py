@@ -28,9 +28,10 @@ from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
+
 @contextmanager
 def eventpublisher_process():
-    proc = event.EventPublisher({'sock_dir':SOCK_DIR})
+    proc = event.EventPublisher({'sock_dir': SOCK_DIR})
     proc.start()
     try:
         if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
@@ -42,6 +43,7 @@ def eventpublisher_process():
     finally:
         proc.terminate()
         proc.join()
+
 
 class EventSender(Process):
     def __init__(self, data, tag, wait):
@@ -60,6 +62,7 @@ class EventSender(Process):
             time.sleep(10)
         else:
             time.sleep(2)
+
 
 @contextmanager
 def eventsender_process(data, tag, wait=0):
@@ -149,47 +152,47 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_subscription_matching(self):
         '''Test a subscription startswith matching'''
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_subscription_matching_all(self):
         '''Test a subscription matching'''
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='')
-            self.assertGotEvent(evt1, {'data':'foo1'})  
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_not_subscribed(self):
         '''Test get event ignores non-subscribed events'''
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            with eventsender_process({'data':'foo1'}, 'evt1', 5):
-                me.fire_event({'data':'foo1'}, 'evt2')
+            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
+                me.fire_event({'data': 'foo1'}, 'evt2')
                 evt1 = me.get_event(tag='evt1', wait=10)
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_multiple_subscriptions(self):
         '''Test multiple subscriptions do not interfere'''
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            with eventsender_process({'data':'foo1'}, 'evt1', 5):
-                me.fire_event({'data':'foo1'}, 'evt2')
+            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
+                me.fire_event({'data': 'foo1'}, 'evt2')
                 evt1 = me.get_event(tag='evt1', wait=10)
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
@@ -198,23 +201,23 @@ class TestSaltEvent(TestCase):
             me1.subscribe()
             me2 = event.MasterEvent(sock_dir=SOCK_DIR)
             me2.subscribe()
-            me1.fire_event({'data':'foo1'}, 'evt1')
+            me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
             evt2 = me2.get_event(tag='evt1')
-            self.assertGotEvent(evt2, {'data':'foo1'})
+            self.assertGotEvent(evt2, {'data': 'foo1'})
 
     def test_event_nested_subs(self):
         '''Test nested event subscriptions do not drop events, issue #8580'''
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')    
+            me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
-            self.assertGotEvent(evt2, {'data':'foo2'})
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     @expectedFailure
     def test_event_nested_sub_all(self):
@@ -223,12 +226,12 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')    
+            me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='')
             evt1 = me.get_event(tag='')
-            self.assertGotEvent(evt2, {'data':'foo2'})
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_many(self):
         '''Test a large number of events, one at a time'''
@@ -236,9 +239,9 @@ class TestSaltEvent(TestCase):
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
             for i in xrange(500):
-                me.fire_event({'data':'{0}'.format(i)}, 'testevents')
+                me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
-                self.assertGotEvent(evt, {'data':'{0}'.format(i)}, 'Event {0}'.format(i))
+                self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
@@ -247,10 +250,10 @@ class TestSaltEvent(TestCase):
             me.subscribe()
             # Must not exceed zmq HWM
             for i in xrange(500):
-                me.fire_event({'data':'{0}'.format(i)}, 'testevents')
+                me.fire_event({'data': '{0}'.format(i)}, 'testevents')
             for i in xrange(500):
                 evt = me.get_event(tag='testevents')
-                self.assertGotEvent(evt, {'data':'{0}'.format(i)}, 'Event {0}'.format(i))
+                self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
 
 if __name__ == '__main__':
