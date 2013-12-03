@@ -120,7 +120,7 @@ def init(branch, repo_location):
                 repo.git.config('http.sslVerify', 'true')
             else:
                 repo.git.config('http.sslVerify', 'false')
-        except Exception:
+        except os.error:
             # This exception occurs when two processes are trying to write
             # to the git config at once, go ahead and pass over it since
             # this is the only write
