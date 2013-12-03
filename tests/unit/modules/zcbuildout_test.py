@@ -3,6 +3,7 @@
 # Import python libs
 import os
 import tempfile
+import urllib2
 import textwrap
 
 from distutils.dir_util import copy_tree
@@ -34,15 +35,53 @@ buildout.__salt__ = {
     'cmd.retcode': cmd.retcode,
 }
 
+boot_init = {
+    1: [
+        'var/ver/1/bootstrap/bootstrap.py',
+    ],
+    2: [
+        'var/ver/2/bootstrap/bootstrap.py',
+        'b/bootstrap.py',
+    ]}
+
+
 
 class Base(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rdir = tempfile.mkdtemp()
+        cls.tdir = os.path.join(cls.rdir, 'test')
+        for i in buildout._url_versions:
+            p = os.path.join(
+                cls.rdir, '{}_bootstrap.py'.format(i)
+            )
+            fic = open(p, 'w')
+            fic.write(
+                urllib2.urlopen(buildout._url_versions[i]).read())
+            fic.close()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.isdir(cls.rdir):
+            shutil.rmtree(cls.rdir)
+
     def setUp(self):
         super(Base, self).setUp()
-        self.tdir = tempfile.mkdtemp()
-        copy_tree(ROOT, self.tdir)
+        self._remove_dir()
+        shutil.copytree(ROOT, self.tdir)
+
+        for i in boot_init:
+            p = os.path.join(
+                self.rdir, '{}_bootstrap.py'.format(i)
+            )
+            for f in boot_init[i]:
+                shutil.copy2(p, os.path.join(self.tdir, f))
 
     def tearDown(self):
         super(Base, self).tearDown()
+        self._remove_dir()
+
+    def _remove_dir(self):
         if os.path.isdir(self.tdir):
             shutil.rmtree(self.tdir)
 
@@ -238,30 +277,31 @@ class BuildoutTestCase(Base):
 
 class BuildoutOnlineTestCase(Base):
 
-    def setUp(self):
-        super(BuildoutOnlineTestCase, self).setUp()
-        self.ppy_dis = os.path.join(self.tdir, 'pdistibute')
-        self.ppy_st = os.path.join(self.tdir, 'psetuptools')
-        self.ppy_blank = os.path.join(self.tdir, 'pblank')
-        self.py_dis = os.path.join(self.ppy_dis, 'bin', 'python')
-        self.py_st = os.path.join(self.ppy_st, 'bin', 'python')
-        self.py_blank = os.path.join(self.ppy_blank, 'bin', 'python')
+    @classmethod
+    def setUpClass(cls):
+        super(BuildoutOnlineTestCase, cls).setUpClass()
+        cls.ppy_dis = os.path.join(cls.rdir, 'pdistibute')
+        cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
+        cls.ppy_blank = os.path.join(cls.rdir, 'pblank')
+        cls.py_dis = os.path.join(cls.ppy_dis, 'bin', 'python')
+        cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
+        cls.py_blank = os.path.join(cls.ppy_blank, 'bin', 'python')
         # creating a new setuptools install
         ret1 = buildout._Popen((
             'virtualenv --no-site-packages {0};'
             '{0}/bin/easy_install -U setuptools;'
             '{0}/bin/easy_install -U distribute;'
-        ).format(self.ppy_st))
+        ).format(cls.ppy_st))
         # creating a distribute based install
         ret2 = buildout._Popen((
             'virtualenv --no-site-packages {0};'
             '{0}/bin/easy_install -U setuptools==0.6c9;'
             '{0}/bin/easy_install -U distribute==0.6.43;'
-        ).format(self.ppy_dis))
+        ).format(cls.ppy_dis))
         # creating a blank based install
         ret3 = buildout._Popen((
             'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
-            ''.format(self.ppy_blank)))
+            ''.format(cls.ppy_blank)))
         assert ret1['retcode'] == 0
         assert ret2['retcode'] == 0
         assert ret3['retcode'] == 0

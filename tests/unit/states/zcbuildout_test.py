@@ -21,6 +21,7 @@ import integration
 import shutil
 
 # Import Salt libs
+from unit.modules.zcbuildout_test import Base
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -46,18 +47,6 @@ buildout.__salt__ = {
     'cmd.retcode': cmd.retcode,
     'buildout.buildout': modbuildout.buildout,
 }
-
-
-class Base(TestCase):
-    def setUp(self):
-        super(Base, self).setUp()
-        self.tdir = tempfile.mkdtemp()
-        copy_tree(ROOT, self.tdir)
-
-    def tearDown(self):
-        super(Base, self).tearDown()
-        if os.path.isdir(self.tdir):
-            shutil.rmtree(self.tdir)
 
 
 class BuildoutTestCase(Base):
