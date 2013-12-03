@@ -49,9 +49,15 @@ class MySQLTestCase(TestCase):
         Test the creation of a MySQL user in mysql exec module
         '''
         self._test_call(mysql.user_create,
-                        "CREATE USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW'",
+                        {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s',
+                         'sql_args': {'password': 'BLUECOW',
+                                      'user': 'testuser',
+                                      'host': 'localhost',
+                                     }
+                        },
                         'testuser',
-                        password='BLUECOW')
+                        password='BLUECOW'
+        )
 
     def test_user_chpass(self):
         '''
@@ -59,12 +65,16 @@ class MySQLTestCase(TestCase):
         '''
         connect_mock = MagicMock()
         mysql._connect = connect_mock
-
         with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
             mysql.user_chpass('testuser', password='BLUECOW')
             calls = (
                 call().cursor().execute(
-                    "UPDATE mysql.user SET password=PASSWORD('BLUECOW') WHERE User='testuser' AND Host = 'localhost';"),
+                    'UPDATE mysql.user SET password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                    {'password': 'BLUECOW',
+                     'user': 'testuser',
+                     'host': 'localhost',
+                    }
+                ),
                 call().cursor().execute('FLUSH PRIVILEGES;'),
             )
             connect_mock.assert_has_calls(calls, any_order=True)
@@ -73,7 +83,14 @@ class MySQLTestCase(TestCase):
         '''
         Test the removal of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_remove, "DROP USER 'testuser'@'localhost'", 'testuser')
+        self._test_call(mysql.user_remove,
+                        {'sql': 'DROP USER %(user)s@%(host)s',
+                         'sql_args': {'user': 'testuser',
+                                      'host': 'localhost',
+                                     }
+                        },
+                        'testuser'
+        )
 
     def test_db_check(self):
         '''
@@ -147,7 +164,11 @@ class MySQLTestCase(TestCase):
         Test to see if the mysql execution module correctly forms the SQL for information on a MySQL user.
         '''
         self._test_call(mysql.user_info,
-                        "SELECT * FROM mysql.user WHERE User = 'mytestuser' AND Host = 'localhost'",
+                        {'sql': 'SELECT * FROM mysql.user WHERE User = %(user)s AND Host = %(host)s',
+                         'sql_args': {'host': 'localhost',
+                                      'user': 'mytestuser',
+                                     }
+                        },
                        'mytestuser'
         )
 
@@ -155,7 +176,14 @@ class MySQLTestCase(TestCase):
         '''
         Test to ensure the mysql user_grants function returns properly formed SQL for a basic query
         '''
-        self._test_call(mysql.user_grants, "SHOW GRANTS FOR 'testuser'@'localhost'", 'testuser')
+        self._test_call(mysql.user_grants,
+                        {'sql': 'SHOW GRANTS FOR %(user)s@%(host)s',
+                         'sql_args': {'host': 'localhost',
+                                      'user': 'testuser',
+                                     }
+                        },
+                       'testuser'
+        )
 
     @skipIf(True, 'TODO: Mock up user_grants()')
     def test_grant_exists(self):
