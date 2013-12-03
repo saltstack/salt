@@ -221,15 +221,15 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     Terse formatting of a message.
     '''
     result = "Clean"
-    if (ret['changes']):
+    if ret['changes']:
         result = "Changed"
-    if (ret['result'] == False):
+    if ret['result'] is False:
         result = "Failed"
-    elif (ret['result'] == None):
+    elif ret['result'] is None:
         result = "Differs"
-    if (tabular == True):
+    if tabular is True:
         fmt_string = '{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
-    elif (isinstance(tabular, str)):
+    elif isinstance(tabular, str):
         fmt_string = tabular
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
