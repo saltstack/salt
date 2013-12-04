@@ -238,11 +238,16 @@ def _grant_to_tokens(grant):
                 database=database)
 
 
-def quote_identifier(identifier):
+def quote_identifier(identifier, for_grants=False):
     '''
     Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
 
     This means surrounded by "`" character and escaping this charater inside.
+
+    :param identifier: the table, column or database identifier
+
+    :param for_grants: is False by default, when using database names on grant queries
+    you should set it to True to also escape "_" and "%" characters
 
     CLI Example:
 
@@ -250,7 +255,10 @@ def quote_identifier(identifier):
 
         salt '*' mysql.quote_identifier 'foo`bar'
     '''
-    return '`' + identifier.replace('`', '``') + '`'
+    if for_grants:
+        return '`' + identifier.replace('`', '``').replace('_', r'\_').replace('%', r'\%') + '`'
+    else:
+        return '`' + identifier.replace('`', '``') + '`'
 
 
 def query(database, query, **connection_args):
@@ -782,22 +790,28 @@ def user_exists(user,
         return False
 
     cur = dbc.cursor()
-    qry = ('SELECT User,Host FROM mysql.user WHERE User = {0!r} AND '
-           'Host = {1!r}'.format(user, host))
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
 
     if salt.utils.is_true(passwordless):
         if salt.utils.is_true(unix_socket):
-            qry += ' AND plugin={0!r}'.format('unix_socket')
+            qry += ' AND plugin=%(unix_socket)s'
+            args['unix_socket'] = 'unix_socket'
         else:
             qry += ' AND Password = \'\''
     elif password:
-        qry += ' AND Password = PASSWORD({0!r})'.format(password)
+        qry += ' AND Password = PASSWORD(%(password)s)'
+        args['password'] = password
     elif password_hash:
-        qry += ' AND Password = {0!r}'.format(password_hash)
+        qry += ' AND Password = %(password)s'
+        args['password'] = password_hash
 
-    log.debug('Doing query: {0}'.format(qry))
+    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -822,11 +836,15 @@ def user_info(user, host='localhost', **connection_args):
         return False
 
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = ('SELECT * FROM mysql.user WHERE User = {0!r} AND '
-           'Host = {1!r}'.format(user, host))
-    log.debug('Query: {0}'.format(qry))
+    qry = ('SELECT * FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
+
+    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -894,11 +912,16 @@ def user_create(user,
         return False
 
     cur = dbc.cursor()
-    qry = 'CREATE USER {0!r}@{1!r}'.format(user, host)
+    qry = 'CREATE USER %(user)s@%(host)s'
+    args = {}
+    args['user'] = user
+    args['host'] = host
     if password is not None:
-        qry += ' IDENTIFIED BY {0!r}'.format(password)
+        qry += ' IDENTIFIED BY %(password)s'
+        args['password'] = password
     elif password_hash is not None:
-        qry += ' IDENTIFIED BY PASSWORD {0!r}'.format(password_hash)
+        qry += ' IDENTIFIED BY PASSWORD %(password)s'
+        args['password'] = password_hash
     elif salt.utils.is_true(allow_passwordless):
         if salt.utils.is_true(unix_socket):
             if host == 'localhost':
@@ -910,9 +933,9 @@ def user_create(user,
                   'allow_passwordless=True')
         return False
 
-    log.debug('Query: {0}'.format(qry))
+    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -975,10 +998,13 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
+    args = {}
     if password is not None:
-        password_sql = 'PASSWORD({0!r})'.format(password)
+        password_sql = 'PASSWORD(%(password)s)'
+        args['password'] = password
     elif password_hash is not None:
-        password_sql = '{0!r}'.format(password_hash)
+        password_sql = '%(password)s'
+        args['password'] = password_hash
     elif not salt.utils.is_true(allow_passwordless):
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -991,16 +1017,19 @@ def user_chpass(user,
         return False
 
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET password={0} WHERE User={1!r} AND '
-           'Host = {2!r};'.format(password_sql, user, host))
+    qry = ('UPDATE mysql.user SET password='
+           + password_sql +
+           ' WHERE User=%(user)s AND Host = %(host)s;')
+    args['user'] = user
+    args['host'] = host
     if salt.utils.is_true(allow_passwordless) and salt.utils.is_true(unix_socket):
         if host == 'localhost':
             qry += ' IDENTIFIED VIA unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
-    log.debug('Query: {0}'.format(qry))
+    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        result = cur.execute(qry)
+        result = cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1043,10 +1072,13 @@ def user_remove(user,
         return False
 
     cur = dbc.cursor()
-    qry = 'DROP USER {0!r}@{1!r}'.format(user, host)
-    log.debug('Query: {0}'.format(qry))
+    qry = 'DROP USER %(user)s@%(host)s'
+    args = {}
+    args['user'] = user
+    args['host'] = host
+    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        result = cur.execute(qry)
+        result = cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1183,16 +1215,22 @@ def __grant_generate(grant,
 
     if escape:
         if dbc is not '*':
-            dbc = '`{0}`'.format(dbc)
+            dbc = quote_identifier(dbc, for_grants=True)
         if table is not '*':
-            table = '`{0}`'.format(table)
-    qry = 'GRANT {0} ON {1}.{2} TO {3!r}@{4!r}'.format(
-        grant, dbc, table, user, host
-    )
+            table = quote_identifier(table, for_grants=True)
+    qry = ('GRANT %%(grant)s ON %(dbc)s.%(table)s'
+          ' TO %%(user)s@%%(host)s') % dict(
+              dbc=dbc,
+              table=table
+          )
+    args = {}
+    args['grant'] = grant
+    args['user'] = user
+    args['host'] = host
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
-    log.debug('Query generated: {0}'.format(qry))
-    return qry
+    log.debug('Query generated: {0} args {1}'.format(qry, repr(args)))
+    return {'qry': qry, 'args': args}
 
 
 def user_grants(user,
@@ -1214,10 +1252,13 @@ def user_grants(user,
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'SHOW GRANTS FOR {0!r}@{1!r}'.format(user, host)
-    log.debug('Doing query: {0}'.format(qry))
+    qry = 'SHOW GRANTS FOR %(user)s@%(host)s'
+    args = {}
+    args['user'] = user
+    args['host'] = host
+    log.debug('Doing query: {0} args {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1309,9 +1350,9 @@ def grant_add(grant,
     cur = dbc.cursor()
 
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
-    log.debug('Query: {0}'.format(qry))
+    log.debug('Query: {0} args: {1}'.format(qry['qry'], repr(qry['args'])))
     try:
-        cur.execute(qry)
+        cur.execute(qry['qry'], qry['args'])
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1359,12 +1400,17 @@ def grant_revoke(grant,
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
-    qry = 'REVOKE {0} ON {1} FROM {2!r}@{3!r};'.format(
-        grant, database, user, host
-    )
-    log.debug('Query: {0}'.format(qry))
+    # _ and % are authorized on GRANT queries and should get escaped on the db name
+    s_database = quote_identifier(database, for_grants=True)
+    qry = 'REVOKE %%(grant)s ON %(database) FROM %%(user}s@%%(host)s;' % dict(database=s_database)
+    args = {}
+    args['grant'] = grant
+    args['user'] = user
+    args['host'] = host
+
+    log.debug('Query: {0} args{1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry)
+        cur.execute(qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
