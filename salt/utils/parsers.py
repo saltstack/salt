@@ -798,7 +798,6 @@ class TimeoutMixIn(object):
         self.add_option(
             '-t', '--timeout',
             type=int,
-            default=self.default_timeout,
             help=('Change the timeout, if applicable, for the running '
                   'command; default=%default')
         )

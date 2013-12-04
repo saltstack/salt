@@ -63,7 +63,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             for res in batch.run():
                 pass
         else:
-            if self.options.timeout <= 0:
+            if not self.options.timeout:
                 self.options.timeout = local.opts['timeout']
 
             kwargs = {
