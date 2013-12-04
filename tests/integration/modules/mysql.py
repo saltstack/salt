@@ -627,41 +627,39 @@ class MysqlModuleUserTest(integration.ModuleCase,
         '''
         Test various users creation settings
         '''
-        dbname = u"foo'-- `\"'"
-        # create database
-        # but first silently try to remove it
-        # in case of previous tests failures
-        ret = self.run_function(
-            'mysql.db_remove',
-            name=dbname,
-            connection_user=self.user,
-            connection_pass=self.password,
-            character_set='utf8',
-            collate='utf8_general_ci'
-        )
-        ret = self.run_function(
-            'mysql.db_create',
-            name=dbname,
-            connection_user=self.user,
-            connection_pass=self.password,
-            character_set='utf8',
-            collate='utf8_general_ci'
-        )
-        self.assertEqual(True, ret)
         
         # Create users with rights on this database
         # and rights on other databases
         user1 = "user '1"
+        user1_pwd = 'pwd`\'"1b'
+        user1_pwd_hash = '*4DF33B3B12E43384677050A818327877FAB2F4BA'
         # this is : user "2'標
         user2 = 'user "2\'\xe6\xa8\x99'
-        user3 = 'user "3'
-        # this is : user "4標 in unicode instead of utf-8
-        user4 = u'user "4\u6a19'
-        user4_utf8 = 'user "4\xe6\xa8\x99'
+        user2_pwd = 'user "2\'\xe6\xa8\x99b'
+        user2_pwd_hash = '*3A38A7B94B024B983687BB9B44FB60B7AA38FE61'
+        user3 = 'user "3;,?:@=&/'
+        user3_pwd = 'user "3;,?:@=&/'
+        user3_pwd_hash = '*AA3B1D4105A45D381C23A5C221C47EA349E1FD7D'
+        # this is : user ":=;4標 in unicode instead of utf-8
+        # if unicode char is counted as 1 char we hit the max user 
+        # size (16)
+        user4 = u'user":;,?:@=&/4\u6a19'
+        user4_utf8 = 'user":;,?:@=&/4\xe6\xa8\x99'
+        user4_pwd = 'user "4;,?:@=&/'
+        user4_pwd_hash = '*FC8EF8DBF27628E4E113359F8E7478D5CF3DD57C'
         user5 = u'user ``"5'
         user5_utf8 = 'user ``"5'
+        # this is 標標標\
+        user5_pwd = '\xe6\xa8\x99\xe6\xa8\x99\\'
+        # this is password('標標\\')
+        user5_pwd_hash = '*3752E65CDD8751AF8D889C62CFFC6C998B12C376'
         user6 = u'user %--"6'
         user6_utf8 = 'user %--"6'
+        # this is : --'"% SIX標b
+        user6_pwd_u = u' --\'"% SIX\u6a19b'
+        user6_pwd_utf8 = ' --\'"% SIX\xe6\xa8\x99b'
+        # this is password(' --\'"% SIX標b')
+        user6_pwd_hash = '*90AE800593E2D407CD9E28CCAFBE42D17EEA5369'
         self._userCreationLop(
             uname=user1,
             host='localhost',
@@ -675,7 +673,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_exists',
             user=user1,
             host='localhost',
-            password='pwd`\'"1b',
+            password=user1_pwd,
             password_hash=None,
             connection_user=self.user,
             connection_pass=self.password,
@@ -694,7 +692,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             # this is his name hash : user "2'標
             password_hash='*EEF6F854748ACF841226BB1C2422BEC70AE7F1FF',
             # and this is the same with a 'b' added
-            new_password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            new_password_hash=user2_pwd_hash,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -729,7 +727,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             user=user2,
             host='localhost',
             password=None,
-            password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            password_hash=user2_pwd_hash,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -782,7 +780,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             uname=user3,
             host='%',
             password='foo',
-            new_password='bar',
+            new_password=user3_pwd,
             connection_user=self.user,
             connection_pass=self.password
         )
@@ -802,7 +800,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_exists',
             user=user3,
             host='%',
-            password='bar',
+            password=user3_pwd,
             connection_user=self.user,
             connection_pass=self.password
         )
@@ -814,8 +812,9 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self._userCreationLop(
             uname=user4,
             host='%',
-            password='foo',
-            password_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61',
+            password=user4_pwd,
+            # this is password('foo')
+            password_hash='*F3A2A51A9B0F2BE2468926B4132313728C250DBF',
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -827,7 +826,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_exists',
             user=user4_utf8,
             host='%',
-            password='foo',
+            password=user4_pwd,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -838,12 +837,11 @@ class MysqlModuleUserTest(integration.ModuleCase,
             ' with password take from password and not password_hash'
             ' failed').format(user4_utf8, '%')
         )
-        # password is utf-8 version of '標標'
         self._userCreationLop(
             uname=user5,
             host='localhost',
             password='\xe6\xa8\x99\xe6\xa8\x99',
-            new_password='\xe6\xa8\x99\xe6\xa8\x99b',
+            new_password=user5_pwd,
             unix_socket=True,
             connection_user=self.user,
             connection_pass=self.password,
@@ -855,7 +853,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_exists',
             user=user5_utf8,
             host='localhost',
-            password='\xe6\xa8\x99\xe6\xa8\x99b',
+            password=user5_pwd,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -869,8 +867,8 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self._userCreationLop(
             uname=user6,
             host='10.0.0.1',
-            password=' --\'"% SIX',
-            new_password=u' --\'"% SIX\u6a19b',
+            password=' foobar',
+            new_password=user6_pwd_u,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -882,7 +880,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_exists',
             user=user6_utf8,
             host='10.0.0.1',
-            password=' --\'"% SIX\xe6\xa8\x99b',
+            password=user6_pwd_utf8,
             connection_user=self.user,
             connection_pass=self.password,
             connection_use_unicode=True,
@@ -894,19 +892,19 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
         # Final result should be:
         # mysql> select Host, User, Password from user where user like 'user%';
-        # +-----------+-------------+-------------------------------------------+
-        # | Host      | User        | Password                                  |
-        # +-----------+-------------+-------------------------------------------+
-        # | 10.0.0.1  | user "2'標  |                                           |
-        # | 10.0.0.2  | user "2'標  |                                           |
-        # | localhost | user "2'標  | *3A38A7B94B024B983687BB9B44FB60B7AA38FE61 |
-        # | %         | user "3     | *E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB |
-        # | localhost | user "3     |                                           |
-        # | %         | user "4標   | *F3A2A51A9B0F2BE2468926B4132313728C250DBF |
-        # | 10.0.0.1  | user %--"6  | *90AE800593E2D407CD9E28CCAFBE42D17EEA5369 |
-        # | localhost | user '1     | *4DF33B3B12E43384677050A818327877FAB2F4BA |
-        # | localhost | user ``"5   | *E2D5734CF0048A1ABEE39E13EA35160DCF249B0C |
-        # +-----------+-------------+-------------------------------------------+
+        # +--------------------+-----------+-------------------------------------------+
+        # | User               | Host      | Password                                  |
+        # +--------------------+-----------+-------------------------------------------+
+        # | user "2'標         | 10.0.0.1  |                                           |
+        # | user "2'標         | 10.0.0.2  |                                           |
+        # | user "2'標         | localhost | *3A38A7B94B024B983687BB9B44FB60B7AA38FE61 |
+        # | user "3;,?:@=&/    | %         | *AA3B1D4105A45D381C23A5C221C47EA349E1FD7D |
+        # | user "3;,?:@=&/    | localhost |                                           |
+        # | user %--"6         | 10.0.0.1  | *90AE800593E2D407CD9E28CCAFBE42D17EEA5369 |
+        # | user '1            | localhost | *4DF33B3B12E43384677050A818327877FAB2F4BA |
+        # | user ``"5          | localhost | *3752E65CDD8751AF8D889C62CFFC6C998B12C376 |
+        # | user":;,?:@=&/4標  | %         | *FC8EF8DBF27628E4E113359F8E7478D5CF3DD57C |
+        # +--------------------+-----------+-------------------------------------------
         self._chck_userinfo(user=user2,
                             host='10.0.0.1',
                             check_user=user2,
@@ -920,12 +918,12 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self._chck_userinfo(user=user2,
                             host='localhost',
                             check_user=user2,
-                            check_hash='*3A38A7B94B024B983687BB9B44FB60B7AA38FE61'
+                            check_hash=user2_pwd_hash
         )
         self._chck_userinfo(user=user3,
                             host='%',
                             check_user=user3,
-                            check_hash='*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+                            check_hash=user3_pwd_hash
         )
         self._chck_userinfo(user=user3,
                             host='localhost',
@@ -935,22 +933,22 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self._chck_userinfo(user=user4,
                             host='%',
                             check_user=user4_utf8,
-                            check_hash='*F3A2A51A9B0F2BE2468926B4132313728C250DBF'
+                            check_hash=user4_pwd_hash
         )
         self._chck_userinfo(user=user6,
                             host='10.0.0.1',
                             check_user=user6_utf8,
-                            check_hash='*90AE800593E2D407CD9E28CCAFBE42D17EEA5369'
+                            check_hash=user6_pwd_hash
         )
         self._chck_userinfo(user=user1,
                             host='localhost',
                             check_user=user1,
-                            check_hash='*4DF33B3B12E43384677050A818327877FAB2F4BA'
+                            check_hash=user1_pwd_hash
         )
         self._chck_userinfo(user=user5,
                             host='localhost',
                             check_user=user5_utf8,
-                            check_hash='*E2D5734CF0048A1ABEE39E13EA35160DCF249B0C'
+                            check_hash=user5_pwd_hash
         )
         # check user_list function
         ret = self.run_function(
@@ -990,14 +988,17 @@ class MysqlModuleUserTest(integration.ModuleCase,
             )
         self.assertEqual([['1']], ret['results'])
         
-        # FIXME: still failing, works by hand...
+        # FIXME: still failing, but works by hand...
         # mysql --user="user \"2'標" --password="user \"2'標b" information_schema
+        # Seems to be a python-mysql library problem with user names containing
+        # utf8 characters
+        #import urllib
         #ret = self.run_function(
         #    'mysql.query',
         #    database='information_schema',
         #    query='SELECT 1',
-        #    connection_user=user2,
-        #    connection_pass='user "2\'\xe6\xa8\x99b',
+        #    connection_user=urllib.quote_plus(user2),
+        #    connection_pass=urllib.quote_plus(user2_pwd),
         #    connection_host='localhost',
         #    connection_use_unicode=True,
         #    connection_charset='utf8',
@@ -1035,7 +1036,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    database='information_schema',
         #    query='SELECT 1',
         #    connection_user=user4_utf8,
-        #    connection_pass='foo',
+        #    connection_pass=user4_pwd,
         #    connection_host='localhost',
         #    connection_use_unicode=True,
         #    connection_charset='utf8',
@@ -1050,13 +1051,13 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #        )
         #    )
         #self.assertEqual([['1']], ret['results'])
-        # FIXME
+        # FIXME: crash on conv parameter handling in MySQldb
         #ret = self.run_function(
         #    'mysql.query',
         #    database='information_schema',
         #    query='SELECT 1',
-        #    connection_user=user5,
-        #    connection_pass='\xe6\xa8\x99\xe6\xa8\x99b',
+        #    connection_user=user5_utf8,
+        #    connection_pass=user5_pwd,
         #    connection_host='localhost',
         #    connection_use_unicode=True,
         #    connection_charset='utf8',
@@ -1066,8 +1067,8 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    raise AssertionError(
         #        ('Unexpected result while testing connection'
         #        ' with user {0!r}: {1}').format(
-        #            user5,
-        #            repr(ret)
+        #            user5_utf8,
+        #           repr(ret)
         #        )
         #    )
         #self.assertEqual([['1']], ret['results'])
@@ -1075,42 +1076,60 @@ class MysqlModuleUserTest(integration.ModuleCase,
         # Teardown by deleting with user_remove
         self._chk_remove_user(user=user2,
                               host='10.0.0.1',
+                              connection_user=self.user,
+                              connection_pass=self.password,
                               connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
         self._chk_remove_user(user=user2,
                               host='10.0.0.2',
+                              connection_user=self.user,
+                              connection_pass=self.password,
                               connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
         self._chk_remove_user(user=user2,
                               host='localhost',
+                              connection_user=self.user,
+                              connection_pass=self.password,
                               connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
         self._chk_remove_user(user=user3,
-                              host='%'
+                              host='%',
+                              connection_user=self.user,
+                              connection_pass=self.password,
         )
         self._chk_remove_user(user=user3,
-                              host='localhost'
+                              host='localhost',
+                              connection_user=self.user,
+                              connection_pass=self.password,
         )
         self._chk_remove_user(user=user4,
                               host='%',
+                              connection_user=self.user,
+                              connection_pass=self.password,
                               connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
         self._chk_remove_user(user=user6,
-                              host='10.0.0.1'
+                              host='10.0.0.1',
+                              connection_user=self.user,
+                              connection_pass=self.password,
         )
         self._chk_remove_user(user=user1,
-                              host='localhost'
+                              host='localhost',
+                              connection_user=self.user,
+                              connection_pass=self.password,
         )
         self._chk_remove_user(user=user5,
-                              host='localhost'
+                              host='localhost',
+                              connection_user=self.user,
+                              connection_pass=self.password,
         )
         # Final verification of the cleanup
         ret = self.run_function(
