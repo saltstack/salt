@@ -13,7 +13,7 @@ at https://cloud.google.com.
 
 Dependencies
 ============
-* `Libcloud <http://libcloud.apache.org>`_ version 0.14.0-beta3 or greater
+* Source install of `Libcloud <https://github.com/apache/libcloud>`_ (or greater than 0.14.0-beta3 when available)
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
