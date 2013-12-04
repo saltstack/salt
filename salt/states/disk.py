@@ -52,7 +52,7 @@ def status(name, maximum=None, minimum=None):
             return ret
     if maximum:
         if cap > maximum:
-            ret['comment'] = 'Disk is below maximum of {0} at {1}'.format(
+            ret['comment'] = 'Disk is above maximum of {0} at {1}'.format(
                     maximum, cap)
             return ret
     ret['comment'] = 'Disk in acceptable range'
