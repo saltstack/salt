@@ -52,7 +52,7 @@ hr = u'{0}\n'.format('-' * 80)
 re_f = re.S | re.M | re.U
 base_status = {
     'status': None,
-    'logs': {'debug': []},
+    'logs': [],
     'comment': '',
     'out': None,
     'logs_by_level': {},
@@ -331,7 +331,7 @@ def _get_bootstrap_content(directory="."):
                 os.path.abspath(directory), 'bootstrap.py'))
         oldcontent = fic.read()
         fic.close()
-    except os.error:
+    except (OSError, IOError):
         oldcontent = ""
     return oldcontent
 
@@ -368,7 +368,7 @@ def _get_buildout_ver(directory="."):
             or '--distribute' in bcontent
         ):
             buildoutver = 1
-    except os.error:
+    except (OSError, IOError):
         pass
     return buildoutver
 
@@ -447,7 +447,7 @@ def upgrade_bootstrap(directory=".",
                 open(os.path.join(
                     dbuild,
                     '{0}.updated_bootstrap'.format(buildout_ver)))
-            except os.error:
+            except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
                 data = urllib2.urlopen(booturl).read()
                 updated = True
@@ -468,7 +468,7 @@ def upgrade_bootstrap(directory=".",
             ), 'w')
             afic.write('foo')
             afic.close()
-    except os.error:
+    except (OSError, IOError):
         if oldcontent:
             fic = open(b_py, 'w')
             fic.write(oldcontent)
