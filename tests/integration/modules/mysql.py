@@ -572,7 +572,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             self.skipTest('No MySQL Server running, or no root access on it.')
 
 
-    def _userCreationLop(self,
+    def _userCreationLoop(self,
                          uname,
                          host,
                          password=None,
@@ -715,7 +715,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         user6_pwd_utf8 = ' --\'"% SIX\xe6\xa8\x99b'
         # this is password(' --\'"% SIX標b')
         user6_pwd_hash = '*90AE800593E2D407CD9E28CCAFBE42D17EEA5369'
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user1,
             host='localhost',
             password='pwd`\'"1',
@@ -740,7 +740,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             ' existence failed').format(user1, 'localhost')
         )
 
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user2,
             host='localhost',
             password=None,
@@ -755,7 +755,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             saltenv={"LC_ALL": "en_US.utf8"}
         )
         # user2 can connect from other places with other password
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user2,
             host='10.0.0.1',
             allow_passwordless=True,
@@ -765,7 +765,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user2,
             host='10.0.0.2',
             allow_passwordless=True,
@@ -823,7 +823,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
 
         # Empty password is not passwordless (or is it a bug?)
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user3,
             host='localhost',
             password='',
@@ -831,7 +831,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_pass=self.password
         )
         # user 3 on another host with a password
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user3,
             host='%',
             password='foo',
@@ -864,7 +864,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
 
         # check unicode name, and password > password_hash
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user4,
             host='%',
             password=user4_pwd,
@@ -892,7 +892,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             ' with password take from password and not password_hash'
             ' failed').format(user4_utf8, '%')
         )
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user5,
             host='localhost',
             password='\xe6\xa8\x99\xe6\xa8\x99',
@@ -919,7 +919,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             ' with utf8 password failed').format(user5_utf8, 'localhost')
         )
         # for this one we give password in unicode and check it in utf-8
-        self._userCreationLop(
+        self._userCreationLoop(
             uname=user6,
             host='10.0.0.1',
             password=' foobar',
