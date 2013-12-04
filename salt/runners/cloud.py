@@ -92,6 +92,7 @@ def destroy(names):
     '''
     Destroy the named vm(s)
     '''
+    import wingdbstub # Import WingIDE remote debugger
     client = _get_client()
     info = client.destroy(names)
     return info
