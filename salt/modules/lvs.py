@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 
-Support for LVS(Linux Virtual Server)
+Support for LVS (Linux Virtual Server)
 '''
 
 # Import python libs
@@ -10,6 +10,11 @@ Support for LVS(Linux Virtual Server)
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import SaltException
+
+
+__func_alias__ = {
+    'list_': 'list'
+}
 
 
 # Cache the output of running which('ipvsadm')
@@ -350,7 +355,7 @@ def get_rules():
     return ret
 
 
-def list(protocol=None, service_address=None):
+def list_(protocol=None, service_address=None):
     '''
 
     List the virtual server table if service_address is not specified. If a service_address is selected, list this service only.

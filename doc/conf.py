@@ -88,8 +88,8 @@ except NameError:
     docs_basepath = os.path.abspath(os.path.dirname('.'))
 
 addtl_paths = (
-        os.pardir, # salt itself (for autodoc)
-        '_ext', # custom Sphinx extensions
+        os.pardir,  # salt itself (for autodoc)
+        '_ext',  # custom Sphinx extensions
 )
 
 for path in addtl_paths:

@@ -610,7 +610,7 @@ fi
         expected_result_simple = {
             'cmd_|-A_|-echo A third_|-run': {
                 '__run_num__': 2,
-                'comment':  'Command "echo A third" run',
+                'comment': 'Command "echo A third" run',
                 'result': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,
@@ -636,7 +636,7 @@ fi
         expected_result_simple2 = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
-                'comment':  'Command "echo A" run',
+                'comment': 'Command "echo A" run',
                 'result': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 2,
@@ -658,7 +658,7 @@ fi
         expected_result_complex = {
             'cmd_|-A_|-echo A fourth_|-run': {
                 '__run_num__': 3,
-                'comment':  'Command "echo A fourth" run',
+                'comment': 'Command "echo A fourth" run',
                 'result': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,

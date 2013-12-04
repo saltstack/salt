@@ -1146,7 +1146,7 @@ def login(url=None, username=None, password=None, email=None, *args, **kwargs):
         salt '*' docker.login <container id>
     '''
     client = _get_client()
-    return client.login(url, username=username, password=password, email=email)
+    return client.login(url, username, password, email)
 
 
 def search(term, *args, **kwargs):
@@ -1725,7 +1725,7 @@ def push(repo, *args, **kwargs):
     return status
 
 
-def _run_wrapper(status, container, func, cmd,  *args, **kwargs):
+def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     '''
     Wrapper to a cmdmod function
 
