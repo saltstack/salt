@@ -260,6 +260,8 @@ class Client(object):
                     else:
                         for found_file in files:
                             stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            if salt.utils.is_windows():
+                                stripped_root = stripped_root.replace('\\', '/')
                             if found_file.endswith(('.sls')):
                                 if found_file.endswith('init.sls'):
                                     if stripped_root.endswith('.'):
@@ -273,6 +275,8 @@ class Client(object):
                                     states.append(stripped_root + found_file[:-4])
         else:
             for path in self.file_list(env):
+                if salt.utils.is_windows():
+                    path = path.replace('\\', '/')
                 if path.endswith('.sls'):
                     # is an sls module!
                     if path.endswith('{0}init.sls'.format('/')):
