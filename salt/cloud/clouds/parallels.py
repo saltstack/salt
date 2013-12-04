@@ -98,7 +98,7 @@ def avail_images():
     return ret
 
 
-def list_nodes():
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -122,7 +122,7 @@ def list_nodes():
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -147,7 +147,7 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''

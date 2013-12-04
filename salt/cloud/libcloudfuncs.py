@@ -346,7 +346,7 @@ def reboot(name, conn=None):
     return False
 
 
-def list_nodes(conn=None):
+def list_nodes(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -368,7 +368,7 @@ def list_nodes(conn=None):
     return ret
 
 
-def list_nodes_full(conn=None):
+def list_nodes_full(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with all fields
     '''
@@ -385,7 +385,7 @@ def list_nodes_full(conn=None):
     return ret
 
 
-def list_nodes_select(conn=None):
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
