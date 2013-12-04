@@ -1051,27 +1051,26 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #        )
         #    )
         #self.assertEqual([['1']], ret['results'])
-        # FIXME: crash on conv parameter handling in MySQldb
-        #ret = self.run_function(
-        #    'mysql.query',
-        #    database='information_schema',
-        #    query='SELECT 1',
-        #    connection_user=user5_utf8,
-        #    connection_pass=user5_pwd,
-        #    connection_host='localhost',
-        #    connection_use_unicode=True,
-        #    connection_charset='utf8',
-        #    saltenv={"LC_ALL": "en_US.utf8"}
-        #)
-        #if not isinstance(ret, dict) or not 'results' in ret:
-        #    raise AssertionError(
-        #        ('Unexpected result while testing connection'
-        #        ' with user {0!r}: {1}').format(
-        #            user5_utf8,
-        #           repr(ret)
-        #        )
-        #    )
-        #self.assertEqual([['1']], ret['results'])
+        ret = self.run_function(
+            'mysql.query',
+            database='information_schema',
+            query='SELECT 1',
+            connection_user=user5_utf8,
+            connection_pass=user5_pwd,
+            connection_host='localhost',
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+        if not isinstance(ret, dict) or not 'results' in ret:
+            raise AssertionError(
+                ('Unexpected result while testing connection'
+                ' with user {0!r}: {1}').format(
+                    user5_utf8,
+                   repr(ret)
+                )
+            )
+        self.assertEqual([['1']], ret['results'])
 
         # Teardown by deleting with user_remove
         self._chk_remove_user(user=user2,
