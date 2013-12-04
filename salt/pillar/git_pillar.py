@@ -111,7 +111,14 @@ def init(branch, repo_location):
 
     if not os.path.isdir(rp_):
         os.makedirs(rp_)
-    repo = git.Repo.init(rp_)
+
+    try:
+        repo = git.Repo.init(rp_)
+    except Exception as e:
+        log.error('GitPython exception caught while initializing the repo for '
+                  'git_pillar: {0}. Maybe git is not available.'.format(e))
+        return None
+
     if not repo.remotes:
         try:
             repo.create_remote('origin', repo_location)
