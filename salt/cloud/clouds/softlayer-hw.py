@@ -667,7 +667,8 @@ def create(vm_):
 
 
 def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
-        primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]'):
+        primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]',
+        call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -680,7 +681,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
     return ret
 
 
-def list_nodes():
+def list_nodes(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -705,7 +706,7 @@ def list_nodes():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
@@ -744,7 +745,7 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint disable=W0613
     '''
     Destroy a node.
 
