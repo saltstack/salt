@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Wrapper module for at(1)
 
@@ -46,9 +45,7 @@ def atq(tag=None):
     List all queued and running jobs or only those with
     an optional 'tag'.
 
-    CLI Example:
-
-    .. code-block:: bash
+    CLI Example::
 
         salt '*' at.atq
         salt '*' at.atq [tag]
@@ -137,9 +134,7 @@ def atrm(*args):
     '''
     Remove jobs from the queue.
 
-    CLI Example:
-
-    .. code-block:: bash
+    CLI Example::
 
         salt '*' at.atrm <jobid> <jobid> .. <jobid>
         salt '*' at.atrm all
@@ -181,9 +176,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     The 'timespec' follows the format documented in the
     at(1) manpage.
 
-    CLI Example:
-
-    .. code-block:: bash
+    CLI Example::
 
         salt '*' at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
@@ -243,9 +236,7 @@ def atc(jobid):
     id. This is mostly for debugging so the output will
     just be text.
 
-    CLI Example:
-
-    .. code-block:: bash
+    CLI Example::
 
         salt '*' at.atc <jobid>
     '''
@@ -259,3 +250,166 @@ def atc(jobid):
         return {'error': 'invalid job id "{0}"'.format(str(jobid))}
 
     return output
+
+def _formatdate(timespec, delimiter):
+    '''
+    Return formatted time format: HH:MM YY-mm-dd.
+    This is a very simple way, you can extend this method to suit your needs.
+    '''
+
+    if ' ' in timespec:
+        t = timespec.split()[0]
+        d = timespec.split()[1]
+        Y = d.split('%s' % delimiter)[2]
+        tmp = d.split('%s' % delimiter)
+
+        if len(d.split('%s' % delimiter)[2]) != 4:
+            Y = '20' + d.split('%s' % delimiter)[2]
+        if delimiter == '/':
+            T = "%s %s%s%02d%s%02d" % (t, Y, '-', int(tmp[0]), '-', int(tmp[1]))
+        elif delimiter == '.':
+            T = "%s %s%s%02d%s%02d" % (t, Y, '-', int(tmp[1]), '-', int(tmp[0]))
+    else:
+        Y = timespec.split('%s' % delimiter)[2]
+        tmp = timespec.split('%s' % delimiter)
+        if len(timespec.split('%s' % delimiter)[2]) != 4:
+            Y = '20' + timespec.split('%s' % delimiter)[2]
+        if delimiter == '/':
+            T = "%s%s%02d%s%02d" % (Y, '-', int(tmp[0]), '-', int(tmp[1]))
+        elif delimiter == '.':
+            T = "%s%s%02d%s%02d" % (Y, '-', int(tmp[1]), '-', int(tmp[0]))
+        
+    return T
+
+def _atq(**kwargs):
+    '''
+    Return match jobs list
+    '''
+    
+    jobs = []
+
+    runas = kwargs.get('runas', None)
+    time_tag = kwargs.get('timespec', None)
+    tag = kwargs.get('tag', None)
+
+    jobinfo = atq()['jobs']
+    if not jobinfo:
+        return {'jobs': jobs}
+
+    for i in range(0, len(jobinfo)):
+        opts = {}
+        t = jobinfo[i]['time']
+        d = jobinfo[i]['date']
+        a = t + ' ' + d
+        if runas and time_tag and tag:
+            if runas == jobinfo[i]['user']:
+                if tag == jobinfo[i]['tag']:
+                    if ' ' in time_tag and time_tag == a:
+                        opts = jobinfo[i]
+                    elif '-' in time_tag and time_tag == d:
+                        opts = jobinfo[i]
+                    elif ':' in time_tag and time_tag == t:
+                        opts = jobinfo[i]
+        elif runas and time_tag:
+            if runas == jobinfo[i]['user']:
+                if ' ' in time_tag and time_tag == a:
+                    opts = jobinfo[i]
+                elif '-' in time_tag and time_tag == d:
+                    opts = jobinfo[i]
+                elif ':' in time_tag and time_tag == t:
+                    opts = jobinfo[i]
+        elif runas and tag:
+            if runas == jobinfo[i]['user']:
+                if tag == jobinfo[i]['tag']:
+                    opts = jobinfo[i]
+        elif tag and time_tag:
+            if tag == jobinfo[i]['tag']:
+                if ' ' in time_tag and time_tag == a:
+                    opts = jobinfo[i]
+                elif '-' in time_tag and time_tag == d:
+                    opts = jobinfo[i]
+                elif ':' in time_tag and time_tag == t:
+                    opts = jobinfo[i]
+        elif runas:
+            if runas == jobinfo[i]['user']:
+                opts = jobinfo[i]
+        elif tag:
+            if tag == jobinfo[i]['tag']:
+                opts = jobinfo[i]
+        elif time_tag:
+            if ' ' in time_tag and time_tag == a:
+                opts = jobinfo[i]
+            elif '-' in time_tag and time_tag == d:
+                opts = jobinfo[i]
+            elif ':' in time_tag and time_tag == t:
+                opts = jobinfo[i]
+
+        if opts:
+            jobs.append(opts)
+
+    if not jobs:
+        note = 'No match jobs'
+        return {'jobs': jobs, 'note': note}
+
+    return {'jobs': jobs}
+
+def jobcheck(**kwargs):  # pylint: disable=C0103
+    '''
+    According to the given parameters match the return queue job list
+    '''
+
+    if not kwargs:
+        return {'error': 'You have given a condition'}
+
+    if "timespec" in kwargs.keys():
+        time_spec = kwargs['timespec']
+
+        _t = '((00|[0][1-9]|[1][0-9]|[2][0-3]):[0-5][0-9])$'
+        mdy = '(([0]?[13578]|10|12)/([0]?[1-9]|[1-2][0-9]|30|31)|([0]?[469]|11)/([0]?[1-9]|[1-2][0-9]|30)|([0]?[2])/([0]?[1-9]|[1-2][0-9]))/(\d{2}|\d{4})$'    # MM/DD/YY
+        dmy = '(([0]?[1-9]|[1-2][0-9]|30|31)\.([0]?[13578]|10|12)|([0]?[1-9]|[1-2][0-9]|30)\.([0]?[469]|11)|([0]?[1-9]|[1-2][0-9])\.[0]?[2])\.(\d{2}|\d{4})$'    # DD.MM.YY
+        ymd = '(\d{2}|\d{4})-(([0][13578]|10|12)-([0][1-9]|[1-2][0-9]|30|31)|([0]?469]|11)-([0][1-9]|[1-2]|[0-9]|30)|([0][2])-([0][1-9]|[1-2][0-9]))$'    # YY-MM-DD
+        only_time = re.compile(r'%s' % _t)
+        only_mdy = re.compile(r'%s' % mdy)
+        only_dmy = re.compile(r'%s' % dmy)
+        only_ymd = re.compile(r'%s' % ymd)
+        time_mdy = re.compile(r'%s %s' % (_t[:-1], mdy))
+        time_dmy = re.compile(r'%s %s' % (_t[:-1], dmy))
+        time_ymd = re.compile(r'%s %s' % (_t[:-1], ymd))
+
+        # Greater than 599 minutes Format Convertor
+        try:
+            if int(time_spec) > 599:
+                time_spec = "%02d:%02d" % (int(time_spec)/60, int(time_spec)%60)
+        except:
+            pass
+
+        if only_time.match(time_spec):
+            # 17:25
+            time_tag = only_time.match(time_spec).group(0)
+        elif only_ymd.match(time_spec):
+            # 2013-11-30
+            time_tag = only_ymd.match(time_spec).group(0)
+        elif only_mdy.match(time_spec):
+            # 11/30/2013
+            hit = only_mdy.match(time_spec).group(0)
+            time_tag = _formatdate(hit, '/')
+        elif only_dmy.match(time_spec):
+            # 30.11.2013
+            hit = only_dmy.match(time_spec).group(0)
+            time_tag = _formatdate(hit, '.')
+        elif time_mdy.match(time_spec):
+            # 17:25 11/29/13
+            hit = time_mdy.match(time_spec).group(0)
+            time_tag = _formatdate(hit, '/')
+        elif time_dmy.match(time_spec):
+            # 17:25 29.11.13
+            hit = time_dmy.match(time_spec).group(0)
+            time_tag = _formatdate(hit, '.')
+        elif time_ymd.match(time_spec):
+            # 17:25 2013-11-13
+            time_tag = time_ymd.match(time_spec).group(0)
+        else:
+            return {'error': 'Sorry,this time format is not supported'}
+        kwargs.update(timespec=time_tag)
+
+    return _atq(**kwargs)
