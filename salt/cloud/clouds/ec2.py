@@ -1725,7 +1725,7 @@ def rename(name, kwargs, call=None):
     )
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint disable=W0613
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
@@ -1866,7 +1866,7 @@ def _get_node(name, location=None):
     return {}
 
 
-def list_nodes_full(location=None, call=None):
+def list_nodes_full(location=None, call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -1954,7 +1954,7 @@ def _list_nodes_full(location=None):
     return ret
 
 
-def list_nodes(call=None):
+def list_nodes(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -1978,7 +1978,7 @@ def list_nodes(call=None):
     return ret
 
 
-def list_nodes_select(call=None):
+def list_nodes_select(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''

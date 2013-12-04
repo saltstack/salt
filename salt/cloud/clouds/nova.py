@@ -711,7 +711,7 @@ def avail_sizes():
                               [conn['profile']])
 
 
-def list_nodes(call=None):
+def list_nodes(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that in this location
     '''
@@ -735,7 +735,7 @@ def list_nodes(call=None):
     return ret
 
 
-def list_nodes_full(call=None):
+def list_nodes_full(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that in this location
     '''
@@ -754,7 +754,7 @@ def list_nodes_full(call=None):
     return ret
 
 
-def list_nodes_select(call=None):
+def list_nodes_select(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''

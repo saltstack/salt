@@ -126,7 +126,7 @@ def avail_sizes():
     return ret
 
 
-def list_nodes(call=None):
+def list_nodes(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -144,7 +144,7 @@ def list_nodes(call=None):
     return ret
 
 
-def list_nodes_full(call=None):
+def list_nodes_full(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -161,7 +161,7 @@ def list_nodes_full(call=None):
     return ret
 
 
-def list_nodes_select(call=None):
+def list_nodes_select(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -610,7 +610,7 @@ def get_keyid(keyname):
     raise SaltCloudNotFound('The specified ssh key could not be found.')
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint disable=W0613
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
