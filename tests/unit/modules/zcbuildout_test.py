@@ -230,9 +230,9 @@ class BuildoutTestCase(Base):
 
     @requires_network()
     def test__find_cfgs(self):
-        self.assertEqual(
-            [a.replace(ROOT, '')
-             for a in buildout._find_cfgs(ROOT)],
+        result = sorted(
+            [a.replace(ROOT, '') for a in buildout._find_cfgs(ROOT)])
+        assertlist = sorted(
             ['/buildout.cfg',
              '/c/buildout.cfg',
              '/etc/buildout.cfg',
@@ -241,6 +241,7 @@ class BuildoutTestCase(Base):
              '/b/bdistribute/buildout.cfg',
              '/b/b2/buildout.cfg',
              '/foo/buildout.cfg'])
+        self.assertEqual(result, assertlist)
 
     @requires_network()
     def test_upgrade_bootstrap(self):

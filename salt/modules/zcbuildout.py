@@ -52,7 +52,7 @@ hr = u'{0}\n'.format('-' * 80)
 re_f = re.S | re.M | re.U
 base_status = {
     'status': None,
-    'logs': {'debug': []},
+    'logs': [],
     'comment': '',
     'out': None,
     'logs_by_level': {},
@@ -78,7 +78,7 @@ def _salt_callback(func):
         runas = kw.get('runas', None)
         env = kw.get('env', ())
         try:
-            # may rise ResultTransmission
+            # may rise _ResultTransmission
             _check_onlyif_unless(onlyif,
                                  unless,
                                  directory=directory,
@@ -86,13 +86,13 @@ def _salt_callback(func):
                                  env=env)
             comment, st, out = '', True, None
             if not status['status']:
-                # may rise ResultTransmission
+                # may rise _ResultTransmission
                 out = func(*a, **kw)
                 if isinstance(out, dict):
                     comment = out.get('comment', '')
                     out = out.get('out', None)
             status = _set_status(status, status=st, comment=comment, out=out)
-        except ResultTransmission, ex:
+        except _ResultTransmission, ex:
             status = ex.args[0]
         except Exception:
             trace = traceback.format_exc(None)
@@ -100,6 +100,7 @@ def _salt_callback(func):
             _invalid(status)
         LOG.clear()
         return status
+    _call_callback.__doc__ = func.__doc__
     return _call_callback
 
 
@@ -156,7 +157,7 @@ def _set_status(m,
                 status=False,
                 out=None):
     '''
-    Assign status data to a dict
+    Assign status data to a dict.
     '''
     m['out'] = out
     m['status'] = status
@@ -192,14 +193,14 @@ def _set_status(m,
 
 def _invalid(m, comment=INVALID_RESPONSE, out=None):
     '''
-    Return invalid status
+    Return invalid status.
     '''
     return _set_status(m, status=False, comment=comment, out=out)
 
 
 def _valid(m, comment=VALID_RESPONSE, out=None):
     '''
-    Return valid status
+    Return valid status.
     '''
     return _set_status(m, status=True, comment=comment, out=out)
 
@@ -211,15 +212,20 @@ def _Popen(command,
            env=(),
            exitcode=0):
     '''
-    Run a command
+    Run a command.
+
     output
         return output if true
+
     directory
         directory to execute in
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     exitcode
         fails if cmd does not return this exit code
         (set to None to disable check)
@@ -233,22 +239,22 @@ def _Popen(command,
     ret = __salt__['cmd.run_all'](command, cwd=directory, runas=runas, env=env)
     out = ret['stdout'] + '\n\n' + ret['stderr']
     if (exitcode is not None) and (ret['retcode'] != exitcode):
-        raise BuildoutError(out)
+        raise _BuildoutError(out)
     ret['output'] = out
     if output:
         ret = out
     return ret
 
 
-class ResultTransmission(Exception):
+class _ResultTransmission(Exception):
     '''General Buildout Error.'''
 
 
-class BuildoutError(CommandExecutionError):
+class _BuildoutError(CommandExecutionError):
     '''General Buildout Error.'''
 
 
-class MrDeveloperError(BuildoutError):
+class _MrDeveloperError(_BuildoutError):
     '''Arrives when mr.developer fails'''
 
 
@@ -287,7 +293,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 
 def _find_cfgs(path, cfgs=None):
-    """Find all buildout configs in a sudirectory
+    '''
+    Find all buildout configs in a sudirectory.
     only builout.cfg and etc/buildout.cfg are valid in::
 
     path
@@ -304,7 +311,7 @@ def _find_cfgs(path, cfgs=None):
             │   └── buildout.cfg
             └── var
                 └── buildout.cfg
-    """
+    '''
     ignored = ['var', 'parts']
     dirs = []
     if not cfgs:
@@ -324,20 +331,23 @@ def _find_cfgs(path, cfgs=None):
 
 
 def _get_bootstrap_content(directory="."):
-    """Get the current bootstrap.py script content"""
+    '''
+    Get the current bootstrap.py script content
+    '''
     try:
         fic = open(
             os.path.join(
                 os.path.abspath(directory), 'bootstrap.py'))
         oldcontent = fic.read()
         fic.close()
-    except os.error:
+    except (OSError, IOError):
         oldcontent = ""
     return oldcontent
 
 
 def _get_buildout_ver(directory="."):
-    """Check for buildout versions
+    '''Check for buildout versions.
+
     In any cases, check for a version pinning
     Also check for buildout.dumppickedversions which is buildout1 specific
     Also check for the version targeted by the local bootstrap file
@@ -345,7 +355,7 @@ def _get_buildout_ver(directory="."):
 
     directory
         directory to execute in
-    """
+    '''
     directory = os.path.abspath(directory)
     buildoutver = 2
     try:
@@ -368,25 +378,30 @@ def _get_buildout_ver(directory="."):
             or '--distribute' in bcontent
         ):
             buildoutver = 1
-    except os.error:
+    except (OSError, IOError):
         pass
     return buildoutver
 
 
 def _get_bootstrap_url(directory):
-    """Get the most appropriate download url for the bootstrap script
+    '''
+    Get the most appropriate download url for the bootstrap script.
+
     directory
         directory to execute in
-    """
+
+    '''
     v = _get_buildout_ver(directory)
     return _url_versions.get(v, _url_versions[DEFAULT_VER])
 
 
 def _dot_buildout(directory):
-    """Get the local marker directory
+    '''
+    Get the local marker directory.
+
     directory
         directory to execute in
-    """
+    '''
     return os.path.join(
         os.path.abspath(directory), '.buildout')
 
@@ -399,18 +414,24 @@ def upgrade_bootstrap(directory=".",
                       env=(),
                       offline=False,
                       buildout_ver=None):
-    """Upgrade current bootstrap.py with the last released one.
+    '''
+    Upgrade current bootstrap.py with the last released one.
+
     Indeed, when we first run a buildout, a common source of problem
     is to have an locally stale boostrap, we just try rab a new copy
 
     directory
         directory to execute in
+
     offline
         are we executing buildout in offline mode
+
     buildout_ver
         forcing to use a specific buildout version (1 | 2)
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
 
@@ -419,8 +440,7 @@ def upgrade_bootstrap(directory=".",
     .. code-block:: bash
 
         salt '*' buildout.upgrade_bootstrap /srv/mybuildout
-
-    """
+    '''
     if buildout_ver:
         booturl = _url_versions[buildout_ver]
     else:
@@ -447,7 +467,7 @@ def upgrade_bootstrap(directory=".",
                 open(os.path.join(
                     dbuild,
                     '{0}.updated_bootstrap'.format(buildout_ver)))
-            except os.error:
+            except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
                 data = urllib2.urlopen(booturl).read()
                 updated = True
@@ -468,7 +488,7 @@ def upgrade_bootstrap(directory=".",
             ), 'w')
             afic.write('foo')
             afic.close()
-    except os.error:
+    except (OSError, IOError):
         if oldcontent:
             fic = open(b_py, 'w')
             fic.write(oldcontent)
@@ -490,30 +510,42 @@ def bootstrap(directory=".",
               test_release=False,
               offline=False,
               new_st=None):
-    """Run the buildout bootstrap dance (python bootstrap.py)
+    '''
+    Run the buildout bootstrap dance (python bootstrap.py).
 
     directory
         directory to execute in
+
     config
         alternative buildout configuration file to use
+
     runas
         User used to run buildout as
+
     env
         environment variables to set when running
+
     buildout_ver
         force a specific buildout version (1 | 2)
+
     test_release
         buildout accept test release
+
     offline
         are we executing buildout in offline mode
+
     distribute
         Forcing use of distribute
+
     new_set
         Forcing use of setuptools >= 0.7
+
     python
         path to a python executable to use in place of default (salt one)
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
 
@@ -522,8 +554,7 @@ def bootstrap(directory=".",
     .. code-block:: bash
 
         salt '*' buildout.bootstrap /srv/mybuildout
-
-    """
+    '''
     directory = os.path.abspath(directory)
     dbuild = _dot_buildout(directory)
     bootstrap_args = ''
@@ -675,28 +706,45 @@ def run_buildout(directory=".",
                  verbose=False,
                  debug=False,
                  python=sys.executable):
-    """
+    '''
+    Run a buildout in a directory.
+
     directory
         directory to execute in
+
     config
         alternative buildout configuration file to use
+
     offline
         are we executing buildout in offline mode
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     onlyif
         Only execute cmd if statement on the host return 0
     unless
+
         Do not execute cmd if statement on the host return 0
     newest
         run buildout in newest mode
+
     force
+
         run buildout unconditionnaly
+
     verbose
         run buildout in verbose mode (-vvvvv)
-    """
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' buildout.run_buildout /srv/mybuildout
+    '''
     directory = os.path.abspath(directory)
     bcmd = os.path.join(directory, 'bin', 'buildout')
     installed_cfg = os.path.join(directory, '.installed.cfg')
@@ -801,41 +849,63 @@ def buildout(directory=".",
              verbose=False,
              onlyif=None,
              unless=None):
-    """Run buildout in a directory
+    '''
+    Run buildout in a directory.
 
     directory
         directory to execute in
+
     config
         buildout config to use
+
     parts
         specific buildout parts to run
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     buildout_ver
         force a specific buildout version (1 | 2)
+
     test_release
         buildout accept test release
+
     new_set
         Forcing use of setuptools >= 0.7
+
     distribute
         use distribute over setuptools if possible
+
     offline
         does buildout run offline
+
     python
         python to use
+
     debug
         run buildout with -D debug flag
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
     newest
         run buildout in newest mode
+
     verbose
         run buildout in verbose mode (-vvvvv)
-    """
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' buildout.buildout /srv/mybuildout
+    '''
     LOG.info(
         'Running buildout in %s (%s)' % (directory,
                                          config))
@@ -859,7 +929,7 @@ def buildout(directory=".",
                                 verbose=verbose,
                                 debug=debug)
     # signal the decorator or our return
-    raise ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
+    raise _ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
     return True  # make pylint happy
 
 
@@ -884,6 +954,6 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if retcode(unless, cwd=directory, runas=runas, env=env) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
-        raise ResultTransmission(status)
+        raise _ResultTransmission(status)
 
 # vim:set et sts=4 ts=4 tw=80:
