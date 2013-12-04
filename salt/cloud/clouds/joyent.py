@@ -753,7 +753,7 @@ def reformat_node(item=None, full=False):
     return item
 
 
-def list_nodes(full=False):
+def list_nodes(full=False, call=None):
     '''
     list of nodes, keeping only a brief listing
 
@@ -785,7 +785,7 @@ def list_nodes(full=False):
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(call=None):
     '''
     list of nodes, maintaining all content provided from joyent listings
 

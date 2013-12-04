@@ -176,6 +176,57 @@ def __virtual__():
     return True
 
 
+def check_opts(name, **kwargs):
+    '''
+    Checks an options dict against an instance, to see which options are
+    currently applied against the instance. Returns a dict of which options do
+    not currently match, and their present values. Returns an empty dict if no
+    changes need to be made.
+    '''
+    valid_opts = [
+        'securitygroup',
+        'iam_profile',
+        'securitygroupid',
+        'block_device_mappings',
+        'del_root_vol_on_destroy',
+        'del_all_vols_on_destroy',
+        'tag',
+        'volumes',
+        'rename_on_destroy',
+        # The following options are only useful when an instance is created
+        #'script',  # Create time only
+        #'keyname',  # Create time only
+        #'ssh_username',  # Create time only
+        #'ssh_interface',  # Create time only
+        #'location',  # Create time only
+        #'availability_zone',  # Create time only
+        #'subnetid',  # Create time only
+        #'spot_config',  # Create time only
+        #'private_key',  # Create time only
+        #'size',  # Create time only
+        #'network_interfaces',  # Create time only
+        #'wait_for_spot_timeout',  # Create time only
+        #'wait_for_ip_timeout',  # Create time only
+        #'wait_for_ip_interval',  # Create time only
+        #'display_ssh_output',  # Create time only
+        #'ssh_connect_timeout',  # Create time only
+        #'wait_for_passwd_timeout',  # Create time only
+        #'deploy',  # Create time only
+        #'tmp_dir',  # Create time only
+        #'deploy_command',  # Create time only
+        #'tty',  # Create time only
+        #'sudo',  # Create time only
+        #'sudo_password',  # Create time only
+        #'script_args',  # Create time only
+        #'script_env',  # Create time only
+        #'make_master',  # Create time only
+        #'make_minion',  # Create time only
+        #'win_installer',  # Create time only
+        #'win_username',  # Create time only
+        #'win_password',  # Create time only
+    ]
+
+
 def get_configured_provider():
     '''
     Return the first configured instance.
@@ -1815,7 +1866,7 @@ def _get_node(name, location=None):
     return {}
 
 
-def list_nodes_full(location=None):
+def list_nodes_full(location=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -1903,7 +1954,7 @@ def _list_nodes_full(location=None):
     return ret
 
 
-def list_nodes():
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -1927,7 +1978,7 @@ def list_nodes():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
