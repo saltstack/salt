@@ -1204,6 +1204,154 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self.assertNotIn({'Host': 'localhost', 'User': user5_utf8}, ret)
         self.assertNotIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
 
+
+
+
+@skipIf(
+    NO_MYSQL,
+    'Please install MySQL bindings and a MySQL Server before running'
+    'MySQL integration tests.'
+)
+class MysqlModuleUserGrantTest(integration.ModuleCase,
+                      integration.SaltReturnAssertsMixIn):
+    '''
+    User Creation and connection tests
+    '''
+
+    user = 'root'
+    password = 'poney'
+    users = {
+        'user1': {
+            'name': 'foo',
+            'pwd': 'bar',
+        },
+        'user2': {
+            'name': 'user ";--,?:@=&/\\',
+            'pwd': '";--,?:@=&/\\',
+        },
+        # this is : user 標標
+        'user3': {
+            'name': 'user \xe6\xa8\x99',
+            'pwd': '\xe6\xa8\x99\xe6\xa8\x99',
+        },
+    }
+
+    @destructiveTest
+    def setUp(self):
+        '''
+        Test presence of MySQL server, enforce a root password, create users
+        '''
+        super(MysqlModuleUserTest, self).setUp()
+        NO_MYSQL_SERVER = True
+        # now ensure we know the mysql root password
+        # one of theses two at least should work
+        ret1 = self.run_state(
+            'cmd.run',
+             name='mysqladmin -u '
+               + self.user
+               + ' flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        ret2 = self.run_state(
+            'cmd.run',
+             name='mysqladmin -u '
+               + self.user
+               + ' --password="'
+               + self.password
+               + '" flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        key, value = ret2.popitem()
+        if value['result']:
+            NO_MYSQL_SERVER = False
+        else:
+            self.skipTest('No MySQL Server running, or no root access on it.')
+        for user,userdef in self.users.iteritems():
+            self._userCreation(uname=userdef['name'] ,password=userdef['pwd'])
+
+
+    @destructiveTest
+    def tearDown(self):
+        '''
+        Removes created users
+        '''
+        for user,userdef in self.users.iteritems():
+            self._userCreation(uname=userdef['name'] ,password=userdef['pwd'])
+
+
+    def _userCreation(self,
+                      uname,
+                      password=None):
+        '''
+        Create a test user
+        '''
+        self.run_function(
+            'mysql.user_create',
+            user=uname,
+            host='localhost',
+            password=password,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+
+
+    def _userRemoval(self,
+                     uname,
+                     host,
+                     password=None):
+        self.run_function(
+            'mysql.user_remove',
+            user=uname,
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8',
+            saltenv={"LC_ALL": "en_US.utf8"}
+        )
+
+
+#    def _addGrantRoutine(self,
+#                         uname,
+#                         host,
+#                         password=None,
+#                         new_password=None,
+#                         new_password_hash=None,
+#                         **kwargs):
+#        '''
+#        Perform some tests around creation of the given user
+#        '''
+#        ret = self.run_function(
+#            'mysql.grant_add',
+#            grant=uname,
+#            database=host,
+#            user='foo'
+#            host='jklj'
+#            **kwargs
+#        )
+#       
+#        self.assertEqual(True, ret, ('Calling grant_add on'
+#            ' user {0!r} did not return True: {1}').format(
+#            uname,
+#            repr(ret)
+#        ))
+       
+
+    @destructiveTest
+    def testGrants:
+        '''
+        '''
+#        user_grants
+#        grant_exists
+#        grant_add
+#        grant_revoke
+        assertEqual(True, False)
+
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MysqlModuleDbTest, MysqlModuleUserTest)
+    run_tests(MysqlModuleDbTest, MysqlModuleUserTest,  MysqlModuleUserGrantsTest)
