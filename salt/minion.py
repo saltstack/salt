@@ -181,6 +181,10 @@ def yamlify_arg(arg):
     try:
         original_arg = str(arg)
         if isinstance(arg, string_types):
+            if '#' in arg:
+                # Don't yamlify this argument or the '#' and everything after
+                # it will be interpreted as a comment.
+                return arg
             if '\n' not in arg:
                 arg = yaml.safe_load(arg)
         if isinstance(arg, dict):
