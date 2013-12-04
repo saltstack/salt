@@ -1343,8 +1343,10 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
        
 
     @destructiveTest
-    def testGrants:
+    @skipIf(True,'User grant are unstable on this branch, WIP')
+    def testGrants(self):
         '''
+        Test user grant methods
         '''
 #        user_grants
 #        grant_exists
