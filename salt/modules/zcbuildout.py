@@ -100,6 +100,7 @@ def _salt_callback(func):
             _invalid(status)
         LOG.clear()
         return status
+    _call_callback.__doc__ = func.__doc__
     return _call_callback
 
 
@@ -156,7 +157,7 @@ def _set_status(m,
                 status=False,
                 out=None):
     '''
-    Assign status data to a dict
+    Assign status data to a dict.
     '''
     m['out'] = out
     m['status'] = status
@@ -192,14 +193,14 @@ def _set_status(m,
 
 def _invalid(m, comment=INVALID_RESPONSE, out=None):
     '''
-    Return invalid status
+    Return invalid status.
     '''
     return _set_status(m, status=False, comment=comment, out=out)
 
 
 def _valid(m, comment=VALID_RESPONSE, out=None):
     '''
-    Return valid status
+    Return valid status.
     '''
     return _set_status(m, status=True, comment=comment, out=out)
 
@@ -211,15 +212,20 @@ def _Popen(command,
            env=(),
            exitcode=0):
     '''
-    Run a command
+    Run a command.
+
     output
         return output if true
+
     directory
         directory to execute in
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     exitcode
         fails if cmd does not return this exit code
         (set to None to disable check)
@@ -287,7 +293,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 
 def _find_cfgs(path, cfgs=None):
-    '''Find all buildout configs in a sudirectory
+    '''
+    Find all buildout configs in a sudirectory.
     only builout.cfg and etc/buildout.cfg are valid in::
 
     path
@@ -324,7 +331,9 @@ def _find_cfgs(path, cfgs=None):
 
 
 def _get_bootstrap_content(directory="."):
-    '''Get the current bootstrap.py script content'''
+    '''
+    Get the current bootstrap.py script content
+    '''
     try:
         fic = open(
             os.path.join(
@@ -337,7 +346,8 @@ def _get_bootstrap_content(directory="."):
 
 
 def _get_buildout_ver(directory="."):
-    '''Check for buildout versions
+    '''Check for buildout versions.
+
     In any cases, check for a version pinning
     Also check for buildout.dumppickedversions which is buildout1 specific
     Also check for the version targeted by the local bootstrap file
@@ -374,16 +384,21 @@ def _get_buildout_ver(directory="."):
 
 
 def _get_bootstrap_url(directory):
-    '''Get the most appropriate download url for the bootstrap script
+    '''
+    Get the most appropriate download url for the bootstrap script.
+
     directory
         directory to execute in
+
     '''
     v = _get_buildout_ver(directory)
     return _url_versions.get(v, _url_versions[DEFAULT_VER])
 
 
 def _dot_buildout(directory):
-    '''Get the local marker directory
+    '''
+    Get the local marker directory.
+
     directory
         directory to execute in
     '''
@@ -399,18 +414,24 @@ def upgrade_bootstrap(directory=".",
                       env=(),
                       offline=False,
                       buildout_ver=None):
-    '''Upgrade current bootstrap.py with the last released one.
+    '''
+    Upgrade current bootstrap.py with the last released one.
+
     Indeed, when we first run a buildout, a common source of problem
     is to have an locally stale boostrap, we just try rab a new copy
 
     directory
         directory to execute in
+
     offline
         are we executing buildout in offline mode
+
     buildout_ver
         forcing to use a specific buildout version (1 | 2)
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
 
@@ -419,7 +440,6 @@ def upgrade_bootstrap(directory=".",
     .. code-block:: bash
 
         salt '*' buildout.upgrade_bootstrap /srv/mybuildout
-
     '''
     if buildout_ver:
         booturl = _url_versions[buildout_ver]
@@ -490,30 +510,42 @@ def bootstrap(directory=".",
               test_release=False,
               offline=False,
               new_st=None):
-    '''Run the buildout bootstrap dance (python bootstrap.py)
+    '''
+    Run the buildout bootstrap dance (python bootstrap.py).
 
     directory
         directory to execute in
+
     config
         alternative buildout configuration file to use
+
     runas
         User used to run buildout as
+
     env
         environment variables to set when running
+
     buildout_ver
         force a specific buildout version (1 | 2)
+
     test_release
         buildout accept test release
+
     offline
         are we executing buildout in offline mode
+
     distribute
         Forcing use of distribute
+
     new_set
         Forcing use of setuptools >= 0.7
+
     python
         path to a python executable to use in place of default (salt one)
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
 
@@ -522,7 +554,6 @@ def bootstrap(directory=".",
     .. code-block:: bash
 
         salt '*' buildout.bootstrap /srv/mybuildout
-
     '''
     directory = os.path.abspath(directory)
     dbuild = _dot_buildout(directory)
@@ -676,31 +707,43 @@ def run_buildout(directory=".",
                  debug=False,
                  python=sys.executable):
     '''
+    Run a buildout in a directory.
+
     directory
         directory to execute in
+
     config
         alternative buildout configuration file to use
+
     offline
         are we executing buildout in offline mode
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     onlyif
         Only execute cmd if statement on the host return 0
     unless
+
         Do not execute cmd if statement on the host return 0
     newest
         run buildout in newest mode
+
     force
+
         run buildout unconditionnaly
+
     verbose
         run buildout in verbose mode (-vvvvv)
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' buildout.run_buildout /srv/mybuildout
-
     '''
     directory = os.path.abspath(directory)
     bcmd = os.path.join(directory, 'bin', 'buildout')
@@ -806,45 +849,62 @@ def buildout(directory=".",
              verbose=False,
              onlyif=None,
              unless=None):
-    '''Run buildout in a directory
+    '''
+    Run buildout in a directory.
 
     directory
         directory to execute in
+
     config
         buildout config to use
+
     parts
         specific buildout parts to run
+
     runas
         user used to run buildout as
+
     env
         environment variables to set when running
+
     buildout_ver
         force a specific buildout version (1 | 2)
+
     test_release
         buildout accept test release
+
     new_set
         Forcing use of setuptools >= 0.7
+
     distribute
         use distribute over setuptools if possible
+
     offline
         does buildout run offline
+
     python
         python to use
+
     debug
         run buildout with -D debug flag
+
     onlyif
         Only execute cmd if statement on the host return 0
+
     unless
         Do not execute cmd if statement on the host return 0
     newest
         run buildout in newest mode
+
     verbose
         run buildout in verbose mode (-vvvvv)
+
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' buildout.buildout /srv/mybuildout
-
     '''
     LOG.info(
         'Running buildout in %s (%s)' % (directory,
