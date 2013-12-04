@@ -78,7 +78,7 @@ def _salt_callback(func):
         runas = kw.get('runas', None)
         env = kw.get('env', ())
         try:
-            # may rise ResultTransmission
+            # may rise _ResultTransmission
             _check_onlyif_unless(onlyif,
                                  unless,
                                  directory=directory,
@@ -86,13 +86,13 @@ def _salt_callback(func):
                                  env=env)
             comment, st, out = '', True, None
             if not status['status']:
-                # may rise ResultTransmission
+                # may rise _ResultTransmission
                 out = func(*a, **kw)
                 if isinstance(out, dict):
                     comment = out.get('comment', '')
                     out = out.get('out', None)
             status = _set_status(status, status=st, comment=comment, out=out)
-        except ResultTransmission, ex:
+        except _ResultTransmission, ex:
             status = ex.args[0]
         except Exception:
             trace = traceback.format_exc(None)
@@ -233,22 +233,22 @@ def _Popen(command,
     ret = __salt__['cmd.run_all'](command, cwd=directory, runas=runas, env=env)
     out = ret['stdout'] + '\n\n' + ret['stderr']
     if (exitcode is not None) and (ret['retcode'] != exitcode):
-        raise BuildoutError(out)
+        raise _BuildoutError(out)
     ret['output'] = out
     if output:
         ret = out
     return ret
 
 
-class ResultTransmission(Exception):
+class _ResultTransmission(Exception):
     '''General Buildout Error.'''
 
 
-class BuildoutError(CommandExecutionError):
+class _BuildoutError(CommandExecutionError):
     '''General Buildout Error.'''
 
 
-class MrDeveloperError(BuildoutError):
+class _MrDeveloperError(_BuildoutError):
     '''Arrives when mr.developer fails'''
 
 
@@ -859,7 +859,7 @@ def buildout(directory=".",
                                 verbose=verbose,
                                 debug=debug)
     # signal the decorator or our return
-    raise ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
+    raise _ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
     return True  # make pylint happy
 
 
@@ -884,6 +884,6 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if retcode(unless, cwd=directory, runas=runas, env=env) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
-        raise ResultTransmission(status)
+        raise _ResultTransmission(status)
 
 # vim:set et sts=4 ts=4 tw=80:
