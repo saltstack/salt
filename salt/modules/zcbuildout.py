@@ -104,7 +104,7 @@ def _salt_callback(func):
     return _call_callback
 
 
-class _Logger():
+class _Logger(object):
     levels = ('info', 'warn', 'debug', 'error')
 
     def __init__(self):
