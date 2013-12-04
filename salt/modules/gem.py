@@ -13,7 +13,7 @@ __func_alias__ = {
 
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
-    if __salt__['rvm.is_installed']():
+    if __salt__['rvm.is_installed'](runas=runas):
         return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
     ret = __salt__['cmd.run_all'](
