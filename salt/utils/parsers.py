@@ -238,6 +238,11 @@ class MergeConfigMixIn(object):
                 # value, this allows to tweak settings on the configuration
                 # files bypassing the shell option flags
                 self.config[option.dest] = value
+            elif option.dest in self.config:
+                # Let's update the option value with the one from the
+                # configuration file. This allows the parsers to make use of
+                # the updated value by using self.options.<option>
+                setattr(self.options, option.dest, self.config[option.dest])
 
         # Merge parser group options if any
         for group in self.option_groups:
@@ -252,12 +257,18 @@ class MergeConfigMixIn(object):
                     if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
-                else:
-                    if value is not None and value != default:
-                        # Only set the value in the config file IF it's not the
-                        # default value, this allows to tweak settings on the
-                        # configuration files bypassing the shell option flags
-                        self.config[option.dest] = value
+                elif value is not None and value != default:
+                    # Only set the value in the config file IF it's not the
+                    # default value, this allows to tweak settings on the
+                    # configuration files bypassing the shell option flags
+                    self.config[option.dest] = value
+                elif option.dest in self.config:
+                    # Let's update the option value with the one from the
+                    # configuration file. This allows the parsers to make use
+                    # of the updated value by using self.options.<option>
+                    setattr(self.options,
+                            option.dest,
+                            self.config[option.dest])
 
 
 class ConfigDirMixIn(object):
