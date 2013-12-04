@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import os
 import logging
 
-from mock import patch, MagicMock
+from mock import patch
 
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
-    requires_system_grains
+    ensure_in_syspath
 )
 ensure_in_syspath('../../')
 
@@ -29,9 +27,16 @@ except Exception:
     NO_MYSQL = True
 
 
-@skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
+@skipIf(
+    NO_MYSQL,
+    'Please install MySQL bindings and a MySQL Server before running'
+    'MySQL integration tests.'
+)
 class MysqlModuleDbTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
+    '''
+    Module testing database creation on a real MySQL Server.
+    '''
 
     user = 'root'
     password = 'poney'
@@ -71,21 +76,29 @@ class MysqlModuleDbTest(integration.ModuleCase,
 
     def _db_creation_loop(self, db_name, returning_name, **kwargs):
         '''
-        Used in testCase, create, check existence, check name in db list and removes database
+        Used in db testCase, create, check exists, check in list and removes.
         '''
         ret = self.run_function(
             'mysql.db_create',
             name=db_name,
             **kwargs
         )
-        self.assertEqual(True, ret, 'Problem while creating db for db name: {0!r}'.format(db_name))
+        self.assertEqual(
+            True,
+            ret,
+            'Problem while creating db for db name: {0!r}'.format(db_name)
+        )
         # test db exists
         ret = self.run_function(
             'mysql.db_exists',
             name=db_name,
             **kwargs
         )
-        self.assertEqual(True, ret, 'Problem while testing db exists for db name: {0!r}'.format(db_name))
+        self.assertEqual(
+            True,
+            ret,
+            'Problem while testing db exists for db name: {0!r}'.format(db_name)
+        )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function(
             'mysql.db_list',
@@ -93,25 +106,31 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
         if not isinstance(ret, list):
             raise AssertionError(
-                    'Unexpected query result while retrieving databases list {0!r} for {1!r} test'.format(
+                ('Unexpected query result while retrieving databases list'
+                 ' {0!r} for {1!r} test').format(
                          ret,
                          db_name
                     )
                 )
-        self.assertIn(returning_name,
-                      ret,
-                      ('Problem while testing presence of db name in db lists'
-                       ' for db name: {0!r} in list {1!r}').format(
+        self.assertIn(
+            returning_name,
+            ret,
+            ('Problem while testing presence of db name in db lists'
+             ' for db name: {0!r} in list {1!r}').format(
                           db_name,
                           ret
-                     ))
+        ))
         # Now remove database
         ret = self.run_function(
             'mysql.db_remove',
             name=db_name,
             **kwargs
         )
-        self.assertEqual(True, ret, 'Problem while removing db for db name: {0!r}'.format(db_name))
+        self.assertEqual(
+            True,
+            ret,
+            'Problem while removing db for db name: {0!r}'.format(db_name)
+        )
 
     @destructiveTest
     def test_database_creation_level1(self):
@@ -214,7 +233,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
         # same as 'notamérican' because of file encoding
         # but ensure it on this test
         db_name_utf8 = 'notam\xc3\xa9rican'
-        db_name = db_name_utf8
         self._db_creation_loop(db_name=db_name_utf8,
                                returning_name=db_name_utf8,
                                connection_user=self.user,
@@ -288,7 +306,10 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
         self.assertEqual(True, ret)
         # Create 3 tables
-        tablenames = {'Atable "`1': 'MYISAM', 'Btable \'`2': 'InnoDB', 'Ctable --`3': 'MEMORY'}
+        tablenames = {'Atable "`1': 'MYISAM',
+                      'Btable \'`2': 'InnoDB',
+                      'Ctable --`3': 'MEMORY'
+                     }
         for tablename, engine in iter(sorted(tablenames.iteritems())):
             # prepare queries
             create_query = ('CREATE TABLE %(tblname)s ('
@@ -298,9 +319,13 @@ class MysqlModuleDbTest(integration.ModuleCase,
                     engine=engine,
                 )
             insert_query = ('INSERT INTO %(tblname)s (data)'
-                ' VALUES ') % dict(tblname=mysqlmod.quote_identifier(tablename))
+                ' VALUES ') % dict(
+                    tblname=mysqlmod.quote_identifier(tablename)
+            )
             delete_query = ('DELETE from  %(tblname)s'
-                ' order by rand() limit 50;') % dict(tblname=mysqlmod.quote_identifier(tablename))
+                ' order by rand() limit 50;') % dict(
+                    tblname=mysqlmod.quote_identifier(tablename)
+            )
             for x in range(100):
                 insert_query += "('foo"+str(x)+"'),"
             insert_query += "('bar');"
@@ -316,7 +341,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
             )
             if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
-                    'Unexpected query result while populating test table {0!r} : {1!r}'.format(
+                    ('Unexpected query result while populating test table'
+                     ' {0!r} : {1!r}').format(
                          tablename,
                          ret,
                     )
@@ -332,7 +358,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
             )
             if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
-                    'Unexpected query result while populating test table {0!r} : {1!r}'.format(
+                    ('Unexpected query result while populating test table'
+                     ' {0!r} : {1!r}').format(
                          tablename,
                          ret,
                     )
@@ -365,7 +392,11 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'check'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 
+                                'Msg_text': 'OK',
+                                'Msg_type': 'status',
+                                'Op': 'check'}]
+        )
         ret = self.run_function(
           'mysql.db_repair',
           name=dbname,
@@ -374,7 +405,11 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'repair'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
+                                'Msg_text': 'OK',
+                                'Msg_type': 'status',
+                                'Op': 'repair'}]
+        )
         ret = self.run_function(
           'mysql.db_optimize',
           name=dbname,
@@ -383,7 +418,11 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 'Msg_text': 'OK', 'Msg_type': 'status', 'Op': 'optimize'}])
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
+                                'Msg_text': 'OK',
+                                'Msg_type': 'status',
+                                'Op': 'optimize'}]
+        )
 
         # test check/repair/opimize on all tables
         ret = self.run_function(
@@ -397,7 +436,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
             if engine is 'MEMORY':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
-                    'Msg_text': "The storage engine for the table doesn't support check",
+                    'Msg_text': ("The storage engine for the table doesn't"
+                                 " support check"),
                     'Msg_type': 'note',
                     'Op': 'check'
                 }])
@@ -428,7 +468,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
             else:
                 expected.append([{
                     'Table': dbname+'.'+tablename,
-                    'Msg_text': "The storage engine for the table doesn't support repair",
+                    'Msg_text': ("The storage engine for the table doesn't"
+                                 " support repair"),
                     'Msg_type': 'note',
                     'Op': 'repair'
                 }])
@@ -467,7 +508,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
             elif engine is 'MEMORY':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
-                    'Msg_text': "The storage engine for the table doesn't support optimize",
+                    'Msg_text': ("The storage engine for the table doesn't"
+                                 " support optimize"),
                     'Msg_type': 'note',
                     'Op': 'optimize'
                 }])
@@ -482,9 +524,16 @@ class MysqlModuleDbTest(integration.ModuleCase,
         self.assertEqual(True, ret)
 
 
-@skipIf(NO_MYSQL, 'Install MySQL bindings and a MySQL Server before running MySQL integration tests.')
+@skipIf(
+    NO_MYSQL,
+    'Please install MySQL bindings and a MySQL Server before running'
+    'MySQL integration tests.'
+)
 class MysqlModuleUserTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
+    '''
+    User Creation and connection tests
+    '''
 
     user = 'root'
     password = 'poney'
@@ -523,7 +572,13 @@ class MysqlModuleUserTest(integration.ModuleCase,
             self.skipTest('No MySQL Server running, or no root access on it.')
 
 
-    def _userCreationLop(self, uname, host, password=None, new_password=None, new_password_hash=None, **kwargs):
+    def _userCreationLop(self,
+                         uname,
+                         host,
+                         password=None,
+                         new_password=None,
+                         new_password_hash=None,
+                         **kwargs):
         '''
         Perform some tests around creation of the given user
         '''
@@ -601,7 +656,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
                     user
                 )
             )
-        self.assertEqual(ret['Host'],host)
+        self.assertEqual(ret['Host'], host)
         self.assertEqual(ret['Password'], check_hash)
         self.assertEqual(ret['User'], check_user)
 
@@ -615,7 +670,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             host=host,
             **kwargs
         )
-        self.assertEqual(True,ret, ('Assertion failed  while removing user'
+        self.assertEqual(True, ret, ('Assertion failed  while removing user'
             ' {0!r} on host {1!r}: {2}').format(
             user,
             host,
@@ -892,19 +947,19 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
         # Final result should be:
         # mysql> select Host, User, Password from user where user like 'user%';
-        # +--------------------+-----------+-------------------------------------------+
-        # | User               | Host      | Password                                  |
-        # +--------------------+-----------+-------------------------------------------+
-        # | user "2'標         | 10.0.0.1  |                                           |
-        # | user "2'標         | 10.0.0.2  |                                           |
-        # | user "2'標         | localhost | *3A38A7B94B024B983687BB9B44FB60B7AA38FE61 |
-        # | user "3;,?:@=&/    | %         | *AA3B1D4105A45D381C23A5C221C47EA349E1FD7D |
-        # | user "3;,?:@=&/    | localhost |                                           |
-        # | user %--"6         | 10.0.0.1  | *90AE800593E2D407CD9E28CCAFBE42D17EEA5369 |
-        # | user '1            | localhost | *4DF33B3B12E43384677050A818327877FAB2F4BA |
-        # | user ``"5          | localhost | *3752E65CDD8751AF8D889C62CFFC6C998B12C376 |
-        # | user":;,?:@=&/4標  | %         | *FC8EF8DBF27628E4E113359F8E7478D5CF3DD57C |
-        # +--------------------+-----------+-------------------------------------------
+        # +--------------------+-----------+-------------------------------+
+        # | User               | Host      | Password                      |
+        # +--------------------+-----------+-------------------------------+
+        # | user "2'標         | 10.0.0.1  |                               |
+        # | user "2'標         | 10.0.0.2  |                               |
+        # | user "2'標         | localhost | *3A38A7B94B0(...)60B7AA38FE61 |
+        # | user "3;,?:@=&/    | %         | *AA3B1D4105(...)47EA349E1FD7D |
+        # | user "3;,?:@=&/    | localhost |                               |
+        # | user %--"6         | 10.0.0.1  | *90AE800593(...)E42D17EEA5369 |
+        # | user '1            | localhost | *4DF33B3B1(...)327877FAB2F4BA |
+        # | user ``"5          | localhost | *3752E65CD(...)FC6C998B12C376 |
+        # | user":;,?:@=&/4標  | %         | *FC8EF8DBF(...)7478D5CF3DD57C |
+        # +--------------------+-----------+-------------------------------+
         self._chck_userinfo(user=user2,
                             host='10.0.0.1',
                             check_user=user2,
@@ -1151,4 +1206,4 @@ class MysqlModuleUserTest(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MysqlModuleDbTest,MysqlModuleUserTest)
+    run_tests(MysqlModuleDbTest, MysqlModuleUserTest)
