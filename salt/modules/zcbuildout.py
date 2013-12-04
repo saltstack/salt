@@ -287,7 +287,7 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 
 def _find_cfgs(path, cfgs=None):
-    """Find all buildout configs in a sudirectory
+    '''Find all buildout configs in a sudirectory
     only builout.cfg and etc/buildout.cfg are valid in::
 
     path
@@ -304,7 +304,7 @@ def _find_cfgs(path, cfgs=None):
             │   └── buildout.cfg
             └── var
                 └── buildout.cfg
-    """
+    '''
     ignored = ['var', 'parts']
     dirs = []
     if not cfgs:
@@ -324,7 +324,7 @@ def _find_cfgs(path, cfgs=None):
 
 
 def _get_bootstrap_content(directory="."):
-    """Get the current bootstrap.py script content"""
+    '''Get the current bootstrap.py script content'''
     try:
         fic = open(
             os.path.join(
@@ -337,7 +337,7 @@ def _get_bootstrap_content(directory="."):
 
 
 def _get_buildout_ver(directory="."):
-    """Check for buildout versions
+    '''Check for buildout versions
     In any cases, check for a version pinning
     Also check for buildout.dumppickedversions which is buildout1 specific
     Also check for the version targeted by the local bootstrap file
@@ -345,7 +345,7 @@ def _get_buildout_ver(directory="."):
 
     directory
         directory to execute in
-    """
+    '''
     directory = os.path.abspath(directory)
     buildoutver = 2
     try:
@@ -374,19 +374,19 @@ def _get_buildout_ver(directory="."):
 
 
 def _get_bootstrap_url(directory):
-    """Get the most appropriate download url for the bootstrap script
+    '''Get the most appropriate download url for the bootstrap script
     directory
         directory to execute in
-    """
+    '''
     v = _get_buildout_ver(directory)
     return _url_versions.get(v, _url_versions[DEFAULT_VER])
 
 
 def _dot_buildout(directory):
-    """Get the local marker directory
+    '''Get the local marker directory
     directory
         directory to execute in
-    """
+    '''
     return os.path.join(
         os.path.abspath(directory), '.buildout')
 
@@ -399,7 +399,7 @@ def upgrade_bootstrap(directory=".",
                       env=(),
                       offline=False,
                       buildout_ver=None):
-    """Upgrade current bootstrap.py with the last released one.
+    '''Upgrade current bootstrap.py with the last released one.
     Indeed, when we first run a buildout, a common source of problem
     is to have an locally stale boostrap, we just try rab a new copy
 
@@ -420,7 +420,7 @@ def upgrade_bootstrap(directory=".",
 
         salt '*' buildout.upgrade_bootstrap /srv/mybuildout
 
-    """
+    '''
     if buildout_ver:
         booturl = _url_versions[buildout_ver]
     else:
@@ -490,7 +490,7 @@ def bootstrap(directory=".",
               test_release=False,
               offline=False,
               new_st=None):
-    """Run the buildout bootstrap dance (python bootstrap.py)
+    '''Run the buildout bootstrap dance (python bootstrap.py)
 
     directory
         directory to execute in
@@ -523,7 +523,7 @@ def bootstrap(directory=".",
 
         salt '*' buildout.bootstrap /srv/mybuildout
 
-    """
+    '''
     directory = os.path.abspath(directory)
     dbuild = _dot_buildout(directory)
     bootstrap_args = ''
@@ -675,7 +675,7 @@ def run_buildout(directory=".",
                  verbose=False,
                  debug=False,
                  python=sys.executable):
-    """
+    '''
     directory
         directory to execute in
     config
@@ -696,7 +696,12 @@ def run_buildout(directory=".",
         run buildout unconditionnaly
     verbose
         run buildout in verbose mode (-vvvvv)
-    """
+
+    .. code-block:: bash
+
+        salt '*' buildout.run_buildout /srv/mybuildout
+
+    '''
     directory = os.path.abspath(directory)
     bcmd = os.path.join(directory, 'bin', 'buildout')
     installed_cfg = os.path.join(directory, '.installed.cfg')
@@ -801,7 +806,7 @@ def buildout(directory=".",
              verbose=False,
              onlyif=None,
              unless=None):
-    """Run buildout in a directory
+    '''Run buildout in a directory
 
     directory
         directory to execute in
@@ -835,7 +840,12 @@ def buildout(directory=".",
         run buildout in newest mode
     verbose
         run buildout in verbose mode (-vvvvv)
-    """
+
+    .. code-block:: bash
+
+        salt '*' buildout.buildout /srv/mybuildout
+
+    '''
     LOG.info(
         'Running buildout in %s (%s)' % (directory,
                                          config))
