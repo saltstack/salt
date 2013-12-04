@@ -447,7 +447,7 @@ def create_node(**kwargs):
     return {}
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint disable=W0613
     '''
     destroy a machine by name
 
@@ -753,7 +753,7 @@ def reformat_node(item=None, full=False):
     return item
 
 
-def list_nodes(full=False, call=None):
+def list_nodes(full=False, call=None):  # pylint disable=W0613
     '''
     list of nodes, keeping only a brief listing
 
@@ -785,7 +785,7 @@ def list_nodes(full=False, call=None):
     return ret
 
 
-def list_nodes_full(call=None):
+def list_nodes_full(call=None):  # pylint disable=W0613
     '''
     list of nodes, maintaining all content provided from joyent listings
 
