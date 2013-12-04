@@ -543,8 +543,11 @@ def _role_create(name,
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
                     maintenance_db=maintenance_db, password=password)
-    return _run_psql(cmd, runas=runas, password=password, host=host,
+
+    ret = _run_psql(cmd, runas=runas, password=password, host=host,
                      run_cmd='cmd.run')
+
+    return ret['retcode'] == 0
 
 
 def user_create(username,
