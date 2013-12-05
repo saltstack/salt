@@ -518,13 +518,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             continue
         elif version_num not in pkginfo:
             log.error('Version {0} not found for package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
             continue
 
         installer = pkginfo[version_num].get('installer')
         if not installer:
             log.error('No installer configured for version {0} of package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
 
         if installer.startswith('salt:') \
                 or installer.startswith('http:') \
