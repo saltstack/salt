@@ -1069,6 +1069,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     result[name]['stdout'] = step['changes']['stdout']
             self.maxDiff=None
             self.assertEqual(expected, result)
+            cat_id = ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
+                      '_|-run').format(test_file)
+            self.assertEqual(
+                result[cat_id]['stdout'],
+                korean_2 + '\n' + korean_1 + '\n' + korean_3
+            )
         finally:
             if os.path.isdir(test_file):
                 os.unlink(test_file)
