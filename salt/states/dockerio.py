@@ -147,6 +147,44 @@ def _invalid(exec_status=None, name='', comment='', changes=None):
                        result=False)
 
 
+def mod_watch(name, sfun=None, *args, **kw):
+    if sfun == 'built':
+        # Needs to refresh the image
+        kw['force'] = True
+        build_status = built(name, **kw)
+        result = build_status['result']
+        status = _ret_status(build_status, name, result=result,
+                             changes={name: result})
+        return status
+    elif sfun == 'installed':
+        # Throw away the old container and create a new one
+        remove_container = __salt__['docker.remove_container']
+        remove_status = _ret_status(remove_container(container=name,
+                                                     force=True,**kw),
+                                    name=name)
+        installed_status = installed(name=name, **kw)
+        result = installed_status['result'] and remove_status['result']
+        comment = '\n'.join((remove_status['comment'],
+                             installed_status['comment']))
+        status = _ret_status(installed_status, name=name,
+                             result=result,
+                             changes={name: result},
+                             comment=comment)
+        return status
+    elif sfun == 'running':
+        # Force a restart agaisnt new container
+        restarter = __salt__['docker.restart']
+        status = _ret_status(restarter(kw['container']), name=name,
+                             changes={name: status['result']})
+        return status
+
+    return {'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ('watch requisite is not'
+                        ' implemented for {0}'.format(sfun))}
+
+
 def pulled(name, force=False, *args, **kwargs):
     '''
     Pull an image from a docker registry
