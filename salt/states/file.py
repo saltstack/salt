@@ -988,8 +988,9 @@ def managed(name,
         hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs. If source is left blank or None, the file
-        will be created as an empty file and the content will not be managed
+        string is salt://spam/eggs. If source is left blank or None
+        (use ~ in YAML), the file will be created as an empty file and
+        the content will not be managed
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
