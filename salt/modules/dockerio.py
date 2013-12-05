@@ -555,6 +555,8 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
+                     privileged=False,
+                     name=None,
                      *args, **kwargs):
     '''
     Create a new container
@@ -587,6 +589,10 @@ def create_container(image,
         let stdin open
     volumes_from
         container to get volumes definition from
+    privileged
+        run container in privileged mode
+    name
+        name given to container
 
     EG:
 
@@ -629,6 +635,8 @@ def create_container(image,
             dns=dns,
             volumes=mountpoints,
             volumes_from=volumes_from,
+            privileged=privileged,
+            name=name,
         )
         container = info['Id']
         kill(container)
