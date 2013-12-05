@@ -30,13 +30,14 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import (check_hash, check_managed, check_perms,  # pylint: disable=W0611
+from salt.modules.file import (check_hash, # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
-        patch, remove, source_list, sed_contains, touch, append, contains,
-        contains_regex, contains_regex_multiline, contains_glob, patch,
-        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
-        manage_file, file_exists, get_diff, get_managed, __clean_tmp,
-        check_managed, check_file_meta, _binary_replace, contains_regex)
+        check_managed, check_perms, patch, remove, source_list, sed_contains,
+        touch, append, contains, contains_regex, contains_regex_multiline,
+        contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
+        get_hash, comment, manage_file, file_exists, get_diff, get_managed,
+        __clean_tmp, check_managed, check_file_meta, _binary_replace,
+        contains_regex)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -53,7 +54,7 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs
+            global source_list, mkdir, __clean_tmp, makedirs, file_exists
 
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
@@ -62,6 +63,7 @@ def __virtual__():
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
             mkdir = _namespaced_function(mkdir, globals())
+            file_exists = _namespaced_function(file_exists, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
 
             return __virtualname__
