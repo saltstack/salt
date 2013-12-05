@@ -20,6 +20,7 @@ import salt.roster
 try:
     import jnpr.junos
     import jnpr.junos.utils
+    import jnpr.junos.cfg
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -49,7 +50,7 @@ def _get_conn(user=None, host=None, passwd=None):
     else:
         jdev = jnpr.junos.Device(user=user, host=host, password=passwd)
         jdev.open()
-        jdev.bind(cu=jnpr.junos.utils.Config)
+        jdev.bind(cu=jnpr.junos.cfg.Resource)
         __context__['juniper.conn.{0}.{1}'.format(user, host)] = jdev
         __context__['juniper.facts.{0}.{1}'.format(user, host)] = jdev.facts
 
