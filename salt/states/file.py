@@ -689,14 +689,16 @@ def _get_template_texts(source_list=None,
     return ret
 
 
-def symlink(name,
-            target,
-            force=False,
-            makedirs=False,
-            user=None,
-            group=None,
-            mode=None,
-            **kwargs):
+def symlink(
+        name,
+        target,
+        force=False,
+        backupname=None,
+        makedirs=False,
+        user=None,
+        group=None,
+        mode=None,
+        **kwargs):
     '''
     Create a symlink
 
@@ -704,7 +706,7 @@ def symlink(name,
     than the specified target, the symlink will be replaced. If the symlink is
     a regular file or directory then the state will return False. If the
     regular file or directory is desired to be replaced with a symlink pass
-    force: True.
+    force: True, if it is to be renamed, pass a backupname.
 
     name
         The location of the symlink to create
@@ -713,9 +715,17 @@ def symlink(name,
         The location that the symlink points to
 
     force
-        If the location of the symlink exists and is not a symlink then the
-        state will fail, set force to True and any file or directory in the way
-        of the symlink file will be deleted to make room for the symlink
+        If the target of the symlink exists and is not a symlink and
+        force is set to False, the state will fail. If force is set to
+        True, the file or directory in the way of the symlink file
+        will be deleted to make room for the symlink, unless
+        backupname is set, when it will be renamed
+
+    backupname
+        If the target of the symlink exists and is not a symlink, it will be 
+        renamed to the backupname. If the backupname already
+        exists and force is False, the state will fail. Otherwise, the
+        backupname will be removed first.
 
     makedirs
         If the location of the symlink does not already have a parent directory
@@ -802,20 +812,41 @@ def symlink(name,
                     )
             return ret
 
-    elif os.path.isfile(name):
-        # Since it is not a link, and is a file, error out
-        if force:
-            os.remove(name)
+    elif os.path.isfile(name) or os.path.isdir(name):
+        # It is not a link, but a file or dir
+        if backupname is not None:
+            # Make a backup first
+            if os.path.lexists(backupname):
+                if not force:
+                    return _error(ret, 
+                                   ('File exists where the backup target {0} should go'
+                                    .format(backupname)))
+                elif os.path.isfile(backupname):
+                    os.remove(backupname)
+                elif os.path.isdir(backupname):
+                    shutil.rmtree(backupname)
+                else:
+                    return _error(ret, 
+                                  ('Something exists where the backup target {0} should go'
+                                   .format(backupname)))
+            os.rename(name, backupname)
+        elif force:
+            # Remove whatever is in the way
+            if os.path.isfile(name):
+                os.remove(name)
+            else:
+                shutil.rmtree(name)
         else:
-            return _error(ret, ('File exists where the symlink {0} should be'
-                                .format(name)))
-    elif os.path.isdir(name):
-        # It is not a link or a file, it is a dir, error out
-        if force:
-            shutil.rmtree(name)
-        else:
-            return _error(ret, 'Directory exists where the symlink {0} '
-                               'should be'.format(name))
+            # Otherwise throw an error
+            if os.path.isfile(name):
+                return _error(ret, 
+                              ('File exists where the symlink {0} should be'
+                               .format(name)))
+            else:
+                return _error(ret, 
+                              ('Directory exists where the symlink {0} should be'
+                               .format(name)))
+            
     if not os.path.exists(name):
         # The link is not present, make it
         try:
