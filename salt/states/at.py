@@ -85,25 +85,16 @@ def present(job, timespec, tag=None, runas=None):
 
     return ret
 
-
-def absent(limit, tag=None, timespec=None, runas=None):
+def absent(limit, jobid=None, **kwargs):
     '''
     Remove a job from queue
+    The 'kwargs' can include hour. minute. day. month. year
 
     limit
         Target range
 
     tag
         Job's tag
-
-    timepsec
-        Running time specified task,Supports the following formats:
-        - timepsec: 00:15 (only time)
-        - timepsec: 2013-12-01 (only date)
-        - timepsec: 1.1.13 (only date. 'day.month.year')
-        - timepsec: 1/1/13 (only date. 'month/day/year')
-        A combination of the three in the time format and date format
-        Note that the time must be in front of date
 
     runas
         Runs user-specified jobs
@@ -115,7 +106,7 @@ def absent(limit, tag=None, timespec=None, runas=None):
 
             at.absent:
                 - limit: all
-                - timespec: 11:37 12/01/2013
+                - year: 13
 
             at.absent:
                 - limit: all
@@ -124,21 +115,18 @@ def absent(limit, tag=None, timespec=None, runas=None):
 
             at.absent:
                 - limit: all
-                - timespec: 11:37 12/01/2013
                 - tag: rose
+                - day: 13
+                - hour: 16
     '''
 
-    ret = {'name': 'Delete job',
+    ret = {'name': 'remove job',
            'changes': {},
            'result': True,
            'comment': ''}
-    
-    binary = salt.utils.which('at')
-    if not binary:
-        ret['comment'] = '"{0}" is not available.'.format('at.atrm')
-        ret['result'] = False
-        return ret
 
+    binary = salt.utils.which('at')
+    
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Remove jobs()'
@@ -149,26 +137,33 @@ def absent(limit, tag=None, timespec=None, runas=None):
         ret['result'] = False
         return ret
 
-    if timespec and runas and tag:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](timespec=timespec, runas=runas, tag=tag)['jobs']])
-    elif timespec and runas:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](timespec=timespec, runas=runas)['jobs']])
-    elif timespec and tag:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](timespec=timespec, tag=tag)['jobs']])
-    elif runas and tag:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](runas=runas, tag=tag)['jobs']])
-    elif timespec:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](timespec=timespec)['jobs']])
-    elif runas:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](runas=runas)['jobs']])
-    elif tag:
-        opts = map(str, [j['job'] for j in __salt__['at.atq'](tag)['jobs']])
+    if jobid:
+        output = __salt__['cmd.run']('{0} -d {1}'.format(binary, jobid))
+        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+            ret['result'] = False
+            return ret
+        ret['comment'] = 'Remove job({0}) from queue'.format(' '.join(opts))
+        return ret
+
+    if kwargs:
+        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])
     else:
         opts = map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])
 
-    ret['comment'] = __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
-    if ret['comment']:
+    if not opts:
         ret['result'] = False
+        ret['comment'] = 'No match jobs'
         return ret
-    ret['comment'] = 'Remove job({0}) from queue'.format(' '.join(opts))
+
+    output = __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
+    fail = []
+    for i in opts:
+        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+            fail.append(i)
+
+    if fail:
+       ret['comment'] = 'Remove job({0}) from queue but ({1}) fail'.format(' '.join(opts),fail)
+    else:
+       ret['comment'] = 'Remove job({0}) from queue'.format(' '.join(opts))
+
     return ret
