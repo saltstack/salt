@@ -481,7 +481,7 @@ def install(pkgs=None,
 
         for entry in editable:
             # Is the editable local?
-            if not entry.startswith(('file://', '/')):
+            if not (entry == '.' or entry.startswith(('file://', '/'))):
                 match = egg_match.search(entry)
 
                 if not match or not match.group(1):
