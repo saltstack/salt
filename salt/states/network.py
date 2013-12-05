@@ -158,6 +158,9 @@ from salt.loader import _create_loader
 # Define the module's virtual name
 __virtualname__ = 'network'
 
+# Set up logging
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -197,13 +200,15 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    kwargs['test'] = __opts__['test']
+    #kwargs['test'] = __opts__['test']
+    if not kwargs.has_key('test'):
+        kwargs['test'] = False
 
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
         new = __salt__['ip.build_interface'](name, type, enabled, **kwargs)
-        if __opts__['test']:
+        if kwargs['test']:
             if old == new:
                 pass
             if not old and new:
@@ -218,9 +223,13 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['changes']['interface'] = ''.join(diff)
         else:
             if not old and new:
+                ret['comment'] = 'Interface {0} ' \
+                                 'added.'.format(name)
                 ret['changes']['interface'] = 'Added network interface.'
             elif old != new:
                 diff = difflib.unified_diff(old, new)
+                ret['comment'] = 'Interface {0} ' \
+                                 'updated.'.format(name)
                 ret['changes']['interface'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
@@ -232,7 +241,7 @@ def managed(name, type, enabled=True, **kwargs):
         try:
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, **kwargs)
-            if __opts__['test']:
+            if kwargs['test']:
                 if old == new:
                     pass
                 if not old and new:
@@ -247,9 +256,13 @@ def managed(name, type, enabled=True, **kwargs):
                     ret['changes']['bond'] = ''.join(diff)
             else:
                 if not old and new:
+                    ret['comment'] = 'Bond interface {0} ' \
+                                     'added.'.format(name)
                     ret['changes']['bond'] = 'Added bond {0}.'.format(name)
                 elif old != new:
                     diff = difflib.unified_diff(old, new)
+                    ret['comment'] = 'Bond interface {0} ' \
+                                     'updated.'.format(name)
                     ret['changes']['bond'] = ''.join(diff)
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
@@ -257,7 +270,7 @@ def managed(name, type, enabled=True, **kwargs):
             ret['comment'] = error.message
             return ret
 
-    if __opts__['test']:
+    if kwargs['test']:
         return ret
 
     # Bring up/shutdown interface
@@ -295,12 +308,15 @@ def routes(name, **kwargs):
         'comment': 'Interface {0} routes are up to date.'.format(name),
     }
     apply_routes = False
-    kwargs['test'] = __opts__['test']
+    #kwargs['test'] = __opts__['test']
+    if not kwargs.has_key('test'):
+        kwargs['test'] = False
+
     # Build interface routes
     try:
         old = __salt__['ip.get_routes'](name)
         new = __salt__['ip.build_routes'](name, **kwargs)
-        if __opts__['test']:
+        if kwargs['test']:
             if old == new:
                 return ret
             if not old and new:
@@ -315,10 +331,12 @@ def routes(name, **kwargs):
                 return ret
         if not old and new:
             apply_routes = True
+            ret['comment'] = 'Interface {0} routes added.'.format(name)
             ret['changes']['network_routes'] = 'Added interface {0} routes.'.format(name)
         elif old != new:
             diff = difflib.unified_diff(old, new)
             apply_routes = True
+            ret['comment'] = 'Interface {0} routes updated.'.format(name)
             ret['changes']['network_routes'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False

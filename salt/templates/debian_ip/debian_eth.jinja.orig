@@ -1,0 +1,15 @@
+{% for adapter in adapters %}{% if adapters[adapter].enabled %}auto {{adapter}}
+{%endif%}{% if adapters[adapter].hotplug %}allow-hotplug {{adapter}}
+{%endif%}{% for interface in adapters[adapter]['data'] %}iface {{adapter}} {{interface.inet_type}} {{interface.proto}}
+{% if interface.address %}    address {{interface.address}}
+{%endif%}{% if interface.netmask %}    netmask {{interface.netmask}}
+{%endif%}{% if interface.broadcast %}    brodcast {{interface.broadcast}}
+{%endif%}{% if interface.gateway %}    gateway {{interface.gateway}}
+{%endif%}{% if interface.addr %}    hwaddress {{interface.addr}}
+{%endif%}{% if interface.up_cmds %}    up {{interface.up_cmds}}
+{%endif%}{% if interface.down_cmds %}    down {{interface.down_cmds}}
+{%endif%}{% if interface.pre_up_cmds %}    pre-up {{interface.pre_up_cmds}}
+{%endif%}{% if interface.pre_down_cmds %}    hwaddress {{interface.pre_down_cmds}}
+{%endif%}
+{%endfor%}
+{%endfor%}

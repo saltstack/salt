@@ -433,6 +433,7 @@ SETUP_KWARGS = {'name': NAME,
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
+                                    'debian_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
                                 },
