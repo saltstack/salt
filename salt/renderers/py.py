@@ -30,22 +30,23 @@ In this module, a few objects are defined for you, including the usual
             'pkg': [
                 'installed',
                 {'name': 's3cmd'},
-                ],
-            }
+            ],
+        }
 
         config[home + '/.s3cfg'] = {
-            'file.managed': [{
-                'source': 'salt://s3cfg/templates/s3cfg',
-                'template': 'jinja',
-                'user': user,
-                'group': group,
-                'mode': 600,
-                'context': {
+            'file.managed': [
+                {'source': 'salt://s3cfg/templates/s3cfg'},
+                {'template': 'jinja'},
+                {'user': user},
+                {'group': group},
+                {'mode': 600},
+                {'context': {
                     'aws_key': __pillar__['AWS_ACCESS_KEY_ID'],
                     'aws_secret_key': __pillar__['AWS_SECRET_ACCESS_KEY'],
                     },
-                }],
-            }
+                },
+            ],
+        }
 
         return config
 
