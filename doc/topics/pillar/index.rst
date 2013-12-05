@@ -150,7 +150,7 @@ key under which to nest the results of the included pillar:
     include:
       - users:
           defaults:
-            - sudo: ['bob', 'paul']
+              sudo: ['bob', 'paul']
           key: users
 
 With this form, the included file (users.sls) will be nested within the 'users'
