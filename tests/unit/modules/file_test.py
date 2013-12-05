@@ -14,10 +14,12 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import file as filemod
+from salt.modules import config as configmod
 from salt.modules import cmdmod
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 filemod.__salt__ = {
+    'config.manage_mode': configmod.manage_mode,
     'cmd.run': cmdmod.run,
     'cmd.run_all': cmdmod.run_all
 }
@@ -87,21 +89,24 @@ class FileReplaceTestCase(TestCase):
         self.assertEqual(before_ctime, after_ctime)
 
     def test_show_changes(self):
-        ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
-                show_changes=True)
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              show_changes=True)
 
         self.assertTrue(ret.startswith('---'))  # looks like a diff
 
     def test_noshow_changes(self):
-        ret = filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
-                show_changes=False)
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              show_changes=False)
 
         self.assertIsInstance(ret, bool)
 
     def test_re_str_flags(self):
         # upper- & lower-case
-        filemod.replace(self.tfile.name, r'Etiam', 'Salticus',
-                flags=['MULTILINE', 'ignorecase'])
+        filemod.replace(self.tfile.name,
+                        r'Etiam', 'Salticus',
+                        flags=['MULTILINE', 'ignorecase'])
 
     def test_re_int_flags(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', flags=10)
@@ -136,7 +141,8 @@ class FileBlockReplaceTestCase(TestCase):
         ''')
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False, prefix='blockrepltmp')
+        self.tfile = tempfile.NamedTemporaryFile(delete=False,
+                                                 prefix='blockrepltmp')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
         manage_mode_mock = MagicMock()
@@ -146,12 +152,23 @@ class FileBlockReplaceTestCase(TestCase):
         os.remove(self.tfile.name)
 
     def test_replace_multiline(self):
-        new_multiline_content = "Who's that then?\nWell, how'd you become king, then?\nWe found them. I'm not a witch.\nWe shall say 'Ni' again to you, if you do not appease us."
-        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 1', '#-- END BLOCK 1', new_multiline_content, backup=False)
+        new_multiline_content = (
+            "Who's that then?\nWell, how'd you become king,"
+            "then?\nWe found them. I'm not a witch.\nWe shall"
+            "say 'Ni' again to you, if you do not appease us."
+        )
+        filemod.blockreplace(self.tfile.name,
+                             '#-- START BLOCK 1',
+                             '#-- END BLOCK 1',
+                             new_multiline_content,
+                             backup=False)
 
         with open(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
-        self.assertIn('#-- START BLOCK 1'+"\n"+new_multiline_content+"\n"+'#-- END BLOCK 1', filecontent)
+        self.assertIn('#-- START BLOCK 1'
+                      + "\n" + new_multiline_content
+                      + "\n"
+                      + '#-- END BLOCK 1', filecontent)
         self.assertNotIn('old content part 1', filecontent)
         self.assertNotIn('old content part 2', filecontent)
 
@@ -169,12 +186,21 @@ class FileBlockReplaceTestCase(TestCase):
             backup=False
         )
         with open(self.tfile.name, 'rb') as fp:
-            self.assertNotIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
+            self.assertNotIn('#-- START BLOCK 2'
+                             + "\n" + new_content + "\n"
+                             + '#-- END BLOCK 2', fp.read())
 
-        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False, append_if_not_found=True)
+        filemod.blockreplace(self.tfile.name,
+                             '#-- START BLOCK 2',
+                             '#-- END BLOCK 2',
+                             new_content,
+                             backup=False,
+                             append_if_not_found=True)
 
         with open(self.tfile.name, 'rb') as fp:
-            self.assertIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
+            self.assertIn('#-- START BLOCK 2'
+                          + "\n" + new_content
+                          + "\n" + '#-- END BLOCK 2', fp.read())
 
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
@@ -190,15 +216,30 @@ class FileBlockReplaceTestCase(TestCase):
             backup=False
         )
         with open(self.tfile.name, 'rb') as fp:
-            self.assertNotIn('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2', fp.read())
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n"
+                + new_content + "\n" + '#-- END BLOCK 2',
+                fp.read())
 
-        filemod.blockreplace(self.tfile.name, '#-- START BLOCK 2', '#-- END BLOCK 2', new_content, backup=False, prepend_if_not_found=True)
+        filemod.blockreplace(self.tfile.name,
+                             '#-- START BLOCK 2', '#-- END BLOCK 2',
+                             new_content,
+                             backup=False,
+                             prepend_if_not_found=True)
 
         with open(self.tfile.name, 'rb') as fp:
-            self.assertTrue(fp.read().startswith('#-- START BLOCK 2'+"\n"+new_content+"\n"+'#-- END BLOCK 2'))
+            self.assertTrue(
+                fp.read().startswith(
+                    '#-- START BLOCK 2'
+                    + "\n" + new_content
+                    + "\n" + '#-- END BLOCK 2'))
 
     def test_replace_partial_marked_lines(self):
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 1', backup=False)
+        filemod.blockreplace(self.tfile.name,
+                             '// START BLOCK', 
+                             '// END BLOCK',
+                             'new content 1',
+                             backup=False)
 
         with open(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
@@ -213,7 +254,10 @@ class FileBlockReplaceTestCase(TestCase):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
 
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 2', backup=fext)
+        filemod.blockreplace(
+            self.tfile.name,
+            '// START BLOCK', '// END BLOCK', 'new content 2',
+            backup=fext)
 
         self.assertTrue(os.path.exists(bak_file))
         os.unlink(bak_file)
@@ -222,31 +266,54 @@ class FileBlockReplaceTestCase(TestCase):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
 
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 3', backup=False)
+        filemod.blockreplace(self.tfile.name,
+                             '// START BLOCK', '// END BLOCK', 'new content 3',
+                             backup=False)
 
         self.assertFalse(os.path.exists(bak_file))
 
     def test_no_modifications(self):
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 4', backup=False)
+        filemod.blockreplace(self.tfile.name,
+                             '// START BLOCK', '// END BLOCK',
+                             'new content 4',
+                             backup=False)
         before_ctime = os.stat(self.tfile.name).st_mtime
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 4', backup=False)
+        filemod.blockreplace(self.tfile.name,
+                             '// START BLOCK',
+                             '// END BLOCK',
+                             'new content 4',
+                             backup=False)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
         self.assertEqual(before_ctime, after_ctime)
 
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
-        filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 5', dry_run=True)
+        filemod.blockreplace(self.tfile.name,
+                             '// START BLOCK',
+                             '// END BLOCK',
+                             'new content 5',
+                             dry_run=True)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
         self.assertEqual(before_ctime, after_ctime)
 
     def test_show_changes(self):
-        ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 6', backup=False, show_changes=True)
+        ret = filemod.blockreplace(self.tfile.name,
+                                   '// START BLOCK',
+                                   '// END BLOCK',
+                                   'new content 6',
+                                   backup=False,
+                                   show_changes=True)
 
         self.assertTrue(ret.startswith('---'))  # looks like a diff
 
-        ret = filemod.blockreplace(self.tfile.name, '// START BLOCK', '// END BLOCK', 'new content 7', backup=False, show_changes=False)
+        ret = filemod.blockreplace(self.tfile.name,
+                                   '// START BLOCK',
+                                   '// END BLOCK',
+                                   'new content 7',
+                                   backup=False,
+                                   show_changes=False)
 
         self.assertIsInstance(ret, bool)
 
@@ -258,7 +325,7 @@ class FileBlockReplaceTestCase(TestCase):
             '#-- START BLOCK UNFINISHED',
             '#-- END BLOCK UNFINISHED',
             'foobar',
-             backup=False
+            backup=False
         )
 
 
@@ -309,4 +376,7 @@ class FileModuleTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(FileModuleTestCase, FileReplaceTestCase, FileBlockReplaceTestCase, needs_daemon=False)
+    run_tests(FileModuleTestCase,
+              FileReplaceTestCase,
+              FileBlockReplaceTestCase,
+              needs_daemon=False)

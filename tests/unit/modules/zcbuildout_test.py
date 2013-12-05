@@ -4,9 +4,6 @@
 import os
 import tempfile
 import urllib2
-import textwrap
-
-from distutils.dir_util import copy_tree
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -14,7 +11,6 @@ from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
 )
-from salttesting.mock import MagicMock
 
 ensure_in_syspath('../../')
 import integration
@@ -23,11 +19,8 @@ import shutil
 # Import Salt libs
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
-from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-ROOT = os.path.join(os.path.dirname(integration.__file__),
-                    'files/file/base/buildout')
-
+ROOT = os.path.join(integration.FILES, 'file', 'base', 'buildout')
 
 buildout.__salt__ = {
     'cmd.run_all': cmd.run_all,
@@ -52,7 +45,7 @@ class Base(TestCase):
         cls.tdir = os.path.join(cls.rdir, 'test')
         for i in buildout._url_versions:
             p = os.path.join(
-                cls.rdir, '{}_bootstrap.py'.format(i)
+                cls.rdir, '{0}_bootstrap.py'.format(i)
             )
             fic = open(p, 'w')
             fic.write(
@@ -71,7 +64,7 @@ class Base(TestCase):
 
         for i in boot_init:
             p = os.path.join(
-                self.rdir, '{}_bootstrap.py'.format(i)
+                self.rdir, '{0}_bootstrap.py'.format(i)
             )
             for f in boot_init[i]:
                 shutil.copy2(p, os.path.join(self.tdir, f))
@@ -108,6 +101,7 @@ class BuildoutTestCase(Base):
         @buildout._salt_callback
         def callback2(a, b=1):
             raise Exception('foo')
+            return 1  # make pylint happy
 
         ret1 = callback1(1, b=3)
         self.assertEqual(ret1['status'], True)
@@ -236,9 +230,9 @@ class BuildoutTestCase(Base):
 
     @requires_network()
     def test__find_cfgs(self):
-        self.assertEqual(
-            [a.replace(ROOT, '')
-             for a in buildout._find_cfgs(ROOT)],
+        result = sorted(
+            [a.replace(ROOT, '') for a in buildout._find_cfgs(ROOT)])
+        assertlist = sorted(
             ['/buildout.cfg',
              '/c/buildout.cfg',
              '/etc/buildout.cfg',
@@ -247,6 +241,7 @@ class BuildoutTestCase(Base):
              '/b/bdistribute/buildout.cfg',
              '/b/b2/buildout.cfg',
              '/foo/buildout.cfg'])
+        self.assertEqual(result, assertlist)
 
     @requires_network()
     def test_upgrade_bootstrap(self):
@@ -384,4 +379,3 @@ if __name__ == '__main__':
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)
-

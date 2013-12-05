@@ -576,6 +576,9 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     master. The default environment is ``base``, use ``saltenv`` (``env`` in
     Salt 0.17.x and older) to specify a different environment.
 
+    This function does not support topfiles.  For ``top.sls`` please use
+    ``show_top`` instead.
+
     CLI Example:
 
     .. code-block:: bash

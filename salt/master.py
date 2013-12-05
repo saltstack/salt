@@ -1175,7 +1175,7 @@ class AESFuncs(object):
         '''
         Return the pillar data for the minion
         '''
-        if any(key not in load for key in ('id', 'grains', 'saltenv')):
+        if any(key not in load for key in ('id', 'grains')):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
@@ -1183,7 +1183,7 @@ class AESFuncs(object):
                 self.opts,
                 load['grains'],
                 load['id'],
-                load['saltenv'],
+                load.get('saltenv', load.get('env')),
                 load.get('ext'))
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):

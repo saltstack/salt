@@ -165,7 +165,7 @@ def traceroute(host):
                         'ip': traceline[2],
                     }
                     for x in range(0, len(delays)):
-                        result['ms{0}'.format(x+1)] = delays[x]
+                        result['ms{0}'.format(x + 1)] = delays[x]
             except IndexError:
                 result = {}
 
