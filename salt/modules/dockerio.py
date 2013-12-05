@@ -109,6 +109,7 @@ You have those methods:
 
 - start
 - stop
+- restart
 - kill
 - wait
 - get_containers
@@ -556,7 +557,7 @@ def create_container(image,
                      volumes_from=None,
                      *args, **kwargs):
     '''
-    Get container diffs
+    Create a new container
 
     image
         image to create the container from
@@ -739,7 +740,7 @@ def stop(container, timeout=10, *args, **kwargs):
           ex::
 
             {'id': 'abcdef123456789',
-           'status': True}
+             'status': True}
 
     CLI Example:
 
