@@ -269,7 +269,11 @@ def absent(name,
            'comment': ''}
 
     # Get just the key
-    name = name.split(' ')[0]
+    keydata = name.split(' ')
+    if len(keydata) > 1:
+        name = keydata[1]
+    else:
+        name = keydata[0]
 
     if __opts__['test']:
         check = __salt__['ssh.check_key'](

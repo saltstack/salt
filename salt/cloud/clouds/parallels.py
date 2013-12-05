@@ -98,7 +98,7 @@ def avail_images():
     return ret
 
 
-def list_nodes():
+def list_nodes(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -122,7 +122,7 @@ def list_nodes():
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -147,7 +147,7 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(call=None):  # pylint disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -611,7 +611,7 @@ def wait_until(name, state, timeout=300):
         node = show_instance(name, call='action')
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint disable=W0613
     '''
     Destroy a node.
 
