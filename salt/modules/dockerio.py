@@ -639,20 +639,12 @@ def create_container(image,
             name=name,
         )
         container = info['Id']
-        kill(container)
-        ret_start = start(container, binds=binds)
         callback = valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
-            'started': ret_start,
             'out': info
         }
-        if not ret_start['status']:
-            callback = invalid
-            comment = 'Container created but cannot be started\n{0}'.format(
-                ret_start['out']
-            )
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
         invalid(status, id=image, out=traceback.format_exc())
