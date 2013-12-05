@@ -80,98 +80,124 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_ref(repo, short):
+class GitPillar(object):
     '''
-    Return bool if the short ref is in the repo
+    Deal with the remote git repository for Pillar
     '''
-    for ref in repo.refs:
-        if isinstance(ref, git.RemoteReference):
-            parted = ref.name.partition('/')
-            refname = parted[2] if parted[2] else parted[0]
-            if short == refname:
-                return ref
-    return False
+
+    def __init__(self, branch, repo_location, opts):
+        '''
+        Try to initilize the Git repo object
+        '''
+        self.br = branch
+        self.rp_location = repo_location
+        self.opts = opts
+        self.envs = set()
+        self.working_dir = ''
+        self.repo = None
+
+        for idx, opts_dict in enumerate(self.opts['ext_pillar']):
+            if opts_dict.get('git', '') == '{0} {1}'.format(self.br,
+                                                            self.rp_location):
+                rp_ = os.path.join(self.opts['cachedir'],
+                                   'pillar_gitfs', str(idx))
+
+                if not os.path.isdir(rp_):
+                    os.makedirs(rp_)
+
+                try:
+                    self.repo = git.Repo.init(rp_)
+                except Exception as e:
+                    log.error('GitPython exception caught while '
+                              'initializing the repo: {0}. Maybe '
+                              'git is not available.'.format(e))
+
+                # Git directory we are working on
+                # Should be the same as self.repo.working_dir
+                self.working_dir = rp_
+
+                if isinstance(self.repo, git.Repo):
+                    if not self.repo.remotes:
+                        try:
+                            self.repo.create_remote('origin', self.rp_location)
+                            # ignore git ssl verification if requested
+                            if self.opts.get('pillar_gitfs_ssl_verify', True):
+                                self.repo.git.config('http.sslVerify', 'true')
+                            else:
+                                self.repo.git.config('http.sslVerify', 'false')
+                        except os.error:
+                            # This exception occurs when two processes are trying to write
+                            # to the git config at once, go ahead and pass over it since
+                            # this is the only write
+                            # This should place a lock down
+                            pass
+
+                break
 
 
-def init(branch, repo_location):
-    '''
-    Return the git repo object for this session
-    '''
-    # get index
-    ind = None
-    for index, opts_dict in enumerate(__opts__['ext_pillar']):
-        if opts_dict.get('git', '') == '{0} {1}'.format(branch, repo_location):
-            ind = index
-            break
+    def update(self):
+        '''
+        Ensure you are following the latest changes on the remote
 
-    if ind is None:
-        return None
-
-    rp_ = os.path.join(__opts__['cachedir'], 'pillar_gitfs', str(ind))
-
-    if not os.path.isdir(rp_):
-        os.makedirs(rp_)
-
-    try:
-        repo = git.Repo.init(rp_)
-    except Exception as e:
-        log.error('GitPython exception caught while initializing the repo for '
-                  'git_pillar: {0}. Maybe git is not available.'.format(e))
-        return None
-
-    if not repo.remotes:
+        Return boolean wether it worked
+        '''
         try:
-            repo.create_remote('origin', repo_location)
-            # ignore git ssl verification if requested
-            if __opts__.get('pillar_gitfs_ssl_verify', True):
-                repo.git.config('http.sslVerify', 'true')
-            else:
-                repo.git.config('http.sslVerify', 'false')
-        except os.error:
-            # This exception occurs when two processes are trying to write
-            # to the git config at once, go ahead and pass over it since
-            # this is the only write
-            # This should place a lock down
-            pass
-    repo.git.fetch()
-    return repo
+            log.debug('Updating fileserver for git_pillar module')
+            self.repo.git.fetch()
+        except git.exc.GitCommandError as e:
+            log.error('Unable to fetch the latest changes from remote '
+                      '{0}: {1}'.format(self.rp_location, e))
+            return False
+
+        try:
+            self.repo.git.checkout("origin/" + self.br)
+        except git.exc.GitCommandError as e:
+            logging.error('Unable to checkout branch '
+                          '{0}: {1}'.format(self.br, e))
+            return False
+
+        return True
+
+
+    def envs(self):
+        '''
+        Return a list of refs that can be used as environments
+        '''
+
+        if isinstance(self.repo, git.Repo):
+            remote = self.repo.remote()
+            for ref in self.repo.refs:
+                parted = ref.name.partition('/')
+                short = parted[2] if parted[2] else parted[0]
+                if isinstance(ref, git.Head):
+                    if short == 'master':
+                        short = 'base'
+                    if ref not in remote.stale_refs:
+                        self.envs.add(short)
+                elif isinstance(ref, git.Tag):
+                    self.envs.add(short)
+
+        return list(self.envs)
 
 
 def update(branch, repo_location):
     '''
-    Ensure you are on the right branch, and execute a git pull
+    Ensure you are following the latest changes on the remote
 
     return boolean whether it worked
     '''
-    pid = os.getpid()
-    repo = init(branch, repo_location)
-    try:
-        repo.git.checkout("origin/" + branch)
-    except git.exc.GitCommandError as e:
-        logging.error('Unable to checkout branch {0}: {1}'.format(branch, e))
-        return False
-    return True
+    gitpil = GitPillar(branch, repo_location, __opts__)
+
+    return gitpil.update()
 
 
 def envs(branch, repo_location):
     '''
     Return a list of refs that can be used as environments
     '''
-    ret = set()
-    repo = init(branch, repo_location)
+    gitpil = GitPillar(branch, repo_location, __opts__)
 
-    remote = repo.remote()
-    for ref in repo.refs:
-        parted = ref.name.partition('/')
-        short = parted[2] if parted[2] else parted[0]
-        if isinstance(ref, git.Head):
-            if short == 'master':
-                short = 'base'
-            if ref not in remote.stale_refs:
-                ret.add(short)
-        elif isinstance(ref, git.Tag):
-            ret.add(short)
-    return list(ret)
+    return gitpil.envs()
 
 
 def ext_pillar(minion_id, pillar, repo_string):
@@ -181,26 +207,19 @@ def ext_pillar(minion_id, pillar, repo_string):
     # split the branch and repo name
     branch, repo_location = repo_string.strip().split()
 
+    gitpil = GitPillar(branch, repo_location, __opts__)
+
     # environment is "different" from the branch
-    branch_env = branch
-    if branch_env == 'master':
-        branch_env = 'base'
-
-    # Update first
-    if not update(branch, repo_location):
-        return {}
-
-    # get the repo
-    repo = init(branch, repo_location)
+    branch = (branch == 'master' and 'base' or branch)
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function
-    if __opts__['pillar_roots'].get(branch_env, []) == [repo.working_dir]:
+    if __opts__['pillar_roots'].get(branch, []) == [gitpil.working_dir]:
         return {}
 
     opts = deepcopy(__opts__)
 
-    opts['pillar_roots'][branch_env] = [repo.working_dir]
+    opts['pillar_roots'][branch] = [gitpil.working_dir]
 
     pil = Pillar(opts, __grains__, minion_id, 'base')
 
