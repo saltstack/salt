@@ -5,7 +5,6 @@ Utility functions for salt.cloud
 
 # Import python libs
 import os
-import pwd
 import sys
 import codecs
 import shutil
@@ -30,6 +29,13 @@ import salt.config
 import salt.utils
 import salt.utils.event
 from salt.utils.nb_popen import NonBlockingPopen
+
+# Let's import pwd after salt.utils to check for windows platform
+try:
+    import pwd
+except ImportError:
+    if not salt.utils.is_windows():
+        raise
 
 # Import salt cloud libs
 import salt.cloud
