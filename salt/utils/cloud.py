@@ -19,6 +19,16 @@ import types
 import re
 import warnings
 
+# Let's import pwd and catch the ImportError. We'll raise it if this is not
+# Windows
+try:
+    import pwd
+except ImportError:
+    if not sys.platform.lower().startswith('win'):
+        # We can use salt.utils.is_windows() a little down because that will
+        # cause issues under windows at install time.
+        raise
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -29,13 +39,6 @@ import salt.config
 import salt.utils
 import salt.utils.event
 from salt.utils.nb_popen import NonBlockingPopen
-
-# Let's import pwd after salt.utils to check for windows platform
-try:
-    import pwd
-except ImportError:
-    if not salt.utils.is_windows():
-        raise
 
 # Import salt cloud libs
 import salt.cloud
