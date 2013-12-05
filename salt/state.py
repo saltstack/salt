@@ -341,6 +341,19 @@ class Compiler(object):
                                             continue
                                         req_key = next(iter(req))
                                         req_val = req[req_key]
+                                        if '.' in req_key:
+                                            errors.append((
+                                                'Invalid requisite type {0!r} '
+                                                'in state {1!r}, in SLS '
+                                                '{2!r}. Requisite types must '
+                                                'not contain periods, did you '
+                                                'mean {3!r}?'.format(
+                                                    req_key,
+                                                    name,
+                                                    body['__sls__'],
+                                                    req_key[:req_key.find('.')]
+                                                )
+                                            ))
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
@@ -805,6 +818,19 @@ class State(object):
                                             continue
                                         req_key = next(iter(req))
                                         req_val = req[req_key]
+                                        if '.' in req_key:
+                                            errors.append((
+                                                'Invalid requisite type {0!r} '
+                                                'in state {1!r}, in SLS '
+                                                '{2!r}. Requisite types must '
+                                                'not contain periods, did you '
+                                                'mean {3!r}?'.format(
+                                                    req_key,
+                                                    name,
+                                                    body['__sls__'],
+                                                    req_key[:req_key.find('.')]
+                                                )
+                                            ))
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
