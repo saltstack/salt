@@ -19,6 +19,11 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def _connect(host, port):
     '''
@@ -82,7 +87,7 @@ def get(host, port, key):
         return conn.get(key)
 
 
-def set(host, port, key, val, time=0, min_compress_len=0):
+def set_(host, port, key, val, time=0, min_compress_len=0):
     '''
     insert key to  memcache server
 
