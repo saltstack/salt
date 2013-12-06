@@ -497,7 +497,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     if pkgs is None and len(pkg_params) == 1:
         # Only use the 'version' param if 'name' was not specified as a
         # comma-separated list
-        pkg_params = {name: 
+        pkg_params = {name:
                          {
                              'version': kwargs.get('version'),
                              'extra_install_flags': kwargs.get('extra_install_flags')}}
@@ -515,13 +515,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
         elif version_num not in pkginfo:
             log.error('Version {0} not found for package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
             continue
 
         installer = pkginfo[version_num].get('installer')
         if not installer:
             log.error('No installer configured for version {0} of package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
 
         if installer.startswith('salt:') \
                 or installer.startswith('http:') \
