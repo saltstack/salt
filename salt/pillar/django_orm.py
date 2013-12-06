@@ -21,8 +21,8 @@ requirements installed.
           project_path: /path/to/project/
           settings_module: my_application.settings
           env_file: /path/to/env/file.sh
-          # Optional: If your project is not using the system python,\
-              add your virtualenv path here
+          # Optional: If your project is not using the system python,
+          # add your virtualenv path below.
           env: /path/to/virtualenv/
 
           django_app:
