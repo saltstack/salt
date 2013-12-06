@@ -51,7 +51,10 @@ def _set_retcode(ret):
         __context__['retcode'] = 2
     if isinstance(ret, dict):
         for _, result in ret.items():
-            __context__['retcode'] = result['__retcode__']
+            retcode = result['__retcode__']
+            if retcode != 0:
+              __context__['retcode'] = retcode
+              break
 
 
 def _check_pillar(kwargs):
