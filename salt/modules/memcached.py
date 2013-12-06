@@ -26,7 +26,7 @@ def _connect(host, port):
     values assigned to missing values.
     '''
     if not host:
-        user = __salt__['config.option']('memcache.host')
+        host = __salt__['config.option']('memcache.host')
     if not port:
         port = __salt__['config.option']('memcache.port')
 
