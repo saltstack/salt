@@ -1040,7 +1040,8 @@ class LocalClient(object):
                 if 'return' not in raw:
                     continue
                 found.add(raw.get('id'))
-                ret = {raw['id']: {'ret': raw['return']}}
+                ret = {raw['id']: {'ret': raw['return'],
+                                   'retcode': raw['retcode']}}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
