@@ -42,6 +42,13 @@ boot_init = {
 log = logging.getLogger(__name__)
 
 
+def download_to(url, dest):
+    with salt.utils.fopen(dest, 'w') as fic:
+        fic.write(
+            urllib2.urlopen(url, timeout=10).read()
+        )
+
+
 class Base(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -52,14 +59,10 @@ class Base(TestCase):
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
-            with salt.utils.fopen(dest, 'w') as fic:
-                try:
-                    req = urllib2.Request(url)
-                    fic.write(
-                        urllib2.urlopen(url, timeout=10).read()
-                    )
-                except urllib2.URLError:
-                    log.debug('Failed to download {0}'.format(url))
+            try:
+                download_to(url, dest)
+            except urllib2.URLError:
+                log.debug('Failed to download {0}'.format(url))
 
     @classmethod
     def tearDownClass(cls):
@@ -107,10 +110,8 @@ class BuildoutTestCase(Base):
                 getattr(buildout.LOG, i)('{0}bar'.format(i[0]))
             return 'foo'
 
-        @buildout._salt_callback
         def callback2(a, b=1):
             raise Exception('foo')
-            return 1  # make pylint happy
 
         ret1 = callback1(1, b=3)
         self.assertEqual(ret1['status'], True)
@@ -138,7 +139,7 @@ class BuildoutTestCase(Base):
         )
         self.assertTrue('by level' in ret1['outlog_by_level'])
         self.assertEqual(ret1['out'], 'foo')
-        ret2 = callback2(2, b=6)
+        ret2 = buildout._salt_callback(callback2)(2, b=6)
         self.assertEqual(ret2['status'], False)
         self.assertTrue(
             ret2['logs_by_level']['error'][0].startswith('Traceback'))
@@ -296,16 +297,24 @@ class BuildoutOnlineTestCase(Base):
             '{0}/bin/easy_install -U distribute;'
         ).format(cls.ppy_st))
         # creating a distribute based install
+        ret20 = buildout._Popen((
+            'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
+            ''.format(cls.ppy_dis)))
+        download_to(' https://pypi.python.org/packages/source'
+                    '/d/distribute/distribute-0.6.43.tar.gz',
+                    os.path.join(cls.ppy_dis, 'distribute-0.6.43.tar.gz'))
         ret2 = buildout._Popen((
-            'virtualenv --no-site-packages {0};'
-            '{0}/bin/easy_install -U setuptools==0.6c9;'
-            '{0}/bin/easy_install -U distribute==0.6.43;'
+            'cd {0} &&'
+            ' tar xzvf distribute-0.6.43.tar.gz && cd distribute-0.6.43 &&'
+            ' {0}/bin/python setup.py install'
         ).format(cls.ppy_dis))
         # creating a blank based install
         ret3 = buildout._Popen((
             'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
             ''.format(cls.ppy_blank)))
         assert ret1['retcode'] == 0
+        assert ret20['retcode'] == 0
+        assert ret2['retcode'] == 0
         assert ret2['retcode'] == 0
         assert ret3['retcode'] == 0
 
