@@ -606,8 +606,14 @@ class Key(object):
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
+
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if include_accepted:
+            # Since some of the rejected keys may have already been
+            # accepted, we must revoke their auth by generating
+            # a new AES key
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)

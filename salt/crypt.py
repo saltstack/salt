@@ -40,6 +40,34 @@ def dropfile(cachedir, user=None):
     '''
     dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
+
+    def ready():
+        """
+        Because MWorker._update_aes uses second-precision mtime
+        to detect changes to the file, we must avoid writing two
+        versions with the same mtime.
+
+        Note that this only makes rapid updates in serial safe: concurrent
+        updates could still both pass this check and then write two different
+        keys with the same mtime.
+        """
+        try:
+            stats = os.stat(dfn)
+        except os.error:
+            # Not there, go ahead and write it
+            return True
+        else:
+            if stats.st_mtime == time.time():
+                # The mtime is the current time, we must
+                # wait until time has moved on.
+                return False
+            else:
+                return True
+
+    while not ready():
+        log.warning("Waiting before writing %s" % dfn)
+        time.sleep(1)
+
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with salt.utils.fopen(dfnt, 'w+') as fp_:
