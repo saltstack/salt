@@ -53,6 +53,7 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, inspect_stack
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
+from salt.pillar import git_pillar
 
 # Import halite libs
 try:
@@ -191,6 +192,14 @@ class Master(SMaster):
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+
+        pillargitfs = None
+        for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
+            if 'git' in opts_dict:
+                br, loc = opts_dict['git'].strip().split()
+                pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
+                break
+
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
@@ -223,7 +232,7 @@ class Master(SMaster):
                     search.index()
             try:
                 if not fileserver.servers:
-                    log.error('No fileservers loaded, The master will not be'
+                    log.error('No fileservers loaded, the master will not be'
                               'able to serve files to minions')
                     raise SaltMasterError('No fileserver backends available')
                 fileserver.update()
@@ -231,6 +240,12 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in file server update'.format(exc)
                 )
+            try:
+                if pillargitfs is not None:
+                    pillargitfs.update()
+            except Exception as exc:
+                log.error('Exception {0} occurred in file server update '
+                          'for git_pillar module.'.format(exc))
             try:
                 schedule.eval()
                 # Check if scheduler requires lower loop interval than
