@@ -53,6 +53,7 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, inspect_stack
 from salt.exceptions import SaltMasterError, MasterExit, SaltRunnerError
 from salt.utils.event import tagify
+from salt.pillar import git_pillar
 
 # Import halite libs
 try:
@@ -191,8 +192,18 @@ class Master(SMaster):
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
+        pillargitfs = None
+        for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
+            if 'git' in opts_dict:
+                br, loc = opts_dict['git'].strip().split()
+                pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
+                break
+
         while True:
             now = int(time.time())
+            old_present = set()
             loop_interval = int(self.opts['loop_interval'])
             if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
@@ -223,7 +234,7 @@ class Master(SMaster):
                     search.index()
             try:
                 if not fileserver.servers:
-                    log.error('No fileservers loaded, The master will not be'
+                    log.error('No fileservers loaded, the master will not be'
                               'able to serve files to minions')
                     raise SaltMasterError('No fileserver backends available')
                 fileserver.update()
@@ -231,6 +242,12 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in file server update'.format(exc)
                 )
+            try:
+                if pillargitfs is not None:
+                    pillargitfs.update()
+            except Exception as exc:
+                log.error('Exception {0} occurred in file server update '
+                          'for git_pillar module.'.format(exc))
             try:
                 schedule.eval()
                 # Check if scheduler requires lower loop interval than
@@ -242,11 +259,18 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
-            log.debug(
-                'ckminions.connected_ids: {0}'.format(
-                    ckminions.connected_ids()
-                )
-            )
+            if self.opts.get('presence_events', False):
+                present = ckminions.connected_ids()
+                new = present.difference(old_present)
+                lost = old_present.difference(present)
+                if new or lost:
+                    # Fire new minions present event
+                    data = {'new': list(new),
+                            'lost': list(lost)}
+                    event.fire_event(data, tagify('change', 'presense'))
+                data = {'present': present}
+                event.fire_event(data, tagify('present', 'presense'))
+                old_present = present
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:

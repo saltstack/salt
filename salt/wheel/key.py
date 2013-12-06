@@ -100,8 +100,8 @@ def gen_accept(id_, keysize=2048, force=False):
     '''
     ret = gen(id_, keysize)
     acc_path = os.path.join(__opts__['pki_dir'], 'minions', id_)
-    if not os.path.isfile(acc_path) and not force:
+    if os.path.isfile(acc_path) and not force:
         return {}
-    with salt.utils.fopen(acc_path) as fp_:
+    with salt.utils.fopen(acc_path, 'w+') as fp_:
         fp_.write(ret['pub'])
     return ret

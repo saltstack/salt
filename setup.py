@@ -430,9 +430,12 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.log',
                              'salt.log.handlers',
                              'salt.templates',
+                             'salt.cloud',
+                             'salt.cloud.clouds',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
+                                    'debian_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
                                 },
@@ -454,8 +457,8 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
-    SETUP_KWARGS['packages'].extend(['salt.cloud',
-                                     'salt.cloud.clouds'])
+    #SETUP_KWARGS['packages'].extend(['salt.cloud',
+    #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
     SETUP_KWARGS['data_files'][0][1].extend([
         'doc/man/salt-master.1',

@@ -1,0 +1,4 @@
+{% for route in routes %}
+{% if route.name %}# {{route.name}}
+{%endif%}{% if route.ipaddr %}{{route.ipaddr}} {%endif%}{% if route.netmask %}{{route.netmask}} {%endif%}{% if route.gateway %}{{route.gateway}} {%endif%}{% if iface %}{{iface}}{%endif%}
+{% endfor %}

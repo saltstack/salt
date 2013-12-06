@@ -343,7 +343,7 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = "--from {0} ".format(fromrepo)
+        fromrepoopt = "--force --force-resolution --from {0} ".format(fromrepo)
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ""
