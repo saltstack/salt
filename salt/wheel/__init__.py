@@ -2,12 +2,15 @@
 '''
 Modules used to control the master itself
 '''
+#import python libs
+import collections
 
 # Import salt libs
 import salt.loader
 import salt.payload
 import salt.utils
 import salt.exceptions
+from salt.utils.error import raise_error
 
 
 class Wheel(object):
@@ -54,6 +57,8 @@ class Wheel(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         ret = sreq.send('clear', load)
-        if ret == '':
-            raise salt.exceptions.EauthAuthenticationError
+        if isinstance(ret, collections.Mapping):
+           if 'error' in ret:
+               raise_error(**ret['error'])
+            
         return ret

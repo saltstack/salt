@@ -126,6 +126,25 @@ class EauthAuthenticationError(SaltException):
     Thrown when eauth authentication fails
     '''
 
+class TokenAuthenticationError(SaltException):
+    '''
+    Thrown when token authentication fails
+    '''
+
+class AuthorizationError(SaltException):
+    '''
+    Thrown when runner or wheel execution fails due to permissions
+    '''
+
+class SaltRunnerError(SaltException):
+    '''
+    Problem in runner
+    '''
+
+class SaltWheelError(SaltException):
+    '''
+    Problem in wheel
+    '''
 
 class SaltSystemExit(SystemExit):
     '''
@@ -136,3 +155,5 @@ class SaltSystemExit(SystemExit):
         SystemExit.__init__(self, code)
         if msg:
             self.message = msg
+
+
