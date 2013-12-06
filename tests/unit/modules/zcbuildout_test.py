@@ -300,7 +300,7 @@ class BuildoutOnlineTestCase(Base):
         ret20 = buildout._Popen((
             'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
             ''.format(cls.ppy_dis)))
-        download_to(' https://pypi.python.org/packages/source'
+        download_to('https://pypi.python.org/packages/source'
                     '/d/distribute/distribute-0.6.43.tar.gz',
                     os.path.join(cls.ppy_dis, 'distribute-0.6.43.tar.gz'))
         ret2 = buildout._Popen((
