@@ -37,6 +37,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
 import logging
 import os
 import re
+import sys
 
 # Import salt libs
 import salt.utils
@@ -463,6 +464,8 @@ def installed(
                                       pkgs=pkgs,
                                       sources=sources,
                                       **kwargs)
+    retcode = sys.modules[__salt__['pkg.install'].__module__].__context__['retcode']
+    __context__['retcode'] = retcode
     if isinstance(pkg_ret, dict):
         changes = pkg_ret
     elif isinstance(pkg_ret, basestring):
