@@ -200,10 +200,10 @@ class Master(SMaster):
                 br, loc = opts_dict['git'].strip().split()
                 pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
                 break
-
+        
+        old_present = set()
         while True:
             now = int(time.time())
-            old_present = set()
             loop_interval = int(self.opts['loop_interval'])
             if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
