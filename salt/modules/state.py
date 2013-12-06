@@ -49,6 +49,9 @@ def _set_retcode(ret):
         return
     if not salt.utils.check_state_result(ret):
         __context__['retcode'] = 2
+    if isinstance(ret, dict):
+        for _, result in ret.items():
+            __context__['retcode'] = result['__retcode__']
 
 
 def _check_pillar(kwargs):
