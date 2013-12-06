@@ -6,11 +6,13 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.modules import disk
+import salt.utils
+from salttesting import skipIf
 
 # Import Python libs
 import os
 import shutil
+
 
 class DiskModuleVirtualizationTest(integration.ModuleCase):
     '''
