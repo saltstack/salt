@@ -176,7 +176,8 @@ def mod_watch(name, sfun=None, *args, **kw):
         # Throw away the old container and create a new one
         remove_container = __salt__['docker.remove_container']
         remove_status = _ret_status(remove_container(container=name,
-                                                     force=True,**kw),
+                                                     force=True,
+                                                     **kw),
                                     name=name)
         installed_status = installed(name=name, **kw)
         result = installed_status['result'] and remove_status['result']
