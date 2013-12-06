@@ -32,6 +32,7 @@ JINJA = jinja2.Environment(
 # Define the module's virtual name
 __virtualname__ = 'ip'
 
+
 def __virtual__():
     '''
     Confine this module to Debian based distros
@@ -188,6 +189,7 @@ def _raise_error_routes(iface, option, expected):
     log.error(msg)
     raise AttributeError(msg)
 
+
 def _read_file(path):
     '''
     Reads and returns the contents of a file
@@ -197,6 +199,7 @@ def _read_file(path):
             return contents.readlines()
     except Exception:
         return ''
+
 
 def _parse_interfaces():
     '''
@@ -220,7 +223,7 @@ def _parse_interfaces():
         for line in interfaces:
             # Identify the clauses by analyzing the first word of each line.
             # Go to the next line if the current line is a comment.
-            if line.startswith('#') == True:
+            if line.startswith('#'):
                 pass
             else:
                 # Parse the iface clause
@@ -235,11 +238,11 @@ def _parse_interfaces():
 
                     iface_name = sline[1]
                     # Create item in dict, if not already there
-                    if not adapters.has_key(iface_name):
+                    if not iface_name in adapters:
                         adapters[iface_name] = {}
 
                     # Create item in dict, if not already there
-                    if not adapters[iface_name].has_key('data'):
+                    if not 'data' in adapters[iface_name]:
                         context = 0
                         adapters[iface_name]['data'] = []
                         adapters[iface_name]['data'].append({})
@@ -250,11 +253,11 @@ def _parse_interfaces():
                     adapters[iface_name]['data'][context]['inet_type'] = sline[2]
                     adapters[iface_name]['data'][context]['proto'] = sline[3]
 
-                if line.isspace() == True:
+                if line.isspace():
                     pass
                 else:
                     # Parse the detail clauses.
-                    if line[0].isspace() == True:
+                    if line[0].isspace():
                         sline = line.split()
 
                         if sline[0] in ['address', 'netmask', 'gateway', 'broadcast', 'network']:
@@ -265,25 +268,25 @@ def _parse_interfaces():
 
                         if sline[0] in _REV_ETHTOOL_CONFIG_OPTS:
                             ethtool_key = sline[0]
-                            if not adapters[iface_name]['data'][context].has_key('ethtool'):
+                            if not 'ethtool' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['ethtool'] = {}
                             adapters[iface_name]['data'][context]['ethtool'][ethtool_key] = sline[1]
 
-                        if sline[0].startswith('bond') == True:
+                        if sline[0].startswith('bond'):
                             opt = sline[0].split('_', 1)[1]
                             sline.pop(0)
                             value = ' '.join(sline)
 
-                            if not adapters[iface_name].has_key('bonding'):
+                            if not 'bonding' in adapters[iface_name]:
                                 adapters[iface_name]['bonding'] = {}
                             adapters[iface_name]['bonding'][opt] = value
 
-                        if sline[0].startswith('bridge') == True:
+                        if sline[0].startswith('bridge'):
                             opt = sline[0].split('_', 1)[1]
                             sline.pop(0)
                             value = ' '.join(sline)
 
-                            if not adapters[iface_name]['data'][context].has_key('bridge_options'):
+                            if not 'bridge_options' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['bridge_options'] = {}
                             adapters[iface_name]['data'][context]['bridge_options'][opt] = value
 
@@ -291,7 +294,7 @@ def _parse_interfaces():
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
                             cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
-                            if not adapters[iface_name]['data'][context].has_key(cmd_key):
+                            if not cmd_key in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)
 
@@ -301,7 +304,7 @@ def _parse_interfaces():
                         if word == 'auto':
                             pass
                         else:
-                            if not adapters.has_key(word):
+                            if not word in adapters:
                                 adapters[word] = {}
                             adapters[word]['enabled'] = True
 
@@ -311,17 +314,18 @@ def _parse_interfaces():
                         if word == 'allow-hotplug':
                             pass
                         else:
-                            if not adapters.has_key(word):
+                            if not word in adapters:
                                 adapters[word] = {}
                             adapters[word]['hotplug'] = True
 
     # Return a sorted list of the keys for ethtool options to ensure a consistent order
     for iface_name in adapters:
-        if adapters[iface_name]['data'][0].has_key('ethtool'):
+        if 'ethtool' in adapters[iface_name]['data'][0]:
             ethtool_keys = sorted(adapters[iface_name]['data'][0]['ethtool'].keys())
             adapters[iface_name]['data'][0]['ethtool_keys'] = ethtool_keys
 
     return adapters
+
 
 def _parse_ethtool_opts(opts, iface):
     '''
@@ -807,7 +811,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['bridge_ports', 'bridge_stp', 'bridge_waitport', 'bridge_fd']:
         if opt in opts:
             key = opt.split('_')[1]
-            if not adapters[iface]['data'][0].has_key('bridge_options'):
+            if not 'bridge_options' in adapters[iface]['data'][0]:
                 adapters[iface]['data'][0]['bridge_options'] = {}
             adapters[iface]['data'][0]['bridge_options'][key] = opts[opt]
 
@@ -841,6 +845,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     return adapters
 
+
 def _parse_routes(iface, opts):
     '''
     Filters given options and outputs valid settings for
@@ -857,6 +862,7 @@ def _parse_routes(iface, opts):
 
     return result
 
+
 def _write_file(iface, data, folder, pattern):
     '''
     Writes a file to disk
@@ -872,6 +878,7 @@ def _write_file(iface, data, folder, pattern):
     fout.close()
 
     return filename
+
 
 def _write_file_routes(iface, data, folder, pattern):
     '''
@@ -903,6 +910,7 @@ def _read_temp(data):
 
     return output
 
+
 def _read_temp_ifaces(iface, data):
     '''
     Return what would be written to disk for interfaces
@@ -933,7 +941,7 @@ def _write_file_ifaces(iface, data, folder):
 
     ifcfg = ''
     for adapter in adapters:
-        if adapters[adapter].has_key('type') and adapters[adapter]['type'] == 'slave':
+        if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'slave':
             # Override values so the interfaces file is correct
             adapters[adapter]['enabled'] = False
             adapters[adapter]['data'][0]['inet_type'] = 'inet'
@@ -956,6 +964,7 @@ def _write_file_ifaces(iface, data, folder):
 
     # Return as a array so the difflib works
     return saved_ifcfg.split('\n')
+
 
 def build_bond(iface, **settings):
     '''
@@ -999,6 +1008,7 @@ def build_bond(iface, **settings):
     __salt__['pkg.install']('ifenslave-2.6')
 
     return _read_file(path)
+
 
 def build_interface(iface, iface_type, enabled, **settings):
     '''
@@ -1051,9 +1061,10 @@ def build_interface(iface, iface_type, enabled, **settings):
     # ensure lines in list end with newline, so difflib works
     return [item + '\n' for item in ifcfg]
 
+
 def build_routes(iface, **settings):
     '''
-    Add route scripts for a network interface using up commands. 
+    Add route scripts for a network interface using up commands.
 
     CLI Example:
 
@@ -1085,6 +1096,7 @@ def build_routes(iface, **settings):
 
     return results
 
+
 def down(iface, iface_type):
     '''
     Shutdown a network interface
@@ -1099,6 +1111,7 @@ def down(iface, iface_type):
     if iface_type not in ['slave']:
         return __salt__['cmd.run']('ifdown {0}'.format(iface))
     return None
+
 
 def get_bond(iface):
     '''
@@ -1140,6 +1153,7 @@ def get_interface(iface):
     else:
         return []
 
+
 def up(iface, iface_type):  # pylint: disable=C0104
     '''
     Start up a network interface
@@ -1155,9 +1169,11 @@ def up(iface, iface_type):  # pylint: disable=C0104
         return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
 
+
 def get_network_settings():
     msg = 'Not implemented yet'
     return msg
+
 
 def get_routes(iface):
     '''
@@ -1177,6 +1193,7 @@ def get_routes(iface):
     results += _read_file(filename)
 
     return results
+
 
 def apply_network_settings(**settings):
     '''
@@ -1200,7 +1217,7 @@ def apply_network_settings(**settings):
     else:
         return __salt__['service.restart']('networking')
 
+
 def build_network_settings(**settings):
     msg = 'Not implemented yet'
     return msg
-
