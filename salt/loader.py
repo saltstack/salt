@@ -209,8 +209,11 @@ def states(opts, functions, whitelist=None):
     Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'states')
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+             'value': functions},
+            {'name': '__context__',
+             'value': {}},
+            ]
     return load.gen_functions(pack, whitelist=whitelist)
 
 
