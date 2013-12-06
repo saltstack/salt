@@ -334,5 +334,3 @@ def replace(name,
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
                      ).format(host, port)
     return ret
-
-
