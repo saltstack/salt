@@ -48,9 +48,9 @@ from salt._compat import string_types
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
 VALID_RESPONSE = ''
 NOTSET = object()
-hr = u'{0}\n'.format('-' * 80)
-re_f = re.S | re.M | re.U
-base_status = {
+HR = u'{0}\n'.format('-' * 80)
+RE_F = re.S | re.M | re.U
+BASE_STATUS = {
     'status': None,
     'logs': [],
     'comment': '',
@@ -59,7 +59,7 @@ base_status = {
     'outlog': None,
     'outlog_by_level': None,
 }
-_url_versions = {
+_URL_VERSIONS = {
     1: u'http://downloads.buildout.org/1/bootstrap.py',
     2: u'http://downloads.buildout.org/2/bootstrap.py',
 }
@@ -71,7 +71,7 @@ def _salt_callback(func):
 
     def _call_callback(*a, **kw):
         ret, out = None, ''
-        status = base_status.copy()
+        status = BASE_STATUS.copy()
         directory = kw.get('directory', '.')
         onlyif = kw.get('onlyif', None)
         unless = kw.get('unless', None)
@@ -166,17 +166,17 @@ def _set_status(m,
     outlog, outlog_by_level = u'', u''
     m['comment'] = comment
     if out and isinstance(out, string_types):
-        outlog += hr
+        outlog += HR
         outlog += u'OUTPUT:\n'
         outlog += u'{0}\n'.format(out)
-        outlog += hr
+        outlog += HR
     if m['logs']:
-        outlog += hr
+        outlog += HR
         outlog += u'Log summary:\n'
-        outlog += hr
-        outlog_by_level += hr
+        outlog += HR
+        outlog_by_level += HR
         outlog_by_level += u'Log summary by level:\n'
-        outlog_by_level += hr
+        outlog_by_level += HR
         for level, msg in m['logs']:
             outlog += '\n{0}: {1}\n'.format(level.upper(), msg)
         for logger in 'error', 'warn', 'info', 'debug':
@@ -185,7 +185,7 @@ def _set_status(m,
                 outlog_by_level += '\n{0}:\n'.format(logger.upper())
                 outlog_by_level += '\n'.join(logs)
                 outlog_by_level += '\n'
-        outlog += hr
+        outlog += HR
     m['outlog'] = outlog
     m['outlog_by_level'] = outlog_by_level
     return m
@@ -262,11 +262,11 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
     old_distribute = False
     try:
         cmd = [python,
-               "-c",
-               "\"import pkg_resources;"
-               "print pkg_resources."
-               "get_distribution(\'distribute\').location\""]
-        #LOG.debug('Run %s' % " ".join(cmd))
+               '-c',
+               '\'import pkg_resources;'
+               'print pkg_resources.'
+               'get_distribution(\'distribute\').location\'']
+        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
             old_distribute = True
@@ -279,11 +279,11 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
     new_st = False
     try:
         cmd = [python,
-               "-c",
-               "\"import pkg_resources;"
-               "print not pkg_resources."
-               "get_distribution('setuptools').version.startswith('0.6')\""]
-        #LOG.debug('Run %s' % " ".join(cmd))
+               '-c',
+               "'import pkg_resources;"
+               'print not pkg_resources.'
+               "get_distribution('setuptools').version.startswith('0.6')'"]
+        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
             new_st = True
@@ -301,7 +301,7 @@ def _find_cfgs(path, cfgs=None):
         directory where to start to search
 
     cfg
-        a optionnal list to append to
+        a optional list to append to
 
             .
             ├── buildout.cfg
@@ -330,7 +330,7 @@ def _find_cfgs(path, cfgs=None):
     return cfgs
 
 
-def _get_bootstrap_content(directory="."):
+def _get_bootstrap_content(directory='.'):
     '''
     Get the current bootstrap.py script content
     '''
@@ -341,11 +341,11 @@ def _get_bootstrap_content(directory="."):
         oldcontent = fic.read()
         fic.close()
     except (OSError, IOError):
-        oldcontent = ""
+        oldcontent = ''
     return oldcontent
 
 
-def _get_buildout_ver(directory="."):
+def _get_buildout_ver(directory='.'):
     '''Check for buildout versions.
 
     In any cases, check for a version pinning
@@ -362,7 +362,7 @@ def _get_buildout_ver(directory="."):
         files = _find_cfgs(directory)
         for f in files:
             fic = open(f)
-            buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', re_f)
+            buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', RE_F)
             dfic = fic.read()
             if (
                     ('buildout.dumppick' in dfic)
@@ -392,7 +392,7 @@ def _get_bootstrap_url(directory):
 
     '''
     v = _get_buildout_ver(directory)
-    return _url_versions.get(v, _url_versions[DEFAULT_VER])
+    return _URL_VERSIONS.get(v, _URL_VERSIONS[DEFAULT_VER])
 
 
 def _dot_buildout(directory):
@@ -407,7 +407,7 @@ def _dot_buildout(directory):
 
 
 @_salt_callback
-def upgrade_bootstrap(directory=".",
+def upgrade_bootstrap(directory='.',
                       onlyif=None,
                       unless=None,
                       runas=None,
@@ -442,7 +442,7 @@ def upgrade_bootstrap(directory=".",
         salt '*' buildout.upgrade_bootstrap /srv/mybuildout
     '''
     if buildout_ver:
-        booturl = _url_versions[buildout_ver]
+        booturl = _URL_VERSIONS[buildout_ver]
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
@@ -498,7 +498,7 @@ def upgrade_bootstrap(directory=".",
 
 
 @_salt_callback
-def bootstrap(directory=".",
+def bootstrap(directory='.',
               config='buildout.cfg',
               python=sys.executable,
               onlyif=None,
@@ -686,7 +686,7 @@ def bootstrap(directory=".",
     ):
         bootstrap_args += ' --accept-buildout-test-releases'
     if config and '"-c"' in content:
-        bootstrap_args += " -c %s" % config
+        bootstrap_args += ' -c %s' % config
     cmd = '%s bootstrap.py %s ' % (python, bootstrap_args,)
     ret = _Popen(cmd, directory=directory, runas=runas, env=env)
     output = ret['output']
@@ -694,7 +694,7 @@ def bootstrap(directory=".",
 
 
 @_salt_callback
-def run_buildout(directory=".",
+def run_buildout(directory='.',
                  config='buildout.cfg',
                  parts=None,
                  onlyif=None,
@@ -791,7 +791,7 @@ def run_buildout(directory=".",
 
 
 def _merge_statuses(statuses):
-    status = base_status.copy()
+    status = BASE_STATUS.copy()
     status['status'] = None
     status['out'] = []
     for st in statuses:
@@ -807,9 +807,9 @@ def _merge_statuses(statuses):
             if not status['out']:
                 status['out'] = ''
             status['out'] += '\n'
-            status['out'] += hr
+            status['out'] += HR
             status['out'] += '{0}\n'.format(out)
-            status['out'] += hr
+            status['out'] += HR
         if comment:
             if not status['comment']:
                 status['comment'] = ''
@@ -817,12 +817,12 @@ def _merge_statuses(statuses):
         if outlog:
             if not status['outlog']:
                 status['outlog'] = ''
-            status['outlog'] += '\n{0}'.format(hr)
+            status['outlog'] += '\n{0}'.format(HR)
             status['outlog'] += outlog
         if outlog_by_level:
             if not status['outlog_by_level']:
                 status['outlog_by_level'] = ''
-            status['outlog_by_level'] += '\n{0}'.format(hr)
+            status['outlog_by_level'] += '\n{0}'.format(HR)
             status['outlog_by_level'] += outlog_by_level
         status['logs'].extend(logs)
         for log in logs_by_level:
@@ -833,7 +833,7 @@ def _merge_statuses(statuses):
 
 
 @_salt_callback
-def buildout(directory=".",
+def buildout(directory='.',
              config='buildout.cfg',
              parts=None,
              runas=None,
@@ -933,7 +933,7 @@ def buildout(directory=".",
 
 
 def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
-    status = base_status.copy()
+    status = BASE_STATUS.copy()
     if os.path.exists(directory):
         directory = os.path.abspath(directory)
         status['status'] = False
