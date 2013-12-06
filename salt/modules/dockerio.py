@@ -199,7 +199,7 @@ def _sizeof_fmt(num):
     '''
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
-            return "%3.1f %s" % (num, x)
+            return '%3.1f %s' % (num, x)
         num /= 1024.0
 
 
@@ -260,8 +260,8 @@ def _get_client(version=None):
     client = docker.Client(**kwargs)
     # force 1..5 API for registry login
     if not version:
-        if client._version == "1.4":
-            client._version = "1.5"
+        if client._version == '1.4':
+            client._version = '1.5'
     if getattr(client, '_cfg', None) is None:
         client._cfg = {
             'Configs': {},
@@ -528,7 +528,7 @@ def export(container, path, *args, **kwargs):
         try:
             byte = response.read(4096)
             fic.write(byte)
-            while byte != "":
+            while byte != '':
                 # Do stuff with byte.
                 byte = response.read(4096)
                 fic.write(byte)
@@ -1050,7 +1050,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
         try:
             _get_container_infos(dcontainer)
             invalid(status,
-                    comment="Container was not removed: {0}".format(container))
+                    comment='Container was not removed: {0}'.format(container))
         except Exception:
             status['status'] = True
             status['comment'] = 'Container {0} was removed'.format(container)
