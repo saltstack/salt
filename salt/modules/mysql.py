@@ -189,7 +189,7 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
-    if isinstance(grant,dict):
+    if isinstance(grant, dict):
         grant_sql = grant['sql']
     else:
         grant_sql = grant
@@ -1301,7 +1301,7 @@ def grant_exists(grant,
     if grants is False:
         log.debug('Grant does not exist, or is perhaps not ordered properly?')
         return False
-    
+
     for grant in grants:
         try:
             target_tokens = None
