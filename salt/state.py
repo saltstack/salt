@@ -1317,6 +1317,8 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(data, ret)
+        retcode = sys.modules[self.states[cdata['full']].__module__].__context__.get('retcode', 0)
+        ret['__retcode__'] = retcode
         return ret
 
     def call_chunks(self, chunks):
