@@ -4,6 +4,7 @@
 import os
 import tempfile
 import urllib2
+import logging
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -17,6 +18,7 @@ import integration
 import shutil
 
 # Import Salt libs
+import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 
@@ -37,20 +39,27 @@ boot_init = {
         'b/bootstrap.py',
     ]}
 
+log = logging.getLogger(__name__)
+
 
 class Base(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rdir = tempfile.mkdtemp()
         cls.tdir = os.path.join(cls.rdir, 'test')
-        for i in buildout._url_versions:
-            p = os.path.join(
-                cls.rdir, '{0}_bootstrap.py'.format(i)
+        for idx, url in buildout._URL_VERSIONS.iteritems():
+            log.debug('Downloading bootstrap from {0}'.format(url))
+            dest = os.path.join(
+                cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
-            fic = open(p, 'w')
-            fic.write(
-                urllib2.urlopen(buildout._url_versions[i]).read())
-            fic.close()
+            with salt.utils.fopen(dest, 'w') as fic:
+                try:
+                    req = urllib2.Request(url)
+                    fic.write(
+                        urllib2.urlopen(url, timeout=3).read()
+                    )
+                except urllib2.URLError:
+                    log.debug('Failed to download {0}'.format(url))
 
     @classmethod
     def tearDownClass(cls):
@@ -148,7 +157,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/1/bootstrap'),
             os.path.join(self.tdir, 'var/ver/1/versions'),
         ]:
-            self.assertEqual(buildout._url_versions[1],
+            self.assertEqual(buildout._URL_VERSIONS[1],
                              buildout._get_bootstrap_url(p),
                              "b1 url for {0}".format(p))
         for p in [
@@ -157,7 +166,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/2/bootstrap'),
             os.path.join(self.tdir, 'var/ver/2/default'),
         ]:
-            self.assertEqual(buildout._url_versions[2],
+            self.assertEqual(buildout._URL_VERSIONS[2],
                              buildout._get_bootstrap_url(p),
                              "b2 url for {0}".format(p))
 
