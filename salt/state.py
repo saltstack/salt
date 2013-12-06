@@ -346,7 +346,7 @@ class Compiler(object):
                                                 'Invalid requisite type {0!r} '
                                                 'in state {1!r}, in SLS '
                                                 '{2!r}. Requisite types must '
-                                                'not contain periods, did you '
+                                                'not contain dots, did you '
                                                 'mean {3!r}?'.format(
                                                     req_key,
                                                     name,
@@ -823,7 +823,7 @@ class State(object):
                                                 'Invalid requisite type {0!r} '
                                                 'in state {1!r}, in SLS '
                                                 '{2!r}. Requisite types must '
-                                                'not contain periods, did you '
+                                                'not contain dots, did you '
                                                 'mean {3!r}?'.format(
                                                     req_key,
                                                     name,
@@ -1090,6 +1090,7 @@ class State(object):
             ])
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
+        errors = []
         for id_, body in high.items():
             if not isinstance(body, dict):
                 continue
@@ -1119,11 +1120,18 @@ class State(object):
                                 if name not in extend:
                                     extend[name] = {}
                                 if '.' in _state:
-                                    log.warning(
-                                        'Bad requisite syntax in {0} : {1} for {2},'
-                                        ' requisites should not contain any dot'
-                                        .format(rkey, _state, name)
-                                    )
+                                    errors.append((
+                                        'Invalid requisite in {0}: {1} for '
+                                        '{2}, in SLS {3!r}. Requisites must '
+                                        'not contain dots, did you mean {4!r}?'
+                                        .format(
+                                            rkey,
+                                            _state,
+                                            name,
+                                            body['__sls__'],
+                                            _state[:_state.find('.')]
+                                        )
+                                    ))
                                     _state = _state.split(".")[0]
                                 if _state not in extend[name]:
                                     extend[name][_state] = []
@@ -1155,11 +1163,18 @@ class State(object):
                                 _state = next(iter(ind))
                                 name = ind[_state]
                                 if '.' in _state:
-                                    log.warning(
-                                        'Bad requisite syntax in {0} : {1} for {2},'
-                                        ' requisites should not contain any dot'
-                                        .format(rkey, _state, name)
-                                    )
+                                    errors.append((
+                                        'Invalid requisite in {0}: {1} for '
+                                        '{2}, in SLS {3!r}. Requisites must '
+                                        'not contain dots, did you mean {4!r}?'
+                                        .format(
+                                            rkey,
+                                            _state,
+                                            name,
+                                            body['__sls__'],
+                                            _state[:_state.find('.')]
+                                        )
+                                    ))
                                     _state = _state.split(".")[0]
                                 if key == 'prereq_in':
                                     # Add prerequired to origin
@@ -1259,7 +1274,9 @@ class State(object):
         high['__extend__'] = []
         for key, val in extend.items():
             high['__extend__'].append({key: val})
-        return self.reconcile_extend(high)
+        req_in_high, req_in_errors = self.reconcile_extend(high)
+        errors.extend(req_in_errors)
+        return req_in_high, errors
 
     def call(self, low, chunks=None, running=None):
         '''
