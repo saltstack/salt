@@ -200,9 +200,8 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    #kwargs['test'] = __opts__['test']
     if not kwargs.has_key('test'):
-        kwargs['test'] = False
+        kwargs['test'] = __opts__.get('test', False)
 
     # Build interface
     try:
