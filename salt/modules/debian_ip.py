@@ -788,7 +788,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['master'] = opts['master']
 
     if iface_type == 'vlan':
-        adapters[iface]['data'][0]['vlan_raw_device'] = re.sub('\.\d*', '', iface) 
+        adapters[iface]['data'][0]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface) 
 
     if 'proto' in opts:
         valid = ['bootp', 'dhcp', 'none', 'static', 'manual', 'loopback']
@@ -829,7 +829,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['data'][1]['netmask'] = '64'
 
         if 'iface_type' in opts and opts['iface_type'] == 'vlan':
-            adapters[iface]['data'][1]['vlan_raw_device'] = re.sub('\.\d*', '', iface) 
+            adapters[iface]['data'][1]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface) 
 
         if 'ipv6proto' in opts:
             adapters[iface]['data'][1]['proto'] = opts['ipv6proto']
@@ -1154,7 +1154,7 @@ def get_interface(iface):
         return []
 
 
-def up(iface, iface_type):  # pylint: disable=C0104
+def up(iface, iface_type):  # pylint: disable=C0103
     '''
     Start up a network interface
 
