@@ -19,6 +19,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 def _connect(host, port):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
@@ -28,7 +29,7 @@ def _connect(host, port):
         user = __salt__['config.option']('memcache.host')
     if not port:
         port = __salt__['config.option']('memcache.port')
-    
+
     if not HAS_MEMCACHE:
         raise SaltException('Error: python-memcached is not installed.')
     else:
@@ -62,6 +63,7 @@ def status(host, port):
 
     return ret
 
+
 def get(host, port, key):
     '''
     get key from  memcache server
@@ -78,6 +80,7 @@ def get(host, port, key):
         raise SaltException('Error: memcache server is down or not exists.')
     else:
         return conn.get(key)
+
 
 def set(host, port, key, val, time=0, min_compress_len=0):
     '''
@@ -97,6 +100,7 @@ def set(host, port, key, val, time=0, min_compress_len=0):
         ret = conn.set(key, val, time, min_compress_len)
     return ret
 
+
 def delete(host, port, key, time=0):
     '''
     delete key from  memcache server
@@ -105,7 +109,7 @@ def delete(host, port, key, time=0):
 
     .. code-block:: bash
 
-        salt '*' memcache.delete  <host> <port> <key> 
+        salt '*' memcache.delete  <host> <port> <key>
     '''
     conn = _connect(host, port)
     status = conn.get_stats()
@@ -139,7 +143,7 @@ def add(host, port, key, val, time=0, min_compress_len=0):
 
 def incr(host, port, key, delta=1):
     '''
-    incr key 
+    incr key
 
     CLI Example:
 
@@ -161,7 +165,7 @@ def incr(host, port, key, delta=1):
 
 def decr(host, port, key, delta=1):
     '''
-    decr key 
+    decr key
 
     CLI Example:
 
