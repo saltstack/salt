@@ -236,7 +236,7 @@ class FileBlockReplaceTestCase(TestCase):
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK', 
+                             '// START BLOCK',
                              '// END BLOCK',
                              'new content 1',
                              backup=False)
