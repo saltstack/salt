@@ -1171,6 +1171,9 @@ def up(iface, iface_type):  # pylint: disable=C0103
 
 
 def get_network_settings():
+    # Once implemented, please add a docstring with CLI example, and remove
+    # this function from the allow_failure tuple in
+    # SysModuleTest.test_valid_docs, within tests/integration/modules/sysmod.py
     msg = 'Not implemented yet'
     return msg
 
@@ -1219,5 +1222,8 @@ def apply_network_settings(**settings):
 
 
 def build_network_settings(**settings):
+    # Once implemented, please add a docstring with CLI example, and remove
+    # this function from the allow_failure tuple in
+    # SysModuleTest.test_valid_docs, within tests/integration/modules/sysmod.py
     msg = 'Not implemented yet'
     return msg

@@ -60,7 +60,10 @@ class SysModuleTest(integration.ModuleCase):
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',
                 'runtests_decorators.missing_depends',
-                'runtests_decorators.missing_depends_will_fallback',)
+                'runtests_decorators.missing_depends_will_fallback',
+                'ip.build_network_settings',
+                'ip.get_network_settings',
+        )
 
         for fun in docs:
             if fun.startswith('runtests_helpers'):
