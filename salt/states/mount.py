@@ -86,9 +86,10 @@ def mounted(name,
     # Get the active data
     active = __salt__['mount.active']()
     real_name = os.path.realpath(name)
+    real_device = os.path.realpath(device)
     if real_name in active:
-        if device not in (active.__getitem__(real_name).__getitem__('device'),
-                          active.__getitem__(real_name).__getitem__('alt_device')):
+        if real_device != os.path.realpath(active.__getitem__(real_name).__getitem__('device')) \
+             or device != active.__getitem__(real_name).__getitem__('alt_device'):
             # name matches but device doesn't - need to umount
             out = __salt__['mount.umount'](real_name)
             active = __salt__['mount.active']()
