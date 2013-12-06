@@ -268,7 +268,7 @@ class Master(SMaster):
                     data = {'new': list(new),
                             'lost': list(lost)}
                     event.fire_event(data, tagify('change', 'presense'))
-                data = {'present': present}
+                data = {'present': list(present)}
                 event.fire_event(data, tagify('present', 'presense'))
                 old_present = present
             try:
