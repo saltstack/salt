@@ -426,9 +426,11 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-    __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
+    retcode = ret['retcode']
     new = list_pkgs()
+    __context__['retcode'] = retcode
     return salt.utils.compare_dicts(old, new)
 
 
