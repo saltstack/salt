@@ -162,6 +162,7 @@ __virtualname__ = 'network'
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Confine this module to non-Windows systems with the required execution
@@ -200,7 +201,7 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    if not kwargs.has_key('test'):
+    if not 'test' in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface
@@ -307,9 +308,8 @@ def routes(name, **kwargs):
         'comment': 'Interface {0} routes are up to date.'.format(name),
     }
     apply_routes = False
-    #kwargs['test'] = __opts__['test']
-    if not kwargs.has_key('test'):
-        kwargs['test'] = False
+    if not 'test' in kwargs:
+        kwargs['test'] = __opts__.get('test', False)
 
     # Build interface routes
     try:
