@@ -34,6 +34,33 @@ from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 
+STATE_INTERNAL_KEYWORDS = frozenset([
+    # These are keywords passed to state module functions which are to be used
+    # by salt in this state module and not on the actual state module function
+    'fun',
+    'order',
+    'state',
+    'watch',
+    'watch_in',
+    'prereq',
+    'prereq_in',
+    'require',
+    'require_in',
+    'fail_hard',
+    'reload_modules',
+    'saltenv',
+    '__id__',
+    '__sls__',
+    '__env__',
+    '__pub_user',
+    '__pub_arg',
+    '__pub_jid',
+    '__pub_fun',
+    '__pub_tgt',
+    '__pub_ret',
+    '__pub_tgt_type',
+])
+
 log = logging.getLogger(__name__)
 
 
