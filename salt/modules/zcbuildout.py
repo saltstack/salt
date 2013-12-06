@@ -930,7 +930,6 @@ def buildout(directory=".",
                                 debug=debug)
     # signal the decorator or our return
     raise _ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
-    return True  # make pylint happy
 
 
 def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
