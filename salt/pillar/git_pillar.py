@@ -89,15 +89,15 @@ class GitPillar(object):
         '''
         Try to initilize the Git repo object
         '''
-        self.br = branch
+        self.branch = branch
         self.rp_location = repo_location
         self.opts = opts
-        self.envs = set()
+        self._envs = set()
         self.working_dir = ''
         self.repo = None
 
         for idx, opts_dict in enumerate(self.opts['ext_pillar']):
-            if opts_dict.get('git', '') == '{0} {1}'.format(self.br,
+            if opts_dict.get('git', '') == '{0} {1}'.format(self.branch,
                                                             self.rp_location):
                 rp_ = os.path.join(self.opts['cachedir'],
                                    'pillar_gitfs', str(idx))
@@ -107,10 +107,11 @@ class GitPillar(object):
 
                 try:
                     self.repo = git.Repo.init(rp_)
-                except Exception as e:
+                except (git.exc.NoSuchPathError,
+                        git.exc.InvalidGitRepositoryError) as exc:
                     log.error('GitPython exception caught while '
                               'initializing the repo: {0}. Maybe '
-                              'git is not available.'.format(e))
+                              'git is not available.'.format(exc))
 
                 # Git directory we are working on
                 # Should be the same as self.repo.working_dir
@@ -126,14 +127,14 @@ class GitPillar(object):
                             else:
                                 self.repo.git.config('http.sslVerify', 'false')
                         except os.error:
-                            # This exception occurs when two processes are trying to write
-                            # to the git config at once, go ahead and pass over it since
-                            # this is the only write
-                            # This should place a lock down
+                            # This exception occurs when two processes are
+                            # trying to write to the git config at once, go
+                            # ahead and pass over it since this is the only
+                            # write.
+                            # This should place a lock down.
                             pass
 
                 break
-
 
     def update(self):
         '''
@@ -144,20 +145,19 @@ class GitPillar(object):
         try:
             log.debug('Updating fileserver for git_pillar module')
             self.repo.git.fetch()
-        except git.exc.GitCommandError as e:
+        except git.exc.GitCommandError as exc:
             log.error('Unable to fetch the latest changes from remote '
-                      '{0}: {1}'.format(self.rp_location, e))
+                      '{0}: {1}'.format(self.rp_location, exc))
             return False
 
         try:
-            self.repo.git.checkout("origin/" + self.br)
-        except git.exc.GitCommandError as e:
+            self.repo.git.checkout('origin/{0}'.format(self.branch))
+        except git.exc.GitCommandError as exc:
             logging.error('Unable to checkout branch '
-                          '{0}: {1}'.format(self.br, e))
+                          '{0}: {1}'.format(self.branch, exc))
             return False
 
         return True
-
 
     def envs(self):
         '''
@@ -173,11 +173,11 @@ class GitPillar(object):
                     if short == 'master':
                         short = 'base'
                     if ref not in remote.stale_refs:
-                        self.envs.add(short)
+                        self._envs.add(short)
                 elif isinstance(ref, git.Tag):
-                    self.envs.add(short)
+                    self._envs.add(short)
 
-        return list(self.envs)
+        return list(self._envs)
 
 
 def update(branch, repo_location):
