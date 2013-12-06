@@ -7,6 +7,7 @@ Management of Memcached Server.
 This module is used to manage memcached server.
 '''
 
+
 def set(name,
         host=None,
         port=None,
@@ -52,8 +53,9 @@ def set(name,
             return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
+
 
 def get(name,
         host=None,
@@ -93,7 +95,7 @@ def get(name,
         return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
 
 
@@ -137,7 +139,7 @@ def delete(name,
             return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
 
 
@@ -156,7 +158,7 @@ def add(name,
 
     port
         The memcached server port
-   
+
     val
         The value
 
@@ -189,7 +191,7 @@ def add(name,
             return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
 
 
@@ -208,7 +210,7 @@ def incr(name,
 
     port
         The memcached server port
-   
+
     delta
         The default value is 1
 
@@ -236,7 +238,7 @@ def incr(name,
         return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
 
 
@@ -255,7 +257,7 @@ def decr(name,
 
     port
         The memcached server port
-   
+
     delta
         The default value is 1
 
@@ -283,9 +285,8 @@ def decr(name,
         return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
-
 
 
 def replace(name,
@@ -303,7 +304,7 @@ def replace(name,
 
     port
         The memcached server port
-   
+
     Val
         The value
 
@@ -331,7 +332,7 @@ def replace(name,
         return ret
 
     ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host,port)
+                     ).format(host, port)
     return ret
 
 
