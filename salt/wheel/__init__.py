@@ -23,7 +23,7 @@ class Wheel(object):
     Salt Master and it must be done using the same user that the Salt Master is
     running as.
     '''
-    def __init__(self, opts = None):
+    def __init__(self, opts=None):
         if not opts:
             opts = salt.config.client_config(
                     os.environ.get(
