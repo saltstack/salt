@@ -56,7 +56,7 @@ class Base(TestCase):
                 try:
                     req = urllib2.Request(url)
                     fic.write(
-                        urllib2.urlopen(url, timeout=3).read()
+                        urllib2.urlopen(url, timeout=10).read()
                     )
                 except urllib2.URLError:
                     log.debug('Failed to download {0}'.format(url))
