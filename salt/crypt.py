@@ -65,7 +65,7 @@ def dropfile(cachedir, user=None):
                 return True
 
     while not ready():
-        log.warning("Waiting before writing %s" % dfn)
+        log.warning("Waiting before writing {0}".format(dfn))
         time.sleep(1)
 
     aes = Crypticle.generate_key_string()
