@@ -201,4 +201,3 @@ def replace(host, port, key, val, time=0, min_compress_len=0):
         raise SaltException('Error: memcache server is down or not exists.')
     else:
         return conn.replace(key, val, time=0, min_compress_len=0)
-
