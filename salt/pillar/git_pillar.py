@@ -92,7 +92,7 @@ class GitPillar(object):
         self.br = branch
         self.rp_location = repo_location
         self.opts = opts
-        self.envs = set()
+        self._envs = set()
         self.working_dir = ''
         self.repo = None
 
@@ -134,7 +134,6 @@ class GitPillar(object):
 
                 break
 
-
     def update(self):
         '''
         Ensure you are following the latest changes on the remote
@@ -158,7 +157,6 @@ class GitPillar(object):
 
         return True
 
-
     def envs(self):
         '''
         Return a list of refs that can be used as environments
@@ -173,11 +171,11 @@ class GitPillar(object):
                     if short == 'master':
                         short = 'base'
                     if ref not in remote.stale_refs:
-                        self.envs.add(short)
+                        self._envs.add(short)
                 elif isinstance(ref, git.Tag):
-                    self.envs.add(short)
+                    self._envs.add(short)
 
-        return list(self.envs)
+        return list(self._envs)
 
 
 def update(branch, repo_location):
