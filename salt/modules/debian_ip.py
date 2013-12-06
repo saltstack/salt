@@ -207,8 +207,8 @@ def _parse_interfaces():
     #if os.path.exists("/etc/network/interfaces.d/"):
     #    interface_files += os.listdir("/etc/network/interfaces.d/")
 
-    if os.path.isfile("/etc/network/interfaces"):
-        interface_files.insert(0, "/etc/network/interfaces")
+    if os.path.isfile('/etc/network/interfaces'):
+        interface_files.insert(0, '/etc/network/interfaces')
 
     adapters = {}
     context = -1
@@ -272,7 +272,7 @@ def _parse_interfaces():
                         if sline[0].startswith('bond') == True:
                             opt = sline[0].split('_', 1)[1]
                             sline.pop(0)
-                            value = " ".join(sline)
+                            value = ' '.join(sline)
 
                             if not adapters[iface_name].has_key('bonding'):
                                 adapters[iface_name]['bonding'] = {}
@@ -281,7 +281,7 @@ def _parse_interfaces():
                         if sline[0].startswith('bridge') == True:
                             opt = sline[0].split('_', 1)[1]
                             sline.pop(0)
-                            value = " ".join(sline)
+                            value = ' '.join(sline)
 
                             if not adapters[iface_name]['data'][context].has_key('bridge_options'):
                                 adapters[iface_name]['data'][context]['bridge_options'] = {}
@@ -290,7 +290,7 @@ def _parse_interfaces():
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
-                            cmd_key = "%s_cmds" % (re.sub('-', '_', ud))
+                            cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
                             if not adapters[iface_name]['data'][context].has_key(cmd_key):
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)
@@ -761,7 +761,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if enabled:
         adapters[iface]['enabled'] = True
 
-    adapters[iface]['data'][0]['inet_type'] = "inet"
+    adapters[iface]['data'][0]['inet_type'] = 'inet'
 
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
@@ -784,7 +784,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['master'] = opts['master']
 
     if iface_type == 'vlan':
-        adapters[iface]['data'][0]['vlan_raw_device'] = re.sub("\.\d*", "", iface) 
+        adapters[iface]['data'][0]['vlan_raw_device'] = re.sub('\.\d*', '', iface) 
 
     if 'proto' in opts:
         valid = ['bootp', 'dhcp', 'none', 'static', 'manual', 'loopback']
@@ -821,11 +821,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'enable_ipv6' in opts and opts['enable_ipv6']:
         adapters[iface]['data'].append({})
-        adapters[iface]['data'][1]['inet_type'] = "inet6"
+        adapters[iface]['data'][1]['inet_type'] = 'inet6'
         adapters[iface]['data'][1]['netmask'] = '64'
 
         if 'iface_type' in opts and opts['iface_type'] == 'vlan':
-            adapters[iface]['data'][1]['vlan_raw_device'] = re.sub("\.\d*", "", iface) 
+            adapters[iface]['data'][1]['vlan_raw_device'] = re.sub('\.\d*', '', iface) 
 
         if 'ipv6proto' in opts:
             adapters[iface]['data'][1]['proto'] = opts['ipv6proto']
@@ -931,7 +931,7 @@ def _write_file_ifaces(iface, data, folder):
     adapters = _parse_interfaces()
     adapters[iface] = data
 
-    ifcfg = ""
+    ifcfg = ''
     for adapter in adapters:
         if adapters[adapter].has_key('type') and adapters[adapter]['type'] == 'slave':
             # Override values so the interfaces file is correct
