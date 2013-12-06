@@ -70,8 +70,7 @@ def _salt_callback(func):
     LOG.clear()
 
     def _call_callback(*a, **kw):
-        ret, out = None, ''
-        status = BASE_STATUS.copy()
+        st = BASE_STATUS.copy()
         directory = kw.get('directory', '.')
         onlyif = kw.get('onlyif', None)
         unless = kw.get('unless', None)
@@ -79,21 +78,28 @@ def _salt_callback(func):
         env = kw.get('env', ())
         try:
             # may rise _ResultTransmission
-            _check_onlyif_unless(onlyif,
-                                 unless,
-                                 directory=directory,
-                                 runas=runas,
-                                 env=env)
-            comment, st, out = '', True, None
-            if not status['status']:
-                # may rise _ResultTransmission
+            status = _check_onlyif_unless(onlyif,
+                                          unless,
+                                          directory=directory,
+                                          runas=runas,
+                                          env=env)
+            # if onlyif/unless returns, we are done
+            if status is None:
+                status = BASE_STATUS.copy()
+                comment, st = '', True
                 out = func(*a, **kw)
-                if isinstance(out, dict):
-                    comment = out.get('comment', '')
-                    out = out.get('out', None)
-            status = _set_status(status, status=st, comment=comment, out=out)
-        except _ResultTransmission, ex:
-            status = ex.args[0]
+                # we may have already final statuses not to be touched
+                # merged_statuses flag is there to check that !
+                if not isinstance(out, dict):
+                    status = _valid(status, out=out)
+                else:
+                    if out.get('merged_statuses', False):
+                        status = out
+                    else:
+                        status = _set_status(status,
+                                             status=out.get('status', True),
+                                             comment=out.get('comment', ''),
+                                             out=out.get('out', out))
         except Exception:
             trace = traceback.format_exc(None)
             LOG.error(trace)
@@ -246,16 +252,8 @@ def _Popen(command,
     return ret
 
 
-class _ResultTransmission(Exception):
-    '''General Buildout Error.'''
-
-
 class _BuildoutError(CommandExecutionError):
     '''General Buildout Error.'''
-
-
-class _MrDeveloperError(_BuildoutError):
-    '''Arrives when mr.developer fails'''
 
 
 def _has_old_distribute(python=sys.executable, runas=None, env=()):
@@ -265,7 +263,7 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
                '-c',
                '\'import pkg_resources;'
                'print pkg_resources.'
-               'get_distribution(\'distribute\').location\'']
+               'get_distribution(\"distribute\").location\'']
         #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
@@ -280,9 +278,9 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
     try:
         cmd = [python,
                '-c',
-               "'import pkg_resources;"
+               '\'import pkg_resources;'
                'print not pkg_resources.'
-               "get_distribution('setuptools').version.startswith('0.6')'"]
+               'get_distribution("setuptools").version.startswith("0.6")\'']
         #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
@@ -793,6 +791,7 @@ def run_buildout(directory='.',
 def _merge_statuses(statuses):
     status = BASE_STATUS.copy()
     status['status'] = None
+    status['merged_statuses'] = True
     status['out'] = []
     for st in statuses:
         if status['status'] is not False:
@@ -929,10 +928,11 @@ def buildout(directory='.',
                                 verbose=verbose,
                                 debug=debug)
     # signal the decorator or our return
-    raise _ResultTransmission(_merge_statuses([boot_ret, buildout_ret]))
+    return _merge_statuses([boot_ret, buildout_ret])
 
 
 def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
+    ret = None
     status = BASE_STATUS.copy()
     if os.path.exists(directory):
         directory = os.path.abspath(directory)
@@ -953,6 +953,7 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if retcode(unless, cwd=directory, runas=runas, env=env) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
-        raise _ResultTransmission(status)
+        ret = status
+    return ret
 
 # vim:set et sts=4 ts=4 tw=80:
