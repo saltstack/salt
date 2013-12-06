@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration disposable regularly scheduled tasks for at.
 ==========================================================
@@ -100,19 +101,25 @@ def absent(limit, jobid=None, **kwargs):
         Runs user-specified jobs
 
     .. code-block:: yaml
-        revoke:
+        example1:
             at.absent:
                 - limit: all
-
+                
+    .. code-block:: yaml
+        example2
             at.absent:
                 - limit: all
                 - year: 13
-
+                
+    .. code-block:: yaml
+        example3
             at.absent:
                 - limit: all
                 - tag: rose
                 - runas: jim
-
+                
+    .. code-block:: yaml
+        example4
             at.absent:
                 - limit: all
                 - tag: rose
