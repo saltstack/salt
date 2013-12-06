@@ -517,7 +517,7 @@ def run(name,
 
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None):
-    """
+    '''
     name
         name of the service
     container
@@ -551,7 +551,7 @@ def running(name, container=None, port_bindings=None, binds=None,
                 "5000/tcp":
                     - HostIp: ""
                     - HostPort: "5000"
-    """
+    '''
     running = __salt('docker.is_running')(container)
     if running:
         return _valid(
