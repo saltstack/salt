@@ -41,6 +41,18 @@ class ArgumentTestCase(integration.ModuleCase):
             'baz'
         )
 
+    def test_argument_containing_pound_sign(self):
+        '''
+        Tests the argument parsing to ensure that a CLI argument with a pound
+        sign doesn't have the pound sign interpreted as a comment and removed.
+        See https://github.com/saltstack/salt/issues/8585 for more info.
+        '''
+        arg = 'foo bar #baz'
+        self.assertEqual(
+            self.run_function('test.echo', [arg]),
+            arg
+        )
+
 
 if __name__ == '__main__':
     from integration import run_tests

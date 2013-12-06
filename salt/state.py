@@ -2407,12 +2407,14 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
+        cumask = os.umask(191)
         with salt.utils.fopen(cfn, 'w+') as fp_:
             try:
                 self.serial.dump(high, fp_)
             except TypeError:
                 # Can't serialize pydsl
                 pass
+        os.umask(cumask)
         return self.state.call_high(high)
 
     def compile_highstate(self):
