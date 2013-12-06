@@ -43,13 +43,13 @@ class Base(TestCase):
     def setUpClass(cls):
         cls.rdir = tempfile.mkdtemp()
         cls.tdir = os.path.join(cls.rdir, 'test')
-        for i in buildout._url_versions:
+        for i in buildout._URL_VERSIONS:
             p = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(i)
             )
             fic = open(p, 'w')
             fic.write(
-                urllib2.urlopen(buildout._url_versions[i]).read())
+                urllib2.urlopen(buildout._URL_VERSIONS[i]).read())
             fic.close()
 
     @classmethod
@@ -148,7 +148,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/1/bootstrap'),
             os.path.join(self.tdir, 'var/ver/1/versions'),
         ]:
-            self.assertEqual(buildout._url_versions[1],
+            self.assertEqual(buildout._URL_VERSIONS[1],
                              buildout._get_bootstrap_url(p),
                              "b1 url for {0}".format(p))
         for p in [
@@ -157,7 +157,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/2/bootstrap'),
             os.path.join(self.tdir, 'var/ver/2/default'),
         ]:
-            self.assertEqual(buildout._url_versions[2],
+            self.assertEqual(buildout._URL_VERSIONS[2],
                              buildout._get_bootstrap_url(p),
                              "b2 url for {0}".format(p))
 
