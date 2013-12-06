@@ -497,31 +497,34 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
     old = list_pkgs()
 
-    if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
+    if pkgs is None and len(pkg_params) == 1:
         # Only use the 'version' param if 'name' was not specified as a
         # comma-separated list
-        pkg_params = {name: kwargs.get('version')}
+        pkg_params = {name: 
+                         {
+                             'version': kwargs.get('version'),
+                             'extra_install_flags': kwargs.get('extra_install_flags')}}
 
-    for param, version_num in pkg_params.iteritems():
-        pkginfo = _get_package_info(param)
+    for pkg_name, options in pkg_params.iteritems():
+        pkginfo = _get_package_info(pkg_name)
         if not pkginfo:
-            log.error('Unable to locate package {0}'.format(name))
+            log.error('Unable to locate package {0}'.format(pkg_name))
             continue
 
-        version_num = version_num or _get_latest_pkg_version(pkginfo)
+        version_num = options and options.get('version') or _get_latest_pkg_version(pkginfo)
 
         if version_num in [old.get(pkginfo[x]['full_name']) for x in pkginfo]:
             # Desired version number already installed
             continue
         elif version_num not in pkginfo:
             log.error('Version {0} not found for package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
             continue
 
         installer = pkginfo[version_num].get('installer')
         if not installer:
             log.error('No installer configured for version {0} of package '
-                      '{1}'.format(version_num, param))
+                      '{1}'.format(version_num, pkg_name))
 
         if installer.startswith('salt:') \
                 or installer.startswith('http:') \
@@ -536,10 +539,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         cached_pkg = cached_pkg.replace('/', '\\')
         msiexec = pkginfo[version_num].get('msiexec')
+        install_flags = '{0} {1}'.format(pkginfo[version_num]['install_flags'], options and options.get('extra_install_flags'))
         cmd = '{msiexec}"{cached_pkg}" {install_flags}'.format(
             msiexec='msiexec /i ' if msiexec else '',
             cached_pkg=cached_pkg,
-            install_flags=pkginfo[version_num]['install_flags']
+            install_flags=install_flags
         )
         __salt__['cmd.run_all'](cmd)
 

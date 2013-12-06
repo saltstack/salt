@@ -127,7 +127,14 @@ def init():
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
-        repo = git.Repo.init(rp_)
+
+        try:
+            repo = git.Repo.init(rp_)
+        except Exception as e:
+            log.error('GitPython exception caught while initializing the repo '
+                      'for gitfs: {0}. Maybe git is not available.'.format(e))
+            return repos
+
         if not repo.remotes:
             try:
                 repo.create_remote('origin', opt)
@@ -136,7 +143,7 @@ def init():
                     repo.git.config('http.sslVerify', 'true')
                 else:
                     repo.git.config('http.sslVerify', 'false')
-            except Exception:
+            except os.error:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
                 # this is the only write
