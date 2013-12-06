@@ -43,12 +43,13 @@ def present(job, timespec, tag=None, runas=None):
         Users run the job.
 
     .. code-block:: yaml
+    
         rose:
-            at.present:
-                - job: 'echo "I love you" > love'
-                - timespec: '9:9 11/09/13'
-                - tag: love
-                - runas: jam
+          at.present:
+            - job: 'echo "I love saltstack" > love'
+            - timespec: '9:9 11/09/13'
+            - tag: love
+            - runas: jam
 
     '''
     ret = {'name': job,
@@ -103,32 +104,32 @@ def absent(limit, jobid=None, **kwargs):
     .. code-block:: yaml
     
         example1:
-            at.absent:
-                - limit: all
+          at.absent:
+            - limit: all
                 
     .. code-block:: yaml
     
         example2:
-            at.absent:
-                - limit: all
-                - year: 13
+          at.absent:
+            - limit: all
+            - year: 13
                 
     .. code-block:: yaml
     
         example3:
-            at.absent:
-                - limit: all
-                - tag: rose
-                - runas: jim
+          at.absent:
+            - limit: all
+            - tag: rose
+            - runas: jim
                 
     .. code-block:: yaml
     
         example4:
-            at.absent:
-                - limit: all
-                - tag: rose
-                - day: 13
-                - hour: 16
+          at.absent:
+            - limit: all
+            - tag: rose
+            - day: 13
+            - hour: 16
     '''
 
     ret = {'name': 'remove job',
@@ -163,7 +164,7 @@ def absent(limit, jobid=None, **kwargs):
 
     if not opts:
         ret['result'] = False
-        ret['comment'] = 'No match jobs'
+        ret['comment'] = 'No match jobs or time format error'
         return ret
 
     output = __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
