@@ -500,7 +500,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if pkgs is None and len(pkg_params) == 1:
         # Only use the 'version' param if 'name' was not specified as a
         # comma-separated list
-        pkg_params = {name: 
+        pkg_params = {name:
                          {
                              'version': kwargs.get('version'),
                              'extra_install_flags': kwargs.get('extra_install_flags')}}
