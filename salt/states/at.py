@@ -101,25 +101,29 @@ def absent(limit, jobid=None, **kwargs):
         Runs user-specified jobs
 
     .. code-block:: yaml
+    
         example1:
             at.absent:
                 - limit: all
                 
     .. code-block:: yaml
-        example2
+    
+        example2:
             at.absent:
                 - limit: all
                 - year: 13
                 
     .. code-block:: yaml
-        example3
+    
+        example3:
             at.absent:
                 - limit: all
                 - tag: rose
                 - runas: jim
                 
     .. code-block:: yaml
-        example4
+    
+        example4:
             at.absent:
                 - limit: all
                 - tag: rose
