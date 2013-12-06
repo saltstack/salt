@@ -10,6 +10,9 @@ A Docker is a light-weight, portable, self-sufficient container.
 
     This state module is beta; the API is subject to change and no promise
     as to performance or functionality is yet present
+    This module requires a docker-py that support `version 1.6 of docker
+    remote API.
+    <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
 
 Available Functions
 -------------------
