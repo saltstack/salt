@@ -93,6 +93,12 @@ def mounted(name,
             # name matches but device doesn't - need to umount
             out = __salt__['mount.umount'](real_name)
             active = __salt__['mount.active']()
+            if real_name in active:
+                ret['comment'] = "Unable to unmount (mount point name matches but device doesn't)"
+                ret['result']  = None
+                return ret
+            else:
+                ret['changes']['umount'] = "Forced umount because mount point name matches but device doesn't"
         else:
             ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
