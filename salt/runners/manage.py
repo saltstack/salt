@@ -133,7 +133,7 @@ def up():  # pylint: disable=C0103
 
 def present():
     '''
-    Print a list of all minions that are up according to Salt's presense
+    Print a list of all minions that are up according to Salt's presence
     detection, no commands will be sent
 
     CLI Example:
