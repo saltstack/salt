@@ -267,9 +267,9 @@ class Master(SMaster):
                     # Fire new minions present event
                     data = {'new': list(new),
                             'lost': list(lost)}
-                    event.fire_event(data, tagify('change', 'presense'))
+                    event.fire_event(data, tagify('change', 'presence'))
                 data = {'present': present}
-                event.fire_event(data, tagify('present', 'presense'))
+                event.fire_event(data, tagify('present', 'presence'))
                 old_present = present
             try:
                 time.sleep(loop_interval)
