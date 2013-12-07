@@ -440,18 +440,6 @@ def ip_bracket(addr):
     return addr
 
 
-def port_responds(hostname, port):
-    '''
-    Determines whether or not we can establish a TCP connection to a port
-    '''
-    s = socket.socket()
-    try:
-        s.connect((hostname, int(port)))
-        return True
-    except socket.error, e:
-        return False
-
-
 def dns_check(addr, safe=False, ipv6=False):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an

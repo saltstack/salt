@@ -312,14 +312,6 @@ class Auth(object):
                 return 'retry'
             raise SaltClientError
 
-        if not salt.utils.port_responds(
-                self.opts['master_ip'],
-                self.opts['master_port']
-            ):
-            if safe:
-                return 'master_not_running'
-            raise SaltClientError
-
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
@@ -485,12 +477,6 @@ class SAuth(Auth):
                 self.opts.get('_auth_timeout', 60),
                 self.opts.get('_safe_auth', True)
             )
-
-            if creds == 'master_not_running':
-                if self.opts.get('caller'):
-                    print ('Master did not respond. Is master running?')
-                sys.exit(2)
-
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
