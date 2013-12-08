@@ -9,6 +9,17 @@
     ~~~~~~~~~~~~~
 
     Virtual Terminal
+
+    This code has been heavily inspired by Python's subprocess code, the `non
+    blocking version of it`__, some minor online snippets about TTY handling
+    with python including `Python's own ``pty`` source code`__ and `Pexpect`__
+    which has already surpassed some of the pitfalls that some systems would
+    get us into.
+
+    .. __: http://code.activestate.com/recipes/440554/
+    .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
+    .. __: https://github.com/pexpect/pexpect
+
 '''
 
 # Import python libs
