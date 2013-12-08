@@ -974,6 +974,9 @@ def replace(path,
         pre_user = get_user(path)
         pre_group = get_group(path)
         pre_mode = __salt__['config.manage_mode'](get_mode(path))
+
+    # Avoid TypeErrors by forcing repl to be a string
+    repl = str(repl)
     for line in fileinput.input(path,
                                 inplace=not dry_run,
                                 backup=False if dry_run else backup,
