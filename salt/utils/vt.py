@@ -26,6 +26,7 @@ if subprocess.mswindows:
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
+    import _subprocess
 else:
     import pty
     import fcntl
@@ -42,23 +43,6 @@ class TerminalException(Exception):
     '''
 
 
-class TimeoutExpired(TerminalException):
-    '''
-    This exception is raised when the timeout expires while waiting for a
-    child process.
-    '''
-
-    def __init__(self, cmd, timeout, output=None):
-        self.cmd = cmd
-        self.timeout = timeout
-        self.output = output
-
-    def __str__(self):
-        return 'Command {0!r} timed out after {1} seconds'.format(
-            self.cmd, self.timeout
-        )
-
-
 # ----- Cleanup Running Instances ------------------------------------------->
 # This lists holds Terminal instances for which the underlying process had
 # not exited at the time its __del__ method got called: those processes are
@@ -66,11 +50,14 @@ class TimeoutExpired(TerminalException):
 # created, to avoid zombie processes.
 _ACTIVE = []
 
-
 def _cleanup():
+    '''
+    Make sure that any terminal processes still running when __del__ was called
+    to the waited and cleaned up.
+    '''
     for inst in _ACTIVE[:]:
-        res = inst._internal_poll(_deadstate=sys.maxsize)
-        if res is not None:
+        res = inst.isalive()
+        if res is not True:
             try:
                 _ACTIVE.remove(inst)
             except ValueError:
@@ -85,7 +72,7 @@ class Terminal(object):
     I'm a virtual terminal
     '''
     def __init__(self,
-                 args,
+                 args=None,
                  executable=None,
                  shell=False,
                  cwd=None,
@@ -104,6 +91,12 @@ class Terminal(object):
         # Let's avoid Zombies!!!
         _cleanup()
 
+        if not args and not executable and not shell:
+            raise TerminalException(
+                'You need to pass at least one of \'args\', \'executable\' '
+                'or \'shell=True\''
+            )
+
         self.args = args
         self.executable = executable
         self.shell = shell
@@ -115,11 +108,18 @@ class Terminal(object):
         self.stdin = None
         self.stdout = None
         self.stderr = None
-        self.closed = False
-        self.returncode = None
+
         self.child_fd = None
         self.child_fde = None
-        self.terminated = False
+
+        self.closed = True
+        self.flag_eof = False
+        self.__irix_hack = 'irix' in sys.platform.lower()
+        self.terminated = True
+        self.exitstatus = None
+        self.signalstatus = None
+        # status returned by os.waitpid
+        self.status = None
         # <---- Internally Set Attributes ------------------------------------
 
         # ----- Direct Streaming Setup -------------------------------------->
@@ -213,10 +213,10 @@ class Terminal(object):
         # <---- Setup Logging ------------------------------------------------
 
     # ----- Common Public API ----------------------------------------------->
-    def poll(self):
-        return self._internal_poll()
-
     def send(self, data):
+        '''
+        s
+        '''
         return self._send(data)
 
     def sendline(self, data, linesep=os.linesep):
@@ -228,18 +228,18 @@ class Terminal(object):
         elif maxsize < 1:
             maxsize = 1
         return self._recv(maxsize)
-    # <---- Common Public API ------------------------------------------------
 
-    # ----- Common Internal API --------------------------------------------->
-    def _remaining_time(self, endtime):
-        '''
-        Convenience method when computing timeouts.
-        '''
-        if endtime is None:
-            return None
-        else:
-            return endtime - time.time()
-    # <---- Common Internal API ----------------------------------------------
+    def close(self, force=False):
+        if not self.closed:
+            os.close(self.child_fd)
+            os.close(self.child_fde)
+            time.sleep(0.30)
+            if not self.terminate(force):
+                raise TerminalException('Failed to terminate child process.')
+            self.child_fd = self.child_fde = None
+            self.closed = True
+
+    # <---- Common Public API ------------------------------------------------
 
     # ----- Context Manager Methods ----------------------------------------->
     def __enter__(self):
@@ -275,6 +275,7 @@ class Terminal(object):
             '''
             Send a signal to the process
             '''
+            # pylint: disable=E1101
             if sig == signal.SIGTERM:
                 self.terminate()
             elif sig == signal.CTRL_C_EVENT:
@@ -283,20 +284,21 @@ class Terminal(object):
                 os.kill(self.pid, signal.CTRL_BREAK_EVENT)
             else:
                 raise ValueError('Unsupported signal: {0}'.format(sig))
+            # pylint: enable=E1101
 
         def terminate(self):
             '''
             Terminates the process
             '''
             try:
-                _winapi.TerminateProcess(self._handle, 1)
+                _subprocess.TerminateProcess(self._handle, 1)
             except PermissionError:
                 # ERROR_ACCESS_DENIED (winerror 5) is received when the
                 # process already died.
-                rc = _winapi.GetExitCodeProcess(self._handle)
-                if rc == _winapi.STILL_ACTIVE:
+                ecode = _subprocess.GetExitCodeProcess(self._handle)
+                if ecode == _subprocess.STILL_ACTIVE:
                     raise
-                self.returncode = rc
+                self.exitstatus = ecode
 
         kill = terminate
     # <---- Windows Methods --------------------------------------------------
@@ -308,11 +310,15 @@ class Terminal(object):
 
             if isinstance(self.args, string_types):
                 args = [self.args]
-            else:
+            elif self.args:
                 args = list(self.args)
+            else:
+                args = []
 
-            if self.shell:
+            if self.shell and self.args:
                 self.args = ['/bin/sh', '-c'] + args
+            elif self.shell:
+                self.args = ['/bin/sh']
 
             if self.executable:
                 self.args[0] = self.executable
@@ -338,12 +344,13 @@ class Terminal(object):
                     os.chdir(self.cwd)
 
                 if self.env is None:
-                    os.execv(self.executable, self.args)
+                    os.execvp(self.executable, self.args)
                 else:
                     os.execvpe(self.executable, self.args, self.env)
 
             # Parent
             self.closed = False
+            self.terminated = False
 
         def __fork_ptys(self):
             '''
@@ -378,10 +385,11 @@ class Terminal(object):
                     if tty_fd >= 0:
                         os.close(tty_fd)
                 # which exception, shouldn't we catch explicitly .. ?
-                except:
+                except:  # pylint: disable=W0702
                     # Already disconnected. This happens if running inside cron
                     pass
 
+                # New session!
                 os.setsid()
 
                 # Verify we are disconnected from controlling tty
@@ -395,7 +403,7 @@ class Terminal(object):
                             'still possible to open /dev/tty.'
                         )
                 # which exception, shouldn't we catch explicitly .. ?
-                except:
+                except:  # pylint: disable=W0702
                     # Good! We are disconnected from a controlling tty.
                     pass
 
@@ -450,8 +458,29 @@ class Terminal(object):
             return written
 
         def _recv(self, maxsize):
-            if self.closed or (self.child_fd is None and self.child_fde is None):
-                return None, None
+            if not self.isalive():
+                if not self.child_fd and not self.child_fde:
+                    return None, None
+                rlist, wlist, _ = select.select(
+                    [self.child_fd, self.child_fde], [], [], 0
+                )
+                if not rlist:
+                    self.flag_eof = True
+                    log.debug('End of file(EOL). Brain-dead platform.')
+                    return None, None
+            elif self.__irix_hack:
+                # Irix takes a long time before it realizes a child was
+                # terminated.
+                # FIXME So does this mean Irix systems are forced to always
+                # have a 2 second delay when calling read_nonblocking?
+                # That sucks.
+                rlist, wlist, _ = select.select(
+                    [self.child_fd, self.child_fde], [], [], 2
+                )
+                if not rlist:
+                    self.flag_eof = True
+                    log.debug('End of file(EOL). Slow platform.')
+                    return None, None
 
             stderr = ''
             stdout = ''
@@ -467,10 +496,18 @@ class Terminal(object):
             # <---- Non blocking Reads ---------------------------------------
 
             # ----- Check for any incoming data ----------------------------->
-            rlist, wlist, xlist = select.select(
+            rlist, wlist, _ = select.select(
                 [self.child_fd, self.child_fde], [], [], 0
             )
             # <---- Check for any incoming data ------------------------------
+
+            # ----- Nothing to Process!? ------------------------------------>
+            if not rlist:
+                if not self.isalive():
+                    self.flag_eof = True
+                    log.debug('End of file(EOL). Very slow platform.')
+                    return None, None
+            # <---- Nothing to Process!? -------------------------------------
 
             # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist:
@@ -478,8 +515,7 @@ class Terminal(object):
                     stderr = os.read(self.child_fde, maxsize)
 
                     if not stderr:
-                        os.close(self.child_fde)
-                        self.child_fde = None
+                        self.flag_eof = True
                         stderr = None
                     else:
                         if self.stream_stderr:
@@ -497,7 +533,7 @@ class Terminal(object):
                     self.child_fde = None
                     stderr = None
                 finally:
-                    if not self.closed and self.child_fde is not None:
+                    if self.isalive() and self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
             # <---- Process STDERR -------------------------------------------
 
@@ -507,8 +543,7 @@ class Terminal(object):
                     stdout = os.read(self.child_fd, maxsize)
 
                     if not stdout:
-                        os.close(self.child_fd)
-                        self.child_fd = None
+                        self.flag_eof = True
                         stdout = None
                     else:
                         if self.stream_stdout:
@@ -526,125 +561,171 @@ class Terminal(object):
                     self.child_fd = None
                     stdout = None
                 finally:
-                    if not self.closed and self.child_fd is not None:
+                    if self.isalive() and self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
-
-        def _internal_poll(self,
-                           _deadstate=None,
-                           _waitpid=os.waitpid,
-                           _WNOHANG=os.WNOHANG,
-                           _os_error=os.error,
-                           _ECHILD=errno.ECHILD):
-            '''
-            Check if child process has terminated. Returns returncode attribute
-
-            This method is called by __del__, so it cannot reference anything
-            outside of the local scope (nor can any methods it calls).
-            '''
-            if self.returncode is None:
-                try:
-                    pid, sts = _waitpid(self.pid, _WNOHANG)
-                    if pid == self.pid:
-                        self._handle_exitstatus(sts)
-                except _os_error as exc:
-                    if _deadstate is not None:
-                        self.returncode = _deadstate
-                    elif exc.errno == _ECHILD:
-                        # This happens if SIGCLD is set to be ignored or
-                        # waiting for child processes has otherwise been
-                        # disabled for our process. This child is dead, we
-                        # can't get the status.
-                        # http://bugs.python.org/issue15756
-                        self.returncode = 0
-            return self.returncode
-
-        def _try_wait(self, wait_flags):
-            try:
-                (pid, sts) = subprocess._eintr_retry_call(os.waitpid,
-                                                          self.pid,
-                                                          wait_flags)
-            except OSError as exc:
-                if exc.errno != errno.ECHILD:
-                    raise
-                # This happens if SIGCLD is set to be ignored or waiting
-                # for child processes has otherwise been disabled for our
-                # process. This child is dead, we can't get the status.
-                pid = self.pid
-                sts = 0
-            return (pid, sts)
-
-        def _handle_exitstatus(self,
-                               sts,
-                               _WIFSIGNALED=os.WIFSIGNALED,
-                               _WTERMSIG=os.WTERMSIG,
-                               _WIFEXITED=os.WIFEXITED,
-                               _WEXITSTATUS=os.WEXITSTATUS):
-            # This method is called (indirectly) by __del__, so it cannot
-            # refer to anything outside of its local scope
-            if _WIFSIGNALED(sts):
-                self.returncode = -_WTERMSIG(sts)
-            elif _WIFEXITED(sts):
-                self.returncode = _WEXITSTATUS(sts)
-            else:
-                # Should never happen
-                raise RuntimeError('Unknown child exit status!')
-
         # <---- Internal API -------------------------------------------------
 
         # ----- Public API -------------------------------------------------->
-        def wait(self, timeout=None, endtime=None):
+        def isalive(self,
+                    _waitpid=os.waitpid,
+                    _wnohang=os.WNOHANG,
+                    _wifexited=os.WIFEXITED,
+                    _wexitstatus=os.WEXITSTATUS,
+                    _wifsignaled=os.WIFSIGNALED,
+                    _wifstopped=os.WIFSTOPPED,
+                    _wtermsig=os.WTERMSIG,
+                    _os_error=os.error,
+                    _errno_echild=errno.ECHILD,
+                    _terminal_exception=TerminalException):
             '''
-            Wait for child process to terminate. Returns returncode attribute.
+            This tests if the child process is running or not. This is
+            non-blocking. If the child was terminated then this will read the
+            exitstatus or signalstatus of the child. This returns True if the
+            child process appears to be running or False if not. It can take
+            literally SECONDS for Solaris to return the right status.
             '''
+            if self.terminated:
+                return False
 
-            if self.returncode is not None:
-                return self.returncode
-
-            # endtime is preferred to timeout. timeout is only used for
-            # printing.
-            if endtime is not None or timeout is not None:
-                if endtime is None:
-                    endtime = time.time() + timeout
-                elif timeout is None:
-                    timeout = self._remaining_time(endtime)
-
-            if endtime is not None:
-                # Enter a busy loop if we have a timeout. This busy loop was
-                # cribbed from Lib/threading.py in Thread.wait() at r71065.
-                delay = 0.0005  # 500 us -> initial delay of 1 ms
-                while True:
-                    (pid, sts) = self._try_wait(os.WNOHANG)
-                    assert pid == self.pid or pid == 0
-                    if pid == self.pid:
-                        self._handle_exitstatus(sts)
-                        break
-                    remaining = self._remaining_time(endtime)
-                    if remaining <= 0:
-                        raise TimeoutExpired(self.args, timeout)
-                    delay = min(delay * 2, remaining, .05)
-                    time.sleep(delay)
+            if self.flag_eof:
+                # This is for Linux, which requires the blocking form
+                # of waitpid to get status of a defunct process.
+                # This is super-lame. The flag_eof would have been set
+                # in recv(), so this should be safe.
+                waitpid_options = 0
             else:
-                while self.returncode is None:
-                    (pid, sts) = self._try_wait(0)
-                    # Check the pid and loop as waitpid has been known to return
-                    # 0 even without WNOHANG in odd situations. issue14396.
-                    if pid == self.pid:
-                        self._handle_exitstatus(sts)
-            return self.returncode
+                waitpid_options = _wnohang
+
+            try:
+                pid, status = _waitpid(self.pid, waitpid_options)
+            except _os_error:
+                err = sys.exc_info()[1]
+                # No child processes
+                if err.errno == _errno_echild:
+                    raise _terminal_exception(
+                        'isalive() encountered condition where "terminated" '
+                        'is 0, but there was no child process. Did someone '
+                        'else call waitpid() on our process?'
+                    )
+                else:
+                    raise err
+
+            # I have to do this twice for Solaris.
+            # I can't even believe that I figured this out...
+            # If waitpid() returns 0 it means that no child process
+            # wishes to report, and the value of status is undefined.
+            if pid == 0:
+                try:
+                    ### os.WNOHANG # Solaris!
+                    pid, status = _waitpid(self.pid, waitpid_options)
+                except _os_error as e:
+                    # This should never happen...
+                    if e.errno == _errno_echild:
+                        raise _terminal_exception(
+                            'isalive() encountered condition that should '
+                            'never happen. There was no child process. Did '
+                            'someone else call waitpid() on our process?'
+                        )
+                    else:
+                        raise
+
+                # If pid is still 0 after two calls to waitpid() then the
+                # process really is alive. This seems to work on all platforms,
+                # except for Irix which seems to require a blocking call on
+                # waitpid or select, so I let recv take care of this situation
+                # (unfortunately, this requires waiting through the timeout).
+                if pid == 0:
+                    return True
+
+            if pid == 0:
+                return True
+
+            if _wifexited(status):
+                self.status = status
+                self.exitstatus = _wexitstatus(status)
+                self.signalstatus = None
+                self.terminated = True
+            elif _wifsignaled(status):
+                self.status = status
+                self.exitstatus = None
+                self.signalstatus = _wtermsig(status)
+                self.terminated = True
+            elif _wifstopped(status):
+                raise _terminal_exception(
+                    'isalive() encountered condition where child process is '
+                    'stopped. This is not supported. Is some other process '
+                    'attempting job control with our child pid?'
+                )
+            return False
+
+        def terminate(self, force=False):
+            '''
+            This forces a child process to terminate. It starts nicely with
+            SIGHUP and SIGINT. If "force" is True then moves onto SIGKILL. This
+            returns True if the child was terminated. This returns False if the
+            child could not be terminated.
+            '''
+
+            if not self.isalive():
+                return True
+            try:
+                self.send_signal(signal.SIGHUP)
+                time.sleep(0.1)
+                if not self.isalive():
+                    return True
+                self.send_signal(signal.SIGCONT)
+                time.sleep(0.1)
+                if not self.isalive():
+                    return True
+                self.send_signal(signal.SIGINT)
+                time.sleep(0.1)
+                if not self.isalive():
+                    return True
+                if force:
+                    self.send(signal.SIGKILL)
+                    time.sleep(0.1)
+                    if not self.isalive():
+                        return True
+                    else:
+                        return False
+                return False
+            except OSError:
+                # I think there are kernel timing issues that sometimes cause
+                # this to happen. I think isalive() reports True, but the
+                # process is dead to the kernel.
+                # Make one last attempt to see if the kernel is up to date.
+                time.sleep(0.1)
+                if not self.isalive():
+                    return True
+                else:
+                    return False
+
+        def wait(self):
+
+            '''This waits until the child exits. This is a blocking call. This will
+            not read any data from the child, so this will block forever if the
+            child has unread output and has terminated. In other words, the child
+            may have printed output then called exit(), but, the child is
+            technically still alive until its output is read by the parent. '''
+
+            if self.isalive():
+                while self.isalive():
+                    stdout, stderr = self.recv()
+                    if stdout is None:
+                        break
+                    if stderr is None:
+                        break
+            else:
+                raise TerminalException('Cannot wait for dead child process.')
+            return self.exitstatus
 
         def send_signal(self, sig):
             '''
             Send a signal to the process
             '''
             os.kill(self.pid, sig)
-
-        def terminate(self):
-            '''
-            Terminate the process with SIGTERM
-            '''
-            self.send_signal(signal.SIGTERM)
 
         def kill(self):
             '''
@@ -661,8 +742,7 @@ class Terminal(object):
             return
 
         # In case the child hasn't been waited on, check if it's done.
-        self._internal_poll(_deadstate=_maxsize)
-        if self.returncode is None and _ACTIVE is not None:
+        if self.isalive() and _ACTIVE is not None:
             # Child is still running, keep us alive until we can wait on it.
             _ACTIVE.append(self)
     # <---- Cleanup!!! -------------------------------------------------------
