@@ -50,6 +50,7 @@ class TerminalException(Exception):
 # created, to avoid zombie processes.
 _ACTIVE = []
 
+
 def _cleanup():
     '''
     Make sure that any terminal processes still running when __del__ was called
@@ -114,12 +115,12 @@ class Terminal(object):
 
         self.closed = True
         self.flag_eof = False
-        self.__irix_hack = 'irix' in sys.platform.lower()
         self.terminated = True
         self.exitstatus = None
         self.signalstatus = None
         # status returned by os.waitpid
         self.status = None
+        self.__irix_hack = 'irix' in sys.platform.lower()
         # <---- Internally Set Attributes ------------------------------------
 
         # ----- Direct Streaming Setup -------------------------------------->
@@ -215,14 +216,23 @@ class Terminal(object):
     # ----- Common Public API ----------------------------------------------->
     def send(self, data):
         '''
-        s
+        Send data to the terminal. You are responsible to send any required
+        line feeds.
         '''
         return self._send(data)
 
     def sendline(self, data, linesep=os.linesep):
+        '''
+        Send the provided data to the terminal appending a line feed.
+        '''
         return self.send('{0}{1}'.format(data, linesep))
 
     def recv(self, maxsize=None):
+        '''
+        Receive data from the terminal as a (``stdout``, ``stderr``) tuple. If
+        any of those is ``None`` we can no longer communicate with the
+        terminal's child process.
+        '''
         if maxsize is None:
             maxsize = 1024
         elif maxsize < 1:
@@ -230,10 +240,13 @@ class Terminal(object):
         return self._recv(maxsize)
 
     def close(self, force=False):
+        '''
+        Close the communication with the terminal's child and terminate it.
+        '''
         if not self.closed:
             os.close(self.child_fd)
             os.close(self.child_fde)
-            time.sleep(0.30)
+            time.sleep(0.1)
             if not self.terminate(force):
                 raise TerminalException('Failed to terminate child process.')
             self.child_fd = self.child_fde = None
@@ -246,12 +259,7 @@ class Terminal(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.stdout:
-            self.stdout.close()
-        if self.stderr:
-            self.stderr.close()
-        if self.stdin:
-            self.stdin.close()
+        self.close(force=True)
         # Wait for the process to terminate, to avoid zombies.
         self.wait()
     # <---- Context Manager Methods ------------------------------------------
@@ -703,13 +711,11 @@ class Terminal(object):
                     return False
 
         def wait(self):
-
-            '''This waits until the child exits. This is a blocking call. This will
-            not read any data from the child, so this will block forever if the
-            child has unread output and has terminated. In other words, the child
-            may have printed output then called exit(), but, the child is
-            technically still alive until its output is read by the parent. '''
-
+            '''
+            This waits until the child exits internally consuming any remaining
+            output from the child, thus, no blocking forever because the child
+            has unread data.
+            '''
             if self.isalive():
                 while self.isalive():
                     stdout, stderr = self.recv()
