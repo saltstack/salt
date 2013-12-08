@@ -74,7 +74,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
-    def _db_creation_loop(self, db_name, returning_name, **kwargs):
+    def _db_creation_loop(self, db_name, returning_name, test_conn=False, **kwargs):
         '''
         Used in db testCase, create, check exists, check in list and removes.
         '''
@@ -120,6 +120,24 @@ class MysqlModuleDbTest(integration.ModuleCase,
                           db_name,
                           ret
         ))
+
+        if test_conn:
+            # test connections on database with root user
+            ret = self.run_function(
+                'mysql.query',
+                database=db_name,
+                query='SELECT 1',
+                **kwargs
+            )
+            if not isinstance(ret, dict) or not 'results' in ret:
+                raise AssertionError(
+                    ('Unexpected result while testing connection'
+                    ' on database : {0}').format(
+                        repr(db_name)
+                    )
+                )
+            self.assertEqual([['1']], ret['results'])
+
         # Now remove database
         ret = self.run_function(
             'mysql.db_remove',
@@ -141,6 +159,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         db_name = 'foo 1'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
+                               test_conn=True,
                                connection_user=self.user,
                                connection_pass=self.password
         )
@@ -201,6 +220,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         db_name = "foo'3"
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
+                               test_conn=True,
                                character_set='utf8',
                                connection_user=self.user,
                                connection_pass=self.password
@@ -211,6 +231,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         db_name = 'foo"4'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
+                               test_conn=True,
                                collate='utf8_general_ci',
                                connection_user=self.user,
                                connection_pass=self.password
@@ -219,6 +240,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         db_name = '<foo` --"5>'
         self._db_creation_loop(db_name=db_name,
                                returning_name=db_name,
+                               test_conn=True,
                                connection_user=self.user,
                                connection_pass=self.password
         )
@@ -233,8 +255,11 @@ class MysqlModuleDbTest(integration.ModuleCase,
         # same as 'notamérican' because of file encoding
         # but ensure it on this test
         db_name_utf8 = 'notam\xc3\xa9rican'
+        # FIXME: MySQLdb problems on conn strings containing
+        # utf-8 on user name of db name prevent conn test
         self._db_creation_loop(db_name=db_name_utf8,
                                returning_name=db_name_utf8,
+                               test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
                                connection_use_unicode=True,
@@ -244,6 +269,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         # test unicode entry will also return utf8 name
         self._db_creation_loop(db_name=db_name_unicode,
                                returning_name=db_name_utf8,
+                               test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
                                connection_use_unicode=True,
@@ -257,6 +283,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         db_name_utf8 = '\xe6\xa8\x99\xe6\xba\x96\xe8\xaa\x9e'
         self._db_creation_loop(db_name=db_name_utf8,
                                returning_name=db_name_utf8,
+                               test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
                                connection_use_unicode=True,
@@ -266,6 +293,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         # test unicode entry will also return utf8 name
         self._db_creation_loop(db_name=db_name_unicode,
                                returning_name=db_name_utf8,
+                               test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
                                connection_use_unicode=True,
