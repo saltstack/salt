@@ -1254,7 +1254,11 @@ def create(vm_=None, call=None):
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
 
-    if salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
+    if config.get_cloud_config_value('win_installer', vm_, __opts__):
+        username = config.get_cloud_config_value(
+                'win_username', vm_, __opts__, default='Administrator'
+            )
+    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
