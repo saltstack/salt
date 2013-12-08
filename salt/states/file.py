@@ -56,6 +56,13 @@ salt fileserver. Here's an example:
         - user: foo
         - group: users
         - mode: 644
+        - backup: minion
+
+.. note::
+
+    Salt supports backing up managed files via the backup option. For more
+    details on this functionality please review the
+    :doc:`backup_mode documentation </ref/states/backup_mode>`.
 
 The ``source`` parameter can also specify a file in another Salt environment.
 In this example ``foo.conf`` in the ``dev`` environment will be used instead.
