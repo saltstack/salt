@@ -188,6 +188,10 @@
 # security purposes.
 #file_recv: False
 
+# Set a hard-limit on the size of the files that can be pushed to the master.
+# Default: 100MB
+#file_recv_max_size: 1024*1024*100
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded
