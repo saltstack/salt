@@ -244,7 +244,7 @@ def versions():
             ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
 
     salt.output.display_output(ret, '', __opts__)
-    return ret 
+    return ret
 
 
 def bootstrap(version="develop",
