@@ -235,16 +235,16 @@ def versions():
         ver_diff = cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
-            version_status[ver_diff] = []
-        version_status[ver_diff].append(minion)
+            version_status[ver_diff] = {}
+        version_status[ver_diff][minion] = minion_version
 
     ret = {}
     for key in version_status:
         for minion in sorted(version_status[key]):
-            ret.setdefault(labels[key], []).append(minion)
+            ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
 
     salt.output.display_output(ret, '', __opts__)
-    return ret
+    return ret 
 
 
 def bootstrap(version="develop",
