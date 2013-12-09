@@ -233,7 +233,7 @@ def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
     return _set_status(m, status=True, id=id, comment=comment, out=out)
 
 
-def _get_client(version=None):
+def _get_client(version=None, timeout=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -257,6 +257,10 @@ def _get_client(version=None):
         param = get(p, NOTSET)
         if param is not NOTSET:
             kwargs[k] = param
+    if timeout is not None:
+        # make sure we override default timeout of docker-py
+        # only if defined by user.
+        kwargs['timeout'] = timeout
     client = docker.Client(**kwargs)
     # force 1..5 API for registry login
     if not version:
@@ -1362,6 +1366,7 @@ def build(path=None,
           fileobj=None,
           nocache=False,
           rm=True,
+          timeout=None,
           *args, **kwargs):
     '''
     Build a docker image from a dockerfile or an URL
@@ -1381,6 +1386,8 @@ def build(path=None,
         do not use docker image cache
     rm
         remove intermediate commits
+    timeout
+        timeout is seconds before aborting
 
     CLI Example:
 
@@ -1388,7 +1395,7 @@ def build(path=None,
 
         salt '*' docker.build
     '''
-    client = _get_client()
+    client = _get_client(timeout=timeout)
     status = base_status.copy()
     if path or fileobj:
         try:
