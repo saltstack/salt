@@ -91,14 +91,16 @@ def mounted(name,
         if real_device != os.path.realpath(active.__getitem__(real_name).__getitem__('device')) \
              or device != active.__getitem__(real_name).__getitem__('alt_device'):
             # name matches but device doesn't - need to umount
+            ret['changes']['umount'] = "Forced unmount because devices " \
+                                     + "don't match. Wanted: " + device
+            if real_device != device:
+                ret['changes']['umount'] += " (" + real_device + ")"
             out = __salt__['mount.umount'](real_name)
             active = __salt__['mount.active']()
             if real_name in active:
-                ret['comment'] = "Unable to unmount (mount point name matches but device doesn't)"
+                ret['comment'] = "Unable to unmount"
                 ret['result']  = None
                 return ret
-            else:
-                ret['changes']['umount'] = "Forced umount because mount point name matches but device doesn't"
         else:
             ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
