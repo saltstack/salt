@@ -15,9 +15,7 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
-import types
 import re
-import warnings
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows
@@ -38,6 +36,7 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
+from salt import syspaths
 from salt.utils.nb_popen import NonBlockingPopen
 
 # Import salt cloud libs
