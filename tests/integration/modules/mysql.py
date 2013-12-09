@@ -1248,17 +1248,24 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
 
     user = 'root'
     password = 'poney'
+    # yep, this is a valid MySQL db name
+    testdb = 'test `(:=saltdb)'
     users = {
         'user1': {
             'name': 'foo',
             'pwd': 'bar',
         },
         'user2': {
-            'name': 'user ";--,?:@=&/\\',
-            'pwd': '";--,?:@=&/\\',
+            'name': 'user ";()--,?:@=&/\\',
+            'pwd': '";--(),?:@=&/\\',
         },
-        # this is : user 標標
+        # this is : passwd 標標
         'user3': {
+            'name': 'user foobar',
+            'pwd': '\xe6\xa8\x99\xe6\xa8\x99',
+        },
+        # this is : user/password containing 標標
+        'user4': {
             'name': 'user \xe6\xa8\x99',
             'pwd': '\xe6\xa8\x99\xe6\xa8\x99',
         },
@@ -1296,17 +1303,20 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             NO_MYSQL_SERVER = False
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
+        # Create some users and a test db
         for user,userdef in self.users.iteritems():
-            self._userCreation(uname=userdef['name'] ,password=userdef['pwd'])
+            self._userCreation(uname=userdef['name'], password=userdef['pwd'])
+        self.run_function('mysql.db_create', name=testdb.testdb)
 
 
     @destructiveTest
     def tearDown(self):
         '''
-        Removes created users
+        Removes created users and db
         '''
         for user,userdef in self.users.iteritems():
-            self._userCreation(uname=userdef['name'] ,password=userdef['pwd'])
+            self._userRemoval(uname=userdef['name'] ,password=userdef['pwd'])
+        self.run_function('mysql.db_remove', name=testdb.testdb)
 
 
     def _userCreation(self,
@@ -1332,6 +1342,9 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
                      uname,
                      host,
                      password=None):
+        '''
+        Removes a test user
+        '''
         self.run_function(
             'mysql.user_remove',
             user=uname,
@@ -1344,30 +1357,30 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         )
 
 
-#    def _addGrantRoutine(self,
-#                         uname,
-#                         host,
-#                         password=None,
-#                         new_password=None,
-#                         new_password_hash=None,
-#                         **kwargs):
-#        '''
-#        Perform some tests around creation of the given user
-#        '''
-#        ret = self.run_function(
-#            'mysql.grant_add',
-#            grant=uname,
-#            database=host,
-#            user='foo'
-#            host='jklj'
-#            **kwargs
-#        )
-#       
-#        self.assertEqual(True, ret, ('Calling grant_add on'
-#            ' user {0!r} did not return True: {1}').format(
-#            uname,
-#            repr(ret)
-#        ))
+    def _addGrantRoutine(self,
+                         uname,
+                         host,
+                         password=None,
+                         new_password=None,
+                         new_password_hash=None,
+                         **kwargs):
+        '''
+        Perform some tests around creation of the given user
+        '''
+        ret = self.run_function(
+            'mysql.grant_add',
+            grant=uname,
+            database=host,
+            user='foo'
+            host='jklj'
+            **kwargs
+        )
+
+        self.assertEqual(True, ret, ('Calling grant_add on'
+            ' user {0!r} did not return True: {1}').format(
+            uname,
+            repr(ret)
+        ))
        
 
     @destructiveTest
