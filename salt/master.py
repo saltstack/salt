@@ -1154,7 +1154,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = self.opts.get('file_recv_max_size', 1024*1024*100)
+        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
                 'Exceeding file_recv_max_size limit: {0}'.format(

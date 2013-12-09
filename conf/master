@@ -189,8 +189,9 @@
 #file_recv: False
 
 # Set a hard-limit on the size of the files that can be pushed to the master.
-# Default: 100MB
-#file_recv_max_size: 1024*1024*100
+# It will be interpreted as megabytes.
+# Default: 100
+#file_recv_max_size: 100
 
 #####    Master Module Management    #####
 ##########################################
