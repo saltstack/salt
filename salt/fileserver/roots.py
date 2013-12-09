@@ -146,9 +146,10 @@ def update():
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
 
-    # if there is a change, fire an event
-    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+    if __opts__.get('fileserver_events', False):
+        # if there is a change, fire an event
+        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):

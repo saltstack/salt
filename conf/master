@@ -348,6 +348,11 @@
 #
 # fileserver_limit_traversal: False
 #
+# The fileserver can fire events off every time the fileserver is updated,
+# these are disabled by default, but can be easily turned on by setting this
+# flag to True
+#fileserver_events: False
+#
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
