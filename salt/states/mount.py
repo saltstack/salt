@@ -107,7 +107,7 @@ def mounted(name,
             active = __salt__['mount.active']()
             if real_name in active:
                 ret['comment'] = "Unable to unmount"
-                ret['result']  = None
+                ret['result'] = None
                 return ret
         else:
             ret['comment'] = 'Target was already mounted'
