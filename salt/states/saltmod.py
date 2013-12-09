@@ -146,7 +146,7 @@ def state(
         if minion in fail_minions:
             continue
         m_state = salt.utils.check_state_result(m_ret)
-        if not m_state:
+        if m_state != 0:
             fail.add(minion)
     if fail:
         ret['result'] = False
