@@ -245,9 +245,7 @@ def run(opts):
             vm_name,
             sls=opts.sls,
             pillar=opts.pillar.format(commit=opts.commit),
-            commit=opts.commit,
-            provider=opts.provider,
-            platform=opts.platform
+            **opts.__dict__
         )
     )
     print('Running CMD: {0}'.format(cmd))
