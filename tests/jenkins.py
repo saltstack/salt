@@ -239,47 +239,13 @@ def run(opts):
         opts.download_unittest_reports = vm_name
 
     cmd = (
-        'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
-        '{provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
-    )
-    print('Running CMD: {0}'.format(cmd))
-    sys.stdout.flush()
-
-    proc = Terminal(
-        cmd,
-        shell=True,
-        stream_stdout=True,
-        stream_stderr=True,
-        log_stderr=True,
-        log_stdout=True
-    )
-    while proc.isalive():
-        proc.recv()
-        time.sleep(0.025)
-
-    retcode = proc.exitstatus
-    if retcode != 0:
-        print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
-        sys.stdout.flush()
-        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(vm_name)
-        sys.exit(retcode)
-
-    print('VM Bootstrapped. Exit code: {0}'.format(retcode))
-    sys.stdout.flush()
-
-    print('Sleeping for 5 seconds to allow the minion to breathe a little')
-    sys.stdout.flush()
-    time.sleep(5)
-
-    # Run tests here
-    cmd = (
-        'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
-        '--no-color'.format(
+        'salt-cloud -l debug --script-args "-D -n git {commit}" '
+        '--start-action \'-l debug state.sls {sls} pillar="{pillar}" '
+        '--no-color\' -p {provider}_{platform} {0}'.format(
+            vm_name,
             sls=opts.sls,
             pillar=opts.pillar.format(commit=opts.commit),
-            vm_name=vm_name,
-            commit=opts.commit
+            **opts.__dict__
         )
     )
     print('Running CMD: {0}'.format(cmd))
@@ -293,27 +259,36 @@ def run(opts):
         log_stderr=True,
         log_stdout=True
     )
-    retcode = None
-    while proc.isalive():
-        stdout, _ = proc.recv()
-        if stdout and retcode is None:
+
+    exiting = False
+    suite_retcode = None
+    while True:
+        stdout, _ = proc.recv(4096)
+        if stdout and suite_retcode is None:
             try:
                 match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)',
                                   stdout)
                 if match:
-                    retcode = int(match.group('exitcode'))
+                    suite_retcode = int(match.group('exitcode'))
             except AttributeError:
                 # No regex matching
-                retcode = 1
+                suite_retcode = 1
             except ValueError:
                 # Not a number!?
-                retcode = 1
+                suite_retcode = 1
             except TypeError:
                 # No output!?
-                retcode = 1
+                suite_retcode = 1
                 if stdout:
                     # Anything else, raise the exception
                     raise
+
+        if exiting is True:
+            break
+
+        if not proc.isalive:
+            exiting = True
+
         time.sleep(0.025)
 
     if opts.download_remote_reports:
@@ -323,7 +298,13 @@ def run(opts):
         download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-        delete_vm(vm_name)
+        delete_vm(opts)
+
+    retcode = proc.exitstatus
+    if suite_retcode == 0 and retcode == 0:
+        return 0
+    if suite_retcode > 0:
+        return suite_retcode
     return retcode
 
 
