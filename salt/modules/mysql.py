@@ -213,7 +213,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `testdb`.* TO 'testuser'@'localhost'"
-        or a dictionnary with 'sql' and 'sql_args' keys.
+        or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -221,49 +221,114 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
+    dict_mode = False
     if isinstance(grant, dict):
-        grant_sql = grant['sql']
+        dict_mode = True
+        grant_sql = grant.get('qry','undefined')
+        sql_args = grant.get('args',{})
+        host = sql_args.get('host','undefined')
+        user = sql_args.get('user','undefined')
     else:
         grant_sql = grant
-    exploded_grant = shlex.split(grant_sql)
+        user=''
+    # the replace part is for presence of ` character in the db name
+    # the shell escape is \` but mysql escape is ``. Spaces should not be
+    # exploded as users or db names could contain spaces.
+    # Examples of splitting:
+    #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
+    #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
+    #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
+    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@', 
+    #"'localhost'", 'WITH', 'GRANT', 'OPTION']
+    #
+    #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
+    #                                  TO \'foo \' bar\'@\'localhost\''
+    #['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
+    # '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
+    # '@', "'localhost'"]
+    #
+    #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
+    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'', 
+    # '@', "'localhost'"]
+    lex = shlex.shlex(grant_sql)
+    lex.quotes = '\'`'
+    lex.whitespace_split = False
+    lex.commenters = ''
+    lex.wordchars += '\"'
+    exploded_grant = list(lex)
     grant_tokens = []
     multiword_statement = []
     position_tracker = 1  # Skip the initial 'GRANT' word token
+    database = ''
     phrase = 'grants'
 
     for token in exploded_grant[position_tracker:]:
 
+        if token == ',':
+            position_tracker += 1
+            continue
+
         if token == 'ON':
             phrase = 'db'
+            position_tracker += 1
             continue
 
         elif token == 'TO':
             phrase = 'user'
+            position_tracker += 1
+            continue
+
+
+        elif token == '@' and phrase == 'pre-host':
+            phrase='host'
+            position_tracker += 1
             continue
 
         if phrase == 'grants':
-            if token.endswith(',') \
-                    or exploded_grant[position_tracker + 1] == 'ON':  # Read-ahead
-                cleaned_token = token.rstrip(',')
+            # Read-ahead
+            if exploded_grant[position_tracker + 1] == ',' \
+                    or exploded_grant[position_tracker + 1] == 'ON':
+                # End of token detected
                 if multiword_statement:
-                    multiword_statement.append(cleaned_token)
+                    multiword_statement.append(token)
                     grant_tokens.append(' '.join(multiword_statement))
                     multiword_statement = []
                 else:
-                    grant_tokens.append(cleaned_token)
-
-            elif token[-1:] != ',':  # This is a multi-word, ala LOCK TABLES
+                    grant_tokens.append(token)
+            else:  # This is a multi-word, ala LOCK TABLES
                 multiword_statement.append(token)
 
         elif phrase == 'db':
-            database = token.strip('`')
-            phrase = 'tables'
+            # the shlex splitter may have split on special database characters `
+            database += token
+            # Read-ahead
+            if exploded_grant[position_tracker + 1] == '.':
+                phrase = 'tables'
 
         elif phrase == 'user':
-            user, host = token.split('@')
+            if dict_mode:
+                break;
+            else:
+                user += token
+                # Read-ahead
+                if exploded_grant[position_tracker + 1] == '@':
+                    phrase = 'pre-host'
+
+        elif phrase == 'host':
+            host = token
+            break
 
         position_tracker += 1
 
+    if not dict_mode:
+        user = user.strip("'")
+        host = host.strip("'")
+    log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
+        user,
+        host,
+        grant_tokens,
+        database
+    ))
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
@@ -1245,9 +1310,9 @@ def __grant_generate(grant,
         # some SQL barriers.
         # White-list security check
         grants = grant.split(', ')
-        for grant in grants:
-            if not grant in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(grant))
+        for chkgrant in grants:
+            if not chkgrant in __grants__:
+                raise Exception('Invalid grant requested: {0!r}'.format(chkgrant))
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1389,6 +1454,8 @@ def grant_add(grant,
         return False
     cur = dbc.cursor()
 
+    # Avoid spaces problems
+    grant = grant.strip()
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug('Query: {0} args: {1}'.format(qry['qry'], repr(qry['args'])))
     try:
