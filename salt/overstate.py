@@ -112,12 +112,12 @@ class OverState(object):
             running = {minion: self.over_run[req][minion]['ret']}
 
             if self.over_run[req][minion]['fun'] == 'state.highstate':
-                if salt.utils.check_state_result(running):
+                if salt.utils.check_state_result(running) == 0:
                     # This req is good, check the next
                     continue
 
             elif self.over_run[req][minion]['fun'] == 'state.sls':
-                if salt.utils.check_state_result(running):
+                if salt.utils.check_state_result(running) == 0:
                     # This req is good, check the next
                     continue
 
