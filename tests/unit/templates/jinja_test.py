@@ -318,7 +318,6 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='other')
         )
 
-
     def test_render_with_undefined_variable_unicode(self):
         template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
@@ -329,6 +328,7 @@ class TestGetTemplate(TestCase):
             template,
             dict(opts=self.local_opts, saltenv='other')
         )
+
 
 class TestCustomExtensions(TestCase):
     def test_serialize_json(self):

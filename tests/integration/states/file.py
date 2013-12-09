@@ -926,11 +926,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 chararacters on the sls
-        
+
         This is more generic than just a file test. Feel free to move
         '''
         # Get a path to the temporary file
@@ -1007,32 +1006,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 '_|-managed').format(test_file): {
                     'name': '{0}'.format(test_file),
                     '__run_num__': 0,
-                    'comment': 
-                          'File {0} updated'.format(test_file),
-                    'diff' : 'New file'
+                    'comment': 'File {0} updated'.format(test_file),
+                    'diff': 'New file'
                 },
                 ('file_|-some-utf8-file-create2_|-{0}'
                 '_|-managed').format(test_file): {
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
-                    'comment': 
-                          'File {0} updated'.format(test_file),
-                    'diff' : 'Replace binary file with text file'
+                    'comment': 'File {0} updated'.format(test_file),
+                    'diff': 'Replace binary file with text file'
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
                     'name': '{0}'.format(test_file),
                     '__run_num__': 2,
-                    'comment': 
-                          'Path {0} exists'.format(test_file)
+                    'comment': 'Path {0} exists'.format(test_file)
                 },
                 ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
                  '_|-run').format(test_file): {
                     'name': 'cat "{0}"'.format(test_file),
                     '__run_num__': 3,
-                    'comment':
-                          'Command "cat "{0}"" run'.format(test_file),
-                    'stdout' : '{0}\n{1}\n{2}'.format(
+                    'comment': 'Command "cat "{0}"" run'.format(test_file),
+                    'stdout': '{0}\n{1}\n{2}'.format(
                         korean_unicode_2.encode('utf-8'),
                         korean_unicode_1.encode('utf-8'),
                         korean_unicode_3.encode('utf-8')
@@ -1042,15 +1037,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                  '_|-run').format(test_file): {
                     'name': 'rm -f "{0}"'.format(test_file),
                     '__run_num__': 4,
-                    'comment': 
-                          'Command "rm -f "{0}"" run'.format(test_file),
-                    'stdout' : ''
+                    'comment': 'Command "rm -f "{0}"" run'.format(test_file),
+                    'stdout': ''
                 },
                 ('file_|-some-utf8-file-removed_|-{0}'
                 '_|-missing').format(test_file): {
                     'name': '{0}'.format(test_file),
                     '__run_num__': 5,
-                    'comment': 
+                    'comment':
                           'Path {0} is missing'.format(test_file),
                 }
             }
@@ -1059,15 +1053,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 self.assertSaltTrueReturn({name: step})
                 result.update({
                  name: {
-                    'name' : step['name'],
-                    '__run_num__' : step['__run_num__'],
-                    'comment' : step['comment']
+                    'name': step['name'],
+                    '__run_num__': step['__run_num__'],
+                    'comment': step['comment']
                 }})
                 if 'diff' in step['changes']:
                     result[name]['diff'] = step['changes']['diff']
                 if 'stdout' in step['changes']:
                     result[name]['stdout'] = step['changes']['stdout']
-            self.maxDiff=None
+
+            self.maxDiff = None
+
             self.assertEqual(expected, result)
             cat_id = ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
                       '_|-run').format(test_file)
