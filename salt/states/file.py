@@ -1861,7 +1861,7 @@ def replace(name,
                                        show_changes=show_changes)
 
     if changes:
-        ret['changes'] = changes
+        ret['changes'] = {'diff': changes}
         ret['comment'] = 'Changes were made'
     else:
         ret['comment'] = 'No changes were made'
@@ -1989,7 +1989,7 @@ def blockreplace(name,
                                        show_changes=show_changes)
 
     if changes:
-        ret['changes'] = changes
+        ret['changes'] = {'diff': changes}
         ret['comment'] = 'Changes were made'
     else:
         ret['comment'] = 'No changes were made'
