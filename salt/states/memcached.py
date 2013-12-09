@@ -7,6 +7,22 @@ Management of Memcached Server.
 This module is used to manage memcached server.
 '''
 
+# Import third party libs
+try:
+    import memcache
+    HAS_MEMCACHE = True
+except ImportError:
+    HAS_MEMCACHE = False
+
+
+def __virtual__():
+    '''
+    Only load if have installed python memcache module
+    '''
+    if not HAS_MEMCACHE:
+        return False
+    return 'memcache'
+
 
 def set(name,
         host=None,
