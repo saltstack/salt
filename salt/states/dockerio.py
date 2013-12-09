@@ -232,6 +232,7 @@ def built(name,
           nocache=False,
           rm=True,
           force=False,
+          timeout=None,
           *args, **kwargs):
     '''
     Build a docker image from a dockerfile or an URL
@@ -258,7 +259,8 @@ def built(name,
         path=path,
         quiet=quiet,
         nocache=nocache,
-        rm=rm
+        rm=rm,
+        timeout=timeout,
     )
     status = _ret_status(func(*a, **kw), name)
     return status
