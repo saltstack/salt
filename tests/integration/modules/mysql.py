@@ -1248,20 +1248,24 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
 
     user = 'root'
     password = 'poney'
-    # yep, this is a valid MySQL db name
-    testdb = 'test `(:=saltdb)'
+    # yep, theses are valid MySQL db names
+    # very special chars are _ % and .
+    testdb1 = 'tes.t\'"saltdb'
+    testdb2 = 'test `(:=saltdb)'
+    table1 = 'foo'
+    table2 = "foo `\'bar"
     users = {
         'user1': {
             'name': 'foo',
             'pwd': 'bar',
         },
         'user2': {
-            'name': 'user ";()--,?:@=&/\\',
+            'name': 'user ";--,?:&/\\',
             'pwd': '";--(),?:@=&/\\',
         },
         # this is : passwd 標標
         'user3': {
-            'name': 'user foobar',
+            'name': 'user( @ )=foobar',
             'pwd': '\xe6\xa8\x99\xe6\xa8\x99',
         },
         # this is : user/password containing 標標
@@ -1276,7 +1280,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         '''
         Test presence of MySQL server, enforce a root password, create users
         '''
-        super(MysqlModuleUserTest, self).setUp()
+        super(MysqlModuleUserGrantTest, self).setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -1306,7 +1310,46 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         # Create some users and a test db
         for user,userdef in self.users.iteritems():
             self._userCreation(uname=userdef['name'], password=userdef['pwd'])
-        self.run_function('mysql.db_create', name=testdb.testdb)
+        self.run_function(
+            'mysql.db_create',
+            name=self.testdb1,
+            connection_user=self.user,
+            connection_pass=self.password,
+        )
+        self.run_function(
+            'mysql.db_create',
+            name=self.testdb2,
+            connection_user=self.user,
+            connection_pass=self.password,
+        )
+        create_query = ('CREATE TABLE %(tblname)s ('
+            ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
+            ' data VARCHAR(100)) ENGINE=%(engine)s;') % dict(
+            tblname=mysqlmod.quote_identifier(self.table1),
+            engine='MYISAM',
+        )
+        log.info('Adding table{0!r}'.format(self.table1,))
+        self.run_function(
+            'mysql.query',
+            database=self.testdb2,
+            query=create_query,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        create_query = ('CREATE TABLE %(tblname)s ('
+            ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
+            ' data VARCHAR(100)) ENGINE=%(engine)s;') % dict(
+            tblname=mysqlmod.quote_identifier(self.table2),
+            engine='MYISAM',
+        )
+        log.info('Adding table{0!r}'.format(self.table2,))
+        self.run_function(
+            'mysql.query',
+            database=self.testdb2,
+            query=create_query,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
 
 
     @destructiveTest
@@ -1316,7 +1359,18 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         '''
         for user,userdef in self.users.iteritems():
             self._userRemoval(uname=userdef['name'] ,password=userdef['pwd'])
-        self.run_function('mysql.db_remove', name=testdb.testdb)
+        self.run_function(
+            'mysql.db_remove',
+            name=self.testdb1,
+            connection_user=self.user,
+            connection_pass=self.password,
+       )
+        self.run_function(
+            'mysql.db_remove',
+            name=self.testdb2,
+            connection_user=self.user,
+            connection_pass=self.password,
+       )
 
 
     def _userCreation(self,
@@ -1340,7 +1394,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
 
     def _userRemoval(self,
                      uname,
-                     host,
                      password=None):
         '''
         Removes a test user
@@ -1358,43 +1411,94 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
 
 
     def _addGrantRoutine(self,
-                         uname,
-                         host,
-                         password=None,
-                         new_password=None,
-                         new_password_hash=None,
+                         grant,
+                         user,
+                         db,
+                         grant_option=False,
+                         escape=True,
                          **kwargs):
         '''
-        Perform some tests around creation of the given user
+        Perform some tests around creation of the given grants
         '''
+        
         ret = self.run_function(
             'mysql.grant_add',
-            grant=uname,
-            database=host,
-            user='foo'
-            host='jklj'
+            grant=grant,
+            database=db,
+            user=user,
+            grant_option=grant_option,
+            escape=escape,
             **kwargs
         )
 
         self.assertEqual(True, ret, ('Calling grant_add on'
-            ' user {0!r} did not return True: {1}').format(
-            uname,
+            ' user {0!r} and grants {1!r} did not return True: {2}').format(
+            user,
+            grant,
             repr(ret)
         ))
        
 
     @destructiveTest
-    @skipIf(True,'User grant are unstable on this branch, WIP')
     def testGrants(self):
         '''
         Test user grant methods
         '''
-#        user_grants
-#        grant_exists
-#        grant_add
-#        grant_revoke
-        assertEqual(True, False)
+        self._addGrantRoutine(
+            grant = 'SELECT, INSERT,UPDATE, CREATE',
+            user=self.users['user1']['name'],
+            db=self.testdb1 + '.*',
+            grant_option=True,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self._addGrantRoutine(
+            grant = 'SELECT, INSERT',
+            user=self.users['user1']['name'],
+            db=self.testdb2 + '.' + self.table1,
+            grant_option=True,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self._addGrantRoutine(
+            grant = '  SELECT, UPDATE,DELETE, CREATE TEMPORARY TABLES',
+            user=self.users['user2']['name'],
+            db=self.testdb1 + '.*',
+            grant_option=True,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self._addGrantRoutine(
+            grant = 'select, ALTER,CREATE TEMPORARY TABLES, EXECUTE ',
+            user=self.users['user3']['name'],
+            db=self.testdb1 + '.*',
+            grant_option=True,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self._addGrantRoutine(
+            grant = 'SELECT, INSERT',
+            user=self.users['user4']['name'],
+            db=self.testdb2 + '.' + self.table2,
+            grant_option=False,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self._addGrantRoutine(
+            grant = 'SELECT, INSERT',
+            user=self.users['user4']['name'],
+            db=self.testdb2 + '.*',
+            grant_option=False,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MysqlModuleDbTest, MysqlModuleUserTest,  MysqlModuleUserGrantsTest)
+    run_tests(MysqlModuleDbTest, MysqlModuleUserTest, MysqlModuleUserGrantsTest)
