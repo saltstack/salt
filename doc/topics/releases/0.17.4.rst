@@ -29,7 +29,7 @@ Version 0.17.4 is another bugfix release for :doc:`0.17.0
 - Fix salt.util.copyfile umask usage (:issue:`8590`)
 - Fix rescheduling of failed jobs (:issue:`8941`)
 - Fix pkg on Amazon Linux (uses yumpkg5 now) (:issue:`8226`)
-- Fix conflicting option sin postgres module (:issue:`8717`)
+- Fix conflicting options in postgres module (:issue:`8717`)
 - Fix ps modules for psutil >= 0.3.0 (:issue:`7432`)
 - Fix postgres module to return False on failure (:issue:`8778`)
 - Fix argument passing for args with pound signs (:issue:`8585`)
