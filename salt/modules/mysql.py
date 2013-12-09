@@ -61,6 +61,38 @@ log = logging.getLogger(__name__)
 # TODO: this is not used anywhere in the code?
 __opts__ = {}
 
+__grants__ = [
+    'ALTER',
+    'ALTER ROUTINE',
+    'CREATE',
+    'CREATE ROUTINE',
+    'CREATE TABLESPACE',
+    'CREATE TEMPORARY TABLES',
+    'CREATE USER',
+    'CREATE VIEW',
+    'DELETE',
+    'DROP',
+    'EVENT',
+    'EXECUTE',
+    'FILE',
+    'GRANT OPTION',
+    'INDEX',
+    'INSERT',
+    'LOCK TABLES',
+    'PROCESS',
+    'REFERENCES',
+    'RELOAD',
+    'REPLICATION CLIENT',
+    'REPLICATION SLAVE',
+    'SELECT',
+    'SHOW DATABASES',
+    'SHOW VIEW',
+    'SHUTDOWN',
+    'SUPER',
+    'TRIGGER',
+    'UPDATE',
+    'USAGE'
+]
 
 def __virtual__():
     '''
@@ -1208,6 +1240,14 @@ def __grant_generate(grant,
     # grant_exists and grant_add ALL work correctly
     if grant == 'ALL':
         grant = 'ALL PRIVILEGES'
+    else:
+        # Grants won't be used as query arguments, so we need
+        # some SQL barriers.
+        # White-list security check
+        grants = grant.split(', ')
+        for grant in grants:
+            if not grant in __grants__:
+                raise Exception('Invalid grant requested: {0!r}'.format(grant))
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1218,13 +1258,13 @@ def __grant_generate(grant,
             dbc = quote_identifier(dbc, for_grants=True)
         if table is not '*':
             table = quote_identifier(table, for_grants=True)
-    qry = ('GRANT %%(grant)s ON %(dbc)s.%(table)s'
+    qry = ('GRANT %(grant)s ON %(dbc)s.%(table)s'
           ' TO %%(user)s@%%(host)s') % dict(
+              grant=grant,
               dbc=dbc,
               table=table
           )
     args = {}
-    args['grant'] = grant
     args['user'] = user
     args['host'] = host
     if salt.utils.is_true(grant_option):
