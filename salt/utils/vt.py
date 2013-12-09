@@ -311,7 +311,7 @@ class Terminal(object):
             '''
             try:
                 _subprocess.TerminateProcess(self._handle, 1)
-            except PermissionError:
+            except OSError:
                 # ERROR_ACCESS_DENIED (winerror 5) is received when the
                 # process already died.
                 ecode = _subprocess.GetExitCodeProcess(self._handle)
@@ -753,7 +753,12 @@ class Terminal(object):
     # <---- Linux Methods ----------------------------------------------------
 
     # ----- Cleanup!!! ------------------------------------------------------>
-    def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):
+    def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
+        # I've disabled W0102 above which is regarding a dangerous default
+        # value of [] for _ACTIVE, though, this is how Python itself handles
+        # their subprocess clean up code.
+        # XXX: Revisit this cleanup code to make it less dangerous.
+
         if self.pid is None:
             # We didn't get to successfully create a child process.
             return
