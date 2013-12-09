@@ -55,7 +55,7 @@ def __virtual__():
     '''
     if not HAS_SLLIBS:
         log.debug(
-            'The SoftLayer Python Library needs to be installed in ordere to'
+            'The SoftLayer Python Library needs to be installed in ordere to '
             'use the SoftLayer salt.cloud module. See: '
             'https://pypi.python.org/pypi/SoftLayer'
         )
