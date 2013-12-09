@@ -250,10 +250,8 @@ def _get_client(version=None, timeout=None):
     '''
     kwargs = {}
     get = __salt__['config.get']
-    for k, p in {
-        'base_url': 'docker.url',
-        'version': 'docker.version',
-    }.items():
+    for k, p in (('base_url', 'docker.url'),
+                 ('version', 'docker.version')):
         param = get(p, NOTSET)
         if param is not NOTSET:
             kwargs[k] = param
