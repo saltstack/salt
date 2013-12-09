@@ -90,11 +90,12 @@ def mounted(name,
         real_device = os.path.realpath(device)
     else:
         real_device = device
-    device_list = [active[real_name]['device']]
-    device_list.append(os.path.realpath(device_list[0]))
-    if active[real_name]['alt_device'] not in device_list:
-        device_list.append(active[real_name]['alt_device'])
+    device_list = []
     if real_name in active:
+        device_list.append(active[real_name]['device'])
+        device_list.append(os.path.realpath(device_list[0]))
+        if active[real_name]['alt_device'] not in device_list:
+            device_list.append(active[real_name]['alt_device'])
         if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
