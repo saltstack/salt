@@ -1167,13 +1167,12 @@ def check_state_result(running):
     dict has any issues
     '''
     if not isinstance(running, dict):
-        return False
+        return 1
     if not running:
-        return False
+        return 2
     for host in running:
         if not isinstance(running[host], dict):
-            return False
-
+            return 3
         if host.find('_|-') == 4:
             # This is a single ret, no host associated
             rets = running[host]
@@ -1182,17 +1181,17 @@ def check_state_result(running):
 
         if isinstance(rets, dict) and 'result' in rets:
             if rets['result'] is False:
-                return False
-            return True
+                return rets.get('__retcode__', 4)
+            return 0
 
         for ret in rets:
             if not isinstance(ret, dict):
-                return False
+                return 5
             if 'result' not in ret:
-                return False
+                return ret.get('__retcode__', 6)
             if ret['result'] is False:
-                return False
-    return True
+                return ret.get('__retcode__', 4)
+    return 0
 
 
 def test_mode(**kwargs):
