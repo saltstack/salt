@@ -208,13 +208,25 @@ class NonBlockingPopen(subprocess.Popen):
                     fcntl.fcntl(conn, fcntl.F_SETFL, flags)
 
     def poll_and_read_until_finish(self):
+        silent_iterations = 0
         while self.poll() is None:
             if self.stdout is not None:
+                silent_iterations = 0
                 self.recv()
 
             if self.stderr is not None:
+                silent_iterations = 0
                 self.recv_err()
 
+            silent_iterations += 1
+
+            if silent_iterations > 100:
+                silent_iterations = 0
+                (stdoutdata, stderrdata) = self.communicate()
+                if stdoutdata:
+                    log.debug(stdoutdata)
+                if stderrdata:
+                    log.error(stderrdata)
             time.sleep(0.01)
 
     def communicate(self, input=None):
