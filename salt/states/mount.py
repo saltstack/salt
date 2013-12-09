@@ -86,15 +86,22 @@ def mounted(name,
     # Get the active data
     active = __salt__['mount.active']()
     real_name = os.path.realpath(name)
-    real_device = os.path.realpath(device)
+    if device[0:1] == "/":
+        real_device = os.path.realpath(device)
+    else:
+        real_device = device
+    device_list = [active[real_name]['device']]
+    device_list.append(os.path.realpath(device_list[0]))
+    if active[real_name]['alt_device'] not in device_list:
+        device_list.append(active[real_name]['alt_device'])
     if real_name in active:
-        if real_device != os.path.realpath(active.__getitem__(real_name).__getitem__('device')) \
-             or device != active.__getitem__(real_name).__getitem__('alt_device'):
+        if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
                                      + "don't match. Wanted: " + device
             if real_device != device:
                 ret['changes']['umount'] += " (" + real_device + ")"
+            ret['changes']['umount'] += ", current: " + ', '.join(device_list)
             out = __salt__['mount.umount'](real_name)
             active = __salt__['mount.active']()
             if real_name in active:
