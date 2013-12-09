@@ -1117,7 +1117,7 @@ def user_remove(user,
         log.error(err)
         return False
 
-    if not user_exists(user, host):
+    if not user_exists(user, host, **connection_args):
         log.info('User {0!r}@{1!r} has been removed'.format(user, host))
         return True
 
