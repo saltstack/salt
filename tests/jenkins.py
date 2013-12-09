@@ -17,11 +17,12 @@ import random
 import shutil
 import hashlib
 import optparse
+import subprocess
 
 try:
-    from salt.utils.vt import Terminal
+    from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
-    # Salt not installed, or vt was not yet shipped with it
+    # Salt not installed, or nb_popen was not yet shipped with it
     SALT_LIB = os.path.abspath(
         os.path.dirname(os.path.dirname(__file__))
     )
@@ -29,14 +30,14 @@ except ImportError:
         sys.path.insert(0, SALT_LIB)
     try:
         # Let's try using the current checked out code
-        from salt.utils.vt import Terminal
+        from salt.utils.nb_popen import NonBlockingPopen
     except ImportError:
         # Still an ImportError??? Let's use some "brute-force"
         sys.path.insert(
             0,
             os.path.join(SALT_LIB, 'salt', 'utils')
         )
-        from vt import Terminal  # pylint: disable=F0401
+        from nb_popen import NonBlockingPopen
 
 
 def generate_vm_name(platform):
@@ -60,17 +61,15 @@ def delete_vm(options):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = Terminal(
+    proc = NonBlockingPopen(
         cmd,
         shell=True,
-        stream_stdout=True,
-        stream_stderr=True,
-        log_stderr=True,
-        log_stdout=True
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stream_stds=True
     )
-    while proc.isalive():
-        time.sleep(0.025)
-    return proc.exitstatus
+    proc.poll_and_read_until_finish()
+    proc.communicate()
 
 
 def echo_parseable_environment(options):
@@ -112,21 +111,19 @@ def download_unittest_reports(options):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = Terminal(
+        proc = NonBlockingPopen(
             cmd,
             shell=True,
-            stream_stdout=True,
-            stream_stderr=True,
-            log_stderr=True,
-            log_stdout=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
         )
-        while proc.isalive():
-            time.sleep(0.025)
-
-        if proc.exitstatus != 0:
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
             print(
                 '\nFailed to execute command. Exit code: {0}'.format(
-                    proc.exitstatus
+                    proc.returncode
                 )
             )
         time.sleep(0.25)
@@ -154,21 +151,19 @@ def download_coverage_report(options):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = Terminal(
+        proc = NonBlockingPopen(
             cmd,
             shell=True,
-            stream_stdout=True,
-            stream_stderr=True,
-            log_stderr=True,
-            log_stdout=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
         )
-        while proc.isalive():
-            time.sleep(0.025)
-
-        if proc.exitstatus != 0:
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
             print(
                 '\nFailed to execute command. Exit code: {0}'.format(
-                    proc.exitstatus
+                    proc.returncode
                 )
             )
         time.sleep(0.25)
@@ -201,21 +196,19 @@ def download_remote_logs(options):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = Terminal(
+        proc = NonBlockingPopen(
             cmd,
             shell=True,
-            stream_stdout=True,
-            stream_stderr=True,
-            log_stderr=True,
-            log_stdout=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
         )
-        while proc.isalive():
-            time.sleep(0.025)
-
-        if proc.exitstatus != 0:
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
             print(
                 '\nFailed to execute command. Exit code: {0}'.format(
-                    proc.exitstatus
+                    proc.returncode
                 )
             )
         time.sleep(0.25)
@@ -241,18 +234,17 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = Terminal(
+    proc = NonBlockingPopen(
         cmd,
         shell=True,
-        stream_stdout=True,
-        stream_stderr=True,
-        log_stderr=True,
-        log_stdout=True
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stream_stds=True
     )
-    while proc.isalive():
-        time.sleep(0.025)
+    proc.poll_and_read_until_finish()
+    proc.communicate()
 
-    retcode = proc.exitstatus
+    retcode = proc.returncode
     if retcode != 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
@@ -280,36 +272,36 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = Terminal(
+    #proc = NonBlockingPopen(
+    proc = subprocess.Popen(
         cmd,
         shell=True,
-        stream_stdout=True,
-        stream_stderr=True,
-        log_stderr=True,
-        log_stdout=True
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    #    stream_stds=True
     )
-    retcode = None
-    while proc.isalive():
-        stdout, _ = proc.recv()
-        if stdout and retcode is None:
-            try:
-                match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)',
-                                  stdout)
-                if match:
-                    retcode = int(match.group('exitcode'))
-            except AttributeError:
-                # No regex matching
-                retcode = 1
-            except ValueError:
-                # Not a number!?
-                retcode = 1
-            except TypeError:
-                # No output!?
-                retcode = 1
-                if stdout:
-                    # Anything else, raise the exception
-                    raise
-        time.sleep(0.025)
+    #proc.poll_and_read_until_finish()
+    stdout, stderr = proc.communicate()
+
+    if stdout:
+        print(stdout)
+    sys.stdout.flush()
+
+    try:
+        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+        retcode = int(match.group('exitcode'))
+    except AttributeError:
+        # No regex matching
+        retcode = 1
+    except ValueError:
+        # Not a number!?
+        retcode = 1
+    except TypeError:
+        # No output!?
+        retcode = 1
+        if stdout:
+            # Anything else, raise the exception
+            raise
 
     if opts.download_remote_reports:
         # Download unittest reports
