@@ -47,14 +47,7 @@ def _set_retcode(ret):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret):
-        __context__['retcode'] = 2
-    if isinstance(ret, dict):
-        for _, result in ret.items():
-            retcode = result['__retcode__']
-            if retcode != 0:
-              __context__['retcode'] = retcode
-              break
+    __context__['retcode'] = salt.utils.check_state_result(ret)
 
 
 def _check_pillar(kwargs):
@@ -149,8 +142,7 @@ def low(data, queue=False, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__['retcode'] = 1
-    if salt.utils.check_state_result(ret):
-        __context__['retcode'] = 2
+    __context__['retcode'] = salt.utils.check_state_result(ret)
     return ret
 
 
