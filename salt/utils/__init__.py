@@ -218,6 +218,10 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
+    # warning: jinja content may contain unicode strings
+    # instead of utf-8.
+    buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
+
     return '---\n{0}\n---'.format('\n'.join(buf))
 
 

@@ -927,6 +927,159 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(filename)
 
 
+    def test_issue_8947_utf8_sls(self):
+        '''
+        Test some file operation with utf-8 chararacters on the sls
+        
+        This is more generic than just a file test. Feel free to move
+        '''
+        # Get a path to the temporary file
+         # 한국어 시험 (korean)
+        # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
+        # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
+        korean_1 = '한국어 시험'
+        korean_utf8_1 = ('\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4'
+                         ' \xec\x8b\x9c\xed\x97\x98')
+        korean_unicode_1 = u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8'
+        korean_2 = '첫 번째 행'
+        korean_utf8_2 = '\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89'
+        korean_unicode_2 = u'\uccab \ubc88\uc9f8 \ud589'
+        korean_3 = '마지막 행'
+        korean_utf8_3 = '\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89'
+        korean_unicode_3 = u'\ub9c8\uc9c0\ub9c9 \ud589'
+        test_file = os.path.join(integration.TMP,
+                                 'salt_utf8_tests/'+korean_utf8_1+'.txt'
+        )
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-8947.sls')
+        # create the sls template
+        template_lines = [
+            '# -*- coding: utf-8 -*-',
+            'some-utf8-file-create:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            "    - contents: {0}".format(korean_utf8_1),
+            '    - makedirs: True',
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-create2:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            '    - contents: |',
+            '       {0}'.format(korean_utf8_2),
+            '       {0}'.format(korean_utf8_1),
+            '       {0}'.format(korean_utf8_3),
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-exists:',
+            '  file.exists:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-create2',
+            'some-utf8-file-content-test:',
+            '  cmd.run:',
+            '    - name: \'cat "{0}"\''.format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-exists',
+            'some-utf8-file-content-remove:',
+            '  cmd.run:',
+            '    - name: \'rm -f "{0}"\''.format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-test',
+            'some-utf8-file-removed:',
+            '  file.missing:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-remove',
+        ]
+        open(template_path, 'w').write(
+                '\n'.join(template_lines))
+        try:
+            ret = self.run_function('state.sls', mods='issue-8947')
+            if not isinstance(ret, dict):
+                raise AssertionError(
+                    ('Something went really wrong while testing this sls:'
+                    ' {0}').format(repr(ret))
+                )
+            # using unicode.encode('utf-8') we should get the same as
+            # an utf-8 string
+            expected = {
+                ('file_|-some-utf8-file-create_|-{0}'
+                '_|-managed').format(test_file): {
+                    'name': '{0}'.format(test_file),
+                    '__run_num__': 0,
+                    'comment': 
+                          'File {0} updated'.format(test_file),
+                    'diff' : 'New file'
+                },
+                ('file_|-some-utf8-file-create2_|-{0}'
+                '_|-managed').format(test_file): {
+                    'name': '{0}'.format(test_file),
+                    '__run_num__': 1,
+                    'comment': 
+                          'File {0} updated'.format(test_file),
+                    'diff' : 'Replace binary file with text file'
+                },
+                ('file_|-some-utf8-file-exists_|-{0}'
+                '_|-exists').format(test_file): {
+                    'name': '{0}'.format(test_file),
+                    '__run_num__': 2,
+                    'comment': 
+                          'Path {0} exists'.format(test_file)
+                },
+                ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
+                 '_|-run').format(test_file): {
+                    'name': 'cat "{0}"'.format(test_file),
+                    '__run_num__': 3,
+                    'comment':
+                          'Command "cat "{0}"" run'.format(test_file),
+                    'stdout' : '{0}\n{1}\n{2}'.format(
+                        korean_unicode_2.encode('utf-8'),
+                        korean_unicode_1.encode('utf-8'),
+                        korean_unicode_3.encode('utf-8')
+                    )
+                },
+                ('cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"'
+                 '_|-run').format(test_file): {
+                    'name': 'rm -f "{0}"'.format(test_file),
+                    '__run_num__': 4,
+                    'comment': 
+                          'Command "rm -f "{0}"" run'.format(test_file),
+                    'stdout' : ''
+                },
+                ('file_|-some-utf8-file-removed_|-{0}'
+                '_|-missing').format(test_file): {
+                    'name': '{0}'.format(test_file),
+                    '__run_num__': 5,
+                    'comment': 
+                          'Path {0} is missing'.format(test_file),
+                }
+            }
+            result = {}
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
+                result.update({
+                 name: {
+                    'name' : step['name'],
+                    '__run_num__' : step['__run_num__'],
+                    'comment' : step['comment']
+                }})
+                if 'diff' in step['changes']:
+                    result[name]['diff'] = step['changes']['diff']
+                if 'stdout' in step['changes']:
+                    result[name]['stdout'] = step['changes']['stdout']
+            self.maxDiff=None
+            self.assertEqual(expected, result)
+            cat_id = ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
+                      '_|-run').format(test_file)
+            self.assertEqual(
+                result[cat_id]['stdout'],
+                korean_2 + '\n' + korean_1 + '\n' + korean_3
+            )
+        finally:
+            if os.path.isdir(test_file):
+                os.unlink(test_file)
+                os.unlink(template_path)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FileTest)
