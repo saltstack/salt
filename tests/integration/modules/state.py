@@ -487,41 +487,49 @@ fi
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-B_|-echo B second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B second" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-C_|-echo C third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo C third" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 5,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       foobar: A\n',
-                'result': False},
+                'result': False
+            },
             'cmd_|-G_|-echo G_|-run': {
                 '__run_num__': 6,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False},
+                'result': False
+            },
             'cmd_|-H_|-echo H_|-run': {
                 '__run_num__': 7,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False}
+                'result': False
+            }
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
