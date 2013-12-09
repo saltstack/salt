@@ -56,5 +56,32 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
                 )
         if not data:
             data = {}
+        else:
+            data = _yaml_result_unicode_to_utf8(data)
         log.debug('Results of YAML rendering: \n{0}'.format(data))
         return data
+
+
+def _yaml_result_unicode_to_utf8(data):
+    ''''
+    Replace `unicode` strings by utf-8 `str` in final yaml result
+
+    This is a recursive function
+    '''
+    if isinstance(data, OrderedDict):
+        for key, elt in data.iteritems():
+            if isinstance(elt, unicode):
+                # Here be dragons
+                data[key] = elt.encode('utf-8')
+            elif isinstance(elt, OrderedDict):
+                data[key] = _yaml_result_unicode_to_utf8(elt)
+            elif isinstance(elt, list):
+                for i in xrange(len(elt)):
+                    elt[i] = _yaml_result_unicode_to_utf8(elt[i])
+    elif isinstance(data, list):
+        for i in xrange(len(data)):
+            data[i] = _yaml_result_unicode_to_utf8(data[i])
+    elif isinstance(data, unicode):
+        # here also
+        data = data.encode('utf-8')
+    return data
