@@ -399,10 +399,34 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         # Shell out to smbclient to create C:\salt\conf\pki\minion
         win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
         # Shell out to smbclient to copy over minion keys
-        ## minion_pub, minion_pem, minion_conf
+        ## minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
+        if minion_pub:
+            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
+
+        if minion_pem:
+            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
+
+        # Shell out to smbclient to copy over win_installer
+        ## win_installer refers to a file such as:
+        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
+        ## ..which exists on the same machine as salt-cloud
+        comps = win_installer.split('/')
+        local_path = '/'.join(comps[:-1])
+        installer = comps[-1]
+        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
+            creds, local_path, installer
+        ))
+        # Shell out to winexe to execute win_installer
+        ## We don't actually need to set the master and the minion here since
+        ## the minion config file will be set next via smb_file
+        win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+            creds, installer, master, name
+        ))
+
+        # Shell out to smbclient to copy over minion_conf
         if minion_conf:
             if not isinstance(minion_conf, dict):
                 # Let's not just fail regarding this change, specially
@@ -424,27 +448,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
                 kwargs
             )
-
-        if minion_pub:
-            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
-
-        if minion_pem:
-            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
-
-        # Shell out to smbclient to copy over win_installer
-        ## win_installer refers to a file such as:
-        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
-        ## ..which exists on the same machine as salt-cloud
-        comps = win_installer.split('/')
-        local_path = '/'.join(comps[:-1])
-        installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
-        # Shell out to winexe to execute win_installer
-        win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-            creds, installer, master, name
-        ))
+        
         # Shell out to smbclient to delete C:\salttmp\ and installer file
         ## Unless keep_tmp is True
         if not keep_tmp:
@@ -455,6 +459,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
                 creds,
             ))
+        
         # Shell out to winexe to ensure salt-minion service started
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
