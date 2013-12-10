@@ -17,6 +17,15 @@ try:
 except ImportError:
     HAS_MEMCACHE = False
 
+
+def __virtual__():
+    '''
+    Only load if have installed python memcache module
+    '''
+    if not HAS_MEMCACHE:
+        return False
+    return 'memcache'
+
 log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
