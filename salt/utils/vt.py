@@ -273,6 +273,14 @@ class Terminal(object):
 
     # <---- Common Public API ------------------------------------------------
 
+    # ----- Common Internal API --------------------------------------------->
+    def _translate_newlines(self, data):
+        if data is None or not data:
+            return
+        # PTY's always return \r\n as the line feeds
+        return data.replace('\r\n', os.linesep)
+    # <---- Common Internal API ----------------------------------------------
+
     # ----- Context Manager Methods ----------------------------------------->
     def __enter__(self):
         return self
@@ -542,7 +550,9 @@ class Terminal(object):
             # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist:
                 try:
-                    stderr = os.read(self.child_fde, maxsize)
+                    stderr = self._translate_newlines(
+                        os.read(self.child_fde, maxsize)
+                    )
 
                     if not stderr:
                         self.flag_eof = True
@@ -570,7 +580,9 @@ class Terminal(object):
             # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist:
                 try:
-                    stdout = os.read(self.child_fd, maxsize)
+                    stdout = self._translate_newlines(
+                        os.read(self.child_fd, maxsize)
+                    )
 
                     if not stdout:
                         self.flag_eof = True
