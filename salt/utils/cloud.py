@@ -457,7 +457,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
                 kwargs
             )
-        
         # Shell out to smbclient to delete C:\salttmp\ and installer file
         ## Unless keep_tmp is True
         if not keep_tmp:
@@ -468,7 +467,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
                 creds,
             ))
-        
         # Shell out to winexe to ensure salt-minion service started
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
