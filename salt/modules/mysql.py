@@ -197,6 +197,7 @@ def _connect(**kwargs):
     # retrieve utf8 strings as unicode() objects in salt
     # and we do not want that.
     #_connarg('connection_use_unicode', 'use_unicode')
+    connargs['use_unicode'] = False
     _connarg('connection_charset', 'charset')
 
     try:
