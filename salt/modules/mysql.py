@@ -283,26 +283,27 @@ def _grant_to_tokens(grant):
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ''
     phrase = 'grants'
+    #log.debug('_grant_to_tokens lex analysis {0!r}'.format(exploded_grant))
 
     for token in exploded_grant[position_tracker:]:
 
-        if token == ',':
+        if token == ',' and phrase == 'grants':
             position_tracker += 1
             continue
 
-        if token == 'ON':
+        if token == 'ON' and phrase == 'grants':
             phrase = 'db'
             position_tracker += 1
             continue
 
-        elif token == 'TO':
+        elif token == 'TO' and phrase == 'tables':
             phrase = 'user'
             position_tracker += 1
             continue
 
 
         elif token == '@' and phrase == 'pre-host':
-            phrase='host'
+            phrase = 'host'
             position_tracker += 1
             continue
 
@@ -1438,9 +1439,9 @@ def grant_exists(grant,
         log.debug('Grant does not exist, or is perhaps not ordered properly?')
         return False
 
+    target_tokens = None
     for grant in grants:
         try:
-            target_tokens = None
             if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
@@ -1448,11 +1449,15 @@ def grant_exists(grant,
                     grant_tokens['database'] == target_tokens['database'] and \
                     grant_tokens['host'] == target_tokens['host'] and \
                     set(grant_tokens['grant']) == set(target_tokens['grant']):
-                log.debug(grant_tokens)
-                log.debug(target_tokens)
                 return True
+            else:
+                log.debug('grants mismatch {0!r}<>{1!r}'.format(
+                    grant_tokens,
+                    target_tokens
+                ))
 
         except Exception as exc:  # Fallback to strict parsing
+            log.exception(exc)
             if grants is not False and target in grants:
                 log.debug('Grant exists.')
                 return True
