@@ -163,7 +163,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'pacman -Q'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, quiet=True).splitlines()
     for line in out:
         if not line:
             continue

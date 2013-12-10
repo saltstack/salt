@@ -264,7 +264,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'rpm -qa --queryformat "{0}\n"'.format(__QUERYFORMAT)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](cmd, quiet=True).splitlines():
         pkginfo = _parse_pkginfo(line)
         if pkginfo is None:
             continue
