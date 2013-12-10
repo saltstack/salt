@@ -10,7 +10,7 @@ def external_ip():
     '''
 
     if not HAS_REQUESTS:
-        return []
+        return {}
 
     try:
         r = requests.get('http://ipecho.net/plain')
