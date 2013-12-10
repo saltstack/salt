@@ -1322,25 +1322,4 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
-try:
-    import requests
-    HAS_REQUESTS = True
-except:
-    HAS_REQUESTS = False
-
-def external_ip():
-    '''
-    Return the external IP address reported by ipecho.net
-    '''
-
-    if not HAS_REQUESTS:
-        return False
-
-    try:
-        r = requests.get('http://ipecho.net/plain')
-        ip = r.content
-    except:
-        ip = False
-    return {'external_ip': ip}
-
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
