@@ -314,6 +314,15 @@ def wait_for_port(host, port=22, timeout=900):
                 )
             )
 
+def validate_windows_cred(host, port=445, username='Administrator',
+                          password=None):
+    '''
+    Check if the windows credentials are valid
+    '''
+    retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
+        username, password, host
+    ))
+    return retcode == 0
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
