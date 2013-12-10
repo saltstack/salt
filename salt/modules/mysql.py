@@ -1565,7 +1565,7 @@ def grant_revoke(grant,
     # Grants are paste directly in SQL, must filter it
     exploded_grants = grant.split(",")
     for chkgrant in exploded_grants:
-        if not chkgrant.strip() in __grants__:
+        if not chkgrant.strip().upper() in __grants__:
             raise Exception('Invalid grant : {0!r}'.format(
                 chkgrant
             ))
