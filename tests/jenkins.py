@@ -240,7 +240,7 @@ def run(opts):
 
     cmd = (
         'salt-cloud -l debug --no-color --script-args "-D -n git {commit}" '
-        '--start-action \'saltutil.sync_all && salt-call state.sls {state} '
+        '--start-action \'saltutil.sync_all && salt-call state.sls {sls} '
         'pillar="{pillar}" --no-color\' -p {provider}_{platform} {0}'.format(
             vm_name,
             sls=opts.sls,
