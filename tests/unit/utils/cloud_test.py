@@ -25,13 +25,19 @@ class CloudUtilsTestCase(TestCase):
     def test_ssh_password_regex(self):
         '''Test matching ssh password patterns'''
         for pattern in ('Password for root@127.0.0.1:',
-                        'password for root@127.0.0.1:',
                         'root@127.0.0.1 Password:',
-                        'root@127.0.0.1 password:',
-                        ' Password:',
-                        ' password:'):
+                        ' Password:'):
             self.assertNotEqual(
                 cloud.SSH_PASSWORD_PROMP_RE.match(pattern), None
+            )
+            self.assertNotEqual(
+                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower()), None
+            )
+            self.assertNotEqual(
+                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.strip()), None
+            )
+            self.assertNotEqual(
+                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()), None
             )
 
 
