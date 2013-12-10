@@ -161,7 +161,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             collate='utf8_general_ci',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
 
@@ -189,7 +188,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             collate='utf8_general_ci',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
 

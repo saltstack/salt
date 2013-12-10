@@ -249,7 +249,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
     def test_mysql_dbname_character_percent(self):
         '''
         Play with the '%' character problems
-        
+
         This character should be escaped in the form '%%' on queries, but only
         when theses queries have arguments. It is also a special character
         in LIKE SQL queries. Finally it is used to indicate query arguments.
@@ -318,7 +318,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
-                               connection_use_unicode=True,
                                connection_charset='utf8',
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -328,7 +327,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
-                               connection_use_unicode=True,
                                connection_charset='utf8',
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -342,7 +340,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
-                               connection_use_unicode=True,
                                connection_charset='utf8',
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -352,7 +349,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                test_conn=False,
                                connection_user=self.user,
                                connection_pass=self.password,
-                               connection_use_unicode=True,
                                connection_charset='utf8',
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -709,7 +705,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                 password_hash=new_password_hash,
                 connection_user=self.user,
                 connection_pass=self.password,
-                connection_use_unicode=True,
                 connection_charset='utf8',
                 saltenv={"LC_ALL": "en_US.utf8"}
             )
@@ -730,7 +725,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             host=host,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -816,7 +810,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password_hash=None,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -834,7 +827,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             new_password_hash=user2_pwd_hash,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -845,7 +837,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             allow_passwordless=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -856,7 +847,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             unix_socket=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -869,7 +859,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password_hash=user2_pwd_hash,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -883,7 +872,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             allow_passwordless=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -898,7 +886,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             unix_socket=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -956,7 +943,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password_hash='*F3A2A51A9B0F2BE2468926B4132313728C250DBF',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -968,7 +954,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password=user4_pwd,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -984,7 +969,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             unix_socket=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -995,7 +979,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password=user5_pwd,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1010,7 +993,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             new_password=user6_pwd_u,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1022,7 +1004,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             password=user6_pwd_utf8,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1094,7 +1075,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_list',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1131,6 +1111,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         # mysql --user="user \"2'標" --password="user \"2'標b" information_schema
         # Seems to be a python-mysql library problem with user names containing
         # utf8 characters
+        # @see https://github.com/farcepest/MySQLdb1/issues/40
         #import urllib
         #ret = self.run_function(
         #    'mysql.query',
@@ -1139,7 +1120,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    connection_user=urllib.quote_plus(user2),
         #    connection_pass=urllib.quote_plus(user2_pwd),
         #    connection_host='localhost',
-        #    connection_use_unicode=True,
         #    connection_charset='utf8',
         #    saltenv={"LC_ALL": "en_US.utf8"}
         #)
@@ -1177,7 +1157,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    connection_user=user4_utf8,
         #    connection_pass=user4_pwd,
         #    connection_host='localhost',
-        #    connection_use_unicode=True,
         #    connection_charset='utf8',
         #    saltenv={"LC_ALL": "en_US.utf8"}
         #)
@@ -1197,7 +1176,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_user=user5_utf8,
             connection_pass=user5_pwd,
             connection_host='localhost',
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1216,7 +1194,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                               host='10.0.0.1',
                               connection_user=self.user,
                               connection_pass=self.password,
-                              connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1224,7 +1201,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                               host='10.0.0.2',
                               connection_user=self.user,
                               connection_pass=self.password,
-                              connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1232,7 +1208,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                               host='localhost',
                               connection_user=self.user,
                               connection_pass=self.password,
-                              connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1250,7 +1225,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                               host='%',
                               connection_user=self.user,
                               connection_pass=self.password,
-                              connection_use_unicode=True,
                               connection_charset='utf8',
                               saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1274,7 +1248,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
             'mysql.user_list',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1443,7 +1416,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             password=password,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1461,7 +1433,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             host='localhost',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
@@ -1559,7 +1530,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             escape=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
         self._addGrantRoutine(
@@ -1570,7 +1540,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             escape=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
         self._addGrantRoutine(
@@ -1581,7 +1550,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             escape=True,
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
         # '' is valid for anonymous users
@@ -1645,7 +1613,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             host='localhost',
             connection_user=self.user,
             connection_pass=self.password,
-            connection_use_unicode=True,
             connection_charset='utf8'
         )
         self.assertEqual(ret, [

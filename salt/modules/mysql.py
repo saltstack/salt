@@ -20,16 +20,14 @@ Module to provide MySQL compatibility to salt.
         mysql.db: 'mysql'
         mysql.unix_socket: '/tmp/mysql.sock'
         mysql.unix_socket: '/tmp/mysql.sock'
-        mysql.use_unicode: True
         mysql.charset: 'utf8'
 
     You can also use a defaults file::
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-.. versionchanged:: 0.17.3
-    charset and use_unicode connection arguments added, note that charset usage
-    requires use_unicode activated. See MySQLdb documentation for details.
+.. versionchanged:: 0.18
+    charset connection argument added. This is a MySQL charset, not a python one
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
     CLI by using the arguments defined :doc:`here
@@ -193,7 +191,12 @@ def _connect(**kwargs):
     _connarg('connection_unix_socket', 'unix_socket')
     _connarg('connection_default_file', 'read_default_file')
     _connarg('connection_default_group', 'read_default_group')
-    _connarg('connection_use_unicode', 'use_unicode')
+    # MySQLdb states that this is required for charset usage
+    # but in fact it's more than it's internally activated
+    # when charset is used, activating use_unicode here would
+    # retrieve utf8 strings as unicode() objects in salt
+    # and we do not want that.
+    #_connarg('connection_use_unicode', 'use_unicode')
     _connarg('connection_charset', 'charset')
 
     try:
