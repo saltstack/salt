@@ -762,11 +762,11 @@ def db_exists(name, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    # Warn: here db identifier is bot backtyped but should be
-    #  escaped as a string value
+    # Warn: here db identifier is not backtyped but should be
+    #  escaped as a string value. Note also that LIKE special characters
+    # '_' and '%' should also be escaped.
+    args = {"dbname": name.replace('%','\%').replace('_','\_')}
     qry = "SHOW DATABASES LIKE %(dbname)s;"
-    args = {"dbname": name}
-    log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
@@ -1368,9 +1368,11 @@ def __grant_generate(grant,
 
     if escape:
         if dbc is not '*':
-            dbc = quote_identifier(dbc, for_grants=True)
+            # _ and % are authorized on GRANT queries and should get escaped
+            # on the db name, but only if not requesting a table level grant
+            dbc = quote_identifier(dbc, for_grants=(table is '*'))
         if table is not '*':
-            table = quote_identifier(table, for_grants=True)
+            table = quote_identifier(table)
     qry = ('GRANT %(grant)s ON %(dbc)s.%(table)s'
           ' TO %%(user)s@%%(host)s') % dict(
               grant=grant,
@@ -1566,12 +1568,21 @@ def grant_revoke(grant,
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
-    # _ and % are authorized on GRANT queries and should get escaped
-    # on the db name
-    s_database = quote_identifier(database, for_grants=True)
-    qry = 'REVOKE %(grant) ON %(database) FROM %%(user}s@%%(host)s;' % dict(
+
+    db_part = database.rpartition('.')
+    dbc = db_part[0]
+    table = db_part[2]
+    if dbc is not '*':
+        # _ and % are authorized on GRANT queries and should get escaped
+        # on the db name, but only if not requesting a table level grant
+        s_database = quote_identifier(dbc, for_grants=(table is '*'))
+    if table is not '*':
+        table = quote_identifier(table)
+    qry = ('REVOKE %(grant) ON %(database)s.%(table)s '
+           'FROM %%(user}s@%%(host)s;') % dict(
         grant=grant,
-        database=s_database
+        database=s_database,
+        table=table
     )
     args = {}
     args['user'] = user
