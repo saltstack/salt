@@ -68,7 +68,7 @@ def list_present(name, value):
     value
        The value is present in the list type grain
 
-    The grain should be `list type<http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
+    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
 
     .. code-block:: yaml
 
@@ -120,7 +120,7 @@ def list_absent(name, value):
     value
        The value is  absent in the list type grain
 
-    The grain should be `list type<http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
+    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
 
     .. code-block:: yaml
 
