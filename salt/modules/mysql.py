@@ -1582,8 +1582,8 @@ def grant_revoke(grant,
         s_database = quote_identifier(dbc, for_grants=(table is '*'))
     if table is not '*':
         table = quote_identifier(table)
-    qry = ('REVOKE %(grant) ON %(database)s.%(table)s '
-           'FROM %%(user}s@%%(host)s;') % dict(
+    qry = ('REVOKE %(grant)s ON %(database)s.%(table)s '
+           'FROM %%(user)s@%%(host)s;') % dict(
         grant=grant,
         database=s_database,
         table=table
