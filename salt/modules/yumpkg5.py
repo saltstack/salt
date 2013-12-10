@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltInvocationError
 from salt.utils import namespaced_function as _namespaced_function
 from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
                                  get_repo, expand_repo_def, del_repo)
