@@ -104,9 +104,10 @@ def present(name,
         To have Salt forcibly revoke perms before applying a new grant, enable
         the 'revoke_first options.
 
-        WARNING: This will *remove* permissions for a database before attempting to apply
-        new permissions. There is no guarantee that new permissions will be applied correctly
-        which can leave your database security in an unknown and potentially dangerous state.
+        WARNING: This will *remove* permissions for a database before attempting
+        to apply new permissions. There is no guarantee that new permissions
+        will be applied correctly which can leave your database security in an
+        unknown and potentially dangerous state.
         Use with caution!
 
         default: False
@@ -128,24 +129,37 @@ def present(name,
             ret['comment'] = err
             ret['result'] = False
             return ret
-    if revoke_first:
-        #  for each grant, break into tokens and see if its on the same user/db as ours. (there is probably only one)
-        for user_grant in __salt__['mysql.user_grants'](user, host, **connection_args):
-            if __salt__['mysql.tokenize_grant'](user_grant)['database'].replace('`', '')\
-            == database.replace('`', ''):
-                grant_to_revoke = ','.join(__salt__['mysql.tokenize_grant'](user_grant)['grant']).rstrip(',')
-                __salt__['mysql.grant_revoke'](grant_to_revoke,
-                database,
-                user,
-                host=host,
-                grant_option=grant_option,
-                escape=escape,
-                connection_args=connection_args)  # Probably needs some ordering love
+    if revoke_first and not __opts__['test']:
+        #  for each grant, break into tokens and see if its on the same
+        # user/db/table as ours. (there is probably only one)
+        user_grants = __salt__['mysql.user_grants'](user, host, **connection_args)
+        if not user_grants:
+            user_grants = []
+        for user_grant in user_grants:
+            token_grants = __salt__['mysql.tokenize_grant'](user_grant)
+            db_part = database.rpartition('.')
+            my_db = db_part[0]
+            my_table = db_part[2]
+            my_db = __salt__['mysql.quote_identifier'] \
+                    (my_db, (my_table is '*'))
+            my_table = __salt__['mysql.quote_identifier'](my_table)
+            # Removing per table grants in case of database level grant !!!
+            if token_grants['database'] == my_db :
+                grant_to_revoke = ','.join(token_grants['grant']).rstrip(',')
+                __salt__['mysql.grant_revoke'](
+                    grant=grant_to_revoke,
+                    database=database,
+                    user=user,
+                    host=host,
+                    grant_option=grant_option,
+                    escape=escape,
+                    **connection_args)
 
     # The grant is not present, make it!
     if __opts__['test']:
+        # there is probably better things to make in test mode
         ret['result'] = None
-        ret['comment'] = 'MySQL grant {0} is set to be created'.format(name)
+        ret['comment'] = ('MySQL grant {0} is set to be created').format(name)
         return ret
     if __salt__['mysql.grant_add'](
         grant, database, user, host, grant_option, escape, **connection_args
