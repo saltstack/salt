@@ -214,7 +214,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
         super(LogstashFormatter, self).__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
-        return datetime.utcfromtimestamp(record.created).isoformat()
+        return datetime.fromtimestamp(record.created).isoformat()
 
     def format(self, record):
         host = socket.getfqdn()
