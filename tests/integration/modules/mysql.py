@@ -246,6 +246,62 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
 
     @destructiveTest
+    def test_mysql_dbname_character_percent(self):
+        '''
+        Play with the '%' character problems
+        
+        This character should be escaped in the form '%%' on queries, but only
+        when theses queries have arguments. It is also a special character
+        in LIKE SQL queries. Finally it is used to indicate query arguments.
+        '''
+        db_name1 = "foo%1_"
+        db_name2 = "foo%12"
+        ret = self.run_function(
+          'mysql.db_create',
+          name=db_name1,
+          character_set='utf8',
+          collate='utf8_general_ci',
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertEqual(True, ret)
+        ret = self.run_function(
+          'mysql.db_create',
+          name=db_name2,
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertEqual(True, ret)
+        ret = self.run_function(
+          'mysql.db_remove',
+          name=db_name1,
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertEqual(True, ret)
+        ret = self.run_function(
+            'mysql.db_exists',
+            name=db_name1,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(False, ret)
+        ret = self.run_function(
+            'mysql.db_exists',
+            name=db_name2,
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(True, ret)
+        ret = self.run_function(
+          'mysql.db_remove',
+          name=db_name2,
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertEqual(True, ret)
+
+    @destructiveTest
     def test_database_creation_utf8(self):
         '''
         Test support of utf8 in database names
@@ -306,7 +362,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         '''
         Test maintenance operations on a created database
         '''
-        dbname = u"foo'-- `\"'"
+        dbname = u"foo%'-- `\"'"
         # create database
         # but first silently try to remove it
         # in case of previous tests failures
@@ -334,8 +390,8 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
         self.assertEqual(True, ret)
         # Create 3 tables
-        tablenames = {'Atable "`1': 'MYISAM',
-                      'Btable \'`2': 'InnoDB',
+        tablenames = {'A%table "`1': 'MYISAM',
+                      'B%table \'`2': 'InnoDB',
                       'Ctable --`3': 'MEMORY'
                      }
         for tablename, engine in iter(sorted(tablenames.iteritems())):
@@ -359,7 +415,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             insert_query += "('bar');"
 
             # populate database
-            log.info('Adding table{0!r}'.format(tablename,))
+            log.info('Adding table {0!r}'.format(tablename,))
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -376,7 +432,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                     )
                 )
             self.assertEqual(ret['rows affected'], 0)
-            log.info('Populating table{0!r}'.format(tablename,))
+            log.info('Populating table {0!r}'.format(tablename,))
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -411,7 +467,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                 )
             self.assertEqual(ret['rows affected'], 50)
         # test check/repair/opimize on 1 table
-        tablename = 'Atable "`1'
+        tablename = 'A%table "`1'
         ret = self.run_function(
           'mysql.db_check',
           name=dbname,
@@ -1251,9 +1307,10 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
     # yep, theses are valid MySQL db names
     # very special chars are _ % and .
     testdb1 = 'tes.t\'"saltdb'
-    testdb2 = 'test `(:=saltdb)'
+    testdb2 = 't_st `(:=salt%b)'
+    testdb3 = 'test `(:=salteeb)'
     table1 = 'foo'
-    table2 = "foo `\'bar"
+    table2 = "foo `\'%_bar"
     users = {
         'user1': {
             'name': 'foo',
@@ -1328,7 +1385,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table1),
             engine='MYISAM',
         )
-        log.info('Adding table{0!r}'.format(self.table1,))
+        log.info('Adding table {0!r}'.format(self.table1,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -1342,7 +1399,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table2),
             engine='MYISAM',
         )
-        log.info('Adding table{0!r}'.format(self.table2,))
+        log.info('Adding table {0!r}'.format(self.table2,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -1430,14 +1487,28 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             escape=escape,
             **kwargs
         )
-
         self.assertEqual(True, ret, ('Calling grant_add on'
             ' user {0!r} and grants {1!r} did not return True: {2}').format(
             user,
             grant,
             repr(ret)
         ))
-       
+        ret = self.run_function(
+            'mysql.grant_exists',
+            grant=grant,
+            database=db,
+            user=user,
+            grant_option=grant_option,
+            escape=escape,
+            **kwargs
+        )
+        self.assertEqual(True, ret, ('Calling grant_exists on'
+            ' user {0!r} and grants {1!r} did not return True: {2}').format(
+            user,
+            grant,
+            repr(ret)
+        ))
+
 
     @destructiveTest
     def testGrants(self):
@@ -1454,7 +1525,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
         self._addGrantRoutine(
-            grant = 'SELECT, INSERT',
+            grant = 'INSERT, SELECT',
             user=self.users['user1']['name'],
             db=self.testdb2 + '.' + self.table1,
             grant_option=True,
@@ -1487,17 +1558,117 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             grant_option=False,
             escape=True,
             connection_user=self.user,
-            connection_pass=self.password
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8'
         )
         self._addGrantRoutine(
-            grant = 'SELECT, INSERT',
+            grant = 'CREATE',
             user=self.users['user4']['name'],
             db=self.testdb2 + '.*',
             grant_option=False,
             escape=True,
             connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8'
+        )
+        self._addGrantRoutine(
+            grant = 'SELECT, INSERT',
+            user=self.users['user4']['name'],
+            db=self.testdb2 + '.' + self.table1,
+            grant_option=False,
+            escape=True,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8'
+        )
+        # '' is valid for anonymous users
+        self._addGrantRoutine(
+            grant = 'DELETE',
+            user='',
+            db=self.testdb3 + '.*',
+            grant_option=False,
+            escape=True,
+            connection_user=self.user,
             connection_pass=self.password
         )
+        # Check result for users
+        ret = self.run_function(
+            'mysql.user_grants',
+            user=self.users['user1']['name'],
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.maxDiff = None
+        self.assertEqual(ret, [
+            "GRANT USAGE ON *.* TO 'foo'@'localhost'",
+            ('GRANT SELECT, INSERT, UPDATE, CREATE ON '
+             '`tes.t\'"saltdb`.* TO \'foo\'@\'localhost\' WITH GRANT OPTION'),
+            ("GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
+             " TO 'foo'@'localhost' WITH GRANT OPTION")
+        ])
+
+        ret = self.run_function(
+            'mysql.user_grants',
+            user=self.users['user2']['name'],
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(ret, [
+            'GRANT USAGE ON *.* TO \'user ";--,?:&/\\\'@\'localhost\'',
+            ('GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t\''
+             '"saltdb`.* TO \'user ";--,?:&/\\\'@\'localhost\''
+             ' WITH GRANT OPTION')
+        ])
+
+        ret = self.run_function(
+            'mysql.user_grants',
+            user=self.users['user3']['name'],
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(ret, [
+            "GRANT USAGE ON *.* TO 'user( @ )=foobar'@'localhost'",
+            ('GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON '
+             '`tes.t\'"saltdb`.* TO \'user( @ )=foobar\'@\'localhost\' '
+             'WITH GRANT OPTION')
+        ])
+
+        ret = self.run_function(
+            'mysql.user_grants',
+            user=self.users['user4']['name'],
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_use_unicode=True,
+            connection_charset='utf8'
+        )
+        self.assertEqual(ret, [
+            "GRANT USAGE ON *.* TO 'user \xe6\xa8\x99'@'localhost'",
+            (r"GRANT CREATE ON `t\_st ``(:=salt\%b)`.* TO "
+             "'user \xe6\xa8\x99'@'localhost'"),
+            ("GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo ``'%_bar` TO "
+             "'user \xe6\xa8\x99'@'localhost'"),
+            ("GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
+             "'user \xe6\xa8\x99'@'localhost'"),
+        ])
+
+        ret = self.run_function(
+            'mysql.user_grants',
+            user='',
+            host='localhost',
+            connection_user=self.user,
+            connection_pass=self.password
+        )
+        self.assertEqual(ret, [
+            "GRANT USAGE ON *.* TO ''@'localhost'",
+            "GRANT DELETE ON `test ``(:=salteeb)`.* TO ''@'localhost'"
+        ])
 
 if __name__ == '__main__':
     from integration import run_tests
