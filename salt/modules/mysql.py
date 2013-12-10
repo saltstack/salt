@@ -1326,6 +1326,12 @@ def __grant_generate(grant,
                     host='localhost',
                     grant_option=False,
                     escape=True):
+    '''
+    Validate grants and build the query that could set the given grants
+
+    Note that this query contains arguments for user and host but not for
+    grants or database.
+    '''
     # TODO: Re-order the grant so it is according to the
     #       SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = re.sub(r'\s*,\s*', ', ', grant).upper()
@@ -1533,21 +1539,32 @@ def grant_revoke(grant,
 
     .. code-block:: bash
 
-        salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_revoke \
+            'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
-    # todo: validate grant
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
     cur = dbc.cursor()
 
+    # Grants are paste directly in SQL, must filter it
+    exploded_grants = grant.split(",")
+    for chkgrant in exploded_grants:
+        if not chkgrant.strip() in __grants__:
+            raise Exception('Invalid grant : {0!r}'.format(
+                chkgrant
+            ))
+
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
-    # _ and % are authorized on GRANT queries and should get escaped on the db name
+    # _ and % are authorized on GRANT queries and should get escaped
+    # on the db name
     s_database = quote_identifier(database, for_grants=True)
-    qry = 'REVOKE %%(grant)s ON %(database) FROM %%(user}s@%%(host)s;' % dict(database=s_database)
+    qry = 'REVOKE %(grant) ON %(database) FROM %%(user}s@%%(host)s;' % dict(
+        grant=grant,
+        database=s_database
+    )
     args = {}
-    args['grant'] = grant
     args['user'] = user
     args['host'] = host
 
