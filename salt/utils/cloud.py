@@ -58,7 +58,7 @@ NSTATES = {
     3: 'pending',
 }
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword( for .*)?:')
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:')
 
 # Get logging started
 log = logging.getLogger(__name__)
