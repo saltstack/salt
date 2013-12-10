@@ -1254,7 +1254,22 @@ def create(vm_=None, call=None):
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
 
-    if salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
+    if config.get_cloud_config_value('win_installer', vm_, __opts__):
+        username = config.get_cloud_config_value(
+                'win_username', vm_, __opts__, default='Administrator'
+            )
+        win_passwd = config.get_cloud_config_value(
+                'win_password', vm_, __opts__, default=''
+            )
+        if not salt.utils.cloud.wait_for_port(ip_address, port=445, timeout=ssh_connect_timeout):
+            raise SaltCloudSystemExit(
+                'Failed to connect to remote windows host'
+            )
+        if not salt.utils.cloud.validate_windows_cred(ip_address, 445, username, win_passwd):
+            raise SaltCloudSystemExit(
+                'Failed to authenticate against remote windows host'
+            )
+    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
