@@ -443,6 +443,15 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                     salt_config_to_yaml(minion_grains, line_break='\r\n'),
                     kwargs
                 )
+            # Add special windows minion configuration
+            # that must be in the minion config file
+            windows_minion_conf = {
+                'ipc_mode': 'tcp',
+                'root_dir': 'c:\salt',
+                'pki_dir': '/conf/pki/minion',
+                'multiprocessing': False,
+            }
+            minion_conf = dict(minion_conf, **windows_minion_conf)
             smb_file(
                 'salt\\conf\\minion',
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
