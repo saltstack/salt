@@ -295,23 +295,25 @@ def linux_interfaces():
     Obtain interface information for *NIX/BSD variants
     '''
     ifaces = dict()
-    if salt.utils.which('ip'):
+    ip_path = salt.utils.which('ip')
+    ifconfig_path = None if ip_path else salt.utils.which('ifconfig')
+    if ip_path:
         cmd1 = subprocess.Popen(
-            'ip link show',
+            '{0} link show'.format(ip_path),
             shell=True,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         cmd2 = subprocess.Popen(
-            'ip addr show',
+            '{0} addr show'.format(ip_path),
             shell=True,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
-    elif salt.utils.which('ifconfig'):
+    elif ifconfig_path:
         cmd = subprocess.Popen(
-            'ifconfig -a',
+            '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
