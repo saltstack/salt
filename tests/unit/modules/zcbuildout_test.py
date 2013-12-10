@@ -4,6 +4,7 @@
 import os
 import tempfile
 import urllib2
+import logging
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -17,6 +18,7 @@ import integration
 import shutil
 
 # Import Salt libs
+import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
 
@@ -37,20 +39,30 @@ boot_init = {
         'b/bootstrap.py',
     ]}
 
+log = logging.getLogger(__name__)
+
+
+def download_to(url, dest):
+    with salt.utils.fopen(dest, 'w') as fic:
+        fic.write(
+            urllib2.urlopen(url, timeout=10).read()
+        )
+
 
 class Base(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rdir = tempfile.mkdtemp()
         cls.tdir = os.path.join(cls.rdir, 'test')
-        for i in buildout._url_versions:
-            p = os.path.join(
-                cls.rdir, '{0}_bootstrap.py'.format(i)
+        for idx, url in buildout._URL_VERSIONS.iteritems():
+            log.debug('Downloading bootstrap from {0}'.format(url))
+            dest = os.path.join(
+                cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
-            fic = open(p, 'w')
-            fic.write(
-                urllib2.urlopen(buildout._url_versions[i]).read())
-            fic.close()
+            try:
+                download_to(url, dest)
+            except urllib2.URLError:
+                log.debug('Failed to download {0}'.format(url))
 
     @classmethod
     def tearDownClass(cls):
@@ -98,10 +110,8 @@ class BuildoutTestCase(Base):
                 getattr(buildout.LOG, i)('{0}bar'.format(i[0]))
             return 'foo'
 
-        @buildout._salt_callback
         def callback2(a, b=1):
             raise Exception('foo')
-            return 1  # make pylint happy
 
         ret1 = callback1(1, b=3)
         self.assertEqual(ret1['status'], True)
@@ -129,7 +139,7 @@ class BuildoutTestCase(Base):
         )
         self.assertTrue('by level' in ret1['outlog_by_level'])
         self.assertEqual(ret1['out'], 'foo')
-        ret2 = callback2(2, b=6)
+        ret2 = buildout._salt_callback(callback2)(2, b=6)
         self.assertEqual(ret2['status'], False)
         self.assertTrue(
             ret2['logs_by_level']['error'][0].startswith('Traceback'))
@@ -148,7 +158,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/1/bootstrap'),
             os.path.join(self.tdir, 'var/ver/1/versions'),
         ]:
-            self.assertEqual(buildout._url_versions[1],
+            self.assertEqual(buildout._URL_VERSIONS[1],
                              buildout._get_bootstrap_url(p),
                              "b1 url for {0}".format(p))
         for p in [
@@ -157,7 +167,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, 'var/ver/2/bootstrap'),
             os.path.join(self.tdir, 'var/ver/2/default'),
         ]:
-            self.assertEqual(buildout._url_versions[2],
+            self.assertEqual(buildout._URL_VERSIONS[2],
                              buildout._get_bootstrap_url(p),
                              "b2 url for {0}".format(p))
 
@@ -287,16 +297,24 @@ class BuildoutOnlineTestCase(Base):
             '{0}/bin/easy_install -U distribute;'
         ).format(cls.ppy_st))
         # creating a distribute based install
+        ret20 = buildout._Popen((
+            'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
+            ''.format(cls.ppy_dis)))
+        download_to('https://pypi.python.org/packages/source'
+                    '/d/distribute/distribute-0.6.43.tar.gz',
+                    os.path.join(cls.ppy_dis, 'distribute-0.6.43.tar.gz'))
         ret2 = buildout._Popen((
-            'virtualenv --no-site-packages {0};'
-            '{0}/bin/easy_install -U setuptools==0.6c9;'
-            '{0}/bin/easy_install -U distribute==0.6.43;'
+            'cd {0} &&'
+            ' tar xzvf distribute-0.6.43.tar.gz && cd distribute-0.6.43 &&'
+            ' {0}/bin/python setup.py install'
         ).format(cls.ppy_dis))
         # creating a blank based install
         ret3 = buildout._Popen((
             'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
             ''.format(cls.ppy_blank)))
         assert ret1['retcode'] == 0
+        assert ret20['retcode'] == 0
+        assert ret2['retcode'] == 0
         assert ret2['retcode'] == 0
         assert ret3['retcode'] == 0
 

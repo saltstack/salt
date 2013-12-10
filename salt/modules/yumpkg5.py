@@ -7,17 +7,12 @@ Support for YUM
 import collections
 import copy
 import logging
+import os
 import re
 
 # Import salt libs
 import salt.utils
-from salt.utils import namespaced_function as _namespaced_function
-from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
-                                 get_repo, expand_repo_def, del_repo)
-
-# Import libs required by functions imported from yumpkg
-# DO NOT REMOVE THESE, ON PAIN OF DEATH
-import os
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -40,39 +35,15 @@ def __virtual__():
     '''
     # Work only on RHEL/Fedora based distros with python 2.5 and below
     try:
-        os_grain = __grains__['os']
-        os_family = __grains__['os_family']
+        os_grain = __grains__['os'].lower()
+        os_family = __grains__['os_family'].lower()
         os_major_version = int(__grains__['osrelease'].split('.')[0])
     except Exception:
         return False
 
-    valid = False
-    # Fedora <= 10 need to use this module
-    if os_grain == 'Fedora' and os_major_version < 11:
-        valid = True
-    # XCP == 1.x uses a CentOS 5 base
-    elif os_grain == 'XCP':
-        if os_major_version == 1:
-            valid = True
-    # XenServer 6 and earlier uses a CentOS 5 base
-    elif os_grain == 'XenServer':
-        if os_major_version <= 6:
-            valid = True
-    elif os_grain == 'Amazon':
-        valid = True
-    else:
-        # RHEL <= 5 and all variants need to use this module
-        if os_family == 'RedHat' and os_major_version <= 5:
-            valid = True
-    if valid:
-        global mod_repo, _parse_repo_file, list_repos, get_repo
-        global expand_repo_def, del_repo
-        mod_repo = _namespaced_function(mod_repo, globals())
-        _parse_repo_file = _namespaced_function(_parse_repo_file, globals())
-        list_repos = _namespaced_function(list_repos, globals())
-        get_repo = _namespaced_function(get_repo, globals())
-        expand_repo_def = _namespaced_function(expand_repo_def, globals())
-        del_repo = _namespaced_function(del_repo, globals())
+    enabled = ('amazon', 'xcp', 'xenserver')
+
+    if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
     return False
 
@@ -634,3 +605,282 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return remove(name=name, pkgs=pkgs)
+
+
+def list_repos(basedir='/etc/yum.repos.d'):
+    '''
+    Lists all repos in <basedir> (default: /etc/yum.repos.d/).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repos
+    '''
+    repos = {}
+    for repofile in os.listdir(basedir):
+        repopath = '{0}/{1}'.format(basedir, repofile)
+        if not repofile.endswith('.repo'):
+            continue
+        header, filerepos = _parse_repo_file(repopath)
+        for reponame in filerepos.keys():
+            repo = filerepos[reponame]
+            repo['file'] = repopath
+            repos[reponame] = repo
+    return repos
+
+
+def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
+    '''
+    Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_repo myrepo
+        salt '*' pkg.get_repo myrepo basedir=/path/to/dir
+    '''
+    repos = list_repos(basedir)
+
+    # Find out what file the repo lives in
+    repofile = ''
+    for arepo in repos.keys():
+        if arepo == repo:
+            repofile = repos[arepo]['file']
+    if not repofile:
+        raise Exception('repo {0} was not found in {1}'.format(repo, basedir))
+
+    # Return just one repo
+    header, filerepos = _parse_repo_file(repofile)
+    return filerepos[repo]
+
+
+def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
+    '''
+    Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
+
+    If the .repo file that the repo exists in does not contain any other repo
+    configuration, the file itself will be deleted.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.del_repo myrepo
+        salt '*' pkg.del_repo myrepo basedir=/path/to/dir
+    '''
+    repos = list_repos(basedir)
+
+    if repo not in repos:
+        return 'Error: the {0} repo does not exist in {1}'.format(
+            repo, basedir)
+
+    # Find out what file the repo lives in
+    repofile = ''
+    for arepo in repos:
+        if arepo == repo:
+            repofile = repos[arepo]['file']
+
+    # See if the repo is the only one in the file
+    onlyrepo = True
+    for arepo in repos.keys():
+        if arepo == repo:
+            continue
+        if repos[arepo]['file'] == repofile:
+            onlyrepo = False
+
+    # If this is the only repo in the file, delete the file itself
+    if onlyrepo:
+        os.remove(repofile)
+        return 'File {0} containing repo {1} has been removed'.format(
+            repofile, repo)
+
+    # There must be other repos in this file, write the file with them
+    header, filerepos = _parse_repo_file(repofile)
+    content = header
+    for stanza in filerepos.keys():
+        if stanza == repo:
+            continue
+        comments = ''
+        if 'comments' in filerepos[stanza]:
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza]:
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+
+    with salt.utils.fopen(repofile, 'w') as fileout:
+        fileout.write(content)
+
+    return 'Repo {0} has been removed from {1}'.format(repo, repofile)
+
+
+def mod_repo(repo, basedir=None, **kwargs):
+    '''
+    Modify one or more values for a repo. If the repo does not exist, it will
+    be created, so long as the following values are specified:
+
+    repo
+        name by which the yum refers to the repo
+    name
+        a human-readable name for the repo
+    baseurl
+        the URL for yum to reference
+    mirrorlist
+        the URL for yum to reference
+
+    Key/Value pairs may also be removed from a repo's configuration by setting
+    a key to a blank value. Bear in mind that a name cannot be deleted, and a
+    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+    '''
+    # Filter out '__pub' arguments
+    repo_opts = dict((x, kwargs[x]) for x in kwargs if not x.startswith('__'))
+
+    if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):
+        raise SaltInvocationError(
+            'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
+        )
+
+    # Build a list of keys to be deleted
+    todelete = []
+    for key in repo_opts:
+        if repo_opts[key] != 0 and not repo_opts[key]:
+            del repo_opts[key]
+            todelete.append(key)
+
+    # Add baseurl or mirrorlist to the 'todelete' list if the other was
+    # specified in the repo_opts
+    if 'mirrorlist' in repo_opts:
+        todelete.append('baseurl')
+    elif 'baseurl' in repo_opts:
+        todelete.append('mirrorlist')
+
+    # Fail if the user tried to delete the name
+    if 'name' in todelete:
+        raise SaltInvocationError('The repo name cannot be deleted')
+
+    # Give the user the ability to change the basedir
+    repos = {}
+    if basedir:
+        repos = list_repos(basedir)
+    else:
+        repos = list_repos()
+        basedir = '/etc/yum.repos.d'
+
+    repofile = ''
+    header = ''
+    filerepos = {}
+    if repo not in repos:
+        # If the repo doesn't exist, create it in a new file
+        repofile = '{0}/{1}.repo'.format(basedir, repo)
+
+        if 'name' not in repo_opts:
+            raise SaltInvocationError(
+                'The repo does not exist and needs to be created, but a name '
+                'was not given'
+            )
+
+        if 'baseurl' not in repo_opts and 'mirrorlist' not in repo_opts:
+            raise SaltInvocationError(
+                'The repo does not exist and needs to be created, but either '
+                'a baseurl or a mirrorlist needs to be given'
+            )
+        filerepos[repo] = {}
+    else:
+        # The repo does exist, open its file
+        repofile = repos[repo]['file']
+        header, filerepos = _parse_repo_file(repofile)
+
+    # Error out if they tried to delete baseurl or mirrorlist improperly
+    if 'baseurl' in todelete:
+        if 'mirrorlist' not in repo_opts and 'mirrorlist' \
+                not in filerepos[repo].keys():
+            raise SaltInvocationError(
+                'Cannot delete baseurl without specifying mirrorlist'
+            )
+    if 'mirrorlist' in todelete:
+        if 'baseurl' not in repo_opts and 'baseurl' \
+                not in filerepos[repo].keys():
+            raise SaltInvocationError(
+                'Cannot delete mirrorlist without specifying baseurl'
+            )
+
+    # Delete anything in the todelete list
+    for key in todelete:
+        if key in filerepos[repo].keys():
+            del filerepos[repo][key]
+
+    # Old file or new, write out the repos(s)
+    filerepos[repo].update(repo_opts)
+    content = header
+    for stanza in filerepos.keys():
+        comments = ''
+        if 'comments' in filerepos[stanza].keys():
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza].keys():
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+
+    with salt.utils.fopen(repofile, 'w') as fileout:
+        fileout.write(content)
+
+    return {repofile: filerepos}
+
+
+def _parse_repo_file(filename):
+    '''
+    Turn a single repo file into a dict
+    '''
+    repos = {}
+    header = ''
+    repo = ''
+    with salt.utils.fopen(filename, 'r') as rfile:
+        for line in rfile:
+            if line.startswith('['):
+                repo = line.strip().replace('[', '').replace(']', '')
+                repos[repo] = {}
+
+            # Even though these are essentially uselss, I want to allow the
+            # user to maintain their own comments, etc
+            if not line:
+                if not repo:
+                    header += line
+            if line.startswith('#'):
+                if not repo:
+                    header += line
+                else:
+                    if 'comments' not in repos[repo]:
+                        repos[repo]['comments'] = []
+                    repos[repo]['comments'].append(line.strip())
+                continue
+
+            # These are the actual configuration lines that matter
+            if '=' in line:
+                comps = line.strip().split('=')
+                repos[repo][comps[0].strip()] = '='.join(comps[1:])
+
+    return (header, repos)
+
+
+def expand_repo_def(repokwargs):
+    '''
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison. This is a helper function to make
+    certain repo managers sane for comparison in the pkgrepo states.
+
+    There is no use to calling this function via the CLI.
+    '''
+    # YUM doesn't need the data massaged.
+    return repokwargs

@@ -274,9 +274,53 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='other')
         )
 
+    def test_render_with_unicode_syntax_error(self):
+        template = u'hello\n\n{{ bad\n\nfoo\ud55c'
+        expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
+
+    def test_render_with_utf8_syntax_error(self):
+        template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
+        expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
+
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
+
+    def test_render_with_undefined_variable_utf8(self):
+        template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
+        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='other')
+        )
+
+    def test_render_with_undefined_variable_unicode(self):
+        template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
+        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,

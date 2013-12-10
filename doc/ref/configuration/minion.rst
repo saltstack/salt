@@ -436,9 +436,7 @@ below.
 .. code-block:: yaml
 
     providers:
-      pkg: yumpkg5
       service: systemd
-
 
       
 State Management Settings

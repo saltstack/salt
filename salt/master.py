@@ -192,6 +192,7 @@ class Master(SMaster):
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
         pillargitfs = None
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
@@ -202,6 +203,7 @@ class Master(SMaster):
 
         while True:
             now = int(time.time())
+            old_present = set()
             loop_interval = int(self.opts['loop_interval'])
             if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
@@ -257,11 +259,18 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
-            log.debug(
-                'ckminions.connected_ids: {0}'.format(
-                    ckminions.connected_ids()
-                )
-            )
+            if self.opts.get('presence_events', False):
+                present = ckminions.connected_ids()
+                new = present.difference(old_present)
+                lost = old_present.difference(present)
+                if new or lost:
+                    # Fire new minions present event
+                    data = {'new': list(new),
+                            'lost': list(lost)}
+                    event.fire_event(data, tagify('change', 'presence'))
+                data = {'present': present}
+                event.fire_event(data, tagify('present', 'presence'))
+                old_present = present
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -1144,6 +1153,14 @@ class AESFuncs(object):
             # Can overwrite master files!!
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
+            log.error(
+                'Exceeding file_recv_max_size limit: {0}'.format(
+                    file_recv_max_size
+                )
+            )
             return False
         if 'tok' not in load:
             log.error(

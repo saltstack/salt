@@ -56,6 +56,13 @@ salt fileserver. Here's an example:
         - user: foo
         - group: users
         - mode: 644
+        - backup: minion
+
+.. note::
+
+    Salt supports backing up managed files via the backup option. For more
+    details on this functionality please review the
+    :doc:`backup_mode documentation </ref/states/backup_mode>`.
 
 The ``source`` parameter can also specify a file in another Salt environment.
 In this example ``foo.conf`` in the ``dev`` environment will be used instead.
@@ -722,7 +729,7 @@ def symlink(
         backupname is set, when it will be renamed
 
     backupname
-        If the target of the symlink exists and is not a symlink, it will be 
+        If the target of the symlink exists and is not a symlink, it will be
         renamed to the backupname. If the backupname already
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
@@ -818,7 +825,7 @@ def symlink(
             # Make a backup first
             if os.path.lexists(backupname):
                 if not force:
-                    return _error(ret, 
+                    return _error(ret,
                                    ('File exists where the backup target {0} should go'
                                     .format(backupname)))
                 elif os.path.isfile(backupname):
@@ -826,7 +833,7 @@ def symlink(
                 elif os.path.isdir(backupname):
                     shutil.rmtree(backupname)
                 else:
-                    return _error(ret, 
+                    return _error(ret,
                                   ('Something exists where the backup target {0} should go'
                                    .format(backupname)))
             os.rename(name, backupname)
@@ -839,14 +846,14 @@ def symlink(
         else:
             # Otherwise throw an error
             if os.path.isfile(name):
-                return _error(ret, 
+                return _error(ret,
                               ('File exists where the symlink {0} should be'
                                .format(name)))
             else:
-                return _error(ret, 
+                return _error(ret,
                               ('Directory exists where the symlink {0} should be'
                                .format(name)))
-            
+
     if not os.path.exists(name):
         # The link is not present, make it
         try:
@@ -1854,7 +1861,7 @@ def replace(name,
                                        show_changes=show_changes)
 
     if changes:
-        ret['changes'] = changes
+        ret['changes'] = {'diff': changes}
         ret['comment'] = 'Changes were made'
     else:
         ret['comment'] = 'No changes were made'
@@ -1982,12 +1989,17 @@ def blockreplace(name,
                                        show_changes=show_changes)
 
     if changes:
-        ret['changes'] = changes
-        ret['comment'] = 'Changes were made'
+        ret['changes'] = {'diff': changes}
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Changes would be made'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
     else:
-        ret['comment'] = 'No changes were made'
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
 
-    ret['result'] = True
     return ret
 
 

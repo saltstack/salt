@@ -496,10 +496,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     result = json.loads(content)
     if result.get('status', '').lower() == 'error':
         raise SaltCloudSystemExit(
-            ''.join(
-                '{0}: {1}\n'.format(k, '\n'.join(v)) for (k, v) in
-                result.get('error_message', {}).items()
-            )
+            pprint.pformat(result.get('error_message', {}))
         )
 
     return result

@@ -161,9 +161,9 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(sock_dir=SOCK_DIR)
             me.subscribe()
-            me.fire_event({'data':'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
-            self.assertGotEvent(evt1, {'data':'foo1'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
             evt2 = me.get_event(tag='evt1')
             self.assertIsNone(evt2)
 

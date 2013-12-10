@@ -7,7 +7,7 @@
 # B (2) ---+ <-+ <-+ <-+
 #              |   |   |
 # C (3) <--+ --|---|---+
-#          |   |   |
+#          |   |   |
 # E (4) ---|---|---+ <-+
 #          |   |       |
 # A (5) ---+ --+ ------+
@@ -23,10 +23,7 @@ B:
     - name: echo B second
     - require_in:
       - cmd: A
-      # issue #8773
-      # this will generate a warning but will still be done
-      # right syntax is cmd: C
-      - cmd.run: C
+      - cmd: C
 
 C:
   cmd.run:
@@ -35,11 +32,8 @@ C:
 D:
   cmd.run:
     - name: echo D first
-    # issue #8773 fix
-    # this will generate a warning but will still be done
-    # as in B, here testing the non-list form (no '-')
     - require_in:
-        cmd.foo: B
+      - cmd: B
 
 E:
   cmd.run:
@@ -66,5 +60,5 @@ H:
   cmd.run:
     - name: echo H
     - require:
-      - cmd.run: Z
+      - cmd: Z
 

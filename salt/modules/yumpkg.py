@@ -23,7 +23,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import third party libs
 try:
@@ -136,32 +136,8 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Confine this module to yum based systems
+    Deprecated, yumpkg5 is being used now.
     '''
-    if not HAS_YUMDEPS:
-        return False
-
-    # Work only on RHEL/Fedora based distros with python 2.6 or greater
-    # TODO: Someone decide if we can just test os_family and pythonversion
-    os_grain = __grains__['os']
-    os_family = __grains__['os_family']
-    try:
-        os_major = int(__grains__['osrelease'].split('.')[0])
-    except ValueError:
-        os_major = 0
-
-    if os_grain == 'Fedora':
-        # Fedora <= 10 used Python 2.5 and below
-        if os_major >= 11:
-            return __virtualname__
-    elif os_grain == 'XCP':
-        if os_major >= 2:
-            return __virtualname__
-    elif os_grain == 'XenServer':
-        if os_major > 6:
-            return __virtualname__
-    elif os_family == 'RedHat' and os_major >= 6:
-        return __virtualname__
     return False
 
 
@@ -234,15 +210,15 @@ def _pkg_arch(name):
     that packages that are for the system architecture should not have the
     architecture specified in the passed string.
     '''
-    all_arches = rpmUtils.arch.getArchList()
-    if not any(name.endswith('.{0}'.format(x)) for x in all_arches):
-        return name, __grains__['cpuarch']
     try:
         pkgname, pkgarch = name.rsplit('.', 1)
     except ValueError:
         return name, __grains__['cpuarch']
-    else:
-        return pkgname, pkgarch
+
+    if pkgarch not in rpmUtils.arch.getArchList():
+        return name, __grains__['cpuarch']
+
+    return pkgname, pkgarch
 
 
 def latest_version(*names, **kwargs):
@@ -1107,6 +1083,11 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Filter out '__pub' arguments
     repo_opts = dict((x, kwargs[x]) for x in kwargs if not x.startswith('__'))
 
+    if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):
+        raise SaltInvocationError(
+            'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
+        )
+
     # Build a list of keys to be deleted
     todelete = []
     for key in repo_opts:
@@ -1114,9 +1095,16 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
+    # Add baseurl or mirrorlist to the 'todelete' list if the other was
+    # specified in the repo_opts
+    if 'mirrorlist' in repo_opts:
+        todelete.append('baseurl')
+    elif 'baseurl' in repo_opts:
+        todelete.append('mirrorlist')
+
     # Fail if the user tried to delete the name
     if 'name' in todelete:
-        return 'Error: The repo name cannot be deleted'
+        raise SaltInvocationError('The repo name cannot be deleted')
 
     # Give the user the ability to change the basedir
     repos = {}
@@ -1134,12 +1122,16 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = '{0}/{1}.repo'.format(basedir, repo)
 
         if 'name' not in repo_opts:
-            return ('Error: The repo does not exist and needs to be created, '
-                    'but a name was not given')
+            raise SaltInvocationError(
+                'The repo does not exist and needs to be created, but a name '
+                'was not given'
+            )
 
         if 'baseurl' not in repo_opts and 'mirrorlist' not in repo_opts:
-            return ('Error: The repo does not exist and needs to be created, '
-                    'but either a baseurl or a mirrorlist needs to be given')
+            raise SaltInvocationError(
+                'The repo does not exist and needs to be created, but either '
+                'a baseurl or a mirrorlist needs to be given'
+            )
         filerepos[repo] = {}
     else:
         # The repo does exist, open its file
@@ -1150,11 +1142,15 @@ def mod_repo(repo, basedir=None, **kwargs):
     if 'baseurl' in todelete:
         if 'mirrorlist' not in repo_opts and 'mirrorlist' \
                 not in filerepos[repo].keys():
-            return 'Error: Cannot delete baseurl without specifying mirrorlist'
+            raise SaltInvocationError(
+                'Cannot delete baseurl without specifying mirrorlist'
+            )
     if 'mirrorlist' in todelete:
         if 'baseurl' not in repo_opts and 'baseurl' \
                 not in filerepos[repo].keys():
-            return 'Error: Cannot delete mirrorlist without specifying baseurl'
+            raise SaltInvocationError(
+                'Cannot delete mirrorlist without specifying baseurl'
+            )
 
     # Delete anything in the todelete list
     for key in todelete:

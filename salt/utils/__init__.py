@@ -218,6 +218,10 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
+    # warning: jinja content may contain unicode strings
+    # instead of utf-8.
+    buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
+
     return '---\n{0}\n---'.format('\n'.join(buf))
 
 
@@ -331,7 +335,21 @@ def which(exe=None):
                     continue
             return False
 
-        for path in search_path.split(os.pathsep):
+        search_path = search_path.split(os.pathsep)
+        if not is_windows():
+	    # Add any dirs in the default_path which are not in search_path. If
+	    # there was no PATH variable found in os.environ, then this will be
+	    # a no-op. This ensures that all dirs in the default_path are
+	    # searched, which lets salt.utils.which() work well when invoked by
+	    # salt-call running from cron (which, depending on platform, may
+	    # have a severely limited PATH).
+            search_path.extend(
+                [
+                    x for x in default_path.split(os.pathsep)
+                    if x not in search_path
+                ]
+            )
+        for path in search_path:
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
@@ -343,14 +361,16 @@ def which(exe=None):
                     # safely rely on that behaviour
                     if os.access(full_path + ext, os.X_OK):
                         return full_path + ext
-        log.trace(
+        log.debug(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
             )
         )
     else:
-        log.trace('No executable was passed to be searched by which')
+        log.error(
+            'No executable was passed to be searched by salt.utils.which()'
+        )
     return None
 
 
@@ -438,18 +458,6 @@ def ip_bracket(addr):
     if addr and ':' in addr and not addr.startswith('['):
         return '[{0}]'.format(addr)
     return addr
-
-
-def port_responds(hostname, port):
-    '''
-    Determines whether or not we can establish a TCP connection to a port
-    '''
-    s = socket.socket()
-    try:
-        s.connect((hostname, int(port)))
-        return True
-    except socket.error, e:
-        return False
 
 
 def dns_check(addr, safe=False, ipv6=False):

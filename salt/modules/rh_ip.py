@@ -887,7 +887,7 @@ def build_interface(iface, iface_type, enabled, **settings):
             return ''
         ifcfg = template.render(opts)
 
-    if settings['test']:
+    if 'test' in settings and settings['test']:
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')

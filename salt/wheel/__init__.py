@@ -3,7 +3,10 @@
 Modules used to control the master itself
 '''
 
+import os
 # Import salt libs
+from salt import syspaths
+import salt.config
 import salt.loader
 import salt.payload
 import salt.utils
@@ -20,7 +23,15 @@ class Wheel(object):
     Salt Master and it must be done using the same user that the Salt Master is
     running as.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts=None):
+        if not opts:
+            opts = salt.config.client_config(
+                    os.environ.get(
+                        'SALT_MASTER_CONFIG',
+                        os.path.join(syspaths.CONFIG_DIR, 'master')
+                        )
+                    )
+
         self.opts = opts
         self.w_funcs = salt.loader.wheels(opts)
 

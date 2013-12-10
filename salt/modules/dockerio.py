@@ -22,7 +22,8 @@ Installation prerequisites
 --------------------------
 
 - You will need the 'docker-py' python package in your python installation
-  running salt.
+  running salt. The version of docker-py should support `version 1.6 of docker
+  remote API. <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
 - For now, you need docker-py from sources:
 
     https://github.com/dotcloud/docker-py
@@ -109,6 +110,7 @@ You have those methods:
 
 - start
 - stop
+- restart
 - kill
 - wait
 - get_containers
@@ -197,7 +199,7 @@ def _sizeof_fmt(num):
     '''
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
-            return "%3.1f %s" % (num, x)
+            return '%3.1f %s' % (num, x)
         num /= 1024.0
 
 
@@ -231,7 +233,7 @@ def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
     return _set_status(m, status=True, id=id, comment=comment, out=out)
 
 
-def _get_client(version=None):
+def _get_client(version=None, timeout=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -248,18 +250,20 @@ def _get_client(version=None):
     '''
     kwargs = {}
     get = __salt__['config.get']
-    for k, p in {
-        'base_url': 'docker.url',
-        'version': 'docker.version',
-    }.items():
+    for k, p in (('base_url', 'docker.url'),
+                 ('version', 'docker.version')):
         param = get(p, NOTSET)
         if param is not NOTSET:
             kwargs[k] = param
+    if timeout is not None:
+        # make sure we override default timeout of docker-py
+        # only if defined by user.
+        kwargs['timeout'] = timeout
     client = docker.Client(**kwargs)
     # force 1..5 API for registry login
     if not version:
-        if client._version == "1.4":
-            client._version = "1.5"
+        if client._version == '1.4':
+            client._version = '1.5'
     if getattr(client, '_cfg', None) is None:
         client._cfg = {
             'Configs': {},
@@ -526,7 +530,7 @@ def export(container, path, *args, **kwargs):
         try:
             byte = response.read(4096)
             fic.write(byte)
-            while byte != "":
+            while byte != '':
                 # Do stuff with byte.
                 byte = response.read(4096)
                 fic.write(byte)
@@ -554,9 +558,11 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
+                     privileged=False,
+                     name=None,
                      *args, **kwargs):
     '''
-    Get container diffs
+    Create a new container
 
     image
         image to create the container from
@@ -586,6 +592,10 @@ def create_container(image,
         let stdin open
     volumes_from
         container to get volumes definition from
+    privileged
+        run container in privileged mode
+    name
+        name given to container
 
     EG:
 
@@ -628,22 +638,16 @@ def create_container(image,
             dns=dns,
             volumes=mountpoints,
             volumes_from=volumes_from,
+            privileged=privileged,
+            name=name,
         )
         container = info['Id']
-        kill(container)
-        ret_start = start(container, binds=binds)
         callback = valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
-            'started': ret_start,
             'out': info
         }
-        if not ret_start['status']:
-            callback = invalid
-            comment = 'Container created but cannot be started\n{0}'.format(
-                ret_start['out']
-            )
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
         invalid(status, id=image, out=traceback.format_exc())
@@ -739,7 +743,7 @@ def stop(container, timeout=10, *args, **kwargs):
           ex::
 
             {'id': 'abcdef123456789',
-           'status': True}
+             'status': True}
 
     CLI Example:
 
@@ -870,7 +874,9 @@ def restart(container, timeout=10, *args, **kwargs):
     return status
 
 
-def start(container, binds=None, ports=None, *args, **kwargs):
+def start(container, binds=None, ports=None, port_bindings=None,
+          lxc_conf=None, publish_all_ports=None, links=None,
+          *args, **kwargs):
     '''
     restart the specified container
 
@@ -895,7 +901,9 @@ def start(container, binds=None, ports=None, *args, **kwargs):
     try:
         dcontainer = _get_container_infos(container)['id']
         if not is_running(container):
-            client.start(dcontainer, binds=binds)
+            client.start(dcontainer, binds=binds, port_bindings=port_bindings,
+                         lxc_conf=lxc_conf,
+                         publish_all_ports=publish_all_ports, links=links)
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
@@ -1044,7 +1052,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
         try:
             _get_container_infos(dcontainer)
             invalid(status,
-                    comment="Container was not removed: {0}".format(container))
+                    comment='Container was not removed: {0}'.format(container))
         except Exception:
             status['status'] = True
             status['comment'] = 'Container {0} was removed'.format(container)
@@ -1356,6 +1364,7 @@ def build(path=None,
           fileobj=None,
           nocache=False,
           rm=True,
+          timeout=None,
           *args, **kwargs):
     '''
     Build a docker image from a dockerfile or an URL
@@ -1375,6 +1384,8 @@ def build(path=None,
         do not use docker image cache
     rm
         remove intermediate commits
+    timeout
+        timeout is seconds before aborting
 
     CLI Example:
 
@@ -1382,7 +1393,7 @@ def build(path=None,
 
         salt '*' docker.build
     '''
-    client = _get_client()
+    client = _get_client(timeout=timeout)
     status = base_status.copy()
     if path or fileobj:
         try:

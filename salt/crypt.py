@@ -40,6 +40,34 @@ def dropfile(cachedir, user=None):
     '''
     dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
+
+    def ready():
+        '''
+        Because MWorker._update_aes uses second-precision mtime
+        to detect changes to the file, we must avoid writing two
+        versions with the same mtime.
+
+        Note that this only makes rapid updates in serial safe: concurrent
+        updates could still both pass this check and then write two different
+        keys with the same mtime.
+        '''
+        try:
+            stats = os.stat(dfn)
+        except os.error:
+            # Not there, go ahead and write it
+            return True
+        else:
+            if stats.st_mtime == time.time():
+                # The mtime is the current time, we must
+                # wait until time has moved on.
+                return False
+            else:
+                return True
+
+    while not ready():
+        log.warning('Waiting before writing {0}'.format(dfn))
+        time.sleep(1)
+
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with salt.utils.fopen(dfnt, 'w+') as fp_:
@@ -284,14 +312,6 @@ class Auth(object):
                 return 'retry'
             raise SaltClientError
 
-        if not salt.utils.port_responds(
-                self.opts['master_ip'],
-                self.opts['master_port']
-            ):
-            if safe:
-                return 'master_not_running'
-            raise SaltClientError
-
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
@@ -457,12 +477,6 @@ class SAuth(Auth):
                 self.opts.get('_auth_timeout', 60),
                 self.opts.get('_safe_auth', True)
             )
-
-            if creds == 'master_not_running':
-                if self.opts.get('caller'):
-                    print ('Master did not respond. Is master running?')
-                sys.exit(2)
-
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '

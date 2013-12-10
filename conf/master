@@ -188,6 +188,11 @@
 # security purposes.
 #file_recv: False
 
+# Set a hard-limit on the size of the files that can be pushed to the master.
+# It will be interpreted as megabytes.
+# Default: 100
+#file_recv_max_size: 100
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded
@@ -347,6 +352,11 @@
 # has a very large number of files and performance is impacted. Default is False.
 #
 # fileserver_limit_traversal: False
+#
+# The fileserver can fire events off every time the fileserver is updated,
+# these are disabled by default, but can be easily turned on by setting this
+# flag to True
+#fileserver_events: False
 #
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be

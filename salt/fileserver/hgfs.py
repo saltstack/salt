@@ -196,8 +196,9 @@ def update():
             pass
 
     # if there is a change, fire an event
-    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
+    if __opts__.get('fileserver_events', False):
+        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'hgfs/hash'),

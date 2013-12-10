@@ -295,23 +295,25 @@ def linux_interfaces():
     Obtain interface information for *NIX/BSD variants
     '''
     ifaces = dict()
-    if salt.utils.which('ip'):
+    ip_path = salt.utils.which('ip')
+    ifconfig_path = None if ip_path else salt.utils.which('ifconfig')
+    if ip_path:
         cmd1 = subprocess.Popen(
-            'ip link show',
+            '{0} link show'.format(ip_path),
             shell=True,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         cmd2 = subprocess.Popen(
-            'ip addr show',
+            '{0} addr show'.format(ip_path),
             shell=True,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
-    elif salt.utils.which('ifconfig'):
+    elif ifconfig_path:
         cmd = subprocess.Popen(
-            'ifconfig -a',
+            '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
@@ -619,7 +621,7 @@ def local_port_tcp(port):
                 if iret[sl]['local_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret
-    else: # Fallback to use 'lsof' if /proc not available
+    else:  # Fallback to use 'lsof' if /proc not available
         ret = remotes_on_local_tcp_port(port)
     return ret
 
@@ -640,13 +642,14 @@ def _parse_tcp_line(line):
     ret[sl]['remote_port'] = int(r_port, 16)
     return ret
 
+
 def remotes_on_local_tcp_port(port):
     '''
     Returns set of ipv4 host addresses of remote established connections
     on local tcp port port.
-    
-    Parses output of shell 'lsof' to get connections 
-    
+
+    Parses output of shell 'lsof' to get connections
+
     $ sudo lsof -i4TCP:4505 -n
     COMMAND   PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
     Python   9971 root   35u  IPv4 0x18a8464a29ca329d      0t0  TCP *:4505 (LISTEN)
@@ -656,33 +659,33 @@ def remotes_on_local_tcp_port(port):
     '''
     port = int(port)
     remotes = set()
-    
+
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
-        return remotes
-    
+        raise
+
     lines = data.split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
             continue
-        # ['Python', '9971', 'root', '37u', 'IPv4', '0x18a8464a29b2b29d', '0t0', 
+        # ['Python', '9971', 'root', '37u', 'IPv4', '0x18a8464a29b2b29d', '0t0',
         # 'TCP', '127.0.0.1:4505->127.0.0.1:55703', '(ESTABLISHED)']
         #print chunks
         if 'COMMAND' in chunks[0]:
-            continue # ignore header
+            continue  # ignore header
         if 'ESTABLISHED' not in chunks[-1]:
-            continue # ignore if not ESTABLISHED
+            continue  # ignore if not ESTABLISHED
         # '127.0.0.1:4505->127.0.0.1:55703'
         local, remote = chunks[8].split('->')
         lhost, lport = local.split(':')
-        if not (int(lport) == port): #ignore if local port not port
+        if not (int(lport) == port):  # ignore if local port not port
             continue
         rhost, rport = remote.split(':')
-        remotes.add(rhost) 
-    
+        remotes.add(rhost)
+
     return remotes
 
 

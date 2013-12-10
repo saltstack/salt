@@ -140,3 +140,12 @@ As of release 0.17.1 backwards compatibility was broken (specifically for
 security purposes. The Salt team continues to emphasize backwards compatiblity
 as an important feature and plans to support it to the best of our ability to
 do so.
+
+Does Salt support backing up managed files?
+-------------------------------------------
+
+Yes. Salt provides an easy to use addition to your file.managed states that
+allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
+backup_mode can be configured on a per state basis, or in the minion config
+(note that if set in the minion config this would simply be the default
+method to use, you still need to specify that the file should be backed up!).
