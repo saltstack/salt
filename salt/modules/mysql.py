@@ -6,7 +6,8 @@ Module to provide MySQL compatibility to salt.
 
 .. note::
 
-    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb need to be installed.
+    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb
+    need to be installed.
 
 :configuration: In order to connect to MySQL, certain configuration is required
     in /etc/salt/minion on the relevant minions. Some sample configs might look
@@ -110,7 +111,10 @@ def __check_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
+    qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(
+        dbname=s_name,
+        dbtable=s_table
+    )
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -125,7 +129,10 @@ def __repair_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
+    qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(
+        dbname=s_name,
+        dbtable=s_table
+    )
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -140,7 +147,10 @@ def __optimize_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(dbname=s_name, dbtable=s_table)
+    qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(
+        dbname=s_name,
+        dbtable=s_table
+    )
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
     results = cur.fetchall()
@@ -204,15 +214,26 @@ def _connect(**kwargs):
 def _grant_to_tokens(grant):
     '''
 
-    This should correspond fairly closely to the YAML rendering of a mysql_grants state which comes out
-    as follows:
+    This should correspond fairly closely to the YAML rendering of a 
+    mysql_grants state which comes out as follows:
 
-     OrderedDict([('whatever_identifier', OrderedDict([('mysql_grants.present',
-     [OrderedDict([('database', 'testdb.*')]), OrderedDict([('user', 'testuser')]),
-     OrderedDict([('grant', 'ALTER, SELECT, LOCK TABLES')]), OrderedDict([('host', 'localhost')])])]))])
+     OrderedDict([
+        ('whatever_identifier',
+         OrderedDict([
+            ('mysql_grants.present',
+             [
+              OrderedDict([('database', 'testdb.*')]),
+              OrderedDict([('user', 'testuser')]),
+              OrderedDict([('grant', 'ALTER, SELECT, LOCK TABLES')]),
+              OrderedDict([('host', 'localhost')])
+             ]
+            )
+         ])
+        )
+     ])
 
     :param grant: An un-parsed MySQL GRANT statement str, like
-        "GRANT SELECT, ALTER, LOCK TABLES ON `testdb`.* TO 'testuser'@'localhost'"
+        "GRANT SELECT, ALTER, LOCK TABLES ON `mydb`.* TO 'testuser'@'localhost'"
         or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
@@ -221,16 +242,17 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
+    log.debug('_grant_to_tokens entry {0!r}'.format(grant))
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        grant_sql = grant.get('qry','undefined')
-        sql_args = grant.get('args',{})
-        host = sql_args.get('host','undefined')
-        user = sql_args.get('user','undefined')
+        grant_sql = grant.get('qry', 'undefined')
+        sql_args = grant.get('args', {})
+        host = sql_args.get('host', 'undefined')
+        user = sql_args.get('user', 'undefined')
     else:
         grant_sql = grant
-        user=''
+        user = ''
     # the replace part is for presence of ` character in the db name
     # the shell escape is \` but mysql escape is ``. Spaces should not be
     # exploded as users or db names could contain spaces.
@@ -307,7 +329,7 @@ def _grant_to_tokens(grant):
 
         elif phrase == 'user':
             if dict_mode:
-                break;
+                break
             else:
                 user += token
                 # Read-ahead
@@ -337,13 +359,14 @@ def _grant_to_tokens(grant):
 
 def quote_identifier(identifier, for_grants=False):
     '''
-    Return an identifier name (column, table, database, etc) escaped accordingly for MySQL
+    Return an identifier name (column, table, database, etc) escaped for MySQL
 
     This means surrounded by "`" character and escaping this charater inside.
 
     :param identifier: the table, column or database identifier
 
-    :param for_grants: is False by default, when using database names on grant queries
+    :param for_grants: is False by default, when using database names on grant
+     queries
     you should set it to True to also escape "_" and "%" characters
 
     CLI Example:
@@ -353,7 +376,8 @@ def quote_identifier(identifier, for_grants=False):
         salt '*' mysql.quote_identifier 'foo`bar'
     '''
     if for_grants:
-        return '`' + identifier.replace('`', '``').replace('_', r'\_').replace('%', r'\%') + '`'
+        return '`' + identifier.replace('`', '``').replace('_', r'\_') \
+            .replace('%', r'\%') + '`'
     else:
         return '`' + identifier.replace('`', '``') + '`'
 
@@ -1024,7 +1048,9 @@ def user_create(user,
             if host == 'localhost':
                 qry += ' IDENTIFIED VIA unix_socket'
             else:
-                log.error('Auth via unix_socket can be set only for host=localhost')
+                log.error(
+                    'Auth via unix_socket can be set only for host=localhost'
+                )
     else:
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -1119,7 +1145,8 @@ def user_chpass(user,
            ' WHERE User=%(user)s AND Host = %(host)s;')
     args['user'] = user
     args['host'] = host
-    if salt.utils.is_true(allow_passwordless) and salt.utils.is_true(unix_socket):
+    if salt.utils.is_true(allow_passwordless) and \
+            salt.utils.is_true(unix_socket):
         if host == 'localhost':
             qry += ' IDENTIFIED VIA unix_socket'
         else:
@@ -1200,7 +1227,8 @@ def tokenize_grant(grant):
 
     .. code-block:: bash
 
-        salt '*' mysql.tokenize_grant "GRANT SELECT, INSERT ON testdb.* TO 'testuser'@'localhost'"
+        salt '*' mysql.tokenize_grant \
+            "GRANT SELECT, INSERT ON testdb.* TO 'testuser'@'localhost'"
     '''
     return _grant_to_tokens(grant)
 
@@ -1311,8 +1339,10 @@ def __grant_generate(grant,
         # White-list security check
         grants = grant.split(', ')
         for chkgrant in grants:
-            if not chkgrant in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(chkgrant))
+            if not chkgrant.strip() in __grants__:
+                raise Exception('Invalid grant requested: {0!r}'.format(
+                    chkgrant
+                ))
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1395,7 +1425,8 @@ def grant_exists(grant,
 
     .. code-block:: bash
 
-        salt '*' mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_exists \
+             'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     target = __grant_generate(
         grant, database, user, host, grant_option, escape
@@ -1446,9 +1477,9 @@ def grant_add(grant,
 
     .. code-block:: bash
 
-        salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_add \
+            'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
-    # todo: validate grant
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
@@ -1524,7 +1555,13 @@ def grant_revoke(grant,
         log.error(err)
         return False
 
-    if not grant_exists(grant, database, user, host, grant_option, escape, **connection_args):
+    if not grant_exists(grant,
+                        database,
+                        user,
+                        host,
+                        grant_option,
+                        escape,
+                        **connection_args):
         log.info(
             'Grant {0!r} on {1!r} for user {2!r} has been '
             'revoked'.format(grant, database, user)
