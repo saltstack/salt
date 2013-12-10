@@ -267,7 +267,7 @@ def clean_proc_dir(opts):
             job = salt.payload.Serial(opts).load(fp_)
             log.debug('schedule.clean_proc_dir: checking job {0} for process '
                       'existence'.format(job))
-            if 'pid' in job:
+            if job is not None and 'pid' in job:
                 if salt.utils.process.os_is_running(job['pid']):
                     log.debug('schedule.clean_proc_dir: Cleaning proc dir, '
                               'pid {0} still exists.'.format(job['pid']))
