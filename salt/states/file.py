@@ -1990,11 +1990,16 @@ def blockreplace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
-        ret['comment'] = 'Changes were made'
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Changes would be made'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
     else:
-        ret['comment'] = 'No changes were made'
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
 
-    ret['result'] = True
     return ret
 
 
