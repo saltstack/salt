@@ -34,10 +34,12 @@ import resource
 import subprocess
 
 if subprocess.mswindows:
+    # pylint: disable=F0401
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
     import _subprocess
+    # pylint: enable=F0401
 else:
     import pty
     import fcntl
@@ -496,12 +498,16 @@ class Terminal(object):
             return written
 
         def _recv(self, maxsize):
+            rfds = []
+            if self.child_fd:
+                rfds.append(self.child_fd)
+            if self.child_fde:
+                rfds.append(self.child_fde)
+
             if not self.isalive():
                 if not self.child_fd and not self.child_fde:
                     return None, None
-                rlist, wlist, _ = select.select(
-                    [self.child_fd, self.child_fde], [], [], 0
-                )
+                rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
                     self.flag_eof = True
                     log.debug('End of file(EOL). Brain-dead platform.')
@@ -512,9 +518,7 @@ class Terminal(object):
                 # FIXME So does this mean Irix systems are forced to always
                 # have a 2 second delay when calling read_nonblocking?
                 # That sucks.
-                rlist, wlist, _ = select.select(
-                    [self.child_fd, self.child_fde], [], [], 2
-                )
+                rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
                     self.flag_eof = True
                     log.debug('End of file(EOL). Slow platform.')
@@ -524,19 +528,23 @@ class Terminal(object):
             stdout = ''
 
             # ----- Store FD Flags ------------------------------------------>
-            fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
-            fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
+            if self.child_fd:
+                fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
+            if self.child_fde:
+                fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
             # <---- Store FD Flags -------------------------------------------
 
             # ----- Non blocking Reads -------------------------------------->
-            fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
-            fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
+            if self.child_fd:
+                fcntl.fcntl(self.child_fd,
+                            fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
+            if self.child_fde:
+                fcntl.fcntl(self.child_fde,
+                            fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
             # <---- Non blocking Reads ---------------------------------------
 
             # ----- Check for any incoming data ----------------------------->
-            rlist, wlist, _ = select.select(
-                [self.child_fd, self.child_fde], [], [], 0
-            )
+            rlist, wlist, _ = select.select(rfds, [], [], 0)
             # <---- Check for any incoming data ------------------------------
 
             # ----- Nothing to Process!? ------------------------------------>
@@ -564,8 +572,8 @@ class Terminal(object):
 
                         if self.stderr_logger:
                             stripped = stderr.rstrip()
-                            if stripped.startswith('\r\n'):
-                                stripped = stripped[2:]
+                            if stripped.startswith(os.linesep):
+                                stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stderr_logger.debug(stripped)
                 except OSError:
@@ -594,8 +602,8 @@ class Terminal(object):
 
                         if self.stdout_logger:
                             stripped = stdout.rstrip()
-                            if stripped.startswith('\r\n'):
-                                stripped = stripped[2:]
+                            if stripped.startswith(os.linesep):
+                                stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stdout_logger.debug(stripped)
                 except OSError:
@@ -701,9 +709,9 @@ class Terminal(object):
                 try:
                     ### os.WNOHANG # Solaris!
                     pid, status = _waitpid(self.pid, waitpid_options)
-                except _os_error as e:
+                except _os_error as exc:
                     # This should never happen...
-                    if e.errno == _errno_echild:
+                    if exc.errno == _errno_echild:
                         raise _terminal_exception(
                             'isalive() encountered condition that should '
                             'never happen. There was no child process. Did '
