@@ -115,8 +115,7 @@ def __check_table(name, table, **connection_args):
         dbname=s_name,
         dbtable=s_table
     )
-    log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -133,8 +132,7 @@ def __repair_table(name, table, **connection_args):
         dbname=s_name,
         dbtable=s_table
     )
-    log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -151,8 +149,7 @@ def __optimize_table(name, table, **connection_args):
         dbname=s_name,
         dbtable=s_table
     )
-    log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -246,7 +243,10 @@ def _grant_to_tokens(grant):
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        grant_sql = grant.get('qry', 'undefined')
+        # Everything coming in dictionnary form was made for a MySQLdb execute
+        # call and contain a '%%' escaping of '%' characters for MySQLdb
+        # that we should remove here.
+        grant_sql = grant.get('qry', 'undefined').replace('%%','%')
         sql_args = grant.get('args', {})
         host = sql_args.get('host', 'undefined')
         user = sql_args.get('user', 'undefined')
@@ -363,12 +363,15 @@ def quote_identifier(identifier, for_grants=False):
     Return an identifier name (column, table, database, etc) escaped for MySQL
 
     This means surrounded by "`" character and escaping this charater inside.
+    It also means doubling the '%' character for MySQLdb internal usage.
 
     :param identifier: the table, column or database identifier
 
     :param for_grants: is False by default, when using database names on grant
-     queries
-    you should set it to True to also escape "_" and "%" characters
+     queries you should set it to True to also escape "_" and "%" characters as
+     requested by MySQL. Note that theses characters should only be escaped when
+     requesting grants on the database level (`my\_\%db`.*) but not for table
+     level grants (`my_%db`.`foo`)
 
     CLI Example:
 
@@ -378,10 +381,29 @@ def quote_identifier(identifier, for_grants=False):
     '''
     if for_grants:
         return '`' + identifier.replace('`', '``').replace('_', r'\_') \
-            .replace('%', r'\%') + '`'
+            .replace('%', r'\%%') + '`'
     else:
-        return '`' + identifier.replace('`', '``') + '`'
+        return '`' + identifier.replace('`', '``').replace('%', '%%') + '`'
 
+
+def _execute(cur, qry, args=None):
+    '''
+    Internal wrapper around MySQLdb cursor.execute() function
+
+    MySQLDb does not apply the same filters  when arguments are used with the
+    query. For example '%' characters on the query must be encoded as '%%' and
+    will be restored as '%' when arguments are applied. But when there're no
+    arguments the '%%' is not managed. We cannot apply Identifier quoting in a
+    predictible way if the query are not always applying the same filters. So
+    this wrapper ensure this escape is mase if no arguments are used.
+    '''
+    if args is None or args == {}:
+        qry = qry.replace('%%','%')
+        log.debug('Doing query: {0}'.format(qry))
+        return cur.execute(qry)
+    else:
+        log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
+        return cur.execute(qry, args)
 
 def query(database, query, **connection_args):
     '''
@@ -476,14 +498,14 @@ def query(database, query, **connection_args):
         return {}
     cur = dbc.cursor()
     start = time.time()
+    log.debug('Using db: {0} to run query {1}'.format(database, query))
     try:
-        affected = cur.execute(query)
+        affected = _execute(cur, query)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
         return {}
-    log.debug('Using db: ' + database + ' to run query: ' + query)
     results = cur.fetchall()
     elapsed = (time.time() - start)
     if elapsed < 0.200:
@@ -528,9 +550,8 @@ def status(**connection_args):
         return {}
     cur = dbc.cursor()
     qry = 'SHOW STATUS'
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute(qry)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -560,9 +581,8 @@ def version(**connection_args):
         return ''
     cur = dbc.cursor()
     qry = 'SELECT VERSION()'
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute('SELECT VERSION()')
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -594,9 +614,8 @@ def slave_lag(**connection_args):
         return -3
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'show slave status'
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute(qry)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -676,9 +695,8 @@ def db_list(**connection_args):
         return []
     cur = dbc.cursor()
     qry = 'SHOW DATABASES'
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute(qry)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -714,9 +732,8 @@ def db_tables(name, **connection_args):
     cur = dbc.cursor()
     s_name = quote_identifier(name)
     qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname=s_name)
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute(qry)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -751,7 +768,7 @@ def db_exists(name, **connection_args):
     args = {"dbname": name}
     log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -802,9 +819,8 @@ def db_create(name, character_set=None, collate=None, **connection_args):
         args['collate'] = collate
     qry += ';'
 
-    log.debug('Query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        if cur.execute(qry, args):
+        if _execute(cur, qry, args):
             log.info('DB {0!r} created'.format(name))
             return True
     except MySQLdb.OperationalError as exc:
@@ -840,9 +856,8 @@ def db_remove(name, **connection_args):
     cur = dbc.cursor()
     s_name = quote_identifier(name)
     qry = 'DROP DATABASE %(dbname)s;' % dict(dbname=s_name)
-    log.debug('Doing query: {0}'.format(qry))
     try:
-        cur.execute(qry)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -873,7 +888,8 @@ def user_list(**connection_args):
         return []
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute('SELECT User,Host FROM mysql.user')
+        qry = 'SELECT User,Host FROM mysql.user'
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -931,9 +947,8 @@ def user_exists(user,
         qry += ' AND Password = %(password)s'
         args['password'] = password_hash
 
-    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -964,9 +979,8 @@ def user_info(user, host='localhost', **connection_args):
     args['user'] = user
     args['host'] = host
 
-    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1057,9 +1071,8 @@ def user_create(user,
                   'allow_passwordless=True')
         return False
 
-    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1152,9 +1165,8 @@ def user_chpass(user,
             qry += ' IDENTIFIED VIA unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
-    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        result = cur.execute(qry, args)
+        result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1162,7 +1174,7 @@ def user_chpass(user,
         return False
 
     if result:
-        cur.execute('FLUSH PRIVILEGES;')
+        _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
             'Password for user {0!r}@{1!r} has been {2}'.format(
                 user, host,
@@ -1201,9 +1213,8 @@ def user_remove(user,
     args = {}
     args['user'] = user
     args['host'] = host
-    log.debug('Doing query: {0} args: {1}'.format(qry, repr(args)))
     try:
-        result = cur.execute(qry, args)
+        result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1398,9 +1409,8 @@ def user_grants(user,
     args = {}
     args['user'] = user
     args['host'] = host
-    log.debug('Doing query: {0} args {1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1499,9 +1509,8 @@ def grant_add(grant,
     # Avoid spaces problems
     grant = grant.strip()
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
-    log.debug('Query: {0} args: {1}'.format(qry['qry'], repr(qry['args'])))
     try:
-        cur.execute(qry['qry'], qry['args'])
+        _execute(cur, qry['qry'], qry['args'])
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1568,9 +1577,8 @@ def grant_revoke(grant,
     args['user'] = user
     args['host'] = host
 
-    log.debug('Query: {0} args{1}'.format(qry, repr(args)))
     try:
-        cur.execute(qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1626,7 +1634,7 @@ def processlist(**connection_args):
 
     dbc = _connect(**connection_args)
     cur = dbc.cursor()
-    cur.execute('SHOW FULL PROCESSLIST')
+    _execute(cur, 'SHOW FULL PROCESSLIST')
     hdr = [c[0] for c in cur.description]
     for _ in range(cur.rowcount):
         row = cur.fetchone()
@@ -1660,7 +1668,7 @@ def __do_query_into_hash(conn, sql_str):
         return rtn_results
 
     try:
-        cursor.execute(sql_str)
+        _execute(cursor, sql_str)
     except MySQLdb.MySQLError:
         log.error('{0}: try to execute : SQL->{1}'.format(mod, sql_str))
         cursor.close()
