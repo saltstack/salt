@@ -17,7 +17,22 @@ try:
 except ImportError:
     HAS_MEMCACHE = False
 
+
+def __virtual__():
+    '''
+    Only load if have installed python memcache module
+    '''
+    if not HAS_MEMCACHE:
+        return False
+    return 'memcache'
+
 log = logging.getLogger(__name__)
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def _connect(host, port):
     '''
@@ -25,10 +40,10 @@ def _connect(host, port):
     values assigned to missing values.
     '''
     if not host:
-        user = __salt__['config.option']('memcache.host')
+        host = __salt__['config.option']('memcache.host')
     if not port:
         port = __salt__['config.option']('memcache.port')
-    
+
     if not HAS_MEMCACHE:
         raise SaltException('Error: python-memcached is not installed.')
     else:
@@ -62,6 +77,7 @@ def status(host, port):
 
     return ret
 
+
 def get(host, port, key):
     '''
     get key from  memcache server
@@ -79,7 +95,8 @@ def get(host, port, key):
     else:
         return conn.get(key)
 
-def set(host, port, key, val, time=0, min_compress_len=0):
+
+def set_(host, port, key, val, time=0, min_compress_len=0):
     '''
     insert key to  memcache server
 
@@ -97,6 +114,7 @@ def set(host, port, key, val, time=0, min_compress_len=0):
         ret = conn.set(key, val, time, min_compress_len)
     return ret
 
+
 def delete(host, port, key, time=0):
     '''
     delete key from  memcache server
@@ -105,7 +123,7 @@ def delete(host, port, key, time=0):
 
     .. code-block:: bash
 
-        salt '*' memcache.delete  <host> <port> <key> 
+        salt '*' memcache.delete  <host> <port> <key>
     '''
     conn = _connect(host, port)
     status = conn.get_stats()
@@ -139,7 +157,7 @@ def add(host, port, key, val, time=0, min_compress_len=0):
 
 def incr(host, port, key, delta=1):
     '''
-    incr key 
+    incr key
 
     CLI Example:
 
@@ -161,7 +179,7 @@ def incr(host, port, key, delta=1):
 
 def decr(host, port, key, delta=1):
     '''
-    decr key 
+    decr key
 
     CLI Example:
 
@@ -197,4 +215,3 @@ def replace(host, port, key, val, time=0, min_compress_len=0):
         raise SaltException('Error: memcache server is down or not exists.')
     else:
         return conn.replace(key, val, time=0, min_compress_len=0)
-
