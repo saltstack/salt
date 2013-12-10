@@ -239,10 +239,9 @@ def run(opts):
         opts.download_unittest_reports = vm_name
 
     cmd = (
-        'salt-cloud -l debug --script-args "-D -n git {commit}" '
-        '--start-action \'saltutil.sync_all && salt-call -l '
-        'state.sls {sls} pillar="{pillar}" --no-color\' '
-        '-p {provider}_{platform} {0}'.format(
+        'salt-cloud -l debug --no-color --script-args "-D -n git {commit}" '
+        '--start-action \'saltutil.sync_all && salt-call state.sls {state} '
+        'pillar="{pillar}" --no-color\' -p {provider}_{platform} {0}'.format(
             vm_name,
             sls=opts.sls,
             pillar=opts.pillar.format(commit=opts.commit),
