@@ -544,7 +544,7 @@ class Terminal(object):
             # <---- Non blocking Reads ---------------------------------------
 
             # ----- Check for any incoming data ----------------------------->
-            rlist, wlist, _ = select.select(rfds, [], [], 0)
+            rlist, _, _ = select.select(rfds, [], [], 0)
             # <---- Check for any incoming data ------------------------------
 
             # ----- Nothing to Process!? ------------------------------------>
