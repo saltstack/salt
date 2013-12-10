@@ -314,6 +314,7 @@ def wait_for_port(host, port=22, timeout=900):
                 )
             )
 
+
 def validate_windows_cred(host, port=445, username='Administrator',
                           password=None):
     '''
@@ -323,6 +324,7 @@ def validate_windows_cred(host, port=445, username='Administrator',
         username, password, host
     ))
     return retcode == 0
+
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
@@ -458,7 +460,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             # that must be in the minion config file
             windows_minion_conf = {
                 'ipc_mode': 'tcp',
-                'root_dir': 'c:\salt',
+                'root_dir': 'c:\\salt',
                 'pki_dir': '/conf/pki/minion',
                 'multiprocessing': False,
             }
