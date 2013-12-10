@@ -118,6 +118,10 @@ _DEB_NETWORK_DIR = '/etc/network/interfaces.d'
 _DEB_NETWORK_UP_DIR = '/etc/network/if-up.d'
 _DEB_NETWORK_DOWN_DIR = '/etc/network/if-down.d'
 _DEB_NETWORK_CONF_FILES = '/etc/modprobe.d'
+_DEB_NETWORKING_FILE = '/etc/default/networking'
+_DEB_HOSTNAME_FILE = '/etc/hostname'
+_DEB_RESOLV_FILE = '/etc/resolv.conf'
+
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
@@ -200,6 +204,65 @@ def _read_file(path):
     except Exception:
         return ''
 
+def _parse_resolve():
+    '''
+    Parse /etc/resolv.conf and return domainname
+    '''
+
+    contents = _read_file(_DEB_RESOLV_FILE)
+    return contents
+
+def _parse_domainname():
+    '''
+    Parse /etc/resolv.conf and return domainname
+    '''
+
+    contents = _read_file(_DEB_RESOLV_FILE)
+    pattern = "(?P<tag>\S+)\s+(?P<domain_name>\S+)"
+    prog = re.compile(pattern)
+    for item in contents:
+        match = prog.match(item)
+        if match:
+            return match.group("domain_name")
+    return ""
+
+def _parse_hostname():
+    '''
+    Parse /etc/hostname and return hostname
+    '''
+
+    contents = _read_file(_DEB_HOSTNAME_FILE)
+    return contents[0].split('\n')[0]
+
+def _parse_current_network_settings():
+    '''
+    Parse /etc/default/networking and return current configuration
+    '''
+
+    opts = {}
+
+    #_read_file('/etc/default/networking'):
+    if os.path.isfile('/etc/default/networking'):
+        contents = open('/etc/default/networking')
+
+        for line in contents:
+            if line.startswith('#'):
+                pass
+            elif line.startswith('CONFIGURE_INTERFACES'):
+                sline = line.split('=')
+                if line.endswith('\n'):
+                    opts['networking'] = sline[1][:-1]
+                else:
+                    opts['networking'] = sline[1]
+
+    hostname = _parse_hostname()
+    domainname = _parse_domainname()
+
+    if domainname:
+        hostname = "{0}.{1}" . format(hostname, domainname)
+
+    opts['hostname'] = hostname
+    return opts
 
 def _parse_interfaces():
     '''
@@ -237,18 +300,18 @@ def _parse_interfaces():
                         raise AttributeError(msg)
 
                     iface_name = sline[1]
+                    context = sline[2]
+
                     # Create item in dict, if not already there
                     if not iface_name in adapters:
                         adapters[iface_name] = {}
 
                     # Create item in dict, if not already there
                     if not 'data' in adapters[iface_name]:
-                        context = 0
-                        adapters[iface_name]['data'] = []
-                        adapters[iface_name]['data'].append({})
-                    else:
-                        context += 1
-                        adapters[iface_name]['data'].append({})
+                        adapters[iface_name]['data'] = {}
+
+                    if not context in adapters[iface_name]['data']:
+                        adapters[iface_name]['data'][context] = {}
 
                     adapters[iface_name]['data'][context]['inet_type'] = sline[2]
                     adapters[iface_name]['data'][context]['proto'] = sline[3]
@@ -264,7 +327,7 @@ def _parse_interfaces():
                             adapters[iface_name]['data'][context][sline[0]] = sline[1]
 
                         if sline[0] == 'vlan-raw-device':
-                            adapters[iface_name]['data'][0]['vlan_raw_device'] = sline[1]
+                            adapters[iface_name]['data'][context]['vlan_raw_device'] = sline[1]
 
                         if sline[0] in _REV_ETHTOOL_CONFIG_OPTS:
                             ethtool_key = sline[0]
@@ -289,6 +352,12 @@ def _parse_interfaces():
                             if not 'bridge_options' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['bridge_options'] = {}
                             adapters[iface_name]['data'][context]['bridge_options'][opt] = value
+
+                        if sline[0].startswith('dns-nameservers'):
+                            sline.pop(0)
+                            if not cmd_key in adapters[iface_name]['data'][context]:
+                                adapters[iface_name]['data'][context]['dns'] = []
+                            adapters[iface_name]['data'][context]['dns'] = sline
 
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
@@ -320,9 +389,9 @@ def _parse_interfaces():
 
     # Return a sorted list of the keys for ethtool options to ensure a consistent order
     for iface_name in adapters:
-        if 'ethtool' in adapters[iface_name]['data'][0]:
-            ethtool_keys = sorted(adapters[iface_name]['data'][0]['ethtool'].keys())
-            adapters[iface_name]['data'][0]['ethtool_keys'] = ethtool_keys
+        if 'ethtool' in adapters[iface_name]['data']['inet']:
+            ethtool_keys = sorted(adapters[iface_name]['data']['inet']['ethtool'].keys())
+            adapters[iface_name]['data']['inet']['ethtool_keys'] = ethtool_keys
 
     return adapters
 
@@ -759,13 +828,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     adapters[iface]['type'] = iface_type
 
-    adapters[iface]['data'] = []
-    adapters[iface]['data'].append({})
+    adapters[iface]['data'] = {}
+    adapters[iface]['data']['inet'] = {}
 
     if enabled:
         adapters[iface]['enabled'] = True
 
-    adapters[iface]['data'][0]['inet_type'] = 'inet'
+    adapters[iface]['data']['inet']['inet_type'] = 'inet'
 
     if iface_type not in ['bridge']:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
@@ -774,9 +843,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for item in tmp_ethtool:
                 ethtool[_ETHTOOL_CONFIG_OPTS[item]] = tmp_ethtool[item]
 
-            adapters[iface]['data'][0]['ethtool'] = ethtool
+            adapters[iface]['data']['inet']['ethtool'] = ethtool
             # return a list of sorted keys to ensure consistent order
-            adapters[iface]['data'][0]['ethtool_keys'] = sorted(ethtool.keys())
+            adapters[iface]['data']['inet']['ethtool_keys'] = sorted(ethtool.keys())
 
     if iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
@@ -788,63 +857,119 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['master'] = opts['master']
 
     if iface_type == 'vlan':
-        adapters[iface]['data'][0]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
+        adapters[iface]['data']['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
     if 'proto' in opts:
         valid = ['bootp', 'dhcp', 'none', 'static', 'manual', 'loopback']
         if opts['proto'] in valid:
             # no 'none' proto for Debian, set to static
             if opts['proto'] == 'none':
-                adapters[iface]['data'][0]['proto'] = 'static'
+                adapters[iface]['data']['inet']['proto'] = 'static'
             else:
-                adapters[iface]['data'][0]['proto'] = opts['proto']
+                adapters[iface]['data']['inet']['proto'] = opts['proto']
         else:
             _raise_error_iface(iface, opts['proto'], valid)
 
     if 'ipaddr' in opts:
-        adapters[iface]['data'][0]['address'] = opts['ipaddr']
+        adapters[iface]['data']['inet']['address'] = opts['ipaddr']
 
     for opt in ['netmask', 'network', 'gateway', 'addr']:
         if opt in opts:
-            adapters[iface]['data'][0][opt] = opts[opt]
+            adapters[iface]['data']['inet'][opt] = opts[opt]
 
     for opt in ['bridge_ports', 'bridge_stp', 'bridge_waitport', 'bridge_fd']:
         if opt in opts:
             key = opt.split('_')[1]
-            if not 'bridge_options' in adapters[iface]['data'][0]:
-                adapters[iface]['data'][0]['bridge_options'] = {}
-            adapters[iface]['data'][0]['bridge_options'][key] = opts[opt]
+            if not 'bridge_options' in adapters[iface]['data']['inet']:
+                adapters[iface]['data']['inet']['bridge_options'] = {}
+            adapters[iface]['data']['inet']['bridge_options'][key] = opts[opt]
+
+    if 'dns' in opts:
+        adapters[iface]['data']['inet']['dns'] = opts['dns']
 
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds']:
         if opt in opts:
-            adapters[iface]['data'][0][opt] = opts[opt]
+            adapters[iface]['data']['inet'][opt] = opts[opt]
 
     for opt in ['down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            adapters[iface]['data'][0][opt] = opts[opt]
+            adapters[iface]['data']['inet'][opt] = opts[opt]
 
     if 'enable_ipv6' in opts and opts['enable_ipv6']:
-        adapters[iface]['data'].append({})
-        adapters[iface]['data'][1]['inet_type'] = 'inet6'
-        adapters[iface]['data'][1]['netmask'] = '64'
+        #adapters[iface]['data'].append({})
+        adapters[iface]['data']['inet6'] = {}
+        adapters[iface]['data']['inet6']['inet_type'] = 'inet6'
+        adapters[iface]['data']['inet6']['netmask'] = '64'
 
         if 'iface_type' in opts and opts['iface_type'] == 'vlan':
-            adapters[iface]['data'][1]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
+            adapters[iface]['data']['inet6']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
         if 'ipv6proto' in opts:
-            adapters[iface]['data'][1]['proto'] = opts['ipv6proto']
+            adapters[iface]['data']['inet6']['proto'] = opts['ipv6proto']
 
         if 'ipv6addr' in opts:
-            adapters[iface]['data'][1]['address'] = opts['ipv6addr']
+            adapters[iface]['data']['inet6']['address'] = opts['ipv6addr']
 
         if 'ipv6netmask' in opts:
-            adapters[iface]['data'][1]['netmask'] = opts['ipv6netmask']
+            adapters[iface]['data']['inet6']['netmask'] = opts['ipv6netmask']
 
         if 'ipv6gateway' in opts:
-            adapters[iface]['data'][1]['gateway'] = opts['ipv6gateway']
+            adapters[iface]['data']['inet6']['gateway'] = opts['ipv6gateway']
 
     return adapters
 
+
+def _parse_network_settings(opts, current):
+    '''
+    Filters given options and outputs valid settings for
+    the global network settings file.
+    '''
+    # Normalize keys
+    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    result = {}
+
+    valid = _CONFIG_TRUE + _CONFIG_FALSE
+    if not 'networking' in opts:
+        try:
+            opts['networking'] = current['networking']
+            _log_default_network('networking', current['networking'])
+        except Exception:
+            _raise_error_network('networking', valid)
+
+    if opts['networking'] in valid:
+        if opts['networking'] in _CONFIG_TRUE:
+            result['networking'] = 'yes'
+        elif opts['networking'] in _CONFIG_FALSE:
+            result['networking'] = 'no'
+    else:
+        _raise_error_network('networking', valid)
+
+    if not 'hostname' in opts:
+        try:
+            opts['hostname'] = current['hostname']
+            _log_default_network('hostname', current['hostname'])
+        except Exception:
+            _raise_error_network('hostname', ['server1.example.com'])
+
+    if opts['hostname']:
+        result['hostname'] = opts['hostname']
+    else:
+        _raise_error_network('hostname', ['server1.example.com'])
+
+    #if 'nozeroconf' in opts:
+    #    if opts['nozeroconf'] in valid:
+    #        if opts['nozeroconf'] in _CONFIG_TRUE:
+    #            result['nozeroconf'] = 'true'
+    #        elif opts['nozeroconf'] in _CONFIG_FALSE:
+    #            result['nozeroconf'] = 'false'
+    #    else:
+    #        _raise_error_network('nozeroconf', valid)
+
+    #for opt in opts:
+    #    if opt not in ['networking', 'hostname', 'nozeroconf']:
+    #        result[opt] = opts[opt]
+    return result
 
 def _parse_routes(iface, opts):
     '''
@@ -898,6 +1023,20 @@ def _write_file_routes(iface, data, folder, pattern):
     return filename
 
 
+def _write_file_network(data, filename):
+    '''
+    Writes a file to disk
+    '''
+    if not os.path.exists(filename):
+        msg = '{0} cannot be written. {0} does not exist'
+        msg = msg.format(filename)
+        log.error(msg)
+        raise AttributeError(msg)
+    fout = salt.utils.fopen(filename, 'w')
+    fout.write(data)
+
+    fout.close()
+
 def _read_temp(data):
     '''
     Return what would be written to disk
@@ -944,8 +1083,8 @@ def _write_file_ifaces(iface, data, folder):
         if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'slave':
             # Override values so the interfaces file is correct
             adapters[adapter]['enabled'] = False
-            adapters[adapter]['data'][0]['inet_type'] = 'inet'
-            adapters[adapter]['data'][0]['proto'] = 'manual'
+            adapters[adapter]['data']['inet']['inet_type'] = 'inet'
+            adapters[adapter]['data']['inet']['proto'] = 'manual'
 
         tmp = template.render({'name': adapter, 'data': adapters[adapter]})
         ifcfg += tmp
@@ -1171,12 +1310,26 @@ def up(iface, iface_type):  # pylint: disable=C0103
 
 
 def get_network_settings():
-    # Once implemented, please add a docstring with CLI example, and remove
-    # this function from the allow_failure tuple in
-    # SysModuleTest.test_valid_docs, within tests/integration/modules/sysmod.py
-    msg = 'Not implemented yet'
-    return msg
+    '''
+    Return the contents of the global network script.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.get_network_settings
+    '''
+
+    settings = _parse_current_network_settings()
+
+    try:
+        template = JINJA.get_template('display-network.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template display-network.jinja')
+        return ''
+
+    network = template.render(settings)
+    return _read_temp(network)
 
 def get_routes(iface):
     '''
@@ -1222,8 +1375,69 @@ def apply_network_settings(**settings):
 
 
 def build_network_settings(**settings):
-    # Once implemented, please add a docstring with CLI example, and remove
-    # this function from the allow_failure tuple in
-    # SysModuleTest.test_valid_docs, within tests/integration/modules/sysmod.py
-    msg = 'Not implemented yet'
-    return msg
+    '''
+    Build the global network script.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.build_network_settings <settings>
+    '''
+    # Read current configuration and store default values
+    current_network_settings = _parse_current_network_settings()
+
+    # Build settings
+    opts = _parse_network_settings(settings, current_network_settings)
+    try:
+        template = JINJA.get_template('network.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template network.jinja')
+        return ''
+    network = template.render(opts)
+
+    if settings['test']:
+        return _read_temp(network)
+
+    # Write settings
+    _write_file_network(network, _DEB_NETWORKING_FILE)
+
+    sline = opts['hostname'].split('.', 1)
+
+    # Write hostname to /etc/hostname
+    hostname = "{0}\n" . format(sline[0])
+    _write_file_network(hostname, _DEB_HOSTNAME_FILE)
+
+    # Write domainname to /etc/resolv.conf
+    if len(sline) > 0:
+        domainname = sline[1]
+
+        contents = _parse_resolve()
+        pattern = "domain\s+(?P<domain_name>\S+)"
+        prog = re.compile(pattern)
+        new_contents = []
+        found_domain = False
+        for item in contents:
+            match = prog.match(item)
+            if match:
+                new_contents.append("domain {0}\n" . format(domainname))
+                found_domain = True
+            else:
+                new_contents.append(item)
+
+        # Not found add to beginning
+        if not found_domain:
+            new_contents.insert(0, "domain {0}\n" . format(domainname))
+     
+        new_resolv = "".join(new_contents)
+
+        _write_file_network(new_resolv, _DEB_RESOLV_FILE)
+
+    try:
+        template = JINJA.get_template('display-network.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template display-network.jinja')
+        return ''
+
+    network = template.render(opts)
+    return _read_temp(network)
