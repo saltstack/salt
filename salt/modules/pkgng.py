@@ -292,7 +292,7 @@ def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
 
     ret = {}
     cmd = '{0} info'.format(_pkg(jail, chroot))
-    for line in __salt__['cmd.run_stdout'](cmd, quiet=True).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         if not line:
             continue
         try:
