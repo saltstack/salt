@@ -200,7 +200,7 @@ class Master(SMaster):
                 br, loc = opts_dict['git'].strip().split()
                 pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
                 break
-        
+
         old_present = set()
         while True:
             now = int(time.time())
@@ -2082,7 +2082,7 @@ class ClearFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message)) 
+                                       message=exc.message))
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -2133,7 +2133,7 @@ class ClearFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message)) 
+                                       message=exc.message))
 
         except Exception as exc:
             log.error(
@@ -2141,7 +2141,7 @@ class ClearFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))           
+                                   message=exc.message))
 
     def wheel(self, clear_load):
         '''
@@ -2204,9 +2204,9 @@ class ClearFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
                                             fun,
-                                            exc.__class__.__name__, 
+                                            exc.__class__.__name__,
                                             exc,
-                                            )                
+                                            )
                 data['success'] = False
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return {'tag': tag}
@@ -2271,9 +2271,9 @@ class ClearFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
                                             fun,
-                                            exc.__class__.__name__, 
+                                            exc.__class__.__name__,
                                             exc,
-                                            )     
+                                            )
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return {'tag': tag}
 
