@@ -686,7 +686,6 @@ class Minion(object):
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
-
     def _handle_pub(self, load):
         '''
         Handle public key payloads
@@ -1402,7 +1401,7 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
 
-    def _handle_aes(self, load):
+    def _handle_aes(self, load, sig=None):
         '''
         Takes the AES encrypted load, decrypts it, and runs the encapsulated
         instructions
