@@ -887,7 +887,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     local
         Do not update the repository catalogues with ``pkg-update(8)``. A value
-        of ``True`` here is equivalent to using the ``-L`` flag with ``pkg
+        of ``True`` here is equivalent to using the ``-U`` flag with ``pkg
         upgrade``.
 
         CLI Example:
