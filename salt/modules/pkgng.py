@@ -543,8 +543,9 @@ def upgrade(force=False, local=False, dryrun=False):
             salt '*' pkgng.upgrade force=True
 
     local
-        Skip updating the repository catalogues with ``pkg-update(8)``. Use the
-        local cache only.
+        Do not update the repository catalogues with ``pkg-update(8)``. A value
+        of ``True`` here is equivalent to using the ``-U`` flag with ``pkg
+        upgrade``.
 
         CLI Example:
 
