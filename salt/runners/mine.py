@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A runner to access data from the salt mine
 '''

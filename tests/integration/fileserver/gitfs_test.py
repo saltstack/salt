@@ -30,7 +30,7 @@ except ImportError:
     pass
 
 if not gitfs.__virtual__():
-  GITFS_AVAILABLE = False
+    GITFS_AVAILABLE = False
 
 
 @skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
