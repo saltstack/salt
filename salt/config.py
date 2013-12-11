@@ -162,6 +162,7 @@ VALID_OPTS = {
     'enable_lspci': bool,
     'syndic_wait': int,
     'minion_id_caching': bool,
+    'sign_pub_messages': bool,
 }
 
 # default configurations
@@ -349,6 +350,7 @@ DEFAULT_MASTER_OPTS = {
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
     'syndic_wait': 1,
+    'sign_pub_messages': False,
 }
 
 

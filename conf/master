@@ -188,6 +188,23 @@
 # security purposes.
 #file_recv: False 
 
+# Signature verification on messages published from the master.
+# This causes the master to cryptographically sign all messages published to its event
+# bus, and minions then verify that signature before acting on the message.
+#
+# This is False by default.
+#
+# Note that to facilitate interoperability with masters and minions that are different
+# versions, if sign_pub_messages is True but a message is received by a minion with
+# no signature, it will still be accepted, and a warning message will be logged.
+# Conversely, if sign_pub_messages is False, but a minion receives a signed
+# message it will be accepted, the signature will not be checked, and a warning message
+# will be logged.  This behavior will go away in Salt 0.17.6 (or Hydrogen RC1, whichever
+# comes first) and these two situations will cause minion to throw an exception and
+# drop the message.
+#
+# sign_pub_messages: False
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded
