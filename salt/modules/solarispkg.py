@@ -95,7 +95,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](cmd, quiet=True).splitlines()
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
