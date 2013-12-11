@@ -647,6 +647,12 @@ class Terminal(object):
 
             Thank you for the shortcut PEXPECT
             '''
+            if self.child_fd is None:
+                raise TerminalException(
+                    'Can\'t check the size of the teminal since we\'re not '
+                    'connected to the child process.'
+                )
+
             TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
             packed = struct.pack('HHHH', 0, 0, 0, 0)
             ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
