@@ -33,7 +33,8 @@ Some quick guides covering getting started with Amazon EC2, Digital Ocean,
 GoGrid, Google Compute Engine, Linode, Joyent, Parallels, Rackspace, and
 SoftLayer.
 
-* :doc:`Getting Started With AWS/EC2 <aws>`
+* :doc:`Getting Started With EC2 <aws>`
+* :doc:`Getting Started With Azure <azure>`
 * :doc:`Getting Started With Digital Ocean <digitalocean>`
 * :doc:`Getting Started With GoGrid <gogrid>`
 * :doc:`Getting Started With Google Compute Engine <gce>`
