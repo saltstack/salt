@@ -33,9 +33,9 @@ def external_ip():
                  'http://api.externalip.net/ip',
                  'http://v4.ident.me')
 
-    for check_ip in check_ips:
+    for url in check_ips:
         try:
-            with contextlib.closing(urllib2.urlopen(check_ip)) as req:
+            with contextlib.closing(urllib2.urlopen(url, timeout=3)) as req:
                 ip_ = req.read().strip()
                 if not _ipv4_addr(ip_):
                     continue
