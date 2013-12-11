@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''\
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
