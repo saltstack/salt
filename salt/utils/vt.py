@@ -356,6 +356,8 @@ class Terminal(object):
                 self.args = ['/bin/sh', '-c'] + args
             elif self.shell:
                 self.args = ['/bin/sh']
+            else:
+                self.args = args
 
             if self.executable:
                 self.args[0] = self.executable
