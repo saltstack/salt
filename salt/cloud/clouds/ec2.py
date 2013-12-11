@@ -1261,15 +1261,20 @@ def create(vm_=None, call=None):
         win_passwd = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
-        if not salt.utils.cloud.wait_for_port(ip_address, port=445, timeout=ssh_connect_timeout):
+        if not salt.utils.cloud.wait_for_port(ip_address,
+                                              port=445,
+                                              timeout=ssh_connect_timeout):
             raise SaltCloudSystemExit(
                 'Failed to connect to remote windows host'
             )
-        if not salt.utils.cloud.validate_windows_cred(ip_address, 445, username, win_passwd):
+        if not salt.utils.cloud.validate_windows_cred(ip_address,
+                                                      username,
+                                                      win_passwd):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
+    elif salt.utils.cloud.wait_for_port(ip_address,
+                                        timeout=ssh_connect_timeout):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
@@ -1349,7 +1354,9 @@ def create(vm_=None, call=None):
         )
 
         # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer',
+                                                      vm_,
+                                                      __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
@@ -1504,7 +1511,10 @@ def create_attach_volumes(name, kwargs, call=None):
         if attach:
             msg = (
                 '{0} attached to {1} (aka {2}) as device {3}'.format(
-                    volume_dict['volume_id'], kwargs['instance_id'], name, volume['device']
+                    volume_dict['volume_id'],
+                    kwargs['instance_id'],
+                    name,
+                    volume['device']
                 )
             )
             log.info(msg)
