@@ -41,7 +41,6 @@ import jinja2
 
 
 # pylint: disable=W0611
-# pylint: enable=W0611
 # These are imported to be available in the spawmed shell
 
 
