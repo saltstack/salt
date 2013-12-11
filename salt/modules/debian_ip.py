@@ -218,7 +218,7 @@ def _parse_domainname():
     '''
 
     contents = _read_file(_DEB_RESOLV_FILE)
-    pattern = "(?P<tag>\S+)\s+(?P<domain_name>\S+)"
+    pattern = r'(?P<tag>\S+)\s+(?P<domain_name>\S+)'
     prog = re.compile(pattern)
     for item in contents:
         match = prog.match(item)
@@ -1413,7 +1413,7 @@ def build_network_settings(**settings):
         domainname = sline[1]
 
         contents = _parse_resolve()
-        pattern = "domain\s+(?P<domain_name>\S+)"
+        pattern = r"domain\s+(?P<domain_name>\S+)"
         prog = re.compile(pattern)
         new_contents = []
         found_domain = False
@@ -1428,7 +1428,7 @@ def build_network_settings(**settings):
         # Not found add to beginning
         if not found_domain:
             new_contents.insert(0, "domain {0}\n" . format(domainname))
-     
+
         new_resolv = "".join(new_contents)
 
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)
