@@ -27,8 +27,6 @@ except ImportError:
         # because that will cause issues under windows at install time.
         raise
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword( for .*)?:')
-
 # Import salt libs
 import salt.crypt
 import salt.client
@@ -59,6 +57,8 @@ NSTATES = {
     2: 'terminated',
     3: 'pending',
 }
+
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:')
 
 # Get logging started
 log = logging.getLogger(__name__)
