@@ -664,7 +664,7 @@ def remotes_on_local_tcp_port(port):
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
-        raise
+        raise 
 
     lines = data.split('\n')
     for line in lines:
