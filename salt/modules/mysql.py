@@ -26,7 +26,7 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-.. versionchanged:: 0.18
+.. versionchanged:: Hydrogen
     charset connection argument added. This is a MySQL charset, not a python one
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
