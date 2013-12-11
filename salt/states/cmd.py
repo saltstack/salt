@@ -461,13 +461,13 @@ def run(name,
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
 
-    .. note:: 
+    .. note::
 
-        cmd.run supports the usage of reload_modules. This functionality
+        cmd.run supports the usage of ``reload_modules``. This functionality
         allows you to force Salt to reload all modules. You should only use
-        reload_modules if your cmd.run does some sort of installation (such as
-        pip), if you do not reload the modules future items in your state
-        which rely on the software being installed will fail. 
+        ``reload_modules`` if your cmd.run does some sort of installation
+        (such as ``pip``), if you do not reload the modules future items in
+        your state which rely on the software being installed will fail.
 
         .. code-block:: yaml
 
