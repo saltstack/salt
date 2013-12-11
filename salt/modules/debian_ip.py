@@ -359,8 +359,7 @@ def _parse_interfaces():
                             adapters[iface_name]['data'][context]['bridge_options'][opt] = value
 
                         if sline[0].startswith('dns-nameservers'):
-                            sline.pop(0)
-                            if not cmd_key in adapters[iface_name]['data'][context]:
+                            if not 'dns' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['dns'] = []
                             adapters[iface_name]['data'][context]['dns'] = sline
 
