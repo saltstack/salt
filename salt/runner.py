@@ -55,7 +55,7 @@ class RunnerClient(object):
         except Exception as exc:
             data['return'] = 'Exception occured in runner {0}: {1}: {2}'.format(
                             fun,
-                            exc.__class__.__name__, 
+                            exc.__class__.__name__,
                             exc,
                             )
             data['success'] = False
@@ -135,9 +135,8 @@ class RunnerClient(object):
                 )
         ret = sreq.send('clear', load)
         if isinstance(ret, collections.Mapping):
-           if 'error' in ret:
-               raise_error(**ret['error'])
-            
+            if 'error' in ret:
+                raise_error(**ret['error'])
         return ret
 
 
