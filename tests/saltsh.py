@@ -1,5 +1,5 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python
 '''\
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
@@ -39,11 +39,15 @@ import salt.runner
 # Import 3rd party libs
 import jinja2
 
+
 # pylint: disable=W0611
+# pylint: enable=W0611
 # These are imported to be available in the spawmed shell
+
+
 import yaml
 import pprint
-# pylint: enable=W0611
+
 
 HISTFILE = '{HOME}/.saltsh_history'.format(**os.environ)
 
