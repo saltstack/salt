@@ -201,7 +201,7 @@ def _read_file(path):
     try:
         with salt.utils.fopen(path, 'rb') as contents:
             return contents.readlines()
-    except Exception:
+    except (OSError, IOError):
         return ''
 
 
