@@ -204,6 +204,7 @@ def _read_file(path):
     except Exception:
         return ''
 
+
 def _parse_resolve():
     '''
     Parse /etc/resolv.conf and return domainname
@@ -211,6 +212,7 @@ def _parse_resolve():
 
     contents = _read_file(_DEB_RESOLV_FILE)
     return contents
+
 
 def _parse_domainname():
     '''
@@ -226,6 +228,7 @@ def _parse_domainname():
             return match.group("domain_name")
     return ""
 
+
 def _parse_hostname():
     '''
     Parse /etc/hostname and return hostname
@@ -233,6 +236,7 @@ def _parse_hostname():
 
     contents = _read_file(_DEB_HOSTNAME_FILE)
     return contents[0].split('\n')[0]
+
 
 def _parse_current_network_settings():
     '''
@@ -263,6 +267,7 @@ def _parse_current_network_settings():
 
     opts['hostname'] = hostname
     return opts
+
 
 def _parse_interfaces():
     '''
@@ -971,6 +976,7 @@ def _parse_network_settings(opts, current):
     #        result[opt] = opts[opt]
     return result
 
+
 def _parse_routes(iface, opts):
     '''
     Filters given options and outputs valid settings for
@@ -1036,6 +1042,7 @@ def _write_file_network(data, filename):
     fout.write(data)
 
     fout.close()
+
 
 def _read_temp(data):
     '''
@@ -1330,6 +1337,7 @@ def get_network_settings():
 
     network = template.render(settings)
     return _read_temp(network)
+
 
 def get_routes(iface):
     '''
