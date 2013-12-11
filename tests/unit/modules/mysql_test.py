@@ -34,10 +34,28 @@ DEBUG = True
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase):
 
-    def test_user_create_when_user_exists(self):
+    def test_user_exists(self):
         '''
-        Test to ensure we don't try to create a user when one already exists
+        Test to see if mysql module properly forms the MySQL query to see if a user exists
+
+        Do it before test_user_create_when_user_exists mocks the user_exists call
         '''
+        self._test_call(mysql.user_exists,
+                        {'sql' : ('SELECT User,Host FROM mysql.user WHERE '
+                                  'User = %(user)s AND Host = %(host)s AND '
+                                  'Password = PASSWORD(%(password)s)'),
+                         'sql_args': {'host': 'localhost',
+                                      'password': 'BLUECOW',
+                                      'user': 'mytestuser'
+                                     }
+                        },
+                        user='mytestuser',
+                        host='localhost',
+                        password='BLUECOW'
+        )
+
+        # test_user_create_when_user_exists(self):
+        # ensure we don't try to create a user when one already exists
         mock = MagicMock(return_value=True)
         mysql.user_exists = mock
         with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
@@ -151,12 +169,6 @@ class MySQLTestCase(TestCase):
         '''
         self._test_call(mysql.user_list, 'SELECT User,Host FROM mysql.user')
 
-    @skipIf(True, 'This test is broken and it is not clear why')
-    def test_user_exists(self):
-        '''
-        Test to see if mysql module properly forms the MySQL query to see if a user exists
-        '''
-        self._test_call(mysql.user_exists, '', 'mytestuser')
 
     def test_user_info(self):
         '''
@@ -175,6 +187,8 @@ class MySQLTestCase(TestCase):
         '''
         Test to ensure the mysql user_grants function returns properly formed SQL for a basic query
         '''
+        mock = MagicMock(return_value=True)
+        mysql.user_exists = mock
         self._test_call(mysql.user_grants,
                         {'sql': 'SHOW GRANTS FOR %(user)s@%(host)s',
                          'sql_args': {'host': 'localhost',
