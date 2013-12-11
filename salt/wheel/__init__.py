@@ -69,7 +69,6 @@ class Wheel(object):
                 )
         ret = sreq.send('clear', load)
         if isinstance(ret, collections.Mapping):
-           if 'error' in ret:
-               raise_error(**ret['error'])
-            
+            if 'error' in ret:
+                raise_error(**ret['error'])
         return ret
