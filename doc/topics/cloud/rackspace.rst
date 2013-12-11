@@ -2,36 +2,14 @@
 Getting Started With Rackspace
 ==============================
 
-Rackspace is a major public cloud platform and is one of the core platforms 
-that Salt Cloud has been built to support.
+Rackspace is a major public cloud platform which may be configured using either
+the `rackspace` or the `openstack` driver, depending on your needs.
 
-* Using the old format, set up the cloud configuration at ``/etc/salt/cloud``:
+Please note that the `rackspace` driver is only intended for "the old cloud" at
+Rackspace. Unless you explicitly have a reason to use it, it is highly
+recommended that you use the `openstack` driver instead.
 
-.. code-block:: yaml
-
-    # Set the location of the salt-master
-    #
-    minion:
-      master: saltmaster.example.com
-
-    # Configure Rackspace using the OpenStack plugin
-    #
-    OPENSTACK.identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
-    OPENSTACK.compute_name: cloudServersOpenStack
-    OPENSTACK.protocol: ipv4
-
-    # Set the compute region:
-    #
-    OPENSTACK.compute_region: DFW
-
-    # Configure Rackspace authentication credentials
-    #
-    OPENSTACK.user: myname
-    OPENSTACK.tenant: 123456
-    OPENSTACK.apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-
-* Using the new format, set up the cloud configuration at 
+To use the `openstack` driver (recommended), set up the cloud configuration at 
   ``/etc/salt/cloud.providers`` or 
   ``/etc/salt/cloud.providers.d/rackspace.conf``:
 
@@ -62,6 +40,22 @@ that Salt Cloud has been built to support.
       provider: openstack
 
 
+To use the `rackspace` driver, set up the cloud configuration at 
+  ``/etc/salt/cloud.providers`` or 
+  ``/etc/salt/cloud.providers.d/rackspace.conf``:
+
+.. code-block:: yaml
+
+    my-rackspace-config:
+      provider: rackspace
+      # The Rackspace login user
+      user: fred
+      # The Rackspace user's apikey
+      apikey: 901d3f579h23c8v73q9
+
+The settings that follow are for using Rackspace with the `openstack` driver,
+and will not work with the `rackspace` driver.
+
 
 Compute Region
 ==============
@@ -90,27 +84,12 @@ generated), and ``tenant`` will be labeled as Cloud Account Number.
 An initial profile can be configured in ``/etc/salt/cloud.profiles`` or 
 ``/etc/salt/cloud.profiles.d/rackspace.conf``:
 
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    openstack_512:
-        provider: openstack
-        size: 512 MB Standard
-        image: Ubuntu 12.04 LTS (Precise Pangolin)
-
-
-* Using the new cloud configuration format and the example configuration from 
-  above:
-
 .. code-block:: yaml
 
     openstack_512:
         provider: my-rackspace-config
         size: 512 MB Standard
         image: Ubuntu 12.04 LTS (Precise Pangolin)
-
 
 To instantiate a machine based on this profile:
 
@@ -133,11 +112,11 @@ RackConnect Environments
 --------------------------------
 
 Rackspace offers a hybrid hosting configuration option called RackConnect that
-allows you to use a physical firewall appliance with your cloud servers. When this 
-service is in use the public_ip assigned by nova will be replaced by a NAT ip on
-the firewall. For salt-cloud to work properly it must use the newly assigned "access ip"
-instead of the Nova assigned public ip. You can enable that capability by adding this 
-to your profiles:
+allows you to use a physical firewall appliance with your cloud servers. When
+this service is in use the public_ip assigned by nova will be replaced by a NAT
+ip on the firewall. For salt-cloud to work properly it must use the newly
+assigned "access ip" instead of the Nova assigned public ip. You can enable that
+capability by adding this to your profiles:
 
 .. code-block:: yaml
 
@@ -150,12 +129,13 @@ to your profiles:
 Managed Cloud Environments
 --------------------------------
 
-Rackspace offers a managed service level of hosting. As part of the managed service level
-you have the ability to choose from base of lamp installations on cloud server images.
-The post build process for both the base and the lamp installations used Chef to install
-things such as the cloud monitoring agent and the cloud backup agent. It also takes care of
-installing the lamp stack if selected. In order to prevent the post installation process
-from stomping over the bootstrapping you can add the below to your profiles.
+Rackspace offers a managed service level of hosting. As part of the managed
+service level you have the ability to choose from base of lamp installations on
+cloud server images.  The post build process for both the base and the lamp
+installations used Chef to install things such as the cloud monitoring agent and
+the cloud backup agent. It also takes care of installing the lamp stack if
+selected. In order to prevent the post installation process from stomping over
+the bootstrapping you can add the below to your profiles.
 
 .. code-block:: yaml
 
