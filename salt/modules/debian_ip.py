@@ -429,7 +429,7 @@ def _parse_ethtool_opts(opts, iface):
         try:
             int(opts['mtu'])
             config.update({'mtu': opts['mtu']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
@@ -570,7 +570,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -594,7 +594,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -643,7 +643,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -677,7 +677,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -721,7 +721,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -764,7 +764,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -800,7 +800,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -939,7 +939,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except Exception:
+        except ValueError:
             _raise_error_network('networking', valid)
 
     if opts['networking'] in valid:
@@ -954,7 +954,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except Exception:
+        except ValueError:
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
