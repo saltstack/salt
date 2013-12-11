@@ -508,7 +508,7 @@ class Terminal(object):
                 rfds.append(self.child_fde)
 
             if not self.isalive():
-                if not self.child_fd and not self.child_fde:
+                if not rfds:
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
