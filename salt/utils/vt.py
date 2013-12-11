@@ -41,6 +41,8 @@ if subprocess.mswindows:
 else:
     import pty
     import fcntl
+    import struct
+    import termios
 
 # Import salt libs
 from salt._compat import string_types
@@ -90,6 +92,10 @@ class Terminal(object):
                  cwd=None,
                  env=None,
 
+                 # Terminal Size
+                 rows=24,
+                 cols=80,
+
                  # Logging options
                  log_stdin=None,
                  log_stdout=None,
@@ -114,6 +120,8 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+        self.rows = rows
+        self.cols = cols
 
         # ----- Internally Set Attributes ----------------------------------->
         self.pid = None
@@ -351,6 +359,9 @@ class Terminal(object):
                 self.stdout = sys.stdout.fileno()
                 self.stderr = sys.stderr.fileno()
 
+                # Set the terminal size
+                self.setwinsize(self.rows, self.cols)
+
                 # Do not allow child to inherit open file descriptors from
                 # parent
                 max_fd = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -587,6 +598,45 @@ class Terminal(object):
         # <---- Internal API -------------------------------------------------
 
         # ----- Public API -------------------------------------------------->
+        def getwinsize(self):
+            '''
+            This returns the terminal window size of the child tty. The return
+            value is a tuple of (rows, cols).
+
+            Thank you for the shortcut PEXPECT
+            '''
+            TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
+            packed = struct.pack('HHHH', 0, 0, 0, 0)
+            ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
+            return struct.unpack('HHHH', ioctl)[0:2]
+
+        def setwinsize(self, rows, cols):
+            '''
+            This sets the terminal window size of the child tty. This will
+            cause a SIGWINCH signal to be sent to the child. This does not
+            change the physical window size. It changes the size reported to
+            TTY-aware applications like vi or curses -- applications that
+            respond to the SIGWINCH signal.
+
+            Thank you for the shortcut PEXPECT
+            '''
+            # Check for buggy platforms. Some Python versions on some platforms
+            # (notably OSF1 Alpha and RedHat 7.1) truncate the value for
+            # termios.TIOCSWINSZ. It is not clear why this happens.
+            # These platforms don't seem to handle the signed int very well;
+            # yet other platforms like OpenBSD have a large negative value for
+            # TIOCSWINSZ and they don't have a truncate problem.
+            # Newer versions of Linux have totally different values for
+            # TIOCSWINSZ.
+            # Note that this fix is a hack.
+            TIOCSWINSZ = getattr(termios, 'TIOCSWINSZ', -2146929561)
+            if TIOCSWINSZ == 2148037735:
+                # Same bits, but with sign.
+                TIOCSWINSZ = -2146929561
+            # Note, assume ws_xpixel and ws_ypixel are zero.
+            packed = struct.pack('HHHH', rows, cols, 0, 0)
+            fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
+
         def isalive(self,
                     _waitpid=os.waitpid,
                     _wnohang=os.WNOHANG,
