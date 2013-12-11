@@ -372,6 +372,7 @@ class Terminal(object):
                 self.stderr = sys.stderr.fileno()
 
                 # Set the terminal size
+                self.child_fd = self.stdin
                 self.setwinsize(self.rows, self.cols)
 
                 # Do not allow child to inherit open file descriptors from
