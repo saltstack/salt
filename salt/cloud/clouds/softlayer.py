@@ -154,8 +154,6 @@ def avail_images():
     ret = {}
     conn = get_conn()
     response = conn.getCreateObjectOptions()
-    conn = get_conn('SoftLayer_Account')
-    response = conn.getBlockDeviceTemplateGroups()
     for image in response['operatingSystems']:
         ret[image['itemPrice']['item']['description']] = {
             'name': image['itemPrice']['item']['description'],
