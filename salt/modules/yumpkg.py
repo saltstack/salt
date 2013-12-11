@@ -375,10 +375,10 @@ def list_repo_pkgs():
     .. code-block:: bash
 
         salt '*' pkg.list_repo_pkgs
-    '''  
+    '''
     yb = yum.YumBase()
     yb.conf.cache = 1
-    ret = {'repo': {}}    
+    ret = {'repo': {}}
     for pkg in sorted(yb.pkgSack.returnPackages()):
         pkgname = '{0}-{1}-{2}.{3}.rpm'.format(pkg.name,
                                                pkg.ver,
@@ -391,7 +391,7 @@ def list_repo_pkgs():
             pkglist = ret['repo'][pkgrepo]
             pkglist.append(pkgname)
         else:
-            ret={}
+            ret = {}
     return ret
 
 
