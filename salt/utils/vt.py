@@ -95,8 +95,8 @@ class Terminal(object):
                  env=None,
 
                  # Terminal Size
-                 rows=24,
-                 cols=80,
+                 rows=None,
+                 cols=None,
 
                  # Logging options
                  log_stdin=None,
@@ -122,8 +122,17 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+
+        # ----- Set the desired terminal size ------------------------------->
+        if rows is None and cols is None:
+            rows, cols = self.__detect_parent_terminal_size()
+        elif rows is not None and cols is None:
+            _, cols = self.__detect_parent_terminal_size()
+        elif rows is None and cols is not None:
+            rows, _ = self.__detect_parent_terminal_size()
         self.rows = rows
         self.cols = cols
+        # <---- Set the desired terminal size --------------------------------
 
         # ----- Internally Set Attributes ----------------------------------->
         self.pid = None
@@ -618,6 +627,16 @@ class Terminal(object):
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
+
+        def __detect_parent_terminal_size(self):
+            try:
+                TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
+                packed = struct.pack('HHHH', 0, 0, 0, 0)
+                ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
+                return struct.unpack('HHHH', ioctl)[0:2]
+            except IOError:
+                # Return a default value of 24x80
+                return 24, 80
         # <---- Internal API -------------------------------------------------
 
         # ----- Public API -------------------------------------------------->
