@@ -140,11 +140,10 @@ def present(name,
             db_part = database.rpartition('.')
             my_db = db_part[0]
             my_table = db_part[2]
-            my_db = __salt__['mysql.quote_identifier'] \
-                    (my_db, (my_table is '*'))
+            my_db = __salt__['mysql.quote_identifier'](my_db, (my_table is '*'))
             my_table = __salt__['mysql.quote_identifier'](my_table)
             # Removing per table grants in case of database level grant !!!
-            if token_grants['database'] == my_db :
+            if token_grants['database'] == my_db:
                 grant_to_revoke = ','.join(token_grants['grant']).rstrip(',')
                 __salt__['mysql.grant_revoke'](
                     grant=grant_to_revoke,
