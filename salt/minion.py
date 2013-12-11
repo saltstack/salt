@@ -622,18 +622,17 @@ class Minion(object):
         # false                 true                 N/A                   exception, post 0.17.6
         # false                 false                N/A                   process msg
 
-
-        if self.opts['pillar']['master']['sign_pub_messages'] and not sig:
+        if self.functions['config.get']('sign_pub_messages') and not sig:
             salt.utils.warn_until((0, 17, 6), 'Master pub message signing is enabled but we '
                 'did not receive a signature for this message.  '
                 'Most likely this means that your masters and minions are not the same version.  '
                 'After Salt 0.17.6 this situation will throw an exception.')
-        if not self.opts['pillar']['master']['sign_pub_messages'] and sig:
+        if not self.functions['config.get']('sign_pub_messages') and not sig:
             salt.utils.warn_until((0, 17, 6), 'Master pub message signing is disabled but we '
                 'received a signature for this message.  Most likely this means that your masters '
                 'and minions are not the same version.  '
                 'After Salt 0.17.6 this situation will throw an exception.')
-        if sig and self.opts['pillar']['master']['sign_pub_messages']:
+        if sig and self.functions['config.get']('sign_pub_messages'):
             if not salt.crypt.verify_signature(master_pubkey_path, load, sig):
                 raise AuthenticationError('Message signature failed to validate.')
 
