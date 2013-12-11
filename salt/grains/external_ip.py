@@ -1,7 +1,7 @@
 try:
     import requests
     HAS_REQUESTS = True
-except:
+except ImportError:
     HAS_REQUESTS = False
 
 def external_ip():
@@ -15,6 +15,6 @@ def external_ip():
     try:
         r = requests.get('http://ipecho.net/plain')
         ip = r.content
-    except:
+    except Exception:
         ip = []
     return {'external_ip': ip}
