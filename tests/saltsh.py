@@ -38,10 +38,12 @@ import salt.output
 import salt.pillar
 import salt.runner
 
-HISTFILE="{HOME}/.saltsh_history".format(**os.environ)
+HISTFILE = "{HOME}/.saltsh_history".format(**os.environ)
+
 
 def savehist():
     readline.write_history_file(HISTFILE)
+
 
 def get_salt_vars():
     '''
@@ -78,6 +80,7 @@ def get_salt_vars():
 
     return locals()
 
+
 def main():
     salt_vars = get_salt_vars()
 
@@ -107,6 +110,7 @@ def main():
 
     saltrepl = InteractiveConsole(locals=salt_vars)
     saltrepl.interact(banner=__doc__)
+
 
 if __name__ == '__main__':
     main()
