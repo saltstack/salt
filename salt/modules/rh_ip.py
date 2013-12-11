@@ -377,7 +377,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
-        valid = ['layer2', 'layer3+4']
+        valid = ['layer2', 'layer2+3', 'layer3+4']
         if opts['hashing-algorithm'] in valid:
             bond.update({'xmit_hash_policy': opts['hashing-algorithm']})
         else:
@@ -464,7 +464,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
         bond.update({'use_carrier': bond_def['use_carrier']})
 
     if 'hashing-algorithm' in opts:
-        valid = ['layer2', 'layer3+4']
+        valid = ['layer2', 'layer2+3', 'layer3+4']
         if opts['hashing-algorithm'] in valid:
             bond.update({'xmit_hash_policy': opts['hashing-algorithm']})
         else:
