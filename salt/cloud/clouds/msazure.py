@@ -32,6 +32,7 @@ import logging
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
+from salt.cloud.exceptions import SaltCloudSystemExit
 
 # Import azure libs
 HAS_LIBS = False
@@ -39,7 +40,7 @@ try:
     import azure
     import azure.servicemanagement
     HAS_LIBS = True
-except Exception:
+except ImportError:
     pass
 
 __virtualname__ = 'azure'
@@ -487,6 +488,10 @@ def create(vm_):
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+
+    if not hostname:
+        log.error('Failed to get a value for the hostname.')
+        return False
 
     hostname = hostname.replace('http://', '').replace('/', '')
 
