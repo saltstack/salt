@@ -111,6 +111,12 @@ def latest(name,
         passed to the ``unless`` option returns false
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    # Check to make sure rev and mirror/bare are not both in use
+    if rev and (mirror or bare):
+        return _fail(ret, ('"rev" is not compatible with the "mirror" and'
+                           '"bare" arguments'))
+
     if not target:
         return _fail(ret, '"target" option is required')
 
