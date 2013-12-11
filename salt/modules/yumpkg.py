@@ -387,7 +387,35 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
+def list_repo_pkgs():
+    '''  
+    List the packages from repo in a dict::
+         
+        {'repo':{'<repo_name>':['<package_name>']}}
+         
+    CLI Example:
+         
+    .. code-block:: bash
+        salt '*' pkg.list_repo_pkgs
+    '''  
+         
+    yb = yum.YumBase()
+    yb.conf.cache = 1
+    ret={'repo': {}}    
+    for pkg in sorted(yb.pkgSack.returnPackages()):
+        pkgname='{0}-{1}-{2}.{3}.rpm'.format(pkg.name,pkg.ver,pkg.release,pkg.arch)
+        pkgrepo=pkg.repoid 
+        if ret['repo'].keys() == '' or pkgrepo not in ret['repo'].keys():
+            ret['repo'].update({pkgrepo:[]})
+        elif pkgrepo in ret['repo'].keys():
+            pkglist=ret['repo'][pkgrepo]
+            pkglist.append(pkgname)                                                                  
+        else:                                                                                                                                                           
+            ret={}
+         
+    return ret
 
+    
 def check_db(*names, **kwargs):
     '''
     .. versionadded:: 0.17.0
