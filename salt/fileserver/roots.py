@@ -191,6 +191,8 @@ def file_hash(load, fnd):
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    # Delete the file since its incomplete (either corrupted or incomplete)
+                    os.unlink(cache_path)
                     file_hash(load, fnd)
                     return(ret)
                 if os.path.getmtime(path) == mtime:
@@ -199,6 +201,8 @@ def file_hash(load, fnd):
                     return ret
         except os.error:  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
+            # Delete the file since its incomplete (either corrupted or incomplete)
+            os.unlink(cache_path)
             file_hash(load, fnd)
             return(ret)
 
