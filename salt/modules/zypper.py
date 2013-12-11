@@ -183,7 +183,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n"'
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](cmd, quiet=True).splitlines():
         name, pkgver, rel = line.split('_|-')
         if rel:
             pkgver += '-{0}'.format(rel)

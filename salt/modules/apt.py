@@ -601,7 +601,7 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_all'](cmd, quiet=True).get('stdout', '')
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64

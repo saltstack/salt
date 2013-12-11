@@ -58,7 +58,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'pkg_info -q -a'
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_all'](cmd, quiet=True).get('stdout', '')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()

@@ -214,7 +214,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
 
-    for line in __salt__['cmd.run'](pkg_command).splitlines():
+    for line in __salt__['cmd.run'](pkg_command, quiet=True).splitlines():
         if not line:
             continue
         pkg, ver = line.split(' ')[0].rsplit('-', 1)
