@@ -16,7 +16,7 @@ import logging
 
 # Import third party libs
 try:
-    from M2Crypto import RSA
+    from M2Crypto import RSA, EVP
     from Crypto.Cipher import AES
 except ImportError:
     # No need for crypt in local mode
@@ -109,6 +109,35 @@ def gen_keys(keydir, keyname, keysize, user=None):
             # report the error
             pass
     return priv
+
+
+def sign_message(privkey_path, message):
+    '''
+    Use M2Crypto's EVP ("Envelope") functions to sign a message.  Returns the signature.
+    '''
+    log.debug('salt.crypt.sign_message: Loading private key')
+    evp_rsa = EVP.load_key(privkey_path)
+    evp_rsa.sign_init()
+    evp_rsa.sign_update(message)
+    log.debug('salt.crypt.sign_message: Signing message.')
+    return evp_rsa.sign_final()
+
+
+def verify_signature(pubkey_path, message, signature):
+    '''
+    Use M2Crypto's EVP ("Envelope") functions to verify the signature on a message.
+    Returns True for valid signature.
+    '''
+    # Verify that the signature is valid
+    log.debug('salt.crypt.verify_signature: Loading public key')
+    pubkey = RSA.load_pub_key(pubkey_path)
+    verify_evp = EVP.PKey()
+    verify_evp.assign_rsa(pubkey)
+    verify_evp.verify_init()
+    verify_evp.verify_update(message)
+    log.debug('salt.crypt.verify_signature: Verifying signature')
+    result = verify_evp.verify_final(signature)
+    return result
 
 
 class MasterKeys(dict):
