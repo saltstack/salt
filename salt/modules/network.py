@@ -366,8 +366,8 @@ def mod_hostname(hostname):
     __salt__['cmd.run'](cmd1)
 
     #2.modify /etc/hosts hostname
-    f = open('/etc/hosts','r')
-    str_hosts = f.read()  
+    f = open('/etc/hosts', 'r')
+    str_hosts = f.read()
     f.close()
     list_hosts = str_hosts.splitlines()
     cmd2 = '127.0.0.1\t\tlocalhost.localdomain\t\tlocalhost\t\t{0}'.format(hostname)
@@ -379,21 +379,21 @@ def mod_hostname(hostname):
             list_hosts[num] = cmd2
 
     hostfile = '\n'.join(list_hosts)
-    f = open('/etc/hosts','w')
+    f = open('/etc/hosts', 'w')
     f.write(hostfile)
     f.close()
-  
+
     #3.modify /etc/sysconfig/network
-    f = open('/etc/sysconfig/network','r')
-    str_network = f.read() 
+    f = open('/etc/sysconfig/network', 'r')
+    str_network = f.read()
     list_network = str_network.splitlines()
-    cmd='HOSTNAME={0}'.format(hostname)
+    cmd = 'HOSTNAME={0}'.format(hostname)
     for k in list_network:
         if k.startswith('HOSTNAME'):
             num = list_network.index(k)
             list_network[num] = cmd
     networkfile = '\n'.join(list_network)
-    f = open('/etc/sysconfig/network','w')
+    f = open('/etc/sysconfig/network', 'w')
     f.write(networkfile)
     f.close()
     return True
