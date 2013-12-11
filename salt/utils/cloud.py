@@ -315,8 +315,7 @@ def wait_for_port(host, port=22, timeout=900):
             )
 
 
-def validate_windows_cred(host, port=445, username='Administrator',
-                          password=None):
+def validate_windows_cred(host, username='Administrator', password=None):
     '''
     Check if the windows credentials are valid
     '''
