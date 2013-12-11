@@ -74,7 +74,11 @@ class MysqlModuleDbTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
-    def _db_creation_loop(self, db_name, returning_name, test_conn=False, **kwargs):
+    def _db_creation_loop(self,
+                          db_name,
+                          returning_name,
+                          test_conn=False,
+                          **kwargs):
         '''
         Used in db testCase, create, check exists, check in list and removes.
         '''
@@ -1338,7 +1342,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
         # Create some users and a test db
-        for user,userdef in self.users.iteritems():
+        for user, userdef in self.users.iteritems():
             self._userCreation(uname=userdef['name'], password=userdef['pwd'])
         self.run_function(
             'mysql.db_create',
@@ -1387,8 +1391,8 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         '''
         Removes created users and db
         '''
-        for user,userdef in self.users.iteritems():
-            self._userRemoval(uname=userdef['name'] ,password=userdef['pwd'])
+        for user, userdef in self.users.iteritems():
+            self._userRemoval(uname=userdef['name'], password=userdef['pwd'])
         self.run_function(
             'mysql.db_remove',
             name=self.testdb1,
@@ -1570,7 +1574,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.maxDiff = None
         self.assertEqual(ret, [
             "GRANT USAGE ON *.* TO 'foo'@'localhost'",
             ('GRANT SELECT, INSERT, UPDATE, CREATE ON '

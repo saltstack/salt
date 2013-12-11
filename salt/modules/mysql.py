@@ -93,6 +93,7 @@ __grants__ = [
     'USAGE'
 ]
 
+
 def __virtual__():
     '''
     Only load this module if the mysql libraries exist
@@ -215,7 +216,7 @@ def _connect(**kwargs):
 def _grant_to_tokens(grant):
     '''
 
-    This should correspond fairly closely to the YAML rendering of a 
+    This should correspond fairly closely to the YAML rendering of a
     mysql_grants state which comes out as follows:
 
      OrderedDict([
@@ -250,7 +251,7 @@ def _grant_to_tokens(grant):
         # Everything coming in dictionnary form was made for a MySQLdb execute
         # call and contain a '%%' escaping of '%' characters for MySQLdb
         # that we should remove here.
-        grant_sql = grant.get('qry', 'undefined').replace('%%','%')
+        grant_sql = grant.get('qry', 'undefined').replace('%%', '%')
         sql_args = grant.get('args', {})
         host = sql_args.get('host', 'undefined')
         user = sql_args.get('user', 'undefined')
@@ -264,7 +265,7 @@ def _grant_to_tokens(grant):
     #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
     #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
     #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
-    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@', 
+    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
     #"'localhost'", 'WITH', 'GRANT', 'OPTION']
     #
     #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
@@ -274,7 +275,7 @@ def _grant_to_tokens(grant):
     # '@', "'localhost'"]
     #
     #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
-    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'', 
+    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
     # '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
     lex.quotes = '\'`'
@@ -304,7 +305,6 @@ def _grant_to_tokens(grant):
             phrase = 'user'
             position_tracker += 1
             continue
-
 
         elif token == '@' and phrase == 'pre-host':
             phrase = 'host'
@@ -363,7 +363,7 @@ def _grant_to_tokens(grant):
 
 
 def quote_identifier(identifier, for_grants=False):
-    '''
+    r'''
     Return an identifier name (column, table, database, etc) escaped for MySQL
 
     This means surrounded by "`" character and escaping this charater inside.
@@ -402,12 +402,13 @@ def _execute(cur, qry, args=None):
     this wrapper ensure this escape is mase if no arguments are used.
     '''
     if args is None or args == {}:
-        qry = qry.replace('%%','%')
+        qry = qry.replace('%%', '%')
         log.debug('Doing query: {0}'.format(qry))
         return cur.execute(qry)
     else:
         log.debug('Doing query: {0} args: {1} '.format(qry, repr(args)))
         return cur.execute(qry, args)
+
 
 def query(database, query, **connection_args):
     '''
@@ -769,7 +770,7 @@ def db_exists(name, **connection_args):
     # Warn: here db identifier is not backtyped but should be
     #  escaped as a string value. Note also that LIKE special characters
     # '_' and '%' should also be escaped.
-    args = {"dbname": name.replace('%','\%').replace('_','\_')}
+    args = {"dbname": name.replace('%', r'\%').replace('_', r'\_')}
     qry = "SHOW DATABASES LIKE %(dbname)s;"
     try:
         _execute(cur, qry, args)

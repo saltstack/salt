@@ -314,7 +314,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
         # Create some users and a test db
-        for user,userdef in self.users.iteritems():
+        for user, userdef in self.users.iteritems():
             self._userCreation(uname=userdef['name'], password=userdef['pwd'])
         self.run_state(
             'mysql_database.present',
@@ -367,8 +367,8 @@ class MysqlGrantsStateTest(integration.ModuleCase,
         '''
         Removes created users and db
         '''
-        for user,userdef in self.users.iteritems():
-            self._userRemoval(uname=userdef['name'] ,password=userdef['pwd'])
+        for user, userdef in self.users.iteritems():
+            self._userRemoval(uname=userdef['name'], password=userdef['pwd'])
         self.run_state(
             'mysql_database.absent',
             name=self.testdb1,
