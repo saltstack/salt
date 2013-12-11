@@ -26,7 +26,4 @@ def error(name=None, message=''):
     ret = {}
     if name is not None:
         salt.utils.error.raise_error(name=name, message=message)
-    
     return ret
-
-
