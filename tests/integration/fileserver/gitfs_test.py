@@ -75,7 +75,6 @@ class GitFSTest(integration.ModuleCase):
 					 'sock_dir': self.master_opts['sock_dir']}):
 	    gitfs.update()
 
-
     def test_file_list(self):
 	with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
 					 'gitfs_remotes': ['file://' + self.tmp_repo_git],
@@ -139,7 +138,6 @@ class GitFSTest(integration.ModuleCase):
 		   'path': 'testfile'}
 	    ret = gitfs.file_hash(load, fnd)
 	    self.assertDictEqual({'hash_type': 'md5', 'hsum': '98aa509006628302ce38ce521a7f805f'}, ret)
-
 
     def test_serve_file(self):
 	with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
