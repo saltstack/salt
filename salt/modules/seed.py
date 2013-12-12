@@ -211,7 +211,7 @@ def _chroot_exec(root, cmd):
         root,
         sh_,
         cmd)
-    res = __salt__['cmd.run_all'](cmd, quiet=True)
+    res = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
 
     # Kill processes running in the chroot
     for i in range(6):
