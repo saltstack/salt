@@ -551,7 +551,7 @@ def create(vm_=None, call=None):
             ),
             'deploy_command': config.get_cloud_config_value(
                 'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deplloy.sh',
+                default='/tmp/.saltcloud/deploy.sh',
             ),
             'start_action': __opts__['start_action'],
             'sock_dir': __opts__['sock_dir'],
