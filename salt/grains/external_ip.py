@@ -40,7 +40,7 @@ def external_ip():
                 if not _ipv4_addr(ip_):
                     continue
             return {'external_ip': ip_}
-        except urllib2.HTTPError, urllib2.URLError:
+        except (urllib2.HTTPError, urllib2.URLError):
             continue
 
     # Return an empty value as a last resort
