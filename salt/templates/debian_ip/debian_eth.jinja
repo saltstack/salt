@@ -11,11 +11,9 @@ iface {{name}} {{interface.inet_type}} {{interface.proto}}
 {%endif%}{% if interface.vlan_raw_device %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.dns %}    dns-nameservers {%for item in interface.dns %}{{item}} {%endfor%}
 {%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{%if data.bonding %}{%for item in data.bonding %}    bond_{{item}} {{data.bonding[item]}}
-{%endfor%}{%endif%}{% if interface.bridge_options -%}
-{% if interface.bridge_options.ports %}    bridge_ports {{interface.bridge_options.ports}}
-{%endif-%}
-{%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
+{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    {{item}} {{interface.bonding[item]}}
+{%endfor%}{%endif%}{% if interface.bridgeing %}{%for item in interface.bridgeing_keys %}    {{item}} {{interface.bridgeing[item]}}
+{%endfor%}{%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
 {%endfor-%}
 {%endif%}{% if interface.down_cmds %}{% for cmd in interface.down_cmds %}    down {{ cmd }}
 {%endfor-%}
