@@ -432,6 +432,10 @@ class LowDataAdapter(object):
         lowstate = cherrypy.request.lowstate
         token = cherrypy.session.get('token', None)
 
+        # if the lowstate loaded isn't a list, lets notify the client
+        if type(lowstate) != list:
+            raise cherrypy.HTTPError(400, 'Lowstates must be a list')
+
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
