@@ -796,11 +796,12 @@ class State(object):
                                     'a list').format(
                                         name,
                                         body['__sls__']))
-                            if argfirst == 'require' or argfirst == 'watch':
+                            if argfirst in ('require', 'watch', 'prereq'):
                                 if not isinstance(arg[argfirst], list):
-                                    errors.append(('The require or watch'
-                                    ' statement in state "{0}" in sls "{1}" '
+                                    errors.append(('The {0}'
+                                    ' statement in state "{1}" in sls "{2}" '
                                     'needs to be formed as a list').format(
+                                        argfirst,
                                         name,
                                         body['__sls__']
                                         ))
