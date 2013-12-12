@@ -87,7 +87,7 @@ def _update_rbenv(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'git pull --git-dir {0}'.format(path), runas=runas)
+        'cd {0} && git pull'.format(path), runas=runas)
 
 
 def _update_ruby_build(path, runas=None):
@@ -96,7 +96,7 @@ def _update_ruby_build(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'git pull --git-dir {0}'.format(path), runas=runas)
+        'cd {0} && git pull'.format(path), runas=runas)
 
 
 def install(runas=None, path=None):
