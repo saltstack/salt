@@ -163,7 +163,10 @@ def append(name, **kwargs):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to set iptables rule for {0}'.format(name)
+        ret['comment'] = ('Failed to set iptables rule for {0}.\n'
+                          'Attempted rule was {1}').format(
+                              name,
+                              command.strip())
         return ret
 
 
