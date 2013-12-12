@@ -33,10 +33,12 @@ class VTTestCase(TestCase):
             shell=True,
             cols=cols
         )
-        terminal.wait()
+        # First the assertion
         self.assertEqual(
             terminal.getwinsize(), (24, cols)
         )
+        # Then wait for the terminal child to exit
+        terminal.wait()
 
 if __name__ == '__main__':
     from integration import run_tests
