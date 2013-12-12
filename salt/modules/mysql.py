@@ -92,6 +92,59 @@ __grants__ = [
     'USAGE'
 ]
 
+################################################################################
+# DEVELOPPER NOTE: ABOUT arguments management, escapes, formats, arguments and
+# security of SQL.
+#
+# A general rule of SQL security is to use queries with _execute call in this
+# code using args parameter to let MySQLdb manage the arguments proper escaping.
+# Another way of escaping values arguments could be '{0!r}'.format(), using
+# __repr__ to ensure things get properly used as strings. But this could lead
+# to two problems:
+#  * in ANSI mode, which is available on MySQL, but not by default, double
+# quotes " should not be used as a string delimiters, in ANSI mode this is an
+# identifier delimiter (like `).
+#  * some rare exploits with bad multibytes management, either on python or
+# MySQL could defeat this barrier, bindings internal escape functions
+# should manage theses cases.
+# So query with arguments should use a paramstyle defined in PEP249:
+# http://www.python.org/dev/peps/pep-0249/#paramstyle
+# We use pyformat, which means 'SELECT * FROM foo WHERE bar=%(myval)s'
+# used with {'myval': 'some user input'}
+#
+# So far so good. But this cannot be used for identifier escapes. Identifiers
+# are database names, table names and column names. Theses names are not values
+# and do not follow the same escape rules (see quote_identifier function for
+# details on `_ and % escape policies on identifiers). Using value escaping on
+# identifier could fool the SQL engine (badly escaping quotes and not doubling `
+# characters. So for identifiers a call to quote_identifier should be done and
+# theses identifiers should then be added in strings with format, but without
+# __repr__ filter.
+#
+# Note also that when using query with arguments in _execute all '%' characters
+# used in the query should get escaped to '%%' fo MySQLdb, but should not be
+# escaped if the query runs without arguments. This is managed by _execute() and
+# quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
+# when using a LIKE query (example in db_exists), as this escape is there to
+# avoid having _ or % characters interpreted in LIKE queries. The string parted
+# of the first query could become (still used with args dictionnary for myval):
+# 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
+#
+# Check integration tests if you find a hole in theses strings and escapes rules
+#
+# Finally some examples to sum up.
+# Given a name f_o%o`b'a"r, in python that would be '''f_o%o`b'a"r'''. I'll
+# avoid python syntax for clarity:
+# The MySQL way of writing this name is
+# value                         : 'f_o%o`b\'a"r' (managed by MySQLdb)
+# identifier                    : `f_o%o``b'a"r`
+# db identifier in general GRANT: `f\_o\%o``b'a"r`
+# db identifier in table GRANT  : `f_o%o``b'a"r`
+# in mySQLdb, query with args   : `f_o%%o``b'a"r` (as identifier)
+# in mySQLdb, query without args: `f_o%o``b'a"r` (as identifier)
+# value in a LIKE query         : 'f\_o\%o`b\'a"r' (quotes managed by MySQLdb)
+# And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
+################################################################################
 
 def __virtual__():
     '''
@@ -109,10 +162,8 @@ def __check_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'CHECK TABLE %(dbname)s.%(dbtable)s' % dict(
-        dbname=s_name,
-        dbtable=s_table
-    )
+    # identifiers cannot be used as values
+    qry = 'CHECK TABLE {0}.{1}'.format(s_name, s_table)
     _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
@@ -126,10 +177,8 @@ def __repair_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'REPAIR TABLE %(dbname)s.%(dbtable)s' % dict(
-        dbname=s_name,
-        dbtable=s_table
-    )
+    # identifiers cannot be used as values
+    qry = 'REPAIR TABLE {0}.{1}'.format(s_name, s_table)
     _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
@@ -143,10 +192,8 @@ def __optimize_table(name, table, **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     s_name = quote_identifier(name)
     s_table = quote_identifier(table)
-    qry = 'OPTIMIZE TABLE %(dbname)s.%(dbtable)s' % dict(
-        dbname=s_name,
-        dbtable=s_table
-    )
+    # identifiers cannot be used as values
+    qry = 'OPTIMIZE TABLE {0}.{1}'.format(s_name, s_table)
     _execute(cur, qry)
     results = cur.fetchall()
     log.debug(results)
@@ -199,6 +246,8 @@ def _connect(**kwargs):
     #_connarg('connection_use_unicode', 'use_unicode')
     connargs['use_unicode'] = False
     _connarg('connection_charset', 'charset')
+    # Ensure MySQldb knows the format we use for queries with arguments
+    MySQLdb.paramstyle = 'pyformat'
 
     try:
         dbc = MySQLdb.connect(**connargs)
@@ -393,12 +442,12 @@ def _execute(cur, qry, args=None):
     '''
     Internal wrapper around MySQLdb cursor.execute() function
 
-    MySQLDb does not apply the same filters  when arguments are used with the
+    MySQLDb does not apply the same filters when arguments are used with the
     query. For example '%' characters on the query must be encoded as '%%' and
     will be restored as '%' when arguments are applied. But when there're no
     arguments the '%%' is not managed. We cannot apply Identifier quoting in a
     predictible way if the query are not always applying the same filters. So
-    this wrapper ensure this escape is mase if no arguments are used.
+    this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
         qry = qry.replace('%%', '%')
@@ -735,7 +784,8 @@ def db_tables(name, **connection_args):
         return []
     cur = dbc.cursor()
     s_name = quote_identifier(name)
-    qry = 'SHOW TABLES IN %(dbname)s' % dict(dbname=s_name)
+    # identifiers cannot be used as values
+    qry = 'SHOW TABLES IN {0}'.format(s_name)
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
@@ -813,7 +863,8 @@ def db_create(name, character_set=None, collate=None, **connection_args):
         return False
     cur = dbc.cursor()
     s_name = quote_identifier(name)
-    qry = 'CREATE DATABASE %(dbname)s' % dict(dbname=s_name)
+    # identifiers cannot be used as values
+    qry = 'CREATE DATABASE {0}'.format(s_name)
     args = {}
     if character_set is not None:
         qry += ' CHARACTER SET %(character_set)s'
@@ -853,13 +904,14 @@ def db_remove(name, **connection_args):
         log.info('DB {0!r} may not be removed'.format(name))
         return False
 
-    # db doesxists, proceed
+    # db does exists, proceed
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
     cur = dbc.cursor()
     s_name = quote_identifier(name)
-    qry = 'DROP DATABASE %(dbname)s;' % dict(dbname=s_name)
+    # identifiers cannot be used as values
+    qry = 'DROP DATABASE {0};'.format(s_name)
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
@@ -1377,18 +1429,14 @@ def __grant_generate(grant,
             dbc = quote_identifier(dbc, for_grants=(table is '*'))
         if table is not '*':
             table = quote_identifier(table)
-    qry = ('GRANT %(grant)s ON %(dbc)s.%(table)s'
-          ' TO %%(user)s@%%(host)s') % dict(
-              grant=grant,
-              dbc=dbc,
-              table=table
-          )
+    # identifiers cannot be used as values, and same thing for grants
+    qry = 'GRANT {0} ON {1}.{2} TO %(user)s@%(host)s'.format(grant, dbc, table)
     args = {}
     args['user'] = user
     args['host'] = host
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
-    log.debug('Query generated: {0} args {1}'.format(qry, repr(args)))
+    log.debug('Grant Query generated: {0} args {1}'.format(qry, repr(args)))
     return {'qry': qry, 'args': args}
 
 
@@ -1582,11 +1630,11 @@ def grant_revoke(grant,
         s_database = quote_identifier(dbc, for_grants=(table is '*'))
     if table is not '*':
         table = quote_identifier(table)
-    qry = ('REVOKE %(grant)s ON %(database)s.%(table)s '
-           'FROM %%(user)s@%%(host)s;') % dict(
-        grant=grant,
-        database=s_database,
-        table=table
+    # identifiers cannot be used as values, same thing for grants
+    qry = 'REVOKE {0} ON {1}.{2} FROM %(user)s@%(host)s;'.format(
+        grant,
+        s_database,
+        table
     )
     args = {}
     args['user'] = user
