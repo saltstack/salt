@@ -11,30 +11,8 @@ iface {{name}} {{interface.inet_type}} {{interface.proto}}
 {%endif%}{% if interface.vlan_raw_device %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.dns %}    dns-nameservers {%for item in interface.dns %}{{item}} {%endfor%}
 {%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{%if data.bonding %}
-{%- set bonding = data.bonding -%}
-{% if bonding.mode %}    bond_mode {{bonding.mode}}
-{%endif%}{% if bonding.miimon %}    bond_miimon {{bonding.miimon}}
-{%endif%}{% if bonding.arp_interval %}    bond_arp_interval {{bonding.arp_interval}}
-{%endif%}{% if bonding.slaves %}    bond_slaves {{bonding.slaves}}
-{%endif%}{% if bonding.arp_ip_target %}    bond_arp_ip_target {{bonding.arp_ip_target}}
-{%endif%}{% if bonding.downdelay %}    bond_downdelay {{bonding.downdelay}}
-{%endif%}{% if bonding.updelay %}    bond_updelay {{bonding.updelay}}
-{%endif%}{% if bonding.use_carrier %}    bond_use_carrier {{bonding.use_carrier}}
-{%endif%}{% if bonding.lacp_rate %}    bond_lacp_rate {{bonding.lacp_rate}}
-{%endif%}{% if bonding.max_bonds %}    bond_max_bonds {{bonding.max_bonds}}
-{%endif%}{% if bonding.tx_queues %}    bond_tx_queues {{bonding.tx_queues}}
-{%endif%}{% if bonding.num_grat_arp %}    bond_num_grat_arp {{bonding.num_grat_arp}}
-{%endif%}{% if bonding.num_unsol_na %}    bond_num_unsol_na {{bonding.num_unsol_na}}
-{%endif%}{% if bonding.primary %}    bond_primary {{bonding.primary}}
-{%endif%}{% if bonding.primary_reselect %}    bond_primary_reselect {{bonding.primary_reselect}}
-{%endif%}{% if bonding.ad_select %}    bond_ad_select {{bonding.ad_select}}
-{%endif%}{% if bonding.xmit_hash_policy %}    bond_xmit_hash_policy {{bonding.xmit_hash_policy}}
-{%endif%}{% if bonding.arp_validate %}    bond_arp_validate {{bonding.arp_validate}}
-{%endif%}{% if bonding.fail_over_mac %}    bond_fail_over_mac {{bonding.fail_over_mac}}
-{%endif%}{% if bonding.all_slaves_active %}    bond_all_slaves_active {{bonding.all_slaves_active}}
-{%endif%}{% if bonding.resend_igmp %}    bond_resend_igmp {{bonding.resend_igmp}}
-{%endif%}{%endif%}{% if interface.bridge_options -%}
+{%endfor%}{%endif%}{%if data.bonding %}{%for item in data.bonding %}    bond_{{item}} {{data.bonding[item]}}
+{%endfor%}{%endif%}{% if interface.bridge_options -%}
 {% if interface.bridge_options.ports %}    bridge_ports {{interface.bridge_options.ports}}
 {%endif-%}
 {%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
