@@ -154,7 +154,6 @@ class MysqlModuleDbTest(integration.ModuleCase,
             'Problem while removing db for db name: {0!r}'.format(db_name)
         )
 
-
     @destructiveTest
     def test_database_creation_level1(self):
         '''
@@ -477,7 +476,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename, 
+        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
                                 'Msg_text': 'OK',
                                 'Msg_type': 'status',
                                 'Op': 'check'}]
@@ -656,7 +655,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
-
     def _userCreationLoop(self,
                          uname,
                          host,
@@ -719,7 +717,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
                 repr(ret)
             ))
 
-
     def _chck_userinfo(self, user, host, check_user, check_hash):
         '''
         Internal routine to check user_info returned results
@@ -765,7 +762,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
         '''
         Test various users creation settings
         '''
-        
         # Create users with rights on this database
         # and rights on other databases
         user1 = "user '1"
@@ -779,7 +775,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         user3_pwd = 'user "3;,?:@=&/'
         user3_pwd_hash = '*AA3B1D4105A45D381C23A5C221C47EA349E1FD7D'
         # this is : user ":=;4標 in unicode instead of utf-8
-        # if unicode char is counted as 1 char we hit the max user 
+        # if unicode char is counted as 1 char we hit the max user
         # size (16)
         user4 = u'user":;,?:@=&/4\u6a19'
         user4_utf8 = 'user":;,?:@=&/4\xe6\xa8\x99'
@@ -1013,7 +1009,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             saltenv={"LC_ALL": "en_US.utf8"}
         )
         self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
-            ' with unicode password failed').format(user6_utf8,'10.0.0.1')
+            ' with unicode password failed').format(user6_utf8, '10.0.0.1')
         )
         # Final result should be:
         # mysql> select Host, User, Password from user where user like 'user%';
@@ -1092,7 +1088,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self.assertIn({'Host': '%', 'User': user4_utf8}, ret)
         self.assertIn({'Host': 'localhost', 'User': user5_utf8}, ret)
         self.assertIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
-        
+ 
         # And finally, test connections on MySQL with theses users
         ret = self.run_function(
             'mysql.query',
@@ -1111,7 +1107,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
                 )
             )
         self.assertEqual([['1']], ret['results'])
-        
+
         # FIXME: still failing, but works by hand...
         # mysql --user="user \"2'標" --password="user \"2'標b" information_schema
         # Seems to be a python-mysql library problem with user names containing
@@ -1267,8 +1263,6 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self.assertNotIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
 
 
-
-
 @skipIf(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
@@ -1386,7 +1380,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
 
-
     @destructiveTest
     def tearDown(self):
         '''
@@ -1407,7 +1400,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password,
        )
 
-
     def _userCreation(self,
                       uname,
                       password=None):
@@ -1425,7 +1417,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-
     def _userRemoval(self,
                      uname,
                      password=None):
@@ -1442,7 +1433,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-
     def _addGrantRoutine(self,
                          grant,
                          user,
@@ -1453,7 +1443,6 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         '''
         Perform some tests around creation of the given grants
         '''
-        
         ret = self.run_function(
             'mysql.grant_add',
             grant=grant,
@@ -1485,14 +1474,13 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             repr(ret)
         ))
 
-
     @destructiveTest
     def testGrants(self):
         '''
         Test user grant methods
         '''
         self._addGrantRoutine(
-            grant = 'SELECT, INSERT,UPDATE, CREATE',
+            grant='SELECT, INSERT,UPDATE, CREATE',
             user=self.users['user1']['name'],
             db=self.testdb1 + '.*',
             grant_option=True,
@@ -1501,7 +1489,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
         self._addGrantRoutine(
-            grant = 'INSERT, SELECT',
+            grant='INSERT, SELECT',
             user=self.users['user1']['name'],
             db=self.testdb2 + '.' + self.table1,
             grant_option=True,
@@ -1510,7 +1498,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
         self._addGrantRoutine(
-            grant = '  SELECT, UPDATE,DELETE, CREATE TEMPORARY TABLES',
+            grant='  SELECT, UPDATE,DELETE, CREATE TEMPORARY TABLES',
             user=self.users['user2']['name'],
             db=self.testdb1 + '.*',
             grant_option=True,
@@ -1519,7 +1507,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
         self._addGrantRoutine(
-            grant = 'select, ALTER,CREATE TEMPORARY TABLES, EXECUTE ',
+            grant='select, ALTER,CREATE TEMPORARY TABLES, EXECUTE ',
             user=self.users['user3']['name'],
             db=self.testdb1 + '.*',
             grant_option=True,
@@ -1528,7 +1516,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
         self._addGrantRoutine(
-            grant = 'SELECT, INSERT',
+            grant='SELECT, INSERT',
             user=self.users['user4']['name'],
             db=self.testdb2 + '.' + self.table2,
             grant_option=False,
@@ -1538,7 +1526,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_charset='utf8'
         )
         self._addGrantRoutine(
-            grant = 'CREATE',
+            grant='CREATE',
             user=self.users['user4']['name'],
             db=self.testdb2 + '.*',
             grant_option=False,
@@ -1548,7 +1536,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_charset='utf8'
         )
         self._addGrantRoutine(
-            grant = 'SELECT, INSERT',
+            grant='SELECT, INSERT',
             user=self.users['user4']['name'],
             db=self.testdb2 + '.' + self.table1,
             grant_option=False,
@@ -1559,7 +1547,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         )
         # '' is valid for anonymous users
         self._addGrantRoutine(
-            grant = 'DELETE',
+            grant='DELETE',
             user='',
             db=self.testdb3 + '.*',
             grant_option=False,
@@ -1643,4 +1631,4 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MysqlModuleDbTest, MysqlModuleUserTest, MysqlModuleUserGrantsTest)
+    run_tests(MysqlModuleDbTest, MysqlModuleUserTest)
