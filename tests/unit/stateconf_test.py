@@ -21,7 +21,7 @@ OPTS = salt.config.minion_config(None)
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/'])
 FUNCS = {}
-FUNCS['config.get': lambda a, b: False]
+FUNCS['config.get'] = lambda a, b: False
 
 RENDERERS = salt.loader.render(OPTS, {})
 
