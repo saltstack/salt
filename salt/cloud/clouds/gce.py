@@ -542,8 +542,8 @@ def create(vm_=None, call=None):
         ssh_user, ssh_key = __get_ssh_credentials(vm_)
         deploy_kwargs = {
             'host': node_data.public_ips[0],
-            'ssh_username': ssh_user,
-            'ssh_keyfile': ssh_key,
+            'username': ssh_user,
+            'key_filename': ssh_key,
             'script': deploy_script.script,
             'name': vm_['name'],
             'tmp_dir': config.get_cloud_config_value(
