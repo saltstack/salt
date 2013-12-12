@@ -85,8 +85,8 @@ def _repoquery(repoquery_args):
     '''
     ret = []
     cmd = 'repoquery {0}'.format(repoquery_args)
-    output = __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines()
-    for line in output:
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         pkginfo = _parse_pkginfo(line)
         if pkginfo is not None:
             ret.append(pkginfo)
@@ -264,7 +264,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'rpm -qa --queryformat "{0}\n"'.format(__QUERYFORMAT)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         pkginfo = _parse_pkginfo(line)
         if pkginfo is None:
             continue
@@ -326,7 +327,10 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         ret.setdefault(name, {})['found'] = bool(
-            __salt__['cmd.run'](deplist_base.format(name))
+            __salt__['cmd.run'](
+                deplist_base.format(name),
+                output_loglevel='debug'
+            )
         )
         if ret[name]['found'] is False:
             repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
@@ -497,7 +501,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
-        __salt__['cmd.run_all'](cmd)
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
 
     if downgrade:
         cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
@@ -505,7 +509,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
-        __salt__['cmd.run_all'](cmd)
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -531,7 +535,7 @@ def upgrade(refresh=True):
         refresh_db()
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -570,7 +574,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'yum -q -y remove "{0}"'.format('" "'.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

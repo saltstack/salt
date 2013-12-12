@@ -231,7 +231,7 @@ def _get_upgradable():
     '''
 
     cmd = 'emerge --pretend --update --newuse --deep --ask n world'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
 
     rexp = re.compile(r'(?m)^\[.+\] '
                       r'([^ ]+/[^ ]+)'    # Package string
@@ -563,7 +563,7 @@ def install(name=None,
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -608,7 +608,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0}'.format(full_atom)
-    call = __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -636,7 +636,7 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --deep --ask n --quiet world'
-    call = __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -693,7 +693,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         return {}
     cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
           '{0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -779,7 +779,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
         targets = [x for x in pkg_params if x in old]
 
     cmd = 'emerge --depclean --ask n --quiet {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

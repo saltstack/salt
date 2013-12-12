@@ -27,7 +27,10 @@ def _check_pkgin():
     ppath = salt.utils.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
-        localbase = __salt__['cmd.run']('pkg_info -Q LOCALBASE pkgin')
+        localbase = __salt__['cmd.run'](
+            'pkg_info -Q LOCALBASE pkgin',
+            output_loglevel='debug'
+        )
         if localbase is not None:
             ppath = '{0}/bin/pkgin'.format(localbase)
             if not os.path.exists(ppath):
@@ -42,7 +45,9 @@ def _supports_regex():
     Get the pkgin version
     '''
     ppath = _check_pkgin()
-    version_string = __salt__['cmd.run']('{0} -v'.format(ppath))
+    version_string = __salt__['cmd.run'](
+        '{0} -v'.format(ppath), output_loglevel='debug'
+    )
     if version_string is None:
         # Dunno why it would, but...
         return False
@@ -90,12 +95,15 @@ def search(pkg_name):
     if _supports_regex():
         pkg_name = '^{0}$'.format(pkg_name)
 
-    for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
-                                 ).splitlines():
-        if p:
-            s = _splitpkg(p.split()[0])
-            if s:
-                pkglist[s[0]] = s[1]
+    out = __salt__['cmd.run'](
+        '{0} se {1}'.format(pkgin, pkg_name),
+        output_loglevel='debug'
+    )
+    for line in out.splitlines():
+        if line:
+            match = _splitpkg(line.split()[0])
+            if match:
+                pkglist[match[0]] = match[1]
 
     return pkglist
 
@@ -130,8 +138,11 @@ def latest_version(*names, **kwargs):
     for name in names:
         if _supports_regex():
             name = '^{0}$'.format(name)
-        for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
-                                        ).splitlines():
+        out = __salt__['cmd.run'](
+            '{0} se {1}'.format(pkgin, name),
+            output_loglevel='debug'
+        )
+        for line in out.splitlines():
             p = line.split()  # pkgname-version status
             if p and p[0] in ('=:', '<:', '>:'):
                 # These are explanation comments
@@ -184,7 +195,7 @@ def refresh_db():
     pkgin = _check_pkgin()
 
     if pkgin:
-        __salt__['cmd.run']('{0} up'.format(pkgin))
+        __salt__['cmd.run']('{0} up'.format(pkgin), output_loglevel='debug')
 
     return {}
 
@@ -214,7 +225,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
 
-    for line in __salt__['cmd.run'](pkg_command).splitlines():
+    out = __salt__['cmd.run'](pkg_command, output_loglevel='debug')
+    for line in out.splitlines():
         if not line:
             continue
         pkg, ver = line.split(' ')[0].rsplit('-', 1)
@@ -313,7 +325,11 @@ def install(name=None, refresh=False, fromrepo=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run_all']('{0} {1}'.format(cmd, ' '.join(args)), env=env)
+    __salt__['cmd.run'](
+        '{0} {1}'.format(cmd, ' '.join(args)),
+        env=env,
+        output_loglevel='debug'
+    )
     new = list_pkgs()
 
     rehash()
@@ -399,8 +415,7 @@ def remove(name=None, pkgs=None, **kwargs):
     else:
         cmd = 'pkg_remove {0}'.format(for_remove)
 
-    __salt__['cmd.run_all'](cmd)
-
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     new = list_pkgs()
 
     return salt.utils.compare_dicts(old, new)
@@ -449,9 +464,9 @@ def rehash():
 
         salt '*' pkg.rehash
     '''
-    shell = __salt__['cmd.run']('echo $SHELL').split('/')
-    if shell[len(shell) - 1] in ['csh', 'tcsh']:
-        __salt__['cmd.run']('rehash')
+    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='debug')
+    if shell.split('/')[-1] in ('csh', 'tcsh'):
+        __salt__['cmd.run']('rehash', output_loglevel='debug')
 
 
 def file_list(package):
@@ -487,7 +502,7 @@ def file_dict(package):
     files[package] = None
 
     cmd = 'pkg_info -qL {0}'.format(package)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
 
     for line in ret['stderr'].splitlines():
         errors.append(line)
