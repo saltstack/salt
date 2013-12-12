@@ -27,8 +27,6 @@ except ImportError:
         # because that will cause issues under windows at install time.
         raise
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword( for .*)?:')
-
 # Import salt libs
 import salt.crypt
 import salt.client
@@ -59,6 +57,8 @@ NSTATES = {
     2: 'terminated',
     3: 'pending',
 }
+
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:')
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -315,8 +315,7 @@ def wait_for_port(host, port=22, timeout=900):
             )
 
 
-def validate_windows_cred(host, port=445, username='Administrator',
-                          password=None):
+def validate_windows_cred(host, username='Administrator', password=None):
     '''
     Check if the windows credentials are valid
     '''

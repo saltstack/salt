@@ -127,6 +127,30 @@ class EauthAuthenticationError(SaltException):
     '''
 
 
+class TokenAuthenticationError(SaltException):
+    '''
+    Thrown when token authentication fails
+    '''
+
+
+class AuthorizationError(SaltException):
+    '''
+    Thrown when runner or wheel execution fails due to permissions
+    '''
+
+
+class SaltRunnerError(SaltException):
+    '''
+    Problem in runner
+    '''
+
+
+class SaltWheelError(SaltException):
+    '''
+    Problem in wheel
+    '''
+
+
 class SaltSystemExit(SystemExit):
     '''
     This exception is raised when an unsolvable problem is found. There's

@@ -163,7 +163,6 @@ class APIClient(object):
 
         cmd is dict of the form:
         {
-            'client': 'clienttypestring'
             'module' : 'modulestring',
             'tgt' : 'targetpatternstring',
             'expr_form' : 'targetpatterntype',
@@ -174,7 +173,7 @@ class APIClient(object):
         }
 
         The cmd dict items are as follows:
-        client: Either 'master' or 'minion'. Defaults to 'minion' if missing
+
         module: required. This is either a module or module function name for
             the specified client.
         tgt: Optional pattern string specifying the targeted minions when client
@@ -187,6 +186,17 @@ class APIClient(object):
         password: the user's password. Required if token is missing.
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
 
+        Adds client per the command.
+        '''
+        cmd['client'] = 'minion'
+        if len(cmd['module'].split('.')) > 2 and cmd['module'].split('.')[0] in ['runner', 'wheel']:
+            cmd['client'] = 'master'
+        return self._signature(cmd)
+
+    def _signature(self, cmd):
+        '''
+        Expects everything that signature does and also a client type string.
+        client can either be master or minion.
         '''
         result = {}
 
@@ -203,7 +213,7 @@ class APIClient(object):
                 functions = self.wheelClient.w_funcs
             elif client == 'runner':
                 functions = self.runnerClient.functions
-            result = salt.utils.argspec_report(functions, module)
+            result = {'master': salt.utils.argspec_report(functions, module)}
         return result
 
     def create_token(self, creds):

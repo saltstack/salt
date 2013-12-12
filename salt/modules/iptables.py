@@ -120,15 +120,34 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
+    # Jumps should appear last, except for any arguments that are passed to
+    # jumps, which of course need to follow.
+    after_jump = []
+
     if 'jump' in kwargs:
-        kwargs['j'] = kwargs['jump']
+        after_jump.append('--jump {0} '.format(kwargs['jump']))
         del kwargs['jump']
+
+    if 'j' in kwargs:
+        after_jump.append('-j {0} '.format(kwargs['j']))
+        del kwargs['j']
+
+    if 'to-port' in kwargs:
+        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
+        del kwargs['to-port']
+
+    if 'to-ports' in kwargs:
+        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
+        del kwargs['to-ports']
 
     for item in kwargs:
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
         else:
             rule += '--{0} {1} '.format(item, kwargs[item])
+
+    for item in after_jump:
+        rule += item
 
     if full is True:
         if not table:

@@ -155,6 +155,10 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'wait': 'watch'
+}
+
 
 def _reinterpreted_state(state):
     '''
@@ -460,6 +464,25 @@ def run(name,
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    .. note::
+
+        cmd.run supports the usage of ``reload_modules``. This functionality
+        allows you to force Salt to reload all modules. You should only use
+        ``reload_modules`` if your cmd.run does some sort of installation
+        (such as ``pip``), if you do not reload the modules future items in
+        your state which rely on the software being installed will fail.
+
+        .. code-block:: yaml
+
+            cmd.run:
+              - name: /usr/bin/python /usr/local/sbin/get-pip.py
+              - unless: which pip
+              - require:
+                - pkg: python
+                - file: /usr/local/sbin/get-pip.py
+              - reload_modules: True
+
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
@@ -807,7 +830,7 @@ def mod_watch(name, **kwargs):
     '''
     Execute a cmd function based on a watch call
     '''
-    if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
+    if kwargs['sfun'] in ('wait', 'run', 'watch'):
         if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(run(name, **kwargs))

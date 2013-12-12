@@ -337,12 +337,12 @@ def which(exe=None):
 
         search_path = search_path.split(os.pathsep)
         if not is_windows():
-	    # Add any dirs in the default_path which are not in search_path. If
-	    # there was no PATH variable found in os.environ, then this will be
-	    # a no-op. This ensures that all dirs in the default_path are
-	    # searched, which lets salt.utils.which() work well when invoked by
-	    # salt-call running from cron (which, depending on platform, may
-	    # have a severely limited PATH).
+            # Add any dirs in the default_path which are not in search_path. If
+            # there was no PATH variable found in os.environ, then this will be
+            # a no-op. This ensures that all dirs in the default_path are
+            # searched, which lets salt.utils.which() work well when invoked by
+            # salt-call running from cron (which, depending on platform, may
+            # have a severely limited PATH).
             search_path.extend(
                 [
                     x for x in default_path.split(os.pathsep)

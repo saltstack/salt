@@ -8,6 +8,7 @@ import multiprocessing
 import datetime
 import time
 import logging
+import collections
 
 # Import salt libs
 import salt.loader
@@ -16,6 +17,7 @@ import salt.utils
 import salt.minion
 import salt.utils.event
 from salt.utils.event import tagify
+from salt.utils.error import raise_error
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +53,9 @@ class RunnerClient(object):
             data['return'] = self.low(fun, low)
             data['success'] = True
         except Exception as exc:
-            data['return'] = 'Exception occured in runner {0}: {1}'.format(
+            data['return'] = 'Exception occured in runner {0}: {1}: {2}'.format(
                             fun,
+                            exc.__class__.__name__,
                             exc,
                             )
             data['success'] = False
@@ -131,8 +134,9 @@ class RunnerClient(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         ret = sreq.send('clear', load)
-        if ret == '':
-            raise salt.exceptions.EauthAuthenticationError
+        if isinstance(ret, collections.Mapping):
+            if 'error' in ret:
+                raise_error(**ret['error'])
         return ret
 
 

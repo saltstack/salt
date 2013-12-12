@@ -407,7 +407,7 @@ class Pillar(object):
                             )
                         )
                         continue
-                    pillar.update(pstate)
+                    update(pillar, pstate)
 
         return pillar, errors
 

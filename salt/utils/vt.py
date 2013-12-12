@@ -34,13 +34,17 @@ import resource
 import subprocess
 
 if subprocess.mswindows:
+    # pylint: disable=F0401
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
     import _subprocess
+    # pylint: enable=F0401
 else:
     import pty
     import fcntl
+    import struct
+    import termios
 
 # Import salt libs
 from salt._compat import string_types
@@ -90,6 +94,10 @@ class Terminal(object):
                  cwd=None,
                  env=None,
 
+                 # Terminal Size
+                 rows=None,
+                 cols=None,
+
                  # Logging options
                  log_stdin=None,
                  log_stdout=None,
@@ -114,6 +122,17 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+
+        # ----- Set the desired terminal size ------------------------------->
+        if rows is None and cols is None:
+            rows, cols = self.__detect_parent_terminal_size()
+        elif rows is not None and cols is None:
+            _, cols = self.__detect_parent_terminal_size()
+        elif rows is None and cols is not None:
+            rows, _ = self.__detect_parent_terminal_size()
+        self.rows = rows
+        self.cols = cols
+        # <---- Set the desired terminal size --------------------------------
 
         # ----- Internally Set Attributes ----------------------------------->
         self.pid = None
@@ -265,6 +284,14 @@ class Terminal(object):
 
     # <---- Common Public API ------------------------------------------------
 
+    # ----- Common Internal API --------------------------------------------->
+    def _translate_newlines(self, data):
+        if data is None or not data:
+            return
+        # PTY's always return \r\n as the line feeds
+        return data.replace('\r\n', os.linesep)
+    # <---- Common Internal API ----------------------------------------------
+
     # ----- Context Manager Methods ----------------------------------------->
     def __enter__(self):
         return self
@@ -338,6 +365,8 @@ class Terminal(object):
                 self.args = ['/bin/sh', '-c'] + args
             elif self.shell:
                 self.args = ['/bin/sh']
+            else:
+                self.args = args
 
             if self.executable:
                 self.args[0] = self.executable
@@ -350,6 +379,10 @@ class Terminal(object):
                 self.stdin = sys.stdin.fileno()
                 self.stdout = sys.stdout.fileno()
                 self.stderr = sys.stderr.fileno()
+
+                # Set the terminal size
+                self.child_fd = self.stdin
+                self.setwinsize(self.rows, self.cols)
 
                 # Do not allow child to inherit open file descriptors from
                 # parent
@@ -477,12 +510,16 @@ class Terminal(object):
             return written
 
         def _recv(self, maxsize):
+            rfds = []
+            if self.child_fd:
+                rfds.append(self.child_fd)
+            if self.child_fde:
+                rfds.append(self.child_fde)
+
             if not self.isalive():
-                if not self.child_fd and not self.child_fde:
+                if not rfds:
                     return None, None
-                rlist, wlist, _ = select.select(
-                    [self.child_fd, self.child_fde], [], [], 0
-                )
+                rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
                     self.flag_eof = True
                     log.debug('End of file(EOL). Brain-dead platform.')
@@ -493,9 +530,7 @@ class Terminal(object):
                 # FIXME So does this mean Irix systems are forced to always
                 # have a 2 second delay when calling read_nonblocking?
                 # That sucks.
-                rlist, wlist, _ = select.select(
-                    [self.child_fd, self.child_fde], [], [], 2
-                )
+                rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
                     self.flag_eof = True
                     log.debug('End of file(EOL). Slow platform.')
@@ -505,19 +540,23 @@ class Terminal(object):
             stdout = ''
 
             # ----- Store FD Flags ------------------------------------------>
-            fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
-            fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
+            if self.child_fd:
+                fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
+            if self.child_fde:
+                fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
             # <---- Store FD Flags -------------------------------------------
 
             # ----- Non blocking Reads -------------------------------------->
-            fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
-            fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
+            if self.child_fd:
+                fcntl.fcntl(self.child_fd,
+                            fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
+            if self.child_fde:
+                fcntl.fcntl(self.child_fde,
+                            fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
             # <---- Non blocking Reads ---------------------------------------
 
             # ----- Check for any incoming data ----------------------------->
-            rlist, wlist, _ = select.select(
-                [self.child_fd, self.child_fde], [], [], 0
-            )
+            rlist, _, _ = select.select(rfds, [], [], 0)
             # <---- Check for any incoming data ------------------------------
 
             # ----- Nothing to Process!? ------------------------------------>
@@ -531,7 +570,9 @@ class Terminal(object):
             # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist:
                 try:
-                    stderr = os.read(self.child_fde, maxsize)
+                    stderr = self._translate_newlines(
+                        os.read(self.child_fde, maxsize)
+                    )
 
                     if not stderr:
                         self.flag_eof = True
@@ -543,8 +584,8 @@ class Terminal(object):
 
                         if self.stderr_logger:
                             stripped = stderr.rstrip()
-                            if stripped.startswith('\r\n'):
-                                stripped = stripped[2:]
+                            if stripped.startswith(os.linesep):
+                                stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stderr_logger.debug(stripped)
                 except OSError:
@@ -559,7 +600,9 @@ class Terminal(object):
             # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist:
                 try:
-                    stdout = os.read(self.child_fd, maxsize)
+                    stdout = self._translate_newlines(
+                        os.read(self.child_fd, maxsize)
+                    )
 
                     if not stdout:
                         self.flag_eof = True
@@ -571,8 +614,8 @@ class Terminal(object):
 
                         if self.stdout_logger:
                             stripped = stdout.rstrip()
-                            if stripped.startswith('\r\n'):
-                                stripped = stripped[2:]
+                            if stripped.startswith(os.linesep):
+                                stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stdout_logger.debug(stripped)
                 except OSError:
@@ -584,9 +627,64 @@ class Terminal(object):
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
+
+        def __detect_parent_terminal_size(self):
+            try:
+                TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
+                packed = struct.pack('HHHH', 0, 0, 0, 0)
+                ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
+                return struct.unpack('HHHH', ioctl)[0:2]
+            except IOError:
+                # Return a default value of 24x80
+                return 24, 80
         # <---- Internal API -------------------------------------------------
 
         # ----- Public API -------------------------------------------------->
+        def getwinsize(self):
+            '''
+            This returns the terminal window size of the child tty. The return
+            value is a tuple of (rows, cols).
+
+            Thank you for the shortcut PEXPECT
+            '''
+            if self.child_fd is None:
+                raise TerminalException(
+                    'Can\'t check the size of the teminal since we\'re not '
+                    'connected to the child process.'
+                )
+
+            TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
+            packed = struct.pack('HHHH', 0, 0, 0, 0)
+            ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
+            return struct.unpack('HHHH', ioctl)[0:2]
+
+        def setwinsize(self, rows, cols):
+            '''
+            This sets the terminal window size of the child tty. This will
+            cause a SIGWINCH signal to be sent to the child. This does not
+            change the physical window size. It changes the size reported to
+            TTY-aware applications like vi or curses -- applications that
+            respond to the SIGWINCH signal.
+
+            Thank you for the shortcut PEXPECT
+            '''
+            # Check for buggy platforms. Some Python versions on some platforms
+            # (notably OSF1 Alpha and RedHat 7.1) truncate the value for
+            # termios.TIOCSWINSZ. It is not clear why this happens.
+            # These platforms don't seem to handle the signed int very well;
+            # yet other platforms like OpenBSD have a large negative value for
+            # TIOCSWINSZ and they don't have a truncate problem.
+            # Newer versions of Linux have totally different values for
+            # TIOCSWINSZ.
+            # Note that this fix is a hack.
+            TIOCSWINSZ = getattr(termios, 'TIOCSWINSZ', -2146929561)
+            if TIOCSWINSZ == 2148037735:
+                # Same bits, but with sign.
+                TIOCSWINSZ = -2146929561
+            # Note, assume ws_xpixel and ws_ypixel are zero.
+            packed = struct.pack('HHHH', rows, cols, 0, 0)
+            fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
+
         def isalive(self,
                     _waitpid=os.waitpid,
                     _wnohang=os.WNOHANG,
@@ -639,9 +737,9 @@ class Terminal(object):
                 try:
                     ### os.WNOHANG # Solaris!
                     pid, status = _waitpid(self.pid, waitpid_options)
-                except _os_error as e:
+                except _os_error as exc:
                     # This should never happen...
-                    if e.errno == _errno_echild:
+                    if exc.errno == _errno_echild:
                         raise _terminal_exception(
                             'isalive() encountered condition that should '
                             'never happen. There was no child process. Did '

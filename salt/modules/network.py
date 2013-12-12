@@ -331,3 +331,69 @@ def ip_addrs6(interface=None, include_loopback=False):
                                         include_loopback=include_loopback)
 
 ipaddrs6 = ip_addrs6
+
+
+def get_hostname():
+    '''
+    Get hostname
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' network.get_hostname
+    '''
+
+    #cmd='hostname  -f'
+    #return __salt__['cmd.run'](cmd)
+    from socket import gethostname
+    return gethostname()
+
+
+def mod_hostname(hostname):
+    '''
+    Modify hostname
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' network.mod_hostname   master.saltstack.com
+    '''
+    if hostname is None:
+        return False
+
+    #1.use shell command hostname
+    hostname = hostname
+    cmd1 = 'hostname {0}'.format(hostname)
+
+    __salt__['cmd.run'](cmd1)
+
+    #2.modify /etc/hosts hostname
+    f = open('/etc/hosts', 'r')
+    str_hosts = f.read()
+    f.close()
+    list_hosts = str_hosts.splitlines()
+    cmd2 = '127.0.0.1\t\tlocalhost.localdomain\t\tlocalhost\t\t{0}'.format(hostname)
+    #list_hosts[0]=cmd2
+
+    for k in list_hosts:
+        if k.startswith('127.0.0.1'):
+            num = list_hosts.index(k)
+            list_hosts[num] = cmd2
+
+    hostfile = '\n'.join(list_hosts)
+    f = open('/etc/hosts', 'w')
+    f.write(hostfile)
+    f.close()
+
+    #3.modify /etc/sysconfig/network
+    f = open('/etc/sysconfig/network', 'r')
+    str_network = f.read()
+    list_network = str_network.splitlines()
+    cmd = 'HOSTNAME={0}'.format(hostname)
+    for k in list_network:
+        if k.startswith('HOSTNAME'):
+            num = list_network.index(k)
+            list_network[num] = cmd
+    networkfile = '\n'.join(list_network)
+    f = open('/etc/sysconfig/network', 'w')
+    f.write(networkfile)
+    f.close()
+    return True

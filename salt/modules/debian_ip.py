@@ -201,8 +201,9 @@ def _read_file(path):
     try:
         with salt.utils.fopen(path, 'rb') as contents:
             return contents.readlines()
-    except Exception:
+    except (OSError, IOError):
         return ''
+
 
 def _parse_resolve():
     '''
@@ -212,19 +213,21 @@ def _parse_resolve():
     contents = _read_file(_DEB_RESOLV_FILE)
     return contents
 
+
 def _parse_domainname():
     '''
     Parse /etc/resolv.conf and return domainname
     '''
 
     contents = _read_file(_DEB_RESOLV_FILE)
-    pattern = "(?P<tag>\S+)\s+(?P<domain_name>\S+)"
+    pattern = r'(?P<tag>\S+)\s+(?P<domain_name>\S+)'
     prog = re.compile(pattern)
     for item in contents:
         match = prog.match(item)
         if match:
             return match.group("domain_name")
     return ""
+
 
 def _parse_hostname():
     '''
@@ -233,6 +236,7 @@ def _parse_hostname():
 
     contents = _read_file(_DEB_HOSTNAME_FILE)
     return contents[0].split('\n')[0]
+
 
 def _parse_current_network_settings():
     '''
@@ -263,6 +267,7 @@ def _parse_current_network_settings():
 
     opts['hostname'] = hostname
     return opts
+
 
 def _parse_interfaces():
     '''
@@ -354,8 +359,7 @@ def _parse_interfaces():
                             adapters[iface_name]['data'][context]['bridge_options'][opt] = value
 
                         if sline[0].startswith('dns-nameservers'):
-                            sline.pop(0)
-                            if not cmd_key in adapters[iface_name]['data'][context]:
+                            if not 'dns' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['dns'] = []
                             adapters[iface_name]['data'][context]['dns'] = sline
 
@@ -424,7 +428,7 @@ def _parse_ethtool_opts(opts, iface):
         try:
             int(opts['mtu'])
             config.update({'mtu': opts['mtu']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
@@ -565,7 +569,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -589,7 +593,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -638,7 +642,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -648,7 +652,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
-        valid = ['layer2', 'layer3+4']
+        valid = ['layer2', 'layer2+3', 'layer3+4']
         if opts['hashing-algorithm'] in valid:
             bond.update({'xmit_hash_policy': opts['hashing-algorithm']})
         else:
@@ -672,7 +676,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -716,7 +720,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -735,7 +739,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
         bond.update({'use_carrier': bond_def['use_carrier']})
 
     if 'hashing-algorithm' in opts:
-        valid = ['layer2', 'layer3+4']
+        valid = ['layer2', 'layer2+3', 'layer3+4']
         if opts['hashing-algorithm'] in valid:
             bond.update({'xmit_hash_policy': opts['hashing-algorithm']})
         else:
@@ -759,7 +763,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -795,7 +799,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except ValueError:
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -934,7 +938,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except Exception:
+        except ValueError:
             _raise_error_network('networking', valid)
 
     if opts['networking'] in valid:
@@ -949,7 +953,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except Exception:
+        except ValueError:
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
@@ -970,6 +974,7 @@ def _parse_network_settings(opts, current):
     #    if opt not in ['networking', 'hostname', 'nozeroconf']:
     #        result[opt] = opts[opt]
     return result
+
 
 def _parse_routes(iface, opts):
     '''
@@ -1037,6 +1042,7 @@ def _write_file_network(data, filename):
 
     fout.close()
 
+
 def _read_temp(data):
     '''
     Return what would be written to disk
@@ -1065,7 +1071,7 @@ def _read_temp_ifaces(iface, data):
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
-def _write_file_ifaces(iface, data, folder):
+def _write_file_ifaces(iface, data):
     '''
     Writes a file to disk
     '''
@@ -1087,7 +1093,7 @@ def _write_file_ifaces(iface, data, folder):
             adapters[adapter]['data']['inet']['proto'] = 'manual'
 
         tmp = template.render({'name': adapter, 'data': adapters[adapter]})
-        ifcfg += tmp
+        ifcfg = tmp + ifcfg
         if adapter == iface:
             saved_ifcfg = tmp
 
@@ -1195,7 +1201,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
-    ifcfg = _write_file_ifaces(iface, opts[iface], _DEB_NETWORK_DIR)
+    ifcfg = _write_file_ifaces(iface, opts[iface])
 
     # ensure lines in list end with newline, so difflib works
     return [item + '\n' for item in ifcfg]
@@ -1331,6 +1337,7 @@ def get_network_settings():
     network = template.render(settings)
     return _read_temp(network)
 
+
 def get_routes(iface):
     '''
     Return the routes for the interface
@@ -1413,7 +1420,7 @@ def build_network_settings(**settings):
         domainname = sline[1]
 
         contents = _parse_resolve()
-        pattern = "domain\s+(?P<domain_name>\S+)"
+        pattern = r"domain\s+(?P<domain_name>\S+)"
         prog = re.compile(pattern)
         new_contents = []
         found_domain = False
@@ -1428,7 +1435,7 @@ def build_network_settings(**settings):
         # Not found add to beginning
         if not found_domain:
             new_contents.insert(0, "domain {0}\n" . format(domainname))
-     
+
         new_resolv = "".join(new_contents)
 
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)

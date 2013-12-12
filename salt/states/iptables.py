@@ -20,6 +20,20 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - proto: tcp
         - sport: 1025:65535
         - save: True
+
+    httpd:
+      iptables.insert:
+        - position: 1
+        - table: filter
+        - chain: INPUT
+        - jump: ACCEPT
+        - match: state
+        - connstate: NEW
+        - dport: 80
+        - proto: tcp
+        - sport: 1025:65535
+        - save: True
+
 '''
 
 # Import salt libs
@@ -163,7 +177,67 @@ def append(name, **kwargs):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to set iptables rule for {0}'.format(name)
+        ret['comment'] = ('Failed to set iptables rule for {0}.\n'
+                          'Attempted rule was {1}').format(
+                              name,
+                              command.strip())
+        return ret
+
+
+def insert(name, **kwargs):
+    '''
+    Insert a rule into a chain
+
+    name
+        A user-defined name to call this rule by in another part of a state or
+        formula. This should not be an actual rule.
+
+    All other arguments are passed in with the same name as the long option
+    that would normally be used for iptables, with one exception: `--state` is
+    specified as `connstate` instead of `state` (not to be confused with
+    `ctstate`).
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    for ignore in _STATE_INTERNAL_KEYWORDS:
+        if ignore in kwargs:
+            del kwargs[ignore]
+    rule = __salt__['iptables.build_rule'](**kwargs)
+    command = __salt__['iptables.build_rule'](full=True, command='I', **kwargs)
+    if __salt__['iptables.check'](kwargs['table'],
+                                  kwargs['chain'],
+                                  rule) is True:
+        ret['result'] = True
+        ret['comment'] = 'iptables rule for {0} already set ({1})'.format(
+            name,
+            command.strip())
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'iptables rule for {0} needs to be set ({1})'.format(
+            name,
+            command.strip())
+        return ret
+    if not __salt__['iptables.insert'](kwargs['table'], kwargs['chain'], kwargs['position'], rule):
+        ret['changes'] = {'locale': name}
+        ret['result'] = True
+        ret['comment'] = 'Set iptables rule for {0} to: {1}'.format(
+            name,
+            command.strip())
+        if 'save' in kwargs:
+            if kwargs['save']:
+                __salt__['iptables.save'](filename=None)
+                ret['comment'] = ('Set and Saved iptables rule for {0} to: '
+                                  '{1}'.format(name, command.strip()))
+        return ret
+    else:
+        ret['result'] = False
+        ret['comment'] = ('Failed to set iptables rule for {0}.\n'
+                          'Attempted rule was {1}').format(
+                              name,
+                              command.strip())
         return ret
 
 
