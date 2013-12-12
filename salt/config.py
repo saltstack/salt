@@ -177,6 +177,7 @@ VALID_OPTS = {
     'jinja_trim_blocks': bool,
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
+    'transport_type': str,
 }
 
 # default configurations
@@ -375,6 +376,7 @@ DEFAULT_MASTER_OPTS = {
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
+    'transport_type': 'zeromq',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
