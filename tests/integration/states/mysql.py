@@ -29,6 +29,7 @@ try:
 except Exception:
     NO_MYSQL = True
 
+
 @skipIf(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
@@ -77,7 +78,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
 
-
     def _test_database(self, db_name, second_db_name, test_conn, **kwargs):
         '''
         Create db two times, test conn, remove it two times
@@ -110,7 +110,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             # test root connection
             ret = self.run_function(
                 'mysql.query',
-                database=db_name, 
+                database=db_name,
                 query='SELECT 1',
                 **kwargs
             )
@@ -148,7 +148,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         )
         self.assertSaltStateChangesEqual(ret, {})
 
-
     @destructiveTest
     def test_present_absent(self):
         '''
@@ -167,7 +166,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
 
     # TODO: test with variations on collate and charset, check for db alter
     # once it will be done in mysql_database.present state
-
 
     @destructiveTest
     def test_present_absent_fuzzy(self):
@@ -204,7 +202,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             connection_charset='utf8',
             #saltenv={"LC_ALL": "en_US.utf8"}
         )
-
 
     @destructiveTest
     @skipIf(True, 'This tests needs issue #8947 to be fixed first')
@@ -361,7 +358,6 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_pass=self.password
         )
 
-
     @destructiveTest
     def tearDown(self):
         '''
@@ -382,7 +378,6 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_pass=self.password,
        )
 
-
     def _userCreation(self,
                       uname,
                       password=None):
@@ -399,7 +394,6 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-
 
     def _userRemoval(self,
                      uname,
