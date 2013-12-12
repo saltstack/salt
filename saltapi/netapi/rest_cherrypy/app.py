@@ -1080,7 +1080,9 @@ class Events(object):
             yield u'retry: {0}\n'.format(400)
 
             while True:
-                yield u'data: {0}\n\n'.format(json.dumps(stream.next()))
+                data = stream.next()
+                yield u'tag: {0}\n'.format(data.get('tag', ''))
+                yield u'data: {0}\n\n'.format(json.dumps(data))
 
         return listen()
 
