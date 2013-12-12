@@ -126,7 +126,8 @@ def _match(names):
 
     # Look for full matches
     full_pkg_strings = []
-    for line in __salt__['cmd.run_stdout']('pkg_info').splitlines():
+    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='debug')
+    for line in out.splitlines():
         try:
             full_pkg_strings.append(line.split()[0])
         except IndexError:
@@ -235,7 +236,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    for line in __salt__['cmd.run_stdout']('pkg_info').splitlines():
+    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='debug')
+    for line in out.splitlines():
         if not line:
             continue
         try:
@@ -330,7 +332,11 @@ def install(name=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run_all']('pkg_add {0}'.format(' '.join(args)), env=env)
+    __salt__['cmd.run'](
+        'pkg_add {0}'.format(' '.join(args)),
+        env=env,
+        output_loglevel='debug'
+    )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     rehash()
@@ -387,7 +393,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'pkg_delete {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -410,9 +416,9 @@ def rehash():
 
         salt '*' pkg.rehash
     '''
-    shell = __salt__['cmd.run']('echo $SHELL').split('/')
-    if shell[len(shell) - 1] in ['csh', 'tcsh']:
-        __salt__['cmd.run_all']('rehash')
+    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='debug')
+    if shell.split('/')[-1] in ('csh', 'tcsh'):
+        __salt__['cmd.run']('rehash', output_loglevel='debug')
 
 
 def file_list(*packages):
@@ -462,7 +468,7 @@ def file_dict(*packages):
     else:
         cmd = 'pkg_info -QLa'
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
 
     for line in ret['stderr'].splitlines():
         errors.append(line)
