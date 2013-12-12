@@ -1071,7 +1071,7 @@ def _read_temp_ifaces(iface, data):
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
-def _write_file_ifaces(iface, data, folder):
+def _write_file_ifaces(iface, data):
     '''
     Writes a file to disk
     '''
