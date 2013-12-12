@@ -183,6 +183,7 @@ def append(name, **kwargs):
                               command.strip())
         return ret
 
+
 def insert(name, **kwargs):
     '''
     Insert a rule into a chain
@@ -238,6 +239,7 @@ def insert(name, **kwargs):
                               name,
                               command.strip())
         return ret
+
 
 def set_policy(name, **kwargs):
     '''
