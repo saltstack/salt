@@ -159,6 +159,15 @@ class APIClient(object):
 
     def signature(self, cmd):
         '''
+        Adds client type per the command.
+        '''
+        cmd['client'] = 'minion'
+        if len(cmd['module'].split('.')) > 2 and cmd['module'].split('.')[0] in ['runner', 'wheel']:
+            cmd['client'] = 'master'
+        return self._signature(cmd)
+
+    def _signature(self, cmd):
+        '''
         Convenience function that returns dict of function signature(s) specified by cmd.
 
         cmd is dict of the form:
@@ -203,7 +212,7 @@ class APIClient(object):
                 functions = self.wheelClient.w_funcs
             elif client == 'runner':
                 functions = self.runnerClient.functions
-            result = salt.utils.argspec_report(functions, module)
+            result = {'master': salt.utils.argspec_report(functions, module)}
         return result
 
     def create_token(self, creds):
