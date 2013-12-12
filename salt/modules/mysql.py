@@ -19,7 +19,6 @@ Module to provide MySQL compatibility to salt.
         mysql.pass: ''
         mysql.db: 'mysql'
         mysql.unix_socket: '/tmp/mysql.sock'
-        mysql.unix_socket: '/tmp/mysql.sock'
         mysql.charset: 'utf8'
 
     You can also use a defaults file::
