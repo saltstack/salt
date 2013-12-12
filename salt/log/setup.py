@@ -41,6 +41,7 @@ LOG_LEVELS = {
     'all': logging.NOTSET,
     'debug': logging.DEBUG,
     'error': logging.ERROR,
+    'critical': logging.CRITICAL,
     'garbage': GARBAGE,
     'info': logging.INFO,
     'quiet': QUIET,
