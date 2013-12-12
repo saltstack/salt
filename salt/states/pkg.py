@@ -456,7 +456,7 @@ def installed(
 
     comment = []
     pkg_ret = __salt__['pkg.install'](name,
-                                      refresh=False,
+                                      refresh=refresh,
                                       version=version,
                                       fromrepo=fromrepo,
                                       skip_verify=skip_verify,
