@@ -55,7 +55,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' flush-privileges password "'
                + self.password
@@ -63,7 +63,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         )
         ret2 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' --password="'
                + self.password
@@ -292,7 +292,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
         # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' flush-privileges password "'
                + self.password
@@ -300,7 +300,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
         )
         ret2 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' --password="'
                + self.password

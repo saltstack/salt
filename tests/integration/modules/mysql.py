@@ -52,7 +52,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' flush-privileges password "'
                + self.password
@@ -60,7 +60,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
         ret2 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' --password="'
                + self.password
@@ -153,6 +153,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             ret,
             'Problem while removing db for db name: {0!r}'.format(db_name)
         )
+
 
     @destructiveTest
     def test_database_creation_level1(self):
@@ -633,7 +634,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' flush-privileges password "'
                + self.password
@@ -641,7 +642,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
         ret2 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' --password="'
                + self.password
@@ -1320,7 +1321,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         # one of theses two at least should work
         ret1 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' flush-privileges password "'
                + self.password
@@ -1328,7 +1329,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         )
         ret2 = self.run_state(
             'cmd.run',
-             name='mysqladmin -u '
+             name='mysqladmin --host="localhost" -u '
                + self.user
                + ' --password="'
                + self.password
