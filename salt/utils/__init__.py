@@ -361,7 +361,7 @@ def which(exe=None):
                     # safely rely on that behaviour
                     if os.access(full_path + ext, os.X_OK):
                         return full_path + ext
-        log.debug(
+        log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
