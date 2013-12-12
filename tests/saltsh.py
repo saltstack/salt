@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''\
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
@@ -19,18 +20,15 @@ A history file is maintained in ~/.saltsh_history.
 completion behavior can be customized via the ~/.inputrc file.
 
 '''
-import atexit
+
+# Import python libs
 import atexit
 import os
-import pprint
 import readline
-import rlcompleter
 import sys
 from code import InteractiveConsole
 
-import jinja2
-import yaml
-
+# Import salt libs
 import salt.client
 import salt.config
 import salt.loader
@@ -38,10 +36,27 @@ import salt.output
 import salt.pillar
 import salt.runner
 
-HISTFILE="{HOME}/.saltsh_history".format(**os.environ)
+# Import 3rd party libs
+import jinja2
+
+
+# pylint: disable=W0611
+# These are imported to be available in the spawmed shell
+
+
+import yaml
+import pprint
+
+
+HISTFILE = '{HOME}/.saltsh_history'.format(**os.environ)
+
 
 def savehist():
+    '''
+    Save the history file
+    '''
     readline.write_history_file(HISTFILE)
+
 
 def get_salt_vars():
     '''
@@ -69,7 +84,7 @@ def get_salt_vars():
         __opts__.get('environment'),
     ).compile_pillar()
 
-    JINJA = lambda x, **y: jinja2.Template(x).render(
+    JINJA = lambda x, **y: jinja2.Template(x).render(  # pylint: disable=C0103,W0612
             grains=__grains__,
             salt=__salt__,
             opts=__opts__,
@@ -78,7 +93,11 @@ def get_salt_vars():
 
     return locals()
 
+
 def main():
+    '''
+    The main entry point
+    '''
     salt_vars = get_salt_vars()
 
     def salt_outputter(value):
@@ -103,10 +122,11 @@ def main():
         readline.read_history_file(HISTFILE)
 
     atexit.register(savehist)
-    atexit.register(lambda: sys.stdout.write("Salt you later!\n"))
+    atexit.register(lambda: sys.stdout.write('Salt you later!\n'))
 
     saltrepl = InteractiveConsole(locals=salt_vars)
     saltrepl.interact(banner=__doc__)
+
 
 if __name__ == '__main__':
     main()

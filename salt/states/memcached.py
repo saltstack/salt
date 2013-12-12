@@ -14,6 +14,11 @@ try:
 except ImportError:
     HAS_MEMCACHE = False
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def __virtual__():
     '''
@@ -24,7 +29,7 @@ def __virtual__():
     return 'memcache'
 
 
-def set(name,
+def set_(name,
         host=None,
         port=None,
         val=None):
