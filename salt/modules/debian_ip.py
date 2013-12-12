@@ -1201,7 +1201,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
-    ifcfg = _write_file_ifaces(iface, opts[iface], _DEB_NETWORK_DIR)
+    ifcfg = _write_file_ifaces(iface, opts[iface])
 
     # ensure lines in list end with newline, so difflib works
     return [item + '\n' for item in ifcfg]
