@@ -24,7 +24,7 @@ def get(tgt, fun, tgt_type='glob'):
     serial = salt.payload.Serial(__opts__)
     checker = salt.utils.minions.CkMinions(__opts__)
     minions = checker.check_minions(
-            'tgt',
+            tgt,
             tgt_type)
     for minion in minions:
         mine = os.path.join(
