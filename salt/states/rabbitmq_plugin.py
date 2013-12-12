@@ -3,6 +3,8 @@
 Manage RabbitMQ Plugins
 =======================
 
+.. versionadded:: Hydrogen
+
 Example:
 
 .. code-block:: yaml
