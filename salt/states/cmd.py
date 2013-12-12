@@ -155,6 +155,10 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'wait': 'watch'
+}
+
 
 def _reinterpreted_state(state):
     '''
