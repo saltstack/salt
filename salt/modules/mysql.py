@@ -146,6 +146,7 @@ __grants__ = [
 # And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 ################################################################################
 
+
 def __virtual__():
     '''
     Only load this module if the mysql libraries exist
