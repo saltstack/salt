@@ -155,6 +155,10 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'wait': 'watch'
+}
+
 
 def _reinterpreted_state(state):
     '''
@@ -826,7 +830,7 @@ def mod_watch(name, **kwargs):
     '''
     Execute a cmd function based on a watch call
     '''
-    if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
+    if kwargs['sfun'] in ('wait', 'run', 'watch'):
         if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(run(name, **kwargs))
