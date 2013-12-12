@@ -28,7 +28,7 @@ overidden in states using the following arguments: ``connection_host``,
     frank:
       mysql_user.present:
         - host: localhost
-        - password: "bob準cat"
+        - password: "bob@cat"
         - connection_user: someuser
         - connection_pass: somepass
         - connection_charset: utf8
