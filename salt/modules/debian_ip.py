@@ -1093,7 +1093,7 @@ def _write_file_ifaces(iface, data, folder):
             adapters[adapter]['data']['inet']['proto'] = 'manual'
 
         tmp = template.render({'name': adapter, 'data': adapters[adapter]})
-        ifcfg += tmp
+        ifcfg = tmp + ifcfg
         if adapter == iface:
             saved_ifcfg = tmp
 
