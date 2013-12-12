@@ -230,7 +230,7 @@ def _run(cmd,
         stack = traceback.extract_stack(limit=2)
 
         # extract_stack() returns a list of tuples.
-        # The last item in the list [-1] is the currrent method.
+        # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
             cmd = 'Powershell -File ' + cmd
