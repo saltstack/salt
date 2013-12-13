@@ -27,7 +27,6 @@ Full list of builtin execution modules
     brew
     bridge
     bsd_shadow
-    buildout
     cassandra
     chocolatey
     cmdmod
@@ -198,6 +197,7 @@ Full list of builtin execution modules
     xapi
     yumpkg
     yumpkg5
+    zcbuildout
     zfs
     zpool
     zypper

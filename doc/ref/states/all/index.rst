@@ -15,7 +15,6 @@ Full list of builtin state modules
     apt
     augeas
     aws_sqs
-    buildout
     cmd
     cron
     ddns
@@ -92,3 +91,4 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    zcbuildout
