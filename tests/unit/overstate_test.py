@@ -35,6 +35,7 @@ overstate_sls = {
 
 }
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class OverstateTestCase(TestCase):
     @patch('salt.client.LocalClient.cmd')
