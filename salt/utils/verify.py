@@ -146,9 +146,8 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if 'OS' in os.environ:
-        if os.environ['OS'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -186,9 +185,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if 'OS' in os.environ:
-        if os.environ['OS'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     import pwd  # after confirming not running Windows
     import grp
     try:
@@ -285,9 +283,8 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if 'OS' in os.environ:
-        if os.environ['OS'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     if user == getpass.getuser():
         return True
     import pwd  # after confirming not running Windows
