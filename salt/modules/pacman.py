@@ -477,7 +477,7 @@ def file_dict(*packages):
     errors = []
     ret = {}
     cmd = 'pacman -Ql {0}'.format(' '.join(packages))
-    out =__salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         if line.startswith('error'):
             errors.append(line)

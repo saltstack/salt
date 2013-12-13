@@ -86,7 +86,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'brew list --versions'
-    out =__salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         try:
             name, version_num = line.split(' ')[0:2]

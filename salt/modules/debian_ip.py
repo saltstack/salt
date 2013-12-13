@@ -859,7 +859,7 @@ def _parse_bridge_opts(opts, iface):
         # match 12 hex digits with either : or - as separators between pairs
         if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$",
                     opts['hw'].lower()):
-             config.update({'hw': opts['hw']})
+            config.update({'hw': opts['hw']})
         else:
             _raise_error_iface(iface, 'hw', ['valid MAC address'])
 
@@ -889,7 +889,7 @@ def _parse_bridge_opts(opts, iface):
             if time.isdigit() and values:
                 config.update({'waitport': '{0} {1}'.format(time, ' '.join(values))})
             else:
-              _raise_error_iface(iface, opt, ['integer [interfaces]'])
+                _raise_error_iface(iface, opt, ['integer [interfaces]'])
 
     return config
 

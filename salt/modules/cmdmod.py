@@ -863,7 +863,7 @@ def retcode(cmd,
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    ret =_run(cmd,
+    ret = _run(cmd,
               runas=runas,
               cwd=cwd,
               stdin=stdin,
