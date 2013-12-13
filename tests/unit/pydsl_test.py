@@ -455,7 +455,39 @@ class PyDSLRendererTestCase(TestCase):
             state_highstate({'base': ['aaa']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
-
+    def test_repeat_includes(self):
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
+        output = os.path.join(dirpath, 'output')
+        try:
+            write_to(os.path.join(dirpath, 'b.sls'), textwrap.dedent('''\
+                #!pydsl
+                include('c')
+                include('d')
+                '''))
+            write_to(os.path.join(dirpath, 'c.sls'), textwrap.dedent('''\
+                #!pydsl
+                modtest = include('e')
+                modtest.success
+                '''))
+            write_to(os.path.join(dirpath, 'd.sls'), textwrap.dedent('''\
+                #!pydsl
+                modtest = include('e')
+                modtest.success
+                '''))
+            write_to(os.path.join(dirpath, 'e.sls'), textwrap.dedent('''\
+                #!pydsl
+                success = True
+                '''))
+            state_highstate({'base': ['b.sls']}, dirpath)
+            state_highstate({'base': ['c.sls', 'd.sls']}, dirpath)
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
 
 def write_to(fpath, content):
     with open(fpath, 'w') as f:
