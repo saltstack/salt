@@ -6,6 +6,7 @@ import integration
 # Import Salt libs
 import salt.wheel
 
+
 class KeyWheelModuleTest(integration.ClientCase):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(self.get_opts())

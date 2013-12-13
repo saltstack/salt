@@ -6,6 +6,7 @@ import integration
 # Import Salt libs
 import salt.wheel
 
+
 class WheelModuleTest(integration.ClientCase):
     def setUp(self):
         '''
