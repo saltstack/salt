@@ -128,8 +128,31 @@ class OverstateTestCase(TestCase):
                                        'success': False}}},
                                         ret)
 
-        
+    @patch('salt.utils.check_state_result')
+    def test__check_results_for_successful_prereq(self, check_state_result_mock):
+        check_state_result_mock.return_value = True
+        overstate = salt.overstate.OverState(opts)
+        overstate.over_run = {'mysql':
+                                  {'minion1':
+                                       {
+                                           'ret': {
+                                               'result': True,
+                                               'comment': 'Victory is ours!',
+                                               'name': 'mysql',
+                                               'changes': {},
+                                               '__run_num__': 0,
 
+                                           },
+                                           'fun': MagicMock(name='Mock of minion1 mysql func'),
+                                           'retcode': 0,
+                                           'success': True
+
+                                       }
+                                  }
+        }
+
+        ret = overstate._check_results('mysql', 'all', {}, {'all': {}})
+        self.assertEqual(ret, ({}, {'all': {}}))
 
 
     # @patch('salt.overstate.OverState.call_stage')
