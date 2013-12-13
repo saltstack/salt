@@ -649,7 +649,7 @@ class Terminal(object):
             '''
             if self.child_fd is None:
                 raise TerminalException(
-                    'Can\'t check the size of the teminal since we\'re not '
+                    'Can\'t check the size of the terminal since we\'re not '
                     'connected to the child process.'
                 )
 
