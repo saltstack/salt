@@ -338,7 +338,9 @@ def get_hostname():
     Get hostname
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' network.get_hostname
     '''
 
@@ -353,7 +355,9 @@ def mod_hostname(hostname):
     Modify hostname
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' network.mod_hostname   master.saltstack.com
     '''
     if hostname is None:

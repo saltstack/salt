@@ -21,7 +21,7 @@ The MySQL authentication information specified in the minion config file can be
 overidden in states using the following arguments: ``connection_host``,
 ``connection_port``, ``connection_user``, ``connection_pass``,
 ``connection_db``, ``connection_unix_socket``, ``connection_default_file`` and
- ``connection_charset``.
+``connection_charset``.
 
 .. code-block:: yaml
 
