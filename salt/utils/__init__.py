@@ -259,7 +259,7 @@ def daemonize(redirect_out=True):
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
-        dev_null_r = open('/dev/null', 'r')
+        dev_null_r = open('/dev/null', 'r+')
         dev_null_w = open('/dev/null', 'w')
         os.dup2(dev_null_r.fileno(), sys.stdin.fileno())
         os.dup2(dev_null_w.fileno(), sys.stdout.fileno())
