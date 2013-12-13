@@ -455,6 +455,7 @@ class PyDSLRendererTestCase(TestCase):
             state_highstate({'base': ['aaa']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
+
     def test_repeat_includes(self):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):

@@ -54,7 +54,7 @@ class OverstateTestCase(TestCase):
     def test__names(self):
         overstate = salt.overstate.OverState(opts)
         overstate.over = overstate._OverState__sort_stages(overstate_sls)
-        self.assertEqual({'webservers', 'all', 'mysql'}, overstate._names())
+        self.assertEqual(['webservers', 'all', 'mysql'], overstate._names())
 
     def test_get_stage(self):
         overstate = salt.overstate.OverState(opts)
