@@ -17,6 +17,40 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def get_grains(minion=None):
+    '''
+    Get the grains for a specific minion.  If no minion is specified, it will
+    return the grains for the first minion it finds.
+
+    Return value is a tuple of the minion ID and the grains
+    '''
+    if self.opts.get('minion_data_cache', False):
+        cdir = os.path.join(self.opts['cachedir'], 'minions')
+        if not os.path.isdir(cdir):
+            return minion if minion else '', {}
+        minions = os.listdir(cdir)
+        if minion is None:
+            # If no minion specified, take first one with valid grains
+            for id_ in minions:
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(
+                        salt.utils.fopen(datap)).get('grains')
+                if grains:
+                    return id_, grains
+        else:
+            # Search for specific minion
+            datap = os.path.join(cdir, minion, 'data.p')
+            if not os.path.isfile(datap):
+                return minion, {}
+            grains = self.serial.load(
+                    salt.utils.fopen(datap)).get('grains')
+            return minion, grains
+    # No cache dir, return empty dict
+    return minion if minion else '', {}
+
+
 def nodegroup_comp(group, nodegroups, skip=None):
     '''
     Take the nodegroup and the nodegroups and fill in nodegroup refs
