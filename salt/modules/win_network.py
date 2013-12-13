@@ -3,9 +3,6 @@
 Module for gathering and managing network information
 '''
 
-# Import python libs
-import re
-
 # Import salt libs
 import salt.utils
 
