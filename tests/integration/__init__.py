@@ -1018,3 +1018,12 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+
+
+class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
+    '''
+    A base class containing relevant options for starting the various Salt
+    Python API entrypoints
+    '''
+    def get_opts(self):
+        return salt.config.client_config(self.get_config_file_path('master'))
