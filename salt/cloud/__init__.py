@@ -1664,6 +1664,9 @@ def run_parallel_map_providers_query(data):
     This function will be called from another process when building the
     providers map.
     '''
+    import Crypto.Random
+    Crypto.Random.atfork()
+
     cloud = Cloud(data['opts'])
     try:
         with context.func_globals_inject(
