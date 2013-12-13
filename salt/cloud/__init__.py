@@ -1664,8 +1664,12 @@ def run_parallel_map_providers_query(data):
     This function will be called from another process when building the
     providers map.
     '''
-    import Crypto.Random
-    Crypto.Random.atfork()  # pylint: disable=#E6011
+    try:
+        import Crypto.Random
+        Crypto.Random.atfork()
+    except ImportError:
+        # PyCrypto version < 2.1
+        pass
 
     cloud = Cloud(data['opts'])
     try:
