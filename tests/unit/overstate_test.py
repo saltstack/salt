@@ -75,6 +75,20 @@ class OverstateTestCase(TestCase):
                           call('webservers', {'require': ['mysql'], 'match': 'web*'})]
         call_stage_mock.assert_has_calls(expected_calls, any_order=False)
 
+    def test_verify_stage(self):
+        overstate = salt.overstate.OverState(opts)
+        test_stage = {'require': {'webservers', 'mysql'}, 'match': '*'}
+        ret = overstate.verify_stage(test_stage)
+        self.assertDictEqual(test_stage, test_stage)
+
+    def test_verify_fail(self):
+        overstate = salt.overstate.OverState(opts)
+        test_stage = {'require': {'webservers', 'mysql'}}
+        ret = overstate.verify_stage(test_stage)
+        self.assertIn('No "match" argument in stage.', ret)
+
+    
+
     # @patch('salt.overstate.OverState.call_stage')
     # def test_call_stage(self, call_stage_mock):
     #     overstate = salt.overstate.OverState(opts)
