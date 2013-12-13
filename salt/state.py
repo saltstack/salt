@@ -1789,6 +1789,7 @@ class BaseHighState(object):
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.serial = salt.payload.Serial(self.opts)
+        self.building_highstate = {}
 
     def __gather_avail(self):
         '''
@@ -2323,7 +2324,7 @@ class BaseHighState(object):
         Gather the state files and render them into a single unified salt
         high data structure.
         '''
-        highstate = {}
+        highstate = self.building_highstate
         all_errors = []
         for saltenv, states in matches.items():
             mods = set()

@@ -113,7 +113,7 @@ class Sls(object):
         self.name = sls
         self.saltenv = saltenv
         self.includes = []
-        self.included_highstate = {}
+        self.included_highstate = HighState.get_active().building_highstate
         self.extends = []
         self.decls = []
         self.options = Options()
