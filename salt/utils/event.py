@@ -598,9 +598,8 @@ class ReactWrap(object):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(**kwargs)
+        return wheel.call_func(fun, **kwargs)
 
 
 class StateFire(object):
