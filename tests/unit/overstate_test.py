@@ -87,7 +87,50 @@ class OverstateTestCase(TestCase):
         ret = overstate.verify_stage(test_stage)
         self.assertIn('No "match" argument in stage.', ret)
 
-    
+    @patch('salt.utils.check_state_result')
+    def test__check_results_for_failed_prereq(self, check_state_result_mock):
+        check_state_result_mock.return_value = True
+        overstate = salt.overstate.OverState(opts)
+        overstate.over_run = {'mysql':
+                                  {'minion1':
+                                       {
+                                           'ret': {
+                                               'result': True,
+                                               'comment': 'Victory is ours!',
+                                               'name': 'mysql',
+                                               'changes': {},
+                                               '__run_num__': 0,
+
+                                           },
+                                           'fun': MagicMock(name='Mock of minion1 mysql func'),
+                                           'retcode': 0,
+                                           'success': False
+
+                                       }
+                                  }
+        }
+        ret = overstate._check_results('mysql', 'all', {}, {'all': {}})
+        self.assertDictEqual({'all': {'req_|-fail_|-fail_|-None': {'fun': 'req.fail',
+                                       'ret': {'__run_num__': 0,
+                                               'changes': {},
+                                               'comment': 'Requisite mysql failed for stage on minion minion1',
+                                               'name': 'Requisite Failure',
+                                               'result': False},
+                                       'retcode': 254,
+                                       'success': False}}},
+ {'all': {'req_|-fail_|-fail_|-None': {'fun': 'req.fail',
+                                       'ret': {'__run_num__': 0,
+                                               'changes': {},
+                                               'comment': 'Requisite mysql failed for stage on minion minion1',
+                                               'name': 'Requisite Failure',
+                                               'result': False},
+                                       'retcode': 254,
+                                       'success': False}}},
+                                        ret)
+
+        
+
+
 
     # @patch('salt.overstate.OverState.call_stage')
     # def test_call_stage(self, call_stage_mock):
