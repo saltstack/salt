@@ -23,7 +23,7 @@ OPTS['file_roots'] = dict(base=['/'])
 FUNCS = {}
 FUNCS['config.get'] = lambda a, b: False
 
-RENDERERS = salt.loader.render(OPTS, {})
+RENDERERS = salt.loader.render(OPTS, FUNCS)
 
 
 def render_sls(content, sls='', saltenv='base', argline='-G yaml . jinja', **kws):
