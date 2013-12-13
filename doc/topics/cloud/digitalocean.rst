@@ -97,3 +97,7 @@ command:
                 slug:
                     None
     ...SNIP...
+
+.. note::
+
+    Additional documentation is available from `Digital Ocean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.
