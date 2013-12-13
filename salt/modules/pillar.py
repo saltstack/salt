@@ -134,3 +134,27 @@ def ext(external):
     ret = pillar.compile_pillar()
 
     return ret
+
+
+def show_top():
+    '''
+    Returns the compiled top data for pillar
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.show_top
+    '''
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'])
+
+    top, errors = pillar.get_top()
+
+    if errors:
+        return errors
+
+    return top
