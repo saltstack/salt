@@ -10,6 +10,7 @@ access to the master root execution access to all salt minions
 import functools
 import json
 import logging
+import operator
 import os
 import shutil
 import subprocess
@@ -23,6 +24,7 @@ import salt.utils.timed_subprocess
 import salt.grains.extra
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
+from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -178,11 +180,41 @@ def _render_cmd(cmd, cwd, template, saltenv='base'):
     return (cmd, cwd)
 
 
+def _check_loglevel(level='info', quiet=False):
+    '''
+    Retrieve the level code for use in logging.Logger.log().
+    '''
+    def _bad_level(level):
+        log.error(
+            'Invalid output_loglevel {0!r}. Valid levels are: {1}. Falling '
+            'back to \'info\'.'
+            .format(
+                level,
+                ', '.join(
+                    sorted(LOG_LEVELS, key=LOG_LEVELS.get, reverse=True)
+                )
+            )
+        )
+        return LOG_LEVELS['info']
+
+    try:
+        level = level.lower()
+        if level not in LOG_LEVELS:
+            return _bad_level(level)
+    except AttributeError:
+        return _bad_level(level)
+
+    if salt.utils.is_true(quiet) or level == 'quiet':
+        return None
+    return LOG_LEVELS[level]
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
+         output_loglevel='info',
          quiet=False,
          runas=None,
          shell=DEFAULT_SHELL,
@@ -199,6 +231,14 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
+    if salt.utils.is_true(quiet):
+        salt.utils.warn_until(
+            'Lithium',
+            'The \'quiet\' option is deprecated and will be removed in the '
+            '\'Lithium\' Salt release. Please use output_loglevel=quiet '
+            'instead.'
+        )
+
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
     # the minion is running.
@@ -300,8 +340,10 @@ def _run(cmd,
                 )
             )
 
-    if not salt.utils.is_true(quiet):
-        # Put the most common case first
+    if _check_loglevel(output_loglevel, quiet) is not None:
+        # Always log the shell commands at INFO unless quiet logging is
+        # requested. The command output is what will be controlled by the
+        # 'loglevel' parameter.
         log.info(
             'Executing command {0!r} {1}in directory {2!r}'.format(
                 cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
@@ -419,7 +461,7 @@ def _run_quiet(cmd,
                 cwd=cwd,
                 stdin=stdin,
                 stderr=subprocess.STDOUT,
-                quiet=True,
+                output_loglevel='quiet',
                 shell=shell,
                 python_shell=python_shell,
                 env=env,
@@ -453,7 +495,7 @@ def _run_all_quiet(cmd,
                 shell=shell,
                 python_shell=python_shell,
                 env=env,
-                quiet=True,
+                output_loglevel='quiet',
                 template=template,
                 umask=umask,
                 timeout=timeout,
@@ -472,6 +514,7 @@ def run(cmd,
         template=None,
         rstrip=True,
         umask=None,
+        output_loglevel='info',
         quiet=False,
         timeout=None,
         reset_system_locale=True,
@@ -511,7 +554,7 @@ def run(cmd,
 
         salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    out = _run(cmd,
+    ret = _run(cmd,
                runas=runas,
                shell=shell,
                python_shell=python_shell,
@@ -523,13 +566,23 @@ def run(cmd,
                template=template,
                rstrip=rstrip,
                umask=umask,
+               output_loglevel=output_loglevel,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)['stdout']
-    if not quiet:
-        log.debug('output: {0}'.format(out))
-    return out
+               saltenv=saltenv)
+
+    lvl = _check_loglevel(output_loglevel, quiet)
+    if lvl is not None:
+        if ret['retcode'] != 0:
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
+            log.error(
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
+            )
+        log.log(lvl, 'output: {0}'.format(ret['stdout']))
+    return ret['stdout']
 
 
 def run_stdout(cmd,
@@ -543,6 +596,7 @@ def run_stdout(cmd,
                template=None,
                rstrip=True,
                umask=None,
+               output_loglevel='info',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
@@ -576,24 +630,37 @@ def run_stdout(cmd,
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    stdout = _run(cmd,
-                  runas=runas,
-                  cwd=cwd,
-                  stdin=stdin,
-                  shell=shell,
-                  python_shell=python_shell,
-                  env=env,
-                  clean_env=clean_env,
-                  template=template,
-                  rstrip=rstrip,
-                  umask=umask,
-                  quiet=quiet,
-                  timeout=timeout,
-                  reset_system_locale=reset_system_locale,
-                  saltenv=saltenv)['stdout']
-    if not quiet:
-        log.debug('stdout: {0}'.format(stdout))
-    return stdout
+    ret = _run(cmd,
+               runas=runas,
+               cwd=cwd,
+               stdin=stdin,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_loglevel=output_loglevel,
+               quiet=quiet,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv)
+
+    lvl = _check_loglevel(output_loglevel, quiet)
+    if lvl is not None:
+        if ret['retcode'] != 0:
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
+            log.error(
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
+            )
+        if ret['stdout']:
+            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+        if ret['stderr']:
+            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+    return ret['stdout']
 
 
 def run_stderr(cmd,
@@ -607,6 +674,7 @@ def run_stderr(cmd,
                template=None,
                rstrip=True,
                umask=None,
+               output_loglevel='info',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
@@ -640,24 +708,37 @@ def run_stderr(cmd,
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    stderr = _run(cmd,
-                  runas=runas,
-                  cwd=cwd,
-                  stdin=stdin,
-                  shell=shell,
-                  python_shell=python_shell,
-                  env=env,
-                  clean_env=clean_env,
-                  template=template,
-                  rstrip=rstrip,
-                  umask=umask,
-                  quiet=quiet,
-                  timeout=timeout,
-                  reset_system_locale=reset_system_locale,
-                  saltenv=saltenv)['stderr']
-    if not quiet:
-        log.debug('stderr: {0}'.format(stderr))
-    return stderr
+    ret = _run(cmd,
+               runas=runas,
+               cwd=cwd,
+               stdin=stdin,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_loglevel=output_loglevel,
+               quiet=quiet,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv)
+
+    lvl = _check_loglevel(output_loglevel, quiet)
+    if lvl is not None:
+        if ret['retcode'] != 0:
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
+            log.error(
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
+            )
+        if ret['stdout']:
+            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+        if ret['stderr']:
+            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+    return ret['stderr']
 
 
 def run_all(cmd,
@@ -671,6 +752,7 @@ def run_all(cmd,
             template=None,
             rstrip=True,
             umask=None,
+            output_loglevel='info',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
@@ -715,28 +797,25 @@ def run_all(cmd,
                template=template,
                rstrip=rstrip,
                umask=umask,
+               output_loglevel=output_loglevel,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv)
 
-    if not quiet:
+    lvl = _check_loglevel(output_loglevel, quiet)
+    if lvl is not None:
         if ret['retcode'] != 0:
-            rcode = ret['retcode']
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
             log.error(
-                'Command {0!r} failed with return code: {1}'.format(cmd, rcode)
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
             )
-            # Don't log a blank line if there is no stderr or stdout
-            if ret['stdout']:
-                log.error('stdout: {0}'.format(ret['stdout']))
-            if ret['stderr']:
-                log.error('stderr: {0}'.format(ret['stderr']))
-        else:
-            # No need to always log output on success to the logs
-            if ret['stdout']:
-                log.debug('stdout: {0}'.format(ret['stdout']))
-            if ret['stderr']:
-                log.debug('stderr: {0}'.format(ret['stderr']))
+        if ret['stdout']:
+            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+        if ret['stderr']:
+            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
     return ret
 
 
@@ -750,6 +829,7 @@ def retcode(cmd,
             clean_env=False,
             template=None,
             umask=None,
+            output_loglevel='info',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
@@ -783,21 +863,34 @@ def retcode(cmd,
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    return _run(cmd,
-                runas=runas,
-                cwd=cwd,
-                stdin=stdin,
-                shell=shell,
-                python_shell=python_shell,
-                env=env,
-                clean_env=clean_env,
-                template=template,
-                umask=umask,
-                quiet=quiet,
-                timeout=timeout,
-                with_communicate=False,
-                reset_system_locale=reset_system_locale,
-                saltenv=saltenv)['retcode']
+    ret =_run(cmd,
+              runas=runas,
+              cwd=cwd,
+              stdin=stdin,
+              stderr=subprocess.STDOUT,
+              shell=shell,
+              python_shell=python_shell,
+              env=env,
+              clean_env=clean_env,
+              template=template,
+              umask=umask,
+              output_loglevel=output_loglevel,
+              quiet=quiet,
+              timeout=timeout,
+              reset_system_locale=reset_system_locale,
+              saltenv=saltenv)
+
+    lvl = _check_loglevel(output_loglevel, quiet)
+    if lvl is not None:
+        if ret['retcode'] != 0:
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
+            log.error(
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
+            )
+        log.log(lvl, 'output: {0}'.format(ret['stdout']))
+    return ret['retcode']
 
 
 def script(source,
@@ -810,6 +903,8 @@ def script(source,
            env=(),
            template='jinja',
            umask=None,
+           output_loglevel='info',
+           quiet=False,
            timeout=None,
            reset_system_locale=True,
            __env__=None,
@@ -900,7 +995,8 @@ def script(source,
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
                stdin=stdin,
-               quiet=kwargs.get('quiet', False),
+               output_loglevel=output_loglevel,
+               quiet=quiet,
                runas=runas,
                shell=shell,
                python_shell=python_shell,
