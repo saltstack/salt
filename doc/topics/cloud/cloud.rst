@@ -4,7 +4,7 @@ Writing Cloud Provider Modules
 
 Salt Cloud runs on a module system similar to the main Salt project. The
 modules inside saltcloud exist in the ``salt/cloud/clouds`` directory of the
-salt-cloud source.
+salt source.
 
 There are two basic types of cloud modules. If a cloud provider is supported by
 libcloud, then using it is the fastest route to getting a module written. The
@@ -13,7 +13,7 @@ Apache Libcloud project is located at:
 http://libcloud.apache.org/
 
 Not every cloud provider is supported by libcloud. Additionally, not every
-feature in a supported cloud providers is necessary supported by libcloud. In
+feature in a supported cloud provider is necessary supported by libcloud. In
 either of these cases, a module can be created which does not rely on libcloud.
 
 All Modules
