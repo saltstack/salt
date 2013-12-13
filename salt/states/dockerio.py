@@ -395,12 +395,12 @@ def absent(name):
     cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
-        running = __salt__['docker.is_running'](cid)
+        is_running = __salt__['docker.is_running'](cid)
         # destroy if we found meat to do
-        if running:
+        if is_running:
             __salt__['docker.stop'](cid)
-            running = __salt('docker.is_running')(cid)
-            if running:
+            is_running = __salt('docker.is_running')(cid)
+            if is_running:
                 return _invalid(
                     comment=('Container {!r}'
                              ' could not be stopped'.format(cid)))
@@ -558,8 +558,8 @@ def running(name, container=None, port_bindings=None, binds=None,
                     - HostIp: ""
                     - HostPort: "5000"
     '''
-    running = __salt('docker.is_running')(container)
-    if running:
+    is_running = __salt('docker.is_running')(container)
+    if is_running:
         return _valid(
             comment='Container {!r} is started'.format(container))
     else:
@@ -567,8 +567,8 @@ def running(name, container=None, port_bindings=None, binds=None,
             container, binds=binds, port_bindings=port_bindings,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
             links=links)
-        running = __salt__['docker.is_running'](container)
-        if running:
+        is_running = __salt__['docker.is_running'](container)
+        if is_running:
             return _valid(
                 comment=('Container {!r} started.\n').format(container),
                 changes={name: True})
