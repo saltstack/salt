@@ -635,9 +635,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True
@@ -665,9 +665,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True

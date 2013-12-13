@@ -269,6 +269,7 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
+    'transport_type': 'zeromq',
 }
 
 DEFAULT_MASTER_OPTS = {

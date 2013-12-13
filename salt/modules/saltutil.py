@@ -20,6 +20,7 @@ import salt.payload
 import salt.state
 import salt.client
 import salt.utils
+import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
@@ -515,15 +516,18 @@ def revoke_auth():
 
         salt '*' saltutil.revoke_auth
     '''
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
             'tok': tok}
+
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        return auth.crypticle.loads(
-                sreq.send('aes', auth.crypticle.dumps(load), 1))
+        sreq.send(load)
+        # return auth.crypticle.loads(
+        #         sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return False
     return False
