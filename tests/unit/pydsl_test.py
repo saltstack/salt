@@ -489,6 +489,7 @@ class PyDSLRendererTestCase(TestCase):
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
+
 def write_to(fpath, content):
     with open(fpath, 'w') as f:
         f.write(content)
