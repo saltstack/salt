@@ -614,24 +614,6 @@ class Minion(object):
         # Verify that the signature is valid
         master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
 
-        # In other words, here's a table
-        # sign_pub_messages     signature present    signature verified    action
-        # true                  true                 true                  process msg
-        # true                  true                 false                 exception, post 0.17.6
-        # true                  false                N/A                   exception, post 0.17.6
-        # false                 true                 N/A                   exception, post 0.17.6
-        # false                 false                N/A                   process msg
-
-        if self.functions['config.get']('sign_pub_messages') and not sig:
-            salt.utils.warn_until((0, 17, 6), 'Master pub message signing is enabled but we '
-                'did not receive a signature for this message.  '
-                'Most likely this means that your masters and minions are not the same version.  '
-                'After Salt 0.17.6 this situation will throw an exception.')
-        if not self.functions['config.get']('sign_pub_messages') and not sig:
-            salt.utils.warn_until((0, 17, 6), 'Master pub message signing is disabled but we '
-                'received a signature for this message.  Most likely this means that your masters '
-                'and minions are not the same version.  '
-                'After Salt 0.17.6 this situation will throw an exception.')
         if sig and self.functions['config.get']('sign_pub_messages'):
             if not salt.crypt.verify_signature(master_pubkey_path, load, sig):
                 raise AuthenticationError('Message signature failed to validate.')
