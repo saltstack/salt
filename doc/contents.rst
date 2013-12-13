@@ -34,6 +34,7 @@ Salt Table of Contents
     topics/git/*
     topics/development/index
     topics/translating
+    topics/salt_projects
 
     ref/configuration/logging/*
     ref/configuration/logging/handlers/*
