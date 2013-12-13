@@ -38,8 +38,8 @@ SoftLayer.
 * :doc:`Getting Started With EC2 <aws>`
 * :doc:`Getting Started With GoGrid <gogrid>`
 * :doc:`Getting Started With Google Compute Engine <gce>`
-* :doc:`Getting Started With Linode <linode>`
 * :doc:`Getting Started With Joyent <joyent>`
+* :doc:`Getting Started With Linode <linode>`
 * :doc:`Getting Started With OpenStack <openstack>`
 * :doc:`Getting Started With Parallels <parallels>`
 * :doc:`Getting Started With Rackspace <rackspace>`
