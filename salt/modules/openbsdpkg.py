@@ -94,7 +94,7 @@ def latest_version(*names, **kwargs):
 
     stems = [x.split('--')[0] for x in names]
     cmd = 'pkg_info -q -I {0}'.format(' '.join(stems))
-    out =__salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
