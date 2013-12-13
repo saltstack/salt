@@ -1665,8 +1665,8 @@ def run_parallel_map_providers_query(data):
     providers map.
     '''
     try:
-        import Crypto.Random
-        Crypto.Random.atfork()  # pylint: disable=E0611
+        import Crypto.Random  # pylint: disable=E0611
+        Crypto.Random.atfork()
     except ImportError:
         # PyCrypto version < 2.1
         pass
