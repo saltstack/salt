@@ -167,6 +167,16 @@ class Client(object):
         '''
         Download and cache all files on a master in a specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         ret = []
         for path in self.file_list(saltenv):
             ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
@@ -1103,6 +1113,16 @@ class RemoteClient(Client):
         '''
         Return a list of the files in the file server's specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:
