@@ -1088,7 +1088,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self.assertIn({'Host': '%', 'User': user4_utf8}, ret)
         self.assertIn({'Host': 'localhost', 'User': user5_utf8}, ret)
         self.assertIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
- 
+
         # And finally, test connections on MySQL with theses users
         ret = self.run_function(
             'mysql.query',

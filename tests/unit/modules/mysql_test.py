@@ -41,7 +41,7 @@ class MySQLTestCase(TestCase):
         Do it before test_user_create_when_user_exists mocks the user_exists call
         '''
         self._test_call(mysql.user_exists,
-                        {'sql' : ('SELECT User,Host FROM mysql.user WHERE '
+                        {'sql': ('SELECT User,Host FROM mysql.user WHERE '
                                   'User = %(user)s AND Host = %(host)s AND '
                                   'Password = PASSWORD(%(password)s)'),
                          'sql_args': {'host': 'localhost',
@@ -148,7 +148,7 @@ class MySQLTestCase(TestCase):
         self._test_call(
             mysql.db_exists,
             {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
-             'sql_args': {'dbname': 'test\%\_`\'" db'}
+             'sql_args': {'dbname': r'test\%\_`\'" db'}
              },
             'test%_`\'" db'
         )
@@ -168,7 +168,6 @@ class MySQLTestCase(TestCase):
         Test MySQL user_list function in mysql exec module
         '''
         self._test_call(mysql.user_list, 'SELECT User,Host FROM mysql.user')
-
 
     def test_user_info(self):
         '''
