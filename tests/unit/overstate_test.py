@@ -19,7 +19,7 @@ overstate_sls = {
     'mysql': {
         'match': 'db*',
         'sls': {
-            'mysql.server', 'drbd'
+            'mysql.server': 'drbd'
         }
     },
     'webservers': {
@@ -29,7 +29,7 @@ overstate_sls = {
     'all': {
         'match': '*',
         'require': {
-            'mysql', 'webservers'
+            'mysql': 'webservers'
         }
     }
 
