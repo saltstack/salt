@@ -359,7 +359,7 @@ class Client(object):
                 for root, dirs, files in os.walk(path, topdown=True):
                     log.debug('Searching for states in dirs {0} and files '
                               '{1}'.format(dirs, files))
-                    if not [file.endswith('.sls') for file in files]:
+                    if not [filename.endswith('.sls') for filename in files]:
                         #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
