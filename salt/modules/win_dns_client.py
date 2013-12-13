@@ -4,7 +4,6 @@ Module for configuring DNS Client on Windows systems
 '''
 
 # Import python libs
-import re
 import logging
 
 # Import salt libs
