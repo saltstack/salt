@@ -10,7 +10,6 @@ access to the master root execution access to all salt minions
 import functools
 import json
 import logging
-import operator
 import os
 import shutil
 import subprocess
