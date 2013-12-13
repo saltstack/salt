@@ -112,7 +112,7 @@ _DEB_CONFIG_BONDING_OPTS = [
     'ad_select', 'xmit_hash_policy', 'arp_validate',
     'fail_over_mac', 'all_slaves_active', 'resend_igmp'
 ]
-_DEB_CONFIG_BRIDGE_OPTS = [
+_DEB_CONFIG_BRIDGEING_OPTS = [
     'ageing', 'bridgeprio', 'fd', 'gcint',
     'hello', 'hw', 'maxage', 'maxwait',
     'pathcost', 'portprio', 'ports',
@@ -828,14 +828,78 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
+def _parse_bridge_opts(opts, iface):
+    '''
+    Filters given options and outputs valid settings for BRIDGEING_OPTS
+    If an option has a value that is not expected, this
+    function will log what the Interface, Setting and what it was
+    expecting.
+    '''
+    config = {}
+
+    if 'ports' in opts:
+        config.update({'ports': opts['ports']})
+
+    for opt in ['ageing', 'fd', 'gcint', 'hello', 'maxage']:
+        if opt in opts:
+            try:
+                float(opts[opt])
+                config.update({opt: opts[opt]})
+            except ValueError:
+                _raise_error_iface(iface, opt, ['float'])
+
+    for opt in ['bridgeprio', 'maxwait']:
+        if opt in opts:
+            if isinstance(opts[opt], int):
+                config.update({opt: opts[opt]})
+            else:
+                _raise_error_iface(iface, opt, ['integer'])
+
+    if 'hw' in opts:
+        # match 12 hex digits with either : or - as separators between pairs
+        if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$",
+                    opts['hw'].lower()):
+             config.update({'hw': opts['hw']})
+        else:
+            _raise_error_iface(iface, 'hw', ['valid MAC address'])
+
+    for opt in ['pathcost', 'portprio']:
+        if opt in opts:
+            try:
+                port, cost_or_prio = opts[opt].split()
+                int(cost_or_prio)
+                config.update({opt: '{0} {1}'.format(port, cost_or_prio)})
+            except ValueError:
+                _raise_error_iface(iface, opt, ['interface integer'])
+
+    if 'stp' in opts:
+        if opts['stp'] in _CONFIG_TRUE:
+            config.update({'stp': 'on'})
+        elif opts['stp'] in _CONFIG_FALSE:
+            config.update({'stp': 'off'})
+        else:
+            _raise_error_iface(iface, 'stp', _CONFIG_TRUE + _CONFIG_FALSE)
+
+    if 'waitport' in opts:
+        if isinstance(opts['waitport'], int):
+            config.update({'waitport': opts['waitport']})
+        else:
+            values = opts['waitport'].split()
+            time = values.pop(0)
+            if time.isdigit() and values:
+                config.update({'waitport': '{0} {1}'.format(time, ' '.join(values))})
+            else:
+              _raise_error_iface(iface, opt, ['integer [interfaces]'])
+
+    return config
+
+
 def _parse_settings_eth(opts, iface_type, enabled, iface):
     '''
     Filters given options and outputs valid settings for a
     network interface.
     '''
     adapters = {}
-    adapters[iface] = []
-
     adapters[iface] = {}
 
     adapters[iface]['type'] = iface_type
@@ -873,14 +937,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['data']['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
     if iface_type == 'bridge':
-        for opt in _DEB_CONFIG_BRIDGE_OPTS:
-            if opt in opts:
-                if not 'bridgeing' in adapters[iface]['data']['inet']:
-                    adapters[iface]['data']['inet']['bridgeing'] = {}
-                adapters[iface]['data']['inet']['bridgeing'][opt] = opts[opt]
-
-        if 'bridgeing' in adapters[iface]['data']['inet']:
-            bridgeing = adapters[iface]['data']['inet']['bridgeing']
+        bridgeing = _parse_bridge_opts(opts, iface)
+        if bridgeing:
+            adapters[iface]['data']['inet']['bridgeing'] = bridgeing
             adapters[iface]['data']['inet']['bridgeing_keys'] = sorted(bridgeing.keys())
 
     if 'proto' in opts:
