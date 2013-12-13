@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 Installation of Composer Packages
-==================================
+=================================
 
-These states manage the installed packages for composer for PHP.
-Note that either composer is installed and accessible via a bin
-directory or you can pass the location of composer in the state.
+These states manage the installed packages for composer for PHP. Note that
+either composer is installed and accessible via a bin directory or you can pass
+the location of composer in the state.
 
 .. code-block:: yaml
+
     get-composer:
       cmd.run:
         - name: 'CURL=`which curl`; $CURL -sS https://getcomposer.org/installer | php'
