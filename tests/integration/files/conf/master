@@ -24,3 +24,4 @@ ext_pillar:
 
 config_opt:
   layer2: 'kosher'
+yaml_utf8: True
