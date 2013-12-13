@@ -35,9 +35,14 @@ def _parse_pkg_meta(path):
             log.critical('Error importing helper functions. This is almost '
                          'certainly a bug.')
             return '', ''
-        pkginfo = __salt__['cmd.run_all'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(__QUERYFORMAT, path)
-        ).get('stdout', '').strip()
+        pkginfo = __salt__['cmd.run_stdout'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(
+                # Binary packages have no REPOID, replace this so the rpm
+                # command does not fail with "invalid tag" error
+                __QUERYFORMAT.replace('%{REPOID}', 'binarypkg'),
+                path
+            )
+        ).strip()
         pkginfo = _parse_pkginfo(pkginfo)
         if pkginfo is None:
             return '', ''

@@ -4,7 +4,6 @@ Support for YUM
 '''
 
 # Import python libs
-import collections
 import copy
 import logging
 import os
@@ -18,9 +17,9 @@ log = logging.getLogger(__name__)
 
 # This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
 # it without considering its impact there.
-__QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
+__QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
-# From rpmUtils.arch.getArchList() (not necessarily available on RHEL/CentOS 5)
+# Needs to be improved to somehow include ARM architectures
 __ALL_ARCHES = ('ia32e', 'x86_64', 'athlon', 'i686', 'i586', 'i486', 'i386',
                 'noarch')
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -52,31 +51,31 @@ def __virtual__():
 # it without considering its impact there.
 def _parse_pkginfo(line):
     '''
-    A small helper to parse package information; returns a namedtuple
+    A small helper to parse a repoquery; returns a namedtuple
     '''
-    # Need to reimport `collections` as this function is re-namespaced into
-    # other modules
+    # Importing `collections` here since this function is re-namespaced into
+    # another module
     import collections
-
-    pkginfo = collections.namedtuple('PkgInfo', ('name', 'shortname',
-                                                 'version', 'arch'))
+    pkginfo = collections.namedtuple(
+        'PkgInfo',
+        ('name', 'version', 'arch', 'repoid')
+    )
 
     try:
-        name, pkgver, rel, arch = line.split('_|-')
+        name, version, release, arch, repoid = line.split('_|-')
     # Handle unpack errors (should never happen with the queryformat we are
     # using, but can't hurt to be careful).
     except ValueError:
         return None
 
-    shortname = name
     # Support 32-bit packages on x86_64 systems
     if __grains__.get('cpuarch') in __SUFFIX_NOT_NEEDED \
             and arch not in __SUFFIX_NOT_NEEDED:
         name += '.{0}'.format(arch)
-    if rel:
-        pkgver += '-{0}'.format(rel)
+    if release:
+        version += '-{0}'.format(release)
 
-    return pkginfo(name, shortname, pkgver, arch)
+    return pkginfo(name, version, arch, repoid)
 
 
 def _repoquery(repoquery_args):
@@ -84,7 +83,9 @@ def _repoquery(repoquery_args):
     Runs a repoquery command and returns a list of namedtuples
     '''
     ret = []
-    cmd = 'repoquery {0}'.format(repoquery_args)
+    cmd = 'repoquery --queryformat="{0}" {1}'.format(
+        __QUERYFORMAT, repoquery_args
+    )
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         pkginfo = _parse_pkginfo(line)
@@ -183,17 +184,15 @@ def latest_version(*names, **kwargs):
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     updates = _repoquery(
-        '{0} --pkgnarrow=available --queryformat {1!r} '
-        '{2}'.format(
+        '{0} --pkgnarrow=available {1}'.format(
             repo_arg,
-            __QUERYFORMAT,
             ' '.join([namearch_map[x]['name'] for x in names])
         )
     )
 
     for name in names:
         for pkg in (x for x in updates
-                    if x.shortname == namearch_map[name]['name']):
+                    if x.name == namearch_map[name]['name']):
             if (all(x in __SUFFIX_NOT_NEEDED
                     for x in (namearch_map[name]['arch'], pkg.arch))
                     or namearch_map[name]['arch'] == pkg.arch):
@@ -263,10 +262,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = 'rpm -qa --queryformat "{0}\n"'.format(__QUERYFORMAT)
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
-    for line in out.splitlines():
-        pkginfo = _parse_pkginfo(line)
+    for pkginfo in _repoquery('--all --pkgnarrow=installed'):
         if pkginfo is None:
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
@@ -275,6 +271,62 @@ def list_pkgs(versions_as_list=False, **kwargs):
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+    return ret
+
+
+def list_repo_pkgs(*args, **kwargs):
+    '''
+    .. versionadded:: Hydrogen
+
+    Returns all available packages. Optionally, package names can be passed and
+    the results will be filtered to packages matching those names. This can be
+    helpful in discovering the version or repo to specify in a pkg.installed
+    state. The return data is a dictionary of repo names, with each repo having
+    a list of dictionaries denoting the package name and version. An example of
+    the return data would look like this:
+
+    .. code-block:: python
+
+        {
+            '<repo_name>': [
+                {'<package1>': '<version1>'},
+                {'<package2>': '<version2>'},
+                {'<package3>': '<version3>'}
+            ]
+        }
+
+    fromrepo : None
+        Only include results from the specified repo(s). Multiple repos can be
+        specified, comma-separated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
+    '''
+    try:
+        repos = tuple(x.strip() for x in kwargs.get('fromrepo').split(','))
+    except AttributeError:
+        # Search in all enabled repos
+        repos = tuple(
+            x for x, y in list_repos().iteritems()
+            if str(y.get('enabled', '1')) == '1'
+        )
+
+    ret = {}
+    for repo in repos:
+        repoquery_cmd = '--all --repoid="{0}"'.format(repo)
+        for arg in args:
+            repoquery_cmd += ' "{0}"'.format(arg)
+        all_pkgs = _repoquery(repoquery_cmd)
+        for pkg in all_pkgs:
+            ret.setdefault(pkg.repoid, []).append({pkg.name: pkg.version})
+
+    for reponame in ret:
+        ret[reponame].sort()
     return ret
 
 
@@ -292,8 +344,7 @@ def list_upgrades(refresh=True, **kwargs):
         refresh_db()
 
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery('{0} --all --pkgnarrow=updates --queryformat '
-                         '"{1}"'.format(repo_arg, __QUERYFORMAT))
+    updates = _repoquery('{0} --all --pkgnarrow=updates'.format(repo_arg))
     return dict([(x.name, x.version) for x in updates])
 
 
@@ -321,8 +372,7 @@ def check_db(*names, **kwargs):
     '''
     repo_arg = _get_repo_options(**kwargs)
     deplist_base = 'yum {0} deplist --quiet'.format(repo_arg) + ' {0!r}'
-    repoquery_base = ('{0} -a --quiet --whatprovides --queryformat '
-                      '{1!r}'.format(repo_arg, __QUERYFORMAT))
+    repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
 
     ret = {}
     for name in names:
