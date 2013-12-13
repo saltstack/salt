@@ -1,5 +1,5 @@
 =================================
-Getting Started With Digtal Ocean
+Getting Started With Digital Ocean
 =================================
 
 Digital Ocean is a public cloud provider that specializes in Linux instances.
