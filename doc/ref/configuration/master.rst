@@ -509,6 +509,19 @@ at the moment a single state fails
 
     failhard: False
 
+.. conf_master:: yaml_utf8 
+
+``yaml_utf8 ``
+--------------
+
+Default: ``False``
+
+Enable extra yaml render routines for states containing UTF characters
+
+.. code-block:: yaml
+
+    yaml_utf8: False
+
 .. conf_master:: test
 
 ``test``
