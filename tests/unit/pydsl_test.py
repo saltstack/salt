@@ -495,12 +495,12 @@ def write_to(fpath, content):
         f.write(content)
 
 
-def state_highstate(matches, dirpath):
+def state_highstate(state, dirpath):
     OPTS['file_roots'] = dict(base=[dirpath])
     HIGHSTATE = HighState(OPTS)
     HIGHSTATE.push_active()
     try:
-        high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
+        high, errors = HIGHSTATE.render_highstate(state)
         if errors:
             import pprint
             pprint.pprint('\n'.join(errors))
