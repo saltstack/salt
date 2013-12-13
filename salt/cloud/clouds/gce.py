@@ -69,6 +69,7 @@ Supported commands:
 :maintainer: Eric Johnson <erjohnso@google.com>
 :maturity: new
 :depends: libcloud >= 0.14.0-beta3
+:depends: pycrypto >= 2.1
 '''
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
