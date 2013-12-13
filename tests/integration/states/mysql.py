@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 NO_MYSQL = False
 try:
     import MySQLdb
-except Exception:
+except ImportError:
     NO_MYSQL = True
 
 
@@ -43,7 +43,6 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
 
     user = 'root'
     password = 'poney'
-
 
     @destructiveTest
     def setUp(self):
