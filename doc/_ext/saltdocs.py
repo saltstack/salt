@@ -8,5 +8,5 @@ def setup(app):
             indextemplate="pair: %s; conf/master")
     app.add_crossref_type(directivename="conf_minion", rolename="conf_minion",
             indextemplate="pair: %s; conf/minion")
-    app.add_crossref_type(directivename="conf-log", rolename="conf-log",
+    app.add_crossref_type(directivename="conf_log", rolename="conf_log",
             indextemplate="pair: %s; conf/logging")
