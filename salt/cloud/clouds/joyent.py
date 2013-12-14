@@ -447,7 +447,7 @@ def create_node(**kwargs):
     return {}
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     destroy a machine by name
 
@@ -463,6 +463,12 @@ def destroy(name, call=None):  # pylint disable=W0613
         salt-cloud -d vm_name
 
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -753,7 +759,7 @@ def reformat_node(item=None, full=False):
     return item
 
 
-def list_nodes(full=False, call=None):  # pylint disable=W0613
+def list_nodes(full=False, call=None):
     '''
     list of nodes, keeping only a brief listing
 
@@ -763,6 +769,11 @@ def list_nodes(full=False, call=None):  # pylint disable=W0613
 
         salt-cloud -Q
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS.keys():
@@ -785,7 +796,7 @@ def list_nodes(full=False, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     list of nodes, maintaining all content provided from joyent listings
 
@@ -795,6 +806,11 @@ def list_nodes_full(call=None):  # pylint disable=W0613
 
         salt-cloud -F
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     return list_nodes(full=True)
 
 

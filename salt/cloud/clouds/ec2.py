@@ -1712,7 +1712,7 @@ def rename(name, kwargs, call=None):
     )
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
@@ -1720,6 +1720,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     node_metadata = _get_node(name)
     instance_id = node_metadata['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
@@ -1853,10 +1859,15 @@ def _get_node(name, location=None):
     return {}
 
 
-def list_nodes_full(location=None, call=None):  # pylint disable=W0613
+def list_nodes_full(location=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     if not location:
         ret = {}
         locations = set(
@@ -1941,10 +1952,15 @@ def _list_nodes_full(location=None):
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full(get_location())
     if 'error' in nodes:
@@ -1965,10 +1981,16 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full(get_location())
     if 'error' in nodes:
@@ -2088,7 +2110,8 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
 
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The keepvol_on_destroy action must be called with -a or --action.'
+            'The show_delvol_on_destroy action must be called '
+            'with -a or --action.'
         )
 
     if not kwargs:
