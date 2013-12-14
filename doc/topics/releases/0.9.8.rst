@@ -331,9 +331,9 @@ with the :doc:`associated </ref/states/all/salt.states.rvm>`
 
 The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
-The :doc:`yum </ref/modules/all/salt.modules.yumpkg5>`
-:doc:`pkg </ref/modules/all/salt.modules.yumpkg>` modules gained Scientific
-Linux support.
+The `yum <https://github.com/saltstack/salt-contrib/blob/master/modules/yumpkg.py>`
+:doc:`pkg <https://github.com/saltstack/salt-contrib/blob/master/modules/yumpkg.py>`
+modules gained Scientific Linux support.
 
 The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu,
 and derivatives force apt to run in a non-interactive mode. This prevents
