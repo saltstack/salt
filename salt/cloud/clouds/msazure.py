@@ -198,10 +198,15 @@ def avail_sizes():
     }
 
 
-def list_nodes(conn=None, call=None):  # pylint disable=W0613
+def list_nodes(conn=None, call=None):
     '''
     List VMs on this Azure account
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full(conn, call)
     for node in nodes:
@@ -212,10 +217,15 @@ def list_nodes(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_full(conn=None, call=None):
     '''
     List VMs on this Azure account, with full information
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     services = list_hosted_services(conn=conn, call=call)
     for service in services:
@@ -334,10 +344,16 @@ def list_hosted_services(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()
 
@@ -630,10 +646,16 @@ def create(vm_):
     return ret
 
 
-def destroy(name, conn=None, call=None):  # pylint disable=W0613
+def destroy(name, conn=None, call=None):
     '''
     Destroy a VM
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     if not conn:
         conn = get_conn()
 
