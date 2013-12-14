@@ -389,13 +389,19 @@ def _wait_for_spot_instance(update_callback,
         timeout -= interval
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a dict of all available VM sizes on the cloud provider with
     relevant data. Latest version can be found at:
 
     http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     sizes = {
         'Cluster Compute': {
             'cc2.8xlarge': {
@@ -534,6 +540,12 @@ def avail_images(kwargs=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     if type(kwargs) is not dict:
         kwargs = {}
 
@@ -669,10 +681,16 @@ def get_location(vm_=None):
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
 
     params = {'Action': 'DescribeRegions'}
