@@ -70,20 +70,20 @@ class OverstateTestCase(TestCase):
         overstate = salt.overstate.OverState(opts)
         overstate.over = overstate._OverState__sort_stages(overstate_sls)
         overstate.stages()
-        expected_calls = [call('all', {'require': {'webservers', 'mysql'}, 'match': '*'}),
+        expected_calls = [call('all', {'require': {'webservers': 'mysql'}, 'match': '*'}),
                           call('mysql', {'match': 'db*', 'sls': {'drbd', 'mysql.server'}}),
                           call('webservers', {'require': ['mysql'], 'match': 'web*'})]
         call_stage_mock.assert_has_calls(expected_calls, any_order=False)
 
     def test_verify_stage(self):
         overstate = salt.overstate.OverState(opts)
-        test_stage = {'require': {'webservers', 'mysql'}, 'match': '*'}
+        test_stage = {'require': {'webservers': 'mysql'}, 'match': '*'}
         ret = overstate.verify_stage(test_stage)
         self.assertDictEqual(test_stage, test_stage)
 
     def test_verify_fail(self):
         overstate = salt.overstate.OverState(opts)
-        test_stage = {'require': {'webservers', 'mysql'}}
+        test_stage = {'require': {'webservers': 'mysql'}}
         ret = overstate.verify_stage(test_stage)
         self.assertIn('No "match" argument in stage.', ret)
 
@@ -159,6 +159,6 @@ class OverstateTestCase(TestCase):
     # def test_call_stage(self, call_stage_mock):
     #     overstate = salt.overstate.OverState(opts)
     #     overstate.over = overstate._OverState__sort_stages(overstate_sls)
-    #     overstate.call_stage('all', {'require': {'webservers', 'mysql'}, 'match': '*'})
+    #     overstate.call_stage('all', {'require': {'webservers': 'mysql'}, 'match': '*'})
     #     overstate.call_stage('mysql', {'match': 'db*', 'sls': {'drbd', 'mysql.server'}})
     #     overstate.call_stage({'require': ['mysql'], 'match': 'web*'})
