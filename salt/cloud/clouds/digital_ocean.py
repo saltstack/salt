@@ -83,11 +83,17 @@ def get_configured_provider():
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     items = query(method='regions')
     ret = {}
     for region in items['regions']:
@@ -98,10 +104,16 @@ def avail_locations():
     return ret
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of the images that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     items = query(method='images')
     ret = {}
     for image in items['images']:
@@ -112,10 +124,16 @@ def avail_images():
     return ret
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a list of the image sizes that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     items = query(method='sizes')
     ret = {}
     for size in items['sizes']:
