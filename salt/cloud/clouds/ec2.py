@@ -530,12 +530,25 @@ def avail_sizes():
     return sizes
 
 
-def avail_images():
+def avail_images(kwargs=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
+    if type(kwargs) is not dict:
+        kwargs = {}
+
+    if 'owner' in kwargs:
+        owner = kwargs['owner']
+    else:
+        provider = get_configured_provider()
+
+        owner = config.get_cloud_config_value(
+            'owner', provider, __opts__, default='amazon'
+        )
+
     ret = {}
-    params = {'Action': 'DescribeImages'}
+    params = {'Action': 'DescribeImages',
+              'Owner': owner}
     images = query(params)
     for image in images:
         ret[image['imageId']] = image

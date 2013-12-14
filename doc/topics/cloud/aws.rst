@@ -418,6 +418,36 @@ configuration file:
       rename_on_destroy: True
 
 
+Listing Images
+==============
+Normally, images can be queried on a cloud provider by passing the
+``--list-images`` argument to Salt Cloud. This still holds true for EC2:
+
+.. code-block:: bash
+
+    salt-cloud --list-images my-ec2-config
+
+However, the full list of images on EC2 is extremely large, and querying all of
+the available images may cause Salt Cloud to behave as if frozen. Therefore,
+the default behavior of this option may be modified, by adding an ``owner``
+argument to the provider configuration:
+
+.. code-block:: yaml
+
+    owner: aws-marketplace
+
+The possible values for this setting are ``amazon``, ``aws-marketplace``,
+``self``, ``<AWS account ID>`` or ``all``. The default setting is ``amazon``.
+
+It is also possible to perform this query using different settings without
+modifying the configuration files. To do this, call the ``avail_images``
+function directly:
+
+.. code-block:: bash
+
+    salt-cloud -f avail_images my-ec2-config owner=aws-marketplace
+
+
 EC2 Images
 ==========
 The following are lists of available AMI images, generally sorted by OS. These
