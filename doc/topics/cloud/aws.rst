@@ -438,6 +438,8 @@ argument to the provider configuration:
 
 The possible values for this setting are ``amazon``, ``aws-marketplace``,
 ``self``, ``<AWS account ID>`` or ``all``. The default setting is ``amazon``.
+Take note that ``all`` and ``aws-marketplace`` may cause Salt Cloud to appear
+as if it is freezing, as it tries to handle the large amount of data.
 
 It is also possible to perform this query using different settings without
 modifying the configuration files. To do this, call the ``avail_images``
