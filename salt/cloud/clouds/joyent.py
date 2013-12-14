@@ -624,10 +624,16 @@ def get_location(vm_=None):
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
     for key in JOYENT_LOCATIONS:
         ret[key] = {
@@ -814,7 +820,7 @@ def list_nodes_full(call=None):
     return list_nodes(full=True)
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     get list of available images
 
@@ -824,6 +830,12 @@ def avail_images():
 
         salt-cloud --list-images
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     img_url = 'https://images.joyent.com/images'
     request = urllib2.Request(img_url)
     request.get_method = lambda: 'GET'
@@ -844,7 +856,7 @@ def avail_images():
     #return key_list(items=items)
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     get list of available packages
 
@@ -854,6 +866,12 @@ def avail_sizes():
 
         salt-cloud --list-sizes
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     rcode, items = query2(command='/my/packages')
     if rcode not in VALID_RESPONSE_CODES:
         return {}
