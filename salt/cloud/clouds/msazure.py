@@ -111,10 +111,16 @@ def script(vm_):
     )
 
 
-def avail_locations(conn=None, call=None):  # pylint disable=W0613
+def avail_locations(conn=None, call=None):
     '''
     List available locations for Azure
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     if not conn:
         conn = get_conn()
 
@@ -129,10 +135,16 @@ def avail_locations(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def avail_images(conn=None, call=None):  # pylint disable=W0613
+def avail_images(conn=None, call=None):
     '''
     List available images for Azure
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     if not conn:
         conn = get_conn()
 
@@ -157,11 +169,17 @@ def avail_images(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Because sizes are built into images with Azure, there will be no sizes to
     return here
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     return {
         'ExtraSmall': {
             'name': 'ExtraSmall',
@@ -251,10 +269,16 @@ def list_nodes_full(conn=None, call=None):
     return ret
 
 
-def list_hosted_services(conn=None, call=None):  # pylint disable=W0613
+def list_hosted_services(conn=None, call=None):
     '''
     List VMs on this Azure account, with full information
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_hosted_services function must be called with '
+            '-f or --function'
+        )
+
     if not conn:
         conn = get_conn()
 
@@ -670,7 +694,7 @@ def destroy(name, conn=None, call=None):
     return ret
 
 
-def list_storage_services(conn=None, call=None):  # pylint disable=W0613
+def list_storage_services(conn=None, call=None):
     '''
     List VMs on this Azure account, with full information
     '''
@@ -697,7 +721,7 @@ def list_storage_services(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_disks(conn=None, call=None):  # pylint disable=W0613
+def list_disks(conn=None, call=None):
     '''
     Destroy a VM
     '''
