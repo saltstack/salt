@@ -19,7 +19,7 @@ def show_top(minion=None, saltenv='base'):
 
         salt-run pillar.show_top
     '''
-    id_, grains = salt.utils.minions.get_grains(minion)
+    id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
     pillar = salt.pillar.Pillar(
         __opts__,
         grains,
