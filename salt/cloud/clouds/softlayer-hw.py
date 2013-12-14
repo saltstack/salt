@@ -99,10 +99,16 @@ def get_conn(service='SoftLayer_Hardware'):
     return client[service]
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
     conn = get_conn(service='SoftLayer_Product_Package')
 
@@ -121,12 +127,18 @@ def avail_locations():
     return ret
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a dict of all available VM sizes on the cloud provider with
     relevant data. This data is provided in three dicts.
 
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     ret = {
         'Bare Metal Instance': {
             '1921': {
@@ -158,10 +170,16 @@ def avail_sizes():
     return ret
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     ret = {'Operating System': {
         '13962': {
             'id': '13962',
