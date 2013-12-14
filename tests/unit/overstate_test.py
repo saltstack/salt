@@ -71,7 +71,7 @@ class OverstateTestCase(TestCase):
         overstate.over = overstate._OverState__sort_stages(overstate_sls)
         overstate.stages()
         expected_calls = [call('all', {'require': {'webservers': 'mysql'}, 'match': '*'}),
-                          call('mysql', {'match': 'db*', 'sls': {'drbd', 'mysql.server'}}),
+                          call('mysql', {'match': 'db*', 'sls': {'drbb': 'mysql.server'}}),
                           call('webservers', {'require': ['mysql'], 'match': 'web*'})]
         call_stage_mock.assert_has_calls(expected_calls, any_order=False)
 
@@ -160,5 +160,5 @@ class OverstateTestCase(TestCase):
     #     overstate = salt.overstate.OverState(opts)
     #     overstate.over = overstate._OverState__sort_stages(overstate_sls)
     #     overstate.call_stage('all', {'require': {'webservers': 'mysql'}, 'match': '*'})
-    #     overstate.call_stage('mysql', {'match': 'db*', 'sls': {'drbd', 'mysql.server'}})
+    #     overstate.call_stage('mysql', {'match': 'db*', 'sls': {'drbb': 'mysql.server'}})
     #     overstate.call_stage({'require': ['mysql'], 'match': 'web*'})
