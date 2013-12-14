@@ -60,7 +60,7 @@ class OverstateTestCase(TestCase):
         overstate = salt.overstate.OverState(opts)
         overstate.over = overstate._OverState__sort_stages(overstate_sls)
         ret = overstate.get_stage('mysql')
-        self.assertDictEqual({'mysql': {'match': 'db*', 'sls': {'drbd', 'mysql.server'}}}, ret)
+        self.assertDictEqual({'mysql': {'match': 'db*', 'sls': {'drbd': 'mysql.server'}}}, ret)
 
     @patch('salt.overstate.OverState.call_stage')
     def test_stages(self, call_stage_mock):
