@@ -208,8 +208,8 @@ class SaltEvent(object):
         The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
-        # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
         try:
+            # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
             self.push.setsockopt(zmq.SNDTIMEO, timeout)
         except AttributeError:
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
