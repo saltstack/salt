@@ -98,10 +98,15 @@ def avail_images():
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     items = query(action='ve')
 
@@ -122,10 +127,15 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     items = query(action='ve')
 
@@ -147,10 +157,16 @@ def list_nodes_full(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
     ret = {}
 
     nodes = list_nodes_full()
@@ -611,7 +627,7 @@ def wait_until(name, state, timeout=300):
         node = show_instance(name, call='action')
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node.
 
@@ -619,6 +635,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',

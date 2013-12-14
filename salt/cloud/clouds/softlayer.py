@@ -495,10 +495,15 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full(mask='mask[id]', call=None):  # pylint disable=W0613
+def list_nodes_full(mask='mask[id]', call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     conn = get_conn(service='Account')
     response = conn.getVirtualGuests()
@@ -507,10 +512,15 @@ def list_nodes_full(mask='mask[id]', call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full()
     if 'error' in nodes:
@@ -532,10 +542,16 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
     ret = {}
 
     nodes = list_nodes_full()
@@ -571,7 +587,7 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node.
 
@@ -579,6 +595,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
