@@ -17,17 +17,18 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def get_grains(minion=None):
+def get_minion_data(minion, opts):
     '''
-    Get the grains for a specific minion.  If no minion is specified, it will
-    return the grains for the first minion it finds.
+    Get the grains/pillar for a specific minion.  If minion is None, it
+    will return the grains/pillar for the first minion it finds.
 
-    Return value is a tuple of the minion ID and the grains
+    Return value is a tuple of the minion ID, grains, and pillar
     '''
-    if self.opts.get('minion_data_cache', False):
-        cdir = os.path.join(self.opts['cachedir'], 'minions')
+    if opts.get('minion_data_cache', False):
+        serial = salt.payload.Serial(opts)
+        cdir = os.path.join(opts['cachedir'], 'minions')
         if not os.path.isdir(cdir):
-            return minion if minion else '', {}
+            return minion if minion else None, None, None
         minions = os.listdir(cdir)
         if minion is None:
             # If no minion specified, take first one with valid grains
@@ -35,20 +36,21 @@ def get_grains(minion=None):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(
-                        salt.utils.fopen(datap)).get('grains')
-                if grains:
-                    return id_, grains
+                miniondata = serial.load(salt.utils.fopen(datap))
+                grains = miniondata.get('grains')
+                pillar = miniondata.get('pillar')
+                return id_, grains, pillar
         else:
             # Search for specific minion
             datap = os.path.join(cdir, minion, 'data.p')
             if not os.path.isfile(datap):
-                return minion, {}
-            grains = self.serial.load(
-                    salt.utils.fopen(datap)).get('grains')
-            return minion, grains
+                return minion, None, None
+            miniondata = serial.load(salt.utils.fopen(datap))
+            grains = miniondata.get('grains')
+            pillar = miniondata.get('pillar')
+            return minion, grains, pillar
     # No cache dir, return empty dict
-    return minion if minion else '', {}
+    return minion if minion else None, None, None
 
 
 def nodegroup_comp(group, nodegroups, skip=None):
