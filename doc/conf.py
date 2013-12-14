@@ -128,13 +128,13 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
-    'saltdocs',
+    'saltdomain', # Must come early
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
     'youtube',
-    'saltautodoc'   # Needs to be listed AFTER sphunx.ext.autodoc
+    'saltautodoc', # Must be AFTER autodoc
 ]
 
 modindex_common_prefix = ['salt.']
@@ -208,7 +208,6 @@ html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
 #html_use_opensearch = ''
-
 
 ### Latex options
 latex_documents = [
