@@ -74,8 +74,6 @@ pkgng                   FreeBSD-based OSes using ``pkg(8)``
 pkgutil                 Solaris-based OSes using `OpenCSW`_'s ``pkgutil(1)``
 solarispkg              Solaris-based OSes using ``pkgadd(1M)``
 win_pkg                 Windows
-yumpkg                  RedHat-based distros and derivatives (utilizes the
-                        ``yum`` and ``rpmUtils`` modules)
 yumpkg5                 RedHat-based distros and derivatives (wraps ``yum(8)``)
 zypper                  SUSE-based distros using ``zypper(8)``
 ======================= =======================================================

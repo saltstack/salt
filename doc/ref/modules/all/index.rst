@@ -204,7 +204,6 @@ Full list of builtin execution modules
     win_timezone
     win_useradd
     xapi
-    yumpkg
     yumpkg5
     zcbuildout
     zfs

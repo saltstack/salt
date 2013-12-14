@@ -214,21 +214,6 @@ Install Salt (and dependencies) into the virtualenv:
     can be done by installing the ``python-dev`` or ``python-devel`` package.
     For other platforms, the package will likely be similarly named.
 
-.. note:: Important note for those developing using RedHat variants
-
-    For developers using a RedHat variant, be advised that the package
-    provider for newer Redhat-based systems (:doc:`yumpkg.py
-    <../ref/modules/all/salt.modules.yumpkg>`) relies on RedHat's python
-    interface for yum. The variants that use this module to provide package
-    support include the following:
-
-    * `RHEL`_ and `CentOS`_ releases 6 and later
-    * `Fedora Linux`_ releases 11 and later
-    * `Amazon Linux`_
-
-    Developers using one of these systems should create the salt virtualenv using the
-    ``--system-site-packages`` option to ensure that the correct modules are available.
-
 .. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
 .. _`CentOS`: http://centos.org/
 .. _`Fedora Linux`: http://fedoraproject.org/
