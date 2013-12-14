@@ -277,10 +277,16 @@ def script(vm_):
     )
 
 
-def destroy(name, conn=None, call=None):  # pylint disable=W0613
+def destroy(name, conn=None, call=None):
     '''
     Delete a single VM
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -346,10 +352,15 @@ def reboot(name, conn=None):
     return False
 
 
-def list_nodes(conn=None, call=None):  # pylint disable=W0613
+def list_nodes(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -368,10 +379,15 @@ def list_nodes(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_full(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with all fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -385,10 +401,16 @@ def list_nodes_full(conn=None, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
