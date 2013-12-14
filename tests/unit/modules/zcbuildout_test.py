@@ -289,29 +289,42 @@ class BuildoutOnlineTestCase(Base):
         # creating a new setuptools install
         ret1 = buildout._Popen((
             'virtualenv --no-site-packages {0};'
-            '{0}/bin/easy_install -U setuptools;'
+            '{0}/bin/pip install -U setuptools; '
             '{0}/bin/easy_install -U distribute;'
         ).format(cls.ppy_st))
+        assert ret1['retcode'] == 0
+
         # creating a distribute based install
-        ret20 = buildout._Popen((
-            'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
-            ''.format(cls.ppy_dis)))
+        try:
+            ret20 = buildout._Popen((
+                'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
+                ''.format(cls.ppy_dis)))
+        except buildout._BuildoutError:
+            ret20 = buildout._Popen((
+                'virtualenv --no-site-packages {0}'.format(cls.ppy_dis))
+            )
+        assert ret20['retcode'] == 0
+
         download_to('https://pypi.python.org/packages/source'
                     '/d/distribute/distribute-0.6.43.tar.gz',
                     os.path.join(cls.ppy_dis, 'distribute-0.6.43.tar.gz'))
+
         ret2 = buildout._Popen((
             'cd {0} &&'
             ' tar xzvf distribute-0.6.43.tar.gz && cd distribute-0.6.43 &&'
             ' {0}/bin/python setup.py install'
         ).format(cls.ppy_dis))
-        # creating a blank based install
-        ret3 = buildout._Popen((
-            'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
-            ''.format(cls.ppy_blank)))
-
-        assert ret1['retcode'] == 0
-        assert ret20['retcode'] == 0
         assert ret2['retcode'] == 0
+
+        # creating a blank based install
+        try:
+            ret3 = buildout._Popen((
+                'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
+                ''.format(cls.ppy_blank)))
+        except buildout._BuildoutError:
+            ret3 = buildout._Popen((
+                'virtualenv --no-site-packages {0}'.format(cls.ppy_blank)))
+
         assert ret3['retcode'] == 0
 
     @requires_network()
