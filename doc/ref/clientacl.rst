@@ -31,6 +31,13 @@ users specified:
 
     chmod 755 /var/cache/salt /var/cache/salt/jobs /var/run/salt
 
+.. note::
+
+    In addition to the changes above you will also need to modify the
+    permissions of /var/log/salt and the existing log file. If you do not
+    wish to do this then you must disable logging or Salt will generate
+    errors as it cannot write to the logs as the system users.
+
 If you are upgrading from earlier versions of salt you must also remove any
 existing user keys and re-start the Salt master:
 
