@@ -7,7 +7,7 @@ import urllib2
 import logging
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
@@ -30,7 +30,7 @@ buildout.__salt__ = {
     'cmd.retcode': cmd.retcode,
 }
 
-boot_init = {
+BOOT_INIT = {
     1: [
         'var/ver/1/bootstrap/bootstrap.py',
     ],
@@ -52,7 +52,9 @@ def download_to(url, dest):
 class Base(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rdir = tempfile.mkdtemp()
+        if not os.path.isdir(integration.TMP):
+            os.makedirs(integration.TMP)
+        cls.rdir = tempfile.mkdtemp(dir=integration.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in buildout._URL_VERSIONS.iteritems():
             log.debug('Downloading bootstrap from {0}'.format(url))
@@ -74,12 +76,12 @@ class Base(TestCase):
         self._remove_dir()
         shutil.copytree(ROOT, self.tdir)
 
-        for i in boot_init:
-            p = os.path.join(
-                self.rdir, '{0}_bootstrap.py'.format(i)
+        for idx in BOOT_INIT:
+            path = os.path.join(
+                self.rdir, '{0}_bootstrap.py'.format(idx)
             )
-            for f in boot_init[i]:
-                shutil.copy2(p, os.path.join(self.tdir, f))
+            for fname in BOOT_INIT[idx]:
+                shutil.copy2(path, os.path.join(self.tdir, fname))
 
     def tearDown(self):
         super(Base, self).tearDown()
@@ -153,43 +155,37 @@ class BuildoutTestCase(Base):
 
     @requires_network()
     def test_get_bootstrap_url(self):
-        for p in [
-            os.path.join(self.tdir, 'var/ver/1/dumppicked'),
-            os.path.join(self.tdir, 'var/ver/1/bootstrap'),
-            os.path.join(self.tdir, 'var/ver/1/versions'),
-        ]:
+        for path in [os.path.join(self.tdir, 'var/ver/1/dumppicked'),
+                     os.path.join(self.tdir, 'var/ver/1/bootstrap'),
+                     os.path.join(self.tdir, 'var/ver/1/versions')]:
             self.assertEqual(buildout._URL_VERSIONS[1],
-                             buildout._get_bootstrap_url(p),
-                             "b1 url for {0}".format(p))
-        for p in [
+                             buildout._get_bootstrap_url(path),
+                             "b1 url for {0}".format(path))
+        for path in [
             os.path.join(self.tdir, '/non/existing'),
             os.path.join(self.tdir, 'var/ver/2/versions'),
             os.path.join(self.tdir, 'var/ver/2/bootstrap'),
             os.path.join(self.tdir, 'var/ver/2/default'),
         ]:
             self.assertEqual(buildout._URL_VERSIONS[2],
-                             buildout._get_bootstrap_url(p),
-                             "b2 url for {0}".format(p))
+                             buildout._get_bootstrap_url(path),
+                             "b2 url for {0}".format(path))
 
     @requires_network()
     def test_get_buildout_ver(self):
-        for p in [
-            os.path.join(self.tdir, 'var/ver/1/dumppicked'),
-            os.path.join(self.tdir, 'var/ver/1/bootstrap'),
-            os.path.join(self.tdir, 'var/ver/1/versions'),
-        ]:
+        for path in [os.path.join(self.tdir, 'var/ver/1/dumppicked'),
+                     os.path.join(self.tdir, 'var/ver/1/bootstrap'),
+                     os.path.join(self.tdir, 'var/ver/1/versions')]:
             self.assertEqual(1,
-                             buildout._get_buildout_ver(p),
-                             "1 for {0}".format(p))
-        for p in [
-            os.path.join(self.tdir, '/non/existing'),
-            os.path.join(self.tdir, 'var/ver/2/versions'),
-            os.path.join(self.tdir, 'var/ver/2/bootstrap'),
-            os.path.join(self.tdir, 'var/ver/2/default'),
-        ]:
+                             buildout._get_buildout_ver(path),
+                             "1 for {0}".format(path))
+        for path in [os.path.join(self.tdir, '/non/existing'),
+                     os.path.join(self.tdir, 'var/ver/2/versions'),
+                     os.path.join(self.tdir, 'var/ver/2/bootstrap'),
+                     os.path.join(self.tdir, 'var/ver/2/default')]:
             self.assertEqual(2,
-                             buildout._get_buildout_ver(p),
-                             "2 for {0}".format(p))
+                             buildout._get_buildout_ver(path),
+                             "2 for {0}".format(path))
 
     @requires_network()
     def test_get_bootstrap_content(self):
@@ -279,6 +275,8 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
+@skipIf(salt.utils.which('virtualenv') is None,
+        'The \'virtualenv\' packaged needs to be installed')
 class BuildoutOnlineTestCase(Base):
 
     @classmethod
@@ -312,9 +310,9 @@ class BuildoutOnlineTestCase(Base):
         ret3 = buildout._Popen((
             'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
             ''.format(cls.ppy_blank)))
+
         assert ret1['retcode'] == 0
         assert ret20['retcode'] == 0
-        assert ret2['retcode'] == 0
         assert ret2['retcode'] == 0
         assert ret3['retcode'] == 0
 
@@ -390,6 +388,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
         self.assertTrue('Installing b.' in out)
         self.assertTrue('Installing c.' in out)
+
 
 if __name__ == '__main__':
     from integration import run_tests
