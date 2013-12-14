@@ -255,17 +255,15 @@ class BuildoutTestCase(Base):
         bpy = os.path.join(b_dir, 'bootstrap.py')
         buildout.upgrade_bootstrap(b_dir)
         time1 = os.stat(bpy).st_mtime
-        fic = open(bpy)
-        data = fic.read()
-        fic.close()
+        with salt.utils.fopen(bpy) as fic:
+            data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '2.updated_bootstrap')
         self.assertTrue(os.path.exists(flag))
         buildout.upgrade_bootstrap(b_dir, buildout_ver=1)
         time2 = os.stat(bpy).st_mtime
-        fic = open(bpy)
-        data = fic.read()
-        fic.close()
+        with salt.utils.fopen(bpy) as fic:
+            data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '1.updated_bootstrap')
         self.assertTrue(os.path.exists(flag))
