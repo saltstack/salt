@@ -353,13 +353,17 @@ def check_path_traversal(path, user='root'):
     for tpath in list_path_traversal(path):
         if not os.access(tpath, os.R_OK):
             msg = 'Could not access {0}.'.format(tpath)
-            current_user = getpass.getuser()
-            # Make the error message more intelligent based on how
-            # the user invokes salt-call or whatever other script.
-            if user != current_user:
-                msg += ' Try running as user {0}.'.format(user)
+            if not os.path.exists(tpath):
+                msg += ' Path does not exist.'
             else:
-                msg += ' Please give {0} read permissions.'.format(user, tpath)
+                current_user = getpass.getuser()
+                # Make the error message more intelligent based on how
+                # the user invokes salt-call or whatever other script.
+                if user != current_user:
+                    msg += ' Try running as user {0}.'.format(user)
+                else:
+                    msg += ' Please give {0} read permissions.'.format(user,
+                                                                       tpath)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
