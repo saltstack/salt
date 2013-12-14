@@ -511,8 +511,8 @@ at the moment a single state fails
 
 .. conf_master:: yaml_utf8 
 
-``yaml_utf8 ``
---------------
+``yaml_utf8``
+-------------
 
 Default: ``False``
 
