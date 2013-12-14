@@ -301,6 +301,8 @@ def check(table='filter', chain=None, rule=None):
         ))
         if out != -1:
             out = ''
+        else:
+            return False
     else:
         cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
         out = __salt__['cmd.run'](cmd)
