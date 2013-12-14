@@ -360,7 +360,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 )
             )
 
-            status = root_cmd('date', sudo=False, **kwargs)
+            status = root_cmd('date', tty=False, sudo=False, **kwargs)
             if status != 0:
                 connectfail = True
                 if trycount < maxtries:
@@ -511,12 +511,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
-    if tty is not None:
-        salt.utils.warn_until(
-            'Helium',
-            'After Salt Hydrogen you can safely ignore and actually stop '
-            'passing `tty` Salt now defaults to use a virtual terminal.'
-        )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
@@ -566,13 +560,13 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     'sed -i "s/#Subsystem/Subsystem/" '
                     '/etc/ssh/sshd_config'
                 )
-                root_cmd(subsys_command, sudo, **kwargs)
-                root_cmd('service sshd restart', sudo, **kwargs)
+                root_cmd(subsys_command, tty, sudo, **kwargs)
+                root_cmd('service sshd restart', tty, sudo, **kwargs)
 
             root_cmd(
                 '[ ! -d {0} ] && (mkdir -p {0}; chmod 700 {0}) || '
                 'echo "Directory {0} already exists..."'.format(tmp_dir),
-                sudo, **kwargs
+                tty, sudo, **kwargs
             )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
@@ -580,14 +574,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     if len(comps) > 1 or comps[0] != 'tmp':
                         root_cmd(
                             'chown {0}. {1}'.format(username, tmp_dir),
-                            sudo, **kwargs
+                            tty, sudo, **kwargs
                         )
 
             # Minion configuration
             if minion_pem:
                 scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
                 root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
-                         sudo, **kwargs)
+                         tty, sudo, **kwargs)
 
             if minion_pub:
                 scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
@@ -618,7 +612,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if master_pem:
                 scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
                 root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
-                         sudo, **kwargs)
+                         tty, sudo, **kwargs)
 
             if master_pub:
                 scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
@@ -646,18 +640,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 # Create remote temp dir
                 root_cmd(
                     'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
-                    sudo, **kwargs
+                    tty, sudo, **kwargs
                 )
                 root_cmd(
                     'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
-                    sudo, **kwargs
+                    tty, sudo, **kwargs
                 )
                 if kwargs['username'] != 'root':
                     root_cmd(
                         'chown {0} "{1}"'.format(
                             kwargs['username'], preseed_minion_keys_tempdir
                         ),
-                        sudo, **kwargs
+                        tty, sudo, **kwargs
                     )
 
                 # Copy pre-seed minion keys
@@ -672,14 +666,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'chown -R root "{0}"'.format(
                             preseed_minion_keys_tempdir
                         ),
-                        sudo, **kwargs
+                        tty, sudo, **kwargs
                     )
 
             # The actual deploy script
             if script:
                 scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 root_cmd('chmod +x {0}/deploy.sh'.format(tmp_dir),
-                         sudo, **kwargs)
+                         tty, sudo, **kwargs)
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -741,14 +735,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     )
                     root_cmd(
                         'chmod +x {0}/environ-deploy-wrapper.sh'.format(tmp_dir),
-                        sudo, **kwargs
+                        tty, sudo, **kwargs
                     )
                     # The deploy command is now our wrapper
                     deploy_command = '{0}/environ-deploy-wrapper.sh'.format(
                         tmp_dir,
                     )
 
-                if root_cmd(deploy_command, sudo, **kwargs) != 0:
+                if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
                             deploy_command
@@ -759,14 +753,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 # Remove the deploy script
                 if not keep_tmp:
                     root_cmd('rm -f {0}/deploy.sh'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/deploy.sh'.format(tmp_dir))
                     if script_env:
                         root_cmd(
                             'rm -f {0}/environ-deploy-wrapper.sh'.format(
                                 tmp_dir
                             ),
-                            sudo, **kwargs
+                            tty, sudo, **kwargs
                         )
                         log.debug(
                             'Removed {0}/environ-deploy-wrapper.sh'.format(
@@ -782,32 +776,32 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 # Remove minion configuration
                 if minion_pub:
                     root_cmd('rm -f {0}/minion.pub'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/minion.pub'.format(tmp_dir))
                 if minion_pem:
                     root_cmd('rm -f {0}/minion.pem'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/minion.pem'.format(tmp_dir))
                 if minion_conf:
                     root_cmd('rm -f {0}/grains'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/grains'.format(tmp_dir))
                     root_cmd('rm -f {0}/minion'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/minion'.format(tmp_dir))
 
                 # Remove master configuration
                 if master_pub:
                     root_cmd('rm -f {0}/master.pub'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/master.pub'.format(tmp_dir))
                 if master_pem:
                     root_cmd('rm -f {0}/master.pem'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/master.pem'.format(tmp_dir))
                 if master_conf:
                     root_cmd('rm -f {0}/master'.format(tmp_dir),
-                             sudo, **kwargs)
+                             tty, sudo, **kwargs)
                     log.debug('Removed {0}/master'.format(tmp_dir))
 
                 # Remove pre-seed keys directory
@@ -815,7 +809,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     root_cmd(
                         'rm -rf {0}'.format(
                             preseed_minion_keys_tempdir
-                        ), sudo, **kwargs
+                        ), tty, sudo, **kwargs
                     )
                     log.debug(
                         'Removed {0}'.format(preseed_minion_keys_tempdir)
@@ -838,7 +832,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     )
                     root_cmd(
                         'salt-call {0}'.format(start_action),
-                        sudo, **kwargs
+                        tty, sudo, **kwargs
                     )
                     log.info(
                         'Finished executing {0} on the salt-minion'.format(
@@ -917,7 +911,6 @@ def scp_file(dest_path, contents, kwargs):
             stream_stdout=kwargs.get('display_ssh_output', True),
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
-
         log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
 
         sent_password = False
@@ -1007,7 +1000,7 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, sudo, **kwargs):
+def root_cmd(command, tty, sudo, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
@@ -1022,6 +1015,11 @@ def root_cmd(command, sudo, **kwargs):
         log.debug('Using sudo to run command {0}'.format(command))
 
     ssh_args = []
+
+    if tty:
+        # Use double `-t` on the `ssh` command, it's necessary when `sudo` has
+        # `requiretty` enforced.
+        ssh_args.extend(['-t', '-t'])
 
     ssh_args.extend([
         # Don't add new hosts to the host key database
