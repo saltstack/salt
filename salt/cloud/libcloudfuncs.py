@@ -91,11 +91,17 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(ssh).read())
 
 
-def avail_locations(conn=None):
+def avail_locations(conn=None, call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -122,11 +128,17 @@ def avail_locations(conn=None):
     return ret
 
 
-def avail_images(conn=None):
+def avail_images(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -151,11 +163,17 @@ def avail_images(conn=None):
     return ret
 
 
-def avail_sizes(conn=None):
+def avail_sizes(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
