@@ -86,10 +86,16 @@ def get_configured_provider():
     )
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of the images that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     items = query(action='template')
     ret = {}
     for item in items:
