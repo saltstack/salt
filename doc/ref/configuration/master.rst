@@ -866,7 +866,7 @@ Master Logging Settings
 Default: ``/var/log/salt/master``
 
 The master log can be sent to a regular file, local path name, or network
-location. See also :conf-log:`log_file`.
+location. See also :conf_log:`log_file`.
 
 Examples:
 
@@ -891,7 +891,7 @@ Examples:
 
 Default: ``warning``
 
-The level of messages to send to the console. See also :conf-log:`log_level`.
+The level of messages to send to the console. See also :conf_log:`log_level`.
 
 .. code-block:: yaml
 
@@ -908,7 +908,7 @@ The level of messages to send to the console. See also :conf-log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf-log:`log_level_logfile`.
+:conf_log:`log_level_logfile`.
 
 .. code-block:: yaml
 
@@ -924,7 +924,7 @@ The level of messages to send to the log file. See also
 Default: ``%H:%M:%S``
 
 The date and time format used in console log messages. See also
-:conf-log:`log_datefmt`.
+:conf_log:`log_datefmt`.
 
 .. code-block:: yaml
 
@@ -941,7 +941,7 @@ The date and time format used in console log messages. See also
 Default: ``%Y-%m-%d %H:%M:%S``
 
 The date and time format used in log file messages. See also
-:conf-log:`log_datefmt_logfile`.
+:conf_log:`log_datefmt_logfile`.
 
 .. code-block:: yaml
 
@@ -957,7 +957,7 @@ The date and time format used in log file messages. See also
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. See also
-:conf-log:`log_fmt_console`.
+:conf_log:`log_fmt_console`.
 
 .. code-block:: yaml
 
@@ -973,7 +973,7 @@ The format of the console logging messages. See also
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
-:conf-log:`log_fmt_logfile`.
+:conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
@@ -989,7 +989,7 @@ The format of the log file logging messages. See also
 Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
-:conf-log:`log_granular_levels`.
+:conf_log:`log_granular_levels`.
 
 
 
