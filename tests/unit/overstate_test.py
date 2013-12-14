@@ -81,7 +81,7 @@ class OverstateTestCase(TestCase,
         overstate = salt.overstate.OverState(self.master_config)
         overstate.over = overstate._OverState__sort_stages(OVERSTATE_SLS)
         ret = overstate.get_stage('mysql')
-        self.assertDictEqual({'mysql': {'match': 'db*', 'sls': {'drbd': 'mysql.server'}}}, ret)
+        self.assertDictEqual({'mysql': {'match': 'db*', 'sls': {'mysql.server': 'drbd'}}}, ret)
 
     @patch('salt.overstate.OverState.call_stage')
     def test_stages(self, call_stage_mock):
@@ -91,8 +91,8 @@ class OverstateTestCase(TestCase,
         overstate = salt.overstate.OverState(self.master_config)
         overstate.over = overstate._OverState__sort_stages(OVERSTATE_SLS)
         overstate.stages()
-        expected_calls = [call('all', {'require': {'webservers': 'mysql'}, 'match': '*'}),
-                          call('mysql', {'match': 'db*', 'sls': {'drbb': 'mysql.server'}}),
+        expected_calls = [call('all', {'require': {'mysql': 'webservers'}, 'match': '*'}),
+                          call('mysql', {'match': 'db*', 'sls': {'mysql.server': 'drbd'}}),
                           call('webservers', {'require': ['mysql'], 'match': 'web*'})]
         call_stage_mock.assert_has_calls(expected_calls, any_order=False)
 
