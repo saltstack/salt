@@ -282,10 +282,43 @@ present. This function is normally called with the ``-F`` option:
 The list_nodes_select() Function
 --------------------------------
 This function returns only the fields specified in the ``query.selection``
-option in ``/etc/salt/cloud``. Because this function is so generic, it is likely
-to be moved into the ``salt.utils.cloud`` library in the future. In the
-meantime, it can generally be safely copied wholesale from another module, such
-as the Azure module. This function is normally called with the ``-S`` option:
+option in ``/etc/salt/cloud``. Because this function is so generic, all of the
+heavy lifting has been moved into the ``salt.utils.cloud`` library.
+
+A function to call ``list_nodes_select()`` still needs to be present. In
+general, the following code can be used as-is:
+
+.. code-block:: python
+
+    def list_nodes_select(call=None):
+        '''
+        Return a list of the VMs that are on the provider, with select fields
+        '''
+        return salt.utils.cloud.list_nodes_select(
+            list_nodes_full('function'), __opts__['query.selection'], call,
+        )
+
+However, depending on the cloud provider, additional variables may be required.
+For instance, some modules use a ``conn`` object, or may need to pass other
+options into ``list_nodes_full()``. In this case, be sure to update the function
+appropriately:
+
+.. code-block:: python
+
+    def list_nodes_select(conn=None, call=None):
+        '''
+        Return a list of the VMs that are on the provider, with select fields
+        '''
+        if not conn:
+            conn = get_conn()   # pylint: disable=E0602
+    
+        return salt.utils.cloud.list_nodes_select(
+            list_nodes_full(conn, 'function'),
+            __opts__['query.selection'],
+            call,
+        )
+
+This function is normally called with the ``-S`` option:
 
 .. code-block:: bash
 
