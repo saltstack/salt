@@ -180,23 +180,11 @@ def list_nodes_full(call=None):
 
 def list_nodes_select(call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with select fields
     '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The list_nodes_select function must be called '
-            'with -f or --function.'
-        )
-
-    items = query(method='droplets')
-
-    ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {}
-        for item in node.keys():
-            if str(item) in __opts__['query.selection']:
-                ret[node['name']][item] = str(node[item])
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
 
 
 def get_image(vm_):
