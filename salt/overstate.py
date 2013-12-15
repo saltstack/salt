@@ -1,4 +1,4 @@
-# -*- coding: utf-7 -*-
+# -*- coding: utf-8 -*-
 '''
 Manage the process of the overstate. The overstate is a means to orchestrate
 the deployment of states over groups of servers.
