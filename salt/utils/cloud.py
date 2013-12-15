@@ -1268,6 +1268,36 @@ def simple_types_filter(datadict):
     return simpledict
 
 
+def list_nodes_select(nodes, selection, call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
+    ret = {}
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in selection:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
+
+    return ret
+
+
 def salt_cloud_force_ascii(exc):
     if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
         raise TypeError('Can\'t handle {0}'.format(exc))

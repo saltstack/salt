@@ -115,12 +115,9 @@ def __virtual__():
 
     log.debug('Loading Joyent cloud module')
 
-    global script, list_nodes_select
+    global script
     conn = None
     script = namespaced_function(script, globals(), (conn,))
-    list_nodes_select = namespaced_function(
-        list_nodes_select, globals(), (conn,)
-    )
     return True
 
 
@@ -430,8 +427,8 @@ def create_node(**kwargs):
 
     data = json.dumps({
         'name': name,
-        'package': size['id'],
-        'dataset': image['id']
+        'package': size['name'],
+        'dataset': image['name']
     })
 
     try:
@@ -818,6 +815,15 @@ def list_nodes_full(call=None):
         )
 
     return list_nodes(full=True)
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
 
 
 def avail_images(call=None):

@@ -423,27 +423,9 @@ def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The list_nodes_select function must be called '
-            'with -f or --function.'
-        )
-
-    if not conn:
-        conn = get_conn()   # pylint: disable=E0602
-
-    nodes = conn.list_nodes()
-    ret = {}
-    for node in nodes:
-        pairs = {}
-        data = node.__dict__
-        data.update(node.extra)
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node.name] = pairs
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(), __opts__['query.selection'], call,
+    )
 
 
 def show_instance(name, call=None):
