@@ -6,20 +6,9 @@ Digital Ocean Cloud Module
 The Digital Ocean cloud module is used to control access to the Digital Ocean
 VPS system.
 
-Use of this module only requires the ``api_key`` parameter to be set. Using the
-old cloud providers configuration syntax, in the main cloud configuration
-file:
-
-.. code-block:: yaml
-
-    # Digital Ocean account keys
-    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
-    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or
- ``/etc/salt/cloud.providers.d/digital_ocean.conf``:
+Use of this module only requires the ``api_key`` parameter to be set. Set up the
+cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/digital_ocean.conf``:
 
 .. code-block:: yaml
 
