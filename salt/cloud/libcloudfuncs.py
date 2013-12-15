@@ -423,8 +423,11 @@ def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
+    if not conn:
+        conn = get_conn()   # pylint: disable=E0602
+
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__['query.selection'], call,
+        list_nodes_full(conn, 'function'), __opts__['query.selection'], call,
     )
 
 
