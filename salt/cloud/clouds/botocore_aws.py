@@ -9,25 +9,7 @@ This module has been replaced by the EC2 cloud module, and is no longer
 supported. The documentation shown here is for reference only; it is highly
 recommended to change all usages of this driver over to the EC2 driver.
 
-To use the AWS cloud module, using the old cloud providers configuration
-syntax, the following configuration parameters need to be set in the main cloud
-configuration file:
-
-.. code-block:: yaml
-
-    # The AWS API authentication id
-    AWS.id: GKTADJGHEIQSXMKKRBJ08H
-    # The AWS API authentication key
-    AWS.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    # The ssh keyname to use
-    AWS.keyname: default
-    # The amazon security group
-    AWS.securitygroup: ssh_open
-    # The location of the private key which corresponds to the keyname
-    AWS.private_key: /root/default.pem
-
-
-Using the new format, set up the cloud configuration at
+If this driver is still needed, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/aws.conf``:
 
 .. code-block:: yaml

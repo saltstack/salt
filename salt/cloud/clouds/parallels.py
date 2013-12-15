@@ -6,21 +6,8 @@ Parallels Cloud Module
 The Parallels cloud module is used to control access to cloud providers using
 the Parallels VPS system.
 
-Use of this module requires, if using the old salt cloud configuration syntax,
-the following PARALLELS parameters to be set in the cloud configuration file.
-
-.. code-block:: yaml
-
-    # Parallels account information
-    PARALLELS.user: myuser
-    PARALLELS.password: mypassword
-    PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
  ``/etc/salt/cloud.providers.d/parallels.conf``:
-
 
 .. code-block:: yaml
 
