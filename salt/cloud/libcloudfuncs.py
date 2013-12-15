@@ -391,7 +391,6 @@ def list_nodes(conn=None, call=None):
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
-            'extra': node.extra,
             'state': node_state(node.state)
         }
     return ret
@@ -416,6 +415,7 @@ def list_nodes_full(conn=None, call=None):
         for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
             pairs[key] = value
         ret[node.name] = pairs
+        del ret[node.name]['driver']
     return ret
 
 
