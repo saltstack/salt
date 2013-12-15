@@ -2003,31 +2003,9 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The list_nodes_select function must be called '
-            'with -f or --function.'
-        )
-
-    ret = {}
-    nodes = list_nodes_full(get_location())
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
-
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(get_location()), __opts__['query.selection'], call,
+    )
 
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
