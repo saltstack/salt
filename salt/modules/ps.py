@@ -76,6 +76,8 @@ def top(num_processes=5, interval=3):
         else:
             cmdline = process.cmdline
         info = {'cmd': cmdline,
+                'user': process.username,
+                'status': process.status,
                 'pid': process.pid,
                 'create_time': process.create_time}
         for key, value in process.get_cpu_times()._asdict().items():
