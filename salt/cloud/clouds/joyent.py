@@ -5,20 +5,8 @@ Joyent Cloud Module
 
 The Joyent Cloud module is used to interact with the Joyent cloud system.
 
-Using the old cloud configuration syntax, it requires that the ``username`` and
-``password`` to the joyent account be configured:
-
-.. code-block:: yaml
-
-    # The Joyent login user
-    JOYENT.user: fred
-    # The Joyent user's password
-    JOYENT.password: saltybacon
-    # The location of the ssh private key that can log into the new VM
-    JOYENT.private_key: /root/joyent.pem
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/joyent.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/joyent.conf``:
 
 .. code-block:: yaml
 

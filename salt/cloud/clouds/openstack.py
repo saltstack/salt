@@ -17,33 +17,7 @@ This module has been tested to work with HP Cloud and Rackspace. See the
 documentation for specific options for either of these providers. Some
 examples, using the old cloud configuration syntax, are provided below:
 
-.. code-block:: yaml
-
-    # The OpenStack identity service url
-    OPENSTACK.identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
-    # The OpenStack compute region
-    OPENSTACK.compute_region: az-1.region-a.geo-1
-    # The OpenStack compute service name
-    OPENSTACK.compute_name: Compute
-    # The OpenStack tenant name (not tenant ID)
-    OPENSTACK.tenant: myuser-tenant1
-    # The OpenStack user name
-    OPENSTACK.user: myuser
-    # The OpenStack keypair name
-    OPENSTACK.ssh_key_name
-
-Either a password or an API key must also be specified:
-
-.. code-block:: yaml
-
-    # The OpenStack password
-    OPENSTACK.password: letmein
-    # The OpenStack API key
-    OPENSTACK.apikey: 901d3f579h23c8v73q9
-
-
-And using the new format, these examples could be set up in the cloud
-configuration at ``/etc/salt/cloud.providers`` or
+Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/openstack.conf``:
 
 
