@@ -407,7 +407,7 @@ def append(table='filter', chain=None, rule=None):
 
     cmd = 'iptables -t {0} -A {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
-    if len(out) == 0 :
+    if len(out) == 0:
         return True
     else:
         return False
