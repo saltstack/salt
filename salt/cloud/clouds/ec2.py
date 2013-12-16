@@ -947,8 +947,8 @@ def create(vm_=None, call=None):
     if network_interfaces:
         params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
 
-    set_ebs_optimized = config.get_config_value(
-        'ebs_optimized', vm_, __opts__, search_global=False, default=None
+    set_ebs_optimized = config.get_cloud_config_value(
+        'ebs_optimized', vm_, __opts__, search_global=False
     )
 
     if set_ebs_optimized is not None:
