@@ -95,7 +95,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
@@ -308,7 +308,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        __salt__['cmd.run_all'](temp_cmd)
+        __salt__['cmd.run'](temp_cmd, output_loglevel='debug')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -417,7 +417,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
     # Remove the package
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
                                                  ' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)

@@ -15,6 +15,17 @@ no grounds to treat others without respect, especially people working to
 improve Salt)!!
 
 
+Linting
+=======
+
+Most Salt style conventions are codified in Salt's `.pylintrc` file. This file
+is found in the root of the Salt project and can be passed as an argument to the
+pylint_ program as follows:
+
+`pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint`
+
+.. _pylint: http://www.pylint.org
+
 Strings
 =======
 

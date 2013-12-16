@@ -98,10 +98,16 @@ def get_conn(service='SoftLayer_Virtual_Guest'):
     return client[service]
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
     conn = get_conn()
     response = conn.getCreateObjectOptions()
@@ -114,12 +120,17 @@ def avail_locations():
     return ret
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a dict of all available VM sizes on the cloud provider with
     relevant data. This data is provided in three dicts.
-
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     ret = {
         'block devices': {},
         'memory': {},
@@ -147,10 +158,16 @@ def avail_sizes():
     return ret
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     ret = {}
     conn = get_conn()
     response = conn.getCreateObjectOptions()
@@ -495,10 +512,15 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full(mask='mask[id]', call=None):  # pylint disable=W0613
+def list_nodes_full(mask='mask[id]', call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     conn = get_conn(service='Account')
     response = conn.getVirtualGuests()
@@ -507,10 +529,15 @@ def list_nodes_full(mask='mask[id]', call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full()
     if 'error' in nodes:
@@ -532,30 +559,13 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    ret = {}
-
-    nodes = list_nodes_full()
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
-
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(), __opts__['query.selection'], call,
+    )
 
 
 def show_instance(name, call=None):
@@ -571,7 +581,7 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node.
 
@@ -579,6 +589,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',

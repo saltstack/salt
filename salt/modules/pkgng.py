@@ -230,7 +230,10 @@ def latest_version(*names, **kwargs):
 
     for name in names:
         cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
-        pkgver = _get_version(name, __salt__['cmd.run'](cmd))
+        pkgver = _get_version(
+            name,
+            __salt__['cmd.run'](cmd, output_loglevel='debug')
+        )
         if pkgver is not None:
             installed = pkgs.get(name, [])
             if not installed:
@@ -292,7 +295,8 @@ def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
 
     ret = {}
     cmd = '{0} info'.format(_pkg(jail, chroot))
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         if not line:
             continue
         try:
@@ -390,7 +394,8 @@ def stats(local=False, remote=False, jail=None, chroot=None):
         opts = '-' + opts
 
     res = __salt__['cmd.run'](
-        '{0} stats {1}'.format(_pkg(jail, chroot), opts)
+        '{0} stats {1}'.format(_pkg(jail, chroot), opts),
+        output_loglevel='debug'
     )
     res = [x.strip("\t") for x in res.split("\n")]
     return res
@@ -430,7 +435,8 @@ def backup(file_name, jail=None, chroot=None):
             salt '*' pkg.backup /tmp/pkg chroot=/path/to/chroot
     '''
     res = __salt__['cmd.run'](
-        '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name)
+        '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name),
+        output_loglevel='debug'
     )
     return res.split('...')[1]
 
@@ -469,7 +475,8 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name)
+        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
+        output_loglevel='debug'
     )
 
 
@@ -502,7 +509,10 @@ def audit(jail=None, chroot=None):
 
             salt '*' pkg.audit chroot=/path/to/chroot
     '''
-    return __salt__['cmd.run']('{0} audit -F'.format(_pkg(jail, chroot)))
+    return __salt__['cmd.run'](
+        '{0} audit -F'.format(_pkg(jail, chroot)),
+        output_loglevel='debug'
+    )
 
 
 def install(name=None,
@@ -696,7 +706,7 @@ def install(name=None,
     cmd = '{0} {1} {2} {3} {4}'.format(
         _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
     )
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop(_contextkey(jail, chroot), None)
     new = list_pkgs(jail=jail, chroot=chroot)
     return salt.utils.compare_dicts(old, new)
@@ -833,7 +843,7 @@ def remove(name=None,
     cmd = '{0} delete {1} {2}'.format(
         _pkg(jail, chroot), opts, ' '.join(targets)
     )
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop(_contextkey(jail, chroot), None)
     new = list_pkgs(jail=jail, chroot=chroot)
     return salt.utils.compare_dicts(old, new)
@@ -920,7 +930,8 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
         opts = '-' + opts
 
     return __salt__['cmd.run'](
-        '{0} upgrade {1}'.format(_pkg(jail, chroot), opts)
+        '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
+        output_loglevel='debug'
     )
 
 
@@ -936,7 +947,10 @@ def clean(jail=None, chroot=None):
         salt '*' pkg.clean jail=<jail name or id>
         salt '*' pkg.clean chroot=/path/to/chroot
     '''
-    return __salt__['cmd.run']('{0} clean'.format(_pkg(jail, chroot)))
+    return __salt__['cmd.run'](
+        '{0} clean'.format(_pkg(jail, chroot)),
+        output_loglevel='debug'
+    )
 
 
 def autoremove(jail=None, chroot=None, dryrun=False):
@@ -965,7 +979,8 @@ def autoremove(jail=None, chroot=None, dryrun=False):
     if opts:
         opts = '-' + opts
     return __salt__['cmd.run'](
-        '{0} autoremove {1}'.format(_pkg(jail, chroot), opts)
+        '{0} autoremove {1}'.format(_pkg(jail, chroot), opts),
+        output_loglevel='debug'
     )
 
 
@@ -1040,7 +1055,8 @@ def check(jail=None,
         opts = '-' + opts
 
     return __salt__['cmd.run'](
-        '{0} check {1}'.format(_pkg(jail, chroot), opts)
+        '{0} check {1}'.format(_pkg(jail, chroot), opts),
+        output_loglevel='debug'
     )
 
 
@@ -1100,7 +1116,9 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
     if opts:
         opts = '-' + opts
     return __salt__['cmd.run'](
-        '{0} which {1} {2}'.format(_pkg(jail, chroot), opts, path))
+        '{0} which {1} {2}'.format(_pkg(jail, chroot), opts, path),
+        output_loglevel='debug'
+    )
 
 
 def search(name,
@@ -1285,7 +1303,8 @@ def search(name,
         opts = '-' + opts
 
     return __salt__['cmd.run'](
-        '{0} search {1} {2}'.format(_pkg(jail, chroot), opts, name)
+        '{0} search {1} {2}'.format(_pkg(jail, chroot), opts, name),
+        output_loglevel='debug'
     )
 
 
@@ -1428,7 +1447,8 @@ def fetch(name,
     return __salt__['cmd.run'](
         '{0} fetch -y {1} {2} {3}'.format(
             _pkg(jail, chroot), repo_opts, opts, name
-        )
+        ),
+        output_loglevel='debug'
     )
 
 
@@ -1493,5 +1513,6 @@ def updating(name,
         opts = '-' + opts
 
     return __salt__['cmd.run'](
-        '{0} updating {1} {2}'.format(_pkg(jail, chroot), opts, name)
+        '{0} updating {1} {2}'.format(_pkg(jail, chroot), opts, name),
+        output_loglevel='debug'
     )

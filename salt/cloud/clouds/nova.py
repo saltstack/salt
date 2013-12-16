@@ -711,10 +711,15 @@ def avail_sizes():
                               [conn['profile']])
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that in this location
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     conn = get_conn()
     server_list = _salt_client().cmd(conn['auth_minion'],
@@ -735,10 +740,15 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     Return a list of the VMs that in this location
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     conn = get_conn()
     server_list = _salt_client().cmd(conn['auth_minion'],
@@ -754,26 +764,10 @@ def list_nodes_full(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    ret = {}
-    nodes = list_nodes_full()
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
-
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(), __opts__['query.selection'], call,
+    )

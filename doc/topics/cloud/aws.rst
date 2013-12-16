@@ -418,6 +418,38 @@ configuration file:
       rename_on_destroy: True
 
 
+Listing Images
+==============
+Normally, images can be queried on a cloud provider by passing the
+``--list-images`` argument to Salt Cloud. This still holds true for EC2:
+
+.. code-block:: bash
+
+    salt-cloud --list-images my-ec2-config
+
+However, the full list of images on EC2 is extremely large, and querying all of
+the available images may cause Salt Cloud to behave as if frozen. Therefore,
+the default behavior of this option may be modified, by adding an ``owner``
+argument to the provider configuration:
+
+.. code-block:: yaml
+
+    owner: aws-marketplace
+
+The possible values for this setting are ``amazon``, ``aws-marketplace``,
+``self``, ``<AWS account ID>`` or ``all``. The default setting is ``amazon``.
+Take note that ``all`` and ``aws-marketplace`` may cause Salt Cloud to appear
+as if it is freezing, as it tries to handle the large amount of data.
+
+It is also possible to perform this query using different settings without
+modifying the configuration files. To do this, call the ``avail_images``
+function directly:
+
+.. code-block:: bash
+
+    salt-cloud -f avail_images my-ec2-config owner=aws-marketplace
+
+
 EC2 Images
 ==========
 The following are lists of available AMI images, generally sorted by OS. These
@@ -483,6 +515,32 @@ instance.
 .. code-block:: bash
 
     $ salt-cloud -a show_instance myinstance
+
+
+ebs_optimized
+=============
+This argument enables switching of the EbsOptimized setting which default
+to 'false'. Indicates whether the instance is optimized for EBS I/O. This
+optimization provides dedicated throughput to Amazon EBS and an optimized
+configuration stack to provide optimal Amazon EBS I/O performance. This
+optimization isn't available with all instance types. Additional usage
+charges apply when using an EBS-optimized instance.
+
+This setting can be added to the profile or map file for an instance.
+
+If set to True, this setting will enable an instance to be EbsOptimized
+
+.. code-block:: yaml
+
+   ebs_optimized: True
+
+This can also be set as a cloud provider setting in the EC2 cloud
+configuration:
+
+.. code-block:: yaml
+
+   my-ec2-config:
+     ebs_optimized: True
 
 
 del_root_vol_on_destroy

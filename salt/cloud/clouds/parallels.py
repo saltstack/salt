@@ -6,21 +6,8 @@ Parallels Cloud Module
 The Parallels cloud module is used to control access to cloud providers using
 the Parallels VPS system.
 
-Use of this module requires, if using the old salt cloud configuration syntax,
-the following PARALLELS parameters to be set in the cloud configuration file.
-
-.. code-block:: yaml
-
-    # Parallels account information
-    PARALLELS.user: myuser
-    PARALLELS.password: mypassword
-    PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
  ``/etc/salt/cloud.providers.d/parallels.conf``:
-
 
 .. code-block:: yaml
 
@@ -86,10 +73,16 @@ def get_configured_provider():
     )
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of the images that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     items = query(action='template')
     ret = {}
     for item in items:
@@ -98,10 +91,15 @@ def avail_images():
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     items = query(action='ve')
 
@@ -122,10 +120,15 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     ret = {}
     items = query(action='ve')
 
@@ -147,23 +150,13 @@ def list_nodes_full(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with select fields
     '''
-    ret = {}
-
-    nodes = list_nodes_full()
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(), __opts__['query.selection'], call,
+    )
 
 
 def get_image(vm_):
@@ -611,7 +604,7 @@ def wait_until(name, state, timeout=300):
         node = show_instance(name, call='action')
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node.
 
@@ -619,6 +612,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',

@@ -51,7 +51,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, inspect_stack
-from salt.exceptions import SaltMasterError, MasterExit, SaltRunnerError
+from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
 
@@ -2193,7 +2193,7 @@ class ClearFuncs(object):
                     'user': token['name']}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
@@ -2263,7 +2263,7 @@ class ClearFuncs(object):
                     'user': clear_load.get('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))

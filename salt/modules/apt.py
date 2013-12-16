@@ -115,7 +115,7 @@ def _get_virtual():
     '''
     if 'pkg._get_virtual' not in __context__:
         cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-        out = __salt__['cmd.run_stdout'](cmd)
+        out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
         virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
         __context__['pkg._get_virtual'] = {}
         for realpkg, provides in virtpkg_re.findall(out):
@@ -186,7 +186,8 @@ def latest_version(*names, **kwargs):
         cmd = ['apt-cache', '-q', 'policy', name]
         if isinstance(repo, list):
             cmd = cmd + repo
-        out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        out = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      output_loglevel='debug')
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -263,10 +264,8 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
-
-    lines = out.splitlines()
-    for line in lines:
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         cols = line.split()
         if not cols:
             continue
@@ -426,7 +425,8 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-    __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
+    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+                        output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -448,7 +448,12 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return {}
     cmd = ['apt-get', '-q', '-y', action]
     cmd.extend(targets)
-    __salt__['cmd.run_all'](cmd, env=kwargs.get('env'), python_shell=False)
+    __salt__['cmd.run'](
+        cmd,
+        env=kwargs.get('env'),
+        python_shell=False,
+        output_loglevel='debug'
+    )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
@@ -543,7 +548,7 @@ def upgrade(refresh=True, **kwargs):
     old = list_pkgs()
     cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
            '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
-    __salt__['cmd.run_all'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -601,7 +606,7 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -1028,7 +1033,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
                         cmd = 'apt-add-repository -y {0}'.format(repo)
-                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
+                    out = __salt__['cmd.run_stdout'](
+                        cmd, output_loglevel='debug', **kwargs
+                    )
                     # explicit refresh when a repo is modified.
                     refresh_db()
                     return {repo: out}
@@ -1138,14 +1145,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
         cmd = 'apt-key export {0}'.format(keyid)
-        output = __salt__['cmd.run_stdout'](cmd, **kwargs)
+        output = __salt__['cmd.run_stdout'](
+            cmd, output_loglevel='debug', **kwargs
+        )
         imported = output.startswith('-----BEGIN PGP')
         if ks:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](cmd.format(ks, keyid),
-                                              **kwargs)
+                ret = __salt__['cmd.run_all'](
+                    cmd.format(ks, keyid), output_loglevel='debug', **kwargs
+                )
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1156,7 +1166,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
         cmd = 'apt-key add {0}'.format(fn_)
-        out = __salt__['cmd.run_stdout'](cmd, **kwargs)
+        out = __salt__['cmd.run_stdout'](
+            cmd, output_loglevel='debug', **kwargs
+        )
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
                 'Error: key retrieval failed: {0}'.format(cmd.format(key_url))
@@ -1387,7 +1399,7 @@ def get_selections(pattern=None, state=None):
         cmd += ' {0!r}'.format(pattern)
     else:
         cmd += ' "*"'
-    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     ret = _parse_selections(stdout)
     if state:
         return {state: ret.get(state, [])}
@@ -1474,7 +1486,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
         if clear:
             cmd = 'dpkg --clear-selections'
             if not __opts__['test']:
-                result = __salt__['cmd.run_all'](cmd)
+                result = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
                 if result['retcode'] != 0:
                     err = ('Running dpkg --clear-selections failed: '
                            '{0}'.format(result['stderr']))
@@ -1494,7 +1506,9 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                     _state
                     )
                 if not __opts__['test']:
-                    result = __salt__['cmd.run_all'](cmd)
+                    result = __salt__['cmd.run_all'](
+                        cmd, output_loglevel='debug'
+                    )
                     if result['retcode'] != 0:
                         log.error(
                             'failed to set state {0} for package '

@@ -69,6 +69,7 @@ Supported commands:
 :maintainer: Eric Johnson <erjohnso@google.com>
 :maturity: new
 :depends: libcloud >= 0.14.0-beta3
+:depends: pycrypto >= 2.1
 '''
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
@@ -567,7 +568,7 @@ def create(vm_=None, call=None):
                 'sudo_password', vm_, __opts__, default=None
             ),
             'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
+                'tty', vm_, __opts__, default=(ssh_user != 'root')
             ),
             'display_ssh_output': config.get_cloud_config_value(
                 'display_ssh_output', vm_, __opts__, default=True

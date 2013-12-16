@@ -269,8 +269,8 @@ def latest(name,
                     shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
             elif os.listdir(target):
-                return _fail(ret, 'Directory exists, is non-empty, and force '
-                    'option not in use')
+                return _fail(ret, 'Directory \'{0}\' exists, is non-empty, and '
+                             'force option not in use'.format(target))
 
         # git clone is required
         log.debug(

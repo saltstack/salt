@@ -14,7 +14,7 @@ configurations, please continue reading.
 Available Configuration Settings
 ================================
 
-.. conf-log:: log_file
+.. conf_log:: log_file
 
 ``log_file``
 ------------
@@ -51,7 +51,7 @@ Examples:
 
 
 
-.. conf-log:: log_level
+.. conf_log:: log_level
 
 ``log_level``
 -------------
@@ -68,7 +68,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
 
 
-.. conf-log:: log_level_logfile
+.. conf_log:: log_level_logfile
 
 ``log_level_logfile``
 ---------------------
@@ -85,7 +85,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
 
 
-.. conf-log:: log_datefmt
+.. conf_log:: log_datefmt
 
 ``log_datefmt``
 ---------------
@@ -101,7 +101,7 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 
 
-.. conf-log:: log_datefmt_logfile
+.. conf_log:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
 -----------------------
@@ -117,7 +117,7 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 
 
-.. conf-log:: log_fmt_console
+.. conf_log:: log_fmt_console
 
 ``log_fmt_console``
 -------------------
@@ -133,7 +133,7 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 
 
-.. conf-log:: log_fmt_logfile
+.. conf_log:: log_fmt_logfile
 
 ``log_fmt_logfile``
 -------------------
@@ -149,7 +149,7 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 
 
-.. conf-log:: log_granular_levels
+.. conf_log:: log_granular_levels
 
 ``log_granular_levels``
 -----------------------

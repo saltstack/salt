@@ -414,6 +414,7 @@ def run(name,
         env=(),
         stateful=False,
         umask=None,
+        output_loglevel='info',
         quiet=False,
         timeout=None,
         **kwargs):
@@ -457,9 +458,16 @@ def run(name,
     umask
         The umask (in octal) to use when running the command.
 
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged at loglevel INFO
+        regardless, unless ``quiet`` is used for this value.
+
     quiet
         The command will be executed quietly, meaning no log entries of the
-        actual command or its return data
+        actual command or its return data. This is deprecated as of the
+        **Hydrogen** release, and is being replaced with
+        ``output_loglevel: quiet``.
 
     timeout
         If the command has not terminated after timeout seconds, send the
@@ -548,6 +556,7 @@ def run(name,
                   'shell': shell or __grains__['shell'],
                   'env': env,
                   'umask': umask,
+                  'output_loglevel': output_loglevel,
                   'quiet': quiet}
 
     try:
@@ -559,7 +568,9 @@ def run(name,
         # Wow, we passed the test, run this sucker!
         if not __opts__['test']:
             try:
-                cmd_all = __salt__['cmd.run_all'](name, timeout=timeout, **cmd_kwargs)
+                cmd_all = __salt__['cmd.run_all'](
+                    name, timeout=timeout, **cmd_kwargs
+                )
             except CommandExecutionError as err:
                 ret['comment'] = str(err)
                 return ret

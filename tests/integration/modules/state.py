@@ -554,7 +554,7 @@ fi
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
         self.assertEqual(ret, [
-            'The require or watch statement in state "B" in sls '
+            'The require statement in state "B" in sls '
           + '"requisites.require_simple_nolist" needs to be formed as a list'
         ])
 

@@ -97,7 +97,7 @@ def installed(name,
         --no-dev option for composer. Recommended for production.
 
     quiet
-        --queit option for composer. Whether or not to return output from composer.
+        --quiet option for composer. Whether or not to return output from composer.
 
     composer_home
         $COMPOSER_HOME environment variable

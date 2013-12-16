@@ -56,7 +56,7 @@ def _dscl(cmd, ctype='create'):
         source, noderoot = 'localhost', '/Local/Default'
     return __salt__['cmd.run_all'](
         'dscl {0} -{1} {2}{3}'.format(source, ctype, noderoot, cmd),
-        quiet=True if ctype == 'passwd' else False
+        output_loglevel='quiet' if ctype == 'passwd' else False
     )
 
 

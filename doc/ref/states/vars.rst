@@ -15,8 +15,8 @@ the running salt minion:
 
 .. code-block:: jinja
 
-    {% for file in salt['cmd.run'](ls /opt/to_remove) %}
-    {{ file }}:
+    {% for file in salt['cmd.run']('ls -1 /opt/to_remove').splitlines() %}
+    /opt/to_remove/{{ file }}:
       file.absent
     {% endfor %}
 

@@ -177,7 +177,7 @@ VALID_OPTS = {
     'jinja_trim_blocks': bool,
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
-    'keysize' : int
+    'keysize': int
 }
 
 # default configurations
@@ -377,7 +377,7 @@ DEFAULT_MASTER_OPTS = {
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
-    'keysize' : 4096
+    'keysize': 4096
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
