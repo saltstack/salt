@@ -15,53 +15,6 @@ from docutils.statemachine import ViewList
 
 import salt
 
-def parse_lit(lines):
-    '''
-    Parse a string line-by-line delineating comments and code
-
-    :returns: An tuple of boolean/list-of-string pairs. True designates a
-        comment; False designates code.
-    '''
-    comment_char = '#'
-    comment = re.compile(r'^\s*{0}[ \n]'.format(comment_char))
-    section_test = lambda val: bool(comment.match(val))
-
-    sections = []
-    for is_doc, group in itertools.groupby(lines, section_test):
-        if is_doc:
-            text = [comment.sub('', i).rstrip('\r\n') for i in group]
-        else:
-            text = [i.rstrip('\r\n') for i in group]
-
-        sections.append((is_doc, text))
-
-    return sections
-
-def parse_sls_file(config, sls_path):
-    '''
-    Given a typical Salt SLS path (e.g.: apache.vhosts.standard), find the file
-    on the file system and parse it
-    '''
-    formulas_dirs = config.formulas_dirs
-    fpath = sls_path.replace('.', '/')
-
-    name_options = (
-        '{0}.sls'.format(fpath),
-        os.path.join(fpath, 'init.sls')
-    )
-
-    paths = [os.path.join(fdir, fname)
-            for fname in name_options
-                for fdir in formulas_dirs]
-
-    for i in paths:
-        try:
-            with open(i, 'rb') as f:
-                return parse_lit(f)
-        except IOError:
-            pass
-
-    raise Exception("Could not find sls file '{0}'".format(sls_path))
 
 class LiterateCoding(Directive):
     '''
@@ -72,9 +25,41 @@ class LiterateCoding(Directive):
     optional_arguments = 0
     final_argument_whitespace = False
 
+    def parse_file(self, fpath):
+        '''
+        Read a file from the file system
+
+        :returns: A file-like object.
+        :raises IOError: If the file cannot be found or read.
+        '''
+        with open(fpath, 'rb') as f:
+            for line in f:
+                yield line
+
+    def parse_lit(self, lines):
+        '''
+        Parse a string line-by-line delineating comments and code
+
+        :returns: An tuple of boolean/list-of-string pairs. True designates a
+            comment; False designates code.
+        '''
+        comment_char = '#' # TODO: move this into a directive option
+        comment = re.compile(r'^\s*{0}[ \n]'.format(comment_char))
+        section_test = lambda val: bool(comment.match(val))
+
+        sections = []
+        for is_doc, group in itertools.groupby(lines, section_test):
+            if is_doc:
+                text = [comment.sub('', i).rstrip('\r\n') for i in group]
+            else:
+                text = [i.rstrip('\r\n') for i in group]
+
+            sections.append((is_doc, text))
+
+        return sections
+
     def run(self):
-        config = self.state.document.settings.env.config
-        lines = parse_sls_file(config, self.arguments[0])
+        lines = self.parse_lit(self.parse_file((self.arguments[0])))
 
         node = nodes.container()
         node['classes'] = ['lit-container']
