@@ -45,6 +45,15 @@ def version():
     return out[1]
 
 def _hadoop_cmd(module, command, *args):
+    '''
+       Hadoop command wrapper 
+
+       In order to prevent random execution the module name is checked
+
+       Follows hadoop command template:
+          hadoop module -command args
+       E.g.: hadoop dfs -ls /
+    '''
     out = None
     if module and command:
        if module in __authorized_modules__:
@@ -64,7 +73,7 @@ def dfs(command=None, *args):
  
     .. code-block:: bash
 
-        salt '*' hadoop.cmd ls /
+        salt '*' hadoop.dfs ls /
     '''
     if command:
         return _hadoop_cmd('dfs', command, *args)
@@ -72,6 +81,19 @@ def dfs(command=None, *args):
         return 'Error: command must be provided'
 
 def dfs_present(path):
+    '''
+    Check if a file or directory is present on the distributed FS.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hadoop.dfs_present /some_random_file
+
+
+    Returns True if the file is present
+    '''
+
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
     if 'No such file or directory' in cmd_return:
        return False
@@ -79,6 +101,18 @@ def dfs_present(path):
        return True
 
 def dfs_absent(path):
+    '''
+    Check if a file or directory is absent on the distributed FS.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hadoop.dfs_absent /some_random_file
+
+    Returns True if the file is absent
+    '''
+
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
     if 'No such file or directory' in cmd_return:
        return True
