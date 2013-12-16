@@ -517,6 +517,32 @@ instance.
     $ salt-cloud -a show_instance myinstance
 
 
+ebs_optimized
+=============
+This argument enables switching of the EbsOptimized setting which default
+to 'false'. Indicates whether the instance is optimized for EBS I/O. This
+optimization provides dedicated throughput to Amazon EBS and an optimized
+configuration stack to provide optimal Amazon EBS I/O performance. This
+optimization isn't available with all instance types. Additional usage
+charges apply when using an EBS-optimized instance.
+
+This setting can be added to the profile or map file for an instance.
+
+If set to True, this setting will enable an instance to be EbsOptimized
+
+.. code-block:: yaml
+
+   ebs_optimized: True
+
+This can also be set as a cloud provider setting in the EC2 cloud
+configuration:
+
+.. code-block:: yaml
+
+   my-ec2-config:
+     ebs_optimized: True
+
+
 del_root_vol_on_destroy
 =======================
 This argument overrides the default DeleteOnTermination setting in the AMI for
