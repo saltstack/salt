@@ -10,15 +10,8 @@ Support for hadoop
 
 '''
 
-# Import python libs
-import os
-import sys
-import shlex
-
 # Import salt libs
 import salt.utils
-from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.exceptions import SaltException
 
 __authorized_modules__ = ['namenode', 'dfsadmin', 'dfs', 'fs']
 
@@ -46,7 +39,7 @@ def version():
 
 def _hadoop_cmd(module, command, *args):
     '''
-       Hadoop command wrapper 
+       Hadoop command wrapper
 
        In order to prevent random execution the module name is checked
 
@@ -56,21 +49,21 @@ def _hadoop_cmd(module, command, *args):
     '''
     out = None
     if module and command:
-       if module in __authorized_modules__:
-           cmd = 'hadoop %s -%s %s' % (module, command, ' '.join(args))
-           out = __salt__['cmd.run'](cmd)
-       else:
-           return 'Error: Unknown module' 
+        if module in __authorized_modules__:
+            cmd = 'hadoop %s -%s %s' % (module, command, ' '.join(args))
+            out = __salt__['cmd.run'](cmd)
+        else:
+            return 'Error: Unknown module'
     else:
-       return 'Error: Module and command not defined'
+        return 'Error: Module and command not defined'
     return out
 
 def dfs(command=None, *args):
     '''
     Execute a command on DFS
 
-    CLI Example: 
- 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' hadoop.dfs ls /
@@ -83,7 +76,7 @@ def dfs(command=None, *args):
 def dfs_present(path):
     '''
     Check if a file or directory is present on the distributed FS.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -96,14 +89,14 @@ def dfs_present(path):
 
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
     if 'No such file or directory' in cmd_return:
-       return False
+        return False
     else:
-       return True
+        return True
 
 def dfs_absent(path):
     '''
     Check if a file or directory is absent on the distributed FS.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -115,9 +108,9 @@ def dfs_absent(path):
 
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
     if 'No such file or directory' in cmd_return:
-       return True
+        return True
     else:
-       return False
+        return False
 
 def namenode_format(force=None):
     '''
