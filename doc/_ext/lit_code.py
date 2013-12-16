@@ -27,12 +27,14 @@ class LiterateCoding(Directive):
 
     def parse_file(self, fpath):
         '''
-        Read a file from the file system
+        Read a file on the file system (relative to salt's base project dir)
 
         :returns: A file-like object.
         :raises IOError: If the file cannot be found or read.
         '''
-        with open(fpath, 'rb') as f:
+        sdir =  os.path.abspath(os.path.join(os.path.dirname(salt.__file__),
+            os.pardir))
+        with open(os.path.join(sdir, fpath), 'rb') as f:
             for line in f:
                 yield line
 
@@ -108,6 +110,39 @@ class LiterateCoding(Directive):
 
         return [node]
 
+
+class LiterateFormula(LiterateCoding):
+    '''
+    Customizations to handle finding and parsing SLS files
+    '''
+
+    def parse_file(self, sls_path):
+        '''
+        Given a typical Salt SLS path (e.g.: apache.vhosts.standard), find the
+        file on the file system and parse it
+        '''
+        config = self.state.document.settings.env.config
+        formulas_dirs = config.formulas_dirs
+        fpath = sls_path.replace('.', '/')
+
+        name_options = (
+            '{0}.sls'.format(fpath),
+            os.path.join(fpath, 'init.sls')
+        )
+
+        paths = [os.path.join(fdir, fname)
+                for fname in name_options
+                    for fdir in formulas_dirs]
+
+        for i in paths:
+            try:
+                return self.parse_file(i)
+            except IOError:
+                pass
+
+        raise Exception("Could not find sls file '{0}'".format(sls_path))
+
+
 def setup(app):
     '''
     Register the above directive with Sphinx
@@ -117,4 +152,5 @@ def setup(app):
             formulas_path)
 
     app.add_config_value('formulas_dirs', [formulas_dir], 'env')
-    app.add_directive('formula', LiterateCoding)
+    app.add_directive('saltconfig', LiterateCoding)
+    app.add_directive('formula', LiterateFormula)
