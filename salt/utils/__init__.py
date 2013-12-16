@@ -1194,7 +1194,7 @@ def check_state_result(running):
         if not isinstance(running[host], dict):
             return False
 
-        if host.find('_|-') == 4:
+        if host.find('_|-') >= 3:
             # This is a single ret, no host associated
             rets = running[host]
         else:
