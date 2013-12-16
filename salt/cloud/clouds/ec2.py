@@ -947,6 +947,17 @@ def create(vm_=None, call=None):
     if network_interfaces:
         params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
 
+    set_ebs_optimized = config.get_cloud_config_value(
+        'ebs_optimized', vm_, __opts__, search_global=False
+    )
+
+    if set_ebs_optimized is not None:
+        if not isinstance(set_ebs_optimized, bool):
+            raise SaltCloudConfigError(
+                '\'ebs_optimized\' should be a boolean value.'
+            )
+        params['EbsOptimized'] = set_ebs_optimized
+
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
