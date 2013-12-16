@@ -25,6 +25,42 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def get_minion_data(minion, opts):
+    '''
+    Get the grains/pillar for a specific minion.  If minion is None, it
+    will return the grains/pillar for the first minion it finds.
+
+    Return value is a tuple of the minion ID, grains, and pillar
+    '''
+    if opts.get('minion_data_cache', False):
+        serial = salt.payload.Serial(opts)
+        cdir = os.path.join(opts['cachedir'], 'minions')
+        if not os.path.isdir(cdir):
+            return minion if minion else None, None, None
+        minions = os.listdir(cdir)
+        if minion is None:
+            # If no minion specified, take first one with valid grains
+            for id_ in minions:
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                miniondata = serial.load(salt.utils.fopen(datap))
+                grains = miniondata.get('grains')
+                pillar = miniondata.get('pillar')
+                return id_, grains, pillar
+        else:
+            # Search for specific minion
+            datap = os.path.join(cdir, minion, 'data.p')
+            if not os.path.isfile(datap):
+                return minion, None, None
+            miniondata = serial.load(salt.utils.fopen(datap))
+            grains = miniondata.get('grains')
+            pillar = miniondata.get('pillar')
+            return minion, grains, pillar
+    # No cache dir, return empty dict
+    return minion if minion else None, None, None
+
+
 def nodegroup_comp(group, nodegroups, skip=None):
     '''
     Take the nodegroup and the nodegroups and fill in nodegroup refs
