@@ -1,3 +1,7 @@
+salt (0.17.0-1.1-he+1) unstable; urgency=low
+
+ -- Volker Schwicking <vs@hosteurope.de>  Fri, 29 Nov 2013 10:45:18 +0000
+
 salt (0.17.0-1) unstable; urgency=low
 
   * New upstream version
