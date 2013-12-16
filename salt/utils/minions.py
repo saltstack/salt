@@ -402,6 +402,7 @@ class CkMinions(object):
                        'compound': self._check_compound_minions,
                        'ipcidr': self._check_ipcidr_minions,
                        'range': self._check_range_minions,
+                       'exsel': self._all_minions,
                        }[expr_form](expr)
         except Exception:
             log.exception(
