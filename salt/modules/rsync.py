@@ -20,7 +20,7 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
     Generate rsync options
     '''
     options = '-avz'
-    
+
     if delete:
         options = options + ' --delete'
     if force:
@@ -35,16 +35,16 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
             exclude = None
     if exclude:
         options = options + ' --exclude=' + exclude
-    
+
     return options
 
-    
 
-def rsync(src, 
-          dst, 
-          delete=False, 
-          force=False, 
-          update=False, 
+
+def rsync(src,
+          dst,
+          delete=False,
+          force=False,
+          update=False,
           passwordfile=None,
           exclude=None,
           excludefrom=None,
@@ -78,7 +78,7 @@ def rsync(src,
     if not src or not dst:
         raise CommandExecutionError('ERROR: src and dst cannot be empty.')
 
-   
+
     option = _check(delete, force, update, passwordfile, exclude, excludefrom)
     cmd = (
         r'''rsync {option} {src} {dst}'''
@@ -87,7 +87,7 @@ def rsync(src,
             src=src,
             dst=dst,
         )
-    )     
+    )
 
     try:
         ret = __salt__['cmd.run_all'](cmd)
@@ -107,7 +107,7 @@ def version():
 
         salt '*' rsync.version
     '''
-    
+
     cmd = (r'''rsync --version''')
 
     try:
@@ -129,7 +129,7 @@ def config(confile='/etc/rsyncd.conf'):
 
         salt '*' rsync.config
     '''
-    
+
     if not os.path.isfile(confile):
         raise CommandExecutionError('ERROR: %s is not exists' % confile)
 
