@@ -22,7 +22,7 @@ __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 # Needs to be improved to somehow include ARM architectures
 __ALL_ARCHES = ('ia32e', 'x86_64', 'athlon', 'i686', 'i586', 'i486', 'i386',
                 'noarch')
-__SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
+__SUFFIX_NOT_NEEDED = ('i386', 'x86_64', 'noarch')
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
