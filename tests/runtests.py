@@ -281,7 +281,6 @@ def main():
     parser = SaltTestsuiteParser(
         TEST_DIR,
         xml_output_dir=XML_OUTPUT_DIR,
-        html_output_dir=HTML_OUTPUT_DIR,
         tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
     )
     parser.parse_args()
