@@ -79,7 +79,7 @@ def __virtual__():
     libcloudfuncs.__opts__ = __opts__
 
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no AWS cloud provider configuration available. Not '
             'loading module'
         )
