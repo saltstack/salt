@@ -986,14 +986,22 @@ class State(object):
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
-                    errors.append(
-                        'Cannot extend ID {0} in "{1}:{2}". It is not part '
-                        'of the high state.'.format(
-                            name,
-                            body.get('__env__', 'base'),
-                            body.get('__sls__', 'base'))
-                        )
-                    continue
+                    state_type = next(
+                        x for x in body if not x.startswith('__')
+                    )
+                    # Check for a matching 'name' override in high data
+                    id_ = find_name(name, state_type, high)
+                    if id_:
+                        name = id_
+                    else:
+                        errors.append(
+                            'Cannot extend ID {0} in "{1}:{2}". It is not '
+                            'part of the high state.'.format(
+                                name,
+                                body.get('__env__', 'base'),
+                                body.get('__sls__', 'base'))
+                            )
+                        continue
                 for state, run in body.items():
                     if state.startswith('__'):
                         continue
