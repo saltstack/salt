@@ -176,12 +176,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
-    def test_exsel(self):
-        data = self.run_salt('-X test.ping test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
-
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
