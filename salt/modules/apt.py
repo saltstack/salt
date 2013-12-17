@@ -361,6 +361,7 @@ def install(name=None,
         Passes ``--force-yes`` to the apt-get command.  Don't use this unless
         you know what you're doing.
 
+        .. versionadded:: 0.17.4
 
     Returns a dict containing the new package names and versions::
 
