@@ -40,8 +40,8 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
 
     
 
-def rsync(sour, 
-          dest, 
+def rsync(src, 
+          dst, 
           delete=False, 
           force=False, 
           update=False, 
@@ -50,19 +50,19 @@ def rsync(sour,
           excludefrom=None,
           ):
     '''
-    Rsync files from sour to dest
+    Rsync files from src to dst
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' rsync.rsync {sour} {dest} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx}
-        salt '*' rsync.rsync {sour} {dest} {delete=True} {excludefrom=/xx.ini}
+        salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx}
+        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini}
     '''
-    if not sour:
-        sour = __salt__['config.option']('rsync.sour')
-    if not dest:
-        dest = __salt__['config.option']('rsync.dest')
+    if not src:
+        src = __salt__['config.option']('rsync.src')
+    if not dst:
+        dst = __salt__['config.option']('rsync.dst')
     if not delete:
         delete = __salt__['config.option']('rsync.delete')
     if not force:
@@ -75,17 +75,17 @@ def rsync(sour,
         exclude = __salt__['config.option']('rsync.exclude')
     if not excludefrom:
         excludefrom = __salt__['config.option']('rsync.excludefrom')
-    if not sour or not dest:
-        raise CommandExecutionError('ERROR: sour and dest cannot be empty.')
+    if not src or not dst:
+        raise CommandExecutionError('ERROR: src and dst cannot be empty.')
 
    
     option = _check(delete, force, update, passwordfile, exclude, excludefrom)
     cmd = (
-        r'''rsync {option} {sour} {dest}'''
+        r'''rsync {option} {src} {dst}'''
         .format(
             option=option,
-            sour=sour,
-            dest=dest,
+            src=src,
+            dst=dst,
         )
     )     
 
