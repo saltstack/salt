@@ -215,6 +215,9 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         jid = ''
 
+        # Subscribe to all events and subscribe as early as possible
+        self.event.subscribe(jid)
+
         pub_data = self.pub(
             tgt,
             fun,
