@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.exceptions import CommandExecutionError, MinionError
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
@@ -287,10 +288,12 @@ def install(name=None, refresh=False, fromrepo=None,
 
         salt '*' pkg.install <package name>
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
@@ -388,7 +391,13 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     if not pkg_params:
         return {}
 

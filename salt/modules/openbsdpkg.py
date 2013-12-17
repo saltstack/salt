@@ -10,6 +10,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -159,10 +160,13 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -202,9 +206,13 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
+    try:
+        pkg_params = [x.split('--')[0] for x in
+                      __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs()
-    pkg_params = [x.split('--')[0] for x in
-                  __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
