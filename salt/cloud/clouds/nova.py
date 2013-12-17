@@ -697,7 +697,7 @@ def avail_images():
     '''
     conn = get_conn()
     return _salt_client().cmd(conn['auth_minion'],
-                              'glance.image_list',
+                              'nova.image_list',
                               [conn['profile']])
 
 
