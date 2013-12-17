@@ -23,7 +23,6 @@ STUB_PID_LIST = [0, 1, 2, 3]
 MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
 
 
-
 @skipIf(not HAS_PSUTIL, "psutils are required for this test case")
 class PsTestCase(TestCase):
 
