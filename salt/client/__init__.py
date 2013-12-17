@@ -635,6 +635,7 @@ class LocalClient(object):
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             yield {}
+        last_time = False
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
@@ -674,6 +675,20 @@ class LocalClient(object):
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
+            if last_time:
+                if verbose:
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
+                        if len(found.intersection(minions)) >= len(minions):
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                yield({
+                                    minion: {
+                                        'out': 'no_return',
+                                        'ret': 'Minion did not return'
+                                    }
+                                })
+                break
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
@@ -689,19 +704,9 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
-                if verbose:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found.intersection(minions)) >= len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                yield({
-                                    minion: {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                                })
-                break
+                else:
+                    last_time = True
+                    continue
             time.sleep(0.01)
 
     def get_iter_returns(
@@ -735,6 +740,7 @@ class LocalClient(object):
             yield {}
         # Wait for the hosts to check in
         syndic_wait = 0
+        last_time = False
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
@@ -779,6 +785,8 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
+            if last_time:
+                break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
@@ -790,7 +798,9 @@ class LocalClient(object):
                 if more_time:
                     timeout_at = int(time.time()) + timeout
                     continue
-                break
+                else:
+                    last_time = True
+                    continue
             time.sleep(0.01)
 
     def get_returns(
@@ -1030,6 +1040,7 @@ class LocalClient(object):
             yield {}
         # Wait for the hosts to check in
         syndic_wait = 0
+        last_time = False
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
@@ -1072,6 +1083,20 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
+            if last_time:
+                if verbose or show_timeout:
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
+                        if len(found) < len(minions):
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                yield({
+                                    minion: {
+                                        'out': 'no_return',
+                                        'ret': 'Minion did not return'
+                                    }
+                                })
+                break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
@@ -1087,19 +1112,8 @@ class LocalClient(object):
                 if more_time:
                     timeout_at = int(time.time()) + timeout
                     continue
-                if verbose or show_timeout:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found) < len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                yield({
-                                    minion: {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                                })
-                break
+                else:
+                    last_time = True
             time.sleep(0.01)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
