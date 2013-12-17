@@ -18,7 +18,7 @@ specified user. This configuration is much like the ``peer`` configuration:
       thatch:
         - .*
       fred:
-        - ping.*
+        - test.*
         - pkg.*
 
 Permission Issues
