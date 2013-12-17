@@ -753,9 +753,10 @@ def run_buildout(directory='.',
     if verbose:
         LOG.debug(u'Buildout is running in verbose mode!')
         argv.append('-vvvvvvv')
-    if newest and not os.path.exists(installed_cfg):
+    if not newest and os.path.exists(installed_cfg):
+        LOG.debug(u'Buildout is running in non newest mode!')
         argv.append('-N')
-    else:
+    if newest:
         LOG.debug(u'Buildout is running in newest mode!')
         argv.append('-n')
     if offline:
