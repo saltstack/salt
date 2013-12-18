@@ -2117,11 +2117,12 @@ class ClearFuncs(object):
                     'user': token['name']}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
-                data['ret'] = ret
+                ret = self.wheel_.call_func(fun, **clear_load)
+                data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return tag
+                return {'tag': tag,
+                        'data': data}
             except Exception as exc:
                 log.error(exc)
                 log.error('Exception occurred while '
@@ -2131,7 +2132,8 @@ class ClearFuncs(object):
                                             exc,
                                             )
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return tag
+                return {'tag': tag,
+                        'data': data}
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -2178,11 +2180,12 @@ class ClearFuncs(object):
                     'user': clear_load.get('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
-                data['ret'] = ret
+                ret = self.wheel_.call_func(fun, **clear_load)
+                data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return tag
+                return {'tag': tag,
+                        'data': data}
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -2191,7 +2194,8 @@ class ClearFuncs(object):
                                                             exc,
                                                             )
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return tag
+                return {'tag': tag,
+                        'data': data}
 
         except Exception as exc:
             log.error(
