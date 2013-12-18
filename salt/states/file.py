@@ -1181,36 +1181,47 @@ def managed(name,
     )
 
     # Gather the source file from the server
-    sfn, source_sum, comment_ = __salt__['file.get_managed'](
-        name,
-        template,
-        source,
-        source_hash,
-        user,
-        group,
-        mode,
-        __env__,
-        context,
-        defaults,
-        **kwargs
-    )
+    try:
+        sfn, source_sum, comment_ = __salt__['file.get_managed'](
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            __env__,
+            context,
+            defaults,
+            **kwargs
+        )
+    except Exception as exc:
+        ret['changes'] = {}
+        return _error(ret, 'Unable to manage file: {0}'.format(exc))
+
     if comment_ and contents is None:
         return _error(ret, comment_)
     else:
-        return __salt__['file.manage_file'](name,
-                                            sfn,
-                                            ret,
-                                            source,
-                                            source_sum,
-                                            user,
-                                            group,
-                                            mode,
-                                            __env__,
-                                            backup,
-                                            template,
-                                            show_diff,
-                                            contents,
-                                            dir_mode)
+        try:
+            return __salt__['file.manage_file'](
+                name,
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                __env__,
+                backup,
+                template,
+                show_diff,
+                contents,
+                dir_mode
+            )
+        except Exception as exc:
+            ret['changes'] = {}
+            return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
 
 def directory(name,
