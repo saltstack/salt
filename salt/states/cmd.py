@@ -150,7 +150,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -723,14 +723,14 @@ def script(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Command "{0}" would have been executed'
+            ret['comment'] = 'Command {0!r} would have been executed'
             ret['comment'] = ret['comment'].format(name)
             return _reinterpreted_state(ret) if stateful else ret
 
         # Wow, we passed the test, run this sucker!
         try:
             cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
-        except (CommandExecutionError, IOError) as err:
+        except (CommandExecutionError, SaltRenderError, IOError) as err:
             ret['comment'] = str(err)
             return ret
 
@@ -741,9 +741,9 @@ def script(name,
             ret['result'] = not bool(cmd_all['retcode'])
         if ret.get('changes', {}).get('cache_error'):
             ret['comment'] = 'Unable to cache script {0} from env ' \
-                             '\'{1}\''.format(source, env)
+                             '{1!r}'.format(source, env)
         else:
-            ret['comment'] = 'Command "{0}" run'.format(name)
+            ret['comment'] = 'Command {0!r} run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
