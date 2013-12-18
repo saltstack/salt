@@ -114,7 +114,7 @@ def latest(name,
 
     # Check to make sure rev and mirror/bare are not both in use
     if rev and (mirror or bare):
-        return _fail(ret, ('"rev" is not compatible with the "mirror" and'
+        return _fail(ret, ('"rev" is not compatible with the "mirror" and '
                            '"bare" arguments'))
 
     if not target:
