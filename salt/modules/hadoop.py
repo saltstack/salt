@@ -15,6 +15,7 @@ import salt.utils
 
 __authorized_modules__ = ['namenode', 'dfsadmin', 'dfs', 'fs']
 
+
 def __virtual__():
     '''
     Check if hadoop is present, then load the module
@@ -22,6 +23,7 @@ def __virtual__():
     if salt.utils.which('hadoop'):
         return 'hadoop'
     return False
+
 
 def version():
     '''
@@ -36,6 +38,7 @@ def version():
     cmd = 'hadoop version'
     out = __salt__['cmd.run'](cmd).split()
     return out[1]
+
 
 def _hadoop_cmd(module, command, *args):
     '''
@@ -58,6 +61,7 @@ def _hadoop_cmd(module, command, *args):
         return 'Error: Module and command not defined'
     return out
 
+
 def dfs(command=None, *args):
     '''
     Execute a command on DFS
@@ -72,6 +76,7 @@ def dfs(command=None, *args):
         return _hadoop_cmd('dfs', command, *args)
     else:
         return 'Error: command must be provided'
+
 
 def dfs_present(path):
     '''
@@ -93,6 +98,7 @@ def dfs_present(path):
     else:
         return True
 
+
 def dfs_absent(path):
     '''
     Check if a file or directory is absent on the distributed FS.
@@ -111,6 +117,7 @@ def dfs_absent(path):
         return True
     else:
         return False
+
 
 def namenode_format(force=None):
     '''
