@@ -16,18 +16,36 @@ HAS_PSUTIL = ps.__virtual__()
 
 if HAS_PSUTIL:
     import psutil
+
     STUB_CPU_TIMES = psutil._compat.namedtuple('cputimes', 'user nice system idle')(1, 2, 3, 4)
     STUB_PHY_MEM_USAGE = psutil._compat.namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
-    STUB_DISK_PARTITION = psutil._compat.namedtuple('partition', 'device mountpoint fstype, opts')('/dev/disk0s2', '/', 'hfs', 'rw,local,rootfs,dovolfs,journaled,multilabel')
+    STUB_DISK_PARTITION = psutil._compat.namedtuple('partition', 'device mountpoint fstype, opts')('/dev/disk0s2', '/',
+                                                                                                   'hfs',
+                                                                                                   'rw,local,rootfs,dovolfs,journaled,multilabel')
     STUB_DISK_USAGE = psutil._compat.namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
-    STUB_NETWORK_IO = psutil._compat.namedtuple('iostat', 'bytes_sent, bytes_recv, packets_sent, packets_recv, errin errout dropin dropout')(1000, 2000, 500, 600, 1, 2, 3, 4)
-    STUB_DISK_IO = psutil._compat.namedtuple('iostat', 'read_count, write_count, read_bytes, write_bytes, read_time, write_time')(1000, 2000, 500, 600, 2000, 3000)
-    STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost', 0.0)
+    STUB_NETWORK_IO = psutil._compat.namedtuple('iostat',
+                                                'bytes_sent, bytes_recv, packets_sent, packets_recv, errin errout dropin dropout')(
+        1000, 2000, 500, 600, 1, 2, 3, 4)
+    STUB_DISK_IO = psutil._compat.namedtuple('iostat',
+                                             'read_count, write_count, read_bytes, write_bytes, read_time, write_time')(
+        1000, 2000, 500, 600, 2000, 3000)
+    STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
+                                                                                   0.0)
+else:
+    (STUB_CPU_TIMES,
+     STUB_PHY_MEM_USAGE,
+     STUB_DISK_PARTITION,
+     STUB_DISK_USAGE,
+     STUB_NETWORK_IO,
+     STUB_DISK_IO,
+     STUB_USER) = [None for val in range(7)]
+
 STUB_PID_LIST = [0, 1, 2, 3]
 MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
 
 try:
     import utmp
+
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
@@ -35,7 +53,6 @@ except ImportError:
 
 @skipIf(not HAS_PSUTIL, "psutils are required for this test case")
 class PsTestCase(TestCase):
-
     def setUp(self):
         MOCK_PROC.name = 'test_mock_proc'
         MOCK_PROC.pid = 9999999999
@@ -87,8 +104,10 @@ class PsTestCase(TestCase):
 
     @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partitions(self):
-        self.assertDictEqual({'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel', 'fstype': 'hfs'},
-                             ps.disk_partitions()[0])
+        self.assertDictEqual(
+            {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
+             'fstype': 'hfs'},
+            ps.disk_partitions()[0])
 
     @patch('psutil.disk_usage', new=MagicMock(return_value=STUB_DISK_USAGE))
     def test_disk_usage(self):
@@ -96,8 +115,10 @@ class PsTestCase(TestCase):
 
     @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partition_usage(self):
-        self.assertDictEqual({'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel', 'fstype': 'hfs'},
-                             ps.disk_partitions()[0])
+        self.assertDictEqual(
+            {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
+             'fstype': 'hfs'},
+            ps.disk_partitions()[0])
 
     ## Should only be tested in integration
     # def test_total_physical_memory(self):
@@ -112,18 +133,23 @@ class PsTestCase(TestCase):
     #     pass
     @patch('psutil.network_io_counters', new=MagicMock(return_value=STUB_NETWORK_IO))
     def test_network_io_counters(self):
-        self.assertDictEqual({'packets_sent': 500, 'packets_recv': 600, 'bytes_recv': 2000, 'dropout': 4, 'bytes_sent': 1000, 'errout': 2, 'errin': 1, 'dropin': 3}, ps.network_io_counters())
+        self.assertDictEqual(
+            {'packets_sent': 500, 'packets_recv': 600, 'bytes_recv': 2000, 'dropout': 4, 'bytes_sent': 1000,
+             'errout': 2, 'errin': 1, 'dropin': 3}, ps.network_io_counters())
 
     @patch('psutil.disk_io_counters', new=MagicMock(return_value=STUB_DISK_IO))
     def test_disk_io_counters(self):
-        self.assertDictEqual({'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000, 'write_count': 2000}, ps.disk_io_counters())
+        self.assertDictEqual(
+            {'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000,
+             'write_count': 2000}, ps.disk_io_counters())
 
     @patch('psutil.get_users', new=MagicMock(return_value=[STUB_USER]))
     def test_get_users(self):
-        self.assertDictEqual({'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'}, ps.get_users()[0])
+        self.assertDictEqual({'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'},
+                             ps.get_users()[0])
 
-    ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
-    # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
-    # @patch('psutil.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
-    # def test_get_users_utmp(self):
-    #     pass
+        ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
+        # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
+        # @patch('psutil.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
+        # def test_get_users_utmp(self):
+        #     pass
