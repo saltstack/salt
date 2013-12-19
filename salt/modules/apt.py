@@ -117,7 +117,7 @@ def _get_virtual():
     '''
     if 'pkg._get_virtual' not in __context__:
         __context__['pkg._get_virtual'] = {}
-        if  __salt__['cmd.has_exec']('grep-available'):
+        if __salt__['cmd.has_exec']('grep-available'):
             cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
             out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
             virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
