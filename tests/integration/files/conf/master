@@ -5,7 +5,7 @@ root_dir: /tmp/salttest
 pidfile: masterpid
 pki_dir: pki
 cachedir: cache
-timeout: 1
+timeout: 3
 sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
