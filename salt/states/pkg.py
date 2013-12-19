@@ -40,7 +40,7 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
 
 if salt.utils.is_windows():
@@ -455,14 +455,22 @@ def installed(
                 'comment': comment}
 
     comment = []
-    pkg_ret = __salt__['pkg.install'](name,
-                                      refresh=refresh,
-                                      version=version,
-                                      fromrepo=fromrepo,
-                                      skip_verify=skip_verify,
-                                      pkgs=pkgs,
-                                      sources=sources,
-                                      **kwargs)
+    try:
+        pkg_ret = __salt__['pkg.install'](name,
+                                          refresh=refresh,
+                                          version=version,
+                                          fromrepo=fromrepo,
+                                          skip_verify=skip_verify,
+                                          pkgs=pkgs,
+                                          sources=sources,
+                                          **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while installing '
+                           'package(s): {0}'.format(exc)}
+
     if isinstance(pkg_ret, dict):
         changes = pkg_ret
     elif isinstance(pkg_ret, basestring):
@@ -676,14 +684,21 @@ def latest(
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
 
-        # No need to refresh, if a refresh was necessary it would have been
-        # performed above when pkg.latest_version was run.
-        changes = __salt__['pkg.install'](name,
-                                          refresh=False,
-                                          fromrepo=fromrepo,
-                                          skip_verify=skip_verify,
-                                          pkgs=targeted_pkgs,
-                                          **kwargs)
+        try:
+            # No need to refresh, if a refresh was necessary it would have been
+            # performed above when pkg.latest_version was run.
+            changes = __salt__['pkg.install'](name,
+                                            refresh=false,
+                                            fromrepo=fromrepo,
+                                            skip_verify=skip_verify,
+                                            pkgs=targeted_pkgs,
+                                            **kwargs)
+        except CommandExecutionError as exc:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while installing '
+                               'package(s): {0}'.format(exc)}
 
         if changes:
             # Find failed and successful updates
@@ -765,7 +780,14 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
                 'comment': 'Invalid action {0!r}. '
                            'This is probably a bug.'.format(action)}
 
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while parsing targets: '
+                           '{0}'.format(exc)}
     old = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     targets = [x for x in pkg_params if x in old]
     if action == 'purge':
