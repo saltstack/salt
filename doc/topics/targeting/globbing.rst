@@ -57,6 +57,12 @@ Match the ``web1`` through ``web5`` minions:
 
     salt 'web[1-5]' test.ping
 
+Match the ``web1`` and ``web3`` minions:
+
+.. code-block:: bash
+
+    salt 'web[1,3]' test.ping
+
 Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 
 .. code-block:: bash
