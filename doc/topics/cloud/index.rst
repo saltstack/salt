@@ -96,12 +96,20 @@ Troubleshooting Steps
 Extending Salt Cloud
 ====================
 
-Salt cloud extensions work in a way similar to Salt modules. Therefore
+Salt Cloud extensions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
 * :doc:`Adding Cloud Providers <cloud>`
 * :doc:`Adding OS Support <deploy>`
+
+Using Salt Cloud from Salt
+==========================
+
+Several Salt Cloud modules exist within Salt itself in order to manage cloud
+instances using Salt's own powerful feature set.
+
+* :doc:`Using Salt Cloud from Salt <salt>`
 
 Feature Comparison
 ==================
