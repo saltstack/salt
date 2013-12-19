@@ -139,7 +139,7 @@ __virtualname__ = 'logstash'
 def __virtual__():
     if not any(['logstash_udp_handler' in __opts__,
                 'logstash_zmq_handler' in __opts__]):
-        log.debug(
+        log.trace(
             'None of the required configuration sections, '
             '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
             'were found the in the configuration. Not loading the Logstash '
