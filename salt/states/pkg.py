@@ -688,11 +688,11 @@ def latest(
             # No need to refresh, if a refresh was necessary it would have been
             # performed above when pkg.latest_version was run.
             changes = __salt__['pkg.install'](name,
-                                            refresh=False,
-                                            fromrepo=fromrepo,
-                                            skip_verify=skip_verify,
-                                            pkgs=targeted_pkgs,
-                                            **kwargs)
+                                              refresh=False,
+                                              fromrepo=fromrepo,
+                                              skip_verify=skip_verify,
+                                              pkgs=targeted_pkgs,
+                                              **kwargs)
         except CommandExecutionError as exc:
             return {'name': name,
                     'changes': {},
