@@ -67,11 +67,12 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
                 locals()[mod] = __import__(mod)
                 tops.append(os.path.dirname(locals()[mod].__file__))
             except ImportError:
-                pass # Not entirely sure this is the right thing, but the only
-                     # options seem to be 1) fail, 2) spew errors, or 3) pass.
-                     # Nothing else in here spits errors, and the markupsafe code
-                     # doesn't bail on import failure, so I followed that lead.
-                     # And of course, any other failure still S/T's.
+                # Not entirely sure this is the right thing, but the only
+                # options seem to be 1) fail, 2) spew errors, or 3) pass.
+                # Nothing else in here spits errors, and the markupsafe code
+                # doesn't bail on import failure, so I followed that lead.
+                # And of course, any other failure still S/T's.
+                pass
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
