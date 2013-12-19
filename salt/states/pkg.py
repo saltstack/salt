@@ -688,7 +688,7 @@ def latest(
             # No need to refresh, if a refresh was necessary it would have been
             # performed above when pkg.latest_version was run.
             changes = __salt__['pkg.install'](name,
-                                            refresh=false,
+                                            refresh=False,
                                             fromrepo=fromrepo,
                                             skip_verify=skip_verify,
                                             pkgs=targeted_pkgs,
