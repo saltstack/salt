@@ -19,10 +19,18 @@ log = logging.getLogger(__name__)
 # it without considering its impact there.
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
-# Needs to be improved to somehow include ARM architectures
-__ALL_ARCHES = ('ia32e', 'x86_64', 'athlon', 'i686', 'i586', 'i486', 'i386',
-                'noarch')
-__SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
+# These arches compiled from the rpmUtils.arch python module source
+__ARCHES = (
+    'x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode',
+    'i386', 'i486', 'i586', 'i686',
+    'ppc', 'ppc64', 'ppc64iseries', 'ppc64pseries',
+    's390', 's390x',
+    'sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v',
+    'alpha', 'alphaev4', 'alphaev45', 'alphaev5', 'alphaev56',
+    'alphapca56', 'alphaev6', 'alphaev67', 'alphaev68', 'alphaev7',
+    'armv5tel', 'armv5tejl', 'armv6l', 'armv7l',
+    'sh3', 'sh4', 'sh4a',
+)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -68,9 +76,7 @@ def _parse_pkginfo(line):
     except ValueError:
         return None
 
-    # Support 32-bit packages on x86_64 systems
-    if __grains__.get('cpuarch') in __SUFFIX_NOT_NEEDED \
-            and arch not in __SUFFIX_NOT_NEEDED:
+    if arch != 'noarch' and arch != __grains__['osarch']:
         name += '.{0}'.format(arch)
     if release:
         version += '-{0}'.format(release)
@@ -125,23 +131,6 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
-def _pkg_arch(name):
-    '''
-    Returns a 2-tuple of the name and arch parts of the passed string. Note
-    that packages that are for the system architecture should not have the
-    architecture specified in the passed string.
-    '''
-    # TODO: Fix __grains__ availability in provider overrides
-    if not any(name.endswith('.{0}'.format(x)) for x in __ALL_ARCHES):
-        return name, __grains__['cpuarch']
-    try:
-        pkgname, pkgarch = name.rsplit('.', 1)
-    except ValueError:
-        return name, __grains__['cpuarch']
-    else:
-        return pkgname, pkgarch
-
-
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -167,15 +156,33 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 0:
         return ''
+
+    # Initialize the return dict with empty strings, and populate namearch_map.
+    # namearch_map will provide a means of distinguishing between multiple
+    # matches for the same package name, for example a target of 'glibc' on an
+    # x86_64 arch would return both x86_64 and i686 versions when searched
+    # using repoquery:
+    #
+    # $ repoquery --all --pkgnarrow=available glibc
+    # glibc-0:2.12-1.132.el6.i686
+    # glibc-0:2.12-1.132.el6.x86_64
+    #
+    # Note that the logic in the for loop below would place the osarch into the
+    # map for noarch packages, but those cases are accounted for when iterating
+    # through the repoquery results later on. If the repoquery match for that
+    # package is a noarch, then the package is assumed to be noarch, and the
+    # namearch_map is ignored.
     ret = {}
     namearch_map = {}
-    # Initialize the return dict with empty strings, and populate the namearch
-    # dict
     for name in names:
         ret[name] = ''
-        pkgname, pkgarch = _pkg_arch(name)
-        namearch_map.setdefault(name, {})['name'] = pkgname
-        namearch_map[name]['arch'] = pkgarch
+        try:
+            arch = name.rsplit('.', 1)[-1]
+            if arch not in __ARCHES:
+                arch = __grains__['osarch']
+        except ValueError:
+            arch = __grains__['osarch']
+        namearch_map[name] = arch
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -184,19 +191,15 @@ def latest_version(*names, **kwargs):
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     updates = _repoquery(
-        '{0} --pkgnarrow=available {1}'.format(
-            repo_arg,
-            ' '.join([namearch_map[x]['name'] for x in names])
-        )
+        '{0} --pkgnarrow=available {1}'.format(repo_arg, ' '.join(names))
     )
 
     for name in names:
-        for pkg in (x for x in updates
-                    if x.name == namearch_map[name]['name']):
-            if (all(x in __SUFFIX_NOT_NEEDED
-                    for x in (namearch_map[name]['arch'], pkg.arch))
-                    or namearch_map[name]['arch'] == pkg.arch):
+        for pkg in (x for x in updates if x.name == name):
+            if pkg.arch == 'noarch' or pkg.arch == namearch_map[name]:
                 ret[name] = pkg.version
+                # no need to check another match, if there was one
+                break
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -525,16 +528,16 @@ def install(name=None,
                 targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
-                if __grains__.get('cpuarch', '') == 'x86_64':
-                    try:
-                        arch = re.search(r'(\.i\d86)$', pkgname).group(1)
-                    except AttributeError:
-                        arch = ''
-                    else:
-                        # Remove arch from pkgname
-                        pkgname = pkgname[:-len(arch)]
+                arch = ''
+                try:
+                    namepart, archpart = pkgname.rsplit('.', 1)
+                except ValueError:
+                    pass
                 else:
-                    arch = ''
+                    if archpart in __ARCHES:
+                        arch = '.' + archpart
+                        pkgname = namepart
+
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
                 if not cver or salt.utils.compare_versions(ver1=version_num,
                                                            oper='>=',

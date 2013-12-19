@@ -691,14 +691,23 @@ def create(vm_):
     return ret
 
 
+def avail_locations():
+    '''
+    Would normally return a list of available datacenters (ComputeRegions?
+    Availability Zones?), but those don't seem to be available via the nova
+    client.
+    '''
+    return {}
+
+
 def avail_images():
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
     conn = get_conn()
     return _salt_client().cmd(conn['auth_minion'],
-                              'glance.image_list',
-                              [conn['profile']])
+                              'nova.image_list',
+                              ['profile={0}'.format(conn['profile'])])
 
 
 def avail_sizes():

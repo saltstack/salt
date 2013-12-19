@@ -532,7 +532,7 @@ def running(name, container=None, port_bindings=None, binds=None,
     binds
         like -v of docker run command
 
-        ..code-block:: yaml
+        .. code-block:: yaml
 
             - binds:
                 - /var/log/service: /var/log/service
@@ -542,7 +542,7 @@ def running(name, container=None, port_bindings=None, binds=None,
     links
         Link several container together
 
-        ..code-block:: yaml
+        .. code-block:: yaml
 
             - links:
                 name_other_container: alias_for_other_container
