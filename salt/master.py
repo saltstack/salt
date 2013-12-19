@@ -2045,10 +2045,10 @@ class ClearFuncs(object):
         if not token:
             raise salt.exceptions.TokenAuthenticationError()
 
-        if token['eauth'] not in self.opts['external_auth']:
+        if not token['eauth'] in self.opts['external_auth']:
             raise salt.exceptions.TokenAuthenticationError()
 
-        if token['name'] not in self.opts['external_auth'][token['eauth']]:
+        if not token['name'] in self.opts['external_auth'][token['eauth']]:
             raise salt.exceptions.TokenAuthenticationError()
 
         good = check_func(
@@ -2066,10 +2066,10 @@ class ClearFuncs(object):
         '''
         Check a clear_load dictionary for valid eauth credentials
         '''
-        if 'eauth' not in clear_load:
+        if not 'eauth' in clear_load:
             raise salt.exceptions.EauthAuthenticationError()
 
-        if clear_load['eauth'] not in self.opts['external_auth']:
+        if not clear_load['eauth'] in self.opts['external_auth']:
             raise salt.exceptions.EauthAuthenticationError()
 
         name = self.loadauth.load_name(clear_load)
