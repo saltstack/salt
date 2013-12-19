@@ -61,17 +61,17 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
             ]
-    for mod in [ m for m in extra_mods.split(',') if m ]:
-      if mod not in locals() and mod not in globals():
-        try:
-          locals()[mod] = __import__(mod)
-          tops.append(os.path.dirname(locals()[mod].__file__))
-        except ImportError:
-          pass # Not entirely sure this is the right thing, but the only
-               # options seem to be 1) fail, 2) spew errors, or 3) pass.
-               # Nothing else in here spits errors, and the markupsafe code
-               # doesn't bail on import failure, so I followed that lead.
-               # And of course, any other failure still S/T's.
+    for mod in [m for m in extra_mods.split(',') if m]:
+        if mod not in locals() and mod not in globals():
+            try:
+                locals()[mod] = __import__(mod)
+                tops.append(os.path.dirname(locals()[mod].__file__))
+            except ImportError:
+                pass # Not entirely sure this is the right thing, but the only
+                     # options seem to be 1) fail, 2) spew errors, or 3) pass.
+                     # Nothing else in here spits errors, and the markupsafe code
+                     # doesn't bail on import failure, so I followed that lead.
+                     # And of course, any other failure still S/T's.
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
