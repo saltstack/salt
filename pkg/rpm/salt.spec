@@ -318,6 +318,12 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Dec 19 2013 Erik Johnson <erik@saltstack.com> - 0.17.4-1
+- Update to bugfix release 0.17.4
+
+* Tue Nov 19 2013 Erik Johnson <erik@saltstack.com> - 0.17.2-2
+- Patched to fix pkgrepo.managed regression
+
 * Mon Nov 18 2013 Erik Johnson <erik@saltstack.com> - 0.17.2-1
 - Update to bugfix release 0.17.2
 
