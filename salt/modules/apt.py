@@ -114,12 +114,13 @@ def _get_virtual():
     Return a dict of virtual package information
     '''
     if 'pkg._get_virtual' not in __context__:
-        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-        out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
-        virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
         __context__['pkg._get_virtual'] = {}
-        for realpkg, provides in virtpkg_re.findall(out):
-            __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+        if  __salt__['cmd.has_exec']('grep-available'):
+            cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+            for realpkg, provides in virtpkg_re.findall(out):
+                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
     return __context__['pkg._get_virtual']
 
 
