@@ -731,11 +731,12 @@ def latest(
                     'comment': ' '.join(comments)}
         else:
             if len(targets) > 10:
-                comment = 'All targeted {0} packages failed to update.'\
-                    .format(len(targets))
+                comment = ('{0} targeted packages failed to update. '
+                           'See debug log for details.'.format(len(targets)))
             elif len(targets) > 1:
-                comment = 'All targeted packages failed to update: ' \
-                          '({0}).'.format(', '.join(sorted(targets.keys())))
+                comment = ('The following targeted packages failed to update. '
+                           'See debug log for details: ({0}).'
+                           .format(', '.join(sorted(targets.keys()))))
             else:
                 comment = 'Package {0} failed to ' \
                           'update.'.format(targets.keys()[0])
