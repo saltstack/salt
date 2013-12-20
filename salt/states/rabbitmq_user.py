@@ -12,7 +12,7 @@ Example:
             - password: password
             - force: True
             - tags: administrator
-            - permissions:
+            - perms:
               - '/':
                 - '.*'
                 - '.*'
