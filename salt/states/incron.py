@@ -103,7 +103,7 @@ def present(name,
     systems' incron documentation can be found via the incrontab man page:
     ``man 5 incrontab``.
 
-    name 
+    name
         The path that should be watched
 
     user
@@ -170,7 +170,7 @@ def absent(name,
     Verifies that the specified incron job is absent for the specified user; only
     the name is matched when removing a incron job.
 
-    name 
+    name
         The path that should be watched
 
     user
