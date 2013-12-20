@@ -169,6 +169,11 @@ class RunnerClient(object):
                 'password': 'saltdev',
                 'eauth': 'pam',
             })
+
+        Synchronous or asyncronous operation can be configured with the
+        ``mode`` key. If ``mode`` is ``sync`` then :py:meth:`low` will be
+        called. If ``mode`` is ``async`` then :py:meth:`async` will be
+        called.
         '''
         load = kwargs
         load['cmd'] = 'runner'
