@@ -99,6 +99,47 @@ execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
 
 See :py:mod:`salt.modules.event` for more information.
 
+Knowing what event is being fired
+=================================
+
+Knowing exactly which event is being fired and what data is has for use in the
+sls files can be challenging. The easiest way to see exactly what's going on is
+to use the :strong:`eventlisten.py` script. This script is not part of packages
+but is part of the source.
+
+If the master process is using the default socket, no additional options will be
+required. Otherwise, you will need to specify the socket location.
+
+Example usage:
+
+    wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
+    python eventlisten.py
+
+    OR: python eventlisten.py --sock-dir /path/to/var/run/salt
+
+Example output:
+
+    Event fired at Fri Dec 20 10:43:00 2013
+    *************************
+    Tag: salt/auth
+    Data:
+    {'_stamp': '2013-12-20_10:47:54.584699',
+     'act': 'accept',
+     'id': 'fuzzer.domain.tld',
+     'pub': '-----BEGIN PUBLIC KEY-----\nMIICIDANBgk+TRIMMED+EMZ8CAQE=\n-----END PUBLIC KEY-----\n',
+     'result': True}
+
+    Event fired at Fri Dec 20 10:43:01 2013
+    *************************
+    Tag: salt/minion/fuzzer.domain.tld/start
+    Data:
+    {'_stamp': '2013-12-20_10:43:01.638387',
+     'cmd': '_minion_event',
+     'data': 'Minion fuzzer.domain.tld started at Fri Dec 20 10:43:01 2013',
+     'id': 'fuzzer.domain.tld',
+     'pretag': None,
+     'tag': 'salt/minion/fuzzer.domain.tld/start'}
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
