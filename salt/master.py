@@ -2106,6 +2106,19 @@ class ClearFuncs(object):
                                     args=exc.args,
                                     message=exc.message))
 
+    def _runner_sync(self, user, clear_load):
+        try:
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+
+            return runner_client.low(fun, clear_load.get('kwarg', {}))
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            return dict(error=dict(name=exc.__class__.__name__,
+                                    args=exc.args,
+                                    message=exc.message))
+
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
@@ -2136,7 +2149,10 @@ class ClearFuncs(object):
                                    args=exc.args,
                                    message=exc.message))
         else:
-            return self._runner_sync(user, clear_load)
+            if clear_load.get('mode', 'sync') == 'async':
+                return self._runner_async(user, clear_load)
+            else:
+                return self._runner_sync(user, clear_load)
 
     def _wheel_sync(self, user, clear_load):
         jid = salt.utils.gen_jid()
