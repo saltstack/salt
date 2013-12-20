@@ -19,6 +19,7 @@ import traceback
 import sys
 import signal
 from random import randint
+import importlib
 
 # Import third party libs
 try:
@@ -1828,3 +1829,883 @@ class Matcher(object):
                 salt.utils.minions.nodegroup_comp(tgt, nodegroups)
             )
         return False
+
+
+class ProxyMinion(object):
+    '''
+    This class instantiates a 'proxy' minion--a minion that does not manipulate
+    the host it runs on, but instead manipulates a device that cannot run a minion.
+    '''
+    def __init__(self, opts, timeout=60, safe=True):
+        '''
+        Pass in the options dict
+        '''
+
+        # Warn if ZMQ < 3.2
+        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
+                        zmq.zmq_version_info() < (3, 2)):
+            # PyZMQ 2.1.9 does not have zmq_version_info
+            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
+                        'are known connection keep-alive issues with ZMQ < '
+                        '3.2 which may result in loss of contact with '
+                        'minions. Please upgrade your ZMQ!')
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        # print opts['proxymodule']
+        fq_proxyname = 'proxy.'+opts['proxymodule']
+        proxymodule = salt.loader.proxy(opts, fq_proxyname)
+        opts['proxytype'] = proxymodule[opts['proxymodule']+'.proxytype']()
+        opts['proxyconn'] = proxymodule[opts['proxymodule']+'.proxyconn'](user='cro', host='junos', passwd='croldham123')
+        opts['id'] = proxymodule[opts['proxymodule']+'.id'](opts)
+        opts.update(resolve_dns(opts))
+        self.opts = opts
+        self.authenticate(timeout, safe)
+        self.opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+        ).compile_pillar()
+        self.serial = salt.payload.Serial(self.opts)
+        self.mod_opts = self.__prep_mod_opts()
+        self.functions, self.returners = self.__load_modules()
+        self.matcher = Matcher(self.opts, self.functions)
+        self.proc_dir = get_proc_dir(opts['cachedir'])
+        self.schedule = salt.utils.schedule.Schedule(
+            self.opts,
+            self.functions,
+            self.returners)
+        self.grains_cache = self.opts['grains']
+
+
+
+    def __prep_mod_opts(self):
+        '''
+        Returns a copy of the opts with key bits stripped out
+        '''
+        mod_opts = {}
+        for key, val in self.opts.items():
+            if key == 'logger':
+                continue
+            mod_opts[key] = val
+        return mod_opts
+
+    def __load_modules(self):
+        '''
+        Return the functions and the returners loaded up from the loader
+        module
+        '''
+        # if this is a *nix system AND modules_max_memory is set, lets enforce
+        # a memory limit on module imports
+        # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
+        modules_max_memory = False
+        if self.opts.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
+            log.debug('modules_max_memory set, enforcing a maximum of {0}'.format(self.opts['modules_max_memory']))
+            modules_max_memory = True
+            old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
+            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            mem_limit = rss + vms + self.opts['modules_max_memory']
+            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+        elif self.opts.get('modules_max_memory', -1) > 0:
+            if not HAS_PSUTIL:
+                log.error('Unable to enforce modules_max_memory because psutil is missing')
+            if not HAS_RESOURCE:
+                log.error('Unable to enforce modules_max_memory because resource is missing')
+
+        self.opts['grains'] = salt.loader.grains(self.opts)
+        functions = salt.loader.minion_mods(self.opts)
+        returners = salt.loader.returners(self.opts, functions)
+
+        # we're done, reset the limits!
+        if modules_max_memory is True:
+            resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
+
+        return functions, returners
+
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
+        '''
+        Fire an event on the master
+        '''
+        load = {'id': self.opts['id'],
+                'cmd': '_minion_event',
+                'pretag': pretag,
+                'tok': self.tok}
+        if events:
+            load['events'] = events
+        elif data and tag:
+            load['data'] = data
+            load['tag'] = tag
+        else:
+            return
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.crypticle.dumps(load))
+        except Exception:
+            pass
+
+    def _handle_payload(self, payload):
+        '''
+        Takes a payload from the master publisher and does whatever the
+        master wants done.
+        '''
+        {'aes': self._handle_aes,
+         'pub': self._handle_pub,
+         'clear': self._handle_clear}[payload['enc']](payload['load'])
+
+    def _handle_aes(self, load):
+        '''
+        Takes the AES encrypted load, decrypts it, and runs the encapsulated
+        instructions
+        '''
+        try:
+            data = self.crypticle.loads(load)
+        except AuthenticationError:
+            # decryption of the payload failed, try to re-auth but wait
+            # random seconds if set in config with random_reauth_delay
+            if 'random_reauth_delay' in self.opts:
+                reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
+                log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
+                time.sleep(reauth_delay)
+
+            self.authenticate()
+            data = self.crypticle.loads(load)
+        # Verify that the publication is valid
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'arg' not in data:
+            return
+        # Verify that the publication applies to this minion
+
+        # It's important to note that the master does some pre-processing
+        # to determine which minions to send a request to. So for example,
+        # a "salt -G 'grain_key:grain_val' test.ping" will invoke some
+        # pre-processing on the master and this minion should not see the
+        # publication if the master does not determine that it should.
+
+        if 'tgt_type' in data:
+            match_func = getattr(self.matcher,
+                                 '{0}_match'.format(data['tgt_type']), None)
+            if match_func is None or not match_func(data['tgt']):
+                return
+        else:
+            if not self.matcher.glob_match(data['tgt']):
+                return
+        # If the minion does not have the function, don't execute,
+        # this prevents minions that could not load a minion module
+        # from returning a predictable exception
+        #if data['fun'] not in self.functions:
+        #    return
+        if 'user' in data:
+            log.info(
+                'User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)
+            )
+        else:
+            log.info(
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+            )
+        log.debug('Command details {0}'.format(data))
+        self._handle_decoded_payload(data)
+
+    def _handle_pub(self, load):
+        '''
+        Handle public key payloads
+        '''
+        pass
+
+    def _handle_clear(self, load):
+        '''
+        Handle un-encrypted transmissions
+        '''
+        pass
+
+    def _handle_decoded_payload(self, data):
+        '''
+        Override this method if you wish to handle the decoded data
+        differently.
+        '''
+        if isinstance(data['fun'], string_types):
+            if data['fun'] == 'sys.reload_modules':
+                self.functions, self.returners = self.__load_modules()
+                self.schedule.functions = self.functions
+                self.schedule.returners = self.returners
+        if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
+            target = Minion._thread_multi_return
+        else:
+            target = Minion._thread_return
+        # We stash an instance references to allow for the socket
+        # communication in Windows. You can't pickle functions, and thus
+        # python needs to be able to reconstruct the reference on the other
+        # side.
+        instance = self
+        if self.opts['multiprocessing']:
+            if sys.platform.startswith('win'):
+                # let python reconstruct the minion on the other side if we're
+                # running on windows
+                instance = None
+            process = multiprocessing.Process(
+                target=target, args=(instance, self.opts, data)
+            )
+        else:
+            process = threading.Thread(
+                target=target, args=(instance, self.opts, data)
+            )
+        process.start()
+        process.join()
+
+    @classmethod
+    def _thread_return(cls, minion_instance, opts, data):
+        '''
+        This method should be used as a threading target, start the actual
+        minion side execution.
+        '''
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = cls(opts)
+        if opts['multiprocessing']:
+            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
+            salt.utils.daemonize_if(opts)
+            sdata = {'pid': os.getpid()}
+            sdata.update(data)
+            with salt.utils.fopen(fn_, 'w+') as fp_:
+                fp_.write(minion_instance.serial.dumps(sdata))
+        ret = {'success': False}
+        function_name = data['fun']
+        if function_name in minion_instance.functions:
+            try:
+                func = minion_instance.functions[data['fun']]
+                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
+                sys.modules[func.__module__].__context__['retcode'] = 0
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
+                        event_data = {'return': single}
+                        minion_instance._fire_master(event_data, tag)
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
+                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode',
+                    0
+                )
+                ret['success'] = True
+            except CommandNotFoundError as exc:
+                msg = 'Command required for {0!r} not found'.format(
+                    function_name
+                )
+                log.debug(msg, exc_info=True)
+                ret['return'] = '{0}: {1}'.format(msg, exc)
+            except CommandExecutionError as exc:
+                log.error(
+                    'A command in {0!r} had a problem: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR: {0}'.format(exc)
+            except SaltInvocationError as exc:
+                log.error(
+                    'Problem executing {0!r}: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
+                    function_name, exc
+                )
+            except TypeError as exc:
+                trb = traceback.format_exc()
+                aspec = salt.utils.get_function_argspec(
+                    minion_instance.functions[data['fun']]
+                )
+                msg = ('TypeError encountered executing {0}: {1}. See '
+                       'debug log for more info.  Possibly a missing '
+                       'arguments issue:  {2}').format(function_name,
+                                                       exc,
+                                                       aspec)
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = msg
+            except Exception:
+                msg = 'The minion function caused an exception'
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
+        else:
+            ret['return'] = '{0!r} is not available.'.format(function_name)
+
+        ret['jid'] = data['jid']
+        ret['fun'] = data['fun']
+        ret['fun_args'] = data['arg']
+        minion_instance._return_pub(ret)
+        if data['ret']:
+            ret['id'] = opts['id']
+            for returner in set(data['ret'].split(',')):
+                try:
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                    )](ret)
+                except Exception as exc:
+                    log.error(
+                        'The return failed for job {0} {1}'.format(
+                        data['jid'],
+                        exc
+                        )
+                    )
+
+    @classmethod
+    def _thread_multi_return(cls, minion_instance, opts, data):
+        '''
+        This method should be used as a threading target, start the actual
+        minion side execution.
+        '''
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = cls(opts)
+        ret = {
+            'return': {},
+            'success': {},
+        }
+        for ind in range(0, len(data['fun'])):
+            ret['success'][data['fun'][ind]] = False
+            try:
+                func = minion_instance.functions[data['fun'][ind]]
+                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
+                ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                ret['success'][data['fun'][ind]] = True
+            except Exception as exc:
+                trb = traceback.format_exc()
+                log.warning(
+                    'The minion function caused an exception: {0}'.format(
+                        exc
+                    )
+                )
+                ret['return'][data['fun'][ind]] = trb
+            ret['jid'] = data['jid']
+            ret['fun'] = data['fun']
+            ret['fun_args'] = data['arg']
+        minion_instance._return_pub(ret)
+        if data['ret']:
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = opts['id']
+                try:
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                    )](ret)
+                except Exception as exc:
+                    log.error(
+                        'The return failed for job {0} {1}'.format(
+                        data['jid'],
+                        exc
+                        )
+                    )
+
+    def _return_pub(self, ret, ret_cmd='_return'):
+        '''
+        Return the data from the executed command to the master server
+        '''
+        jid = ret.get('jid', ret.get('__jid__'))
+        fun = ret.get('fun', ret.get('__fun__'))
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, jid)
+            if os.path.isfile(fn_):
+                try:
+                    os.remove(fn_)
+                except (OSError, IOError):
+                    # The file is gone already
+                    pass
+        log.info('Returning information for job: {0}'.format(jid))
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        if ret_cmd == '_syndic_return':
+            load = {'cmd': ret_cmd,
+                    'id': self.opts['id'],
+                    'jid': jid,
+                    'fun': fun,
+                    'load': ret.get('__load__')}
+            load['return'] = {}
+            for key, value in ret.items():
+                if key.startswith('__'):
+                    continue
+                load['return'][key] = value
+        else:
+            load = {'cmd': ret_cmd,
+                    'id': self.opts['id']}
+            for key, value in ret.items():
+                load[key] = value
+        try:
+            if hasattr(self.functions[ret['fun']], '__outputter__'):
+                oput = self.functions[ret['fun']].__outputter__
+                if isinstance(oput, string_types):
+                    load['out'] = oput
+        except KeyError:
+            pass
+        try:
+            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+        except SaltReqTimeoutError:
+            ret_val = ''
+        if isinstance(ret_val, string_types) and not ret_val:
+            # The master AES key has changed, reauth
+            self.authenticate()
+            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+        if self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                self.opts['cachedir'],
+                'minion_jobs',
+                load['jid'],
+                'return.p')
+            jdir = os.path.dirname(fn_)
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+            salt.utils.fopen(fn_, 'w+').write(self.serial.dumps(ret))
+        return ret_val
+
+    def _state_run(self):
+        '''
+        Execute a state run based on information set in the minion config file
+        '''
+        if self.opts['startup_states']:
+            data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
+            if self.opts['startup_states'] == 'sls':
+                data['fun'] = 'state.sls'
+                data['arg'] = [self.opts['sls_list']]
+            elif self.opts['startup_states'] == 'top':
+                data['fun'] = 'state.top'
+                data['arg'] = [self.opts['top_file']]
+            else:
+                data['fun'] = 'state.highstate'
+                data['arg'] = []
+            self._handle_decoded_payload(data)
+
+    def _refresh_grains_watcher(self, refresh_interval_in_minutes):
+        '''
+        Create a loop that will fire a pillar refresh to inform a master about a change in the grains of this minion
+        :param refresh_interval_in_minutes:
+        :return: None
+        '''
+        if '__update_grains' not in self.opts.get('schedule', {}):
+            if not 'schedule' in self.opts:
+                self.opts['schedule'] = {}
+            self.opts['schedule'].update({
+                '__update_grains':
+                    {
+                        'function': 'event.fire',
+                        'args': [{}, "grains_refresh"],
+                        'minutes': refresh_interval_in_minutes
+                    }
+            })
+
+    @property
+    def master_pub(self):
+        '''
+        Return the master publish port
+        '''
+        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
+                                          port=self.publish_port)
+
+    def authenticate(self, timeout=60, safe=True):
+        '''
+        Authenticate with the master, this method breaks the functional
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master AES key.
+        '''
+        log.debug(
+            'Attempting to authenticate with the Salt Master at {0}'.format(
+                self.opts['master_ip']
+            )
+        )
+        auth = salt.crypt.Auth(self.opts)
+        self.tok = auth.gen_token('salt')
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
+        while True:
+            creds = auth.sign_in(timeout, safe)
+            if creds != 'retry':
+                log.info('Authentication with master successful!')
+                break
+            log.info('Waiting for minion key to be accepted by the master.')
+            time.sleep(acceptance_wait_time)
+            if acceptance_wait_time < acceptance_wait_time_max:
+                acceptance_wait_time += acceptance_wait_time
+                log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+        self.aes = creds['aes']
+        self.publish_port = creds['publish_port']
+        self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
+
+    def module_refresh(self):
+        '''
+        Refresh the functions and returners.
+        '''
+        self.functions, self.returners = self.__load_modules()
+        self.schedule.functions = self.functions
+        self.schedule.returners = self.returners
+
+    def pillar_refresh(self):
+        '''
+        Refresh the pillar
+        '''
+        self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+        ).compile_pillar()
+        self.module_refresh()
+
+    def clean_die(self, signum, frame):
+        '''
+        Python does not handle the SIGTERM cleanly, if it is signaled exit
+        the minion process cleanly
+        '''
+        exit(0)
+
+    # Main Minion Tune In
+    def tune_in(self):
+        '''
+        Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
+        '''
+        try:
+            log.info(
+                '{0} is starting as user \'{1}\''.format(
+                    self.__class__.__name__,
+                    getpass.getuser()
+                )
+            )
+        except Exception as err:
+            # Only windows is allowed to fail here. See #3189. Log as debug in
+            # that case. Else, error.
+            log.log(
+                salt.utils.is_windows() and logging.DEBUG or logging.ERROR,
+                'Failed to get the user who is starting {0}'.format(
+                    self.__class__.__name__
+                ),
+                exc_info=err
+            )
+        signal.signal(signal.SIGTERM, self.clean_die)
+        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
+        self.context = zmq.Context()
+
+        # Prepare the minion event system
+        #
+        # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
+        epub_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pub.ipc'.format(id_hash)
+        )
+        epull_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pull.ipc'.format(id_hash)
+        )
+        self.epub_sock = self.context.socket(zmq.PUB)
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pub_port']
+            )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pull_port']
+            )
+        else:
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            salt.utils.check_ipc_path_max_len(epub_uri)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+            salt.utils.check_ipc_path_max_len(epull_uri)
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
+        # Create the pull socket
+        self.epull_sock = self.context.socket(zmq.PULL)
+        # Bind the event sockets
+        self.epub_sock.bind(epub_uri)
+        self.epull_sock.bind(epull_uri)
+        # Restrict access to the sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            os.chmod(
+                epub_sock_path,
+                448
+            )
+            os.chmod(
+                epull_sock_path,
+                448
+            )
+
+        self.poller = zmq.Poller()
+        self.epoller = zmq.Poller()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+
+        recon_delay = self.opts['recon_default']
+
+        if self.opts['recon_randomize']:
+            recon_delay = randint(self.opts['recon_default'],
+                                  self.opts['recon_default'] + self.opts['recon_max']
+                          )
+
+            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
+                self.opts['recon_default'],
+                self.opts['recon_default'] + self.opts['recon_max'],
+                recon_delay)
+            )
+
+        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
+        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
+                self.opts['recon_default'] + self.opts['recon_max'])
+            )
+
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
+            )
+
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+        self.epoller.register(self.epull_sock, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'minion_start'
+        )
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
+
+        # Make sure to gracefully handle SIGUSR1
+        enable_sigusr1_handler()
+
+        # Make sure to gracefully handle CTRL_LOGOFF_EVENT
+        salt.utils.enable_ctrl_logoff_handler()
+
+        # On first startup execute a state run if configured to do so
+        self._state_run()
+        time.sleep(.5)
+
+        loop_interval = int(self.opts['loop_interval'])
+
+        try:
+            if self.opts['grains_refresh_every']:  # If exists and is not zero. In minutes, not seconds!
+                if self.opts['grains_refresh_every'] > 1:
+                    log.debug(
+                        'Enabling the grains refresher. Will run every {0} minutes.'.format(
+                            self.opts['grains_refresh_every'])
+                    )
+                else:  # Clean up minute vs. minutes in log message
+                    log.debug(
+                        'Enabling the grains refresher. Will run every {0} minute.'.format(
+                            self.opts['grains_refresh_every'])
+
+                    )
+                self._refresh_grains_watcher(
+                    abs(self.opts['grains_refresh_every'])
+                )
+        except Exception as exc:
+            log.error(
+                'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
+                    exc)
+            )
+
+        while True:
+            try:
+                self.schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if self.schedule.loop_interval < loop_interval:
+                    loop_interval = self.schedule.loop_interval
+                    log.debug(
+                        'Overriding loop_interval because of scheduled jobs.'
+                    )
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
+            try:
+                socks = dict(self.poller.poll(
+                    loop_interval * 1000)
+                )
+                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv())
+                    self._handle_payload(payload)
+                # Check the event system
+                if self.epoller.poll(1):
+                    try:
+                        while True:
+                            package = self.epull_sock.recv(zmq.NOBLOCK)
+                            if package.startswith('module_refresh'):
+                                self.module_refresh()
+                            elif package.startswith('pillar_refresh'):
+                                self.pillar_refresh()
+                            elif package.startswith('grains_refresh'):
+                                if self.grains_cache != self.opts['grains']:
+                                    self.pillar_refresh()
+                                    self.grains_cache = self.opts['grains']
+                            self.epub_sock.send(package)
+                    except Exception:
+                        pass
+            except zmq.ZMQError:
+                # This is thrown by the interrupt caused by python handling the
+                # SIGCHLD. This is a safe error and we just start the poll
+                # again
+                continue
+            except Exception:
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
+
+    def tune_in_no_block(self):
+        '''
+        Executes the tune_in sequence but omits extra logging and the
+        management of the event bus assuming that these are handled outside
+        the tune_in sequence
+        '''
+        self.context = zmq.Context()
+        self.poller = zmq.Poller()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
+            )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'minion_start'
+        )
+        # dup name spaced event
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
+        loop_interval = int(self.opts['loop_interval'])
+        while True:
+            try:
+                socks = dict(self.poller.poll(
+                    loop_interval * 1000)
+                )
+                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv())
+                    self._handle_payload(payload)
+                # Check the event system
+            except zmq.ZMQError:
+                # If a zeromq error happens recover
+                yield True
+            except Exception:
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
+            yield True
+
+    def destroy(self):
+        '''
+        Tear down the minion
+        '''
+        if hasattr(self, 'poller'):
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.poller.unregister(socket[0])
+
+        if hasattr(self, 'epoller'):
+            if isinstance(self.epoller.sockets, dict):
+                for socket in self.epoller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.epoller.unregister(socket)
+            else:
+                for socket in self.epoller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.epoller.unregister(socket[0])
+        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
+            self.epub_sock.close()
+        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
+            self.epull_sock.close()
+        if hasattr(self, 'socket') and self.socket.closed is False:
+            self.socket.close()
+        if hasattr(self, 'context') and self.context.closed is False:
+            self.context.term()
+
+    def __del__(self):
+        self.destroy()
+

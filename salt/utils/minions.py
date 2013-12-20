@@ -407,7 +407,7 @@ class CkMinions(object):
                 grains = self.serial.load(
                     salt.utils.fopen(datap)
                 ).get('grains')
-                for ipv4 in grains['ipv4']:
+                for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
