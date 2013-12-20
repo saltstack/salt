@@ -250,7 +250,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(result, assertlist)
 
     @requires_network()
-    def test_upgrade_bootstrap(self):
+    def skip_test_upgrade_bootstrap(self):
         b_dir = os.path.join(self.tdir, 'b')
         bpy = os.path.join(b_dir, 'bootstrap.py')
         buildout.upgrade_bootstrap(b_dir)
