@@ -7,26 +7,26 @@ import os
 import integration
 
 # Import Salt libs
-import salt.wheel
+import salt.runner
 
 
-class WheelModuleTest(integration.ClientCase):
+class RunnerModuleTest(integration.ClientCase):
     def setUp(self):
         '''
         Configure an eauth user to test with
         '''
-        self.wheel = salt.wheel.Wheel(self.get_opts())
+        self.runner = salt.runner.RunnerClient(self.get_opts())
 
-    def test_master_call(self):
+    def test_eauth(self):
         '''
         Test executing master_call with lowdata
 
-        The choice of using key.list_all for this is arbitrary and should be
+        The choice of using error.error for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
-        self.wheel.master_call(**{
-            'client': 'wheel',
-            'fun': 'key.list_all',
+        self.runner.master_call(**{
+            'client': 'runner',
+            'fun': 'error.error',
             'eauth': 'auto',
             'username': 'saltdev',
             'password': 'saltdev',
@@ -36,7 +36,7 @@ class WheelModuleTest(integration.ClientCase):
         '''
         Test executing master_call with lowdata
 
-        The choice of using key.list_all for this is arbitrary and should be
+        The choice of using error.error for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
         import salt.auth
@@ -51,12 +51,13 @@ class WheelModuleTest(integration.ClientCase):
             'eauth': 'auto',
         })
 
-        self.wheel.master_call(**{
-            'client': 'wheel',
-            'fun': 'key.list_all',
+        self.runner.master_call(**{
+            'client': 'runner',
+            'fun': 'error.error',
             'token': token['token'],
         })
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(WheelModuleTest, needs_daemon=True)
+    run_tests(RunnerModuleTest, needs_daemon=True)
+
