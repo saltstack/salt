@@ -5,10 +5,10 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import re
 import os
 import sys
 import time
+import errno
 import shutil
 import pprint
 import logging
