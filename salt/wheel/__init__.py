@@ -106,4 +106,4 @@ class WheelClient(object):
                 raise_error(**ret['error'])
         return ret
 
-Wheel = WheelClient # for backward-compat
+Wheel = WheelClient  # for backward-compat
