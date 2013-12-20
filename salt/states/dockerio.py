@@ -6,7 +6,7 @@ Manage Docker containers
 
 `Docker <https://en.wikipedia.org/wiki/Docker_(software)>`_
 is a lightweight, portable, self-sufficient software container
-based on `Linux Containers (LXC)
+wrapper. The base supported wrapper type is LXC:
 <https://en.wikipedia.org/wiki/Linux_Containers>`_,
 `cgroups <https://en.wikipedia.org/wiki/Cgroups>`_, and the
 `Linux Kernel <https://en.wikipedia.org/wiki/Linux_kernel>`_.
@@ -18,7 +18,7 @@ based on `Linux Containers (LXC)
 
 .. note::
 
-    This state module requires a
+    This state module requires
     `docker-py <https://github.com/dotcloud/docker-py>`_
     which supports `Docker Remote API version 1.6
     <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
@@ -80,8 +80,10 @@ Available Functions
                - unless: grep -q something /var/log/foo
                - docker_unless: grep -q done /install_log
 
-.. note:: The docker modules are named `dockerio` because
-   the name 'docker' would conflict with the underlying docker-py library.
+.. note::
+
+    The docker modules are named `dockerio` because
+    the name 'docker' would conflict with the underlying docker-py library.
 
 '''
 
@@ -105,7 +107,7 @@ __virtualname__ = 'docker'
 
 def __virtual__():
     '''
-    Only load if the docker libs are available (`import docker`).
+    Only load if the docker libs are available.
     '''
     if HAS_DOCKER:
         return __virtualname__
@@ -215,18 +217,19 @@ def pulled(name, force=False, *args, **kwargs):
     '''
     Pull an image from a docker registry. (`docker pull`)
 
-    .. note:: The image must already be loaded in docker; see the
-       documentation for `docker login`, `docker pull`, `docker push`,
-       and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
-       (`docker import
-       <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
+    .. note::
+
+        The image must already be loaded in docker; see the
+        documentation for `docker login`, `docker pull`, `docker push`,
+        and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
+        (`docker import
+        <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
 
     name
         Tag of the image
 
     force
         Pull even if the image is already pulled
-
     '''
     ins = __salt('docker.inspect_image')
     iinfos = ins(name)
@@ -308,7 +311,6 @@ def installed(name,
 
     path
         Path in the filesystem to the dockerfile
-        XXX: TODO: does this support a URL?
 
     environment
         Environment variables for the container, either
@@ -328,21 +330,16 @@ def installed(name,
     <http://docs.docker.io/en/latest/commandline/cli/#run>`_ for the
     `docker run` command.
 
-    XXX TODO: It would be helpful to list the supported kwargs here.
-
     You can create it either by specifying :
 
         - an image
         - an absolute path on the filesystem
 
-    This mean that you need one of those two parameters.
+    This mean that one of two parameters are required.
 
-    XXX TODO: Image appears to be a required parameter.
-
-    .. note:: This command does not verify that the named container
-       is running the specified image.
-
-
+    .. note::
+        This command does not verify that the named container
+        is running the specified image.
     '''
     ins_image = __salt('docker.inspect_image')
     ins_container = __salt('docker.inspect_container')
@@ -417,10 +414,6 @@ def absent(name):
 
     name:
         Either the container name or id
-
-    .. note:: eventually the grain matching will be removed
-       XXX TODO: is this removed?
-
     '''
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
@@ -453,7 +446,6 @@ def present(name):
 
     name:
         Either a `state_id` or container id
-
     '''
     ins_container = __salt('docker.inspect_container')
     cinfos = ins_container(name)
@@ -622,12 +614,10 @@ def script(name,
            docked_onlyif=None,
            docked_unless=None,
            *args, **kwargs):
-    '''Run a command in a specific container
-
-    XXX: TODO: IMPLEMENT
-    XXX: TODO: is this the same as `.run()`?
-
-    You can match by either name or hostname
+    '''
+    Run a command in a specific container
+    
+    Matching can be done by either name or hostname
 
     name
         command to run in the docker
