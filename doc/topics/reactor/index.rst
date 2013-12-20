@@ -112,12 +112,17 @@ required. Otherwise, you will need to specify the socket location.
 
 Example usage:
 
+.. code-block:: bash
+
     wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
     python eventlisten.py
 
-    OR: python eventlisten.py --sock-dir /path/to/var/run/salt
+    # OR
+    python eventlisten.py --sock-dir /path/to/var/run/salt
 
 Example output:
+
+.. code-block:: text
 
     Event fired at Fri Dec 20 10:43:00 2013
     *************************
