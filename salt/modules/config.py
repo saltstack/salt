@@ -12,6 +12,8 @@ import urllib2
 import salt.utils
 import salt.syspaths as syspaths
 
+__proxyenabled__ = ['*']
+
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
             'mongo.host': 'salt',

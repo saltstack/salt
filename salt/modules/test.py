@@ -14,6 +14,7 @@ import salt
 import salt.version
 import salt.loader
 
+__proxyenabled__ = ['*']
 
 def echo(text):
     '''
@@ -39,7 +40,15 @@ def ping():
 
         salt '*' test.ping
     '''
-    return True
+
+    if 'proxytype' in __opts__:
+        fun = 'salt.proxy.{0}.ping'.format(__opts__['proxytype'])
+        if fun in __salt__:
+            return __salt__[fun]()
+        else:
+            return False
+    else:
+        return True
 
 
 def sleep(length):

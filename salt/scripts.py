@@ -35,6 +35,16 @@ def salt_minion():
     minion.start()
 
 
+def proxy_minion():
+    '''
+    Kick off a proxy salt-minion daemon.
+    '''
+    if '' in sys.path:
+        sys.path.remove('')
+    proxyminion = salt.ProxyMinion()
+    proxyminion.start()
+
+
 def salt_syndic():
     '''
     Kick off a salt syndic daemon.
