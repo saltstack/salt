@@ -383,10 +383,7 @@ def check_max_open_files(opts):
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
-    accepted_count = len([
-        key for key in os.listdir(accepted_keys_dir) if
-        os.path.isfile(os.path.join(accepted_keys_dir, key))
-    ])
+    accepted_count = sum(1 for _ in os.listdir(accepted_keys_dir))
 
     log.debug(
         'This salt-master instance has accepted {0} minion keys.'.format(
