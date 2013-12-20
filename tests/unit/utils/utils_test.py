@@ -118,11 +118,44 @@ class UtilsTestCase(TestCase):
 
     @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
     def test_format_call(self, arg_lookup, get_function_argspec):
-        def dummy_func(first, second, third, fourth='fifth'):
+    # def test_format_call(self):
+        def dummy_func(first=None, second=None, third=None):
             pass
 
-        arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {'fourth': 'fifth'}}
+        arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
         get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
         # Make sure we raise an error if we don't pass in the requisite number of arguments
         self.assertRaises(SaltInvocationError, utils.format_call, dummy_func, {'1': 2})
+
+        # Make sure we warn on invalid kwargs
+        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
+        self.assertGreaterEqual(len(ret['warnings']), 1)
+
+        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3}, expected_extra_kws=('first', 'second', 'third'))
+        self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
+
+    def test_isorted(self):
+        test_list = ['foo', 'Foo', 'bar', 'Bar']
+        expected_list= ['bar', 'Bar', 'foo', 'Foo']
+        self.assertEqual(utils.isorted(test_list), expected_list)
+
+    def test_mysql_to_dict(self):
+        '''
+        mysql> show processlist;
+        +----+------+-----------+------+---------+------+-------+------------------+
+        | Id | User | Host      | db   | Command | Time | State | Info             |
+        +----+------+-----------+------+---------+------+-------+------------------+
+        |  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |
+        +----+------+-----------+------+---------+------+-------+------------------+
+        1 row in set (0.00 sec)
+        '''
+
+        test_mysql_output = '+----+------+-----------+------+---------+------+-------+------------------+\n'\
+                            '| Id | User | Host      | db   | Command | Time | State | Info             |\n'\
+                            '+----+------+-----------+------+---------+------+-------+------------------+\n'\
+                            '|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |\n'\
+                            '+----+------+-----------+------+---------+------+-------+------------------+\n'\
+                                    
+
+
