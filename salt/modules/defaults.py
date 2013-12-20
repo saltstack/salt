@@ -9,6 +9,7 @@ import salt.utils
 
 __virtualname__ = 'defaults'
 
+
 def _mk_client():
     '''
     Create a file client and add it to the context
@@ -16,6 +17,7 @@ def _mk_client():
     if not 'cp.fileclient' in __context__:
         __context__['cp.fileclient'] = \
             salt.fileclient.get_file_client(__opts__)
+
 
 def _get_files(pillar_name):
     '''
@@ -32,6 +34,7 @@ def _get_files(pillar_name):
 
     return __context__['cp.fileclient'].cache_files(paths)
 
+
 def _load(pillar_name, defaults_path):
     '''
     Given a pillar_name and the template cache location, attempt to load
@@ -43,6 +46,7 @@ def _load(pillar_name, defaults_path):
         if os.path.exists(defaults_file):
             defaults = loader.load(open(defaults_file))
             return defaults
+
 
 def get(key, default=''):
     '''
@@ -82,8 +86,8 @@ def get(key, default=''):
     sls = inspect.getargvalues(stack[2][0]).locals.get('sls')
     tmplpath = inspect.getargvalues(stack[2][0]).locals.get('tmplpath')
 
-    if not sls: # this is the case when called from CLI
-        return  __salt__['pillar.get'](key, default)
+    if not sls:  # this is the case when called from CLI
+        return __salt__['pillar.get'](key, default)
 
     pillar_name = sls.split('.')[0]
     defaults_path = tmplpath.split(pillar_name)[0] + pillar_name
