@@ -32,6 +32,15 @@ class RunnerModuleTest(integration.ClientCase):
             'password': 'saltdev',
         })
 
+    def _get_token(self, low):
+        import salt.auth
+
+        opts = self.get_opts()
+        self.mkdir_p(os.path.join(opts['root_dir'], 'cache', 'tokens'))
+
+        auth = salt.auth.LoadAuth(opts)
+        return auth.mk_token(low)
+
     def test_token(self):
         '''
         Test executing master_call with lowdata
@@ -39,13 +48,7 @@ class RunnerModuleTest(integration.ClientCase):
         The choice of using error.error for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
-        import salt.auth
-
-        opts = self.get_opts()
-        self.mkdir_p(os.path.join(opts['root_dir'], 'cache', 'tokens'))
-
-        auth = salt.auth.LoadAuth(opts)
-        token = auth.mk_token({
+        token = self._get_token({
             'username': 'saltdev',
             'password': 'saltdev',
             'eauth': 'auto',
