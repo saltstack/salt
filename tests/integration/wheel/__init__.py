@@ -17,7 +17,7 @@ class WheelModuleTest(integration.ClientCase):
         '''
         self.wheel = salt.wheel.Wheel(self.get_opts())
 
-    def test_master_call(self):
+    def test_eauth(self):
         '''
         Test executing master_call with lowdata
 
