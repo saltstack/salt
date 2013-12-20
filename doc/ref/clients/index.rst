@@ -40,7 +40,7 @@ These entry points are often referred to as ``*Client()`` APIs.
 
 Some clients require access to Salt's ``opts`` dictionary. (The dictionary
 representation of the :ref:`master <configuration-salt-master>` or
-:ref:`minion` <configuration-salt-minion> config files.)
+:ref:`minion <configuration-salt-minion>` config files.)
 
 A common pattern for fetching the ``opts`` dictionary is to defer to
 environment variables if they exist or otherwise fetch the config from the
@@ -63,7 +63,8 @@ LocalClient
 -----------
 
 .. autoclass:: salt.client.LocalClient
-    :members: cmd, cmd_cli, cmd_iter, cmd_iter_no_block, cmd_async
+    :members: cmd, run_job, cmd_async, cmd_subset, cmd_iter, cmd_iter_no_block,
+        get_cli_returns, get_event_iter_returns
 
 Salt Caller
 -----------
@@ -75,16 +76,16 @@ RunnerClient
 ------------
 
 .. autoclass:: salt.runner.RunnerClient
-    :members: cmd, low
+    :members:
 
 WheelClient
 -----------
 
-.. autoclass:: salt.wheel.Wheel
-    :members: call_func, master_call
+.. autoclass:: salt.wheel.WheelClient
+    :members:
 
 CloudClient
 -----------
 
-.. autoclass:: salt.cloud.Client
+.. autoclass:: salt.cloud.CloudClient
     :members:
