@@ -16,7 +16,7 @@ import salt.exceptions
 from salt.utils.error import raise_error
 
 
-class Wheel(object):
+class WheelClient(object):
     '''
     ``WheelClient`` is an interface to Salt's :ref:`wheel modules
     <all-salt.wheel>`. Wheel modules interact with various parts of the Salt
@@ -72,3 +72,5 @@ class Wheel(object):
             if 'error' in ret:
                 raise_error(**ret['error'])
         return ret
+
+Wheel = WheelClient # for backward-compat
