@@ -25,6 +25,7 @@ _MASK_TYPES = [
     'IN_DONT_FOLLOW', 'IN_ONESHOT', 'IN_ONLYDIR'
 ]
 
+
 def _needs_change(old, new):
     if old != new:
         if new == 'random':
@@ -34,6 +35,7 @@ def _needs_change(old, new):
         elif new is not None:
             return True
     return False
+
 
 def _render_tab(lst):
     '''
@@ -102,6 +104,7 @@ def _write_incron_lines(user, lines):
     ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
     os.remove(path)
     return ret
+
 
 def raw_incron(user):
     '''
@@ -217,6 +220,7 @@ def set_job(user, path, mask, cmd):
     else:
         return 'new'
 
+
 def rm_job(user,
            path,
            mask,
@@ -261,4 +265,3 @@ def rm_job(user,
     return ret
 
 rm = rm_job  # pylint: disable=C0103
-
