@@ -64,6 +64,7 @@ import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -1097,6 +1098,15 @@ class Minion(object):
                 self.__class__.__name__, epull_uri
             )
         )
+
+        # Check to make sure the sock_dir is available, create if not
+        minion_sock_dir = os.path.join(salt.syspaths.SOCK_DIR, 'minion')
+        if not os.path.isdir(minion_sock_dir):
+            try:
+                os.makedirs(minion_sock_dir, 0755)
+            except OSError as e:
+                log.error('Could not create SOCK_DIR: {0}'.format(e))
+                raise
 
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
