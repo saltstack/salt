@@ -27,8 +27,6 @@ LORUM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque 
               'Sed quis posuere urna.'
 
 
-
-
 class UtilsTestCase(TestCase):
     def test_get_context(self):
         expected_context = '---\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n'\
@@ -44,7 +42,7 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
-        incorrect_jid_lenth=2012
+        incorrect_jid_lenth = 2012
         self.assertEqual(utils.jid_to_time(incorrect_jid_lenth), '')
 
     @patch('random.randint', return_value=1)
@@ -71,9 +69,9 @@ class UtilsTestCase(TestCase):
         self.assertEqual(ret, expected_jid_dir)
 
     def test_is_jid(self):
-        self.assertTrue(utils.is_jid('20131219110700123489')) # Valid JID
-        self.assertFalse(utils.is_jid(20131219110700123489)) # int
-        self.assertFalse(utils.is_jid('2013121911070012348911111')) # Wrong length
+        self.assertTrue(utils.is_jid('20131219110700123489'))  # Valid JID
+        self.assertFalse(utils.is_jid(20131219110700123489))  # int
+        self.assertFalse(utils.is_jid('2013121911070012348911111'))  # Wrong length
 
     @patch('salt.utils.is_windows', return_value=False)
     def test_path_join(self, is_windows_mock):
@@ -82,8 +80,8 @@ class UtilsTestCase(TestCase):
         self.assertEqual(ret, expected_path)
 
     def test_build_whitespace_split_regex(self):
-        expected_regex = '(?m)^(?:[\s]+)?Lorem(?:[\s]+)?ipsum(?:[\s]+)?dolor(?:[\s]+)?sit(?:[\s]+)?amet\,(?:[\s]+)?$'
-        ret =  utils.build_whitespace_split_regex(' '.join(LORUM_IPSUM.split()[:5]))
+        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,(?:[\\s]+)?$'
+        ret = utils.build_whitespace_split_regex(' '.join(LORUM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
     @patch('warnings.warn')
