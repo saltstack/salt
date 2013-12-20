@@ -57,7 +57,7 @@ class RunnerModuleTest(integration.ClientCase):
             'token': token['token'],
         })
 
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(RunnerModuleTest, needs_daemon=True)
-
