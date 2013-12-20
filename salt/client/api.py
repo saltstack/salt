@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-This module provides the point of entry for client applications to interface to salt.
-The purpose is to have a simplified consistent interface for various client applications
+This module provides the point of entry for client applications to interface to
+salt. The purpose is to have a simplified consistent interface for various
+client applications.
+
+.. warning:: This API is not yet public or stable!
+
+    This API exists in its current form as an entry point for Halite only. This
+    interface is likely to change without warning. Long-term plans are to make
+    this public as a unified interface to Salt's *Client() APIs. Until that
+    time please use Salt's *Client() interfaces individually:
+
+    http://docs.saltstack.com/ref/clients/index.html
 
 '''
 # Import Python libs
