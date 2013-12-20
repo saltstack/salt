@@ -616,7 +616,7 @@ def script(name,
            *args, **kwargs):
     '''
     Run a command in a specific container
-    
+
     Matching can be done by either name or hostname
 
     name
