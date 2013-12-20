@@ -235,6 +235,109 @@ class Minion(parsers.MinionOptionParser):
         '''
 
 
+class ProxyMinion(parsers.MinionOptionParser):
+    '''
+    Create a proxy minion server
+    '''
+    def prepare(self):
+        '''
+        Run the preparation sequence required to start a salt minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
+        '''
+        self.parse_args()
+
+        try:
+            if self.config['verify_env']:
+                confd = self.config.get('default_include')
+                if confd:
+                    # If 'default_include' is specified in config, then use it
+                    if '*' in confd:
+                        # Value is of the form "minion.d/*.conf"
+                        confd = os.path.dirname(confd)
+                    if not os.path.isabs(confd):
+                        # If configured 'default_include' is not an absolute
+                        # path, consider it relative to folder of 'conf_file'
+                        # (/etc/salt by default)
+                        confd = os.path.join(
+                            os.path.dirname(self.config['conf_file']), confd
+                        )
+                else:
+                    confd = os.path.join(
+                        os.path.dirname(self.config['conf_file']), 'minion.d'
+                    )
+                verify_env(
+                    [
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                        confd,
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
+                )
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                   'udp://',
+                                                                   'file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files([logfile], self.config['user'])
+        except OSError as err:
+            sys.exit(err.errno)
+
+        self.setup_logfile_logger()
+        logger.info(
+            'Setting up a Salt Proxy Minion "{0}"'.format(
+                self.config['id']
+            )
+        )
+        migrations.migrate_paths(self.config)
+        # Late import so logging works correctly
+        import salt.minion
+        # If the minion key has not been accepted, then Salt enters a loop
+        # waiting for it, if we daemonize later then the minion could halt
+        # the boot process waiting for a key to be accepted on the master.
+        # This is the latest safe place to daemonize
+        self.daemonize_if_required()
+        self.set_pidfile()
+        if isinstance(self.config.get('master'), list):
+            self.minion = salt.minion.MultiMinion(self.config)
+        else:
+            self.minion = salt.minion.ProxyMinion(self.config)
+
+    def start(self):
+        '''
+        Start the actual minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        self.prepare()
+        try:
+            if check_user(self.config['user']):
+                self.minion.tune_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
+
+    def shutdown(self):
+        '''
+        If sub-classed, run any shutdown operations on this method.
+        '''
+
+
 class Syndic(parsers.SyndicOptionParser):
     '''
     Create a syndic server
