@@ -16,6 +16,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.exceptions import SaltException
 
+__proxyenabled__ = ['*']
+
 # Seed the grains dict so cython will build
 __grains__ = {}
 

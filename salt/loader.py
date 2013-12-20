@@ -98,6 +98,7 @@ def _create_loader(
     )
 
 
+
 def minion_mods(opts, context=None, whitelist=None):
     '''
     Returns the minion modules
@@ -125,6 +126,16 @@ def raw_mod(opts, name, functions):
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
+
+
+def proxy(opts, functions, whitelist=None):
+    '''
+    Returns the proxy module for this salt-proxy-minion
+    '''
+    load = _create_loader(opts, 'proxy', 'proxy')
+    pack = {'name': '__proxy__',
+            'value': functions }
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def returners(opts, functions, whitelist=None):
@@ -728,6 +739,20 @@ class Loader(object):
             modules.append(mod)
         for mod in modules:
             virtual = ''
+
+            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
+            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+            # containing the names of the proxy types that the module supports.
+            if 'proxytype' in self.opts:
+                if not hasattr(mod, '__proxyenabled__'):
+                    # This is a proxy minion but this module doesn't support proxy
+                    # minions at all
+                    continue
+                if not (self.opts['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
+                    # This is a proxy minion, this module supports proxy
+                    # minions, but not this particular minion
+                    continue
+
             if hasattr(mod, '__opts__'):
                 mod.__opts__.update(self.opts)
             else:
