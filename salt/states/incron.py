@@ -222,4 +222,3 @@ def absent(name,
                       .format(name, user, data))
     ret['result'] = False
     return ret
-
