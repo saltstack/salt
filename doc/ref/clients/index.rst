@@ -35,3 +35,9 @@ WheelClient
 
 .. autoclass:: salt.wheel.Wheel
     :members: call_func, master_call
+
+CloudClient
+-----------
+
+.. autoclass:: salt.cloud.Client
+    :members:
