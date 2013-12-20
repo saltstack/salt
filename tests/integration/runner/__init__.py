@@ -32,6 +32,22 @@ class RunnerModuleTest(integration.ClientCase):
             'password': 'saltdev',
         })
 
+    def test_eauth_async(self):
+        '''
+        Test executing async master_call with lowdata
+
+        The choice of using error.error for this is arbitrary and should be
+        changed to some mocked function that is more testing friendly.
+        '''
+        self.runner.master_call(**{
+            'client': 'runner',
+            'fun': 'error.error',
+            'eauth': 'auto',
+            'username': 'saltdev',
+            'password': 'saltdev',
+            'mode': 'async',
+        })
+
     def _get_token(self, low):
         import salt.auth
 
@@ -58,6 +74,26 @@ class RunnerModuleTest(integration.ClientCase):
             'client': 'runner',
             'fun': 'error.error',
             'token': token['token'],
+        })
+
+    def test_token_async(self):
+        '''
+        Test executing master_call with lowdata
+
+        The choice of using error.error for this is arbitrary and should be
+        changed to some mocked function that is more testing friendly.
+        '''
+        token = self._get_token({
+            'username': 'saltdev',
+            'password': 'saltdev',
+            'eauth': 'auto',
+        })
+
+        self.runner.master_call(**{
+            'client': 'runner',
+            'fun': 'error.error',
+            'token': token['token'],
+            'mode': 'async',
         })
 
 

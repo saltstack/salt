@@ -32,6 +32,22 @@ class WheelModuleTest(integration.ClientCase):
             'password': 'saltdev',
         })
 
+    def test_eauth_async(self):
+        '''
+        Test executing async master_call with lowdata
+
+        The choice of using key.list_all for this is arbitrary and should be
+        changed to some mocked function that is more testing friendly.
+        '''
+        self.wheel.master_call(**{
+            'client': 'wheel',
+            'fun': 'key.list_all',
+            'eauth': 'auto',
+            'username': 'saltdev',
+            'password': 'saltdev',
+            'mode': 'async',
+        })
+
     def _get_token(self, low):
         import salt.auth
 
@@ -60,6 +76,14 @@ class WheelModuleTest(integration.ClientCase):
             'token': token['token'],
         })
 
+    def test_token_async(self):
+        '''
+        Test executing async master_call with lowdata
+
+        The choice of using key.list_all for this is arbitrary and should be
+        changed to some mocked function that is more testing friendly.
+        '''
+        token = self._get_token({
             'username': 'saltdev',
             'password': 'saltdev',
             'eauth': 'auto',
@@ -69,7 +93,9 @@ class WheelModuleTest(integration.ClientCase):
             'client': 'wheel',
             'fun': 'key.list_all',
             'token': token['token'],
+            'mode': 'async',
         })
+
 
 if __name__ == '__main__':
     from integration import run_tests
