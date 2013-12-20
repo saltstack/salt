@@ -5,7 +5,7 @@ Using the Salt Modules for Cloud
 In addition to the ``salt-cloud`` command, Salt Cloud can be called from Salt,
 in a variety of different ways. Most users will be interested in either the
 execution module or the state module, but it is also possible to call Salt Cloud
-as a runner, or directly from the local API.
+as a runner.
 
 Because the actual work will be performed on a remote minion, the normal Salt
 Cloud configuration must exist on any target minion that needs to execute a Salt
@@ -312,27 +312,3 @@ the master or a minion), create a client object and issue a command against it:
     client = salt.cloud.CloudClient('/etc/salt/cloud')
     nodes = client.query()
     pprint.pprint(nodes)
-
-
-APIClient
----------
-Salt Cloud may also be called using Salt's standard APIClient, which requires
-``external_auth`` to be configured on the Salt Master. Once the master has been
-configured properly, this library may be used to issue Salt Cloud commands:
-
-.. code-block:: python
-
-    import salt.client.api
-    client = salt.client.api.APIClient()
-    cmd = {
-        'eauth': 'pam',
-        'fun': 'runner.cloud.profile',
-        'kwarg': {
-            'prof': 'ec2-centos64-x86_64',
-            'names': 'my-instance-name',
-        },
-        'password': 'verybadpass',
-        'username': 'myuser',
-    }
-    client.run(cmd)
-
