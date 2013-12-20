@@ -622,7 +622,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         )
     if not os.path.isdir(os.path.dirname(dest)):
         raise IOError(
-            '[Errno 2] No such file or directory: {0}'.format(source)
+            '[Errno 2] No such file or directory: {0}'.format(dest)
         )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
