@@ -2090,6 +2090,22 @@ class ClearFuncs(object):
 
         return user, good
 
+    def _runner_async(self, user, clear_load):
+        try:
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+
+            return runner_client.async(
+                    fun,
+                    clear_load.get('kwarg', {}),
+                    user)
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            return dict(error=dict(name=exc.__class__.__name__,
+                                    args=exc.args,
+                                    message=exc.message))
+
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
@@ -2120,21 +2136,35 @@ class ClearFuncs(object):
                                    args=exc.args,
                                    message=exc.message))
         else:
-            # Looks good; call the runner function
-            try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
+            return self._runner_sync(user, clear_load)
 
-                return runner_client.async(
-                        fun,
-                        clear_load.get('kwarg', {}),
-                        user)
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=exc.message))
+    def _wheel_sync(self, user, clear_load):
+        jid = salt.utils.gen_jid()
+        fun = clear_load.pop('fun')
+        tag = tagify(jid, prefix='wheel')
+        data = {'fun': "wheel.{0}".format(fun),
+                'jid': jid,
+                'tag': tag,
+                'user': user}
+        try:
+            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            ret = self.wheel_.call_func(fun, **clear_load)
+            data['return'] = ret
+            data['success'] = True
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                                        fun,
+                                        exc.__class__.__name__,
+                                        exc,
+                                        )
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
 
     def wheel(self, clear_load):
         '''
@@ -2149,6 +2179,8 @@ class ClearFuncs(object):
                         self.ckminions.wheel_check)
         except salt.exceptions.TokenAuthenticationError as exc:
             msg = 'Authentication failure of type "token" occurred.'
+            msg = ('Authentication failure of type "token" occurred for '
+                    'user {0}.').format(user)
             log.warning(msg)
             return dict(error=dict(name='TokenAuthenticationError',
                                     message=msg))
@@ -2166,32 +2198,8 @@ class ClearFuncs(object):
                                    args=exc.args,
                                    message=exc.message))
         else:
-            jid = salt.utils.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': user}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
-                                            fun,
-                                            exc.__class__.__name__,
-                                            exc,
-                                            )
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+            # Currently only sync method exists
+            return self._wheel_sync(user, clear_load)
 
 
     def mk_token(self, clear_load):
