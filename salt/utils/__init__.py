@@ -1097,7 +1097,7 @@ def traverse_dict(data, key, default, delim=':'):
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
     data['foo']['bar']['baz'] if this value exists, and will otherwise
-    return an empty dict.
+    return the dict in the default argument.
     '''
     try:
         for each in key.split(delim):
