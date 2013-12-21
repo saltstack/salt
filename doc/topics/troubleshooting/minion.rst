@@ -25,7 +25,4 @@ additional access control system such as `SELinux`_ or `AppArmor`_ is blocking
 Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-   .. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
-
-
-.. _using-salt-call:
+.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
