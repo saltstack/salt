@@ -148,7 +148,7 @@ class PostgresTestCase(TestCase):
         )
         postgres._run_psql.assert_called_once_with(
             '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'CREATE ROLE "testgroup" WITH PASSWORD \'"\'"\'testrolepass\'"\'"\' IN GROUP testgroup\'',
-            host='testhost', password='foo', runas='foo', run_cmd='cmd.run')
+            host='testhost', password='foo', runas='foo')
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
@@ -210,7 +210,7 @@ class PostgresTestCase(TestCase):
         )
         postgres._run_psql.assert_called_once_with(
             '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhose --port testport --dbname maint_test -c \'CREATE USER "testuser" WITH PASSWORD \'"\'"\'test_role_pass\'"\'"\' IN GROUP test_groups\'',
-            host='testhose', password='test_pass', runas='foo', run_cmd='cmd.run'
+            host='testhose', password='test_pass', runas='foo'
         )
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
