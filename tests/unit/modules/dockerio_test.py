@@ -14,6 +14,7 @@ from salt.modules import dockerio
 
 HAS_DOCKER = dockerio.__virtual__()
 
+
 @skipIf(not HAS_DOCKER, "The docker execution module must be available to run the DockerIO test case")
 class DockerIoTestCase(TestCase):
     def test__sizeof_fmt(self):
@@ -23,4 +24,3 @@ class DockerIoTestCase(TestCase):
         self.assertEqual('1.0 GB', dockerio._sizeof_fmt(1024**3))
         self.assertEqual('1.0 TB', dockerio._sizeof_fmt(1024**4))
         self.assertEqual('1.0 PB', dockerio._sizeof_fmt(1024**5))
-
