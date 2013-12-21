@@ -40,14 +40,6 @@ then a new cron job will be added to the user's crontab.
 
 '''
 
-# Import python libs
-import os
-
-# Import salt libs
-import salt._compat
-import salt.utils
-from salt.modules.cron import _needs_change
-
 
 def _check_cron(user,
                 path,
