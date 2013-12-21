@@ -6,7 +6,6 @@ Work with incron
 # Import python libs
 import logging
 import os
-import random
 
 # Import salt libs
 import salt.utils
