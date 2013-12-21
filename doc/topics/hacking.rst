@@ -205,6 +205,10 @@ Install Salt (and dependencies) into the virtualenv:
     This also means that pulling in the M2Crypto installed using apt requires using
     ``--system-site-packages`` when creating the virtualenv.
 
+    If you're using a platform other than Debian or Ubuntu, and you are
+    installing M2Crypto via pip instead of a system package, then you will also
+    need the ``gcc`` compiler.
+
 .. note:: Installing psutil
 
     Python header files are required to build this module, otherwise the pip
