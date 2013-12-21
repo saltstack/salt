@@ -7,7 +7,6 @@ Support for YUM
 import copy
 import logging
 import os
-import re
 
 # Import salt libs
 import salt.utils
