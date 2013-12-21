@@ -18,21 +18,21 @@ ensure_in_syspath('../../')
 
 LORUM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n' \
               'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor \n' \
-              'nibh eu urna. Aliquam iaculis massa risus, sed elementum risus accumsan id. Suspendisse mattis, \n'\
-              'metus sed lacinia dictum, leo orci dapibus sapien, at porttitor sapien nulla ac velit. \n'\
-              'Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam malesuada nec. \n'\
-              'Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget. \n'\
-              'Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum \n'\
-              'eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus. \n'\
+              'nibh eu urna. Aliquam iaculis massa risus, sed elementum risus accumsan id. Suspendisse mattis, \n' \
+              'metus sed lacinia dictum, leo orci dapibus sapien, at porttitor sapien nulla ac velit. \n' \
+              'Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam malesuada nec. \n' \
+              'Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget. \n' \
+              'Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum \n' \
+              'eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus. \n' \
               'Sed quis posuere urna.'
 
 
 class UtilsTestCase(TestCase):
     def test_get_context(self):
-        expected_context = '---\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n'\
-'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor \n'\
-'[...]\n'\
-'---'
+        expected_context = '---\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n' \
+                           'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor \n' \
+                           '[...]\n' \
+                           '---'
         ret = utils.get_context(LORUM_IPSUM, 1, num_lines=1)
         self.assertEqual(ret, expected_context)
 
@@ -92,7 +92,9 @@ class UtilsTestCase(TestCase):
     def test_get_function_argspec(self):
         def dummy_func(first, second, third, fourth='fifth'):
             pass
-        expected_argspec = namedtuple('ArgSpec', 'args varargs keywords defaults')(args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
+
+        expected_argspec = namedtuple('ArgSpec', 'args varargs keywords defaults')(
+            args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
         ret = utils.get_function_argspec(dummy_func)
 
         self.assertEqual(ret, expected_argspec)
@@ -100,6 +102,7 @@ class UtilsTestCase(TestCase):
     def test_arg_lookup(self):
         def dummy_func(first, second, third, fourth='fifth'):
             pass
+
         expected_dict = {'args': ['first', 'second', 'third'], 'kwargs': {'fourth': 'fifth'}}
         ret = utils.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
@@ -123,7 +126,8 @@ class UtilsTestCase(TestCase):
             pass
 
         arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
-        get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
+        get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
+            args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
         # Make sure we raise an error if we don't pass in the requisite number of arguments
         self.assertRaises(SaltInvocationError, utils.format_call, dummy_func, {'1': 2})
@@ -132,30 +136,70 @@ class UtilsTestCase(TestCase):
         ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
         self.assertGreaterEqual(len(ret['warnings']), 1)
 
-        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3}, expected_extra_kws=('first', 'second', 'third'))
+        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
+                                expected_extra_kws=('first', 'second', 'third'))
         self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
 
     def test_isorted(self):
         test_list = ['foo', 'Foo', 'bar', 'Bar']
-        expected_list= ['bar', 'Bar', 'foo', 'Foo']
+        expected_list = ['bar', 'Bar', 'foo', 'Foo']
         self.assertEqual(utils.isorted(test_list), expected_list)
 
     def test_mysql_to_dict(self):
-        '''
-        mysql> show processlist;
-        +----+------+-----------+------+---------+------+-------+------------------+
-        | Id | User | Host      | db   | Command | Time | State | Info             |
-        +----+------+-----------+------+---------+------+-------+------------------+
-        |  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |
-        +----+------+-----------+------+---------+------+-------+------------------+
-        1 row in set (0.00 sec)
-        '''
+        test_mysql_output = ['+----+------+-----------+------+---------+------+-------+------------------+',
+                             '| Id | User | Host      | db   | Command | Time | State | Info             |',
+                             '+----+------+-----------+------+---------+------+-------+------------------+',
+                             '|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |',
+                             '+----+------+-----------+------+---------+------+-------+------------------+']
 
-        test_mysql_output = '+----+------+-----------+------+---------+------+-------+------------------+\n'\
-                            '| Id | User | Host      | db   | Command | Time | State | Info             |\n'\
-                            '+----+------+-----------+------+---------+------+-------+------------------+\n'\
-                            '|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |\n'\
-                            '+----+------+-----------+------+---------+------+-------+------------------+\n'\
-                                    
+        ret = utils.mysql_to_dict(test_mysql_output, 'Info')
+        expected_dict = {
+        'show processlist': {'Info': 'show processlist', 'db': 'NULL', 'State': 'init', 'Host': 'localhost',
+                             'Command': 'Query', 'User': 'root', 'Time': 0, 'Id': 7}}
 
+        self.assertDictEqual(ret, expected_dict)
 
+    def test_contains_whitespace(self):
+        does_contain_whitespace = 'A brown fox jumped over the red hen.'
+        does_not_contain_whitespace = 'Abrownfoxjumpedovertheredhen.'
+
+        self.assertTrue(utils.contains_whitespace(does_contain_whitespace))
+        self.assertFalse(utils.contains_whitespace(does_not_contain_whitespace))
+
+    def test_str_to_num(self):
+        self.assertEqual(7, utils.str_to_num('7'))
+        self.assertIsInstance(utils.str_to_num('7'), int)
+        self.assertEqual(7, utils.str_to_num('7.0'))
+        self.assertIsInstance(utils.str_to_num('7.0'), float)
+        self.assertEqual(utils.str_to_num('Seven'), 'Seven')
+        self.assertIsInstance(utils.str_to_num('Seven'), str)
+
+    def test_subdict_match(self):
+        test_two_level_dict = {'foo': {'bar': 'baz'}}
+        test_two_level_comb_dict = {'foo': {'bar': 'baz:woz'}}
+
+        self.assertTrue(utils.subdict_match(test_two_level_dict, 'foo:bar:baz'))
+        self.assertFalse(utils.subdict_match(test_two_level_comb_dict, 'foo:bar:baz'))
+
+        self.assertTrue(utils.subdict_match(test_two_level_comb_dict, 'foo:bar:baz:woz'))
+        self.assertFalse(utils.subdict_match(test_two_level_comb_dict, 'foo:bar:baz:woz:wiz'))
+
+    def test_traverse_dict(self):
+        test_two_level_dict = {'foo': {'bar': 'baz'}}
+
+        self.assertDictEqual({'not_found': 'nope'},
+                             utils.traverse_dict(test_two_level_dict, 'foo:bar:baz', {'not_found': 'nope'}))
+        self.assertEqual('baz', utils.traverse_dict(test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}))
+
+    def test_clean_kwargs(self):
+
+        self.assertDictEqual(utils.clean_kwargs(foo='bar'), {'foo': 'bar'})
+        self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
+        self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
+
+    def test_check_state_result(self):
+
+        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
+        self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
+
+        self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid data structure for a host")
