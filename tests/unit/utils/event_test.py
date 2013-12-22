@@ -76,7 +76,7 @@ def eventsender_process(data, tag, wait=0):
         proc.terminate()
         proc.join()
 
-#@skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
+@skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
 class TestSaltEvent(TestCase):
     def setUp(self):
         if not os.path.exists(SOCK_DIR):
