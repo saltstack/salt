@@ -29,7 +29,8 @@ from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
-if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) >= 103:
+NO_LONG_IPC = False
+if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
     NO_LONG_IPC = True
 
 @contextmanager
