@@ -65,6 +65,15 @@ class Base(TestCase):
                 download_to(url, dest)
             except urllib2.URLError:
                 log.debug('Failed to download {0}'.format(url))
+        # creating a new setuptools install
+        cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
+        cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
+        ret1 = buildout._Popen((
+            'virtualenv --no-site-packages {0};'
+            '{0}/bin/pip install -U setuptools; '
+            '{0}/bin/easy_install -U distribute;'
+        ).format(cls.ppy_st))
+        assert ret1['retcode'] == 0
 
     @classmethod
     def tearDownClass(cls):
@@ -281,19 +290,9 @@ class BuildoutOnlineTestCase(Base):
     def setUpClass(cls):
         super(BuildoutOnlineTestCase, cls).setUpClass()
         cls.ppy_dis = os.path.join(cls.rdir, 'pdistibute')
-        cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
         cls.ppy_blank = os.path.join(cls.rdir, 'pblank')
         cls.py_dis = os.path.join(cls.ppy_dis, 'bin', 'python')
-        cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
         cls.py_blank = os.path.join(cls.ppy_blank, 'bin', 'python')
-        # creating a new setuptools install
-        ret1 = buildout._Popen((
-            'virtualenv --no-site-packages {0};'
-            '{0}/bin/pip install -U setuptools; '
-            '{0}/bin/easy_install -U distribute;'
-        ).format(cls.ppy_st))
-        assert ret1['retcode'] == 0
-
         # creating a distribute based install
         try:
             ret20 = buildout._Popen((
