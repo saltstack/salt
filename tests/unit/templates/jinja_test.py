@@ -175,6 +175,59 @@ class TestGetTemplate(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
+    def test_macro_additional_log_for_undefined(self):
+        '''
+        If we failed in a macro because of undefined variables, get
+        more output from trace.
+        '''
+        expected = r'''Jinja variable 'b' is undefined; line 2
+
+---
+--------------------------------------------------------------------------------
+.*/test/macroundefined\(2\):    <======================
+.*<-- error is here
+--------------------------------------------------------------------------------
+
+{% from .*'''
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'hello_import_undefined')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='other'))
+        SaltCacheLoader.file_client = _fc
+
+    def test_macro_additional_log(self):
+        '''
+        If  we failed in a macro, get more output from trace.
+        '''
+        expected = r'''Jinja syntax error: expected token 'end of statement block', got '-'; line 2
+
+---
+--------------------------------------------------------------------------------
+.*/test/macroerror\(2\):    <======================
+.*<-- error is here
+--------------------------------------------------------------------------------
+
+{% from .*'''
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'hello_import_error')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='other'))
+        SaltCacheLoader.file_client = _fc
+
     def test_non_ascii_encoding(self):
         fc = MockFileClient()
         # monkey patch file client
