@@ -1,0 +1,3 @@
+{% macro mymacro() -%}
+{{ 1/0 }}
+{%- endmacro %}
