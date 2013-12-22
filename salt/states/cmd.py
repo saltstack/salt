@@ -763,13 +763,14 @@ def call(name,
     declaration. This function is mainly used by the
     :mod:`salt.renderers.pydsl` renderer.
 
-    The interpretation of `onlyif` and `unless` arguments are identical to
-    those of :func:`salt.states.cmd.run`, and all other arguments(`cwd`,
-    `runas`, ...) allowed by `cmd.run` are allowed here, except that their
-    effects apply only to the commands specified in `onlyif` and `unless`
-    rather than to the function to be invoked.
+    The interpretation of ``onlyif`` and ``unless`` arguments are identical to
+    those of :mod:`cmd.run <salt.states.cmd.run>`, and all other
+    arguments(``cwd``, ``runas``, ...) allowed by :mod:`cmd.run
+    <salt.states.cmd.run>` are allowed here, except that their effects apply
+    only to the commands specified in `onlyif` and `unless` rather than to the
+    function to be invoked.
 
-    In addition the `stateful` argument has no effects here.
+    In addition, the ``stateful`` argument has no effects here.
 
     The return value of the invoked function will be interpreted as follows.
 
@@ -777,14 +778,16 @@ def call(name,
     which expects it to have the usual structure returned by any salt state
     function.
 
-    Otherwise, the return value(denoted as ``result`` in the code below) is
+    Otherwise, the return value (denoted as ``result`` in the code below) is
     expected to be a JSON serializable object, and this dictionary is returned:
 
     .. code-block:: python
 
-        { 'changes': { 'retval': result },
-          'result': True if result is None else bool(result),
-          'comment': result if isinstance(result, basestring) else ''
+        {
+            'name': name
+            'changes': {'retval': result},
+            'result': True if result is None else bool(result),
+            'comment': result if isinstance(result, basestring) else ''
         }
     '''
     ret = {'name': name,
