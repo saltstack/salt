@@ -29,9 +29,8 @@ Getting Started
 
 * :doc:`Installing salt cloud <install/index>`
 
-Some quick guides covering getting started with Amazon EC2, Digital Ocean,
-GoGrid, Google Compute Engine, Linode, Joyent, Parallels, Rackspace, and
-SoftLayer.
+Some quick guides covering getting started with each of the various cloud
+providers.
 
 * :doc:`Getting Started With Azure <azure>`
 * :doc:`Getting Started With Digital Ocean <digitalocean>`
