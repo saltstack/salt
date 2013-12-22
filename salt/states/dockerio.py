@@ -4,7 +4,7 @@
 Manage Docker containers
 ========================
 
-`Docker <https://en.wikipedia.org/wiki/Docker_(software)>`_
+`Docker <https://docker.io>`_
 is a lightweight, portable, self-sufficient software container
 wrapper. The base supported wrapper type is LXC:
 <https://en.wikipedia.org/wiki/Linux_Containers>`_,
@@ -85,10 +85,19 @@ Available Functions
     The docker modules are named `dockerio` because
     the name 'docker' would conflict with the underlying docker-py library.
 
+    We should add magic to all methods to also match containers by name
+    now that the 'naming link' stuff has been merged in docker.
+    This applies for exemple to:
+
+        - running
+        - absent
+        - run
+        - script
+
+
 '''
 
 # Import python libs
-import re
 
 # Import salt libs
 from salt._compat import string_types
@@ -117,9 +126,6 @@ def __virtual__():
 INVALID_RESPONSE = 'We did not get an acceptable answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
-CONTAINER_GRAIN_ID = 'docker.containers.{id}.id'
-CONTAINER_GRAIN_ID_RE = re.compile(
-    'docker.containers.([^.]+).id', re.S | re.M | re.U)
 #Use a proxy mapping to allow queries & updates after the initial grain load
 MAPPING_CACHE = {}
 FN_CACHE = {}
@@ -219,11 +225,14 @@ def pulled(name, force=False, *args, **kwargs):
 
     .. note::
 
-        The image must already be loaded in docker; see the
-        documentation for `docker login`, `docker pull`, `docker push`,
+        See first the documentation for `docker login`, `docker pull`,
+        `docker push`,
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
         <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
+        NOTE that We added saltack a way to identify yourself via pillar,
+        see in the salt.modules.dockerio execution module how to ident yourself
+        via the pillar.
 
     name
         Tag of the image
@@ -309,9 +318,6 @@ def installed(name,
     image
         Image from which to build this container
 
-    path
-        Path in the filesystem to the dockerfile
-
     environment
         Environment variables for the container, either
             - a mapping of key, values
@@ -323,19 +329,11 @@ def installed(name,
     volumes
         List of volumes
 
-    For other parameters, see the `docker-py documentation
+    For other parameters, see absolutely first the salt.modules.dockerio
+    execution module and the docker-py python bindings for docker
+    documentation
     <https://github.com/dotcloud/docker-py#api>`_ for
-    `docker.create_container`
-    and the `docker CLI documentation
-    <http://docs.docker.io/en/latest/commandline/cli/#run>`_ for the
-    `docker run` command.
-
-    You can create it either by specifying :
-
-        - an image
-        - an absolute path on the filesystem
-
-    This mean that one of two parameters are required.
+    `docker.create_container`.
 
     .. note::
         This command does not verify that the named container
@@ -445,7 +443,7 @@ def present(name):
     (`docker inspect`)
 
     name:
-        Either a `state_id` or container id
+        container id
     '''
     ins_container = __salt('docker.inspect_container')
     cinfos = ins_container(name)
@@ -467,7 +465,6 @@ def run(name,
         *args, **kwargs):
     '''Run a command in a specific container
 
-    XXX: TODO: IMPLEMENT
 
     You can match by either name or hostname
 
@@ -617,6 +614,8 @@ def script(name,
     '''
     Run a command in a specific container
 
+    XXX: TODO: IMPLEMENT
+
     Matching can be done by either name or hostname
 
     name
@@ -638,10 +637,10 @@ def script(name,
         Do not execute cmd if statement on the host return 0
 
     docked_onlyif
-        Same as onlyif but executed in the context of the docker
+        Only execute cmd if statement in the container returns 0
 
     docked_unless
-        Same as unless but executed in the context of the docker
+        Do not execute cmd if statement in the container returns 0
 
     '''
     if not hostname:
