@@ -31,6 +31,7 @@ def check_ip(x):
     .. code-block:: bash
 
         salt ns1 dig.check_ip 127.0.0.1
+        salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
     '''
     # This is probably validating. Tacked on the CIDR bit myself.
     ip_regex = (
@@ -38,7 +39,12 @@ def check_ip(x):
         r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
         r'(/([0-9]|[12][0-9]|3[0-2]))?$'
     )
-    return bool(re.match(ip_regex, x))
+    # This IPv6 regex is from http://home.deds.nl/~aeron/regex/
+    ip6_regex = (
+        r'^(((?=.*(::))(?!.*\3.+\3))\3?|[\dA-F]{1,4}:)([\dA-F]{1,4}(\3|:\b)|\2){5}'
+        r'(([\dA-F]{1,4}(\3|:\b|$)|\2){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\Z'
+    )
+    return bool(re.match(ip4_regex, x)) | bool(re.match(ip6_regex, x))
 
 
 def A(host, nameserver=None):
@@ -54,6 +60,37 @@ def A(host, nameserver=None):
         salt ns1 dig.A www.google.com
     '''
     dig = ['dig', '+short', str(host), 'A']
+
+    if nameserver is not None:
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    # In this case, 0 is not the same as False
+    if cmd['retcode'] != 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
+        return []
+
+    # make sure all entries are IPs
+    return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
+
+def AAAA(host, nameserver=None):
+    '''
+    Return the AAAA record for ``host``.
+
+    Always returns a list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dig.AAAA www.google.com
+    '''
+    dig = ['dig', '+short', str(host), 'AAAA']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
