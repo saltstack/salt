@@ -9,7 +9,7 @@ from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch, call, DEFAULT
 
 from salt import utils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import (SaltInvocationError, SaltSystemExit)
 
 import os
 from collections import namedtuple
@@ -192,14 +192,32 @@ class UtilsTestCase(TestCase):
         self.assertEqual('baz', utils.traverse_dict(test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}))
 
     def test_clean_kwargs(self):
-
         self.assertDictEqual(utils.clean_kwargs(foo='bar'), {'foo': 'bar'})
         self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
 
     def test_check_state_result(self):
-
         self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-
         self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid data structure for a host")
+        self.assertFalse(utils.check_state_result({}), "Failed to handle an empty dictionary.")
+        self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
+
+        self.assertTrue(utils.check_state_result({'    _|-': {}}))
+
+        test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
+        self.assertTrue(utils.check_state_result(test_valid_state))
+
+        test_valid_false_state = {'host1': {'test_state': {'result': False}}}
+        self.assertFalse(utils.check_state_result(test_valid_false_state))
+
+    def test_check_ipc_length(self):
+        '''
+        Ensure we throw an exception if we have a too-long IPC URI
+        '''
+        self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111')
+
+    def test_test_mode(self):
+        self.assertTrue(utils.test_mode(test=True))
+        self.assertTrue(utils.test_mode(Test=True))
+        self.assertTrue(utils.test_mode(tEsT=True))
