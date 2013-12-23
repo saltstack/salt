@@ -1,9 +1,0 @@
-pep8==1.4.5
-flake8==2.0
-
-# Salt needs M2Crypto; this should be fixed in there requirements.txt file
--f http://tarballs.openstack.org/nova/M2Crypto-0.21.2.tar.gz#egg=M2Crypto-0.21.2
-M2Crypto>=0.21.2
-
-# OpenStack
-netaddr
