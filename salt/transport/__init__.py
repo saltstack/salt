@@ -17,7 +17,7 @@ class Channel(object):
 
         if 'transport_type' in opts:
             ttype = opts['transport_type']
-        elif 'transport_type' in opts['pillar']['master']:
+        elif 'transport_type' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport_type']
 
         if ttype == 'zeromq':
