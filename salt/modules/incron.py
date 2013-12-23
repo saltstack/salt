@@ -110,6 +110,7 @@ def _write_incron_lines(user, lines):
         os.remove(path)
         return ret
 
+
 def _write_file(folder, filename, data):
     '''
     Writes a file to disk
@@ -126,6 +127,7 @@ def _write_file(folder, filename, data):
 
     return 0
 
+
 def _read_file(folder, filename):
     '''
     Reads and returns the contents of a file
@@ -137,6 +139,7 @@ def _read_file(folder, filename):
     except (OSError, IOError):
         return ''
 
+
 def raw_system_incron():
     '''
     Return the contents of the system wide incrontab
@@ -146,10 +149,10 @@ def raw_system_incron():
     .. code-block:: bash
 
         salt '*' incron.raw_system_cron
-    '''
- 
+    ''' 
     log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
     return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
+
 
 def raw_incron(user):
     '''
@@ -180,7 +183,7 @@ def list_tab(user):
     '''
     if user == 'system':
         data = raw_system_incron()
-    else: 
+    else:
         data = raw_incron(user)
         log.debug("user data {0}" . format(data))
     ret = {'crons': [],
