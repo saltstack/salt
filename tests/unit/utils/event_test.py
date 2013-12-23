@@ -33,6 +33,7 @@ NO_LONG_IPC = False
 if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
     NO_LONG_IPC = True
 
+
 @contextmanager
 def eventpublisher_process():
     proc = event.EventPublisher({'sock_dir': SOCK_DIR})
@@ -47,6 +48,7 @@ def eventpublisher_process():
     finally:
         proc.terminate()
         proc.join()
+
 
 class EventSender(Process):
     def __init__(self, data, tag, wait):
@@ -76,6 +78,7 @@ def eventsender_process(data, tag, wait=0):
     finally:
         proc.terminate()
         proc.join()
+
 
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
 class TestSaltEvent(TestCase):
