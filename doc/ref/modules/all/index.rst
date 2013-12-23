@@ -113,7 +113,6 @@ Full list of builtin execution modules
     nginx
     nova
     npm
-    nzbget
     omapi
     openbsdpkg
     openbsdservice
