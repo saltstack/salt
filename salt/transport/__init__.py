@@ -15,7 +15,8 @@ class Channel(object):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
-        if 'transport_type' in opts: ttype = opts['transport_type']
+        if 'transport_type' in opts:
+            ttype = opts['transport_type']
         elif 'transport_type' in opts['pillar']['master']:
             ttype = opts['pillar']['master']['transport_type']
 
@@ -76,7 +77,6 @@ class ZeroMQChannel(Channel):
         except salt.crypt.AuthenticationError:
             self.auth = salt.crypt.SAuth(self.opts)
             return _do_transfer()
-
 
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         return self.sreq.send(self.crypt, load, tries, timeout)
