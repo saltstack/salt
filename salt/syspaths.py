@@ -9,6 +9,14 @@
     ~~~~~~~~~~~~~
 
     Salt's defaults system paths
+
+    This module allows defining Salt's default paths at build time by writing a
+    ``_syspath.py`` file to the filesystem. This is useful, for example, for
+    setting platform-specific defaults that differ from the standard Linux
+    paths.
+
+    These values are static values and must be considered as secondary to any
+    paths that are set in the master/minion config files.
 '''
 
 # Import python libs
