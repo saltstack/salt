@@ -8,7 +8,7 @@
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
-    This is were all the black magic happens on all of salt's CLI tools.
+    This is where all the black magic happens on all of salt's CLI tools.
 '''
 
 # Import python libs

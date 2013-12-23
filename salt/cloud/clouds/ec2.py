@@ -6,33 +6,7 @@ The EC2 Cloud Module
 The EC2 cloud module is used to interact with the Amazon Elastic Cloud
 Computing. This driver is highly experimental! Use at your own risk!
 
-To use the EC2 cloud module, when using the old format the following
-configuration parameters need to be set in the main cloud configuration:
-
-.. code-block:: yaml
-
-    # The EC2 API authentication id
-    EC2.id: GKTADJGHEIQSXMKKRBJ08H
-    # The EC2 API authentication key
-    EC2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    # The ssh keyname to use
-    EC2.keyname: default
-    # The amazon security group
-    EC2.securitygroup: ssh_open
-    # The location of the private key which corresponds to the keyname
-    EC2.private_key: /root/default.pem
-
-    # Be default, service_url is set to amazonaws.com. If you are using this
-    # driver for something other than Amazon EC2, change it here:
-    EC2.service_url: amazonaws.com
-
-    # The endpoint that is ultimately used is usually formed using the region
-    # and the service_url. If you would like to override that entirely, you can
-    # explicitly define the endpoint:
-    EC2.endpoint: myendpoint.example.com:1138/services/Cloud
-
-
-Using the new format, set up the cloud configuration at
+To use the EC2 cloud module, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
 
 .. code-block:: yaml
@@ -389,13 +363,19 @@ def _wait_for_spot_instance(update_callback,
         timeout -= interval
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a dict of all available VM sizes on the cloud provider with
     relevant data. Latest version can be found at:
 
     http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     sizes = {
         'Cluster Compute': {
             'cc2.8xlarge': {
@@ -530,12 +510,31 @@ def avail_sizes():
     return sizes
 
 
-def avail_images():
+def avail_images(kwargs=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
+    if type(kwargs) is not dict:
+        kwargs = {}
+
+    if 'owner' in kwargs:
+        owner = kwargs['owner']
+    else:
+        provider = get_configured_provider()
+
+        owner = config.get_cloud_config_value(
+            'owner', provider, __opts__, default='amazon'
+        )
+
     ret = {}
-    params = {'Action': 'DescribeImages'}
+    params = {'Action': 'DescribeImages',
+              'Owner': owner}
     images = query(params)
     for image in images:
         ret[image['imageId']] = image
@@ -656,10 +655,16 @@ def get_location(vm_=None):
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
 
     params = {'Action': 'DescribeRegions'}
@@ -941,6 +946,17 @@ def create(vm_=None, call=None):
 
     if network_interfaces:
         params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
+
+    set_ebs_optimized = config.get_cloud_config_value(
+        'ebs_optimized', vm_, __opts__, search_global=False
+    )
+
+    if set_ebs_optimized is not None:
+        if not isinstance(set_ebs_optimized, bool):
+            raise SaltCloudConfigError(
+                '\'ebs_optimized\' should be a boolean value.'
+            )
+        params['EbsOptimized'] = set_ebs_optimized
 
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
@@ -1699,7 +1715,7 @@ def rename(name, kwargs, call=None):
     )
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
@@ -1707,6 +1723,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     node_metadata = _get_node(name)
     instance_id = node_metadata['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
@@ -1840,10 +1862,15 @@ def _get_node(name, location=None):
     return {}
 
 
-def list_nodes_full(location=None, call=None):  # pylint disable=W0613
+def list_nodes_full(location=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     if not location:
         ret = {}
         locations = set(
@@ -1928,10 +1955,15 @@ def _list_nodes_full(location=None):
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     nodes = list_nodes_full(get_location())
     if 'error' in nodes:
@@ -1952,29 +1984,13 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    ret = {}
-    nodes = list_nodes_full(get_location())
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
-
-    for node in nodes:
-        pairs = {}
-        data = nodes[node]
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node] = pairs
-
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(get_location()), __opts__['query.selection'], call,
+    )
 
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
@@ -2075,7 +2091,8 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
 
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The keepvol_on_destroy action must be called with -a or --action.'
+            'The show_delvol_on_destroy action must be called '
+            'with -a or --action.'
         )
 
     if not kwargs:

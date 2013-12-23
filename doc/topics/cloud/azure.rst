@@ -12,7 +12,7 @@ You can find more information about Azure at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* The `Azure https://pypi.python.org/pypi/azure`_ Python SDK.
+* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)
 * `Salt <https://github.com/saltstack/salt>`_

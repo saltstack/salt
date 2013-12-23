@@ -51,7 +51,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, inspect_stack
-from salt.exceptions import SaltMasterError, MasterExit, SaltRunnerError
+from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
 
@@ -242,6 +242,10 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in file server update'.format(exc)
                 )
+
+            # check how close to FD limits you are
+            salt.utils.verify.check_max_open_files(self.opts)
+
             try:
                 if pillargitfs is not None:
                     pillargitfs.update()
@@ -1829,15 +1833,13 @@ class ClearFuncs(object):
         This method fires an event over the master event manager. The event is
         tagged "auth" and returns a dict with information about the auth
         event
-        '''
-        # 0. Check for max open files
-        # 1. Verify that the key we are receiving matches the stored key
-        # 2. Store the key if it is not there
-        # 3. make an RSA key with the pub key
-        # 4. encrypt the AES key as an encrypted salt.payload
-        # 5. package the return and return it
 
-        salt.utils.verify.check_max_open_files(self.opts)
+        # Verify that the key we are receiving matches the stored key
+        # Store the key if it is not there
+        # Make an RSA key with the pub key
+        # Encrypt the AES key as an encrypted salt.payload
+        # Package the return and return it
+        '''
 
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             log.info(
@@ -2193,7 +2195,7 @@ class ClearFuncs(object):
                     'user': token['name']}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
@@ -2263,7 +2265,7 @@ class ClearFuncs(object):
                     'user': clear_load.get('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))

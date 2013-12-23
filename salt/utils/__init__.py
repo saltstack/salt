@@ -263,7 +263,7 @@ def daemonize(redirect_out=True):
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
-        dev_null = open('/dev/null', 'w')
+        dev_null = open('/dev/null', 'r+')
         os.dup2(dev_null.fileno(), sys.stdin.fileno())
         os.dup2(dev_null.fileno(), sys.stdout.fileno())
         os.dup2(dev_null.fileno(), sys.stderr.fileno())
@@ -361,7 +361,7 @@ def which(exe=None):
                     # safely rely on that behaviour
                     if os.access(full_path + ext, os.X_OK):
                         return full_path + ext
-        log.debug(
+        log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
@@ -622,7 +622,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         )
     if not os.path.isdir(os.path.dirname(dest)):
         raise IOError(
-            '[Errno 2] No such file or directory: {0}'.format(source)
+            '[Errno 2] No such file or directory: {0}'.format(dest)
         )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
@@ -1097,7 +1097,7 @@ def traverse_dict(data, key, default, delim=':'):
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
     data['foo']['bar']['baz'] if this value exists, and will otherwise
-    return an empty dict.
+    return the dict in the default argument.
     '''
     try:
         for each in key.split(delim):

@@ -20,16 +20,20 @@ Management of MySQL users
 The MySQL authentication information specified in the minion config file can be
 overidden in states using the following arguments: ``connection_host``,
 ``connection_port``, ``connection_user``, ``connection_pass``,
-``connection_db``, ``connection_unix_socket``, and ``connection_default_file``.
+``connection_db``, ``connection_unix_socket``, ``connection_default_file`` and
+``connection_charset``.
 
 .. code-block:: yaml
 
     frank:
       mysql_user.present:
         - host: localhost
-        - password: bobcat
+        - password: "bob@cat"
         - connection_user: someuser
         - connection_pass: somepass
+        - connection_charset: utf8
+        - saltenv:
+          - LC_ALL: "en_US.utf8"
 '''
 
 # Import python libs

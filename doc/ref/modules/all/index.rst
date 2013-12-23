@@ -23,14 +23,16 @@ Full list of builtin execution modules
     archive
     at
     augeas_cfg
+    aws_sqs
     bluez
     brew
     bridge
     bsd_shadow
-    buildout
     cassandra
     chocolatey
+    cloud
     cmdmod
+    composer
     config
     cp
     cron
@@ -39,6 +41,7 @@ Full list of builtin execution modules
     data
     ddns
     debconfmod
+    debian_ip
     debian_service
     dig
     disk
@@ -64,12 +67,14 @@ Full list of builtin execution modules
     gentoolkitmod
     git
     glance
+    gnomedesktop
     grains
     groupadd
     grub_legacy
     guestfs
     hg
     hosts
+    htpasswd
     img
     iptables
     key
@@ -85,12 +90,14 @@ Full list of builtin execution modules
     localemod
     locate
     logrotate
+    lvs
     lxc
     mac_group
     mac_user
     makeconf
     match
     mdadm
+    memcached
     mine
     modjk
     mongodb
@@ -110,6 +117,7 @@ Full list of builtin execution modules
     omapi
     openbsdpkg
     openbsdservice
+    openstack_config
     osxdesktop
     pacman
     pam
@@ -196,8 +204,8 @@ Full list of builtin execution modules
     win_timezone
     win_useradd
     xapi
-    yumpkg
     yumpkg5
+    zcbuildout
     zfs
     zpool
     zypper

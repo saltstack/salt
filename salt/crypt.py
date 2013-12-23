@@ -164,7 +164,7 @@ class MasterKeys(dict):
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      'master',
-                     4096,
+                     self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
@@ -218,7 +218,7 @@ class Auth(object):
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      'minion',
-                     4096,
+                     self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key

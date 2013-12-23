@@ -5,20 +5,8 @@ Joyent Cloud Module
 
 The Joyent Cloud module is used to interact with the Joyent cloud system.
 
-Using the old cloud configuration syntax, it requires that the ``username`` and
-``password`` to the joyent account be configured:
-
-.. code-block:: yaml
-
-    # The Joyent login user
-    JOYENT.user: fred
-    # The Joyent user's password
-    JOYENT.password: saltybacon
-    # The location of the ssh private key that can log into the new VM
-    JOYENT.private_key: /root/joyent.pem
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/joyent.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/joyent.conf``:
 
 .. code-block:: yaml
 
@@ -115,12 +103,9 @@ def __virtual__():
 
     log.debug('Loading Joyent cloud module')
 
-    global script, list_nodes_select
+    global script
     conn = None
     script = namespaced_function(script, globals(), (conn,))
-    list_nodes_select = namespaced_function(
-        list_nodes_select, globals(), (conn,)
-    )
     return True
 
 
@@ -430,8 +415,8 @@ def create_node(**kwargs):
 
     data = json.dumps({
         'name': name,
-        'package': size['id'],
-        'dataset': image['id']
+        'package': size['name'],
+        'dataset': image['name']
     })
 
     try:
@@ -447,7 +432,7 @@ def create_node(**kwargs):
     return {}
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     destroy a machine by name
 
@@ -463,6 +448,12 @@ def destroy(name, call=None):  # pylint disable=W0613
         salt-cloud -d vm_name
 
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -618,10 +609,16 @@ def get_location(vm_=None):
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     List all available locations
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     ret = {}
     for key in JOYENT_LOCATIONS:
         ret[key] = {
@@ -753,7 +750,7 @@ def reformat_node(item=None, full=False):
     return item
 
 
-def list_nodes(full=False, call=None):  # pylint disable=W0613
+def list_nodes(full=False, call=None):
     '''
     list of nodes, keeping only a brief listing
 
@@ -763,6 +760,11 @@ def list_nodes(full=False, call=None):  # pylint disable=W0613
 
         salt-cloud -Q
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     ret = {}
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS.keys():
@@ -785,7 +787,7 @@ def list_nodes(full=False, call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     list of nodes, maintaining all content provided from joyent listings
 
@@ -795,10 +797,24 @@ def list_nodes_full(call=None):  # pylint disable=W0613
 
         salt-cloud -F
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     return list_nodes(full=True)
 
 
-def avail_images():
+def list_nodes_select(call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
+
+
+def avail_images(call=None):
     '''
     get list of available images
 
@@ -808,6 +824,12 @@ def avail_images():
 
         salt-cloud --list-images
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     img_url = 'https://images.joyent.com/images'
     request = urllib2.Request(img_url)
     request.get_method = lambda: 'GET'
@@ -828,7 +850,7 @@ def avail_images():
     #return key_list(items=items)
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     get list of available packages
 
@@ -838,6 +860,12 @@ def avail_sizes():
 
         salt-cloud --list-sizes
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     rcode, items = query2(command='/my/packages')
     if rcode not in VALID_RESPONSE_CODES:
         return {}

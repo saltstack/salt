@@ -1,357 +1,168 @@
 # -*- coding: utf-8 -*-
 '''
+States for Management of Memcached Keys
+=======================================
 
-Management of Memcached Server.
-=====================================================
-
-This module is used to manage memcached server.
+.. versionadded:: Hydrogen
 '''
+from salt.modules.memcached import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    DEFAULT_TIME,
+    DEFAULT_MIN_COMPRESS_LEN
+)
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# Import third party libs
-try:
-    import memcache
-    HAS_MEMCACHE = True
-except ImportError:
-    HAS_MEMCACHE = False
-
-# Define a function alias in order not to shadow built-in's
-__func_alias__ = {
-    'set_': 'set'
-}
+__virtualname__ = 'memcached'
 
 
 def __virtual__():
     '''
-    Only load if have installed python memcache module
+    Only load if memcache module is available
     '''
-    if not HAS_MEMCACHE:
-        return False
-    return 'memcache'
+    return __virtualname__ \
+        if '{0}.status'.format(__virtualname__) in __salt__ \
+        else False
 
 
-def set_(name,
-        host=None,
-        port=None,
-        val=None):
+def managed(name,
+            value=None,
+            host=DEFAULT_HOST,
+            port=DEFAULT_PORT,
+            time=DEFAULT_TIME,
+            min_compress_len=DEFAULT_MIN_COMPRESS_LEN):
     '''
-    Set key to memcached server.
+    Manage a memcached key.
 
     name
-        The key
-
-    host
-        The memcached server ip
-
-    port
-        The memcached server port
+        The key to manage
 
     value
-        The value
-
-    .. code-block:: yaml
-
-        k1:
-          memcached.set:
-            - host: 10.0.0.1
-            - port: 11211
-            - val: v1
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('set key {0} to memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        if __salt__['memcached.set'](host, port, name, val):
-            ret['comment'] = 'set key {0} to memcached server {1}:{2}'.format(name, host, port)
-            ret['changes'][name] = 'to be set'
-            return ret
-
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
-    return ret
-
-
-def get(name,
-        host=None,
-        port=None):
-    '''
-    Get key to memcached server.
-
-    name
-        The key
+        The value to set for that key
 
     host
-        The memcached server ip
+        The memcached server IP address
 
     port
         The memcached server port
 
+
     .. code-block:: yaml
 
-        k1:
-          memcached.get:
-            - host: 10.0.0.1
-            - port: 11211
+        foo:
+          memcached.managed:
+            - value: bar
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': False,
            'comment': ''}
 
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('get key {0} from memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        ret['comment'] = __salt__['memcached.get'](host, port, name)
+    try:
+        cur = __salt__['memcached.get'](name, host, port)
+    except CommandExecutionError as exc:
+        ret['comment'] = str(exc)
         return ret
 
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
-    return ret
+    if cur == value:
+        ret['result'] = True
+        ret['comment'] = 'Key {0!r} does not need to be updated'.format(name)
+        return ret
 
-
-def delete(name,
-        host=None,
-        port=None):
-    '''
-    Delete key from memcached server.
-
-    name
-        The key
-
-    host
-        The memcached server ip
-
-    port
-        The memcached server port
-
-    .. code-block:: yaml
-
-        k1:
-          memcached.delete:
-            - host: 10.0.0.1
-            - port: 11211
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('delete key {0} from memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        if __salt__['memcached.delete'](host, port, name):
-            ret['comment'] = 'delete key {0} from memcached server {1}:{2}'.format(name, host, port)
-            ret['changes'][name] = 'to be delete'
-            return ret
-
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
-    return ret
-
-
-def add(name,
-        host=None,
-        port=None,
-        val=None):
-    '''
-    Add key to memcached server.
-
-    name
-        The key
-
-    host
-        The memcached server ip
-
-    port
-        The memcached server port
-
-    val
-        The value
-
-    .. code-block:: yaml
-
-        k1:
-          memcached.add:
-            - host: 10.0.0.1
-            - port: 11211
-            - val: v1
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('add key {0} to memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        if __salt__['memcached.add'](host, port, name, val):
-            ret['comment'] = 'add key {0} to memcached server {1}:{2}'.format(name, host, port)
-            ret['changes'][name] = 'to be add'
-            return ret
+    if __opts__['test']:
+        ret['result'] = None
+        if cur is None:
+            ret['comment'] = 'Key {0!r} would be added'.format(name)
         else:
-            ret['comment'] = 'key {0} is exists in memcached server {1}:{2}'.format(name, host, port)
-            return ret
+            ret['comment'] = 'Value of key {0!r} would be changed'.format(name)
+        return ret
 
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
+    try:
+        ret['result'] = __salt__['memcached.set'](
+            name, value, host, port, time, min_compress_len
+        )
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['comment'] = str(exc)
+    else:
+        if ret['result']:
+            ret['comment'] = 'Successfully set key {0!r}'.format(name)
+            if cur is not None:
+                ret['changes'] = {'old': cur, 'new': value}
+            else:
+                ret['changes'] = {'key added': name, 'value': value}
+        else:
+            ret['comment'] = 'Failed to set key {0!r}'.format(name)
     return ret
 
 
-def incr(name,
-        host=None,
-        port=None,
-        delta=1):
+def absent(name,
+           value=None,
+           host=DEFAULT_HOST,
+           port=DEFAULT_PORT,
+           time=DEFAULT_TIME):
     '''
-    Incr key to memcached server.
+    Ensure that a memcached key is not present.
 
     name
         The key
 
+    value : None
+        If specified, only ensure that the key is absent if it matches the
+        specified value.
+
     host
-        The memcached server ip
+        The memcached server IP address
 
     port
         The memcached server port
 
-    delta
-        The default value is 1
 
     .. code-block:: yaml
 
-        k1:
-          memcached.incr:
+        foo:
+          memcached.absent
+
+        bar:
+          memcached.absent:
             - host: 10.0.0.1
-            - port: 11211
-            - delta: 100
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': False,
            'comment': ''}
 
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('incr key {0} to memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        ret['comment'] = __salt__['memcached.incr'](host, port, name, delta)
+    try:
+        cur = __salt__['memcached.get'](name, host, port)
+    except CommandExecutionError as exc:
+        ret['comment'] = str(exc)
         return ret
 
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
-    return ret
-
-
-def decr(name,
-        host=None,
-        port=None,
-        delta=1):
-    '''
-    Decr key to memcached server.
-
-    name
-        The key
-
-    host
-        The memcached server ip
-
-    port
-        The memcached server port
-
-    delta
-        The default value is 1
-
-    .. code-block:: yaml
-
-        k1:
-          memcached.decr:
-            - host: 10.0.0.1
-            - port: 11211
-            - delta: 100
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('decr key {0} to memcached server {1}:{2}'
-                    ).format(name, host, port)
+    if value is not None:
+        if cur is not None and cur != value:
+            ret['result'] = True
+            ret['comment'] = (
+                'Value of key {0!r} ({1!r}) is not {2!r}'
+                .format(name, cur, value)
+            )
             return ret
-        ret['comment'] = __salt__['memcached.decr'](host, port, name, delta)
+    if cur is None:
+        ret['result'] = True
+        ret['comment'] = 'Key {0!r} does not exist'.format(name)
         return ret
 
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
-    return ret
-
-
-def replace(name,
-        host=None,
-        port=None,
-        val=None):
-    '''
-    Replace key from memcached server.
-
-    name
-        The key
-
-    host
-        The memcached server ip
-
-    port
-        The memcached server port
-
-    Val
-        The value
-
-    .. code-block:: yaml
-
-        k1:
-          memcached.replace:
-            - host: 10.0.0.1
-            - port: 11211
-            - val: v1
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    #check memcached server
-    if __salt__['memcached.status'](host, port):
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('replace key {0} from memcached server {1}:{2}'
-                    ).format(name, host, port)
-            return ret
-        ret['comment'] = __salt__['memcached.replace'](host, port, name, val)
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Key {0!r} would be deleted'.format(name)
         return ret
 
-    ret['comment'] = ('memcached server {0}:{1} is down or not exists.'
-                     ).format(host, port)
+    try:
+        ret['result'] = __salt__['memcached.delete'](name, host, port, time)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['comment'] = str(exc)
+    else:
+        if ret['result']:
+            ret['comment'] = 'Successfully deleted key {0!r}'.format(name)
+            ret['changes'] = {'key deleted': name, 'value': cur}
+        else:
+            ret['comment'] = 'Failed to delete key {0!r}'.format(name)
     return ret

@@ -13,10 +13,12 @@ Full list of builtin state modules
     alias
     alternatives
     apt
+    archive
     augeas
     aws_sqs
-    buildout
+    cloud
     cmd
+    composer
     cron
     ddns
     debconfmod
@@ -26,6 +28,7 @@ Full list of builtin state modules
     file
     gem
     git
+    gnomedesktop
     grains
     group
     hg
@@ -38,8 +41,11 @@ Full list of builtin state modules
     libvirt
     locale
     lvm
+    lvs_server
+    lvs_service
     makeconf
     mdadm
+    memcached
     modjk_worker
     module
     mongodb_database
@@ -51,6 +57,7 @@ Full list of builtin state modules
     network
     npm
     ntp
+    openstack_config
     pecl
     pip_state
     pkg
@@ -79,6 +86,7 @@ Full list of builtin state modules
     ssh_auth
     ssh_known_hosts
     stateconf
+    status
     supervisord
     svn
     sysctl
@@ -92,3 +100,4 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    zcbuildout

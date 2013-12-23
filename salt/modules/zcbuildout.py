@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-===========================
+=========================
 
-This module is inspired from minitage's buildout maker
-(https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py)
+This module is inspired from `minitage's buildout maker`__
+
+.. __: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
 
 .. versionadded:: Boron
 
@@ -14,11 +15,13 @@ This module is inspired from minitage's buildout maker
 
 General notes
 -------------
+
 You have those following methods:
-    - upgrade_bootstrap
-    - bootstrap
-    - run_buildout
-    - buildout
+
+* upgrade_bootstrap
+* bootstrap
+* run_buildout
+* buildout
 '''
 
 # Define the module's virtual name
@@ -724,14 +727,14 @@ def run_buildout(directory='.',
 
     onlyif
         Only execute cmd if statement on the host return 0
-    unless
 
+    unless
         Do not execute cmd if statement on the host return 0
+
     newest
         run buildout in newest mode
 
     force
-
         run buildout unconditionnaly
 
     verbose
@@ -750,9 +753,10 @@ def run_buildout(directory='.',
     if verbose:
         LOG.debug(u'Buildout is running in verbose mode!')
         argv.append('-vvvvvvv')
-    if newest and not os.path.exists(installed_cfg):
+    if not newest and os.path.exists(installed_cfg):
+        LOG.debug(u'Buildout is running in non newest mode!')
         argv.append('-N')
-    else:
+    if newest:
         LOG.debug(u'Buildout is running in newest mode!')
         argv.append('-n')
     if offline:

@@ -19,8 +19,7 @@ Salt Table of Contents
     topics/master_tops/index
     topics/jobs/*
     topics/nonroot
-    topics/troubleshooting/index
-    topics/troubleshooting/yaml_idiosyncrasies
+    topics/troubleshooting/*
     topics/community
     topics/projects/index
     topics/event/index
@@ -34,6 +33,7 @@ Salt Table of Contents
     topics/git/*
     topics/development/index
     topics/translating
+    topics/salt_projects
 
     ref/configuration/logging/*
     ref/configuration/logging/handlers/*

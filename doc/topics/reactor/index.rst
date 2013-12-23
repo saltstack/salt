@@ -99,6 +99,52 @@ execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
 
 See :py:mod:`salt.modules.event` for more information.
 
+Knowing what event is being fired
+=================================
+
+Knowing exactly which event is being fired and what data is has for use in the
+sls files can be challenging. The easiest way to see exactly what's going on is
+to use the :strong:`eventlisten.py` script. This script is not part of packages
+but is part of the source.
+
+If the master process is using the default socket, no additional options will be
+required. Otherwise, you will need to specify the socket location.
+
+Example usage:
+
+.. code-block:: bash
+
+    wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
+    python eventlisten.py
+
+    # OR
+    python eventlisten.py --sock-dir /path/to/var/run/salt
+
+Example output:
+
+.. code-block:: text
+
+    Event fired at Fri Dec 20 10:43:00 2013
+    *************************
+    Tag: salt/auth
+    Data:
+    {'_stamp': '2013-12-20_10:47:54.584699',
+     'act': 'accept',
+     'id': 'fuzzer.domain.tld',
+     'pub': '-----BEGIN PUBLIC KEY-----\nMIICIDANBgk+TRIMMED+EMZ8CAQE=\n-----END PUBLIC KEY-----\n',
+     'result': True}
+
+    Event fired at Fri Dec 20 10:43:01 2013
+    *************************
+    Tag: salt/minion/fuzzer.domain.tld/start
+    Data:
+    {'_stamp': '2013-12-20_10:43:01.638387',
+     'cmd': '_minion_event',
+     'data': 'Minion fuzzer.domain.tld started at Fri Dec 20 10:43:01 2013',
+     'id': 'fuzzer.domain.tld',
+     'pretag': None,
+     'tag': 'salt/minion/fuzzer.domain.tld/start'}
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
@@ -234,3 +280,72 @@ won't yet direct traffic to it.
         server {{ server }} {{ ip }}:80 check
         {% endif %}
         {% endfor %}
+
+A complete example
+==================
+
+In this example, we're going to assume that we have a group of servers that
+will come online at random and need to have keys automatically accepted. We'll
+also add that we don't want all servers being automatically accepted. For this
+example, we'll assume that all hosts that have an id that starts with 'ink'
+will be automatically accepted and have state.highstate executed. On top of
+thise, we're going to add that a host coming up that was replaced (meaning a new
+key) will also be accepted.
+
+Our master configuration will be rather simple. All minions that attempte to
+authenticate will match the :strong:`tag` of :strong:`salt/auth`. When it comes
+to the minion key being accepted, we get a more refined :strong:`tag` that
+includes the minion id, which we can use for matching.
+
+:file:`/etc/salt/master.d/reactor.conf`:
+
+.. code-block:: yaml
+
+    reactor:
+      - 'salt/auth':
+        - /srv/reactor/auth-pending.sls
+      - 'salt/minion/ink*/start':
+        - /srv/reactor/auth-complete.sls
+
+In this sls file, we say that if the key was rejected we will delete the key on
+the master and then also tell the master to ssh in to the minion and tell it to
+restart the minion, since a minion process will die if the key is rejected.
+
+We also say that if the key is pending and the id starts with ink we will accept
+the key. A minion that is waiting on a pending key will retry authentication
+authentication every ten second by default.
+
+:file:`/srv/reactor/auth-pending.sls`:
+
+.. code-block:: yaml
+
+    {# Ink server faild to authenticate -- remove accepted key #}
+    {% if not data['result'] and data['id'].startswith('ink') %}
+    minion_remove:
+      wheel.key.delete:
+        - match: {{ data['id'] }}
+    minion_rejoin:
+      cmd.cmd.run:
+        - tgt: salt-master.domain.tld
+        - arg:
+          - ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "{{ data['id'] }}" 'sleep 10 && /etc/init.d/salt-minion restart'
+    {% endif %}
+
+    {# Ink server is sending new key -- accept this key #}
+    {% if 'act' in data and data['act'] == 'pend' and data['id'].startswith('ink') %}
+    minion_add:
+      wheel.key.accept:
+        - match: {{ data['id'] }}
+    {% endif %}
+
+No if statements are needed here because we already limited this action to just
+Ink servers in the master configuration.
+
+:file:`/srv/reactor/auth-complete.sls`:
+
+.. code-block:: yaml
+
+    {# When an Ink server connects, run state.highstate. #}
+    highstate_run:
+      cmd.state.highstate:
+        - tgt: {{ data['id'] }}

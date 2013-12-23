@@ -6,11 +6,14 @@ Manage transport commands via ssh
 # Import python libs
 import os
 import time
+import logging
 import subprocess
 
 # Import salt libs
 import salt.utils
 import salt.utils.nb_popen
+
+log = logging.getLogger(__name__)
 
 
 def gen_key(path):
@@ -239,6 +242,12 @@ class Shell(object):
         r_out = []
         r_err = []
         cmd = self._cmd_str(cmd)
+
+        logmsg = 'Executing non-blocking command: {0}'.format(cmd)
+        if self.passwd:
+            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
+        log.debug(logmsg)
+
         for out, err in self._run_nb_cmd(cmd):
             if out is not None:
                 r_out.append(out)
@@ -252,6 +261,12 @@ class Shell(object):
         Execute a remote command
         '''
         cmd = self._cmd_str(cmd)
+
+        logmsg = 'Executing command: {0}'.format(cmd)
+        if self.passwd:
+            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
+        log.debug(logmsg)
+
         ret = self._run_cmd(cmd)
         return ret
 
@@ -261,4 +276,10 @@ class Shell(object):
         '''
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
+
+        logmsg = 'Executing command: {0}'.format(cmd)
+        if self.passwd:
+            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
+        log.debug(logmsg)
+
         return self._run_cmd(cmd)

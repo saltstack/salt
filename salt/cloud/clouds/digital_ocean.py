@@ -6,20 +6,9 @@ Digital Ocean Cloud Module
 The Digital Ocean cloud module is used to control access to the Digital Ocean
 VPS system.
 
-Use of this module only requires the ``api_key`` parameter to be set. Using the
-old cloud providers configuration syntax, in the main cloud configuration
-file:
-
-.. code-block:: yaml
-
-    # Digital Ocean account keys
-    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
-    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or
- ``/etc/salt/cloud.providers.d/digital_ocean.conf``:
+Use of this module only requires the ``api_key`` parameter to be set. Set up the
+cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/digital_ocean.conf``:
 
 .. code-block:: yaml
 
@@ -83,11 +72,17 @@ def get_configured_provider():
     )
 
 
-def avail_locations():
+def avail_locations(call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     items = query(method='regions')
     ret = {}
     for region in items['regions']:
@@ -98,10 +93,16 @@ def avail_locations():
     return ret
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of the images that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     items = query(method='images')
     ret = {}
     for image in items['images']:
@@ -112,10 +113,16 @@ def avail_images():
     return ret
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Return a list of the image sizes that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     items = query(method='sizes')
     ret = {}
     for size in items['sizes']:
@@ -126,10 +133,15 @@ def avail_sizes():
     return ret
 
 
-def list_nodes(call=None):  # pylint disable=W0613
+def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     items = query(method='droplets')
 
     ret = {}
@@ -144,10 +156,15 @@ def list_nodes(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_full(call=None):  # pylint disable=W0613
+def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     items = query(method='droplets')
 
     ret = {}
@@ -161,19 +178,13 @@ def list_nodes_full(call=None):  # pylint disable=W0613
     return ret
 
 
-def list_nodes_select(call=None):  # pylint disable=W0613
+def list_nodes_select(call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with select fields
     '''
-    items = query(method='droplets')
-
-    ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {}
-        for item in node.keys():
-            if str(item) in __opts__['query.selection']:
-                ret[node['name']][item] = str(node[item])
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
 
 
 def get_image(vm_):
@@ -607,7 +618,7 @@ def get_keyid(keyname):
     raise SaltCloudNotFound('The specified ssh key could not be found.')
 
 
-def destroy(name, call=None):  # pylint disable=W0613
+def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
@@ -615,6 +626,12 @@ def destroy(name, call=None):  # pylint disable=W0613
 
         salt-cloud --destroy mymachine
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',

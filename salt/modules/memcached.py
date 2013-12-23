@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Memcache functionality to Salt
+Module for Management of Memcached Keys
+=======================================
 
+.. versionadded:: Hydrogen
 '''
 
 # Import python libs
 import logging
 
 # Import salt libs
-from salt.exceptions import SaltException
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt._compat import integer_types
 
 # Import third party libs
 try:
@@ -17,201 +20,247 @@ try:
 except ImportError:
     HAS_MEMCACHE = False
 
-
-def __virtual__():
-    '''
-    Only load if have installed python memcache module
-    '''
-    if not HAS_MEMCACHE:
-        return False
-    return 'memcache'
+DEFAULT_HOST = '127.0.0.1'
+DEFAULT_PORT = 11211
+DEFAULT_TIME = 0
+DEFAULT_MIN_COMPRESS_LEN = 0
 
 log = logging.getLogger(__name__)
 
-# Don't shadow built-in's.
+# Don't shadow built-ins
 __func_alias__ = {
     'set_': 'set'
 }
 
+__virtualname__ = 'memcached'
 
-def _connect(host, port):
+
+def __virtual__():
+    '''
+    Only load if python-memcache is installed
+    '''
+    return __virtualname__ if HAS_MEMCACHE else False
+
+
+def _connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
     values assigned to missing values.
     '''
-    if not host:
-        host = __salt__['config.option']('memcache.host')
-    if not port:
-        port = __salt__['config.option']('memcache.port')
-
-    if not HAS_MEMCACHE:
-        raise SaltException('Error: python-memcached is not installed.')
-    else:
-        if str(port).isdigit():
-            conn = memcache.Client(["%s:%s" % (host, port)], debug=0)
-        else:
-            raise SaltException('Error: port must be a number.')
-
-    return conn
+    if str(port).isdigit():
+        return memcache.Client(['{0}:{1}'.format(host, port)], debug=0)
+    raise SaltInvocationError('port must be an integer')
 
 
-def status(host, port):
+def _check_stats(conn):
     '''
-    get memcache status
+    Helper function to check the stats data passed into it, and raise an
+    execption if none are returned. Otherwise, the stats are returned.
+    '''
+    stats = conn.get_stats()
+    if not stats:
+        raise CommandExecutionError(
+            'memcached server is down or does not exist'
+        )
+    return stats
+
+
+def status(host=DEFAULT_HOST, port=DEFAULT_PORT):
+    '''
+    Get memcached status
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.status  <host> <port>
+        salt '*' memcached.status
     '''
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
+    try:
+        stats = _check_stats(conn)[0]
+    except (CommandExecutionError, IndexError):
         return False
     else:
-        ret = {}
-        server = status[0][0]
-        stats = status[0][1]
-        ret[server] = stats
-
-    return ret
+        return {stats[0]: stats[1]}
 
 
-def get(host, port, key):
+def get(key, host=DEFAULT_HOST, port=DEFAULT_PORT):
     '''
-    get key from  memcache server
+    Retrieve value for a key
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.get  <host> <port> <key>
+        salt '*' memcached.get <key>
     '''
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        return conn.get(key)
+    _check_stats(conn)
+    return conn.get(key)
 
 
-def set_(host, port, key, val, time=0, min_compress_len=0):
+def set_(key,
+         value,
+         host=DEFAULT_HOST,
+         port=DEFAULT_PORT,
+         time=DEFAULT_TIME,
+         min_compress_len=DEFAULT_MIN_COMPRESS_LEN):
     '''
-    insert key to  memcache server
+    Set a key on the memcached server, overwriting the value if it exists.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.set  <host> <port> <key>
+        salt '*' memcached.set <key> <value>
     '''
+    if not isinstance(time, integer_types):
+        raise SaltInvocationError('\'time\' must be an integer')
+    if not isinstance(min_compress_len, integer_types):
+        raise SaltInvocationError('\'min_compress_len\' must be an integer')
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        ret = conn.set(key, val, time, min_compress_len)
-    return ret
+    _check_stats(conn)
+    return conn.set(key, value, time, min_compress_len)
 
 
-def delete(host, port, key, time=0):
+def delete(key,
+           host=DEFAULT_HOST,
+           port=DEFAULT_PORT,
+           time=DEFAULT_TIME):
     '''
-    delete key from  memcache server
+    Delete a key from memcache server
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.delete  <host> <port> <key>
+        salt '*' memcached.delete <key>
     '''
+    if not isinstance(time, integer_types):
+        raise SaltInvocationError('\'time\' must be an integer')
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        ret = conn.delete(key, time)
-        if ret:
-            return True
-        else:
-            return False
+    _check_stats(conn)
+    return bool(conn.delete(key, time))
 
 
-def add(host, port, key, val, time=0, min_compress_len=0):
+def add(key,
+        value,
+        host=DEFAULT_HOST,
+        port=DEFAULT_PORT,
+        time=DEFAULT_TIME,
+        min_compress_len=DEFAULT_MIN_COMPRESS_LEN):
     '''
-    add key to  memcache server
+    Add a key to the memcached server, but only if it does not exist. Returns
+    False if the key already exists.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.add  <host> <port> <key> <val>
+        salt '*' memcached.add <key> <value>
     '''
+    if not isinstance(time, integer_types):
+        raise SaltInvocationError('\'time\' must be an integer')
+    if not isinstance(min_compress_len, integer_types):
+        raise SaltInvocationError('\'min_compress_len\' must be an integer')
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        return conn.add(key, val, time=0, min_compress_len=0)
+    _check_stats(conn)
+    return conn.add(
+        key,
+        value,
+        time=time,
+        min_compress_len=min_compress_len
+    )
 
 
-def incr(host, port, key, delta=1):
+def replace(key,
+            value,
+            host=DEFAULT_HOST,
+            port=DEFAULT_PORT,
+            time=DEFAULT_TIME,
+            min_compress_len=DEFAULT_MIN_COMPRESS_LEN):
     '''
-    incr key
+    Replace a key on the memcached server. This only succeeds if the key
+    already exists. This is the opposite of :mod:`memcached.add
+    <salt.modules.memcached.add>`
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.incr  <host> <port> <key> <delta>
+        salt '*' memcached.replace <key> <value>
     '''
+    if not isinstance(time, integer_types):
+        raise SaltInvocationError('\'time\' must be an integer')
+    if not isinstance(min_compress_len, integer_types):
+        raise SaltInvocationError('\'min_compress_len\' must be an integer')
     conn = _connect(host, port)
     status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        try:
-            ret = conn.incr(key, delta)
-        except ValueError:
-            raise SaltException('Error: incr key must be a number.')
-        return ret
+    return conn.replace(
+        key,
+        value,
+        time=time,
+        min_compress_len=min_compress_len
+    )
 
 
-def decr(host, port, key, delta=1):
+def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     '''
-    decr key
+    Increment the value of a key
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.decr  <host> <port> <key> <delta>
+        salt '*' memcached.increment <key>
+        salt '*' memcached.increment <key> 2
     '''
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        try:
-            ret = conn.decr(key, delta)
-        except ValueError:
-            raise SaltException('Error: decr key must be a number.')
-        return ret
+    _check_stats(conn)
+    cur = get(key)
+
+    if cur is None:
+        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+    elif not isinstance(cur, integer_types):
+        raise CommandExecutionError(
+            'Value for key {0!r} must be an integer to be '
+            'incremented'.format(key)
+        )
+
+    try:
+        return conn.incr(key, delta)
+    except ValueError:
+        raise SaltInvocationError('Delta value must be an integer')
+
+incr = increment
 
 
-def replace(host, port, key, val, time=0, min_compress_len=0):
+def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     '''
-    replace key from  memcache server
+    Decrement the value of a key
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' memcache.replace  <host> <port> <key> <val>
+        salt '*' memcached.decrement <key>
+        salt '*' memcached.decrement <key> 2
     '''
     conn = _connect(host, port)
-    status = conn.get_stats()
-    if status == []:
-        raise SaltException('Error: memcache server is down or not exists.')
-    else:
-        return conn.replace(key, val, time=0, min_compress_len=0)
+    _check_stats(conn)
+
+    cur = get(key)
+    if cur is None:
+        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+    elif not isinstance(cur, integer_types):
+        raise CommandExecutionError(
+            'Value for key {0!r} must be an integer to be '
+            'decremented'.format(key)
+        )
+
+    try:
+        return conn.decr(key, delta)
+    except ValueError:
+        raise SaltInvocationError('Delta value must be an integer')
+
+decr = decrement

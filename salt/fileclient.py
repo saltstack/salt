@@ -168,6 +168,16 @@ class Client(object):
         '''
         Download and cache all files on a master in a specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         ret = []
         for path in self.file_list(saltenv):
             ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
@@ -360,7 +370,7 @@ class Client(object):
                 for root, dirs, files in os.walk(path, topdown=True):
                     log.debug('Searching for states in dirs {0} and files '
                               '{1}'.format(dirs, files))
-                    if not [file.endswith('.sls') for file in files]:
+                    if not [filename.endswith('.sls') for filename in files]:
                         #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
@@ -1105,6 +1115,16 @@ class RemoteClient(Client):
         '''
         Return a list of the files in the file server's specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:

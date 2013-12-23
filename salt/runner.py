@@ -24,13 +24,18 @@ logger = logging.getLogger(__name__)
 
 class RunnerClient(object):
     '''
-    ``RunnerClient`` is the same interface used by the :command:`salt-run`
-    command-line tool on the Salt Master. It executes :ref:`runner modules
-    <all-salt.runners>` which run on the Salt Master.
+    The interface used by the :command:`salt-run` CLI tool on the Salt Master
+
+    It executes :ref:`runner modules <all-salt.runners>` which run on the Salt
+    Master.
 
     Importing and using ``RunnerClient`` must be done on the same machine as
     the Salt Master and it must be done using the same user that the Salt
     Master is running as.
+
+    Salt's :conf_master:`external_auth` can be used to authenticate calls. The
+    eauth user must be authorized to execute runner modules: (``@runner``).
+    Only the :py:meth:`master_call` below supports eauth.
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -84,7 +89,31 @@ class RunnerClient(object):
 
     def cmd(self, fun, arg, kwarg=None):
         '''
-        Execute a runner with the given arguments
+        Execute a runner function
+
+        .. code-block:: python
+
+            >>> opts = salt.config.master_config('/etc/salt/master')
+            >>> runner = salt.runner.RunnerClient(opts)
+            >>> runner.cmd('jobs.list_jobs', [])
+            {
+                '20131219215650131543': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:56:50.131543',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+                '20131219215921857715': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:59:21.857715',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+            }
         '''
         if not isinstance(kwarg, dict):
             kwarg = {}
@@ -98,6 +127,10 @@ class RunnerClient(object):
     def low(self, fun, low):
         '''
         Pass in the runner function name and the low data structure
+
+        .. code-block:: python
+
+            runner.low({'fun': 'jobs.lookup_jid', 'jid': '20131219215921857715'})
         '''
         self._verify_fun(fun)
         l_fun = self.functions[fun]
@@ -123,10 +156,19 @@ class RunnerClient(object):
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a runner module through the master network
-        interface.
-        Expects that one of the kwargs is key 'fun' whose value is the
-        namestring of the function to call.
+        Execute a runner function through the master network interface (eauth).
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@runner``).
+
+        .. code-block:: python
+
+            runner.master_call({
+                'fun': 'jobs.list_jobs',
+                'username': 'saltdev',
+                'password': 'saltdev',
+                'eauth': 'pam',
+            })
         '''
         load = kwargs
         load['cmd'] = 'runner'
