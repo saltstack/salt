@@ -149,7 +149,7 @@ def raw_system_incron():
     .. code-block:: bash
 
         salt '*' incron.raw_system_cron
-    ''' 
+    '''
     log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
     return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
 
