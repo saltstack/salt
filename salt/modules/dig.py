@@ -44,7 +44,7 @@ def check_ip(x):
         r'^(((?=.*(::))(?!.*\3.+\3))\3?|[\dA-F]{1,4}:)([\dA-F]{1,4}(\3|:\b)|\2){5}'
         r'(([\dA-F]{1,4}(\3|:\b|$)|\2){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\Z'
     )
-    return bool(re.match(ip4_regex, x)) | bool(re.match(ip6_regex, x))
+    return bool(re.match(ip_regex, x)) | bool(re.match(ip6_regex, x))
 
 
 def A(host, nameserver=None):
@@ -77,6 +77,7 @@ def A(host, nameserver=None):
 
     # make sure all entries are IPs
     return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
+
 
 def AAAA(host, nameserver=None):
     '''
