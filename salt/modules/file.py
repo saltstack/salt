@@ -2317,7 +2317,17 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=dir_mode or mode)
+                    if dir_mode is None:
+                        # Add execute bit to each nonzero digit in the mode, if
+                        # dir_mode was not specified. Otherwise, any
+                        # directories created with makedirs() below can't be
+                        # listed via a shell.
+                        mode_list = [x for x in str(mode)][-3:]
+                        for idx in xrange(len(mode_list)):
+                            if mode_list[idx] != '0':
+                                mode_list[idx] = str(int(mode_list[idx]) | 1)
+                        dir_mode = ''.join(mode_list)
+                    makedirs(name, user=user, group=group, mode=dir_mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
