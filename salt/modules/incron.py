@@ -14,6 +14,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 TAG = '# Line managed by Salt, do not edit'
+_INCRON_SYSTEM_TAB = '/etc/incron.d/'
 
 _MASK_TYPES = [
     'IN_ACCESS', 'IN_ATTRIB', 'IN_CLOSE_WRITE',
@@ -95,15 +96,60 @@ def _write_incron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's incrontab and writes it
     '''
-    path = salt.utils.mkstemp()
-    with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.writelines(lines)
-    if __grains__['os'] == 'Solaris' and user != "root":
-        __salt__['cmd.run']('chown {0} {1}'.format(user, path))
-    ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
-    os.remove(path)
-    return ret
+    if user == 'system':
+        ret = {}
+        ret['retcode'] = _write_file(_INCRON_SYSTEM_TAB, 'salt', ''.join(lines))
+        return ret
+    else:
+        path = salt.utils.mkstemp()
+        with salt.utils.fopen(path, 'w+') as fp_:
+            fp_.writelines(lines)
+        if __grains__['os'] == 'Solaris' and user != "root":
+            __salt__['cmd.run']('chown {0} {1}'.format(user, path))
+        ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
+        os.remove(path)
+        return ret
 
+def _write_file(folder, filename, data):
+    '''
+    Writes a file to disk
+    '''
+    path = os.path.join(folder, filename)
+    if not os.path.exists(folder):
+        msg = '{0} cannot be written. {1} does not exist'
+        msg = msg.format(filename, folder)
+        log.error(msg)
+        raise AttributeError(msg)
+    fout = salt.utils.fopen(path, 'w')
+    fout.write(data)
+    fout.close()
+
+    return 0
+
+def _read_file(folder, filename):
+    '''
+    Reads and returns the contents of a file
+    '''
+    path = os.path.join(folder, filename)
+    try:
+        with salt.utils.fopen(path, 'rb') as contents:
+            return contents.readlines()
+    except (OSError, IOError):
+        return ''
+
+def raw_system_incron():
+    '''
+    Return the contents of the system wide incrontab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' incron.raw_system_cron
+    '''
+ 
+    log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
+    return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
 
 def raw_incron(user):
     '''
@@ -132,7 +178,11 @@ def list_tab(user):
 
         salt '*' incron.list_tab root
     '''
-    data = raw_incron(user)
+    if user == 'system':
+        data = raw_system_incron()
+    else: 
+        data = raw_incron(user)
+        log.debug("user data {0}" . format(data))
     ret = {'crons': [],
            'pre': []
            }
