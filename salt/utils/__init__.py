@@ -242,6 +242,7 @@ def daemonize(redirect_out=True):
 
     # decouple from parent environment
     os.chdir('/')
+    # noinspection PyArgumentList
     os.setsid()
     os.umask(18)
 
@@ -593,8 +594,6 @@ def is_jid(jid):
         return True
     except ValueError:
         return False
-    return False
-
 
 def check_or_die(command):
     '''
@@ -1516,16 +1515,16 @@ def date_format(date=None, format="%Y-%m-%d"):
     >>> import datetime
     >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = '2002/12/25'
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = 1040814000
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = '1040814000'
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     '''
     return date_cast(date).strftime(format)
 
@@ -1744,7 +1743,7 @@ def compare_dicts(old=None, new=None):
 def argspec_report(functions, module=''):
     '''
     Pass in a functions dict as it is returned from the loader and return the
-    argspec function sigs
+    argspec function signatures
     '''
     ret = {}
     # TODO: cp.get_file will also match cp.get_file_str. this is the

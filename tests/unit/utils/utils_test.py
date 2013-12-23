@@ -6,12 +6,15 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call, DEFAULT
+from salttesting.mock import MagicMock, patch, call, DEFAULT, create_autospec
 
 from salt import utils
-from salt.exceptions import (SaltInvocationError, SaltSystemExit)
+from salt.modules import sysmod
+from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
+# Import Python libraries
 import os
+import datetime
 from collections import namedtuple
 
 ensure_in_syspath('../../')
@@ -29,8 +32,10 @@ LORUM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque 
 
 class UtilsTestCase(TestCase):
     def test_get_context(self):
-        expected_context = '---\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n' \
-                           'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor \n' \
+        expected_context = '---\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu ' \
+                           'lacinia sagittis. \n' \
+                           'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales' \
+                           ' dolor \n' \
                            '[...]\n' \
                            '---'
         ret = utils.get_context(LORUM_IPSUM, 1, num_lines=1)
@@ -47,6 +52,7 @@ class UtilsTestCase(TestCase):
 
     @patch('random.randint', return_value=1)
     def test_gen_mac(self, random_mock):
+        self.assertEqual(random_mock.return_value, 1)
         ret = utils.gen_mac('00:16:3E')
         expected_mac = '00:16:3E:01:01:01'
         self.assertEqual(ret, expected_mac)
@@ -75,17 +81,20 @@ class UtilsTestCase(TestCase):
 
     @patch('salt.utils.is_windows', return_value=False)
     def test_path_join(self, is_windows_mock):
+        self.assertFalse(is_windows_mock.return_value)
         expected_path = '/a/b/c/d'
         ret = utils.path_join('/a/b/c', 'd')
         self.assertEqual(ret, expected_path)
 
     def test_build_whitespace_split_regex(self):
-        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,(?:[\\s]+)?$'
+        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
+                         '(?:[\\s]+)?$'
         ret = utils.build_whitespace_split_regex(' '.join(LORUM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
     @patch('warnings.warn')
     def test_build_whitepace_splited_regex(self, warnings_mock):
+        # noinspection PyDeprecation
         utils.build_whitepace_splited_regex('foo')
         self.assertTrue(warnings_mock.called)
 
@@ -154,8 +163,8 @@ class UtilsTestCase(TestCase):
 
         ret = utils.mysql_to_dict(test_mysql_output, 'Info')
         expected_dict = {
-        'show processlist': {'Info': 'show processlist', 'db': 'NULL', 'State': 'init', 'Host': 'localhost',
-                             'Command': 'Query', 'User': 'root', 'Time': 0, 'Id': 7}}
+            'show processlist': {'Info': 'show processlist', 'db': 'NULL', 'State': 'init', 'Host': 'localhost',
+                                 'Command': 'Query', 'User': 'root', 'Time': 0, 'Id': 7}}
 
         self.assertDictEqual(ret, expected_dict)
 
@@ -199,7 +208,8 @@ class UtilsTestCase(TestCase):
     def test_check_state_result(self):
         self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-        self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid data structure for a host")
+        self.assertFalse(utils.check_state_result({'host1': []}),
+                         "Failed to handle an invalid data structure for a host")
         self.assertFalse(utils.check_state_result({}), "Failed to handle an empty dictionary.")
         self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
 
@@ -215,9 +225,263 @@ class UtilsTestCase(TestCase):
         '''
         Ensure we throw an exception if we have a too-long IPC URI
         '''
-	self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1'*127)
+        self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1' * 1024)
 
     def test_test_mode(self):
         self.assertTrue(utils.test_mode(test=True))
         self.assertTrue(utils.test_mode(Test=True))
         self.assertTrue(utils.test_mode(tEsT=True))
+
+    def test_parse_docstring(self):
+        test_keystone_str = '''Management of Keystone users
+                                ============================
+
+                                :depends:   - keystoneclient Python module
+                                :configuration: See :py:mod:`salt.modules.keystone` for setup instructions.
+'''
+
+        ret = utils.parse_docstring(test_keystone_str)
+        expected_dict = {'deps': ['keystoneclient'],
+                         'full': 'Management of Keystone users\n                                '
+                                 '============================\n\n                                '
+                                 ':depends:   - keystoneclient Python module\n                                '
+                                 ':configuration: See :py:mod:`salt.modules.keystone` for setup instructions.\n'}
+        self.assertDictEqual(ret, expected_dict)
+
+    def test_get_hash_exception(self):
+        self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')
+
+    def test_parse_kwarg(self):
+        ret = utils.parse_kwarg('foo=bar')
+        self.assertEqual(ret, ('foo', 'bar'))
+
+        ret = utils.parse_kwarg('foobar')
+        self.assertEqual(ret, (None, None))
+
+    def test_date_cast(self):
+        now = datetime.datetime.now()
+        with patch('datetime.datetime'):
+            datetime.datetime.now.return_value = now
+            self.assertEqual(now, utils.date_cast(None))
+        self.assertEqual(now, utils.date_cast(now))
+        try:
+            import timelib
+
+            ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
+            expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
+            self.assertEqual(ret, expected_ret)
+        except ImportError:
+            pass
+        ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
+        expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
+        self.assertEqual(ret, expected_ret)
+
+    def test_date_format(self):
+
+        # Taken from doctests
+
+        expected_ret = '2002-12-25'
+
+        src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+        ret = utils.date_format(src)
+        self.assertEqual(ret, expected_ret)
+
+        src = '2002/12/25'
+        ret = utils.date_format(src)
+        self.assertEqual(ret, expected_ret)
+
+        src = 1040814000
+        ret = utils.date_format(src)
+        self.assertEqual(ret, expected_ret)
+
+        src = '1040814000'
+        ret = utils.date_format(src)
+        self.assertEqual(ret, expected_ret)
+
+    def test_compare_dicts(self):
+        ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
+        self.assertEqual(ret, {})
+
+        ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
+        expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
+        self.assertDictEqual(ret, expected_ret)
+
+
+    def test_argspec_report(self):
+        def _test_spec(arg1, arg2, kwarg1=None):
+            pass
+
+        sys_mock = create_autospec(_test_spec)
+        test_functions = {'test_module.test_spec': sys_mock}
+        ret = utils.argspec_report(test_functions, 'test_module.test_spec')
+        self.assertDictEqual(ret, {'test_module.test_spec':
+                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
+
+    def test_memoize(self):
+        with patch('salt.utils.warn_until'):
+            utils.memoize(lambda x: x ** 2)
+            self.assertTrue(utils.warn_until.called)
+
+        with patch('salt.utils.real_memoize'):
+            utils.memoize(lambda x: x ** 2)
+            self.assertTrue(utils.real_memoize.called)
+
+    def test_decode_list(self):
+        test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
+        expected_ret = ['unicode_str', ['unicode_item_in_list', 'second_item_in_list'], {'dict_key': 'dict_val'}]
+        ret = utils.decode_list(test_data)
+        self.assertEqual(ret, expected_ret)
+
+    def test_decode_dict(self):
+        test_data = {u'test_unicode_key': u'test_unicode_val',
+                     'test_list_key': ['list_1', u'unicode_list_two'],
+                     u'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
+        expected_ret = {'test_unicode_key': 'test_unicode_val',
+                        'test_list_key': ['list_1', 'unicode_list_two'],
+                        'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
+        ret = utils.decode_dict(test_data)
+        self.assertDictEqual(ret, expected_ret)
+
+    def test_find_json(self):
+        test_sample_json = '''
+                            {
+                                "glossary": {
+                                    "title": "example glossary",
+                                    "GlossDiv": {
+                                        "title": "S",
+                                        "GlossList": {
+                                            "GlossEntry": {
+                                                "ID": "SGML",
+                                                "SortAs": "SGML",
+                                                "GlossTerm": "Standard Generalized Markup Language",
+                                                "Acronym": "SGML",
+                                                "Abbrev": "ISO 8879:1986",
+                                                "GlossDef": {
+                                                    "para": "A meta-markup language, used to create markup languages such as DocBook.",
+                                                    "GlossSeeAlso": ["GML", "XML"]
+                                                },
+                                                "GlossSee": "markup"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            '''
+        expected_ret = {'glossary': {'GlossDiv': {'GlossList': {'GlossEntry': {
+            'GlossDef': {'GlossSeeAlso': ['GML', 'XML'],
+                         'para': 'A meta-markup language, used to create markup languages such as DocBook.'},
+            'GlossSee': 'markup', 'Acronym': 'SGML', 'GlossTerm': 'Standard Generalized Markup Language',
+            'SortAs': 'SGML',
+            'Abbrev': 'ISO 8879:1986', 'ID': 'SGML'}}, 'title': 'S'}, 'title': 'example glossary'}}
+
+        # First test the valid JSON
+        ret = utils.find_json(test_sample_json)
+        self.assertDictEqual(ret, expected_ret)
+
+        # Now pre-pend some garbage and re-test
+        garbage_prepend_json = '{0}{1}'.format(LORUM_IPSUM, test_sample_json)
+        ret = utils.find_json(garbage_prepend_json)
+        self.assertDictEqual(ret, expected_ret)
+
+        # Test to see if a ValueError is raised if no JSON is passed in
+        self.assertRaises(ValueError, utils.find_json, LORUM_IPSUM)
+
+    def test_is_bin_str(self):
+        self.assertFalse(utils.is_bin_str(LORUM_IPSUM))
+
+        zero_str = '{0}{1}'.format(LORUM_IPSUM, '\0')
+        self.assertTrue(utils.is_bin_str(zero_str))
+
+        # To to ensure safe exit if str passed doesn't evaluate to True
+        self.assertFalse(utils.is_bin_str(''))
+
+        # TODO: Test binary detection
+
+    def test_repack_dict(self):
+        list_of_one_element_dicts = [{'dict_key_1': 'dict_val_1'},
+                                     {'dict_key_2': 'dict_val_2'},
+                                     {'dict_key_3': 'dict_val_3'}]
+        expected_ret = {'dict_key_1': 'dict_val_1',
+                        'dict_key_2': 'dict_val_2',
+                        'dict_key_3': 'dict_val_3'}
+        ret = utils.repack_dictlist(list_of_one_element_dicts)
+        self.assertDictEqual(ret, expected_ret)
+
+        # Try with yaml
+        yaml_key_val_pair = '- key1: val1'
+        ret = utils.repack_dictlist(yaml_key_val_pair)
+        self.assertDictEqual(ret, {'key1': 'val1'})
+
+        # Make sure we handle non-yaml junk data
+        ret = utils.repack_dictlist(LORUM_IPSUM)
+        self.assertDictEqual(ret, {})
+
+    def test_get_colors(self):
+        ret = utils.get_colors()
+        self.assertDictContainsSubset({'LIGHT_GRAY': '\x1b[0;37m'}, ret)
+
+        ret = utils.get_colors(use=False)
+        self.assertDictContainsSubset({'LIGHT_GRAY': ''}, ret)
+
+        ret = utils.get_colors(use='LIGHT_GRAY')
+        self.assertDictContainsSubset({'YELLOW': '\x1b[0;37m'}, ret)  # YELLOW now == LIGHT_GRAY
+
+    def test_daemonize_if(self):
+        with patch('sys.argv', ['salt-call']):
+            ret = utils.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        ret = utils.daemonize_if({'multiprocessing': False})
+        self.assertEqual(None, ret)
+
+        with patch('sys.platform', 'win'):
+            ret = utils.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        with patch('salt.utils.daemonize'):
+            utils.daemonize_if({})
+            self.assertTrue(utils.daemonize.called)
+
+    def test_which_bin(self):
+        ret = utils.which_bin('str')
+        self.assertIs(None, ret)
+
+        test_exes = ['ls', 'echo']
+        with patch('salt.utils.which', return_value='/tmp/dummy_path'):
+            ret = utils.which_bin(test_exes)
+            self.assertEqual(ret, '/tmp/dummy_path')
+
+            ret = utils.which_bin([])
+            self.assertIs(None, ret)
+
+        with patch('salt.utils.which', return_value=''):
+            ret = utils.which_bin(test_exes)
+            self.assertIs(None, ret)
+
+    def test_gen_jid(self):
+        now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+        with patch('datetime.datetime'):
+            datetime.datetime.now.return_value = now
+            ret = utils.gen_jid()
+            self.assertEqual(ret, '20021225120000000000')
+
+    def test_check_or_die(self):
+        self.assertRaises(CommandNotFoundError, utils.check_or_die, None)
+
+        with patch('salt.utils.which', return_value=False):
+            self.assertRaises(CommandNotFoundError, utils.check_or_die, 'FAKE COMMAND')
+
+    def test_compare_versions(self):
+        ret = utils.compare_versions('1.0', '==', '1.0')
+        self.assertTrue(ret)
+
+        ret = utils.compare_versions('1.0', '!=', '1.0')
+        self.assertFalse(ret)
+
+        with patch('salt.utils.log') as log_mock:
+            ret = utils.compare_versions('1.0', 'HAH I AM NOT A COMP OPERATOR! I AM YOUR FATHER!', '1.0')
+            self.assertTrue(log_mock.error.called)
+
+    def test_kwargs_warn_until(self):
+        # Test invalid version arg
+        self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
