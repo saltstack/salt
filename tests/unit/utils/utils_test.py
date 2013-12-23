@@ -217,3 +217,7 @@ class UtilsTestCase(TestCase):
         '''
         self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111')
 
+    def test_test_mode(self):
+        self.assertTrue(utils.test_mode(test=True))
+        self.assertTrue(utils.test_mode(Test=True))
+        self.assertTrue(utils.test_mode(tEsT=True))
