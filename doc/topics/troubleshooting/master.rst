@@ -87,7 +87,7 @@ You can do it manually with something like:
 Or with the following Salt state:
 
 .. code-block:: yaml
-       :linenos:
+    :linenos:
 
     net.core.rmem_max:
       sysctl:
