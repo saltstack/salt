@@ -155,10 +155,6 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {
-    'wait': 'watch'
-}
-
 
 def _reinterpreted_state(state):
     '''
@@ -332,6 +328,9 @@ def wait(name,
             'result': True,
             'comment': ''}
 
+
+# Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
+watch = wait
 
 def wait_script(name,
                 source=None,
