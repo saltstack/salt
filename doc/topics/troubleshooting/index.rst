@@ -225,7 +225,7 @@ sure the master of minion are running in the foreground:
     salt-master -l debug
     salt-minion -l debug
 
-The pass the signal to the master or minion when it seems to be unresponsive:
+Then pass the signal to the master or minion when it seems to be unresponsive:
 
 .. code-block:: bash
 
