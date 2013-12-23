@@ -13,11 +13,13 @@ import salt.loader
 import salt.fileclient
 import salt.minion
 import salt.crypt
+import salt.transport
 from salt._compat import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +54,8 @@ class RemotePillar(object):
         self.grains = grains
         self.id_ = id_
         self.serial = salt.payload.Serial(self.opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
-        self.auth = salt.crypt.SAuth(opts)
+        self.sreq = salt.transport.Channel.factory(opts)
+        # self.auth = salt.crypt.SAuth(opts)
 
     def compile_pillar(self):
         '''
@@ -66,11 +68,14 @@ class RemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
-        key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
-        pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        ret_pillar = pcrypt.loads(ret['pillar'])
+        # ret = self.sreq.send(load, tries=3, timeout=7200)
+        ret_pillar = self.sreq.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
+
+        # key = self.auth.get_keys()
+        # aes = key.private_decrypt(ret['key'], 4)
+        # pcrypt = salt.crypt.Crypticle(self.opts, aes)
+        # ret_pillar = pcrypt.loads(ret['pillar'])
+
         if not isinstance(ret_pillar, dict):
             log.error(
                 'Got a bad pillar from master, type {0}, expecting dict: '

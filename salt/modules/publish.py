@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.payload
+import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types, integer_types
 
@@ -52,7 +53,7 @@ def _publish(
     arg = _normalize_arg(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
@@ -66,9 +67,11 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        peer_data = auth.crypticle.loads(
-            sreq.send('aes', auth.crypticle.dumps(load), 1))
+        peer_data = sreq.send(load)
+        # peer_data = auth.crypticle.loads(
+        #     sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
@@ -79,8 +82,9 @@ def _publish(
             'id': __opts__['id'],
             'tok': tok,
             'jid': peer_data['jid']}
-    ret = auth.crypticle.loads(
-            sreq.send('aes', auth.crypticle.dumps(load), 5))
+    ret = sreq.send(load)
+    #  auth.crypticle.loads(
+    #         sreq.send('aes', auth.crypticle.dumps(load), 5))
     if form == 'clean':
         cret = {}
         for host in ret:
@@ -212,7 +216,7 @@ def runner(fun, arg=None):
     arg = _normalize_arg(arg)
 
     log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
@@ -220,8 +224,11 @@ def runner(fun, arg=None):
             'arg': arg,
             'tok': tok,
             'id': __opts__['id']}
+
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        return auth.crypticle.loads(
-            sreq.send('aes', auth.crypticle.dumps(load), 1))
+        return sreq.send(load)
+        # return auth.crypticle.loads(
+        #    sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)

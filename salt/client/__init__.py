@@ -39,6 +39,7 @@ import getpass
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.transport
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
@@ -1320,12 +1321,15 @@ class LocalClient(object):
         if self.opts['order_masters']:
             payload_kwargs['to'] = timeout
 
-        sreq = salt.payload.SREQ(
-            #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-            'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
-            ':' + str(self.opts['ret_port']),
-        )
-        payload = sreq.send('clear', payload_kwargs)
+        # sreq = salt.payload.SREQ(
+        #     #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+        #     'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
+        #     ':' + str(self.opts['ret_port']),
+        # )
+        master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                     ':' + str(self.opts['ret_port'])
+        sreq = salt.transport.Channel.factory(self.opts, crypt='clear', master_uri=master_uri)
+        payload = sreq.send(payload_kwargs)
 
         if not payload:
             # The master key could have changed out from under us! Regen
@@ -1335,7 +1339,7 @@ class LocalClient(object):
                 return payload
             self.key = key
             payload_kwargs['key'] = self.key
-            payload = sreq.send('clear', payload_kwargs)
+            payload = sreq.send(payload_kwargs)
             if not payload:
                 return payload
 

@@ -172,10 +172,11 @@ class RunnerClient(object):
         '''
         load = kwargs
         load['cmd'] = 'runner'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        ret = sreq.send('clear', load)
+        # sreq = salt.payload.SREQ(
+        #         'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+        #        )
+        sreq = salt.transport.Channel.factory(opts, crypt='clear')
+        ret = sreq.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 raise_error(**ret['error'])
