@@ -63,6 +63,12 @@ class SSHHighState(salt.state.BaseHighState):
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
 
+    def load_dynamic(self, matches):
+        '''
+        Stub out load_dynamic
+        '''
+        return
+
 
 def lowstate_file_refs(chunks):
     '''
