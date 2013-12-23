@@ -63,7 +63,11 @@ class LiterateCoding(Directive):
         return sections
 
     def run(self):
-        lines = self.parse_lit(self.parse_file(self.arguments[0]))
+        try:
+            lines = self.parse_lit(self.parse_file(self.arguments[0]))
+        except IOError as exc:
+            document = self.state.document
+            return [document.reporter.warning(str(exc), line=self.lineno)]
 
         node = nodes.container()
         node['classes'] = ['lit-container']
@@ -143,7 +147,7 @@ class LiterateFormula(LiterateCoding):
             except IOError:
                 pass
 
-        raise Exception("Could not find sls file '{0}'".format(sls_path))
+        raise IOError("Could not find sls file '{0}'".format(sls_path))
 
 
 class CurrentFormula(Directive):
