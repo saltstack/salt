@@ -100,6 +100,7 @@ for path in addtl_paths:
 import salt.version
 
 
+formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
@@ -192,6 +193,8 @@ html_sidebars = {
         'relations.html',
         'sourcelink.html',
         'searchbox.html',
+    ],
+    'ref/formula/all/*': [
     ],
 }
 
