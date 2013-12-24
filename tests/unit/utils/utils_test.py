@@ -307,7 +307,6 @@ class UtilsTestCase(TestCase):
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
 
-
     def test_argspec_report(self):
         def _test_spec(arg1, arg2, kwarg1=None):
             pass
