@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Module for sending messages via xmpp (aka, jabber)
+Module for Sending Messages via XMPP (a.k.a. Jabber)
+
+.. versionadded:: Hydrogen
 
 :depends:   - sleekxmpp python module
 :configuration: This module can be used by either passing a jid and password
     directly to send_message, or by specifying the name of a configuration
     profile in the minion config, minion pillar, or master config.
 
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         my-xmpp-login:
             xmpp.jid: myuser@jabber.example.org/resourcename
@@ -15,6 +19,8 @@ Module for sending messages via xmpp (aka, jabber)
 
     The resourcename refers to the resource that is using this account. It is
     user-definable, and optional. The following configurations are both valid:
+
+    .. code-block:: yaml
 
         my-xmpp-login:
             xmpp.jid: myuser@jabber.example.org/salt
