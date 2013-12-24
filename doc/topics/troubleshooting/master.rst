@@ -79,6 +79,10 @@ if running Salt as the root user:
     wish to increase them if your Salt master is doing more than just running
     Salt.
 
+After making these changes, ``ulimit -n`` will still show a value of 1024. 
+You must re-establish your session as the specified user or the output will
+remain the same.
+
 Salt Master Stops Responding
 ============================
 
