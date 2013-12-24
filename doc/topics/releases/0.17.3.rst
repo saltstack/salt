@@ -2,6 +2,8 @@
 Salt 0.17.3 Release Notes
 =========================
 
+:release: 2013-12-08
+
 .. note::
 
     0.17.3 had some regressions which were promptly fixed in the 0.17.4

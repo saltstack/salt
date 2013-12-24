@@ -2,6 +2,8 @@
 Salt 0.12.0 Release Notes
 =========================
 
+:release: 2013-01-15
+
 Another feature release of Salt is here! Some exciting additions are included
 with more ways to make salt modular and even easier management of the salt
 file server.
