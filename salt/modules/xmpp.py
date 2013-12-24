@@ -81,8 +81,8 @@ def send_msg(recipient, message, jid=None, password=None, profile=None):
         password = creds.get('xmpp.password')
 
     xmpp = SendMsgBot(jid, password, recipient, message)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0030')  # Service Discovery
+    xmpp.register_plugin('xep_0199')  # XMPP Ping
 
     if xmpp.connect():
         xmpp.process(block=True)

@@ -28,7 +28,7 @@ def send_msg(name, recipient, profile):
     Send a message to an XMPP user
 
     .. code-block:: yaml
-    
+
         server-warning-message:
           xmpp.send_msg:
             - name: 'This is a server warning message'
