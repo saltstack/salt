@@ -28,10 +28,14 @@ Module for sending messages via xmpp (aka, jabber)
 
 HAS_LIBS = False
 try:
-    import sleekxmpp
+    from sleekxmpp import ClientXMPP as _ClientXMPP
     HAS_LIBS = True
 except ImportError:
-    pass
+    class _ClientXMPP(object):
+        '''
+        Fake class in order not to raise errors
+        '''
+
 
 __virtualname__ = 'xmpp'
 
@@ -45,7 +49,7 @@ def __virtual__():
     return False
 
 
-class SendMsgBot(sleekxmpp.ClientXMPP):
+class SendMsgBot(_ClientXMPP):
 
     def __init__(self, jid, password, recipient, msg):  # pylint: disable=E1002
         # PyLint wrongly reports an error when calling super, hence the above
