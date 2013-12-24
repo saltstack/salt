@@ -56,7 +56,6 @@ class SendMsgBot(sleekxmpp.ClientXMPP):
 
     def start(self, event):
         self.send_presence()
-        self.get_roster()
 
         self.send_message(mto=self.recipient,
                           mbody=self.msg,
