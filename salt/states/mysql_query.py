@@ -119,12 +119,14 @@ def run(name,
     # The database is present, execute the query
     query_result = __salt__['mysql.query'](database, query, **connection_args)
     mapped_results = []
-    for res in query_result['results']:
-        mapped_line = {}
-        for idx, col in enumerate(query_result['columns']):
-            mapped_line[col] = res[idx]
-        mapped_results.append(mapped_line)
-    query_result['results'] = mapped_results
+    if 'results' in query_result:
+        for res in query_result['results']:
+            mapped_line = {}
+            for idx, col in enumerate(query_result['columns']):
+                mapped_line[col] = res[idx]
+            mapped_results.append(mapped_line)
+        query_result['results'] = mapped_results
+
     ret['comment'] = query_result
 
     if output == 'grain':
@@ -144,9 +146,12 @@ def run(name,
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
         with open(output, 'w') as output_file:
-            for res in query_result['results']:
-                for col, val in res:
-                    output_file.write(col + ':' + val + '\n')
+            if 'results' in query_result:
+                for res in query_result['results']:
+                    for col, val in res:
+                        output_file.write(col + ':' + val + '\n')
+            else:
+                output_file.write(str(query_result))
     else:
         ret['changes']['query'] = "Executed"
 
