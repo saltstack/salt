@@ -47,7 +47,9 @@ def __virtual__():
 
 class SendMsgBot(sleekxmpp.ClientXMPP):
 
-    def __init__(self, jid, password, recipient, msg):
+    def __init__(self, jid, password, recipient, msg):  # pylint: disable=E1003
+        # PyLint wrongly reports an error when calling super, hence the above
+        # disable call
         super(SendMsgBot, self).__init__(jid, password)
 
         self.recipient = recipient
