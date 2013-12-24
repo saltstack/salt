@@ -42,6 +42,8 @@ def run(name,
         database,
         query,
         output=None,
+        grain=None,
+        key=None,
         overwrite=True,
         **connection_args):
     '''
@@ -57,7 +59,15 @@ def run(name,
         The query to execute
 
     output
-        The file to store results (if defined)
+        grain: output in a grain
+        other: the file to store results
+        None:  output to the result comment (default)
+
+    grain:
+        grain to store the output (need output=grain)
+
+    key:
+        the output is stored as a dictionnary in the specified grain
 
     overwrite
         The file will be overwritten if it already exists (default)
@@ -79,17 +89,64 @@ def run(name,
                 ).format(name)
         return ret
 
-    # The database is present, execute the query
-    results = __salt__['mysql.query'](database, query, **connection_args)
-    ret['comment'] = results
+    # Check if execution needed
+    if output == 'grain':
+        if grain != None and key == None:
+            if not overwrite and grain in __salt__['grains.ls']():
+                ret['comment'] = 'No execution needed. Grain ' + grain\
+                               + ' already set'
+                return ret
+        elif grain != None and key != None:
+            if grain in __salt__['grains.ls']():
+                grain_value = __salt__['grains.get'](grain)
+            else:
+                grain_value = {}
+            if not overwrite and key in grain_value:
+                ret['comment'] = 'No execution needed. Grain ' + grain\
+                               + ':' + key + ' already set'
+                return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = "Error: output type 'grain' needs the grain "\
+                           + "parameter\n"
+            return ret
+    elif output is not None:
+        if not overwrite and os.path.isfile(output):
+            ret['comment'] = 'No execution needed. File ' + output\
+                           + ' already set'
+            return ret
 
-    if output is not None:
-        if overwrite or not os.path.isfile(output):
-            ret['changes']['query'] = "Executed. Output into " + output
-            with open(output, 'w') as output_file:
-                for res in results['results']:
-                    for idx, col in enumerate(results['columns']):
-                        output_file.write(col + ':' + res[idx] + '\n')
+    # The database is present, execute the query
+    query_result = __salt__['mysql.query'](database, query, **connection_args)
+    mapped_results = []
+    for res in query_result['results']:
+        mapped_line = {}
+        for idx, col in enumerate(query_result['columns']):
+            mapped_line[col] = res[idx]
+        mapped_results.append(mapped_line)
+    query_result['results'] = mapped_results
+    ret['comment'] = query_result
+
+    if output == 'grain':
+        if grain != None and key == None:
+            __salt__['grains.setval'](grain, query_result)
+            ret['changes']['query'] = "Executed. Output into grain: "\
+                                        + grain
+        elif grain != None and key != None:
+            if grain in __salt__['grains.ls']():
+                grain_value = __salt__['grains.get'](grain)
+            else:
+                grain_value = {}
+            grain_value[key] = query_result
+            __salt__['grains.setval'](grain, grain_value)
+            ret['changes']['query'] = "Executed. Output into grain: "\
+                                    + grain + ":" + key
+    elif output is not None:
+        ret['changes']['query'] = "Executed. Output into " + output
+        with open(output, 'w') as output_file:
+            for res in query_result['results']:
+                for col, val in res:
+                    output_file.write(col + ':' + val + '\n')
     else:
         ret['changes']['query'] = "Executed"
 
