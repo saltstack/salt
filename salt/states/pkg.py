@@ -343,7 +343,7 @@ def installed(
             - fromrepo: mycustomrepo
             - skip_verify: True
             - version: 2.0.6~ubuntu3
-
+            - refresh: True
 
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
