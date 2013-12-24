@@ -225,8 +225,8 @@ class UtilsTestCase(TestCase):
         '''
         Ensure we throw an exception if we have a too-long IPC URI
         '''
-        self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1' * 1024)
-
+        with patch('zmq.IPC_PATH_MAX_LEN', 1):
+            self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1' * 1024)
 
     def test_test_mode(self):
         self.assertTrue(utils.test_mode(test=True))
