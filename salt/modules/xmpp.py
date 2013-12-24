@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for sending messages via xmpp (aka, jabber)
 
