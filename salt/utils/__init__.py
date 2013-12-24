@@ -595,6 +595,7 @@ def is_jid(jid):
     except ValueError:
         return False
 
+
 def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
