@@ -96,6 +96,11 @@ def run(name,
                 ret['comment'] = 'No execution needed. Grain ' + grain\
                                + ' already set'
                 return ret
+            elif __opts__['test']:
+                ret['result']  = None
+                ret['comment'] = 'Query would execute, storing result in '\
+                               + 'grain: ' + grain
+                return ret
         elif grain != None and key != None:
             if grain in __salt__['grains.ls']():
                 grain_value = __salt__['grains.get'](grain)
@@ -104,6 +109,11 @@ def run(name,
             if not overwrite and key in grain_value:
                 ret['comment'] = 'No execution needed. Grain ' + grain\
                                + ':' + key + ' already set'
+                return ret
+            elif __opts__['test']:
+                ret['result']  = None
+                ret['comment'] = 'Query would execute, storing result in '\
+                               + 'grain: ' + grain + ':' + key
                 return ret
         else:
             ret['result'] = False
@@ -115,6 +125,14 @@ def run(name,
             ret['comment'] = 'No execution needed. File ' + output\
                            + ' already set'
             return ret
+        elif __opts__['test']:
+            ret['result']  = None
+            ret['comment'] = 'Query would execute, storing result in '\
+                           + 'file: ' + output
+            return ret
+    elif __opts__['test']:
+        ret['result']  = None
+        ret['comment'] = 'Query would execute, not storing result'
 
     # The database is present, execute the query
     query_result = __salt__['mysql.query'](database, query, **connection_args)
