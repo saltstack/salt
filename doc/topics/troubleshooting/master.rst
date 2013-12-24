@@ -65,6 +65,19 @@ This setting can be changed in limits.conf as the nofile value(s),
 and activated upon new a login of the specified user.
 
 So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum.
+To set this value add the following line to your ``/etc/security/limits.conf``
+if running Salt as the root user:
+
+.. code-block:: bash
+    
+    root        hard    nofile        3600
+    root        soft    nofile        3600
+
+.. note::
+
+    The above is simply an example of how to set these values, and you may
+    wish to increase them if your Salt master is doing more than just running
+    Salt.
 
 Salt Master Stops Responding
 ============================
