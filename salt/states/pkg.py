@@ -332,6 +332,10 @@ def installed(
         :mod:`yumpkg5 <salt.modules.yumpkg5>`, and
         :mod:`zypper <salt.modules.zypper>`.
 
+    refresh
+        Update the repo database of available packages prior to installing the
+        requested package.
+
     Usage::
 
         httpd:
