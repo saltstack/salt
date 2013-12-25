@@ -3,6 +3,8 @@
 Sending Messages over XMPP
 ==========================
 
+.. versionadded:: Hydrogen
+
 This state is useful for firing messages during state runs, using the XMPP
 protocol
 

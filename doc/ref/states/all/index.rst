@@ -100,4 +100,5 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    xmpp
     zcbuildout
