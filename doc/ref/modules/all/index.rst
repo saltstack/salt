@@ -119,6 +119,7 @@ Full list of builtin execution modules
     openstack_config
     osxdesktop
     pacman
+    pagerduty
     pam
     parted
     pecl
