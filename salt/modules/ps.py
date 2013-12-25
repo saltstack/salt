@@ -63,7 +63,10 @@ def top(num_processes=5, interval=3):
     time.sleep(interval)
     usage = set()
     for process, start in start_usage.items():
-        user, system = process.get_cpu_times()
+        try:
+            user, system = process.get_cpu_times()
+        except psutil.NoSuchProcess:
+            continue
         now = user + system
         diff = now - start
         usage.add((diff, process))
