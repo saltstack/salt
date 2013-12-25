@@ -2,6 +2,8 @@
 Salt 0.10.2 Release Notes
 =========================
 
+:release: 2012-07-30
+
 0.10.2 is out! This release comes with enhancements to the pillar interface,
 cleaner ways to access the salt-call capabilities in the API, minion data
 caching and the event system has been added to salt minions.

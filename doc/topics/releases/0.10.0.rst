@@ -2,6 +2,8 @@
 Salt 0.10.0 Release Notes
 =========================
 
+:release: 2012-06-16
+
 0.10.0 has arrived! This release comes with MANY bug fixes, and new
 capabilities which greatly enhance performance and reliability. This
 release is primarily a bug fix release with many new tests and many repaired
@@ -76,7 +78,7 @@ To continue our efforts with testing Salt's ability to scale the minionswarm
 script has been updated. The minionswarm can now start up minions much faster
 than it could before and comes with a new feature allowing modules to be
 disabled, thus lowering the minion's footprint when making a swarm. These new
-updates have allows us to test 
+updates have allows us to test
 
 .. code-block:: bash
 

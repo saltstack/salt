@@ -2,6 +2,8 @@
 Salt 0.10.3 Release Notes
 =========================
 
+:release: 2012-09-30
+
 The latest taste of Salt has come, this release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
 reliable, the beginning of the ACL system is in place, a new command line
@@ -60,15 +62,15 @@ Parsing System
 
 Pedro Algavio, aka s0undt3ch, has added a substantial update to the command
 line parsing system that makes the help message output much cleaner and easier
-to search through. Salt parsers now have `--versions-report` besides usual 
+to search through. Salt parsers now have `--versions-report` besides usual
 `--version` info which you can provide when reporting any issues found.
 
 Key Generation
 --------------
 
-We have reduced the requirements needed for `salt-key` to generate minion keys.  
-You're no longer required to have salt configured and it's common directories 
-created just to generate keys. This might prove useful if you're batch creating 
+We have reduced the requirements needed for `salt-key` to generate minion keys.
+You're no longer required to have salt configured and it's common directories
+created just to generate keys. This might prove useful if you're batch creating
 keys to pre-load on minions.
 
 Startup States
@@ -96,8 +98,8 @@ the data loaded from the specified sls file or will delete the specified id:
 Max Open Files
 --------------
 
-While we're currently unable to properly handle ZeroMQ's abort signals when the 
-max open files is reached, due to the way that's handled on ZeroMQ's, we have 
+While we're currently unable to properly handle ZeroMQ's abort signals when the
+max open files is reached, due to the way that's handled on ZeroMQ's, we have
 minimized the chances of this happening without at least warning the user.
 
 More State Output Options
@@ -133,25 +135,25 @@ executing a large state system.
 `state.file.append` Improvements
 --------------------------------
 
-The salt state `file.append()` tries *not* to append existing text. Previously 
-the matching check was being made line by line. While this kind of check might 
-be enough for most cases, if the text being appended was multi-line, the check 
-would not work properly. This issue is now properly handled, the match is done 
-as a whole ignoring any white space addition or removal except inside commas.  
-For those thinking that, in order to properly match over multiple lines, salt 
-will load the whole file into memory, that's not true. For most cases this is 
-not important but an erroneous order to read a 4GB file, if not properly 
-handled, like salt does, could make salt chew that amount of memory.  Salt has 
-a buffered file reader which will keep in memory a maximum of 256KB and 
-iterates over the file in chunks of 32KB to test for the match, more than 
-enough, if not, explain your usage on a ticket. With this change, also 
-`salt.modules.file.contains()`, `salt.modules.file.contains_regex()`, 
-`salt.modules.file.contains_glob()` and `salt.utils.find` now do the searching 
+The salt state `file.append()` tries *not* to append existing text. Previously
+the matching check was being made line by line. While this kind of check might
+be enough for most cases, if the text being appended was multi-line, the check
+would not work properly. This issue is now properly handled, the match is done
+as a whole ignoring any white space addition or removal except inside commas.
+For those thinking that, in order to properly match over multiple lines, salt
+will load the whole file into memory, that's not true. For most cases this is
+not important but an erroneous order to read a 4GB file, if not properly
+handled, like salt does, could make salt chew that amount of memory.  Salt has
+a buffered file reader which will keep in memory a maximum of 256KB and
+iterates over the file in chunks of 32KB to test for the match, more than
+enough, if not, explain your usage on a ticket. With this change, also
+`salt.modules.file.contains()`, `salt.modules.file.contains_regex()`,
+`salt.modules.file.contains_glob()` and `salt.utils.find` now do the searching
 and/or matching using the buffered chunks approach explained above.
 
 Two new keyword arguments were also added, `makedirs` and `source`.
-The first, `makedirs` will create the necessary directories in order to append 
-to the specified file, of course, it only applies if we're trying to append to 
+The first, `makedirs` will create the necessary directories in order to append
+to the specified file, of course, it only applies if we're trying to append to
 a non-existing file on a non-existing directory:
 
 .. code-block:: yaml
