@@ -1,4 +1,118 @@
 -------------------------------------------------------------------
+Thu Dec 12 12:57:51 UTC 2013 - aboe76@gmail.com
+
+- Updated to  0.17.4 which is another bugfix release for 0.17.0:
+  - Fix some jinja render errors (issue 8418)
+  - Fix file.replace state changing file ownership (issue 8399)
+  - Fix state ordering with the PyDSL renderer (issue 8446)
+  - Fix for new npm version (issue 8517)
+  - Fix for pip state requiring name even with requirements file (issue 8519)
+  - Add sane maxrunning defaults for scheduler (issue 8563)
+  - Fix states duplicate key detection (issue 8053)
+  - Fix SUSE patch level reporting (issue 8428)
+  - Fix managed file creation umask (issue 8590)
+  - Fix logstash exception (issue 8635)
+  - Improve argument exception handling for salt command (issue 8016)
+  - Fix pecl success reporting (issue 8750)
+  - Fix launchctl module exceptions (issue 8759)
+  - Fix argument order in pw_user module
+  - Add warnings for failing grains (issue 8690)
+  - Fix hgfs problems caused by connections left open (issue 8811 and issue 8810)
+  - Fix installation of packages with dots in pkg name (issue 8614)
+  - Fix noarch package installation on CentOS 6 (issue 8945)
+  - Fix portage_config.enforce_nice_config (issue 8252)
+  - Fix salt.util.copyfile umask usage (issue 8590)
+  - Fix rescheduling of failed jobs (issue 8941)
+  - Fix conflicting options in postgres module (issue 8717)
+  - Fix ps modules for psutil >= 0.3.0 (issue 7432)
+  - Fix postgres module to return False on failure (issue 8778)
+  - Fix argument passing for args with pound signs (issue 8585)
+  - Fix pid of salt CLi command showing in status.pid output (issue 8720)
+  - Fix rvm to run gem as the correct user (issue 8951)
+  - Fix namespace issue in win_file module (issue 9060)
+  - Fix masterless state paths on windows (issue 9021)
+  - Fix timeout option in master config (issue 9040)
+
+-------------------------------------------------------------------
+Thu Nov 21 15:33:06 UTC 2013 - speilicke@suse.com
+
+- Add bugzilla for solved issues
+
+-------------------------------------------------------------------
+Fri Nov 15 18:57:46 UTC 2013 - aboe76@gmail.com
+
+- dropped python-urllib3 depency not in factory yet.
+  only needed with saltstack helium and higher
+
+-------------------------------------------------------------------
+Thu Nov 14 22:05:06 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.17.2 Bugfix Release:
+  - Add ability to delete key with grains.delval (issue 7872)
+  - Fix possible state compiler stack trace (issue 5767)
+  - Fix grains targeting for new grains (issue 5737)
+  - Fix bug with merging in git_pillar (issue 6992)
+  - Fix print_jobs duplicate results
+  - Fix possible KeyError from ext_job_cache missing option
+  - Fix auto_order for - names states (issue 7649)
+  - Fix regression in new gitfs installs (directory not found error)
+  - Fix fileclient in case of master restart (issue 7987)
+  - Try to output warning if CLI command malformed (issue 6538)
+  - Fix --out=quiet to actually be quiet (issue 8000)
+  - Fix for state.sls in salt-ssh (issue 7991)
+  - Fix for MySQL grants ordering issue (issue 5817)
+  - Fix traceback for certain missing CLI args (issue 8016)
+  - Add ability to disable lspci queries on master (issue 4906)
+  - Fail if sls defined in topfile does not exist (issue 5998)
+  - Add ability to downgrade MySQL grants (issue 6606)
+  - Fix ssh_auth.absent traceback (issue 8043)
+  - Fix ID-related issues (issue 8052, issue 8050, and others)
+  - Fix for jinja rendering issues (issue 8066 and issue 8079)
+  - Fix argument parsing in salt-ssh (issue 7928)
+  - Fix some GPU detection instances (issue 6945)
+  - Fix bug preventing includes from other environments in SLS files
+  - Fix for kwargs with dashes (issue 8102)
+  - Fix apache.adduser without apachectl (issue 8123)
+  - Fix issue with evaluating test kwarg in states (issue 7788)
+  - Fix regression in salt.client.Caller() (issue 8078)
+  - Fix bug where cmd.script would try to run even if caching failed (issue 7601)
+  - Fix for mine data not being updated (issue 8144)
+  - Fix a Xen detection edge case (issue 7839)
+  - Fix version generation for when it's part of another git repo (issue 8090)
+  - Fix _handle_iorder stacktrace so that the real syntax error is shown (issue 8114 and issue 7905)
+  - Fix git.latest state when a commit SHA is used (issue 8163)
+  - Fix for specifying identify file in git.latest (issue 8094)
+  - Fix for --output-file CLI arg (issue 8205)
+  - Add ability to specify shutdown time for system.shutdown (issue 7833)
+  - Fix for salt version using non-salt git repo info (issue 8266)
+  - Add additional hints at impact of pkgrepo states when test=True (issue 8247)
+  - Fix for salt-ssh files not being owned by root (issue 8216)
+  - Fix retry logic and error handling in fileserver (related to issue 7755)
+  - Fix file.replace with test=True (issue 8279)
+  - Add flag for limiting file traversal in fileserver (issue 6928)
+  - Fix for extra mine processes (issue 5729)
+  - Fix for unloading custom modules (issue 7691)
+  - Fix for salt-ssh opts (issue 8005 and issue 8271)
+  - Fix compound matcher for grains (issue 7944)
+  - Add dir_mode to file.managed (issue 7860)
+  - Improve traceroute support for FreeBSD and OS X (issue 4927)
+  - Fix for matching minions under syndics (issue 7671)
+  - Improve exception handling for missing ID (issue 8259)
+  - Add configuration option for minion_id_caching
+  - Fix open mode auth errors (issue 8402)  
+
+-------------------------------------------------------------------
+Sun Nov 10 07:52:54 UTC 2013 - aboe76@gmail.com
+
+- In preparation of salt Helium all requirements of salt-cloud
+  absorbed in salt
+
+-------------------------------------------------------------------
+Fri Nov  1 07:22:04 UTC 2013 - aboe76@gmail.com
+
+- Added salt-doc package with html documentation of salt
+
+-------------------------------------------------------------------
 Thu Oct 31 21:25:24 UTC 2013 - aboe76@gmail.com
 
 - Disabled salt unit test, new test assert value not in 0.17.1
@@ -18,7 +132,7 @@ Fri Oct 18 11:24:28 UTC 2013 - p.drouand@gmail.com
 -------------------------------------------------------------------
 Thu Oct 17 18:27:23 UTC 2013 - aboe76@gmail.com
 
-- Updated to salt 0.17.1 bugfix release:
+- Updated to salt 0.17.1 bugfix release (bnc#849205, bnc#849204, bnc#849184):
   - Fix symbolic links in thin.tgz (:issue:`7482`)
   - Pass env through to file.patch state (:issue:`7452`)
   - Service provider fixes and reporting improvements (:issue:`7361`)
