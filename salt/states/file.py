@@ -1592,7 +1592,12 @@ def recurse(name,
         # No need to set __env__ = env since that's done in the state machinery
 
     # Verify the source exists.
-    _src_proto, _src_path = source.split('://', 1)
+    try:
+        _src_proto, _src_path = source.split('://', 1)
+    except ValueError:
+        ret['result'] = False
+        ret['comment'] = 'Could not parse source!\nDid you remember to specify a protocol like salt:// ?'
+        return ret
 
     if not _src_path:
         pass
