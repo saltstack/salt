@@ -2,6 +2,8 @@
 Salt 0.9.5 Release Notes
 ========================
 
+:release: 2012-01-15
+
 Salt 0.9.5 is one of the largest steps forward in the development of Salt.
 
 0.9.5 comes with many milestones, this release has seen the community of
@@ -283,7 +285,7 @@ More to Come
 
 We are actively seeking inclusion in more distributions. Primarily getting
 Salt into Gentoo, SUSE, OpenBSD and preparing Solaris support are all turning
-into higher priorities. 
+into higher priorities.
 
 Refinement
 ==========
