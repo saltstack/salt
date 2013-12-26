@@ -168,7 +168,7 @@ def append(name, **kwargs):
             name,
             command.strip())
         return ret
-    if not __salt__['iptables.append'](kwargs['table'], kwargs['chain'], rule):
+    if __salt__['iptables.append'](kwargs['table'], kwargs['chain'], rule):
         ret['changes'] = {'locale': name}
         ret['result'] = True
         ret['comment'] = 'Set iptables rule for {0} to: {1}'.format(
