@@ -40,16 +40,16 @@ def create_event(name, details, service_key, profile):
             - profile: my-pagerduty-account
 
     The following parameters are required:
-    
+
     name
         This is a short description of the event.
-    
+
     details
         This can be a more detailed description of the event.
-    
+
     service_key
         This key can be found by using pagerduty.list_services.
-    
+
     profile
         This refers to the configuration profile to use to connect to the
         PagerDuty service.

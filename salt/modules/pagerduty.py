@@ -39,6 +39,7 @@ def __virtual__():
 
 def _get_pager(profile):
     '''
+    Return the pagerduty connection
     '''
     creds = __salt__['config.option'](profile)
 
