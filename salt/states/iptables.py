@@ -49,6 +49,7 @@ def __virtual__():
 
 def chain_present(name, table='filter'):
     '''
+    .. versionadded:: Hydrogen
 
     Verify the chain is exist.
 
@@ -90,6 +91,8 @@ def chain_present(name, table='filter'):
 
 def chain_absent(name, table='filter'):
     '''
+    .. versionadded:: Hydrogen
+
     Verify the chain is absent.
     '''
 
@@ -129,6 +132,8 @@ def chain_absent(name, table='filter'):
 
 def append(name, **kwargs):
     '''
+    .. versionadded:: 0.17.0
+
     Append a rule to a chain
 
     name
@@ -186,6 +191,8 @@ def append(name, **kwargs):
 
 def insert(name, **kwargs):
     '''
+    .. versionadded:: Hydrogen
+
     Insert a rule into a chain
 
     name
@@ -243,6 +250,8 @@ def insert(name, **kwargs):
 
 def set_policy(name, **kwargs):
     '''
+    .. versionadded:: Hydrogen
+
     Sets the default policy for iptables firewall tables
     '''
     ret = {'name': name,
@@ -281,6 +290,8 @@ def set_policy(name, **kwargs):
 
 def flush(name, **kwargs):
     '''
+    .. versionadded:: Hydrogen
+
     Flush current iptables state
     '''
     ret = {'name': name,
