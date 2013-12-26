@@ -1876,7 +1876,7 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     '''
     This routine is called from managed() to pull a hash from a remote file.
     The "regular expression" language is used, line by line on the 'source_hash'
-     file, to find a potential candidate of the indicated hash type.
+    file, to find a potential candidate of the indicated hash type.
     This avoids many problems of arbitrary file lay out rules
     It specifically permits pulling hash codes deom debian *.dsc files.
     
