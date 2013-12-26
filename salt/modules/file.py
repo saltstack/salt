@@ -1843,25 +1843,12 @@ def get_managed(
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                             source_hash)
-                    hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
-                    for line in hash_fn_fopen.read().splitlines():
-                        line = line.strip()
-                        if ' ' not in line:
-                            hashstr = line
-                            break
-                        elif line.startswith('{0} '.format(name)):
-                            hashstr = line.split()[1]
-                            break
-                    else:
-                        hashstr = ''  # NOT FOUND
-                    comps = hashstr.split('=')
-                    if len(comps) < 2:
-                        return '', {}, ('Source hash file {0} contains an '
-                                        'invalid hash format, it must be in '
-                                        'the format <hash type>=<hash>'
-                                        ).format(source_hash)
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
+                    source_sum = extract_hash(hash_fn, '', name)
+                    if source_sum is None:
+                        return '', {}, ('Source hash file {0} contains an invalid '
+                            'hash format, it must be in the format <hash type>=<hash>.'
+                            ).format(source_hash)
+                    
                 else:
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
@@ -1876,6 +1863,70 @@ def get_managed(
                 return '', {}, ('Unable to determine upstream hash of'
                                 ' source file {0}').format(source)
     return sfn, source_sum, ''
+
+hashes = [
+              ['sha512', 128]
+            , ['sha384',  96]
+            , ['sha256',  64]
+            , ['sha224',  56]
+            , [  'sha1',  40]
+            , [   'md5',  32]
+         ]
+def extract_hash(hash_fn, hash_type='md5', file_name=''):
+    '''
+    This routine is called from managed() to pull a hash from a remote file.
+    The "regular expression" language is used, line by line on the 'source_hash'
+     file, to find a potential candidate of the indicated hash type.
+    This avoids many problems of arbitrary file lay out rules
+    It specifically permits pulling hash codes deom debian *.dsc files.
+    
+    Tested with :
+        openerp_7.0-latest-1.tar.gz:
+            file.managed:
+                - name: /tmp/openerp_7.0-20121227-075624-1_all.deb
+                - source: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.tar.gz
+                - source_hash: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.dsc
+
+
+    '''
+    source_sum = None
+    partial_id = False
+    name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
+    log.debug('modules.file.py - extract_hash(): Extracting hash for file named: {}'.format(name_sought))
+    hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
+    for hash_variant in hashes:
+        if hash_type == '' or hash_type == hash_variant[0]:
+            log.debug('modules.file.py - extract_hash(): Will use regex to get'
+                ' a purely hexadecimal number of length ({0}), presumably hash'
+                ' type : {1}'.format(hash_variant[1], hash_variant[0]))
+            hash_fn_fopen.seek(0)
+            for line in hash_fn_fopen.read().splitlines():
+                hash_array = re.findall(r'(?i)(?<![a-z0-9])[a-f0-9]{' + str(hash_variant[1]) + '}(?![a-z0-9])', line)
+                log.debug('modules.file.py - extract_hash(): '
+                    'From "line": {} got : {}'.format(line, hash_array))
+                if hash_array:
+                    if not partial_id:
+                        source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
+                        partial_id = True
+                        
+                    log.debug('modules.file.py - extract_hash(): Found : {} -- {}'.format(
+                                            source_sum['hash_type'], source_sum['hsum']))
+                                            
+                    if re.search(name_sought, line):
+                        source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
+                        log.debug('modules.file.py - extract_hash: '
+                        'For {} -- returning the {} hash "{}".'.format(
+                                 name_sought, source_sum['hash_type'], source_sum['hsum']))
+                        return source_sum
+
+    
+    if partial_id:
+        log.debug('modules.file.py - extract_hash: '
+                'Returning the partially identified {} hash "{}".'.format(
+                       source_sum['hash_type'], source_sum['hsum']))
+    else:    
+        log.debug('modules.file.py - extract_hash: Returning None.')
+    return source_sum
 
 
 def check_perms(name, ret, user, group, mode):
