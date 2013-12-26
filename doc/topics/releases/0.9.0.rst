@@ -2,6 +2,8 @@
 Salt 0.9.0 Release Notes
 ========================
 
+:release: 2011-08-27
+
 Salt 0.9.0 is here. This is an exciting release, 0.9.0 includes the new network
 topology features allowing peer salt commands and masters of masters via the
 syndic interface.
