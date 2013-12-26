@@ -93,13 +93,16 @@ When adding a new function or state, where possible try to use a
 
 .. code-block:: python
 
-    def new_func():
+    def new_func(msg=''):
         '''
-        .. versionadded:: 0.17.0
+        .. versionadded:: 0.16.0
 
-        Prints 'foo!'
+        Prints what was passed to the function.
+
+        msg : None
+            The string to be printed.
         '''
-        print 'foo!'
+        print msg
 
 If you are uncertain what version should be used, either :doc:`consult a core
 developer in IRC </topics/community>` or bring this up when opening your
@@ -112,21 +115,29 @@ number should be used in the ``versionadded`` directive.
 
 Similar to the above, when an existing function or state is modified (for
 example, when an argument is added), then under the explanation of that new
-argument a ``versionchanged`` directive should be used to denote the version in
-which the new argument was added:
+argument a ``versionadded`` directive should be used to note the version in
+which the new argument was added. If an argument's function changes
+significantly, the ``versionchanged`` directive can be used to clarify this:
 
 .. code-block:: python
 
-    def new_func(foo=''):
+    def new_func(msg='', signature=''):
         '''
-        .. versionadded:: 0.17.0
+        .. versionadded:: 0.16.0
 
-        foo : None
-            The string to be printed.
+        Prints what was passed to the function.
+
+        msg : None
+            The string to be printed. Will be prepended with 'Greetings! '.
 
         .. versionchanged:: 0.17.1
+
+        signature : None
+            An optional signature.
+
+        .. versionadded 0.17.0
         '''
-        print foo
+        print 'Greetings! {0}\n\n{1}'.format(msg, signature)
 
 
 Imports
