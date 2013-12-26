@@ -481,6 +481,9 @@ def dns_check(addr, safe=False, ipv6=False):
                     break
             if not addr:
                 error = True
+    except TypeError:
+        err = ('Attempt to resolve address failed. Invalid or unresolveable address')
+        raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
