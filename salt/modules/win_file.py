@@ -344,8 +344,14 @@ def stats(path, hash_type='md5', follow_symlink=False):
 
 def get_attributes(path):
     '''
-    Given the path, return a dictionary object with the Windows
-    file attributes.
+    Return a dictionary object with the Windows
+    file attributes for a file.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_attributes c:\\temp\\a.txt
     '''
     err = '' 
     if not os.path.exists(path):
@@ -398,8 +404,15 @@ def get_attributes(path):
 def set_attributes(path, archive=None, hidden=None, normal=None,
                    notIndexed=None, readonly=None, system=None, temporary=None):
     '''
-    Given the path, set the desired Windows
-    file attributes.
+    Set file attributes for a file.  Note that the normal attribute
+    means that all others are false.  So setting it will clear all others.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.set_attributes c:\\temp\\a.txt normal=True
+        salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
     '''
     err = '' 
     if not os.path.exists(path):
