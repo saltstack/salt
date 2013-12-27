@@ -31,7 +31,7 @@ __virtualname__ = 'partition'
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
     'set_': 'set',
-    'part_list': 'list'
+    'list_': 'list',
 }
 
 
@@ -72,9 +72,7 @@ def probe(device=''):
 
 def part_list(device, unit=None):
     '''
-    partition.part_list device unit
-
-    Prints partition information of given <device>
+    Deprecated. Calls partition.list.
 
     CLI Examples:
 
@@ -83,6 +81,23 @@ def part_list(device, unit=None):
         salt '*' partition.part_list /dev/sda
         salt '*' partition.part_list /dev/sda unit=s
         salt '*' partition.part_list /dev/sda unit=kB
+    '''
+    return list_(device, unit)
+
+
+def list_(device, unit=None):
+    '''
+    partition.list device unit
+
+    Prints partition information of given <device>
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' partition.list /dev/sda
+        salt '*' partition.list /dev/sda unit=s
+        salt '*' partition.list /dev/sda unit=kB
     '''
     if device:
         dev = device.replace('/dev/', '')
