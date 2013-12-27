@@ -388,12 +388,13 @@ def get_attributes(path):
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
-    ''' Note:  os.path.islink() does not work in
-           Python 2.7 for the Windows NTFS file system.
-           The following code does, however, work (tested in Windows 8)
-    '''
+
+    # Note:  os.path.islink() does not work in
+    #   Python 2.7 for the Windows NTFS file system.
+    #   The following code does, however, work (tested in Windows 8)
+
     attributes['symbolicLink'] = False
-    if attributes['reparsePoint'] == True:
+    if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
         findDataTuple = fileIterator.next()
         if findDataTuple[6] == 0xA000000C:
