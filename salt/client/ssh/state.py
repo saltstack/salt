@@ -76,6 +76,8 @@ def lowstate_file_refs(chunks):
     '''
     refs = {}
     for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
         saltenv = 'base'
         crefs = []
         for state in chunk:
