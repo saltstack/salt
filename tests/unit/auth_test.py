@@ -16,7 +16,7 @@ class LoadAuthTestCase(TestCase):
 
     @patch('salt.payload.Serial')
     @patch('salt.loader.auth', return_value={'pam.auth': 'fake_func_str'})
-    def setUp(self, auth_mock, serial_mock):
+    def setUp(self, auth_mock, serial_mock):  # pylint: disable=W0221
         self.lauth = auth.LoadAuth({})  # Load with empty opts
 
     def test_load_name(self):
