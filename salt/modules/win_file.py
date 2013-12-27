@@ -346,25 +346,25 @@ def get_attributes(path):
     '''
     Return a dictionary object with the Windows
     file attributes for a file.
-    
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.get_attributes c:\\temp\\a.txt
     '''
-    err = '' 
+    err = ''
     if not os.path.exists(path):
         err += 'File not found\n'
     if err:
         return err
-    
-    # set up dictionary for attribute values   
+
+    # set up dictionary for attribute values
     attributes = {}
-    
+
     # Get cumulative int value of attributes
     intAttributes = win32file.GetFileAttributes(path)
-    
+
     # Assign individual attributes
     attributes['archive'] = (intAttributes & 32) == 32
     attributes['reparsePoint'] = (intAttributes & 1024) == 1024
@@ -378,7 +378,7 @@ def get_attributes(path):
     attributes['readonly'] = (intAttributes & 1) == 1
     attributes['system'] = (intAttributes & 4) == 4
     attributes['temporary'] = (intAttributes & 256) == 256
-    
+
     # check if it's a Mounted Volume
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] == True and attributes['directory'] == True:
@@ -397,7 +397,7 @@ def get_attributes(path):
         findDataTuple = fileIterator.next()
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
-    
+
     return attributes
 
 
@@ -406,7 +406,7 @@ def set_attributes(path, archive=None, hidden=None, normal=None,
     '''
     Set file attributes for a file.  Note that the normal attribute
     means that all others are false.  So setting it will clear all others.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -414,7 +414,7 @@ def set_attributes(path, archive=None, hidden=None, normal=None,
         salt '*' file.set_attributes c:\\temp\\a.txt normal=True
         salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
     '''
-    err = '' 
+    err = ''
     if not os.path.exists(path):
         err += 'File not found\n'
     if normal:
