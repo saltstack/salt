@@ -6,10 +6,9 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call, DEFAULT, create_autospec
+from salttesting.mock import patch, DEFAULT, create_autospec
 
 from salt import utils
-from salt.modules import sysmod
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
 # Import Python libraries
