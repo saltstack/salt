@@ -2092,7 +2092,7 @@ class BaseHighState(object):
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        mods.add(sls)
+        mods.add('{0}:{1}'.format(saltenv, sls))
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -2158,10 +2158,12 @@ class BaseHighState(object):
                         ) or [inc_sls]
 
                         for sls_target in sls_targets:
-                            if sls_target not in mods:
+                            r_env = resolved_envs[0] if len(resolved_envs) == 1 else saltenv
+                            mod_tgt = '{0}:{1}'.format(r_env, sls_target)
+                            if mod_tgt not in mods:
                                 nstate, err = self.render_state(
                                     sls_target,
-                                    resolved_envs[0] if len(resolved_envs) == 1 else saltenv,
+                                    r_env,
                                     mods,
                                     matches
                                 )
@@ -2334,8 +2336,8 @@ class BaseHighState(object):
         '''
         highstate = self.building_highstate
         all_errors = []
+        mods = set()
         for saltenv, states in matches.items():
-            mods = set()
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
                 if not statefiles:
@@ -2346,7 +2348,8 @@ class BaseHighState(object):
                         )
                     )
                 for sls in statefiles:
-                    if sls in mods:
+                    r_env = '{0}:{1}'.format(saltenv, sls)
+                    if r_env in mods:
                         continue
                     state, errors = self.render_state(sls, saltenv, mods, matches)
                     if state:
