@@ -47,6 +47,7 @@ epel-salttest:
 {% elif grains['os'] == 'Ubuntu' %}
 
 # START Ubuntu pkgrepo tests
+{% set codename = grains['oscodename'] %}
 gpodder-ppa:
   pkgrepo.managed:
     - humanname: gPodder PPA
