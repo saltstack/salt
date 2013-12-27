@@ -45,10 +45,17 @@ try:
 except ImportError:
     pass
 
+# Import python libs
+import time
+import logging
+
 # Import salt libs
 import salt.utils
 
-# Function alias to not shadow built-in's
+# Get logging started
+log = logging.getLogger(__name__)
+
+# Function alias to not shadow built-ins
 __func_alias__ = {
     'list_': 'list'
 }
@@ -96,13 +103,15 @@ def _auth(profile=None):
     return client.Client(**kwargs)
 
 
-def boot(name, flavor_id=0, image_id=0, profile=None):
+def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
     '''
     Boot (create) a new instance
 
     <name>        Name of the new instance (must be first)
     <flavor_id>   Unique integer ID for the flavor
     <image_id>    Unique integer ID for the image
+    <timeout>     How long to wait, after creating the instance, for the
+                  provider to return information about it (default 300 seconds).
 
     CLI Example:
 
@@ -122,7 +131,24 @@ def boot(name, flavor_id=0, image_id=0, profile=None):
     response = nt_ks.servers.create(
         name=name, flavor=flavor_id, image=image_id
     )
-    return server_show(response.id)
+
+    start = time.time()
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            return server_show(response.id, profile=profile)
+        except Exception as exc:
+            log.debug('Server information not yet available: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Timed out after {0} seconds '
+                          'while waiting for data'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying server_show() (try {0})'.format(trycount)
+            )
 
 
 def suspend(instance_id, profile=None):
