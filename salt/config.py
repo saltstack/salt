@@ -1975,6 +1975,11 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if os.path.isfile(opts['token_file']):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
+
+    # Make sure the master_uri is set
+    if 'master_uri' not in opts:
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
+                                                        port=opts['ret_port'])
     # Return the client options
     _validate_opts(opts)
     return opts
