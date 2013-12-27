@@ -22,6 +22,7 @@ import itertools  # same as above, do not remove, it's used in __clean_tmp
 # Import third party libs
 try:
     import win32security
+    import win32file
     from pywintypes import error as pywinerror
     import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
@@ -381,7 +382,7 @@ def get_attributes(path):
 
     # check if it's a Mounted Volume
     attributes['mountedVolume'] = False
-    if attributes['reparsePoint'] == True and attributes['directory'] == True:
+    if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
         findDataTuple = fileIterator.next()
         if findDataTuple[6] == 0xA0000003:
