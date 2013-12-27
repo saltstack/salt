@@ -481,11 +481,13 @@ class Single(object):
 
         Returns tuple of (stdout, stderr)
         '''
-
         stdout, stderr = None, None
+        arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):
-            stdout, stderr = self.shell.exec_cmd(self.arg_str)
+            if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
+                arg_str = "'{0}'".format(arg_str)
+            stdout, stderr = self.shell.exec_cmd(arg_str)
 
         elif self.fun in self.wfuncs:
             stdout, stderr = self.run_wfunc()
