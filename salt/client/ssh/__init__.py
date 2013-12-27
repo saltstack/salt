@@ -114,7 +114,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
              exit 1
          fi
       fi
-      echo {{4}} > /tmp/.salt/minion
+      echo '{{4}}' > /tmp/.salt/minion
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
 EOF'''.format(salt.__version__, RSTR)
@@ -448,7 +448,7 @@ class Single(object):
                 {
                     'root_dir': '/tmp/.salt/running_data',
                     'id': self.id,
-                })
+                }).strip()
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
