@@ -340,3 +340,121 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def get_attributes(path):
+    '''
+    Return a dictionary object with the Windows
+    file attributes for a file.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_attributes c:\\temp\\a.txt
+    '''
+    err = '' 
+    if not os.path.exists(path):
+        err += 'File not found\n'
+    if err:
+        return err
+    
+    # set up dictionary for attribute values   
+    attributes = {}
+    
+    # Get cumulative int value of attributes
+    intAttributes = win32file.GetFileAttributes(path)
+    
+    # Assign individual attributes
+    attributes['archive'] = (intAttributes & 32) == 32
+    attributes['reparsePoint'] = (intAttributes & 1024) == 1024
+    attributes['compressed'] = (intAttributes & 2048) == 2048
+    attributes['directory'] = (intAttributes & 16) == 16
+    attributes['encrypted'] = (intAttributes & 16384) == 16384
+    attributes['hidden'] = (intAttributes & 2) == 2
+    attributes['normal'] = (intAttributes & 128) == 128
+    attributes['notIndexed'] = (intAttributes & 8192) == 8192
+    attributes['offline'] = (intAttributes & 4096) == 4096
+    attributes['readonly'] = (intAttributes & 1) == 1
+    attributes['system'] = (intAttributes & 4) == 4
+    attributes['temporary'] = (intAttributes & 256) == 256
+    
+    # check if it's a Mounted Volume
+    attributes['mountedVolume'] = False
+    if attributes['reparsePoint'] == True and attributes['directory'] == True:
+        fileIterator = win32file.FindFilesIterator(path)
+        findDataTuple = fileIterator.next()
+        if findDataTuple[6] == 0xA0000003:
+            attributes['mountedVolume'] = True
+    # check if it's a soft (symbolic) link
+    ''' Note:  os.path.islink() does not work in
+           Python 2.7 for the Windows NTFS file system.
+           The following code does, however, work (tested in Windows 8)
+    '''
+    attributes['symbolicLink'] = False
+    if attributes['reparsePoint'] == True:
+        fileIterator = win32file.FindFilesIterator(path)
+        findDataTuple = fileIterator.next()
+        if findDataTuple[6] == 0xA000000C:
+            attributes['symbolicLink'] = True
+    
+    return attributes
+
+
+def set_attributes(path, archive=None, hidden=None, normal=None,
+                   notIndexed=None, readonly=None, system=None, temporary=None):
+    '''
+    Set file attributes for a file.  Note that the normal attribute
+    means that all others are false.  So setting it will clear all others.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.set_attributes c:\\temp\\a.txt normal=True
+        salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
+    '''
+    err = '' 
+    if not os.path.exists(path):
+        err += 'File not found\n'
+    if normal:
+        if archive or hidden or notIndexed or readonly or system or temporary:
+            err += 'Normal attribute may not be used with any other attributes\n'
+        else:
+            return win32file.SetFileAttributes(path, 128)
+    if err:
+        return err
+    # Get current attributes
+    intAttributes = win32file.GetFileAttributes(path)
+    # individually set or clear bits for appropriate attributes
+    if archive is not None:
+        if archive:
+            intAttributes |= 0x20
+        else:
+            intAttributes &= 0xFFDF
+    if hidden is not None:
+        if hidden:
+            intAttributes |= 0x2
+        else:
+            intAttributes &= 0xFFFD
+    if notIndexed is not None:
+        if notIndexed:
+            intAttributes |= 0x2000
+        else:
+            intAttributes &= 0xDFFF
+    if readonly is not None:
+        if readonly:
+            intAttributes |= 0x1
+        else:
+            intAttributes &= 0xFFFE
+    if system is not None:
+        if system:
+            intAttributes |= 0x4
+        else:
+            intAttributes &= 0xFFFB
+    if temporary is not None:
+        if temporary:
+            intAttributes |= 0x100
+        else:
+            intAttributes &= 0xFEFF
+    return win32file.SetFileAttributes(path, intAttributes)
