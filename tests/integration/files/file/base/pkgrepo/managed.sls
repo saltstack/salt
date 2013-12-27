@@ -47,7 +47,6 @@ epel-salttest:
 {% elif grains['os'] == 'Ubuntu' %}
 
 # START Ubuntu pkgrepo tests
-{% set codename = grains['oscodename'] %}
 gpodder-ppa:
   pkgrepo.managed:
     - humanname: gPodder PPA
@@ -66,11 +65,7 @@ pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
-{% if osrelease|float >= 12.10 %}
       - python-software-properties
-{% else %}
-      - software-properties-common
-{% endif %}
     - require_in:
       - pkgrepo: gpodder-ppa
       - pkgrepo: nginx-ppa
