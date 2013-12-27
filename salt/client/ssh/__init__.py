@@ -529,8 +529,9 @@ class Single(object):
                 self.opts,
                 self.id,
                 **self.target)
-            default_opts = pre_wrapper['test.opts_pkg']()
-            opts_pkg = dict(default_opts.items() + self.opts.items())
+            opts_pkg = pre_wrapper['test.opts_pkg']()
+            opts_pkg['file_roots'] = self.opts['file_roots']
+            opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],
