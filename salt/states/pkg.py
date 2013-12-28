@@ -419,14 +419,10 @@ def installed(
               - qux: /minion/path/to/qux.rpm
     '''
     rtag = __gen_rtag()
+    refresh = bool(salt.utils.is_true(refresh) or os.path.isfile(rtag))
 
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
-
-    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
-        __salt__['pkg.refresh_db']()
-        if os.path.isfile(rtag):
-            os.remove(rtag)
 
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo, **kwargs)
@@ -468,6 +464,9 @@ def installed(
                                           pkgs=pkgs,
                                           sources=sources,
                                           **kwargs)
+
+        if os.path.isfile(rtag):
+            os.remove(rtag)
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
