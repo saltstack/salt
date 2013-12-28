@@ -26,15 +26,14 @@ What Ports does the Master Need Open?
 
 For the master, TCP ports 4505 and 4506 need to be open. If you've put both
 your Salt master and minion in debug mode and don't see an acknowledgment
-that your minion has connected, it could very well be a firewall.
+that your minion has connected, it could very well be a firewall interfering
+with the connection. See our :doc:`firewall configuration
+</topics/tutorials/firewall>` page for help opening the firewall on various
+platforms.
 
-There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
-document that might help as well.
-
-If you've enabled the right TCP ports on your operating system or Linux
-distribution's firewall and still aren't seeing connections, check that no
-additional access control system such as `SELinux`_ or `AppArmor`_ is blocking
-Salt.
+If you've opened the correct TCP ports and still aren't seeing connections,
+check that no additional access control system such as `SELinux`_ or
+`AppArmor`_ is blocking Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
 .. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
@@ -60,28 +59,29 @@ opened by the user running salt-master (root by default):
     [root@salt-master ~]# ulimit -n
     1024
 
-And modify that value to be at least equal to the number of minions x 2.
-This setting can be changed in limits.conf as the nofile value(s),
-and activated upon new a login of the specified user.
+If this value is not equal to twice the number of minions, then raise this
+value to at least that amount. For example, in an environment with 1800
+minions, the ``nofile`` limit should be set to at least twice that amount, or
+3600. This can be done by creating the file
+``/etc/security/limits.d/99-salt.conf``, with the following contents::
 
-So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum.
-To set this value add the following line to your ``/etc/security/limits.conf``
-if running Salt as the root user:
+    root        hard    nofile        4096
+    root        soft    nofile        4096
 
-.. code-block:: bash
-    
-    root        hard    nofile        3600
-    root        soft    nofile        3600
+Replace ``root`` with the user under which the master runs, if different.
+
+If your master does not have an ``/etc/security/limits.d`` directory, the lines
+can simply be appended to ``/etc/security/limits.conf``.
+
+As with any change to resource limits, it is best to stay logged into your
+current shell and open another shell to run ``ulimit -n`` again and verify that
+the changes were applied correctly.
 
 .. note::
 
     The above is simply an example of how to set these values, and you may
     wish to increase them if your Salt master is doing more than just running
     Salt.
-
-After making these changes, ``ulimit -n`` will still show a value of 1024. 
-You must re-establish your session as the specified user or the output will
-remain the same.
 
 Salt Master Stops Responding
 ============================
