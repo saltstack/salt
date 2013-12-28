@@ -136,18 +136,18 @@ def prep_trans_tar(opts, chunks, file_refs):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
                     break
-                files = file_client.cache_dir(name, saltenv, True)
+                files = file_client.cache_dir(name, saltenv)
                 if files:
                     for filename in files:
                         tgt = os.path.join(
                                 env_root,
                                 short,
-                                filename[filename.find(short) + len(short):],
+                                filename[filename.find(short) + len(short) + 1:],
                                 )
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)
-                        shutil.copy(path, tgt)
+                        shutil.copy(filename, tgt)
                     break
     cwd = os.getcwd()
     os.chdir(gendir)
