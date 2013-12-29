@@ -13,7 +13,7 @@ of situations, and are likely to solve most issues that arise.
 .. admonition:: Version Compatibility
 
     One of the most common issues that Salt Cloud users run into is import
-    errors. These are often caused by version compatibility issues with salt.
+    errors. These are often caused by version compatibility issues with Salt.
 
     Salt 0.16.x works with Salt Cloud 0.8.9 or greater.
 
