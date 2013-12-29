@@ -316,15 +316,6 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(ret, {'test_module.test_spec':
                                        {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
 
-    def test_memoize(self):
-        with patch('salt.utils.warn_until'):
-            utils.memoize(lambda x: x ** 2)
-            self.assertTrue(utils.warn_until.called)
-
-        with patch('salt.utils.real_memoize'):
-            utils.memoize(lambda x: x ** 2)
-            self.assertTrue(utils.real_memoize.called)
-
     def test_decode_list(self):
         test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
         expected_ret = ['unicode_str', ['unicode_item_in_list', 'second_item_in_list'], {'dict_key': 'dict_val'}]

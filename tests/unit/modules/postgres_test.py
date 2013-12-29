@@ -4,6 +4,7 @@
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+import re
 
 ensure_in_syspath('../../')
 
@@ -146,9 +147,9 @@ class PostgresTestCase(TestCase):
             groups='testgroup',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'CREATE ROLE "testgroup" WITH PASSWORD \'"\'"\'testrolepass\'"\'"\' IN GROUP testgroup\'',
-            host='testhost', password='foo', runas='foo')
+        self.assertTrue(re.match(
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'CREATE ROLE',
+            postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
@@ -184,10 +185,8 @@ class PostgresTestCase(TestCase):
             groups='testgroup',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'ALTER ROLE testgroup WITH PASSWORD \'"\'"\'test_role_pass\'"\'"\'; GRANT testgroup TO testgroup\'',
-            host='testhost', password='foo', runas='foo', run_cmd='cmd.run'
-        )
+        self.assertTrue(re.match(
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'ALTER ROLE testgroup WITH PASSWORD', postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=False))
@@ -208,26 +207,23 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhose --port testport --dbname maint_test -c \'CREATE USER "testuser" WITH PASSWORD \'"\'"\'test_role_pass\'"\'"\' IN GROUP test_groups\'',
-            host='testhose', password='test_pass', runas='foo'
-        )
+        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username testuser --host testhose --port testport --dbname maint_test -c \'CREATE USER "testuser" WITH PASSWORD', postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query', Mock(return_value=[
         {
-        'name': 'test_user',
-        'superuser': 't',
-        'inherits privileges': 't',
-        'can create roles': 't',
-        'can create databases': 't',
-        'can update system catalogs': 't',
-        'can login': 't',
-        'replication': None,
-        'connections': '-1',
-        'defaults variables': None
-    }]))
+            'name': 'test_user',
+            'superuser': 't',
+            'inherits privileges': 't',
+            'can create roles': 't',
+            'can create databases': 't',
+            'can update system catalogs': 't',
+            'can login': 't',
+            'replication': None,
+            'connections': '-1',
+            'defaults variables': None
+        }]))
     def test_user_exists(self):
         ret = postgres.user_exists(
             'test_user',
@@ -244,16 +240,16 @@ class PostgresTestCase(TestCase):
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query', Mock(return_value=[
         {
-        'name': 'test_user',
-        'superuser': 't',
-        'inherits privileges': 't',
-        'can create roles': 't',
-        'can create databases': 't',
-        'can update system catalogs': 't',
-        'can login': 't',
-        'replication': None,
-        'connections': '-1',
-        'defaults variables': None
+            'name': 'test_user',
+            'superuser': 't',
+            'inherits privileges': 't',
+            'can create roles': 't',
+            'can create databases': 't',
+            'can update system catalogs': 't',
+            'can login': 't',
+            'replication': None,
+            'connections': '-1',
+            'defaults variables': None
         }]))
     def test_user_list(self):
         ret = postgres.user_list(
@@ -265,7 +261,10 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
 
-        self.assertDictEqual(ret, {'test_user': {'superuser': True, 'defaults variables': None, 'can create databases': True, 'can create roles': True, 'connections': None, 'replication': None, 'expiry time': None, 'can login': True, 'can update system catalogs': True, 'inherits privileges': True}})
+        self.assertDictEqual(ret, {
+            'test_user': {'superuser': True, 'defaults variables': None, 'can create databases': True,
+                          'can create roles': True, 'connections': None, 'replication': None, 'expiry time': None,
+                          'can login': True, 'can update system catalogs': True, 'inherits privileges': True}})
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
@@ -280,7 +279,9 @@ class PostgresTestCase(TestCase):
             password='test_password',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with("/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname maint_db -c 'DROP ROLE test_user'", host='test_host', password='test_password', runas='foo', run_cmd='cmd.run')
+        postgres._run_psql.assert_called_once_with(
+            "/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname maint_db -c 'DROP ROLE test_user'",
+            host='test_host', password='test_password', runas='foo', run_cmd='cmd.run')
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
@@ -300,7 +301,7 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'ALTER ROLE test_username WITH PASSWORD \'"\'"\'test_role_pass\'"\'"\'; GRANT test_groups TO test_username\'', host='test_host', password='test_pass', runas='foo', run_cmd='cmd.run')
+        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'ALTER ROLE test_username', postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
     def test_version(self):
@@ -312,7 +313,8 @@ class PostgresTestCase(TestCase):
             password='test_pass',
             runas='foo'
         )
-        postgres._run_psql.assert_called_once_with('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'SELECT setting FROM pg_catalog.pg_settings WHERE name = \'"\'"\'server_version\'"\'"\'\' -t', host='test_host', password='test_pass', runas='foo')
+        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'SELECT setting FROM pg_catalog.pg_settings', postgres._run_psql.call_args[0][0]))
+
 
 if __name__ == '__main__':
     from integration import run_tests
