@@ -1975,6 +1975,9 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if os.path.isfile(opts['token_file']):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
+    # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
+    if opts['interface'] == '0.0.0.0':
+        opts['interface'] = '127.0.0.1'
     # Return the client options
     _validate_opts(opts)
     return opts
