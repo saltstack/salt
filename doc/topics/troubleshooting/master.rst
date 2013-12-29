@@ -59,11 +59,11 @@ opened by the user running salt-master (root by default):
     [root@salt-master ~]# ulimit -n
     1024
 
-If this value is not equal to twice the number of minions, then raise this
-value to at least that amount. For example, in an environment with 1800
-minions, the ``nofile`` limit should be set to at least twice that amount, or
-3600. This can be done by creating the file
-``/etc/security/limits.d/99-salt.conf``, with the following contents::
+If this value is not equal to at least twice the number of minions, then it
+will need to be raised. For example, in an environment with 1800 minions, the
+``nofile`` limit should be set to no less than 3600. This can be done by
+creating the file ``/etc/security/limits.d/99-salt.conf``, with the following
+contents::
 
     root        hard    nofile        4096
     root        soft    nofile        4096
@@ -80,8 +80,8 @@ the changes were applied correctly.
 .. note::
 
     The above is simply an example of how to set these values, and you may
-    wish to increase them if your Salt master is doing more than just running
-    Salt.
+    wish to increase them even further if your Salt master is doing more than
+    just running Salt.
 
 Salt Master Stops Responding
 ============================
