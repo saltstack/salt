@@ -2055,110 +2055,114 @@ class ClearFuncs(object):
         self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
+    def _check_token(self, clear_load, check_func):
+        '''
+        Check a clear_load dictionary for a valid eauth token
+        '''
+        if not 'token' in clear_load:
+            raise salt.exceptions.TokenAuthenticationError()
+
+        token = self.loadauth.get_tok(clear_load['token'])
+
+        if not token:
+            raise salt.exceptions.TokenAuthenticationError()
+
+        if not token['eauth'] in self.opts['external_auth']:
+            raise salt.exceptions.TokenAuthenticationError()
+
+        if not token['name'] in self.opts['external_auth'][token['eauth']]:
+            raise salt.exceptions.TokenAuthenticationError()
+
+        good = check_func(
+                self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                clear_load['fun'])
+
+        if not good:
+            raise salt.exceptions.TokenAuthenticationError()
+
+        user = token.get('name', 'UNKNOWN')
+
+        return user, good
+
+    def _check_eauth(self, clear_load, check_func):
+        '''
+        Check a clear_load dictionary for valid eauth credentials
+        '''
+        if not 'eauth' in clear_load:
+            raise salt.exceptions.EauthAuthenticationError()
+
+        if not clear_load['eauth'] in self.opts['external_auth']:
+            raise salt.exceptions.EauthAuthenticationError()
+
+        name = self.loadauth.load_name(clear_load)
+        if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            raise salt.exceptions.EauthAuthenticationError()
+
+        if not self.loadauth.time_auth(clear_load):
+            raise salt.exceptions.EauthAuthenticationError()
+
+        good = check_func(
+                self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
+                clear_load['fun'])
+
+        if not good:
+            raise salt.exceptions.EauthAuthenticationError()
+
+        user = clear_load.get('username', 'UNKNOWN')
+
+        return user, good
+
+    def _runner_async(self, user, clear_load):
+        try:
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+
+            return runner_client.async(
+                    fun,
+                    clear_load.get('kwarg', {}),
+                    user)
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            return dict(error=dict(name=exc.__class__.__name__,
+                                    args=exc.args,
+                                    message=exc.message))
+
+    def _runner_sync(self, user, clear_load):
+        try:
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+
+            return runner_client.low(fun, clear_load.get('kwarg', {}))
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            return dict(error=dict(name=exc.__class__.__name__,
+                                    args=exc.args,
+                                    message=exc.message))
+
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
         '''
-        # All runner ops pass through eauth
-        if 'token' in clear_load:
-            try:
-                token = self.loadauth.get_tok(clear_load['token'])
-            except Exception as exc:
-                msg = 'Exception occurred when generating auth token: {0}'.format(
-                        exc)
-                log.error(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if not token:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.runner_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
-            try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(
-                        fun,
-                        clear_load.get('kwarg', {}),
-                        token['name'])
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=exc.message))
-
-        if 'eauth' not in clear_load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-        if clear_load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-
         try:
-            name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-            if not self.loadauth.time_auth(clear_load):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.runner_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
-                    clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-
-            try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun,
-                                           clear_load.get('kwarg', {}),
-                                           clear_load.get('username', 'UNKNOWN'))
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=exc.message))
-
+            if 'token' in clear_load:
+                user, good = self._check_token(clear_load,
+                        self.ckminions.runner_check)
+            else:
+                user, good = self._check_eauth(clear_load,
+                        self.ckminions.runner_check)
+        except salt.exceptions.TokenAuthenticationError as exc:
+            msg = 'Authentication failure of type "token" occurred.'
+            log.warning(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                    message=msg))
+        except salt.exceptions.EauthAuthenticationError as exc:
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return dict(error=dict(name='EauthAuthenticationError',
+                                   message=msg))
         except Exception as exc:
             log.error(
                 'Exception occurred in the runner system: {0}'.format(exc)
@@ -2166,145 +2170,64 @@ class ClearFuncs(object):
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
                                    message=exc.message))
+        else:
+            if clear_load.get('mode', 'sync') == 'async':
+                return self._runner_async(user, clear_load)
+            else:
+                return self._runner_sync(user, clear_load)
+
+    def _wheel_sync(self, user, clear_load):
+        jid = salt.utils.gen_jid()
+        fun = clear_load.pop('fun')
+        tag = tagify(jid, prefix='wheel')
+        data = {'fun': "wheel.{0}".format(fun),
+                'jid': jid,
+                'tag': tag,
+                'user': user}
+        try:
+            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            ret = self.wheel_.call_func(fun, **clear_load)
+            data['return'] = ret
+            data['success'] = True
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
+        except Exception as exc:
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                                        fun,
+                                        exc.__class__.__name__,
+                                        exc,
+                                        )
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
 
     def wheel(self, clear_load):
         '''
         Send a master control function back to the wheel system
         '''
-        # All wheel ops pass through eauth
-        if 'token' in clear_load:
-            try:
-                token = self.loadauth.get_tok(clear_load['token'])
-            except Exception as exc:
-                msg = 'Exception occurred when generating auth token: {0}'.format(
-                        exc)
-                log.error(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if not token:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']]
-                        if token['name'] in self.opts['external_auth'][token['eauth']]
-                        else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
-            jid = salt.utils.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': token['name']}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error(exc)
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
-                                            fun,
-                                            exc.__class__.__name__,
-                                            exc,
-                                            )
-                data['success'] = False
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-
-        if 'eauth' not in clear_load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-        if clear_load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-
         try:
-            name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
+            if 'token' in clear_load:
+                user, good = self._check_token(clear_load,
+                        self.ckminions.wheel_check)
+            else:
+                user, good = self._check_eauth(clear_load,
+                        self.ckminions.wheel_check)
+        except salt.exceptions.TokenAuthenticationError as exc:
+            msg = 'Authentication failure of type "token" occurred.'
+            msg = ('Authentication failure of type "token" occurred for '
+                    'user {0}.').format(user)
+            log.warning(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                    message=msg))
+        except salt.exceptions.EauthAuthenticationError as exc:
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
-            if not self.loadauth.time_auth(clear_load):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name]
-                        if name in self.opts['external_auth'][clear_load['eauth']]
-                        else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-
-            jid = salt.utils.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': clear_load.get('username', 'UNKNOWN')}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
-                                            fun,
-                                            exc.__class__.__name__,
-                                            exc,
-                                            )
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-
         except Exception as exc:
             log.error(
                 'Exception occurred in the wheel system: {0}'.format(exc)
@@ -2312,6 +2235,10 @@ class ClearFuncs(object):
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
                                    message=exc.message))
+        else:
+            # Currently only sync method exists
+            return self._wheel_sync(user, clear_load)
+
 
     def mk_token(self, clear_load):
         '''

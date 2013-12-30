@@ -153,9 +153,25 @@ class APIClient(object):
         Expects that one of the kwargs is key 'fun' whose value is the namestring
         of the function to call
         '''
+        kwargs['mode'] = 'async'
         return self.runnerClient.master_call(**kwargs)
 
-    runner_sync = runner_async  # always runner async, so works in either mode
+    def runner_sync(self, **kwargs):
+        '''
+        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
+        '''
+        return self.runnerClient.master_call(**kwargs)
+
+    def wheel_async(self, **kwargs):
+        '''
+        Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
+        '''
+        kwargs['mode'] = 'async'
+        return self.wheelClient.master_call(**kwargs)
 
     def wheel_sync(self, **kwargs):
         '''
@@ -164,8 +180,6 @@ class APIClient(object):
         of the function to call
         '''
         return self.wheelClient.master_call(**kwargs)
-
-    wheel_async = wheel_sync  # always wheel_sync, so it works either mode
 
     def signature(self, cmd):
         '''

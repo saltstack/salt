@@ -5,6 +5,8 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+import errno
+import re
 import os
 import sys
 import time
