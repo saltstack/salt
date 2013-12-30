@@ -14,6 +14,7 @@ from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoun
 # Import Python libraries
 import os
 import datetime
+import zmq
 from collections import namedtuple
 
 ensure_in_syspath('../../')
@@ -220,6 +221,7 @@ class UtilsTestCase(TestCase):
         test_valid_false_state = {'host1': {'test_state': {'result': False}}}
         self.assertFalse(utils.check_state_result(test_valid_false_state))
 
+    @skipIf(not hasattr(zmq, 'IPC_PATH_MAX_LEN'), "ZMQ does not have max length support.")
     def test_check_ipc_length(self):
         '''
         Ensure we throw an exception if we have a too-long IPC URI
