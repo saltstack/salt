@@ -2056,7 +2056,11 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
                 - source: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.tar.gz
                 - source_hash: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.dsc
 
+    CLI Example:
 
+    .. code-block:: bash
+
+        salt '*' file.extract_hash /etc/foo sha512 /path/to/hash/file
     '''
     source_sum = None
     partial_id = False
