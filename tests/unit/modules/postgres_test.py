@@ -75,8 +75,7 @@ class PostgresTestCase(TestCase):
         )
         postgres._run_psql.assert_called_once_with(
             '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'CREATE DATABASE "dbname" WITH TABLESPACE = testspace OWNER = "otheruser"\'',
-            host='testhost', password='foo', runas='foo'
-        )
+            host='testhost', password='foo', runas='foo')
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None,
                                                                  'stdout': test_list_db_csv}))
@@ -148,7 +147,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'CREATE ROLE',
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c (\'|\")CREATE ROLE',
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
@@ -186,7 +185,8 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c \'ALTER ROLE testgroup WITH PASSWORD', postgres._run_psql.call_args[0][0]))
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c (\'|\")ALTER ROLE testgroup WITH PASSWORD',
+            postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=False))
@@ -194,7 +194,7 @@ class PostgresTestCase(TestCase):
         postgres.user_create(
             'testuser',
             user='testuser',
-            host='testhose',
+            host='testhost',
             port='testport',
             maintenance_db='maint_test',
             password='test_pass',
@@ -207,7 +207,9 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
-        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username testuser --host testhose --port testport --dbname maint_test -c \'CREATE USER "testuser" WITH PASSWORD', postgres._run_psql.call_args[0][0]))
+        self.assertTrue(re.match(
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_test -c (\'|\")CREATE USER',
+            postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
@@ -301,7 +303,9 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
-        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'ALTER ROLE test_username', postgres._run_psql.call_args[0][0]))
+        self.assertTrue(re.match(
+            '/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c (\'|\")ALTER ROLE test_username',
+            postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
     def test_version(self):
@@ -313,7 +317,9 @@ class PostgresTestCase(TestCase):
             password='test_pass',
             runas='foo'
         )
-        self.assertTrue(re.match('/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c \'SELECT setting FROM pg_catalog.pg_settings', postgres._run_psql.call_args[0][0]))
+        self.assertTrue(re.match(
+            '/usr/bin/pgsql --no-align --no-readline --username test_user --host test_host --port test_port --dbname test_maint -c (\'|\")SELECT setting FROM pg_catalog.pg_settings',
+            postgres._run_psql.call_args[0][0]))
 
 
 if __name__ == '__main__':
