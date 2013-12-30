@@ -1462,6 +1462,29 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def link(src, link):
+    '''
+    Create a hard link to a file
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.link /path/to/file /path/to/link
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.link(src, link)
+        return True
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
+    return False
+
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
@@ -1536,6 +1559,125 @@ def copy(src, dst):
     return True
 
 
+def lstat(path):
+    '''
+    Returns the lstat attributes for the given file or dir. Does not support
+    symbolic links.
+
+    CLI Example:
+
+    .. versionadded:: Hydrogen
+
+    .. code-block:: bash
+
+        salt '*' file.lstat /path/to/file
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to file must be absolute.')
+
+    lst = os.lstat(path)
+    return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
+        'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+
+
+def access(filename, mode):
+    '''
+    Test whether the Salt process has the specified access to the file. One of
+    the following modes must be specified:
+
+        f: Test the existence of the filename
+        r: Test the readability of the filename
+        w: Test the writability of the filename
+        x: Test whether the filename can be executed
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.access /path/to/file
+    '''
+    if not os.path.isabs(filename):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    modes = {'f': os.F_OK,
+             'r': os.R_OK,
+             'w': os.W_OK,
+             'x': os.X_OK}
+
+    return os.access(filename, modes[mode])
+
+
+def readlink(link):
+    '''
+    Return the path that a symlink points to
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readlink /path/to/link
+    '''
+    if not os.path.isabs(link):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    if not os.path.islink(link):
+        raise SaltInvocationError('A valid link was not specified.')
+
+    return os.readlink(link)
+
+
+def readdir(dirname):
+    '''
+    Return a list containing the contents of a directory
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readdir /path/to/dir/
+    '''
+    if not os.path.isabs(dirname):
+        raise SaltInvocationError('Dir path must be absolute.')
+
+    if not os.path.isdir(dirname):
+        raise SaltInvocationError('A valid directory was not specified.')
+
+    dirents = ['.', '..']
+    dirents.extend(os.listdir(dirname))
+    return dirents
+
+
+def statvfs(filename):
+    '''
+    Perform a statvfs call against the filesystem that the file resides on
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.statvfs /path/to/file
+    '''
+    if not os.path.isabs(filename):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        stv = os.statvfs(filename)
+        return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
+            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
+            'f_frsize', 'f_namemax'))
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
+    return False
+
+
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
     Return a dict containing the stats for a given file
@@ -1581,6 +1723,31 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def rmdir(path):
+    '''
+    Remove the specified directory. Fails if a directory is not empty.
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.rmdir /tmp/foo/
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    if not os.path.isdir(path):
+        raise SaltInvocationError('A valid directory was not specified.')
+
+    try:
+        os.rmdir(path)
+        return True
+    except OSError as exc:
+        return exc.strerror
 
 
 def remove(path):
