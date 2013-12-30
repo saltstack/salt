@@ -43,6 +43,7 @@ def create(path,
            pip=False,
            symlinks=None,
            upgrade=None,
+           user=None,
            runas=None,
            saltenv='base'):
     '''
@@ -77,8 +78,14 @@ def create(path,
         Passthrough argument given to pyvenv if True
     upgrade : None
         Passthrough argument given to pyvenv if True
+    user : None
+        Set ownership for the virtualenv
     runas : None
         Set ownership for the virtualenv
+
+    .. note::
+        The ``runas`` argument is deprecated as of Hydrogen. ``user`` should be
+        used instead.
 
     CLI Example:
 
@@ -100,6 +107,25 @@ def create(path,
             'as \'no_site_packages=True\'. This warning and respective '
             'workaround will be removed in Salt {version}'
         )
+
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
+        salt.utils.warn_until(
+            'Lithium',
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in Salt {version}. Please use \'user\' instead.'
+        )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
 
     if no_site_packages is True and system_site_packages is True:
         raise salt.exceptions.CommandExecutionError(
@@ -138,7 +164,7 @@ def create(path,
         except ImportError:
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
-            ret = __salt__['cmd.run_all'](version_cmd, runas=runas)
+            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -237,7 +263,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas)
+    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
     if ret['retcode'] > 0:
         # Something went wrong. Let's bail out now!
         return ret
@@ -256,7 +282,7 @@ def create(path,
     if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
-            path, venv_python, runas, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv
         )
 
         # clear up the distribute archive which gets downloaded
@@ -271,7 +297,7 @@ def create(path,
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
             'https://raw.github.com/pypa/pip/master/contrib/get-pip.py',
-            path, venv_python, runas, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv
         )
         # Let's update the return dictionary with the details from the pip
         # installation
@@ -304,7 +330,7 @@ def get_site_packages(venv):
             'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
-def _install_script(source, cwd, python, runas, saltenv='base'):
+def _install_script(source, cwd, python, user, saltenv='base'):
     if not salt.utils.is_windows():
         tmppath = salt.utils.mkstemp(dir=cwd)
     else:
@@ -314,11 +340,11 @@ def _install_script(source, cwd, python, runas, saltenv='base'):
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
         os.chmod(tmppath, 320)
-        os.chown(tmppath, __salt__['file.user_to_uid'](runas), -1)
+        os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
             '{0} {1}'.format(python, tmppath),
-            runas=runas,
+            runas=user,
             cwd=cwd,
             env={'VIRTUAL_ENV': cwd}
         )
