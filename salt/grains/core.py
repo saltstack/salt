@@ -1079,6 +1079,20 @@ def ip_interfaces():
     return {'ip_interfaces': ret}
 
 
+def hwaddr_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their hw addresses (Mac Address)
+    '''
+    # Provides:
+    #   hwaddr_interfaces
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        if 'hwaddr' in ifaces[face]:
+            ret[face] = ifaces[face]['hwaddr']
+    return {'hwaddr_interfaces': ret}
+
+
 def path():
     '''
     Return the path
