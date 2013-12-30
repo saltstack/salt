@@ -170,7 +170,7 @@ def setval(key, val, destructive=False):
     if val is None and destructive is True:
         print('SETVAL DESTRUCTIVE ')
         if key in grains:
-            del(grains[key])
+            del grains[key]
     else:
         grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)
