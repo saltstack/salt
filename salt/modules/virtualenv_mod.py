@@ -118,7 +118,7 @@ def create(path,
 
     # "There can only be one"
     if runas is not None and user:
-        raise CommandExecutionError(
+        raise salt.exceptions.CommandExecutionError(
             'The \'runas\' and \'user\' arguments are mutually exclusive. '
             'Please use \'user\' as \'runas\' is being deprecated.'
         )
