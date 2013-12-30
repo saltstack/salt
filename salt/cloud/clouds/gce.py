@@ -599,11 +599,11 @@ def create(vm_=None, call=None):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         node_dict['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

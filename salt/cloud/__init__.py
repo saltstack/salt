@@ -1318,10 +1318,10 @@ class Map(Cloud):
                             nodedata['minion']['grains'].update(
                                 overrides['minion']['grains']
                             )
-                            del(overrides['minion']['grains'])
+                            del overrides['minion']['grains']
                             # remove minion key if now is empty dict
                             if len(overrides['minion']) == 0:
-                                del(overrides['minion'])
+                                del overrides['minion']
 
                 nodedata.update(overrides)
                 # Add the computed information to the return data
