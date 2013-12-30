@@ -1003,19 +1003,44 @@ def managed(name,
         argument is also required
 
     source_hash:
-        This can be either a file which contains a source hash string for
-        the source, or a source hash string. The source hash string is the
-        hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        This can be one of :
+         1) a source hash string
+         2) the URI of a file that contains source hash strings
+        
+        The function accepts the first encountered long unbroken alphanumeric
+        string of correct length as a valid hash, in order from most secure to
+        least secure:
+             Type     Length
+             ====     ======
+            sha512      128
+            sha384       96
+            sha256       64
+            sha224       56
+             sha1        40
+              md5        32
+        
+        The file can contain several checksums for several files. Each line must
+        contain both the file name and the hash.  If no file name is matched, 
+        the first hash encountered will be used, otherwise the most secure hash
+        with the correct source file name will be used.
+        
+        Debian file type *.dsc is supported.
 
-        The file can contain checksums for several files, in this case every
-        line must consist of full name of the file and checksum separated by
-        space:
+        Examples::
 
-        Example::
+            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf 
 
-            /etc/rc.conf md5=ef6e82e4006dee563d98ada2a2a80a27
-            /etc/resolv.conf sha256=c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a
+        Known issues::
+            If the remote server URL has the hash file as an apparent 
+            sub-directory of the source file, the module will discover that it
+            has already cached a directory where a file should be cached.  Eg:
+            
+            tomdroid-src-0.7.3.tar.gz:
+                file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
 
     user
