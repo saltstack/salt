@@ -1697,40 +1697,6 @@ class ClearFuncs(object):
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
-    def _send_cluster(self):
-        '''
-        Send the cluster data out
-        '''
-        log.debug('Sending out cluster data')
-        ret = self.local.cmd(self.opts['cluster_masters'],
-                'cluster.distrib',
-                self._cluster_load(),
-                0,
-                'list'
-                )
-        log.debug('Cluster distributed: {0}'.format(ret))
-
-    def _cluster_load(self):
-        '''
-        Generates the data sent to the cluster nodes.
-        '''
-        minions = {}
-        master_pem = ''
-        with salt.utils.fopen(self.opts['conf_file'], 'r') as fp_:
-            master_conf = fp_.read()
-        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        for host in os.listdir(minion_dir):
-            pub = os.path.join(minion_dir, host)
-            minions[host] = salt.utils.fopen(pub, 'r').read()
-        if self.opts['cluster_mode'] == 'full':
-            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-            with salt.utils.fopen(master_pem_path) as fp_:
-                master_pem = fp_.read()
-        return [minions,
-                master_conf,
-                master_pem,
-                self.opts['conf_file']]
-
     def _check_permissions(self, filename):
         '''
         Check if the specified filename has correct permissions
