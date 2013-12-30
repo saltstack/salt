@@ -1697,7 +1697,7 @@ class ClearFuncs(object):
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
-    def _check_permissions(self, filename):
+    def __check_permissions(self, filename):
         '''
         Check if the specified filename has correct permissions
         '''
@@ -1748,14 +1748,14 @@ class ClearFuncs(object):
 
         return False
 
-    def _check_signing_file(self, keyid, signing_file):
+    def __check_signing_file(self, keyid, signing_file):
         '''
         Check a keyid for membership in a signing file
         '''
         if not signing_file or not os.path.exists(signing_file):
             return False
 
-        if not self._check_permissions(signing_file):
+        if not self.__check_permissions(signing_file):
             message = 'Wrong permissions for {0}, ignoring content'
             log.warn(message.format(signing_file))
             return False
@@ -1783,22 +1783,22 @@ class ClearFuncs(object):
 
         return False
 
-    def _check_autoreject(self, keyid):
+    def __check_autoreject(self, keyid):
         '''
         Checks if the specified keyid should automatically be rejected.
         '''
-        return self._check_signing_file(
+        return self.__check_signing_file(
             keyid,
             self.opts.get('autoreject_file', None)
         )
 
-    def _check_autosign(self, keyid):
+    def __check_autosign(self, keyid):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
         if self.opts['auto_accept']:
             return True
-        return self._check_signing_file(
+        return self.__check_signing_file(
             keyid,
             self.opts.get('autosign_file', None)
         )
@@ -1828,8 +1828,8 @@ class ClearFuncs(object):
         log.info('Authentication request from {id}'.format(**load))
 
         # Check if key is configured to be auto-rejected/signed
-        auto_reject = self._check_autoreject(load['id'])
-        auto_sign = self._check_autosign(load['id'])
+        auto_reject = self.__check_autoreject(load['id'])
+        auto_sign = self.__check_autosign(load['id'])
 
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
