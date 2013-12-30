@@ -104,92 +104,18 @@ def wrap_tmpl_func(render_str):
     return render_tmpl
 
 
-def _get_jinja_error_slug(tb_data):
-    '''
-    Return the line number where the template error was found
-    '''
-    try:
-        return [
-            x
-            for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
-        ][-1]
-    except IndexError:
-        pass
-
-
-def _get_jinja_error_message(tb_data):
-    '''
-    Return an understandable message from jinja error output
-    '''
-    try:
-        line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
-    except IndexError:
-        pass
-    return None
-
-
 def _get_jinja_error_line(tb_data):
     '''
     Return the line number where the template error was found
     '''
     try:
-        return _get_jinja_error_slug(tb_data)[1]
+        return [
+            x[1] for x in tb_data if x[2] in ('top-level template code',
+                                              'template')
+        ][-1]
     except IndexError:
         pass
     return None
-
-
-def _get_jinja_error(trace, context=None):
-    '''
-    Return the error line and error message output from
-    a stacktrace.
-    If we are in a macro, also output inside the message the
-    exact location of the error in the macro
-    '''
-    if not context:
-        context = {}
-    out = ''
-    error = _get_jinja_error_slug(trace)
-    line = _get_jinja_error_line(trace)
-    msg = _get_jinja_error_message(trace)
-    # if we failed on a nested macro, output a little more info
-    # to help debugging
-    # if sls is not found in context, add output only if we can
-    # resolve the filename
-    add_log = False
-    template_path = None
-    if not 'sls' in context:
-        if (
-            (error[0] != '<unknown>')
-            and os.path.exists(error[0])
-        ):
-            template_path = error[0]
-            add_log = True
-    else:
-        # the offender error is not from the called sls
-        filen = context['sls'].replace('.', '/')
-        if (
-            not error[0].endswith(filen)
-            and os.path.exists(error[0])
-        ):
-            add_log = True
-            template_path = error[0]
-    # if we add a log, format explicitly the exeception here
-    # by telling to output the macro context after the macro
-    # error log place at the beginning
-    if add_log:
-        if template_path:
-            out = '\n{}\n'.format(msg.splitlines()[0])
-            out += salt.utils.get_context(
-                salt.utils.fopen(template_path).read(),
-                line,
-                marker='    <======================')
-        else:
-            out = '\n{}\n'.format(msg)
-        line = 0
-    return line, out
 
 
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
@@ -260,31 +186,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     try:
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
-    except jinja2.exceptions.UndefinedError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
-        if not line:
-            tmplstr = ''
+        line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
         raise SaltRenderError(
-            'Jinja variable {0}{1}'.format(
-                exc, out),
-            line,
-            tmplstr)
-    except Exception, exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
+            'Jinja syntax error: {0}'.format(exc), line, tmplstr
+        )
+    except jinja2.exceptions.UndefinedError as exc:
+        line = _get_jinja_error_line(traceback.extract_tb(sys.exc_info()[2]))
+        raise SaltRenderError('Jinja variable {0}'.format(exc), line, tmplstr)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
