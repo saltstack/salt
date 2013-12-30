@@ -46,6 +46,15 @@ import salt._compat
 
 log = logging.getLogger(__name__)
 
+HASHES = [
+            ['sha512', 128],
+            ['sha384', 96],
+            ['sha256', 64],
+            ['sha224', 56],
+            ['sha1', 40],
+            ['md5', 32],
+         ]
+
 
 def __virtual__():
     '''
@@ -2015,7 +2024,7 @@ def get_managed(
                         return '', {}, ('Source hash file {0} contains an invalid '
                             'hash format, it must be in the format <hash type>=<hash>.'
                             ).format(source_hash)
-                    
+
                 else:
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
@@ -2031,14 +2040,7 @@ def get_managed(
                                 ' source file {0}').format(source)
     return sfn, source_sum, ''
 
-hashes = [
-              ['sha512', 128]
-            , ['sha384',  96]
-            , ['sha256',  64]
-            , ['sha224',  56]
-            , [  'sha1',  40]
-            , [   'md5',  32]
-         ]
+
 def extract_hash(hash_fn, hash_type='md5', file_name=''):
     '''
     This routine is called from managed() to pull a hash from a remote file.
@@ -2046,7 +2048,7 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     file, to find a potential candidate of the indicated hash type.
     This avoids many problems of arbitrary file lay out rules
     It specifically permits pulling hash codes deom debian *.dsc files.
-    
+
     Tested with :
         openerp_7.0-latest-1.tar.gz:
             file.managed:
@@ -2061,7 +2063,7 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
     log.debug('modules.file.py - extract_hash(): Extracting hash for file named: {}'.format(name_sought))
     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
-    for hash_variant in hashes:
+    for hash_variant in HASHES:
         if hash_type == '' or hash_type == hash_variant[0]:
             log.debug('modules.file.py - extract_hash(): Will use regex to get'
                 ' a purely hexadecimal number of length ({0}), presumably hash'
@@ -2075,10 +2077,10 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
                     if not partial_id:
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
                         partial_id = True
-                        
+
                     log.debug('modules.file.py - extract_hash(): Found : {} -- {}'.format(
                                             source_sum['hash_type'], source_sum['hsum']))
-                                            
+
                     if re.search(name_sought, line):
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
                         log.debug('modules.file.py - extract_hash: '
@@ -2086,12 +2088,11 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
                                  name_sought, source_sum['hash_type'], source_sum['hsum']))
                         return source_sum
 
-    
     if partial_id:
         log.debug('modules.file.py - extract_hash: '
                 'Returning the partially identified {} hash "{}".'.format(
                        source_sum['hash_type'], source_sum['hsum']))
-    else:    
+    else:
         log.debug('modules.file.py - extract_hash: Returning None.')
     return source_sum
 

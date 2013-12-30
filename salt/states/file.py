@@ -1006,7 +1006,7 @@ def managed(name,
         This can be one of :
          1) a source hash string
          2) the URI of a file that contains source hash strings
-        
+
         The function accepts the first encountered long unbroken alphanumeric
         string of correct length as a valid hash, in order from most secure to
         least secure:
@@ -1018,24 +1018,24 @@ def managed(name,
             sha224       56
              sha1        40
               md5        32
-        
+
         The file can contain several checksums for several files. Each line must
-        contain both the file name and the hash.  If no file name is matched, 
+        contain both the file name and the hash.  If no file name is matched,
         the first hash encountered will be used, otherwise the most secure hash
         with the correct source file name will be used.
-        
+
         Debian file type *.dsc is supported.
 
         Examples::
 
             /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf 
+            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
 
         Known issues::
-            If the remote server URL has the hash file as an apparent 
+            If the remote server URL has the hash file as an apparent
             sub-directory of the source file, the module will discover that it
             has already cached a directory where a file should be cached.  Eg:
-            
+
             tomdroid-src-0.7.3.tar.gz:
                 file.managed:
                     - name: /tmp/tomdroid-src-0.7.3.tar.gz
