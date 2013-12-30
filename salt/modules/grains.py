@@ -197,7 +197,7 @@ def setval(key, val, destructive=False):
     if val is None and destructive is True:
         print('SETVAL DESTRUCTIVE ')
         if key in grains:
-            del(grains[key])
+            del grains[key]
     else:
         grains[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
