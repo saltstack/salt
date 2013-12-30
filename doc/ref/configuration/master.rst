@@ -284,7 +284,7 @@ mode set this value to ``True``.
 Default: ``False``
 
 Enable auto_accept. This setting will automatically accept all incoming
-public keys from the minions
+public keys from minions.
 
 .. code-block:: yaml
 
@@ -295,12 +295,24 @@ public keys from the minions
 ``autosign_file``
 -----------------
 
-Default ``not defined``
+Default: ``not defined``
 
-If the autosign_file is specified incoming keys specified in the autosign_file
-will be automatically accepted.  Matches will be searched for first by string
-comparison, then by globbing, then by full-string regex matching.  This is
+If the ``autosign_file`` is specified incoming keys specified in the autosign_file
+will be automatically accepted. Matches will be searched for first by string
+comparison, then by globbing, then by full-string regex matching. This is
 insecure!
+
+``autoreject_file``
+-------------------
+
+.. versionadded:: Hydrogen
+
+Default: ``not defined``
+
+Works like :conf_master:`autosign_file`, but instead allows you to specify
+minion IDs for which keys will automatically be rejected. Will override both
+membership in the :conf_master:`autosign_file` and the
+:conf_master:`auto_accept` setting.
 
 .. conf_master:: client_acl
 
