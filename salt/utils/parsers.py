@@ -1804,6 +1804,17 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         return keys_config
 
+    def process_list(self):
+        # Filter accepted list arguments as soon as possible
+        if not self.options.list:
+            return
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej')):
+            self.error(
+                '{0!r} is not a valid argument to \'--list\''.format(
+                    self.options.list
+                )
+            )
+
     def process_keysize(self):
         if self.options.keysize < 2048:
             self.error('The minimum value for keysize is 2048')
