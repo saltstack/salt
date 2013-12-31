@@ -552,11 +552,9 @@ def cmd(tgt,
         salt '*' saltutil.cmd
     '''
     if ssh:
-        client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.LocalClient(__opts__['conf_file'])
     ret = {}
     for ret_comp in client.cmd_iter(
             tgt,
@@ -590,11 +588,9 @@ def cmd_iter(tgt,
         salt '*' saltutil.cmd
     '''
     if ssh:
-        client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.LocalClient(__opts__['conf_file'])
     for ret in client.cmd_iter(
             tgt,
             fun,

@@ -35,6 +35,7 @@ import glob
 import time
 import copy
 import getpass
+import logging
 
 # Import salt libs
 import salt.config
@@ -55,6 +56,8 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def condition_kwarg(arg, kwarg):
@@ -95,6 +98,13 @@ class LocalClient(object):
         if mopts:
             self.opts = mopts
         else:
+            if os.path.isdir(c_path):
+                log.warning(
+                    '{0} expects a file path not a directory path({1}) to '
+                    'it\'s \'c_path\' keyword argument'.format(
+                        self.__class__.__name__, c_path
+                    )
+                )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
@@ -1368,6 +1378,13 @@ class SSHClient(object):
         if mopts:
             self.opts = mopts
         else:
+            if os.path.isdir(c_path):
+                log.warning(
+                    '{0} expects a file path not a directory path({1}) to '
+                    'it\'s \'c_path\' keyword argument'.format(
+                        self.__class__.__name__, c_path
+                    )
+                )
             self.opts = salt.config.client_config(c_path)
 
     def _prep_ssh(
