@@ -180,7 +180,7 @@ class TestGetTemplate(TestCase):
         If we failed in a macro because of eg a typeerror, get
         more output from trace.
         '''
-        expected = r'''Jinja error:.*division.*
+        expected = r'''Jinja error: division by zero
 .*/macrogeneral\(2\):
 ---
 \{% macro mymacro\(\) -%\}
