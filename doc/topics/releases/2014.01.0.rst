@@ -1,0 +1,60 @@
+============================
+Salt 2014.01.0 Release Notes
+============================
+
+:release 2013-12-30
+
+The 2014.01.0 release of Salt is a major release which not only increases
+stability but also brings new capabilities in virtualization, cloud integration,
+and more.
+
+2014.01.0 is the first release to follow the new date-based release naming
+system.
+
+Major Features
+==============
+
+Salt Cloud
+----------
+
+Salt Cloud is a tool for provisioning salted minions across various cloud providers. Prior to this release, Salt Cloud was a seperate project but this marks
+its full integration with the Salt distribution. A Getting Started guide
+and additional documentation for Salt Cloud can be found `here`__:
+
+.. __: http://docs.saltstack.com/topics/cloud/index.html
+
+
+Salt Virt
+---------
+
+Salt Virt is a cloud controller that supports virtual machine deployment, inspection, migration and integration with many aspects of Salt.
+
+Salt Virt has undergone a major overhaul with this release and now supports
+many more features and includes a number of critical improvements.
+
+Docker Integration
+------------------
+
+Salt now ships with modules and states for tight integration with Docker
+containers.
+
+Google Compute Engine
+---------------------
+
+Alongside Salt Cloud comes new support for the Google Compute Engine. Salt Stack
+can now deploy and control GCE virtual machines and the application stacks that
+they run.
+
+For more information on Salt Stack and GCE, please see `this blog post`.
+
+Documentation for Salt and GCE can be found `here`.
+
+.. __: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
+.. __: http://docs.saltstack.com/topics/cloud/gce.html
+
+BSD Package Management
+----------------------
+
+BSD package management has been entirely rewritten and expanded with support for
+ports added.
+
