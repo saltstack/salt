@@ -1624,7 +1624,7 @@ def access(path, mode):
         raise SaltInvocationError('Invalid mode specified.')
 
 
-def readlink(link):
+def readlink(path):
     '''
     Return the path that a symlink points to
 
@@ -1636,13 +1636,13 @@ def readlink(link):
 
         salt '*' file.readlink /path/to/link
     '''
-    if not os.path.isabs(link):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
 
-    if not os.path.islink(link):
+    if not os.path.islink(path):
         raise SaltInvocationError('A valid link was not specified.')
 
-    return os.readlink(link)
+    return os.readlink(path)
 
 
 def readdir(dirname):
