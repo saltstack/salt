@@ -1,12 +1,14 @@
-============================
-Salt 2014.01.0 Release Notes
-============================
+================================================
+Salt 2014.01.0 Release Notes - Codename Hydrogen
+================================================
 
 :release 2013-12-30
 
 The 2014.01.0 release of Salt is a major release which not only increases
-stability but also brings new capabilities in virtualization, cloud integration,
-and more.
+stability but also brings new capabilities in virtualization, cloud
+integration, and more. This release brings a great focus on the expansion of
+testing making roughly double the coverage in the Salt tests, and comes with
+many new features.
 
 2014.01.0 is the first release to follow the new date-based release naming
 system.
@@ -14,11 +16,12 @@ system.
 Major Features
 ==============
 
-Salt Cloud
-----------
+Salt Cloud Merged in Salt
+-------------------------
 
-Salt Cloud is a tool for provisioning salted minions across various cloud providers. Prior to this release, Salt Cloud was a seperate project but this marks
-its full integration with the Salt distribution. A Getting Started guide
+Salt Cloud is a tool for provisioning salted minions across various cloud
+providers. Prior to this release, Salt Cloud was a seperate project but this
+marks its full integration with the Salt distribution. A Getting Started guide
 and additional documentation for Salt Cloud can be found `here`__:
 
 .. __: http://docs.saltstack.com/topics/cloud/index.html
@@ -27,7 +30,8 @@ and additional documentation for Salt Cloud can be found `here`__:
 Salt Virt
 ---------
 
-Salt Virt is a cloud controller that supports virtual machine deployment, inspection, migration and integration with many aspects of Salt.
+Salt Virt is a cloud controller that supports virtual machine deployment,
+inspection, migration and integration with many aspects of Salt.
 
 Salt Virt has undergone a major overhaul with this release and now supports
 many more features and includes a number of critical improvements.
@@ -37,6 +41,9 @@ Docker Integration
 
 Salt now ships with modules and states for tight integration with Docker
 containers.
+
+Substantial Testing Expansion
+-----------------------------
 
 Google Compute Engine
 ---------------------
@@ -58,3 +65,16 @@ BSD Package Management
 BSD package management has been entirely rewritten and expanded with support for
 ports added.
 
+Network Management for Debian/Ubuntu
+------------------------------------
+
+PagerDuty Support
+-----------------
+
+vt.Terminal System
+------------------
+
+Sometimes the subprocess module is nto good enough
+
+MinionFS
+--------
