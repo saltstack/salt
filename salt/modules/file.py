@@ -1605,7 +1605,8 @@ def access(filename, mode):
 
     .. code-block:: bash
 
-        salt '*' file.access /path/to/file
+        salt '*' file.access /path/to/file f
+        salt '*' file.access /path/to/file x
     '''
     if not os.path.isabs(filename):
         raise SaltInvocationError('Path to link must be absolute.')
@@ -1615,7 +1616,12 @@ def access(filename, mode):
              'w': os.W_OK,
              'x': os.X_OK}
 
-    return os.access(filename, modes[mode])
+    if mode in modes:
+        return os.access(filename, modes[mode])
+    elif mode in modes.values():
+        return os.access(filename, mode)
+    else:
+        raise SaltInvocationError('Invalid mode specified.')
 
 
 def readlink(link):
