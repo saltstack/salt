@@ -312,7 +312,7 @@ def set_mode(path, mode):
     if not os.path.exists(path):
         return 'File not found'
     try:
-        os.chmod(path, int(mode, 8))
+        os.chmod(path, int(mode))
     except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
@@ -1589,15 +1589,15 @@ def lstat(path):
         'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
 
-def access(filename, mode):
+def access(path, mode):
     '''
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-        f: Test the existence of the filename
-        r: Test the readability of the filename
-        w: Test the writability of the filename
-        x: Test whether the filename can be executed
+        f: Test the existence of the path
+        r: Test the readability of the path
+        w: Test the writability of the path
+        x: Test whether the path can be executed
 
     .. versionadded:: Hydrogen
 
@@ -1608,7 +1608,7 @@ def access(filename, mode):
         salt '*' file.access /path/to/file f
         salt '*' file.access /path/to/file x
     '''
-    if not os.path.isabs(filename):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
 
     modes = {'f': os.F_OK,
@@ -1617,14 +1617,14 @@ def access(filename, mode):
              'x': os.X_OK}
 
     if mode in modes:
-        return os.access(filename, modes[mode])
+        return os.access(path, modes[mode])
     elif mode in modes.values():
-        return os.access(filename, mode)
+        return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
 
 
-def readlink(link):
+def readlink(path):
     '''
     Return the path that a symlink points to
 
@@ -1636,16 +1636,16 @@ def readlink(link):
 
         salt '*' file.readlink /path/to/link
     '''
-    if not os.path.isabs(link):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
 
-    if not os.path.islink(link):
+    if not os.path.islink(path):
         raise SaltInvocationError('A valid link was not specified.')
 
-    return os.readlink(link)
+    return os.readlink(path)
 
 
-def readdir(dirname):
+def readdir(path):
     '''
     Return a list containing the contents of a directory
 
@@ -1657,18 +1657,18 @@ def readdir(dirname):
 
         salt '*' file.readdir /path/to/dir/
     '''
-    if not os.path.isabs(dirname):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Dir path must be absolute.')
 
-    if not os.path.isdir(dirname):
+    if not os.path.isdir(path):
         raise SaltInvocationError('A valid directory was not specified.')
 
     dirents = ['.', '..']
-    dirents.extend(os.listdir(dirname))
+    dirents.extend(os.listdir(path))
     return dirents
 
 
-def statvfs(filename):
+def statvfs(path):
     '''
     Perform a statvfs call against the filesystem that the file resides on
 
@@ -1680,11 +1680,11 @@ def statvfs(filename):
 
         salt '*' file.statvfs /path/to/file
     '''
-    if not os.path.isabs(filename):
+    if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
-        stv = os.statvfs(filename)
+        stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
