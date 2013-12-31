@@ -20,7 +20,7 @@ import shutil
 
 # Import Salt libs
 import salt.utils
-from unit.modules.zcbuildout_test import Base
+from unit.modules.zcbuildout_test import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -48,7 +48,7 @@ buildout.__salt__ = {
 }
 
 
-@skipIf(salt.utils.which('virtualenv') is None,
+@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 
