@@ -20,7 +20,7 @@ except ImportError:
 import salt.fileserver
 import salt.utils
 
-logger = logging.getLogger()
+log = logging.getLogger()
 
 
 # Define the module's virtual name
@@ -34,7 +34,7 @@ def __virtual__():
     if not __virtualname__ in __opts__['fileserver_backend']:
         return False
     if not __opts__['file_recv']:
-            return False
+        return False
     return __virtualname__
 
 
@@ -49,16 +49,16 @@ def find_file(path, env='base', **kwargs):
     if env not in envs():
         return fnd
     if path[-7:] == 'top.sls':
-        logger.debug('minionfs will NOT serve top.sls '
+        log.debug('minionfs will NOT serve top.sls '
                      'for security reasons: {0}'.format(path))
         return fnd
-    minion, pushed_file = path.split(os.sep,1)
+    minion, pushed_file = path.split(os.sep, 1)
     full = os.path.join(__opts__['cachedir'], 'minions',
                                      minion, 'files', pushed_file)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
-            fnd['path'] = full
-            fnd['rel'] = path
-            return fnd
+        fnd['path'] = full
+        fnd['rel'] = path
+        return fnd
     # AP logger.debug('minionfs: full path for {0} is {1}'.format(path, full))
     return fnd
 
@@ -74,7 +74,7 @@ def envs():
 def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -122,7 +122,7 @@ def file_hash(load, fnd):
     '''
     path = fnd['path']
     ret = {}
-    
+
     # if the file doesn't exist, we can't get a hash
     if not path or not os.path.isfile(path):
         return ret
@@ -186,7 +186,7 @@ def file_list(load):
     for minion_dir in os.listdir(minions_cache_dir):
         minion_files_dir = os.path.join(minions_cache_dir, minion_dir, 'files')
         if not os.path.isdir(minion_files_dir):
-            logger.debug('minionfs: could not find files directory under {0}!'
+            log.debug('minionfs: could not find files directory under {0}!'
                              .format(os.path.join(minions_cache_dir, minion_dir))
                         )
             continue
@@ -216,7 +216,7 @@ def file_list(load):
 def dir_list(load):
     '''
     Return a list of all directories on the master
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -234,18 +234,21 @@ def dir_list(load):
     for minion_dir in os.listdir(minions_cache_dir):
         minion_files_dir = os.path.join(minions_cache_dir, minion_dir, 'files')
         if not os.path.isdir(minion_files_dir):
-            logger.debug('minionfs: could not find files directory under {0}!'
+            log.debug('minionfs: could not find files directory under {0}!'
                              .format(os.path.join(minions_cache_dir, minion_dir))
                         )
             continue
         # Always ignore links for security reasons
         for root, dirs, files in os.walk(
-                                     os.path.join(minion_files_dir,
-                                                  prefix
-                                     ), followlinks=False):
-                rel_fn = os.path.join(minion_dir,
-                                      os.path.relpath(root, minion_files_dir)
-                                      )
-                ret.append(rel_fn)
+                os.path.join(
+                    minion_files_dir,
+                    prefix
+                    ),
+                followlinks=False):
+            rel_fn = os.path.join(
+                    minion_dir,
+                    os.path.relpath(root, minion_files_dir)
+                    )
+            ret.append(rel_fn)
     # AP logger.debug('minionfs: dir_list is returning {0}'.format(ret))
     return ret
