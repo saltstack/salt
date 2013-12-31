@@ -312,7 +312,7 @@ def set_mode(path, mode):
     if not os.path.exists(path):
         return 'File not found'
     try:
-        os.chmod(path, int(mode))
+        os.chmod(path, int(mode, 8))
     except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
