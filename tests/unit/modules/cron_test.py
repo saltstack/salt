@@ -6,7 +6,7 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 ensure_in_syspath('../../')
 
@@ -27,6 +27,7 @@ STUB_SIMPLE_CRON_DICT = {'pre': ['5 0 * * * /tmp/no_script.sh'], 'crons': [], 'e
 __grains__ = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PsTestCase(TestCase):
     def test__needs_change(self):
         self.assertTrue(cron._needs_change(True, False))
