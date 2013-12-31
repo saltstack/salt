@@ -67,7 +67,6 @@ _ETHTOOL_CONFIG_OPTS = {
     'hardware-dma-ring-rx-mini': 'hardware-dma-ring-rx-mini',
     'hardware-dma-ring-rx-jumbo': 'hardware-dma-ring-rx-jumbo',
     'hardware-dma-ring-tx': 'hardware-dma-ring-tx',
-    'mtu': 'mtu'
 }
 
 _REV_ETHTOOL_CONFIG_OPTS = {
@@ -96,7 +95,6 @@ _REV_ETHTOOL_CONFIG_OPTS = {
     'hardware-dma-ring-rx-mini': 'hardware-dma-ring-rx-mini',
     'hardware-dma-ring-rx-jumbo': 'hardware-dma-ring-rx-jumbo',
     'hardware-dma-ring-tx': 'hardware-dma-ring-tx',
-    'mtu': 'mtu'
 }
 
 _DEB_CONFIG_OPTS = [
@@ -334,7 +332,7 @@ def _parse_interfaces():
                     if line[0].isspace():
                         sline = line.split()
 
-                        if sline[0] in ['address', 'netmask', 'gateway', 'broadcast', 'network']:
+                        if sline[0] in ['address', 'netmask', 'gateway', 'broadcast', 'network', 'mtu']:
                             adapters[iface_name]['data'][context][sline[0]] = sline[1]
 
                         if sline[0] == 'vlan-raw-device':
