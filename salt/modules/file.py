@@ -1668,7 +1668,7 @@ def readdir(path):
     return dirents
 
 
-def statvfs(filename):
+def statvfs(path):
     '''
     Perform a statvfs call against the filesystem that the file resides on
 
@@ -1680,11 +1680,11 @@ def statvfs(filename):
 
         salt '*' file.statvfs /path/to/file
     '''
-    if not os.path.isabs(filename):
+    if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
-        stv = os.statvfs(filename)
+        stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
