@@ -34,7 +34,7 @@ def __virtual__():
     if not __virtualname__ in __opts__['fileserver_backend']:
         return False
     if not __opts__['file_recv']:
-            return False
+        return False
     return __virtualname__
 
 
@@ -52,13 +52,13 @@ def find_file(path, env='base', **kwargs):
         logger.debug('minionfs will NOT serve top.sls '
                      'for security reasons: {0}'.format(path))
         return fnd
-    minion, pushed_file = path.split(os.sep,1)
+    minion, pushed_file = path.split(os.sep, 1)
     full = os.path.join(__opts__['cachedir'], 'minions',
                                      minion, 'files', pushed_file)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
-            fnd['path'] = full
-            fnd['rel'] = path
-            return fnd
+        fnd['path'] = full
+        fnd['rel'] = path
+        return fnd
     # AP logger.debug('minionfs: full path for {0} is {1}'.format(path, full))
     return fnd
 
@@ -74,7 +74,7 @@ def envs():
 def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -122,7 +122,7 @@ def file_hash(load, fnd):
     '''
     path = fnd['path']
     ret = {}
-    
+
     # if the file doesn't exist, we can't get a hash
     if not path or not os.path.isfile(path):
         return ret
@@ -145,7 +145,7 @@ def file_hash(load, fnd):
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
-                    log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    logger.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     file_hash(load, fnd)
                     return(ret)
                 if os.path.getmtime(path) == mtime:
@@ -153,7 +153,7 @@ def file_hash(load, fnd):
                     ret['hsum'] = hsum
                     return ret
         except os.error:  # Can't use Python select() because we need Windows support
-            log.debug("Fileserver encountered lock when reading cache file. Retrying.")
+            logger.debug("Fileserver encountered lock when reading cache file. Retrying.")
             file_hash(load, fnd)
             return(ret)
 
@@ -216,7 +216,7 @@ def file_list(load):
 def dir_list(load):
     '''
     Return a list of all directories on the master
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -243,9 +243,9 @@ def dir_list(load):
                                      os.path.join(minion_files_dir,
                                                   prefix
                                      ), followlinks=False):
-                rel_fn = os.path.join(minion_dir,
+            rel_fn = os.path.join(minion_dir,
                                       os.path.relpath(root, minion_files_dir)
                                       )
-                ret.append(rel_fn)
+            ret.append(rel_fn)
     # AP logger.debug('minionfs: dir_list is returning {0}'.format(ret))
     return ret
