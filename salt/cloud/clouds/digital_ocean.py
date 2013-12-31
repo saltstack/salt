@@ -640,7 +640,7 @@ def destroy(name, call=None):
     )
 
     data = show_instance(name, call='action')
-    node = query(method='droplets', command='{0}/destroy'.format(data['id']))
+    node = query(method='droplets', command='{0}/destroy'.format(data['id']), args={'scrub_data': True})
 
     salt.utils.cloud.fire_event(
         'event',
