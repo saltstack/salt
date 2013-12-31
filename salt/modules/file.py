@@ -1589,15 +1589,15 @@ def lstat(path):
         'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
 
-def access(filename, mode):
+def access(path, mode):
     '''
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-        f: Test the existence of the filename
-        r: Test the readability of the filename
-        w: Test the writability of the filename
-        x: Test whether the filename can be executed
+        f: Test the existence of the path
+        r: Test the readability of the path
+        w: Test the writability of the path
+        x: Test whether the path can be executed
 
     .. versionadded:: Hydrogen
 
@@ -1608,7 +1608,7 @@ def access(filename, mode):
         salt '*' file.access /path/to/file f
         salt '*' file.access /path/to/file x
     '''
-    if not os.path.isabs(filename):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
 
     modes = {'f': os.F_OK,
@@ -1617,9 +1617,9 @@ def access(filename, mode):
              'x': os.X_OK}
 
     if mode in modes:
-        return os.access(filename, modes[mode])
+        return os.access(path, modes[mode])
     elif mode in modes.values():
-        return os.access(filename, mode)
+        return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
 
