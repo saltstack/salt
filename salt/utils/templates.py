@@ -181,13 +181,13 @@ def _get_jinja_error(trace, context=None):
     # error log place at the beginning
     if add_log:
         if template_path:
-            out = '\n{0}\n'.format(msg.splitlines()[0])
+            out = '\n{}\n'.format(msg.splitlines()[0])
             out += salt.utils.get_context(
                 salt.utils.fopen(template_path).read(),
                 line,
                 marker='    <======================')
         else:
-            out = '\n{0}\n'.format(msg)
+            out = '\n{}\n'.format(msg)
         line = 0
     return line, out
 
