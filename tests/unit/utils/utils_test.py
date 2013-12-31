@@ -6,8 +6,15 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, DEFAULT, create_autospec
+from salttesting.mock import (
+    patch, DEFAULT,
+    create_autospec,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+ensure_in_syspath('../../')
 
+# Import Salt libs
 from salt import utils
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
@@ -17,7 +24,12 @@ import datetime
 import zmq
 from collections import namedtuple
 
-ensure_in_syspath('../../')
+# Import 3rd-party libs
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
 
 LORUM_IPSUM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis. \n' \
               'Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor \n' \
@@ -50,6 +62,7 @@ class UtilsTestCase(TestCase):
         incorrect_jid_lenth = 2012
         self.assertEqual(utils.jid_to_time(incorrect_jid_lenth), '')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)
     def test_gen_mac(self, random_mock):
         self.assertEqual(random_mock.return_value, 1)
@@ -79,6 +92,7 @@ class UtilsTestCase(TestCase):
         self.assertFalse(utils.is_jid(20131219110700123489))  # int
         self.assertFalse(utils.is_jid('2013121911070012348911111'))  # Wrong length
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.utils.is_windows', return_value=False)
     def test_path_join(self, is_windows_mock):
         self.assertFalse(is_windows_mock.return_value)
@@ -92,6 +106,7 @@ class UtilsTestCase(TestCase):
         ret = utils.build_whitespace_split_regex(' '.join(LORUM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('warnings.warn')
     def test_build_whitepace_splited_regex(self, warnings_mock):
         # noinspection PyDeprecation
@@ -116,6 +131,7 @@ class UtilsTestCase(TestCase):
         ret = utils.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('os.remove')
     def test_safe_rm(self, os_remove_mock):
         utils.safe_rm('dummy_tgt')
@@ -128,6 +144,7 @@ class UtilsTestCase(TestCase):
         except (IOError, OSError):
             self.assertTrue(False, "utils.safe_rm raised exception when it should not have")
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
     def test_format_call(self, arg_lookup, get_function_argspec):
     # def test_format_call(self):
@@ -221,6 +238,7 @@ class UtilsTestCase(TestCase):
         test_valid_false_state = {'host1': {'test_state': {'result': False}}}
         self.assertFalse(utils.check_state_result(test_valid_false_state))
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @skipIf(not hasattr(zmq, 'IPC_PATH_MAX_LEN'), "ZMQ does not have max length support.")
     def test_check_ipc_length(self):
         '''
@@ -260,6 +278,7 @@ class UtilsTestCase(TestCase):
         ret = utils.parse_kwarg('foobar')
         self.assertEqual(ret, (None, None))
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_date_cast(self):
         now = datetime.datetime.now()
         with patch('datetime.datetime'):
@@ -273,11 +292,15 @@ class UtilsTestCase(TestCase):
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
         except ImportError:
-            pass
-        ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
-        expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
-        self.assertEqual(ret, expected_ret)
+            try:
+                ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
+                expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
+                self.assertEqual(ret, expected_ret)
+            except RuntimeError:
+                # Unparseable without timelib installed
+                self.skipTest('\'timelib\' is not installed')
 
+    @skipIf(not HAS_TIMELIB, '\'timelib\' is not installed')
     def test_date_format(self):
 
         # Taken from doctests
@@ -308,6 +331,7 @@ class UtilsTestCase(TestCase):
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_argspec_report(self):
         def _test_spec(arg1, arg2, kwarg1=None):
             pass
@@ -418,6 +442,7 @@ class UtilsTestCase(TestCase):
         ret = utils.get_colors(use='LIGHT_GRAY')
         self.assertDictContainsSubset({'YELLOW': '\x1b[0;37m'}, ret)  # YELLOW now == LIGHT_GRAY
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
         with patch('sys.argv', ['salt-call']):
             ret = utils.daemonize_if({})
@@ -434,6 +459,7 @@ class UtilsTestCase(TestCase):
             utils.daemonize_if({})
             self.assertTrue(utils.daemonize.called)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_which_bin(self):
         ret = utils.which_bin('str')
         self.assertIs(None, ret)
@@ -450,6 +476,7 @@ class UtilsTestCase(TestCase):
             ret = utils.which_bin(test_exes)
             self.assertIs(None, ret)
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):
@@ -457,12 +484,14 @@ class UtilsTestCase(TestCase):
             ret = utils.gen_jid()
             self.assertEqual(ret, '20021225120000000000')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_check_or_die(self):
         self.assertRaises(CommandNotFoundError, utils.check_or_die, None)
 
         with patch('salt.utils.which', return_value=False):
             self.assertRaises(CommandNotFoundError, utils.check_or_die, 'FAKE COMMAND')
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_compare_versions(self):
         ret = utils.compare_versions('1.0', '==', '1.0')
         self.assertTrue(ret)

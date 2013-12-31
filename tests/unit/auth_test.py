@@ -6,12 +6,13 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, call
+from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON
 from salt import auth
 
 ensure_in_syspath('../')
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LoadAuthTestCase(TestCase):
 
     @patch('salt.payload.Serial')

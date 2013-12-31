@@ -24,6 +24,13 @@ from salt.modules import cmdmod as cmd
 
 ROOT = os.path.join(integration.FILES, 'file', 'base', 'buildout')
 
+KNOWN_VIRTUALENV_BINARY_NAMES = (
+    'virtualenv',
+    'virtualenv2',
+    'virtualenv-2.6',
+    'virtualenv-2.7'
+)
+
 buildout.__salt__ = {
     'cmd.run_all': cmd.run_all,
     'cmd.run': cmd.run,
@@ -69,10 +76,13 @@ class Base(TestCase):
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
         cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
         ret1 = buildout._Popen((
-            'virtualenv --no-site-packages {0};'
-            '{0}/bin/pip install -U setuptools; '
-            '{0}/bin/easy_install -U distribute;'
-        ).format(cls.ppy_st))
+            '{0} --no-site-packages {1};'
+            '{1}/bin/pip install -U setuptools; '
+            '{1}/bin/easy_install -U distribute;').format(
+                salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                cls.ppy_st
+            )
+        )
         assert ret1['retcode'] == 0
 
     @classmethod
@@ -101,6 +111,8 @@ class Base(TestCase):
             shutil.rmtree(self.tdir)
 
 
+@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+        'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 
     @requires_network()
@@ -282,7 +294,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(salt.utils.which('virtualenv') is None,
+@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 class BuildoutOnlineTestCase(Base):
 
@@ -296,11 +308,17 @@ class BuildoutOnlineTestCase(Base):
         # creating a distribute based install
         try:
             ret20 = buildout._Popen((
-                'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
-                ''.format(cls.ppy_dis)))
+                '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
+                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    cls.ppy_dis
+                )
+            ))
         except buildout._BuildoutError:
             ret20 = buildout._Popen((
-                'virtualenv --no-site-packages {0}'.format(cls.ppy_dis))
+                '{0} --no-site-packages {1}'.format(
+                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    cls.ppy_dis
+                ))
             )
         assert ret20['retcode'] == 0
 
@@ -318,11 +336,18 @@ class BuildoutOnlineTestCase(Base):
         # creating a blank based install
         try:
             ret3 = buildout._Popen((
-                'virtualenv --no-site-packages --no-setuptools --no-pip {0}'
-                ''.format(cls.ppy_blank)))
+                '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
+                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    cls.ppy_blank
+                )
+            ))
         except buildout._BuildoutError:
             ret3 = buildout._Popen((
-                'virtualenv --no-site-packages {0}'.format(cls.ppy_blank)))
+                '{0} --no-site-packages {1}'.format(
+                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    cls.ppy_blank
+                )
+            ))
 
         assert ret3['retcode'] == 0
 
