@@ -101,6 +101,8 @@ class Base(TestCase):
             shutil.rmtree(self.tdir)
 
 
+@skipIf(salt.utils.which('virtualenv') is None,
+        'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 
     @requires_network()

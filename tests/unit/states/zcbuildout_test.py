@@ -7,7 +7,7 @@ import textwrap
 import yaml
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
@@ -19,6 +19,7 @@ import integration
 import shutil
 
 # Import Salt libs
+import salt.utils
 from unit.modules.zcbuildout_test import Base
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
@@ -47,6 +48,8 @@ buildout.__salt__ = {
 }
 
 
+@skipIf(salt.utils.which('virtualenv') is None,
+        'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 
     @requires_network()
