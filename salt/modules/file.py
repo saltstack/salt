@@ -1645,7 +1645,7 @@ def readlink(path):
     return os.readlink(path)
 
 
-def readdir(dirname):
+def readdir(path):
     '''
     Return a list containing the contents of a directory
 
@@ -1657,14 +1657,14 @@ def readdir(dirname):
 
         salt '*' file.readdir /path/to/dir/
     '''
-    if not os.path.isabs(dirname):
+    if not os.path.isabs(path):
         raise SaltInvocationError('Dir path must be absolute.')
 
-    if not os.path.isdir(dirname):
+    if not os.path.isdir(path):
         raise SaltInvocationError('A valid directory was not specified.')
 
     dirents = ['.', '..']
-    dirents.extend(os.listdir(dirname))
+    dirents.extend(os.listdir(path))
     return dirents
 
 
