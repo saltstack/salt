@@ -2,7 +2,7 @@
 '''
 The backend for serving files pushed to master by cp.push (file_recv).
 
-:conf_master:`file_recv` needs to be enabled.
+:conf_master:`file_recv` needs to be enabled in the master config file.
 '''
 
 # Import python libs
