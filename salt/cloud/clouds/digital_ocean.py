@@ -638,9 +638,13 @@ def destroy(name, call=None):
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
     )
+    
+    scrub_data = config.get_cloud_config_value(
+        'scrub_data', get_configured_provider(), __opts__, search_global=False, default=True
+    )
 
     data = show_instance(name, call='action')
-    node = query(method='droplets', command='{0}/destroy'.format(data['id']), args={'scrub_data': True})
+    node = query(method='droplets', command='{0}/destroy'.format(data['id']), args={'scrub_data': scrub_data})
 
     salt.utils.cloud.fire_event(
         'event',
