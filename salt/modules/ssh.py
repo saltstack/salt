@@ -274,7 +274,6 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
 
-
     for pub_key in set(current).difference(set(cache_keys)):
         rm_auth_key(user, pub_key)
 
