@@ -2049,18 +2049,22 @@ def get_managed(
 
 def extract_hash(hash_fn, hash_type='md5', file_name=''):
     '''
-    This routine is called from managed() to pull a hash from a remote file.
-    The "regular expression" language is used, line by line on the 'source_hash'
-    file, to find a potential candidate of the indicated hash type.
-    This avoids many problems of arbitrary file lay out rules
-    It specifically permits pulling hash codes deom debian *.dsc files.
+    This routine is called from the :mod:`file.managed
+    <salt.states.file.managed>` state to pull a hash from a remote file.
+    Regular expressions are used line by line on the ``source_hash`` file, to
+    find a potential candidate of the indicated hash type.  This avoids many
+    problems of arbitrary file lay out rules. It specifically permits pulling
+    hash codes from debian ``*.dsc`` files.
 
-    Tested with :
+    For example:
+
+    .. code-block:: yaml
+
         openerp_7.0-latest-1.tar.gz:
-            file.managed:
-                - name: /tmp/openerp_7.0-20121227-075624-1_all.deb
-                - source: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.tar.gz
-                - source_hash: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.dsc
+          file.managed:
+            - name: /tmp/openerp_7.0-20121227-075624-1_all.deb
+            - source: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.tar.gz
+            - source_hash: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.dsc
 
     CLI Example:
 
