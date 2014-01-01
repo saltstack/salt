@@ -1584,9 +1584,13 @@ def lstat(path):
     if not os.path.isabs(path):
         raise SaltInvocationError('Path to file must be absolute.')
 
-    lst = os.lstat(path)
-    return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
-        'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+    try:
+        lst = os.lstat(path)
+        return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
+            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+    except Exception:
+        return {}
+
 
 
 def access(path, mode):
