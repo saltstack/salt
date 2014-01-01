@@ -262,7 +262,7 @@ def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
 
 
 def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
-              cache_file=''):
+              cache_keys=[]):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -274,20 +274,9 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
 
-    uinfo = __salt__['user.info'](user)
-    full = os.path.join(uinfo.get('home', ''), config)
 
-    if cache_file:
-        with open(full) as fh:
-            current_auth_file = (set(filter(None, [i.strip()
-                                                   for i in fh.readlines()])))
-
-        with open(cache_file) as fh:
-            cache_auth_file = (set(filter(None, [i.strip()
-                                                 for i in fh.readlines()])))
-
-        for pub_key in current_auth_file.difference(cache_auth_file):
-            rm_auth_key(user, pub_key.split(' ')[1])
+    for pub_key in set(current).difference(set(cache_keys)):
+        rm_auth_key(user, pub_key)
 
     if key in current:
         cline = _format_auth_line(key,
@@ -403,7 +392,7 @@ def set_auth_key_from_file(
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
                 config,
-                lfile
+                s_keys.keys()
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -426,7 +415,7 @@ def set_auth_key(
         comment='',
         options=None,
         config='.ssh/authorized_keys',
-        cache_file=''):
+        cache_keys=[]):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
     string of text that is the encoded key. If the key begins with "ssh-rsa"
@@ -444,7 +433,7 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
-    status = check_key(user, key, enc, comment, options, config, cache_file)
+    status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
         return 'replace'
