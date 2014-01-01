@@ -10,9 +10,9 @@ Configuring the mysql ext_pillar
 =====================================
 .. code-block:: yaml
 
-ext_pillar:
-  - mysql:
-      mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+  ext_pillar:
+    - mysql:
+        mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
 
 You can basically use any SELECT query here that gets you the information, you could even do joins or subqueries in case your minion_id is stored elsewhere.
 The query should always return two pieces of information in the correct order: key, value. It is capable of handling single rows or multiple rows per minion.
@@ -75,7 +75,7 @@ def _get_serv():
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-        log.error('Error in ext_pillar MySQL: {0}'.format(err.args))
+		log.exception('Error in ext_pillar MySQL: {0}'.format(err.args))
         raise err
     finally:
         conn.close()    
@@ -84,8 +84,7 @@ def ext_pillar( minion_id, pillar, mysql_query, *args, **kwargs ):
     '''
     Execute the query and return its data as a set
     '''	
-    log.debug('ext_pillar MySQL minion: {0}, pillar: {1}'.format(minion_id, pillar,))
-
+    log.info('Querying MySQL for information for {0}'.format(minion_id, ))
 #
 # this is pretty much WIP still, not sure whether this is a parameter that is being filled in at some point.
 #    log.debug('ext_pillar MySQL args: {0}'.format(args))
