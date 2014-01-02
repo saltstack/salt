@@ -1648,7 +1648,6 @@ def lstat(path):
         return {}
 
 
-
 def access(path, mode):
     '''
     Test whether the Salt process has the specified access to the file. One of
