@@ -41,6 +41,17 @@ def installed(name,
     Verify that the given package is installed and is at the correct version
     (if specified).
 
+    .. code-block:: yaml
+
+        coffee-script:
+          npm:
+            - installed
+            - user: someuser
+
+        coffee-script@1.0.1:
+          npm:
+            - installed
+
     dir
         The target directory in which to install the package, or None for
         global installation
