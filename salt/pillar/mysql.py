@@ -76,7 +76,6 @@ def _get_serv():
         yield cursor
     except MySQLdb.DatabaseError as err:
 		log.exception('Error in ext_pillar MySQL: {0}'.format(err.args))
-        raise err
     finally:
         conn.close()    
 
