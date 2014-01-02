@@ -275,10 +275,10 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
         return json.dumps(message_dict)
 
     def format_v1(self, record):
-        host = socket.getfqdn()
         message_dict = {
             '@version': 1,
             '@timestamp': self.formatTime(record),
+            'host': socket.getfqdn(),
             'levelname': record.levelname,
             'logger': record.name,
             'lineno': record.lineno,
@@ -288,15 +288,8 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             'funcName': record.funcName,
             'processName': record.processName,
             'message': record.getMessage(),
-            'source': '{0}://{1}/{2}'.format(
-                self.msg_type,
-                host,
-                self.msg_path
-            ),
-            'source_host': host,
-            'source_path': self.msg_path,
             'tags': ['salt'],
-            'type': self.msg_type,
+            'type': self.msg_type
         }
 
         if record.exc_info:
