@@ -29,13 +29,9 @@ import integration
 import salt.utils
 
 
+@skipIf(salt.utils.which_bin(integration.KNOWN_BINARY_NAMES['virtualenv']) is None,
+        'virtualenv not installed')
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
-
-    def setUp(self):
-        super(PipStateTest, self).setUp()
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
 
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(

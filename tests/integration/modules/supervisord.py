@@ -6,22 +6,23 @@ import time
 import subprocess
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
+@skipIf(salt.utils.which_bin(integration.KNOWN_BINARY_NAMES['virtualenv']) is None,
+        'virtualenv not installed')
 class SupervisordModuleTest(integration.ModuleCase):
     '''
     Validates the supervisorctl functions.
     '''
     def setUp(self):
         super(SupervisordModuleTest, self).setUp()
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
 
         self.venv_test_dir = os.path.join(integration.TMP, 'supervisortests')
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
