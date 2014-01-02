@@ -264,7 +264,10 @@ def run(opts):
         'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
         '--no-color'.format(
             sls=opts.sls,
-            pillar=opts.pillar.format(commit=opts.commit),
+            pillar=opts.pillar.format(
+                commit=opts.commit,
+                salt_url=opts.salt_url
+            ),
             vm_name=vm_name,
             commit=opts.commit
         )
@@ -338,6 +341,10 @@ def parse():
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PROVIDER', None),
         help='The vm provider')
     parser.add_option(
+        '--salt-url',
+        default='https://github.com/saltstack/salt.git',
+        help='The  salt git repository url')
+    parser.add_option(
         '--commit',
         help='The git commit to track')
     parser.add_option(
@@ -346,7 +353,7 @@ def parse():
         help='The sls file to execute')
     parser.add_option(
         '--pillar',
-        default='{{git_commit: {commit}}}',
+        default='{{git_commit: {commit}, git_url: {salt_url}}}',
         help='Pillar values to pass to the sls file')
     parser.add_option(
         '--no-clean',
