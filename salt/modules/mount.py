@@ -75,7 +75,7 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    if __grains__['os'] in ('FreeBSD'):
+    if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
     else:
         try:
