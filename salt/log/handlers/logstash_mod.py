@@ -144,11 +144,12 @@ def __virtual__():
 
 def setup_handlers():
     host = port = address = None
-    logstash_formatter = LogstashFormatter()
 
     if 'logstash_udp_handler' in __opts__:
         host = __opts__['logstash_udp_handler'].get('host', None)
         port = __opts__['logstash_udp_handler'].get('port', None)
+        version = __opts__['logstash_udp_handler'].get('version', 0)
+
         if host is None and port is None:
             log.debug(
                 'The required \'logstash_udp_handler\' configuration keys, '
@@ -156,6 +157,7 @@ def setup_handlers():
                 'configuring the logstash UDP logging handler.'
             )
         else:
+            logstash_formatter = LogstashFormatter(version = version)
             udp_handler = DatagramLogstashHandler(host, port)
             udp_handler.setFormatter(logstash_formatter)
             udp_handler.setLevel(
@@ -177,6 +179,7 @@ def setup_handlers():
     if 'logstash_zmq_handler' in __opts__:
         address = __opts__['logstash_zmq_handler'].get('address', None)
         zmq_hwm = __opts__['logstash_zmq_handler'].get('hwm', 1000)
+        version = __opts__['logstash_zmq_handler'].get('version', 0)
 
         if address is None:
             log.debug(
@@ -185,6 +188,7 @@ def setup_handlers():
                 'configuring the logstash ZMQ logging handler.'
             )
         else:
+            logstash_formatter = LogstashFormatter(version = version)
             zmq_handler = ZMQLogstashHander(address, zmq_hwm=zmq_hwm)
             zmq_handler.setFormatter(logstash_formatter)
             zmq_handler.setLevel(
@@ -208,17 +212,20 @@ def setup_handlers():
 
 
 class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
-    def __init__(self, msg_type='logstash', msg_path='logstash'):
+    def __init__(self, msg_type='logstash', msg_path='logstash', version=0):
         self.msg_path = msg_path
         self.msg_type = msg_type
+        self.version = version
+        self.format = getattr(self, 'format_v{0}'.format(version))
         super(LogstashFormatter, self).__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
         return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + 'Z'
 
-    def format(self, record):
+    def format_v0(self, record):
         host = socket.getfqdn()
         message_dict = {
+            '@timestamp': self.formatTime(record),
             '@fields': {
                 'levelname': record.levelname,
                 'logger': record.name,
@@ -238,7 +245,6 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             '@source_host': host,
             '@source_path': self.msg_path,
             '@tags': ['salt'],
-            '@timestamp': self.formatTime(record),
             '@type': self.msg_type,
         }
 
@@ -266,6 +272,57 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             message_dict['@fields'][key] = repr(value)
+        return json.dumps(message_dict)
+
+    def format_v1(self, record):
+        host = socket.getfqdn()
+        message_dict = {
+            '@version': 1,
+            '@timestamp': self.formatTime(record),
+            'levelname': record.levelname,
+            'logger': record.name,
+            'lineno': record.lineno,
+            'pathname': record.pathname,
+            'process': record.process,
+            'threadName': record.threadName,
+            'funcName': record.funcName,
+            'processName': record.processName,
+            'message': record.getMessage(),
+            'source': '{0}://{1}/{2}'.format(
+                self.msg_type,
+                host,
+                self.msg_path
+            ),
+            'source_host': host,
+            'source_path': self.msg_path,
+            'tags': ['salt'],
+            'type': self.msg_type,
+        }
+
+        if record.exc_info:
+            message_dict['exc_info'] = self.formatException(
+                record.exc_info
+            )
+
+        # Add any extra attributes to the message field
+        for key, value in record.__dict__.items():
+            if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
+                       'filename', 'funcName', 'id', 'levelname', 'levelno',
+                       'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
+                       'name', 'pathname', 'process', 'processName',
+                       'relativeCreated', 'thread', 'threadName'):
+                # These are already handled above or not handled at all
+                continue
+
+            if value is None:
+                message_dict[key] = value
+                continue
+
+            if isinstance(value, (string_types, bool, dict, float, int, list)):
+                message_dict[key] = value
+                continue
+
+            message_dict[key] = repr(value)
         return json.dumps(message_dict)
 
 
