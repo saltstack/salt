@@ -147,7 +147,7 @@ def file_hash(load, fnd):
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     file_hash(load, fnd)
-                    return(ret)
+                    return ret
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
@@ -155,7 +155,7 @@ def file_hash(load, fnd):
         except os.error:  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             file_hash(load, fnd)
-            return(ret)
+            return ret
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])

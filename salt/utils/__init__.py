@@ -1856,7 +1856,7 @@ def is_bin_file(path):
         return None
     try:
         with open(path, 'r') as fp_:
-            return(is_bin_str(fp_.read(2048)))
+            return is_bin_str(fp_.read(2048))
     except os.error:
         return None
 

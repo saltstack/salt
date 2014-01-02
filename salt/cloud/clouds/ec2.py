@@ -1903,7 +1903,7 @@ def _extract_name_tag(item):
                 if tag['key'] == 'Name':
                     return tag['value']
             return item['instanceId']
-        return (item['tagSet']['item']['value'])
+        return item['tagSet']['item']['value']
     return item['instanceId']
 
 

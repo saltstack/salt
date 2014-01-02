@@ -98,7 +98,7 @@ def bootstrap(force=False):
     # Windows release following Server 2008.
     ps_path = 'C:\\Windows\\SYSTEM32\\WindowsPowerShell\\v1.0\\powershell.exe'
 
-    if not (__salt__['cmd.has_exec'](ps_path)):
+    if not __salt__['cmd.has_exec'](ps_path):
         if (__grains__['osrelease'], __grains__['cpuarch']) in ps_downloads:
             # Install the appropriate release of PowerShell v2.0
             url = ps_downloads[(__grains__['osrelease'], __grains__['cpuarch'])]
