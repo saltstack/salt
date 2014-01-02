@@ -5,6 +5,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -230,10 +231,9 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
+    @skipIf(salt.utils.which_bin(integration.KNOWN_BINARY_NAMES['virtualenv']) is None,
+            'virtualenv not installed')
     def test_issue_2068_template_str(self):
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )
