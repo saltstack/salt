@@ -1596,7 +1596,7 @@ class Matcher(object):
         '''
         if tgt not in self.functions:
             return False
-        return(self.functions[tgt]())
+        return self.functions[tgt]()
 
     def pillar_match(self, tgt, delim=':'):
         '''

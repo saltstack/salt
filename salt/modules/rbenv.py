@@ -112,7 +112,7 @@ def install(runas=None, path=None):
 
     path = path or _rbenv_path(runas)
     path = os.path.expanduser(path)
-    return (_install_rbenv(path, runas) and _install_ruby_build(path, runas))
+    return _install_rbenv(path, runas) and _install_ruby_build(path, runas)
 
 
 def update(runas=None, path=None):
@@ -129,7 +129,7 @@ def update(runas=None, path=None):
     path = path or _rbenv_path(runas)
     path = os.path.expanduser(path)
 
-    return (_update_rbenv(path, runas) and _update_ruby_build(path, runas))
+    return _update_rbenv(path, runas) and _update_ruby_build(path, runas)
 
 
 def is_installed(runas=None):
