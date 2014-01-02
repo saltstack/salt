@@ -50,7 +50,6 @@ class LocalClientTestCase(TestCase):
             cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
-
             self.local_client.cmd_subset('*', 'first.func', sub=10, cli=True)
             cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
@@ -71,10 +70,3 @@ class LocalClientTestCase(TestCase):
                 self.assertRaises(SaltInvocationError,
                                   self.local_client.pub,
                                   'non_existant_group', 'test.ping', expr_form='nodegroup')
-
-
-
-
-
-
-
