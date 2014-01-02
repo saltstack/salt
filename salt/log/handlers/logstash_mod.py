@@ -123,13 +123,6 @@ from salt._compat import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 
-# Import 3rd-party libs
-try:
-    from pytz import utc as _UTC
-    HAS_PYTZ = True
-except ImportError:
-    HAS_PYTZ = False
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -221,10 +214,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
         super(LogstashFormatter, self).__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
-        timestamp = datetime.datetime.utcfromtimestamp(record.created)
-        if HAS_PYTZ:
-            return _UTC.localize(timestamp).isoformat()
-        return '{0}+00:00'.format(timestamp.isoformat())
+        return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + 'Z'
 
     def format(self, record):
         host = socket.getfqdn()
