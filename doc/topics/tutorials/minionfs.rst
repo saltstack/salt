@@ -4,20 +4,23 @@
 MinionFS Backend Walkthrough
 ============================
 
-Sometimes, you might need to propagate files that are generated on a minion. Salt already has a feature to send files from a minion to the
-master:
+Sometimes, you might need to propagate files that are generated on a minion.
+Salt already has a feature to send files from a minion to the master:
 
 .. code-block:: bash
 
     salt 'minion-id' cp.push /path/to/the/file
 
-This command will store the file, including its full path, under :conf_master:`cachedir` ``/master/minions/minion-id/files``. With the default
-:conf_master:`cachedir` the example file above would be stored as `/var/cache/salt/master/minions/minion-id/files/path/to/the/file`.
+This command will store the file, including its full path, under
+:conf_master:`cachedir` ``/master/minions/minion-id/files``. With the default
+:conf_master:`cachedir` the example file above would be stored as
+`/var/cache/salt/master/minions/minion-id/files/path/to/the/file`.
 
 .. note::
 
-    This walkthrough assumes basic knowledge of Salt and :salt.modules.cp:`push`. To get up to speed, check
-    out the :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    This walkthrough assumes basic knowledge of Salt and :mod:`cp.push
+    <salt.modules.cp.push>`. To get up to speed, check out the
+    :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
 Since it is not a good idea to expose the whole :conf_master:`cachedir`, MinionFS
 should be used to send these files to other minions.
@@ -37,14 +40,15 @@ master. The :conf_master:`fileserver_backend` option needs to contain a value of
     
     file_recv: True
 
-These changes require a restart of the master, then new requests for the ``salt://minion-id/`` protocol will send files that are pushed by ``cp.push`` 
+These changes require a restart of the master, then new requests for the
+``salt://minion-id/`` protocol will send files that are pushed by ``cp.push``
 from ``minion-id`` to the master.
 
 .. note::
 
-    All of the files that are pushed to the master are going to be available to all
-    of the minions. If this is not what you want, please remove ``minion`` from 
-    :conf_master:`fileserver_backend`.
+    All of the files that are pushed to the master are going to be available to
+    all of the minions. If this is not what you want, please remove ``minion``
+    from :conf_master:`fileserver_backend` in the master config file.
 
 .. note::
 
@@ -54,8 +58,9 @@ from ``minion-id`` to the master.
 Commandline Example
 ===================
 
-Lets assume that we are going to generate SSH keys on a minion called ``minion-source`` and put the public part in ``~/.ssh/authorized_keys`` of root user 
-of a minion called ``minion-destination``.
+Lets assume that we are going to generate SSH keys on a minion called
+``minion-source`` and put the public part in ``~/.ssh/authorized_keys`` of root
+user of a minion called ``minion-destination``.
 
 First, lets make sure that ``/root/.ssh`` exists and has the right permissions:
 

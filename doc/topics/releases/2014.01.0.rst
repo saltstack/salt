@@ -2,7 +2,7 @@
 Salt 2014.01.0 Release Notes - Codename Hydrogen
 ================================================
 
-:release 2013-12-30
+:release: 2013-12-30
 
 The 2014.01.0 release of Salt is a major release which not only increases
 stability but also brings new capabilities in virtualization, cloud
@@ -22,9 +22,8 @@ Salt Cloud Merged in Salt
 Salt Cloud is a tool for provisioning salted minions across various cloud
 providers. Prior to this release, Salt Cloud was a seperate project but this
 marks its full integration with the Salt distribution. A Getting Started guide
-and additional documentation for Salt Cloud can be found `here`__:
-
-.. __: http://docs.saltstack.com/topics/cloud/index.html
+and additional documentation for Salt Cloud can be found :doc:`here
+</topics/cloud/index>`:
 
 
 Salt Virt
@@ -52,12 +51,11 @@ Alongside Salt Cloud comes new support for the Google Compute Engine. Salt Stack
 can now deploy and control GCE virtual machines and the application stacks that
 they run.
 
-For more information on Salt Stack and GCE, please see `this blog post`.
+For more information on Salt Stack and GCE, please see `this blog post`_.
 
-Documentation for Salt and GCE can be found `here`.
+Documentation for Salt and GCE can be found :doc:`here </topics/cloud/gce>`.
 
-.. __: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
-.. __: http://docs.saltstack.com/topics/cloud/gce.html
+.. _this blog post: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
 
 BSD Package Management
 ----------------------
