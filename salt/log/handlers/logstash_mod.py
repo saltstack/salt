@@ -237,7 +237,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             ),
             '@source_host': host,
             '@source_path': self.msg_path,
-            '@tags': [],
+            '@tags': ['salt'],
             '@timestamp': self.formatTime(record),
             '@type': self.msg_type,
         }
