@@ -1471,6 +1471,62 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def seek_read(path, size, offset):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.seek_read /path/to/file 4096 0
+    '''
+    seek_fh = os.open(path, os.O_RDONLY)
+    os.lseek(seek_fh, int(offset), 0)
+    data = os.read(seek_fh, int(size))
+    os.close(seek_fh)
+    return data
+
+
+def seek_write(path, data, offset):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.seek_write /path/to/file 'some data' 4096
+    '''
+    seek_fh = os.open(path, os.O_WRONLY)
+    os.lseek(seek_fh, int(offset), 0)
+    ret = os.write(seek_fh, data)
+    os.fsync(seek_fh)
+    os.close(seek_fh)
+    return ret
+
+
+def truncate(path, length):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: Hydrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.truncate /path/to/file 512
+    '''
+    seek_fh = open(path, 'r+')
+    seek_fh.truncate(int(length))
+    seek_fh.close()
+
+
 def link(src, link):
     '''
     Create a hard link to a file
