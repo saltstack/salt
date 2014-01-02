@@ -228,7 +228,7 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Asyncronously send a command to connected minions
+        Asynchronously send a command to connected minions
 
         Prep the job directory and publish a command to any targeted minions.
 
@@ -269,7 +269,7 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Asyncronously send a command to connected minions
+        Asynchronously send a command to connected minions
 
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
@@ -392,7 +392,7 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Syncronously execute a command on targeted minions
+        Synchronously execute a command on targeted minions
 
         The cmd method will execute and wait for the timeout period for all
         minions to reply, then it will return all minion data at once.
