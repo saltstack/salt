@@ -11,17 +11,18 @@
     UDP Logging Handler
     -------------------
 
-    In order to setup the datagram handler for `Logstash`_, please define on
-    the salt configuration file:
+    For versions of `Logstash`_ before 1.2.0:
+
+    In the salt configuration file:
 
     .. code-block:: yaml
 
         logstash_udp_handler:
           host: 127.0.0.1
           port: 9999
+          version: 0
 
-
-    On the `Logstash`_ configuration file you need something like:
+    In the `Logstash`_ configuration file:
 
     .. code-block:: text
 
@@ -32,6 +33,27 @@
           }
         }
 
+    For version 1.2.0 of `Logstash`_ and newer:
+
+    In the salt configuration file:
+
+    .. code-block:: yaml
+
+        logstash_udp_handler:
+          host: 127.0.0.1
+          port: 9999
+          version: 1
+
+    In the `Logstash`_ configuration file:
+
+    .. code-block:: text
+
+        input {
+          udp {
+            port => 9999
+            codec => json
+          }
+        }
 
     Please read the `UDP input`_ configuration page for additional information.
 
@@ -39,16 +61,17 @@
     ZeroMQ Logging Handler
     ----------------------
 
-    In order to setup the ZMQ handler for `Logstash`_, please define on the
-    salt configuration file:
+    For versions of `Logstash`_ before 1.2.0:
+
+    In the salt configuration file:
 
     .. code-block:: yaml
 
         logstash_zmq_handler:
           address: tcp://127.0.0.1:2021
+          version: 0
 
-
-    On the `Logstash`_ configuration file you need something like:
+    In the `Logstash`_ configuration file:
 
     .. code-block:: text
 
@@ -63,6 +86,27 @@
           }
         }
 
+    For version 1.2.0 of `Logstash`_ and newer:
+
+    In the salt configuration file:
+
+    .. code-block:: yaml
+
+        logstash_zmq_handler:
+          address: tcp://127.0.0.1:2021
+          version: 1
+
+    In the `Logstash`_ configuration file:
+
+    .. code-block:: text
+
+        input {
+          zeromq {
+            topology => "pubsub"
+            address => "tcp://0.0.0.0:2021"
+            codec => json
+          }
+        }
 
     Please read the `ZeroMQ input`_ configuration page for additional
     information.
