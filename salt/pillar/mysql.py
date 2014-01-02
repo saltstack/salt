@@ -14,10 +14,13 @@ Configuring the mysql ext_pillar
     - mysql:
         mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
 
-You can basically use any SELECT query here that gets you the information, you could even do joins or subqueries in case your minion_id is stored elsewhere.
-The query should always return two pieces of information in the correct order: key, value. It is capable of handling single rows or multiple rows per minion.
+You can basically use any SELECT query here that gets you the information, you
+could even do joins or subqueries in case your minion_id is stored elsewhere.
+The query should always return two pieces of information in the correct order(
+key, value). It is capable of handling single rows or multiple rows per minion.
 
-MySQL configuration of the MySQL returner is being used (mysql.db, mysql.user, mysql.pass, mysql.port, mysql.host)
+MySQL configuration of the MySQL returner is being used (mysql.db, mysql.user,
+mysql.pass, mysql.port, mysql.host)
 
 Required python modules: MySQLdb
 '''
@@ -39,10 +42,12 @@ try:
 except ImportError:
     HAS_MYSQL = False
 
+
 def __virtual__():
     if not HAS_MYSQL:
-        return False        	
+        return False
     return 'mysql'
+
 
 def _get_options():
     '''
@@ -64,25 +69,30 @@ def _get_options():
 
     return _options
 
+
 @contextmanager
 def _get_serv():
     '''
     Return a mysql cursor
     '''
     _options = _get_options()
-    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    conn = MySQLdb.connect(host=_options['host'],
+                           user=_options['user'],
+                           passwd=_options['pass'],
+                           db=_options['db'], port=_options['port'])
     cursor = conn.cursor()
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-		log.exception('Error in ext_pillar MySQL: {0}'.format(err.args))
+        log.exception('Error in ext_pillar MySQL: {0}'.format(err.args))
     finally:
-        conn.close()    
+        conn.close()
 
-def ext_pillar( minion_id, pillar, mysql_query, *args, **kwargs ):
+
+def ext_pillar(minion_id, pillar, mysql_query, *args, **kwargs):
     '''
     Execute the query and return its data as a set
-    '''	
+    '''
     log.info('Querying MySQL for information for {0}'.format(minion_id, ))
 #
 # this is pretty much WIP still, not sure whether this is a parameter that is being filled in at some point.
@@ -100,7 +110,7 @@ def ext_pillar( minion_id, pillar, mysql_query, *args, **kwargs ):
 
         return_data = {}
         for ret in cur.fetchall():
-            return_data[ ret[0] ] = ret[1]
+            return_data[ret[0]] = ret[1]
 
         log.debug('ext_pillar MySQL: Return data: {0}'.format(return_data))
         return return_data
