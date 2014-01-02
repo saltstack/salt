@@ -6,8 +6,8 @@ Manage Docker containers
 
 `Docker <https://docker.io>`_
 is a lightweight, portable, self-sufficient software container
-wrapper. The base supported wrapper type is LXC:
-<https://en.wikipedia.org/wiki/Linux_Containers>`_,
+wrapper. The base supported wrapper type is
+`LXC <https://en.wikipedia.org/wiki/Linux_Containers>`_,
 `cgroups <https://en.wikipedia.org/wiki/Cgroups>`_, and the
 `Linux Kernel <https://en.wikipedia.org/wiki/Linux_kernel>`_.
 
