@@ -27,7 +27,7 @@ option_regexp1 = re.compile(r'\s*(.+)\s*(=)\s*(.+)\s*')
 option_regexp2 = re.compile(r'\s*(.+)\s*(:)\s*(.+)\s*')
 
 
-def set_option(file_name, sections={}, summary=True):
+def set_option(file_name, sections=None, summary=True):
     '''
     Edit ini files
     file_name: path of ini_file
@@ -49,6 +49,8 @@ def set_option(file_name, sections={}, summary=True):
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
+    if sections is None:
+        sections = {}
     ret = {'file_name': file_name}
     inifile = _Ini.get_ini_file(file_name)
     if not inifile:
@@ -75,7 +77,7 @@ def set_option(file_name, sections={}, summary=True):
                     if not summary:
                         changes[section].update({option:
                                                  sections[section][option]})
-            except:
+            except Exception:
                 ret.update({'error':
                             'while setting option {0} in section {0}'.
                             format(option, section)})
@@ -212,7 +214,7 @@ class _Section(list):
         for item in self:
             try:
                 contents.update({item.name: item.value})
-            except:
+            except Exception:
                 pass  # item was a comment
         return contents
 
@@ -349,5 +351,5 @@ class _Ini(object):
     def get_ini_file(file_name):
         try:
             return _Ini(file_name).refresh()
-        except:
+        except Exception:
             return
