@@ -303,8 +303,9 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
 
-    for pub_key in set(current).difference(set(cache_keys)):
-        rm_auth_key(user, pub_key)
+    if cache_keys:
+        for pub_key in set(current).difference(set(cache_keys)):
+            rm_auth_key(user, pub_key)
 
     if key in current:
         cline = _format_auth_line(key,
@@ -387,10 +388,10 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 
 
 def set_auth_key_from_file(user,
-                          source,
-                          config='.ssh/authorized_keys',
-                          saltenv='base',
-                          env=None):
+                           source,
+                           config='.ssh/authorized_keys',
+                           saltenv='base',
+                           env=None):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
