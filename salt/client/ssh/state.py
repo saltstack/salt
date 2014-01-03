@@ -120,12 +120,12 @@ def prep_trans_tar(opts, chunks, file_refs):
     file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     sync_refs = [
-            'salt://_modules',
-            'salt://_states',
-            'salt://_grains',
-            'salt://_renderers',
-            'salt://_returners',
-            'salt://_outputters',
+            ['salt://_modules'],
+            ['salt://_states'],
+            ['salt://_grains'],
+            ['salt://_renderers'],
+            ['salt://_returners'],
+            ['salt://_outputters'],
             ]
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
