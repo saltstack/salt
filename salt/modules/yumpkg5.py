@@ -71,7 +71,7 @@ def _parse_pkginfo(line):
     )
 
     try:
-        name, version, release, arch, repoid = line.split('_|-')
+        name, pkg_version, release, arch, repoid = line.split('_|-')
     # Handle unpack errors (should never happen with the queryformat we are
     # using, but can't hurt to be careful).
     except ValueError:
@@ -80,9 +80,9 @@ def _parse_pkginfo(line):
     if arch != 'noarch' and arch != __grains__['osarch']:
         name += '.{0}'.format(arch)
     if release:
-        version += '-{0}'.format(release)
+        pkg_version += '-{0}'.format(release)
 
-    return pkginfo(name, version, arch, repoid)
+    return pkginfo(name, pkg_version, arch, repoid)
 
 
 def _repoquery(repoquery_args):
