@@ -346,7 +346,7 @@ def _interfaces_ipconfig(out):
             key, val = line.split(',', 1)
             key = key.strip(' .')
             val = val.strip()
-            if addr and key in ('Subnet Mask'):
+            if addr and key == 'Subnet Mask':
                 addr['netmask'] = val
             elif key in ('IP Address', 'IPv4 Address'):
                 if 'inet' not in iface:
@@ -362,9 +362,9 @@ def _interfaces_ipconfig(out):
                 addr = {'address': val.rstrip('(Preferred)'),
                         'prefixlen': None}
                 iface['inet6'].append(addr)
-            elif key in ('Physical Address'):
+            elif key == 'Physical Address':
                 iface['hwaddr'] = val
-            elif key in ('Media State'):
+            elif key == 'Media State':
                 # XXX seen used for tunnel adaptors
                 # might be useful
                 iface['up'] = (val != 'Media disconnected')
