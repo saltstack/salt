@@ -228,8 +228,9 @@ def run(opts):
         opts.download_unittest_reports = vm_name
 
     cmd = (
-        'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
-        '{provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+        'salt-cloud -l debug'
+        ' --script-args "-D -g {salt_url} -n git {commit}"'
+        ' -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
     )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
