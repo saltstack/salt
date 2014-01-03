@@ -195,7 +195,7 @@ def replace(key,
     if not isinstance(min_compress_len, integer_types):
         raise SaltInvocationError('\'min_compress_len\' must be an integer')
     conn = _connect(host, port)
-    status = conn.get_stats()
+    stats = conn.get_stats()
     return conn.replace(
         key,
         value,
