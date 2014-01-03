@@ -681,7 +681,7 @@ def remotes_on_local_tcp_port(port):
         # '127.0.0.1:4505->127.0.0.1:55703'
         local, remote = chunks[8].split('->')
         lhost, lport = local.split(':')
-        if not (int(lport) == port):  # ignore if local port not port
+        if int(lport) != port:  # ignore if local port not port
             continue
         rhost, rport = remote.split(':')
         remotes.add(rhost)
