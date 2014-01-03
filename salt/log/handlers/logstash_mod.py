@@ -201,7 +201,7 @@ def setup_handlers():
                 'configuring the logstash UDP logging handler.'
             )
         else:
-            logstash_formatter = LogstashFormatter(version = version)
+            logstash_formatter = LogstashFormatter(version=version)
             udp_handler = DatagramLogstashHandler(host, port)
             udp_handler.setFormatter(logstash_formatter)
             udp_handler.setLevel(
@@ -232,7 +232,7 @@ def setup_handlers():
                 'configuring the logstash ZMQ logging handler.'
             )
         else:
-            logstash_formatter = LogstashFormatter(version = version)
+            logstash_formatter = LogstashFormatter(version=version)
             zmq_handler = ZMQLogstashHander(address, zmq_hwm=zmq_hwm)
             zmq_handler.setFormatter(logstash_formatter)
             zmq_handler.setLevel(
