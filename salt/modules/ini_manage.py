@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 :maintainer: <ageeleshwar.kandavelu@csscorp.com>
 :maturity: new
 :depends: re
@@ -9,20 +9,17 @@ Module for editing ini files through saltstack
 
 use section as DEFAULT_IMPLICIT if your ini file does not have any section
 for example /etc/sysctl.conf
-"""
+'''
 
-
-try:
-    import re
-    HAS_RE = True
-except ImportError:
-    HAS_RE = False
+# Import Python libs
+import re
 
 
 def __virtual__():
-    if HAS_RE:
-        return 'ini_manage'
-    return False
+    '''
+    Rename to ini
+    '''
+    return 'ini'
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
@@ -30,9 +27,9 @@ option_regexp1 = re.compile(r'\s*(.+)\s*(=)\s*(.+)\s*')
 option_regexp2 = re.compile(r'\s*(.+)\s*(:)\s*(.+)\s*')
 
 
-def ini_option_set(file_name, sections={}, summary=True):
-    """
-    edit ini files
+def set_option(file_name, sections={}, summary=True):
+    '''
+    Edit ini files
     file_name: path of ini_file
     sections: a dictionary representing the ini file
 
@@ -40,19 +37,20 @@ def ini_option_set(file_name, sections={}, summary=True):
 
     set summary=False if return data need not have previous option value
 
-    from cli:
-    salt 'target' ini_manage.ini_option_set path_to_ini_file \
-        '{"section_to_change": {"key": "value"}}'
-    if value is an empty dict just the section will be added
-
     from api:
     import salt
     sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini_manage.ini_option_set',
+    sc.cmd('target', 'ini.set_option',
            ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
-    """
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
+    '''
     ret = {'file_name': file_name}
-    inifile = ini.get_ini_file(file_name)
+    inifile = _Ini.get_ini_file(file_name)
     if not inifile:
         ret.update({'error': 'ini file not found'})
         return ret
@@ -62,7 +60,7 @@ def ini_option_set(file_name, sections={}, summary=True):
         changes.update({section: {}})
         for option in sections[section]:
             try:
-                current_value = ini_option_get(file_name, section, option)
+                current_value = get_option(file_name, section, option)
                 if not current_value == sections[section][option]:
                     inifile.update_section(section,
                                            option,
@@ -89,43 +87,47 @@ def ini_option_set(file_name, sections={}, summary=True):
     return ret
 
 
-def ini_option_get(file_name, section, option):
-    """
-    get value of a key from a section in a ini file
-
-    from cli
-    salt 'target' ini_manage.ini_option_get path_to_ini_file section_name \
-        option_name
+def get_option(file_name, section, option):
+    '''
+    Get value of a key from a section in a ini file
 
     from api:
     import salt
     sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini_manage.ini_option_get',
+    sc.cmd('target', 'ini.get_option',
            [path_to_ini_file, section_name, option])
-    """
-    inifile = ini.get_ini_file(file_name)
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' ini.get_option /path/to/ini section_name option_name
+    '''
+    inifile = _Ini.get_ini_file(file_name)
     if inifile:
         opt = inifile.get_option(section, option)
         if opt:
             return opt.value
 
 
-def ini_option_remove(file_name, section, option):
-    """
-    remove a key,value pair from a section in a ini file
+def remove_option(file_name, section, option):
+    '''
+    Remove a key,value pair from a section in a ini file
     returns the value of the removed key
-
-    from cli
-    salt 'target' ini_manage.ini_option_remove path_to_ini_file section_name \
-        option_name
 
     from api:
     import salt
     sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini_manage.ini_option_remove',
+    sc.cmd('target', 'ini.remove_option',
            [path_to_ini_file, section_name, option])
-    """
-    inifile = ini.get_ini_file(file_name)
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' ini.remove_option /path/to/ini section_name option_name
+    '''
+    inifile = _Ini.get_ini_file(file_name)
     if inifile:
         opt = inifile.remove_option(section, option)
         if opt:
@@ -133,42 +135,48 @@ def ini_option_remove(file_name, section, option):
             return opt.value
 
 
-def ini_section_get(file_name, section):
-    """
+def get_section(file_name, section):
+    '''
     get a section in a ini file
     returns the section as dictionary
-
-    from cli
-    salt 'target' ini_manage.ini_section_get path_to_ini_file section_name
 
     from api:
     import salt
     sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini_manage.ini_section_get',
+    sc.cmd('target', 'ini.get_section',
            [path_to_ini_file, section_name])
-    """
-    inifile = ini.get_ini_file(file_name)
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' ini.get_section /path/to/ini section_name
+    '''
+    inifile = _Ini.get_ini_file(file_name)
     if inifile:
         sect = inifile.get_section(section)
         if sect:
             return sect.contents()
 
 
-def ini_section_remove(file_name, section):
-    """
+def remove_section(file_name, section):
+    '''
     remove a section in a ini file
     returns the removed section as dictionary
-
-    from cli
-    salt 'target' ini_manage.ini_section_remove path_to_ini_file section_name
 
     from api:
     import salt
     sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini_manage.ini_section_remove',
+    sc.cmd('target', 'ini.remove_section',
            [path_to_ini_file, section_name])
-    """
-    inifile = ini.get_ini_file(file_name)
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' ini.remove_section /path/to/ini section_name
+    '''
+    inifile = _Ini.get_ini_file(file_name)
     if inifile:
         sect = inifile.remove_section(section)
         if sect:
@@ -176,20 +184,20 @@ def ini_section_remove(file_name, section):
             return sect.contents()
 
 
-class section(list):
+class _Section(list):
     def __init__(self, name):
-        super(section, self).__init__()
+        super(_Section, self).__init__()
         self.section_name = name
 
     def get_option(self, option_name):
         for item in self:
-            if isinstance(item, option) and (item.name == option_name):
+            if isinstance(item, _Option) and (item.name == option_name):
                 return item
 
     def update_option(self, option_name, option_value=None, separator="="):
         option_to_update = self.get_option(option_name)
         if not option_to_update:
-            option_to_update = option(option_name)
+            option_to_update = _Option(option_name)
             self.append(option_to_update)
         option_to_update.value = option_value
         option_to_update.separator = separator
@@ -220,9 +228,9 @@ class section(list):
                     self.section_name == item.section_name)
 
 
-class option(object):
+class _Option(object):
     def __init__(self, name, value=None, separator="="):
-        super(option, self).__init__()
+        super(_Option, self).__init__()
         self.name = name
         self.value = value
         self.separator = separator
@@ -236,24 +244,24 @@ class option(object):
                     self.name == item.name)
 
 
-class ini(object):
+class _Ini(object):
     def __init__(self, file_name):
-        super(ini, self).__init__()
+        super(_Ini, self).__init__()
         self.file_name = file_name
 
     def refresh(self):
         self.sections = []
-        current_section = section('DEFAULT_IMPLICIT')
+        current_section = _Section('DEFAULT_IMPLICIT')
         self.sections.append(current_section)
         with open(self.file_name, 'r') as inifile:
             for line in inifile.readlines():
-                if ini.iscomment(line):
-                    current_section.append(ini.decrypt_comment(line))
-                elif ini.isnewsection(line):
-                    self.sections.append(ini.decrypt_section(line))
+                if _Ini.iscomment(line):
+                    current_section.append(_Ini.decrypt_comment(line))
+                elif _Ini.isnewsection(line):
+                    self.sections.append(_Ini.decrypt_section(line))
                     current_section = self.sections[-1]
-                elif ini.isoption(line):
-                    current_section.append(ini.decrypt_option(line))
+                elif _Ini.isoption(line):
+                    current_section.append(_Ini.decrypt_option(line))
         return self
 
     def flush(self):
@@ -269,7 +277,7 @@ class ini(object):
             if not section.section_name == 'DEFAULT_IMPLICIT':
                 file_contents += '[%s]\n' % section.section_name
             for item in section:
-                if isinstance(item, option):
+                if isinstance(item, _Option):
                     file_contents += '%s %s %s\n' % (item.name, item.separator,
                                                      item.value)
                 else:
@@ -291,7 +299,7 @@ class ini(object):
                        option_value=None, separator="="):
         section_to_update = self.get_section(section_name)
         if not section_to_update:
-            section_to_update = section(section_name)
+            section_to_update = _Section(section_name)
             self.sections.append(section_to_update)
         if option_name:
             section_to_update.update_option(option_name, option_value,
@@ -315,14 +323,14 @@ class ini(object):
     @staticmethod
     def decrypt_section(line):
         ma = re.match(section_regexp, line)
-        return section(ma.group(1).strip())
+        return _Section(ma.group(1).strip())
 
     @staticmethod
     def decrypt_option(line):
         ma = re.match(option_regexp1, line)
         if not ma:
             ma = re.match(option_regexp2, line)
-        return option(ma.group(1).strip(), ma.group(3).strip(),
+        return _Option(ma.group(1).strip(), ma.group(3).strip(),
                       ma.group(2).strip())
 
     @staticmethod
@@ -340,6 +348,6 @@ class ini(object):
     @staticmethod
     def get_ini_file(file_name):
         try:
-            return ini(file_name).refresh()
+            return _Ini(file_name).refresh()
         except:
             return
