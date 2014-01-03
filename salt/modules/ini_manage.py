@@ -14,12 +14,14 @@ for example /etc/sysctl.conf
 # Import Python libs
 import re
 
+__virtualname__ = 'ini'
+
 
 def __virtual__():
     '''
     Rename to ini
     '''
-    return 'ini'
+    return __virtualname__
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
