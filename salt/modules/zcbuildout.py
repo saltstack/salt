@@ -735,7 +735,7 @@ def run_buildout(directory='.',
         run buildout in newest mode
 
     force
-        run buildout unconditionnaly
+        run buildout unconditionally
 
     verbose
         run buildout in verbose mode (-vvvvv)
