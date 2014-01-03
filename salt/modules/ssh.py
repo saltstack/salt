@@ -287,7 +287,7 @@ def check_key_file(user,
 
 
 def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
-              cache_keys=[]):
+              cache_keys=None):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -297,6 +297,8 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
 
         salt '*' ssh.check_key <user> <key> <enc> <comment> <options>
     '''
+    if cache_keys is None:
+        cache_keys = []
     enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
@@ -458,7 +460,7 @@ def set_auth_key(
         comment='',
         options=None,
         config='.ssh/authorized_keys',
-        cache_keys=[]):
+        cache_keys=None):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
     string of text that is the encoded key. If the key begins with "ssh-rsa"
@@ -471,6 +473,8 @@ def set_auth_key(
 
         salt '*' ssh.set_auth_key <user> '<key>' enc='dsa'
     '''
+    if cache_keys is None:
+        cache_keys = []
     if len(key.split()) > 1:
         return 'invalid'
 
