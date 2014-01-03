@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maturity: new
+:depends: re
+:platform: all
+
 Module for editing ini files through saltstack
 
 use section as DEFAULT_IMPLICIT if your ini file does not have any section
 for example /etc/sysctl.conf
-
-@author: akilesh
 """
+
+
 try:
     import re
     HAS_RE = True
@@ -25,11 +30,15 @@ option_regexp1 = re.compile(r'\s*(.+)\s*(=)\s*(.+)\s*')
 option_regexp2 = re.compile(r'\s*(.+)\s*(:)\s*(.+)\s*')
 
 
-def ini_option_set(file_name, sections={}):
+def ini_option_set(file_name, sections={}, summary=True):
     """
     edit ini files
+    file_name: path of ini_file
+    sections: a dictionary representing the ini file
 
     returns a dictionary containing the changes made
+
+    set summary=False if return data need not have previous option value
 
     from cli:
     salt 'target' ini_manage.ini_option_set path_to_ini_file \
@@ -58,14 +67,22 @@ def ini_option_set(file_name, sections={}):
                     inifile.update_section(section,
                                            option,
                                            sections[section][option])
+                    changes[section].update(
+                        {
+                            option: {
+                                'before': current_value,
+                                'after': sections[section][option]
+                            }
+                        })
+                    if not summary:
+                        changes[section].update({option:
+                                                 sections[section][option]})
             except:
-                changes[section].update({option: 'error encountered'})
+                ret.update({'error':
+                            'while setting option {0} in section {0}'.
+                            format(option, section)})
                 err_flag = True
                 break
-            else:
-                changes[section].update({option:
-                                         {'before': current_value,
-                                          'after': sections[section][option]}})
     if not err_flag:
         inifile.flush()
     ret.update({'changes': changes})
