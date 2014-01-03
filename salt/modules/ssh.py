@@ -286,7 +286,8 @@ def check_key_file(user,
         return ret
 
 
-def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
+def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
+              cache_keys=[]):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -299,6 +300,10 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
     enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
+
+    for pub_key in set(current).difference(set(cache_keys)):
+        rm_auth_key(user, pub_key)
+
     if key in current:
         cline = _format_auth_line(key,
                                   current[key]['enc'],
@@ -429,7 +434,8 @@ def set_auth_key_from_file(user,
                 s_keys[key]['enc'],
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
-                config
+                config,
+                s_keys.keys()
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -451,7 +457,8 @@ def set_auth_key(
         enc='ssh-rsa',
         comment='',
         options=None,
-        config='.ssh/authorized_keys'):
+        config='.ssh/authorized_keys',
+        cache_keys=[]):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
     string of text that is the encoded key. If the key begins with "ssh-rsa"
@@ -471,7 +478,7 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
-    status = check_key(user, key, enc, comment, options, config)
+    status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
         return 'replace'
