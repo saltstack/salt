@@ -3,24 +3,38 @@
     :codauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import Python libs
+import os
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, DEFAULT, MagicMock
+ensure_in_syspath('../')
+
+# Import Salt libs
+import integration
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 
-ensure_in_syspath('../')
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocalClientTestCase(TestCase):
+class LocalClientTestCase(TestCase,
+                          integration.AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
-        self.local_client = client.LocalClient()
+        if not os.path.exists('/tmp/salttest'):
+            # This path is hardcoded in the configuration file
+            os.makedirs('/tmp/salttest/cache')
+        if not os.path.exists(integration.TMP_CONF_DIR):
+            os.makedirs(integration.TMP_CONF_DIR)
+
+        self.local_client = client.LocalClient(
+            self.get_config_file_path('master')
+        )
 
     def test_create_local_client(self):
-        local_client = client.LocalClient()
-        self.assertIsInstance(local_client, client.LocalClient, "LocalClient did not create a LocalClient instance")
+        local_client = client.LocalClient(self.get_config_file_path('master'))
+        self.assertIsInstance(local_client, client.LocalClient, 'LocalClient did not create a LocalClient instance')
 
     def test_check_pub_data(self):
         just_minions = {'minions': ['m1', 'm2']}
@@ -30,12 +44,12 @@ class LocalClientTestCase(TestCase):
         self.assertRaises(EauthAuthenticationError, self.local_client._check_pub_data, None)
         self.assertDictEqual({},
             self.local_client._check_pub_data(just_minions),
-            "Did not handle lack of jid correctly")
+            'Did not handle lack of jid correctly')
 
         self.assertDictEqual(
             {},
             self.local_client._check_pub_data({'jid': '0'}),
-            "Passing JID of zero is not handled gracefully")
+            'Passing JID of zero is not handled gracefully')
 
         with patch.dict(self.local_client.opts, {}):
             self.local_client._check_pub_data(jid_no_minions)
