@@ -295,8 +295,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 def _find_cfgs(path, cfgs=None):
     '''
-    Find all buildout configs in a sudirectory.
-    only builout.cfg and etc/buildout.cfg are valid in::
+    Find all buildout configs in a subdirectory.
+    only buildout.cfg and etc/buildout.cfg are valid in::
 
     path
         directory where to start to search
@@ -386,7 +386,7 @@ def _get_buildout_ver(directory='.'):
 
 def _get_bootstrap_url(directory):
     '''
-    Get the most appropriate download url for the bootstrap script.
+    Get the most appropriate download URL for the bootstrap script.
 
     directory
         directory to execute in
@@ -419,7 +419,7 @@ def upgrade_bootstrap(directory='.',
     Upgrade current bootstrap.py with the last released one.
 
     Indeed, when we first run a buildout, a common source of problem
-    is to have an locally stale boostrap, we just try rab a new copy
+    is to have a locally stale bootstrap, we just try to grab a new copy
 
     directory
         directory to execute in
@@ -448,7 +448,7 @@ def upgrade_bootstrap(directory='.',
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
     LOG.debug('Using %s' % booturl)
-    # try to donwload an uptodate bootstrap
+    # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
     directory = os.path.abspath(directory)
