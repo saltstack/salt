@@ -503,7 +503,7 @@ def pid(sig):
         sig = "'" + sig + "'"
     cmd = ("{0[ps]} | grep {1} | grep -v grep | fgrep -v status.pid | "
            "awk '{{print $2}}'".format(__grains__, sig))
-    return (__salt__['cmd.run_stdout'](cmd) or '')
+    return __salt__['cmd.run_stdout'](cmd) or ''
 
 
 def version():

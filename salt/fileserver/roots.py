@@ -194,7 +194,7 @@ def file_hash(load, fnd):
                     # Delete the file since its incomplete (either corrupted or incomplete)
                     os.unlink(cache_path)
                     file_hash(load, fnd)
-                    return(ret)
+                    return ret
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
@@ -204,7 +204,7 @@ def file_hash(load, fnd):
             # Delete the file since its incomplete (either corrupted or incomplete)
             os.unlink(cache_path)
             file_hash(load, fnd)
-            return(ret)
+            return ret
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
