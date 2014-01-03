@@ -614,7 +614,7 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
+    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
         ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)

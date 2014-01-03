@@ -248,7 +248,7 @@ def showconfig(name, default=False, dict_return=False):
     if not dict_return:
         return '\n'.join(output)
 
-    if ((not output) or ('configuration options' not in output[0])):
+    if (not output) or ('configuration options' not in output[0]):
         return {}
 
     try:
