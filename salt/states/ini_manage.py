@@ -19,7 +19,7 @@ def __virtual__():
     return 'ini' if 'ini_manage.set_option' in __salt__ else False
 
 
-def options_present(name, sections={}):
+def options_present(name, sections=None):
     '''
     /home/saltminion/api-paste.ini:
       ini_manage:
@@ -35,6 +35,8 @@ def options_present(name, sections={}):
     dict will be untouched
     changes dict will contain the list of changes made
     '''
+    if sections is None:
+        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -65,7 +67,7 @@ def options_present(name, sections={}):
     return ret
 
 
-def options_absent(name, sections={}):
+def options_absent(name, sections=None):
     '''
     /home/saltminion/api-paste.ini:
       ini_manage:
@@ -81,6 +83,8 @@ def options_absent(name, sections={}):
     dict will be untouched
     changes dict will contain the list of changes made
     '''
+    if sections is None:
+        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -107,7 +111,7 @@ def options_absent(name, sections={}):
     return ret
 
 
-def sections_present(name, sections={}):
+def sections_present(name, sections=None):
     '''
     /home/saltminion/api-paste.ini:
       ini_manage:
@@ -122,6 +126,8 @@ def sections_present(name, sections={}):
     options present in file and not specified in sections will be deleted
     changes dict will contain the sections that changed
     '''
+    if sections is None:
+        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -151,7 +157,7 @@ def sections_present(name, sections={}):
     return ret
 
 
-def sections_absent(name, sections=[]):
+def sections_absent(name, sections=None):
     '''
     /home/saltminion/api-paste.ini:
       ini_manage:
@@ -163,6 +169,8 @@ def sections_absent(name, sections=[]):
     options present in file and not specified in sections will be deleted
     changes dict will contain the sections that changed
     '''
+    if sections is None:
+        sections = []
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -170,8 +178,9 @@ def sections_absent(name, sections=[]):
            }
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'ini file {0} shall be validated for absense of\
-given sections'.format(name)
+        ret['comment'] = ('ini file {0} shall be validated for absence of '
+                          'given options under their respective '
+                          'sections').format(name)
         return ret
     for section in sections:
         cur_section = __salt__['ini.remove_section'](name, section)
