@@ -540,7 +540,7 @@ def show_instance(name, call=None):
     return _get_node(name)
 
 
-def _get_node(name, location=None):
+def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
