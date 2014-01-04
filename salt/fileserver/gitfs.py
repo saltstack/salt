@@ -1,12 +1,32 @@
 # -*- coding: utf-8 -*-
 '''
-The backend for the git based file server system.
+Git Fileserver Backend
 
-After enabling this backend, branches and tags in a remote git repository
-are exposed to salt as different environments. This feature is managed by
-the fileserver_backend option in the salt master config.
+With this backend, branches and tags in a remote git repository are exposed to
+salt as different environments.
 
-:depends:   - gitpython Python module
+To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
+master config file.
+
+As of the :strong:`Helium` release, the Git fileserver backend will support
+both `GitPython`_ and `pygit2`_, with pygit2 being preferred if both are
+present. An optional master config parameter (:conf_master:`gitfs_provider`)
+can be used to specify which provider should be used.
+
+.. note:: Minimum requirements
+
+    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well as
+    git itself.
+
+    Using `pygit2`_ requires a minimum pygit2 version of 0.19.0. Additionally,
+    using pygit2 as a provider requires `libgit2`_ 0.19.0 or newer, as well as
+    git itself. pygit2 and libgit2 are developed alongside one another, so it
+    is recommended to keep them both at the same major release to avoid
+    unexpected behavior.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
 '''
 
 # Import python libs
@@ -20,7 +40,6 @@ import shutil
 import subprocess
 import time
 
-PROVIDER_PARAM = 'gitfs_provider'
 VALID_PROVIDERS = ('gitpython', 'pygit2')
 
 # Import salt libs
@@ -50,11 +69,11 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'git'
 
 
-def _verify_gitpython():
+def _verify_gitpython(quiet=False):
     '''
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
-    pygit2_msg = (
+    recommend_pygit2 = (
         'pygit2 is installed, you may wish to set gitfs_provider to '
         '\'pygit2\' in the master config file to use pygit2 for '
         'gitfs support.'
@@ -64,8 +83,8 @@ def _verify_gitpython():
             'Git fileserver backend is enabled in master config file, but '
             'could not be loaded, is GitPython installed?'
         )
-        if HAS_PYGIT2:
-            log.error(pygit2_msg)
+        if HAS_PYGIT2 and not quiet:
+            log.error(recommend_pygit2)
         return False
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
@@ -78,21 +97,22 @@ def _verify_gitpython():
             'detected.'.format(minver_str, git.__version__)
         )
     if errors:
-        # Check if pygit2 is available
-        if HAS_PYGIT2:
-            errors.append(pygit2_msg)
+        if HAS_PYGIT2 and not quiet:
+            errors.append(recommend_pygit2)
         for error in errors:
             log.error(error)
         return False
+    log.info('gitpython gitfs_provider enabled')
+    __opts__['verified_gitfs_provider'] = 'gitpython'
     return True
 
 
-def _verify_pygit2():
+def _verify_pygit2(quiet=False):
     '''
     Check if pygit2/libgit2 are available and at a compatible version. Both
     must be at least 0.19.0.
     '''
-    gitpython_msg = (
+    recommend_gitpython = (
         'GitPython is installed, you may wish to set gitfs_provider to '
         '\'gitpython\' in the master config file to use GitPython for '
         'gitfs support.'
@@ -102,8 +122,8 @@ def _verify_pygit2():
             'Git fileserver backend is enabled in master config file, but '
             'could not be loaded, are pygit2 and libgit2 installed?'
         )
-        if HAS_GITPYTHON:
-            log.error(gitpython_msg)
+        if HAS_GITPYTHON and not quiet:
+            log.error(recommend_gitpython)
         return False
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
@@ -128,19 +148,47 @@ def _verify_pygit2():
             'backend when using the \'pygit2\' provider.'
         )
     if errors:
-        # Check if GitPython is available
-        if HAS_GITPYTHON:
-            errors.append(gitpython_msg)
+        if HAS_GITPYTHON and not quiet:
+            errors.append(recommend_gitpython)
         for error in errors:
             log.error(error)
         return False
+    log.info('pygit2 gitfs_provider enabled')
+    __opts__['verified_gitfs_provider'] = 'pygit2'
     return True
 
 
-def _invalid_provider(provider):
-    raise SaltException(
-        'Invalid gitfs provider {0!r}'.format(provider)
-    )
+def _get_provider():
+    '''
+    Determin which gitfs_provider to use
+    '''
+    # Don't re-perform all the verification if we already have a verified
+    # provider
+    if 'verified_gitfs_provider' in __opts__:
+        return __opts__['verified_gitfs_provider']
+    provider = __opts__.get('gitfs_provider', '').lower()
+    if not provider:
+        # Prefer pygit2 if it's available and verified
+        if _verify_pygit2(quiet=True):
+            return 'pygit2'
+        elif _verify_gitpython(quiet=True):
+            return 'gitpython'
+        else:
+            log.error(
+                'No suitable versions of pygit2/libgit2 or GitPython is '
+                'installed.'
+            )
+    else:
+        if provider not in VALID_PROVIDERS:
+            raise SaltException(
+                'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                .format(provider, VALID_PROVIDERS)
+            )
+        elif provider == 'pygit2' and _verify_pygit2():
+            return 'pygit2'
+        elif provider == 'gitpython' and _verify_gitpython():
+            return 'gitpython'
+    return ''
 
 
 def __virtual__():
@@ -154,16 +202,8 @@ def __virtual__():
         return False
     if not __virtualname__ in __opts__['fileserver_backend']:
         return False
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        log.error('Invalid gitfs_provider {0!r}. Valid choices are: {1}'
-                  .format(provider, VALID_PROVIDERS))
-        return False
-    if provider == 'gitpython':
-        verified = _verify_gitpython()
-    elif provider == 'pygit2':
-        verified = _verify_pygit2()
-    return __virtualname__ if verified else False
+    provider = _get_provider()
+    return __virtualname__ if provider else False
 
 
 def _get_ref_gitpython(repo, short):
@@ -261,9 +301,7 @@ def init():
     Return the git repo object for this session
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     repos = []
     for _, opt in enumerate(__opts__['gitfs_remotes']):
         repo_hash = hashlib.md5(opt).hexdigest()
@@ -334,9 +372,7 @@ def update():
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'gitfs'}
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     pid = os.getpid()
     data['changed'] = purge_cache()
     repos = init()
@@ -386,9 +422,7 @@ def envs():
     Return a list of refs that can be used as environments
     '''
     base_branch = __opts__['gitfs_base']
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     ret = set()
     repos = init()
     for repo in repos:
@@ -452,9 +486,7 @@ def find_file(path, short='base', **kwargs):
     fnd = {'path': '',
            'rel': ''}
     base_branch = __opts__['gitfs_base']
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     if os.path.isabs(path):
         return fnd
 
@@ -636,9 +668,7 @@ def file_list(load):
 
     base_branch = __opts__['gitfs_base']
     gitfs_root = __opts__['gitfs_root']
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     if 'saltenv' not in load:
         return []
     if load['saltenv'] == 'base':
@@ -733,9 +763,7 @@ def file_list_emptydirs(load):
 
     base_branch = __opts__['gitfs_base']
     gitfs_root = __opts__['gitfs_root']
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     if 'saltenv' not in load:
         return []
     if load['saltenv'] == 'base':
@@ -837,9 +865,7 @@ def dir_list(load):
 
     base_branch = __opts__['gitfs_base']
     gitfs_root = __opts__['gitfs_root']
-    provider = __opts__.get(PROVIDER_PARAM, 'gitpython').lower()
-    if provider not in VALID_PROVIDERS:
-        _invalid_provider(provider)
+    provider = _get_provider()
     if 'saltenv' not in load:
         return []
     if load['saltenv'] == 'base':
