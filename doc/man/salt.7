@@ -77029,8 +77029,8 @@ my_service:
         \- container: mysuperdocker
         \- port_bindings:
             "5000/tcp":
-                \- HostIp: ""
-                \- HostPort: "5000"
+                \HostIp: ""
+                \HostPort: "5000"
 .ft P
 .fi
 .UNINDENT
@@ -77306,8 +77306,8 @@ a mapping port\(aqs guest, hostname\(aqs host and port\(aqs host.
 .ft C
 \- port_bindings:
     "5000/tcp":
-        \- HostIp: ""
-        \- HostPort: "5000"
+        \HostIp: ""
+        \HostPort: "5000"
 .ft P
 .fi
 .UNINDENT
