@@ -91,10 +91,12 @@ def download_unittest_reports(options):
     print('Downloading remote unittest reports...')
     sys.stdout.flush()
 
-    if os.path.isdir('xml-test-reports'):
-        shutil.rmtree('xml-test-reports')
+    workspace = options.workspace
+    xml_reports_path = os.path.join(workspace, 'xml-test-reports')
+    if os.path.isdir(xml_reports_path):
+        shutil.rmtree(xml_reports_path)
 
-    os.makedirs('xml-test-reports')
+    os.makedirs(xml_reports_path)
 
     cmds = (
         'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
@@ -105,7 +107,6 @@ def download_unittest_reports(options):
     )
 
     vm_name = options.download_unittest_reports
-    workspace = options.workspace
     for cmd in cmds:
         cmd = cmd.format(vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
