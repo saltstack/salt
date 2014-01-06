@@ -95,14 +95,18 @@ class Pillar(object):
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, id_, saltenv, ext)
         self.client = salt.fileclient.get_file_client(self.opts)
-        # if we didn't pass in functions, lets load them
-        if functions is None:
-            self.functions = salt.loader.minion_mods(opts)
-        else:
-            self.functions = functions
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
+
+        # if we didn't pass in functions, lets load them
+        elif functions is None:
+            if opts.get('file_client', '') == 'local':
+                self.functions = salt.loader.minion_mods(opts)
+            else:
+                self.functions = salt.loader.minion_mods(self.opts)
+        else:
+            self.functions = functions
 
         self.matcher = salt.minion.Matcher(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
