@@ -827,7 +827,7 @@ def get_repo(repo, **kwargs):
     '''
     Display a repo from the sources.list / sources.list.d
 
-    The repo passwd in needs to be a complete repo entry.
+    The repo passed in needs to be a complete repo entry.
 
     CLI Examples:
 
