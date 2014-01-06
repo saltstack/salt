@@ -89,7 +89,7 @@ class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
@@ -98,7 +98,7 @@ class Pillar(object):
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
             self.functions = salt.loader.minion_mods(opts)
-        else:
+        elif functions is None:
             self.functions = salt.loader.minion_mods(self.opts)
         self.matcher = salt.minion.Matcher(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
