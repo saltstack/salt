@@ -382,8 +382,20 @@
 #fileserver_events: False
 #
 # Git fileserver backend configuration
+#
+# Gitfs can be provided by one of two python modules: GitPython or pygit2. If
+# using pygit2, both libgit2 and git must also be installed.
+#gitfs_provider: gitpython
+#
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
+#
+# The repos will be searched in order to find the file requested by a client
+# and the first repo to have the file will return it.
+# When using the git backend branches and tags are translated into salt
+# environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
 #
 #gitfs_remotes:
 #  - git://github.com/saltstack/salt-states.git
@@ -396,12 +408,6 @@
 # is a security concern, you may want to try using the ssh transport.
 #gitfs_ssl_verify: True
 #
-# The repos will be searched in order to find the file requested by a client
-# and the first repo to have the file will return it.
-# When using the git backend branches and tags are translated into salt
-# environments.
-# Note:  file:// repos will be treated as a remote, so refs you want used must
-# exist in that repo as *local* refs.
 #
 # The gitfs_root option gives the ability to serve files from a subdirectory
 # within the repository. The path is defined relative to the root of the
