@@ -25,9 +25,9 @@ def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if salt.utils.is_windows() or not salt.utils.which('at'):
+    if salt.utils.is_windows() or salt.utils.which('at') is None:
         return False
-    return 'at'
+    return True
 
 
 def _cmd(binary, *args):
@@ -265,7 +265,7 @@ def _atq(**kwargs):
     '''
     Return match jobs list
     '''
-    
+
     jobs = []
 
     runas = kwargs.get('runas', None)
@@ -284,49 +284,70 @@ def _atq(**kwargs):
 
     for job in jobinfo:
 
-        if not runas: pass
-        elif runas == job['user']: pass
-        else: continue
+        if not runas:
+            pass
+        elif runas == job['user']:
+            pass
+        else:
+            continue
 
-        if not tag: pass
-        elif tag == job['tag']: pass
-        else: continue
+        if not tag:
+            pass
+        elif tag == job['tag']:
+            pass
+        else:
+            continue
 
-        if not hour: pass
-        elif "%02d" % int(hour) == job['time'].split(':')[0]: pass
-        else: continue
+        if not hour:
+            pass
+        elif "%02d" % int(hour) == job['time'].split(':')[0]:
+            pass
+        else:
+            continue
 
-        if not minute: pass
-        elif "%02d" % int(minute) == job['time'].split(':')[1]: pass
-        else: continue
+        if not minute:
+            pass
+        elif "%02d" % int(minute) == job['time'].split(':')[1]:
+            pass
+        else:
+            continue
 
-        if not day: pass
-        elif "%02d" % int(day) == job['date'].split('-')[2]: pass
-        else: continue
+        if not day:
+            pass
+        elif "%02d" % int(day) == job['date'].split('-')[2]:
+            pass
+        else:
+            continue
 
-        if not month: pass
-        elif "%02d" % int(month) == job['date'].split('-')[1]: pass
-        else: continue
+        if not month:
+            pass
+        elif "%02d" % int(month) == job['date'].split('-')[1]:
+            pass
+        else:
+            continue
 
-        if not year: pass
-        elif year == job['date'].split('-')[0]: pass
-        else: continue
-    
+        if not year:
+            pass
+        elif year == job['date'].split('-')[0]:
+            pass
+        else:
+            continue
+
         jobs.append(job)
-    
+
     if not jobs:
         note = 'No match jobs or time format error'
         return {'jobs': jobs, 'note': note}
 
     return {'jobs': jobs}
-    
+
 
 def jobcheck(**kwargs):
     '''
     Check the job from queue.
     The kwargs dict include 'hour minute day month year tag runas'
     Other parameters will be ignored.
-    
+
     CLI Example:
 
     .. code-block:: bash
