@@ -901,9 +901,11 @@ def start(container, binds=None, ports=None, port_bindings=None,
     try:
         dcontainer = _get_container_infos(container)['id']
         if not is_running(container):
-            bindings = {}
-            for k, v in port_bindings.iteritems():
-                bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+            bindings = None
+            if port_bindings is not None:
+                bindings = {}
+                for k, v in port_bindings.iteritems():
+                    bindings[k] = (v.get('HostIp', ''), v['HostPort'])
             client.start(dcontainer, binds=binds, port_bindings=bindings,
                          lxc_conf=lxc_conf,
                          publish_all_ports=publish_all_ports, links=links)
