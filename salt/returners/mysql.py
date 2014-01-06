@@ -134,7 +134,7 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            str(ret['return']), ret['id'],
+                            json.dumps(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
 
 
