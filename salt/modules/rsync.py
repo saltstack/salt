@@ -15,29 +15,29 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def _check(delete, force, update, passwordfile, exclude, excludefrom):
     '''
     Generate rsync options
     '''
-    options = '-avz'
+    options = ['-avz']
 
     if delete:
-        options = options + ' --delete'
+        options.append('--delete')
     if force:
-        options = options + ' --force'
+        options.append('--force')
     if update:
-        options = options +' --update'
+        options.append('--update')
     if passwordfile:
-        options = options + ' --password-file=' + passwordfile
+        options.append('--password-file={0}'.format(passwordfile))
     if excludefrom:
-        options = options + ' --exclude-from=' + excludefrom
+        options.append('--exclude-from={0}'.format(excludefrom))
         if exclude:
             exclude = None
     if exclude:
-        options = options + ' --exclude=' + exclude
+        options.append(' --exclude={0}'.format(exclude))
 
     return options
-
 
 
 def rsync(src,
@@ -77,7 +77,6 @@ def rsync(src,
         excludefrom = __salt__['config.option']('rsync.excludefrom')
     if not src or not dst:
         raise CommandExecutionError('ERROR: src and dst cannot be empty.')
-
 
     option = _check(delete, force, update, passwordfile, exclude, excludefrom)
     cmd = (
@@ -146,4 +145,3 @@ def config(confile='/etc/rsyncd.conf'):
         raise CommandExecutionError(exc.strerror)
 
     return ret
-
