@@ -206,10 +206,10 @@ def mod_watch(name, sfun=None, *args, **kw):
                              comment=comment)
         return status
     elif sfun == 'running':
-        # Force a restart agaisnt new container
+        # Force a restart against new container
         restarter = __salt__['docker.restart']
         status = _ret_status(restarter(kw['container']), name=name,
-                             changes={name: status['result']})
+                             changes={name: True})
         return status
 
     return {'name': name,
