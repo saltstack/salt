@@ -224,13 +224,16 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name:
+                if comps[1] == name or comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
                     if comps[0] != device:
                         change = True
                         comps[0] = device
+                    if comps[1] != name:
+                        change = True
+                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype
@@ -279,13 +282,12 @@ def set_fstab(
         else:
             if not salt.utils.test_mode(test=test, **kwargs):
                 # The entry is new, add it to the end of the fstab
-                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
-                        device,
-                        name,
-                        fstype,
-                        opts,
-                        dump,
-                        pass_num)
+                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(device,
+                                                                   name,
+                                                                   fstype,
+                                                                   opts,
+                                                                   dump,
+                                                                   pass_num)
                 lines.append(newline)
                 try:
                     with salt.utils.fopen(config, 'w+') as ofile:
@@ -415,11 +417,10 @@ def swaps():
             if line.startswith('Filename'):
                 continue
             comps = line.split()
-            ret[comps[0]] = {
-                    'type': comps[1],
-                    'size': comps[2],
-                    'used': comps[3],
-                    'priority': comps[4]}
+            ret[comps[0]] = {'type': comps[1],
+                             'size': comps[2],
+                             'used': comps[3],
+                             'priority': comps[4]}
     return ret
 
 
