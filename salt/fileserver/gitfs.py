@@ -315,7 +315,10 @@ def init():
             elif provider == 'pygit2':
                 repo = pygit2.init_repository(rp_)
             else:
-                _invalid_provider(provider)
+                raise SaltException(
+                    'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                    .format(provider, VALID_PROVIDERS)
+                )
         except Exception as exc:
             log.error(
                 'Exception caught while initializing the repo for gitfs: '
@@ -427,11 +430,14 @@ def envs():
     repos = init()
     for repo in repos:
         if provider == 'gitpython':
-            ret.update(_checkenv_gitpython(repo), base_branch)
+            ret.update(_checkenv_gitpython(repo, base_branch))
         elif provider == 'pygit2':
-            ret.update(_checkenv_pygit2(repo), base_branch)
+            ret.update(_checkenv_pygit2(repo, base_branch))
         else:
-            _invalid_provider(provider)
+            raise SaltException(
+                'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                .format(provider, VALID_PROVIDERS)
+            )
     return sorted(ret)
 
 
@@ -773,7 +779,7 @@ def file_list_emptydirs(load):
     for repo in repos:
         if provider == 'gitpython':
             ret.update(
-                _file_list_emptytdirs_gitpython(
+                _file_list_emptydirs_gitpython(
                     repo, load['saltenv'], gitfs_root
                 )
             )
