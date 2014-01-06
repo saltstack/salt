@@ -41,11 +41,12 @@ def _sync(form, saltenv=None):
     if saltenv is None:
         # No environment passed, detect them based on gathering the top files
         # from the master
-        saltenv = 'base'
         st_ = salt.state.HighState(__opts__)
         top = st_.get_top()
         if top:
             saltenv = st_.top_matches(top).keys()
+        if not saltenv:
+            saltenv = 'base'
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
