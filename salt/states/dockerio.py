@@ -59,8 +59,8 @@ Available Functions
               - container: mysuperdocker
               - port_bindings:
                   "5000/tcp":
-                      - HostIp: ""
-                      - HostPort: "5000"
+                      HostIp: ""
+                      HostPort: "5000"
 
 
 - absent
@@ -577,8 +577,8 @@ def running(name, container=None, port_bindings=None, binds=None,
 
             - port_bindings:
                 "5000/tcp":
-                    - HostIp: ""
-                    - HostPort: "5000"
+                    HostIp: ""
+                    HostPort: "5000"
     '''
     is_running = __salt('docker.is_running')(container)
     if is_running:
