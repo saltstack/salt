@@ -397,7 +397,9 @@ def _check_directory(name,
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
-                stats = __salt__['file.stats'](path, 'md5')
+                stats = __salt__['file.stats'](
+                    path, 'md5', follow_symlinks=False
+                )
                 if user is not None and user != stats.get('user'):
                     fchange['user'] = user
                 if group is not None and group != stats.get('group'):
@@ -453,7 +455,7 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -476,7 +478,7 @@ def _check_touch(name, atime, mtime):
     '''
     if not os.path.exists(name):
         return None, 'File {0} is set to be created'.format(name)
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     if atime is not None:
         if str(atime) != str(stats['atime']):
             return None, 'Times set to be updated on file {0}'.format(name)
