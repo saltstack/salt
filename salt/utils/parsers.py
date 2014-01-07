@@ -29,6 +29,10 @@ import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
 
+if not sys.platform.lower().startswith('win'):
+    # Import salt cloud libs
+    import salt.cloud.exceptions
+
 
 def _sorted(mixins_or_funcs):
     return sorted(

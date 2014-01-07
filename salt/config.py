@@ -27,6 +27,10 @@ import salt.utils.network
 import salt.pillar
 import salt.syspaths
 
+import sys
+if not sys.platform.lower().startswith('win'):
+    import salt.cloud.exceptions
+
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
