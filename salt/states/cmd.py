@@ -503,7 +503,7 @@ def run(name,
            'comment': ''}
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = 'Desired working directory \'{}\' is not available'.format(cwd)
+        ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
         return ret
 
     if env:
@@ -667,7 +667,7 @@ def script(name,
            'result': False}
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = 'Desired working directory \'{}\' is not available'.format(cwd)
+        ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
         return ret
 
     if isinstance(env, string_types):
