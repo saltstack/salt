@@ -2468,7 +2468,7 @@ class BaseHighState(object):
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
-                salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn), quiet=True)
+                self.state.functions('attrib -R "{0}"'.format(cfn), quiet=True)
             with salt.utils.fopen(cfn, 'w+') as fp_:
                 try:
                     self.serial.dump(high, fp_)
