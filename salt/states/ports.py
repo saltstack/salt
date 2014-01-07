@@ -2,7 +2,7 @@
 '''
 Manage software from FreeBSD ports
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 .. note::
 

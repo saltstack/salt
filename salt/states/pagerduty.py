@@ -3,7 +3,7 @@
 Create an Event in PagerDuty
 ============================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 This state is useful for creating events on the PagerDuty service during state
 runs.

@@ -121,9 +121,9 @@ supported cloud providers.
 Legacy Releases
 ===============
 
-.. versionchanged:: Hydrogen
+.. versionchanged:: 2014.1.0 (Hydrogen)
     Release notes will be part of Salt's main release notes starting with
-    Salt's Hydrogen release.
+    Salt's 2014.1.0 (Hydrogen) release.
 
 * :doc:`Legacy Release Notes <releases/index>`
 

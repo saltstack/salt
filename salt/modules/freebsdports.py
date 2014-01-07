@@ -2,7 +2,7 @@
 '''
 Install software from the FreeBSD ``ports(7)`` system
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 This module allows you to install ports using ``BATCH=yes`` to bypass
 configuration prompts. It is recommended to use the the :mod:`ports state

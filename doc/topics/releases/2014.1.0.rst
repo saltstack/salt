@@ -1,16 +1,16 @@
-================================================
-Salt 2014.01.0 Release Notes - Codename Hydrogen
-================================================
+===============================================
+Salt 2014.1.0 Release Notes - Codename Hydrogen
+===============================================
 
 :release: 2013-12-30
 
-The 2014.01.0 release of Salt is a major release which not only increases
+The 2014.1.0 release of Salt is a major release which not only increases
 stability but also brings new capabilities in virtualization, cloud
 integration, and more. This release brings a great focus on the expansion of
 testing making roughly double the coverage in the Salt tests, and comes with
 many new features.
 
-2014.01.0 is the first release to follow the new date-based release naming
+2014.1.0 is the first release to follow the new date-based release naming
 system.
 
 Major Features
