@@ -19,6 +19,7 @@ __func_alias__ = {
 
 __opts__ = {
     'rbenv.root': None,
+    'rbenv.build_env': None,
 }
 
 
@@ -163,8 +164,16 @@ def install_ruby(ruby, runas=None):
     ruby = re.sub(r'^ruby-', '', ruby)
 
     env = None
+    env_list = []
+
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
-        env = 'MAKE=gmake'
+        env_list.append('MAKE=gmake')
+
+    if __salt__['config.option']('rbenv.build_env'):
+        env_list.append(__salt__['config.option']('rbenv.build_env'))
+
+    if env_list:
+        env = ' '.join(env_list)
 
     ret = {}
     ret = _rbenv_exec('install', ruby, env=env, runas=runas, ret=ret)
