@@ -9,6 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -31,9 +32,7 @@ def _list_taps():
     List currently
     '''
     cmd = 'brew tap'
-    taps = __salt__['cmd.run'](cmd).splitlines()
-
-    return taps
+    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
 
 
 def _tap(tap, runas=None):
@@ -50,6 +49,15 @@ def _tap(tap, runas=None):
         return False
 
     return True
+
+
+def _homebrew_bin():
+    '''
+    Returns the full path to the homebrew binary in the PATH
+    '''
+    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='debug')
+    ret += '/bin/brew'
+    return ret
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -79,7 +87,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'brew list --versions'
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         try:
             name, version_num = line.split(' ')[0:2]
         except ValueError:
@@ -168,15 +177,19 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name,
-                                                        pkgs,
-                                                        **kwargs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, **kwargs
+        )[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -193,11 +206,9 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = 'brew update'
+    user = __salt__['file.get_user'](_homebrew_bin())
 
-    homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
-    user = __salt__['file.get_user'](homebrew_binary)
-
-    if __salt__['cmd.retcode'](cmd, runas=user):
+    if __salt__['cmd.retcode'](cmd, runas=user, output_loglevel='debug'):
         log.error('Failed to update')
         return False
 
@@ -266,17 +277,19 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
         salt '*' pkg.install 'package package package'
     '''
-    pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name,
-                                               pkgs,
-                                               kwargs.get('sources', {}))
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, kwargs.get('sources', {})
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
     formulas = ' '.join(pkg_params)
     old = list_pkgs()
-    homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
-    user = __salt__['file.get_user'](homebrew_binary)
+    user = __salt__['file.get_user'](_homebrew_bin())
 
     # Ensure we've tapped the repo if necessary
     if taps:
@@ -296,10 +309,11 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     else:
         cmd = 'brew install {0}'.format(formulas)
 
-    if user != __opts__['user']:
-        __salt__['cmd.run'](cmd, runas=user)
-    else:
-        __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](
+        cmd,
+        runas=user if user != __opts__['user'] else __opts__['user'],
+        output_loglevel='debug'
+    )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -317,7 +331,7 @@ def list_upgrades():
     '''
     cmd = 'brew outdated'
 
-    return __salt__['cmd.run'](cmd).splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
 
 
 def upgrade_available(pkg):

@@ -5,6 +5,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -230,10 +231,9 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
+    @skipIf(salt.utils.which_bin(integration.KNOWN_BINARY_NAMES['virtualenv']) is None,
+            'virtualenv not installed')
     def test_issue_2068_template_str(self):
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )
@@ -487,41 +487,49 @@ fi
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-B_|-echo B second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B second" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-C_|-echo C third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo C third" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True},
+                'result': True
+            },
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 5,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       foobar: A\n',
-                'result': False},
+                'result': False
+            },
             'cmd_|-G_|-echo G_|-run': {
                 '__run_num__': 6,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False},
+                'result': False
+            },
             'cmd_|-H_|-echo H_|-run': {
                 '__run_num__': 7,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False}
+                'result': False
+            }
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
@@ -546,7 +554,7 @@ fi
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
         self.assertEqual(ret, [
-            'The require or watch statement in state "B" in sls '
+            'The require statement in state "B" in sls '
           + '"requisites.require_simple_nolist" needs to be formed as a list'
         ])
 
@@ -709,12 +717,12 @@ fi
             }
         self.assertEqual(expected_result_simple2, result)
 
-        ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
-        self.assertEqual(
-            ret,
-            ['Cannot extend ID Z in "base:requisites.prereq_error_nolist".'
-            + ' It is not part of the high state.']
-        )
+        #ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
+        #self.assertEqual(
+        #    ret,
+        #    ['Cannot extend ID Z in "base:requisites.prereq_error_nolist".'
+        #    + ' It is not part of the high state.']
+        #)
 
         ret = self.run_function('state.sls', mods='requisites.prereq_compile_error1')
         self.assertEqual(

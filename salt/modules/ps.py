@@ -56,14 +56,17 @@ def top(num_processes=5, interval=3):
     for pid in psutil.get_pid_list():
         try:
             process = psutil.Process(pid)
+            user, system = process.get_cpu_times()
         except psutil.NoSuchProcess:
             continue
-        user, system = process.get_cpu_times()
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
     for process, start in start_usage.items():
-        user, system = process.get_cpu_times()
+        try:
+            user, system = process.get_cpu_times()
+        except psutil.NoSuchProcess:
+            continue
         now = user + system
         diff = now - start
         usage.add((diff, process))
@@ -76,6 +79,8 @@ def top(num_processes=5, interval=3):
         else:
             cmdline = process.cmdline
         info = {'cmd': cmdline,
+                'user': process.username,
+                'status': process.status,
                 'pid': process.pid,
                 'create_time': process.create_time}
         for key, value in process.get_cpu_times()._asdict().items():
@@ -159,13 +164,13 @@ def pkill(pattern, user=None, signal=15, full=False):
 
     .. code-block:: bash
 
-        salt 'www.*' httpd signal=1
+        salt 'www.*' ps.pkill httpd signal=1
 
     Send SIGKILL to all bash processes owned by user 'tom':
 
     .. code-block:: bash
 
-        salt '*' bash signal=9 user=tom
+        salt '*' ps.pkill bash signal=9 user=tom
     '''
 
     killed = []
@@ -212,13 +217,13 @@ def pgrep(pattern, user=None, full=False):
 
     .. code-block:: bash
 
-        salt 'www.*' httpd
+        salt 'www.*' ps.pgrep httpd
 
     Find all bash processes owned by user 'tom':
 
     .. code-block:: bash
 
-        salt '*' bash user=tom
+        salt '*' ps.pgrep bash user=tom
     '''
 
     procs = []

@@ -7,23 +7,8 @@ The IBM SCE cloud module. This module interfaces with the IBM SCE public cloud
 service. To use Salt Cloud with IBM SCE log into the IBM SCE web interface and
 create an SSH key.
 
-Using the old configuration syntax, the following parameters are required in
-order to create a node:
-
-.. code-block:: yaml
-
-    # The generated api key to use
-    IBMSCE.user: myuser@mycompany.com
-    # The user's password
-    IBMSCE.password: saltybacon
-    # The name of the ssh key to use
-    IBMSCE.ssh_key_name: mykey
-    # The ID of the datacenter to use
-    IBMSCE.location: Raleigh
-
-
-Using the new format, set up the cloud configuration at
-``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ibmsce.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/ibmsce.conf``:
 
 .. code-block:: yaml
 
@@ -315,10 +300,10 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-KEY" "1" "September 18, 2013" "0.17.0" "Salt"
+.TH "SALT-KEY" "1" "January 02, 2014" "2014.1.0" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -141,41 +141,47 @@ Force colored output
 .INDENT 0.0
 .TP
 .B \-l ARG, \-\-list=ARG
-List the public keys. The args "pre", "un", and "unaccepted" will list
-unaccepted/unsigned keys. "acc" or "accepted" will list accepted/signed
-keys. "rej" or "rejected" will list rejected keys. Finally, "all" will list
-all keys.
+List the public keys. The args \fBpre\fP, \fBun\fP, and \fBunaccepted\fP will
+list unaccepted/unsigned keys. \fBacc\fP or \fBaccepted\fP will list
+accepted/signed keys. \fBrej\fP or \fBrejected\fP will list rejected keys.
+Finally, \fBall\fP will list all keys.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-L, \-\-list\-all
-List all public keys on this Salt master: accepted, pending,
-and rejected.
+List all public keys. (Deprecated: use \fB\-\-list all\fP)
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-a ACCEPT, \-\-accept=ACCEPT
-Accept the named minion public key for command execution.
+Accept the specified public key (use \-\-include\-all to match rejected keys
+in addition to pending keys). Globs are supported.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-A, \-\-accept\-all
-Accepts all pending public keys.
+Accepts all pending keys.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-r REJECT, \-\-reject=REJECT
-Reject the named minion public key.
+Reject the specified public key (use \-\-include\-all to match accepted keys
+in addition to pending keys). Globs are supported.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-R, \-\-reject\-all
-Rejects all pending public keys.
+Rejects all pending keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-include\-all
+Include non\-pending keys when accepting/rejecting.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-p PRINT, \-\-print=PRINT
-Print the specified public key
+Print the specified public key.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -185,23 +191,22 @@ Print all public keys
 .INDENT 0.0
 .TP
 .B \-d DELETE, \-\-delete=DELETE
-Delete the named minion key or minion keys matching a glob for command
-execution.
+Delete the specified key. Globs are supported.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-D, \-\-delete\-all
-Delete all keys
+Delete all keys.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-f FINGER, \-\-finger=FINGER
-Print the named key\(aqs fingerprint
+Print the specified key\(aqs fingerprint.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-F, \-\-finger\-all
-Print all key\(aqs fingerprints
+Print all keys\(aq fingerprints.
 .UNINDENT
 .SS Key Generation Options
 .INDENT 0.0

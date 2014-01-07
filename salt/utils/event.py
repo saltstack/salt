@@ -117,7 +117,7 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
-    return (TAGPARTER.join([part for part in parts if part]))
+    return TAGPARTER.join([part for part in parts if part])
 
 
 class SaltEvent(object):
@@ -208,8 +208,13 @@ class SaltEvent(object):
         The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
-        # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
-        self.push.setsockopt(zmq.SNDTIMEO, timeout)
+        try:
+            # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
+            self.push.setsockopt(zmq.SNDTIMEO, timeout)
+        except AttributeError:
+            # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
+            #                        CentOS5, which still uses 2.1.9)
+            pass
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -598,9 +603,8 @@ class ReactWrap(object):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(**kwargs)
+        return wheel.call_func(fun, **kwargs)
 
 
 class StateFire(object):
@@ -635,9 +639,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True
@@ -665,9 +669,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True

@@ -17,33 +17,7 @@ This module has been tested to work with HP Cloud and Rackspace. See the
 documentation for specific options for either of these providers. Some
 examples, using the old cloud configuration syntax, are provided below:
 
-.. code-block:: yaml
-
-    # The OpenStack identity service url
-    OPENSTACK.identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
-    # The OpenStack compute region
-    OPENSTACK.compute_region: az-1.region-a.geo-1
-    # The OpenStack compute service name
-    OPENSTACK.compute_name: Compute
-    # The OpenStack tenant name (not tenant ID)
-    OPENSTACK.tenant: myuser-tenant1
-    # The OpenStack user name
-    OPENSTACK.user: myuser
-    # The OpenStack keypair name
-    OPENSTACK.ssh_key_name
-
-Either a password or an API key must also be specified:
-
-.. code-block:: yaml
-
-    # The OpenStack password
-    OPENSTACK.password: letmein
-    # The OpenStack API key
-    OPENSTACK.apikey: 901d3f579h23c8v73q9
-
-
-And using the new format, these examples could be set up in the cloud
-configuration at ``/etc/salt/cloud.providers`` or
+Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/openstack.conf``:
 
 
@@ -296,7 +270,8 @@ def ignore_cidr(vm_, ip):
     '''
     if HAS_NETADDR is False:
         log.error('Error: netaddr is not installed')
-        return 'Error: netaddr is not installed'
+        # If we cannot check, assume all is ok
+        return False
 
     cidr = config.get_cloud_config_value(
         'ignore_cidr', vm_, __opts__, default='', search_global=False
@@ -598,6 +573,14 @@ def create(vm_):
                 data.public_ips = access_ip
                 return data
 
+        # populate return data with private_ips
+        # when ssh_interface is set to private_ips and public_ips exist
+        if not result and ssh_interface(vm_) == 'private_ips':
+            for private_ip in private:
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
+
         if result:
             log.debug('result = {0}'.format(result))
             data.private_ips = result
@@ -631,7 +614,7 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
+    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
         ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
@@ -733,11 +716,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

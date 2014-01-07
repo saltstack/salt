@@ -1318,10 +1318,10 @@ class Map(Cloud):
                             nodedata['minion']['grains'].update(
                                 overrides['minion']['grains']
                             )
-                            del(overrides['minion']['grains'])
+                            del overrides['minion']['grains']
                             # remove minion key if now is empty dict
                             if len(overrides['minion']) == 0:
-                                del(overrides['minion'])
+                                del overrides['minion']
 
                 nodedata.update(overrides)
                 # Add the computed information to the return data
@@ -1664,6 +1664,13 @@ def run_parallel_map_providers_query(data):
     This function will be called from another process when building the
     providers map.
     '''
+    try:
+        import Crypto.Random  # pylint: disable=E0611
+        Crypto.Random.atfork()
+    except ImportError:
+        # PyCrypto version < 2.1
+        pass
+
     cloud = Cloud(data['opts'])
     try:
         with context.func_globals_inject(

@@ -11,30 +11,17 @@ The rackspace cloud module interfaces with the Rackspace public cloud service
 and requires that two configuration parameters be set for use, ``user`` and
 ``apikey``.
 
-Using the old cloud providers configuration syntax:
-
-.. code-block:: yaml
-
-    # The Rackspace login user
-    RACKSPACE.user: fred
-    # The Rackspace user's apikey
-    RACKSPACE.apikey: 901d3f579h23c8v73q9
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or
- ``/etc/salt/cloud.providers.d/rackspace.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/rackspace.conf``:
 
 .. code-block:: yaml
 
     my-rackspace-config:
+      provider: rackspace
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
-
-      provider: rackspace
-
 '''
 
 # The import section is mostly libcloud boilerplate
@@ -414,11 +401,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

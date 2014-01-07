@@ -112,7 +112,7 @@ def output(data):
                     '    {tcolor} Comment: {comment}{colors[ENDC]}'
                 ]
                 # This isn't the prettiest way of doing this, but it's readable.
-                if (comps[1] != comps[2]):
+                if comps[1] != comps[2]:
                     state_lines.insert(
                         3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
                 svars = {

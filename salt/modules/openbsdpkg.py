@@ -10,6 +10,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'pkg_info -q -a'
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
@@ -94,7 +95,8 @@ def latest_version(*names, **kwargs):
 
     stems = [x.split('--')[0] for x in names]
     cmd = 'pkg_info -q -I {0}'.format(' '.join(stems))
-    for line in __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines():
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
         except AttributeError:
@@ -158,10 +160,13 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -171,7 +176,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
         cmd = 'pkg_add -x {0}'.format(pkg)
-        __salt__['cmd.run_all'](cmd)
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -201,15 +206,19 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
+    try:
+        pkg_params = [x.split('--')[0] for x in
+                      __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs()
-    pkg_params = [x.split('--')[0] for x in
-                  __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
 
     cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

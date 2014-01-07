@@ -22,6 +22,7 @@ import itertools  # same as above, do not remove, it's used in __clean_tmp
 # Import third party libs
 try:
     import win32security
+    import win32file
     from pywintypes import error as pywinerror
     import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
@@ -30,13 +31,14 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import (check_hash, check_managed, check_perms,  # pylint: disable=W0611
+from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
-        patch, remove, source_list, sed_contains, touch, append, contains,
-        contains_regex, contains_regex_multiline, contains_glob, patch,
-        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
-        manage_file, file_exists, get_diff, get_managed, __clean_tmp,
-        check_managed, check_file_meta, _binary_replace, contains_regex)
+        check_managed, check_perms, patch, remove, source_list, sed_contains,
+        touch, append, contains, contains_regex, contains_regex_multiline,
+        contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
+        get_hash, comment, manage_file, file_exists, get_diff, get_managed,
+        __clean_tmp, check_managed, check_file_meta, _binary_replace,
+        contains_regex)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -53,7 +55,7 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs
+            global source_list, mkdir, __clean_tmp, makedirs, file_exists
 
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
@@ -62,6 +64,7 @@ def __virtual__():
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
             mkdir = _namespaced_function(mkdir, globals())
+            file_exists = _namespaced_function(file_exists, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
 
             return __virtualname__
@@ -293,7 +296,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlink=False):
+def stats(path, hash_type='md5', follow_symlinks=False):
     '''
     Return a dict containing the stats for a given file
 
@@ -306,7 +309,7 @@ def stats(path, hash_type='md5', follow_symlink=False):
     ret = {}
     if not os.path.exists(path):
         return ret
-    if follow_symlink:
+    if follow_symlinks:
         pstat = os.stat(path)
     else:
         pstat = os.lstat(path)
@@ -338,3 +341,122 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def get_attributes(path):
+    '''
+    Return a dictionary object with the Windows
+    file attributes for a file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_attributes c:\\temp\\a.txt
+    '''
+    err = ''
+    if not os.path.exists(path):
+        err += 'File not found\n'
+    if err:
+        return err
+
+    # set up dictionary for attribute values
+    attributes = {}
+
+    # Get cumulative int value of attributes
+    intAttributes = win32file.GetFileAttributes(path)
+
+    # Assign individual attributes
+    attributes['archive'] = (intAttributes & 32) == 32
+    attributes['reparsePoint'] = (intAttributes & 1024) == 1024
+    attributes['compressed'] = (intAttributes & 2048) == 2048
+    attributes['directory'] = (intAttributes & 16) == 16
+    attributes['encrypted'] = (intAttributes & 16384) == 16384
+    attributes['hidden'] = (intAttributes & 2) == 2
+    attributes['normal'] = (intAttributes & 128) == 128
+    attributes['notIndexed'] = (intAttributes & 8192) == 8192
+    attributes['offline'] = (intAttributes & 4096) == 4096
+    attributes['readonly'] = (intAttributes & 1) == 1
+    attributes['system'] = (intAttributes & 4) == 4
+    attributes['temporary'] = (intAttributes & 256) == 256
+
+    # check if it's a Mounted Volume
+    attributes['mountedVolume'] = False
+    if attributes['reparsePoint'] is True and attributes['directory'] is True:
+        fileIterator = win32file.FindFilesIterator(path)
+        findDataTuple = fileIterator.next()
+        if findDataTuple[6] == 0xA0000003:
+            attributes['mountedVolume'] = True
+    # check if it's a soft (symbolic) link
+
+    # Note:  os.path.islink() does not work in
+    #   Python 2.7 for the Windows NTFS file system.
+    #   The following code does, however, work (tested in Windows 8)
+
+    attributes['symbolicLink'] = False
+    if attributes['reparsePoint'] is True:
+        fileIterator = win32file.FindFilesIterator(path)
+        findDataTuple = fileIterator.next()
+        if findDataTuple[6] == 0xA000000C:
+            attributes['symbolicLink'] = True
+
+    return attributes
+
+
+def set_attributes(path, archive=None, hidden=None, normal=None,
+                   notIndexed=None, readonly=None, system=None, temporary=None):
+    '''
+    Set file attributes for a file.  Note that the normal attribute
+    means that all others are false.  So setting it will clear all others.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.set_attributes c:\\temp\\a.txt normal=True
+        salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
+    '''
+    err = ''
+    if not os.path.exists(path):
+        err += 'File not found\n'
+    if normal:
+        if archive or hidden or notIndexed or readonly or system or temporary:
+            err += 'Normal attribute may not be used with any other attributes\n'
+        else:
+            return win32file.SetFileAttributes(path, 128)
+    if err:
+        return err
+    # Get current attributes
+    intAttributes = win32file.GetFileAttributes(path)
+    # individually set or clear bits for appropriate attributes
+    if archive is not None:
+        if archive:
+            intAttributes |= 0x20
+        else:
+            intAttributes &= 0xFFDF
+    if hidden is not None:
+        if hidden:
+            intAttributes |= 0x2
+        else:
+            intAttributes &= 0xFFFD
+    if notIndexed is not None:
+        if notIndexed:
+            intAttributes |= 0x2000
+        else:
+            intAttributes &= 0xDFFF
+    if readonly is not None:
+        if readonly:
+            intAttributes |= 0x1
+        else:
+            intAttributes &= 0xFFFE
+    if system is not None:
+        if system:
+            intAttributes |= 0x4
+        else:
+            intAttributes &= 0xFFFB
+    if temporary is not None:
+        if temporary:
+            intAttributes |= 0x100
+        else:
+            intAttributes &= 0xFEFF
+    return win32file.SetFileAttributes(path, intAttributes)

@@ -106,28 +106,39 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 class CloudSdist(sdist):
     user_options = sdist.user_options + [
         ('skip-bootstrap-download', None,
-         'Skip downloading the bootstrap-salt.sh script. This can also be '
-         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
-         'variable.')
+         '[DEPRECATED] Skip downloading the bootstrap-salt.sh script. This '
+         'can also be triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an '
+         'environment variable.'),
+        ('download-bootstrap-script', None,
+         'Download the latest stable bootstrap-salt.sh script. This '
+         'can also be triggered by having `DOWNLOAD_BOOTSTRAP_SCRIPT=1` as an '
+         'environment variable.')
+
     ]
     boolean_options = sdist.boolean_options + [
-        'skip-bootstrap-download'
+        'skip-bootstrap-download',
+        'download-bootstrap-script'
     ]
 
     def initialize_options(self):
         sdist.initialize_options(self)
-        self.skip_bootstrap_download = False
+        self.skip_bootstrap_download = True
+        self.download_bootstrap_script = False
 
     def finalize_options(self):
         sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            skip_bootstrap_download = os.environ.get(
-                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
+            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
+                '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
+
+        if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
+            download_bootstrap_script = os.environ.get(
+                'DOWNLOAD_BOOTSTRAP_SCRIPT', '0'
             )
-            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+            self.download_bootstrap_script = download_bootstrap_script == '1'
 
     def run(self):
-        if self.skip_bootstrap_download is False:
+        if self.download_bootstrap_script is True:
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
             url = (
@@ -422,6 +433,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.states',
                              'salt.fileserver',
                              'salt.search',
+                             'salt.transport',
                              'salt.output',
                              'salt.utils',
                              'salt.utils.decorators',
@@ -430,9 +442,12 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.log',
                              'salt.log.handlers',
                              'salt.templates',
+                             'salt.cloud',
+                             'salt.cloud.clouds',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
+                                    'debian_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
                                 },
@@ -454,8 +469,8 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
-    SETUP_KWARGS['packages'].extend(['salt.cloud',
-                                     'salt.cloud.clouds'])
+    #SETUP_KWARGS['packages'].extend(['salt.cloud',
+    #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
     SETUP_KWARGS['data_files'][0][1].extend([
         'doc/man/salt-master.1',

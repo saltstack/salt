@@ -1,0 +1,47 @@
+=========================
+Salt 0.17.3 Release Notes
+=========================
+
+:release: 2013-12-08
+
+.. note::
+
+    0.17.3 had some regressions which were promptly fixed in the 0.17.4
+    release.  Please use 0.17.4 instead.
+
+Version 0.17.3 is another bugfix release for :doc:`0.17.0
+</topics/releases/0.17.0>`.  The changes include:
+
+- Fix some jinja render errors (:issue:`8418`)
+- Fix ``file.replace`` state changing file ownership (:issue:`8399`)
+- Fix state ordering with the PyDSL renderer (:issue:`8446`)
+- Fix for new npm version (:issue:`8517`)
+- Fix for pip state requiring ``name`` even with requirements file (:issue:`8519`)
+- Fix yum logging to open terminals (:issue:`3855`)
+- Add sane maxrunning defaults for scheduler (:issue:`8563`)
+- Fix states duplicate key detection (:issue:`8053`)
+- Fix SUSE patch level reporting (:issue:`8428`)
+- Fix managed file creation umask (:issue:`8590`)
+- Fix logstash exception (:issue:`8635`)
+- Improve argument exception handling for salt command (:issue:`8016`)
+- Fix pecl success reporting (:issue:`8750`)
+- Fix launchctl module exceptions (:issue:`8759`)
+- Fix argument order in pw_user module
+- Add warnings for failing grains (:issue:`8690`)
+- Fix hgfs problems caused by connections left open (:issue:`8811` and :issue:`8810`)
+- Add Debian iptables default for iptables-persistent package (:issue:`8889`)
+- Fix installation of packages with dots in pkg name (:issue:`8614`)
+- Fix noarch package installation on CentOS 6 (:issue:`8945`)
+- Fix portage_config.enforce_nice_config (:issue:`8252`)
+- Fix salt.util.copyfile umask usage (:issue:`8590`)
+- Fix rescheduling of failed jobs (:issue:`8941`)
+- Fix pkg on Amazon Linux (uses yumpkg5 now) (:issue:`8226`)
+- Fix conflicting options in postgres module (:issue:`8717`)
+- Fix ps modules for psutil >= 0.3.0 (:issue:`7432`)
+- Fix postgres module to return False on failure (:issue:`8778`)
+- Fix argument passing for args with pound signs (:issue:`8585`)
+- Fix pid of salt CLi command showing in status.pid output (:issue:`8720`)
+- Fix rvm to run gem as the correct user (:issue:`8951`)
+- Fix namespace issue in win_file module (:issue:`9060`)
+- Fix masterless state paths on windows (:issue:`9021`)
+- Fix timeout option in master config (:issue:`9040`)

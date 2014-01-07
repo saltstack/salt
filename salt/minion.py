@@ -54,7 +54,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltClientError
+    SaltInvocationError, SaltReqTimeoutError, SaltClientError, SaltSystemExit
 )
 import salt.client
 import salt.crypt
@@ -65,6 +65,7 @@ import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +113,11 @@ def resolve_dns(opts):
                         pass
             else:
                 ret['master_ip'] = '127.0.0.1'
+        except SaltSystemExit:
+            err = 'Master address: {0} could not be resolved. Invalid or unresolveable address.'.format(
+                opts.get('master', 'Unknown'))
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
     else:
         ret['master_ip'] = '127.0.0.1'
 
@@ -604,13 +610,21 @@ class Minion(object):
         '''
         {'aes': self._handle_aes,
          'pub': self._handle_pub,
-         'clear': self._handle_clear}[payload['enc']](payload['load'])
+         'clear': self._handle_clear}[payload['enc']](payload['load'],
+                                                      payload['sig'] if 'sig' in payload else None)
 
-    def _handle_aes(self, load):
+    def _handle_aes(self, load, sig=None):
         '''
-        Takes the AES encrypted load, decrypts it, and runs the encapsulated
-        instructions
+        Takes the AES encrypted load, checks the signature if pub signatures
+        are turned on, decrypts it, and runs the encapsulated instructions
         '''
+        # Verify that the signature is valid
+        master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
+
+        if sig and self.functions['config.get']('sign_pub_messages'):
+            if not salt.crypt.verify_signature(master_pubkey_path, load, sig):
+                raise AuthenticationError('Message signature failed to validate.')
+
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
@@ -623,6 +637,7 @@ class Minion(object):
 
             self.authenticate()
             data = self.crypticle.loads(load)
+
         # Verify that the publication is valid
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
            or 'arg' not in data:
@@ -1090,6 +1105,33 @@ class Minion(object):
             )
         )
 
+        # Check to make sure the sock_dir is available, create if not
+        default_minion_sock_dir = os.path.join(
+            salt.syspaths.SOCK_DIR,
+            'minion'
+        )
+        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
+
+        if not os.path.isdir(minion_sock_dir):
+            # Let's try to create the directory defined on the configuration
+            # file
+            try:
+                os.makedirs(minion_sock_dir, 0755)
+            except OSError as exc:
+                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                # Let's not fail yet and try using the default path
+                if minion_sock_dir == default_minion_sock_dir:
+                    # We're already trying the default system path, stop now!
+                    raise
+
+            if not os.path.isdir(default_minion_sock_dir):
+                try:
+                    os.makedirs(default_minion_sock_dir, 0755)
+                except OSError as exc:
+                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                    # Let's stop at this stage
+                    raise
+
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         # Bind the event sockets
@@ -1375,7 +1417,7 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
 
-    def _handle_aes(self, load):
+    def _handle_aes(self, load, sig=None):
         '''
         Takes the AES encrypted load, decrypts it, and runs the encapsulated
         instructions
@@ -1561,7 +1603,7 @@ class Matcher(object):
         Takes the data passed to a top file environment and determines if the
         data matches this minion
         '''
-        matcher = 'glob'
+        matcher = 'compound'
         if not data:
             log.error('Received bad data when setting the match from the top '
                       'file')
@@ -1659,7 +1701,7 @@ class Matcher(object):
         '''
         if tgt not in self.functions:
             return False
-        return(self.functions[tgt]())
+        return self.functions[tgt]()
 
     def pillar_match(self, tgt, delim=':'):
         '''
@@ -1705,10 +1747,10 @@ class Matcher(object):
             range_ = seco.range.Range(self.opts['range_server'])
             try:
                 return self.opts['grains']['fqdn'] in range_.expand(tgt)
-            except seco.range.RangeException as e:
-                log.debug('Range exception in compound match: {0}'.format(e))
+            except seco.range.RangeException as exc:
+                log.debug('Range exception in compound match: {0}'.format(exc))
                 return False
-        return
+        return False
 
     def compound_match(self, tgt):
         '''

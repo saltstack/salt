@@ -111,6 +111,16 @@ class FileReplaceTestCase(TestCase):
     def test_re_int_flags(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', flags=10)
 
+    def test_numeric_repl(self):
+        '''
+        This test covers cases where the replacement string is numeric, and the
+        CLI parser yamlifies it into a numeric type. If not converted back to a
+        string type in file.replace, a TypeError occurs when the replacemen is
+        attempted. See https://github.com/saltstack/salt/issues/9097 for more
+        information.
+        '''
+        filemod.replace(self.tfile.name, r'Etiam', 123)
+
 
 class FileBlockReplaceTestCase(TestCase):
     MULTILINE_STRING = textwrap.dedent('''\
@@ -236,7 +246,7 @@ class FileBlockReplaceTestCase(TestCase):
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK', 
+                             '// START BLOCK',
                              '// END BLOCK',
                              'new content 1',
                              backup=False)

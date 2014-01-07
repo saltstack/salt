@@ -120,15 +120,34 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
+    # Jumps should appear last, except for any arguments that are passed to
+    # jumps, which of course need to follow.
+    after_jump = []
+
     if 'jump' in kwargs:
-        kwargs['j'] = kwargs['jump']
+        after_jump.append('--jump {0} '.format(kwargs['jump']))
         del kwargs['jump']
+
+    if 'j' in kwargs:
+        after_jump.append('-j {0} '.format(kwargs['j']))
+        del kwargs['j']
+
+    if 'to-port' in kwargs:
+        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
+        del kwargs['to-port']
+
+    if 'to-ports' in kwargs:
+        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
+        del kwargs['to-ports']
 
     for item in kwargs:
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
         else:
             rule += '--{0} {1} '.format(item, kwargs[item])
+
+    for item in after_jump:
+        rule += item
 
     if full is True:
         if not table:
@@ -282,6 +301,8 @@ def check(table='filter', chain=None, rule=None):
         ))
         if out != -1:
             out = ''
+        else:
+            return False
     else:
         cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
         out = __salt__['cmd.run'](cmd)
@@ -293,6 +314,7 @@ def check(table='filter', chain=None, rule=None):
 
 def check_chain(table='filter', chain=None):
     '''
+    .. versionadded:: Hydrogen
 
     Check for the existance of a chain in the table
 
@@ -319,6 +341,7 @@ def check_chain(table='filter', chain=None):
 
 def new_chain(table='filter', chain=None):
     '''
+    .. versionadded:: Hydrogen
 
     Create new custom chain to the specified table.
 
@@ -342,6 +365,7 @@ def new_chain(table='filter', chain=None):
 
 def delete_chain(table='filter', chain=None):
     '''
+    .. versionadded:: Hydrogen
 
     Delete custom chain to the specified table.
 
@@ -386,7 +410,10 @@ def append(table='filter', chain=None, rule=None):
 
     cmd = 'iptables -t {0} -A {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
-    return out
+    if len(out) == 0:
+        return True
+    else:
+        return False
 
 
 def insert(table='filter', chain=None, position=None, rule=None):
@@ -512,8 +539,9 @@ def _parse_conf(conf_file=None, in_mem=False):
                 parsed_args = vars(parser.parse_args(shlex.split(line)))
             ret_args = {}
             chain = parsed_args['append']
-            if isinstance(chain, list):
-                chain = chain[0]
+            if not sys.version.startswith('2.6'):
+                if isinstance(chain, list):
+                    chain = chain[0]
             for arg in parsed_args:
                 if parsed_args[arg] and arg is not 'append':
                     ret_args[arg] = parsed_args[arg]
@@ -541,7 +569,10 @@ def _parser():
         add_arg = parser.add_argument
 
     # COMMANDS
-    add_arg('-A', '--append', dest='append', action='append', nargs='*')
+    if sys.version.startswith('2.6'):
+        add_arg('-A', '--append', dest='append', action='append')
+    else:
+        add_arg('-A', '--append', dest='append', action='append', nargs='*')
     add_arg('-D', '--delete', dest='delete', action='append')
     add_arg('-I', '--insert', dest='insert', action='append')
     add_arg('-R', '--replace', dest='replace', action='append')
@@ -555,8 +586,13 @@ def _parser():
 
     # PARAMETERS
     add_arg('-p', '--protocol', dest='protocol', action='append')
-    add_arg('-s', '--source', dest='source', action='append', nargs='*')
-    add_arg('-d', '--destination', dest='destination', action='append', nargs='*')
+    if sys.version.startswith('2.6'):
+        add_arg('-s', '--source', dest='source', action='append')
+        add_arg('-d', '--destination', dest='destination', action='append')
+    else:
+        add_arg('-s', '--source', dest='source', action='append', nargs='*')
+        add_arg('-d', '--destination', dest='destination', action='append',
+                nargs='*')
     add_arg('-j', '--jump', dest='jump', action='append')
     add_arg('-g', '--goto', dest='goto', action='append')
     add_arg('-i', '--in-interface', dest='in-interface', action='append')

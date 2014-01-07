@@ -38,7 +38,7 @@ Here's a brief overview of a Salt cluster:
   that describe which software should run on which server, along with
   particular configuration properties for the software that is being
   installed. These files should be created in the /srv/salt folder by default,
-  but their location can be changed using ... /etc/salt/master configuration file !
+  but their location can be changed using ... /etc/salt/master configuration file!
 
 .. note:: 
 

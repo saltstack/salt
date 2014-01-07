@@ -10,6 +10,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
@@ -280,11 +281,12 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 
-    pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name,
-                                               kwargs.get('pkgs'),
-                                               sources,
-                                               **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, kwargs.get('pkgs'), sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -308,7 +310,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        __salt__['cmd.run_all'](temp_cmd)
+        __salt__['cmd.run'](temp_cmd, output_loglevel='debug')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -375,7 +377,11 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:
@@ -417,7 +423,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
     # Remove the package
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
                                                  ' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)

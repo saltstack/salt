@@ -2,6 +2,8 @@
 Salt 0.10.4 Release Notes
 =========================
 
+:release: 2012-10-23
+
 Salt 0.10.4 is a monumental release for the Salt team, with two new module
 systems, many additions to allow granular access to Salt, improved platform
 support and much more.

@@ -15,6 +15,17 @@ no grounds to treat others without respect, especially people working to
 improve Salt)!!
 
 
+Linting
+=======
+
+Most Salt style conventions are codified in Salt's `.pylintrc` file. This file
+is found in the root of the Salt project and can be passed as an argument to the
+pylint_ program as follows:
+
+`pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint`
+
+.. _pylint: http://www.pylint.org
+
 Strings
 =======
 
@@ -75,6 +86,59 @@ it makes the code cleaner and more vertical:
     def baz():
         '''This is not ok!'''
         return
+
+
+When adding a new function or state, where possible try to use a
+``versionadded`` directive to denote when the function or state was added.
+
+.. code-block:: python
+
+    def new_func(msg=''):
+        '''
+        .. versionadded:: 0.16.0
+
+        Prints what was passed to the function.
+
+        msg : None
+            The string to be printed.
+        '''
+        print msg
+
+If you are uncertain what version should be used, either :doc:`consult a core
+developer in IRC </topics/community>` or bring this up when opening your
+:doc:`pull request </topics/hacking>` and a core developer will add the proper
+version once your pull request has been merged. Bugfixes will be available in a
+bugfix release (i.e. 0.17.1, the first bugfix release for 0.17.0), while new
+features are held for feature releases, and this will affect what version
+number should be used in the ``versionadded`` directive.
+
+
+Similar to the above, when an existing function or state is modified (for
+example, when an argument is added), then under the explanation of that new
+argument a ``versionadded`` directive should be used to note the version in
+which the new argument was added. If an argument's function changes
+significantly, the ``versionchanged`` directive can be used to clarify this:
+
+.. code-block:: python
+
+    def new_func(msg='', signature=''):
+        '''
+        .. versionadded:: 0.16.0
+
+        Prints what was passed to the function.
+
+        msg : None
+            The string to be printed. Will be prepended with 'Greetings! '.
+
+        .. versionchanged:: 0.17.1
+
+        signature : None
+            An optional signature.
+
+        .. versionadded 0.17.0
+        '''
+        print 'Greetings! {0}\n\n{1}'.format(msg, signature)
+
 
 Imports
 =======

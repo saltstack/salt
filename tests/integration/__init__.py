@@ -5,10 +5,10 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import re
 import os
 import sys
 import time
+import errno
 import shutil
 import pprint
 import logging
@@ -64,6 +64,15 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
+
+KNOWN_BINARY_NAMES = {
+    'virtualenv': (
+        'virtualenv',
+        'virtualenv2',
+        'virtualenv-2.6',
+        'virtualenv-2.7'
+    ),
+}
 
 log = logging.getLogger(__name__)
 
@@ -1018,3 +1027,21 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+
+
+class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
+    '''
+    A base class containing relevant options for starting the various Salt
+    Python API entrypoints
+    '''
+    def get_opts(self):
+        return salt.config.client_config(self.get_config_file_path('master'))
+
+    def mkdir_p(self, path):
+        try:
+            os.makedirs(path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise

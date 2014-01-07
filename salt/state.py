@@ -318,11 +318,12 @@ class Compiler(object):
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
                             argfirst = next(iter(arg))
-                            if argfirst == 'require' or argfirst == 'watch':
+                            if argfirst in ('require', 'watch', 'prereq'):
                                 if not isinstance(arg[argfirst], list):
-                                    errors.append(('The require or watch'
-                                    ' statement in state "{0}" in sls "{1}" '
+                                    errors.append(('The {0}'
+                                    ' statement in state "{1}" in sls "{2}" '
                                     'needs to be formed as a list').format(
+                                        argfirst,
                                         name,
                                         body['__sls__']
                                         ))
@@ -341,6 +342,19 @@ class Compiler(object):
                                             continue
                                         req_key = next(iter(req))
                                         req_val = req[req_key]
+                                        if '.' in req_key:
+                                            errors.append((
+                                                'Invalid requisite type {0!r} '
+                                                'in state {1!r}, in SLS '
+                                                '{2!r}. Requisite types must '
+                                                'not contain dots, did you '
+                                                'mean {3!r}?'.format(
+                                                    req_key,
+                                                    name,
+                                                    body['__sls__'],
+                                                    req_key[:req_key.find('.')]
+                                                )
+                                            ))
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
@@ -782,11 +796,12 @@ class State(object):
                                     'a list').format(
                                         name,
                                         body['__sls__']))
-                            if argfirst == 'require' or argfirst == 'watch':
+                            if argfirst in ('require', 'watch', 'prereq'):
                                 if not isinstance(arg[argfirst], list):
-                                    errors.append(('The require or watch'
-                                    ' statement in state "{0}" in sls "{1}" '
+                                    errors.append(('The {0}'
+                                    ' statement in state "{1}" in sls "{2}" '
                                     'needs to be formed as a list').format(
+                                        argfirst,
                                         name,
                                         body['__sls__']
                                         ))
@@ -805,6 +820,19 @@ class State(object):
                                             continue
                                         req_key = next(iter(req))
                                         req_val = req[req_key]
+                                        if '.' in req_key:
+                                            errors.append((
+                                                'Invalid requisite type {0!r} '
+                                                'in state {1!r}, in SLS '
+                                                '{2!r}. Requisite types must '
+                                                'not contain dots, did you '
+                                                'mean {3!r}?'.format(
+                                                    req_key,
+                                                    name,
+                                                    body['__sls__'],
+                                                    req_key[:req_key.find('.')]
+                                                )
+                                            ))
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
@@ -958,14 +986,22 @@ class State(object):
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
-                    errors.append(
-                        'Cannot extend ID {0} in "{1}:{2}". It is not part '
-                        'of the high state.'.format(
-                            name,
-                            body.get('__env__', 'base'),
-                            body.get('__sls__', 'base'))
-                        )
-                    continue
+                    state_type = next(
+                        x for x in body if not x.startswith('__')
+                    )
+                    # Check for a matching 'name' override in high data
+                    id_ = find_name(name, state_type, high)
+                    if id_:
+                        name = id_
+                    else:
+                        errors.append(
+                            'Cannot extend ID {0} in "{1}:{2}". It is not '
+                            'part of the high state.'.format(
+                                name,
+                                body.get('__env__', 'base'),
+                                body.get('__sls__', 'base'))
+                            )
+                        continue
                 for state, run in body.items():
                     if state.startswith('__'):
                         continue
@@ -1064,6 +1100,7 @@ class State(object):
             ])
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
+        errors = []
         for id_, body in high.items():
             if not isinstance(body, dict):
                 continue
@@ -1093,11 +1130,18 @@ class State(object):
                                 if name not in extend:
                                     extend[name] = {}
                                 if '.' in _state:
-                                    log.warning(
-                                        'Bad requisite syntax in {0} : {1} for {2},'
-                                        ' requisites should not contain any dot'
-                                        .format(rkey, _state, name)
-                                    )
+                                    errors.append((
+                                        'Invalid requisite in {0}: {1} for '
+                                        '{2}, in SLS {3!r}. Requisites must '
+                                        'not contain dots, did you mean {4!r}?'
+                                        .format(
+                                            rkey,
+                                            _state,
+                                            name,
+                                            body['__sls__'],
+                                            _state[:_state.find('.')]
+                                        )
+                                    ))
                                     _state = _state.split(".")[0]
                                 if _state not in extend[name]:
                                     extend[name][_state] = []
@@ -1129,11 +1173,18 @@ class State(object):
                                 _state = next(iter(ind))
                                 name = ind[_state]
                                 if '.' in _state:
-                                    log.warning(
-                                        'Bad requisite syntax in {0} : {1} for {2},'
-                                        ' requisites should not contain any dot'
-                                        .format(rkey, _state, name)
-                                    )
+                                    errors.append((
+                                        'Invalid requisite in {0}: {1} for '
+                                        '{2}, in SLS {3!r}. Requisites must '
+                                        'not contain dots, did you mean {4!r}?'
+                                        .format(
+                                            rkey,
+                                            _state,
+                                            name,
+                                            body['__sls__'],
+                                            _state[:_state.find('.')]
+                                        )
+                                    ))
                                     _state = _state.split(".")[0]
                                 if key == 'prereq_in':
                                     # Add prerequired to origin
@@ -1233,7 +1284,9 @@ class State(object):
         high['__extend__'] = []
         for key, val in extend.items():
             high['__extend__'].append({key: val})
-        return self.reconcile_extend(high)
+        req_in_high, req_in_errors = self.reconcile_extend(high)
+        errors.extend(req_in_errors)
+        return req_in_high, errors
 
     def call(self, low, chunks=None, running=None):
         '''
@@ -1744,6 +1797,7 @@ class BaseHighState(object):
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.serial = salt.payload.Serial(self.opts)
+        self.building_highstate = {}
 
     def __gather_avail(self):
         '''
@@ -2038,7 +2092,7 @@ class BaseHighState(object):
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        mods.add(sls)
+        mods.add('{0}:{1}'.format(saltenv, sls))
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -2104,10 +2158,12 @@ class BaseHighState(object):
                         ) or [inc_sls]
 
                         for sls_target in sls_targets:
-                            if sls_target not in mods:
+                            r_env = resolved_envs[0] if len(resolved_envs) == 1 else saltenv
+                            mod_tgt = '{0}:{1}'.format(r_env, sls_target)
+                            if mod_tgt not in mods:
                                 nstate, err = self.render_state(
                                     sls_target,
-                                    resolved_envs[0] if len(resolved_envs) == 1 else saltenv,
+                                    r_env,
                                     mods,
                                     matches
                                 )
@@ -2278,10 +2334,10 @@ class BaseHighState(object):
         Gather the state files and render them into a single unified salt
         high data structure.
         '''
-        highstate = {}
+        highstate = self.building_highstate
         all_errors = []
+        mods = set()
         for saltenv, states in matches.items():
-            mods = set()
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
                 if not statefiles:
@@ -2292,7 +2348,8 @@ class BaseHighState(object):
                         )
                     )
                 for sls in statefiles:
-                    if sls in mods:
+                    r_env = '{0}:{1}'.format(saltenv, sls)
+                    if r_env in mods:
                         continue
                     state, errors = self.render_state(sls, saltenv, mods, matches)
                     if state:
@@ -2407,12 +2464,14 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
+        cumask = os.umask(191)
         with salt.utils.fopen(cfn, 'w+') as fp_:
             try:
                 self.serial.dump(high, fp_)
             except TypeError:
                 # Can't serialize pydsl
                 pass
+        os.umask(cumask)
         return self.state.call_high(high)
 
     def compile_highstate(self):
@@ -2555,8 +2614,8 @@ class RemoteHighState(object):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
-        self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+        # self.auth = salt.crypt.SAuth(opts)
+        self.sreq = salt.transport.Channel.factory(self.opts['master_uri'])
 
     def compile_master(self):
         '''
@@ -2566,10 +2625,11 @@ class RemoteHighState(object):
                 'opts': self.opts,
                 'cmd': '_master_state'}
         try:
-            return self.auth.crypticle.loads(self.sreq.send(
-                    'aes',
-                    self.auth.crypticle.dumps(load),
-                    3,
-                    72000))
+            return self.sreq.send(load, tries=3, timeout=72000)
+            # return self.auth.crypticle.loads(self.sreq.send(
+            #         'aes',
+            #         self.auth.crypticle.dumps(load),
+            #         3,
+            #         72000))
         except SaltReqTimeoutError:
             return {}

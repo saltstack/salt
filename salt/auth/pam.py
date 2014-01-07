@@ -11,6 +11,11 @@ Provides an authenticate function that will allow the caller to authenticate
 a user against the Pluggable Authentication Modules (PAM) on the system.
 
 Implemented using ctypes, so no compilation is necessary.
+
+.. note:: PAM authentication will not work for the ``root`` user.
+
+    The Python interface to PAM does not support authenticating as ``root``.
+
 '''
 
 # Import python libs

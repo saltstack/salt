@@ -146,9 +146,8 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -186,9 +185,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     import pwd  # after confirming not running Windows
     import grp
     try:
@@ -285,9 +283,8 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     if user == getpass.getuser():
         return True
     import pwd  # after confirming not running Windows
@@ -356,13 +353,17 @@ def check_path_traversal(path, user='root'):
     for tpath in list_path_traversal(path):
         if not os.access(tpath, os.R_OK):
             msg = 'Could not access {0}.'.format(tpath)
-            current_user = getpass.getuser()
-            # Make the error message more intelligent based on how
-            # the user invokes salt-call or whatever other script.
-            if user != current_user:
-                msg += ' Try running as user {0}.'.format(user)
+            if not os.path.exists(tpath):
+                msg += ' Path does not exist.'
             else:
-                msg += ' Please give {0} read permissions.'.format(user, tpath)
+                current_user = getpass.getuser()
+                # Make the error message more intelligent based on how
+                # the user invokes salt-call or whatever other script.
+                if user != current_user:
+                    msg += ' Try running as user {0}.'.format(user)
+                else:
+                    msg += ' Please give {0} read permissions.'.format(user,
+                                                                       tpath)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
@@ -382,10 +383,7 @@ def check_max_open_files(opts):
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
-    accepted_count = len([
-        key for key in os.listdir(accepted_keys_dir) if
-        os.path.isfile(os.path.join(accepted_keys_dir, key))
-    ])
+    accepted_count = sum(1 for _ in os.listdir(accepted_keys_dir))
 
     log.debug(
         'This salt-master instance has accepted {0} minion keys.'.format(

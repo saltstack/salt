@@ -48,6 +48,7 @@ Use the following mysql database schema::
       `id` varchar(255) NOT NULL,
       `success` varchar(10) NOT NULL,
       `full_ret` mediumtext NOT NULL,
+      `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       KEY `id` (`id`),
       KEY `jid` (`jid`),
       KEY `fun` (`fun`)
@@ -133,7 +134,7 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            str(ret['return']), ret['id'],
+                            json.dumps(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
 
 

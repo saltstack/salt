@@ -8,6 +8,7 @@ master to the minion and vice-versa.
 import salt.crypt
 import salt.utils.event
 import salt.payload
+import salt.transport
 
 
 def fire_master(data, tag, preload=None):
@@ -31,9 +32,10 @@ def fire_master(data, tag, preload=None):
             'tok': auth.gen_token('salt'),
             'cmd': '_minion_event'})
 
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        sreq.send('aes', auth.crypticle.dumps(load))
+        sreq.send(load)
     except Exception:
         pass
     return True

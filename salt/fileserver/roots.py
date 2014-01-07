@@ -146,9 +146,10 @@ def update():
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
 
-    # if there is a change, fire an event
-    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+    if __opts__.get('fileserver_events', False):
+        # if there is a change, fire an event
+        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -190,16 +191,20 @@ def file_hash(load, fnd):
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    # Delete the file since its incomplete (either corrupted or incomplete)
+                    os.unlink(cache_path)
                     file_hash(load, fnd)
-                    return(ret)
+                    return ret
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
         except os.error:  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
+            # Delete the file since its incomplete (either corrupted or incomplete)
+            os.unlink(cache_path)
             file_hash(load, fnd)
-            return(ret)
+            return ret
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])

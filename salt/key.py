@@ -35,7 +35,7 @@ class KeyCLI(object):
                 'key',
                 self.opts
             )
-        elif status.startswith('pre') or status.startswith('un'):
+        elif status.startswith(('pre', 'un')):
             salt.output.display_output(
                 {'minions_pre': keys['minions_pre']},
                 'key',

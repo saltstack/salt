@@ -6,17 +6,9 @@ Linode Cloud Module
 The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
-If using the old cloud configuration syntax, add to salt cloud configuration
-file:
 
-.. code-block:: yaml
-
-    # Linode account api key
-    LINODE.apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-
-
-Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/linode.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/linode.conf``:
 
 .. code-block:: yaml
 
@@ -248,11 +240,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

@@ -69,6 +69,7 @@ Supported commands:
 :maintainer: Eric Johnson <erjohnso@google.com>
 :maturity: new
 :depends: libcloud >= 0.14.0-beta3
+:depends: pycrypto >= 2.1
 '''
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
@@ -542,8 +543,8 @@ def create(vm_=None, call=None):
         ssh_user, ssh_key = __get_ssh_credentials(vm_)
         deploy_kwargs = {
             'host': node_data.public_ips[0],
-            'ssh_username': ssh_user,
-            'ssh_keyfile': ssh_key,
+            'username': ssh_user,
+            'key_filename': ssh_key,
             'script': deploy_script.script,
             'name': vm_['name'],
             'tmp_dir': config.get_cloud_config_value(
@@ -551,7 +552,7 @@ def create(vm_=None, call=None):
             ),
             'deploy_command': config.get_cloud_config_value(
                 'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deplloy.sh',
+                default='/tmp/.saltcloud/deploy.sh',
             ),
             'start_action': __opts__['start_action'],
             'sock_dir': __opts__['sock_dir'],
@@ -567,7 +568,7 @@ def create(vm_=None, call=None):
                 'sudo_password', vm_, __opts__, default=None
             ),
             'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
+                'tty', vm_, __opts__, default=(ssh_user != 'root')
             ),
             'display_ssh_output': config.get_cloud_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
@@ -598,11 +599,11 @@ def create(vm_=None, call=None):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         node_dict['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

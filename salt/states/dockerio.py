@@ -4,12 +4,24 @@
 Manage Docker containers
 ========================
 
-A Docker is a light-weight, portable, self-sufficient container.
+`Docker <https://docker.io>`_
+is a lightweight, portable, self-sufficient software container
+wrapper. The base supported wrapper type is
+`LXC <https://en.wikipedia.org/wiki/Linux_Containers>`_,
+`cgroups <https://en.wikipedia.org/wiki/Cgroups>`_, and the
+`Linux Kernel <https://en.wikipedia.org/wiki/Linux_kernel>`_.
+
+.. warning::
+
+    This state module is beta. The API is subject to change. No promise
+    as to performance or functionality is yet present.
 
 .. note::
 
-    This state module is beta; the API is subject to change and no promise
-    as to performance or functionality is yet present
+    This state module requires
+    `docker-py <https://github.com/dotcloud/docker-py>`_
+    which supports `Docker Remote API version 1.6
+    <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
 
 Available Functions
 -------------------
@@ -33,10 +45,23 @@ Available Functions
 
   .. code-block:: yaml
 
-      mysuperdocker:
+      mysuperdocker-container:
           docker.installed:
+              - name: mysuperdocker
               - hostname: superdocker
               - image: corp/mysuperdocker_img
+- running
+
+  .. code-block:: yaml
+
+      my_service:
+          docker.running:
+              - container: mysuperdocker
+              - port_bindings:
+                  "5000/tcp":
+                      HostIp: ""
+                      HostPort: "5000"
+
 
 - absent
 
@@ -55,13 +80,24 @@ Available Functions
                - unless: grep -q something /var/log/foo
                - docker_unless: grep -q done /install_log
 
-Note:
-The docker Modules can't be called docker as
-it would conflict with the underlying binding modules: docker-py
+.. note::
+
+    The docker modules are named `dockerio` because
+    the name 'docker' would conflict with the underlying docker-py library.
+
+    We should add magic to all methods to also match containers by name
+    now that the 'naming link' stuff has been merged in docker.
+    This applies for exemple to:
+
+        - running
+        - absent
+        - run
+        - script
+
+
 '''
 
 # Import python libs
-import re
 
 # Import salt libs
 from salt._compat import string_types
@@ -80,19 +116,16 @@ __virtualname__ = 'docker'
 
 def __virtual__():
     '''
-    Only load if docker libs available
+    Only load if the docker libs are available.
     '''
     if HAS_DOCKER:
         return __virtualname__
     return False
 
 
-INVALID_RESPONSE = 'We did not get any expectable answer from docker'
+INVALID_RESPONSE = 'We did not get an acceptable answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
-CONTAINER_GRAIN_ID = 'docker.containers.{id}.id'
-CONTAINER_GRAIN_ID_RE = re.compile(
-    'docker.containers.([^.]+).id', re.S | re.M | re.U)
 #Use a proxy mapping to allow queries & updates after the initial grain load
 MAPPING_CACHE = {}
 FN_CACHE = {}
@@ -105,10 +138,10 @@ def __salt(fn):
 
 
 def _ret_status(exec_status=None,
-               name='',
-               comment='',
-               result=None,
-               changes=None):
+                name='',
+                comment='',
+                result=None,
+                changes=None):
     if not changes:
         changes = {}
     if exec_status is None:
@@ -133,31 +166,79 @@ def _ret_status(exec_status=None,
 
 def _valid(exec_status=None, name='', comment='', changes=None):
     return _ret_status(exec_status=exec_status,
-                      comment=comment,
-                      name=name,
-                      changes=changes,
-                      result=True)
+                       comment=comment,
+                       name=name,
+                       changes=changes,
+                       result=True)
 
 
 def _invalid(exec_status=None, name='', comment='', changes=None):
     return _ret_status(exec_status=exec_status,
-                      comment=comment,
-                      name=name,
-                      changes=changes,
-                      result=False)
+                       comment=comment,
+                       name=name,
+                       changes=changes,
+                       result=False)
+
+
+def mod_watch(name, sfun=None, *args, **kw):
+    if sfun == 'built':
+        # Needs to refresh the image
+        kw['force'] = True
+        build_status = built(name, **kw)
+        result = build_status['result']
+        status = _ret_status(build_status, name, result=result,
+                             changes={name: result})
+        return status
+    elif sfun == 'installed':
+        # Throw away the old container and create a new one
+        remove_container = __salt__['docker.remove_container']
+        remove_status = _ret_status(remove_container(container=name,
+                                                     force=True,
+                                                     **kw),
+                                    name=name)
+        installed_status = installed(name=name, **kw)
+        result = installed_status['result'] and remove_status['result']
+        comment = '\n'.join((remove_status['comment'],
+                             installed_status['comment']))
+        status = _ret_status(installed_status, name=name,
+                             result=result,
+                             changes={name: result},
+                             comment=comment)
+        return status
+    elif sfun == 'running':
+        # Force a restart against new container
+        restarter = __salt__['docker.restart']
+        status = _ret_status(restarter(kw['container']), name=name,
+                             changes={name: True})
+        return status
+
+    return {'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ('watch requisite is not'
+                        ' implemented for {0}'.format(sfun))}
 
 
 def pulled(name, force=False, *args, **kwargs):
     '''
-    Pull an image from a docker registry
+    Pull an image from a docker registry. (`docker pull`)
 
-    Remember to look on the execution module to see how to ident yourself with
-    a registry
+    .. note::
+
+        See first the documentation for `docker login`, `docker pull`,
+        `docker push`,
+        and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
+        (`docker import
+        <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
+        NOTE that We added saltack a way to identify yourself via pillar,
+        see in the salt.modules.dockerio execution module how to ident yourself
+        via the pillar.
 
     name
         Tag of the image
+
     force
-        pull even if the image is already pulled
+        Pull even if the image is already pulled
     '''
     ins = __salt('docker.inspect_image')
     iinfos = ins(name)
@@ -177,18 +258,18 @@ def built(name,
           nocache=False,
           rm=True,
           force=False,
+          timeout=None,
           *args, **kwargs):
     '''
-    Build a docker image from a dockerfile or an URL
-
-    You can either:
-        - give the url/branch/docker_dir
-        - give a path on the file system
+    Build a docker image from a path or URL to a dockerfile. (`docker build`)
 
     name
         Tag of the image
+
     path
-        URL or path in the filesystem to the dockerfile
+        URL (e.g. `url/branch/docker_dir/dockerfile`)
+        or filesystem path to the dockerfile
+
     '''
     ins = __salt('docker.inspect_image')
     iinfos = ins(name)
@@ -203,47 +284,11 @@ def built(name,
         path=path,
         quiet=quiet,
         nocache=nocache,
-        rm=rm
+        rm=rm,
+        timeout=timeout,
     )
     status = _ret_status(func(*a, **kw), name)
     return status
-
-
-def _toggle_container_running_status(cid, started):
-    '''
-    Start or stop a container
-    cid
-        Container id
-    started
-        True if container is meant to be started
-    '''
-    running = __salt('docker.is_running')(cid)
-    # if container exists but is not started, try to start it
-    if started:
-        if running:
-            return _valid(comment='Container {0} is started'.format(cid))
-        else:
-            started = __salt('docker.start')(cid)
-            running = __salt('docker.is_running')(cid)
-            if running:
-                return _valid(
-                    comment=('Container {0} was already stopped,\n'
-                             'Container {0} was started.\n').format(cid))
-            else:
-                return _invalid(comment=(
-                    'Container {0} cannot be started\n{1}'
-                ).format(cid, started['out']))
-    else:
-        if running:
-            __salt('docker.stop')(cid, 1)
-            running = __salt('docker.is_running')(cid)
-            if running:
-                return _invalid(
-                    comment='Container {0} could not be stopped'.format(cid))
-            else:
-                return _valid(comment='Container {0} was stopped,'.format(cid))
-        else:
-            return _valid(comment='Container {0} is stopped,'.format(cid))
 
 
 def installed(name,
@@ -260,19 +305,18 @@ def installed(name,
               dns=None,
               volumes=None,
               volumes_from=None,
-              force=False,
-              started=True,
               *args, **kwargs):
     '''
-    Build a new container from an image
+    Ensure that a container with the given name exists;
+    if not, build a new container from the specified image.
+    (`docker run`)
 
     name
-        this name will be stored in grain for not
-        reinstalling again and again the same container
+        Name for the container
+
     image
-        the image from which to build this container
-    path
-        Path in the filesystem to the dockerfile
+        Image from which to build this container
+
     environment
         Environment variables for the container, either
             - a mapping of key, values
@@ -282,38 +326,30 @@ def installed(name,
             - a port to map
             - a mapping of mapping portInHost : PortInContainer
     volumes
-        List of volumes mappings definitions, either:
-            - a volume inside the host which is mounted as the same location
-              in the container
-            - a mapping mountpointInContainer:MountpointinHost
-    started
-        Is the container running (default: true)
+        List of volumes
 
-    For other parameters, please look at the module
+    For other parameters, see absolutely first the salt.modules.dockerio
+    execution module and the docker-py python bindings for docker
     documentation
+    <https://github.com/dotcloud/docker-py#api>`_ for
+    `docker.create_container`.
 
-    You can create it either by specifying :
-
-        - an image
-        - an absolute path on the filesystem
-
-    This mean that you need one of those two parameters:
-
-
+    .. note::
+        This command does not verify that the named container
+        is running the specified image.
     '''
     ins_image = __salt('docker.inspect_image')
     ins_container = __salt('docker.inspect_container')
     create = __salt('docker.create_container')
     iinfos = ins_image(image)
-    dports, dvolumes, denvironment = {}, [], {}
-    iinfos = ins_image(image)
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
-    existing_cid = _get_container_id(name)
-    cinfos = ins_container(existing_cid)
+    cinfos = ins_container(name)
+    already_exists = cinfos['status']
     # if container exists but is not started, try to start it
-    if existing_cid and cinfos['status']:
-        return _toggle_container_running_status(existing_cid, started)
+    if already_exists:
+        return _valid(comment='image {!r} already exists'.format(name))
+    dports, dvolumes, denvironment = {}, [], {}
     if not ports:
         ports = []
     if not volumes:
@@ -352,121 +388,63 @@ def installed(name,
         environment=denvironment,
         dns=dns,
         volumes=dvolumes,
-        volumes_from=volumes_from)
-    already_exists = False
-    if already_exists and not force:
-        return _valid(
-            name=name,
-            comment='Container already exist {0}, id: {1}'.format(1, 1))
-    if not already_exists or force:
-        out = create(*a, **kw)
-        # if container has been created, even if not started, we mark
-        # it as installed
-        try:
-            cid = out['out']['info']['id']
-        except Exception:
-            # not created at all
-            cid = None
-        if cid:
-            _set_container_id(name, cid)
-            out['comment'] = 'Container {0} created'.format(cid)
-            # force start or stop status of this container
-            # only if creation process is successful
-            if out['status']:
-                toggle_s = _toggle_container_running_status(cid, started)
-                out['result'] = toggle_s['result']
-                out['status'] = toggle_s['result']
-                out['comment'] += '\n' + toggle_s['comment']
-        ret = _ret_status(out, name)
-    return ret
-
-
-def _get_container_id(name):
-    k = CONTAINER_GRAIN_ID.format(id=name)
-    val = None
-    if not k in MAPPING_CACHE:
-        getval = __salt('grains.get')
-        val = getval(k, None)
+        volumes_from=volumes_from,
+        name=name)
+    out = create(*a, **kw)
+    # if container has been created, even if not started, we mark
+    # it as installed
+    try:
+        cid = out['out']['info']['id']
+    except Exception:
+        pass
     else:
-        val = MAPPING_CACHE[k]
-    if val:
-        MAPPING_CACHE[k] = val
-    return val
-
-
-def _set_container_id(name, val):
-    setval = __salt('grains.setval')
-    k = CONTAINER_GRAIN_ID.format(id=name)
-    MAPPING_CACHE[k] = val
-    ret = setval(k, val)
+        out['comment'] = 'Container {0} created'.format(cid)
+    ret = _ret_status(out, name)
     return ret
-
-
-def _del_container_id(name=None, cid=None):
-    delval = __salt('grains.delval')
-    getval = __salt('grains.get')
-    grains = __salt('grains.items')()
-    values = []
-    if name:
-        values.append(name)
-    for g, val in grains.items():
-        if val == cid and CONTAINER_GRAIN_ID_RE.match(g):
-            values.append(g)
-    for n in values:
-        k = CONTAINER_GRAIN_ID.format(id=n)
-        if k in MAPPING_CACHE:
-            del MAPPING_CACHE[k]
-        val = getval(k, None)
-        if val:
-            delval(k)
 
 
 def absent(name):
     '''
-    Container should be absent or
-    will be killed, destroyed, and eventually we will remove the grain matching
-
-    You can match by either a state id or a container id
+    Ensure that the container is absent; if not, it will
+    will be killed and destroyed. (`docker inspect`)
 
     name:
-        Either the state_id or container id
-
+        Either the container name or id
     '''
-    cid = _get_container_id(name)
-    ins_container = __salt('docker.inspect_container')
-    if cid:
-        cinfos = ins_container(cid)
-    else:
-        # fallback directly on container id
-        cinfos = ins_container(name)
+    ins_container = __salt__['docker.inspect_container']
+    cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
+        is_running = __salt__['docker.is_running'](cid)
         # destroy if we found meat to do
-        _toggle_container_running_status(cid, False)
-        ret = _ret_status(__salt('docker.remove_container')(cid))
-        _del_container_id(cid=cid)
-        return ret
+        if is_running:
+            __salt__['docker.stop'](cid)
+            is_running = __salt('docker.is_running')(cid)
+            if is_running:
+                return _invalid(
+                    comment=('Container {!r}'
+                             ' could not be stopped'.format(cid)))
+            else:
+                return _valid(comment=('Container {!r}'
+                                       ' was stopped,'.format(cid)),
+                              changes={name: True})
+        else:
+            return _valid(comment=('Container {!r}'
+                                   ' is stopped,'.format(cid)))
     else:
-        return _valid(comment='Container {0} not found'.format(name))
+        return _valid(comment='Container {!r} not found'.format(name))
 
 
 def present(name):
     '''
-    Container should be present or this state will fail
-
-    You can match by either a state id or a container id
+    If a container with the given name is not present, this state will fail.
+    (`docker inspect`)
 
     name:
-        Either the state_id or container id
-
+        container id
     '''
-    cid = _get_container_id(name)
     ins_container = __salt('docker.inspect_container')
-    if cid:
-        cinfos = ins_container(cid)
-    else:
-        # fallback directly on container id
-        cinfos = ins_container(name)
+    cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
         return _valid(comment='Container {0} exists'.format(cid))
@@ -485,12 +463,11 @@ def run(name,
         *args, **kwargs):
     '''Run a command in a specific container
 
-    XXX: TODO: IMPLEMENT
 
     You can match by either name or hostname
 
     name
-        command to run in the docker
+        command to run in the container
 
     cid
         Container id
@@ -502,22 +479,21 @@ def run(name,
         stateful mode
 
     onlyif
-        Only execute cmd if statement on the host return 0
+        Only execute cmd if statement on the host returns 0
 
     unless
-        Do not execute cmd if statement on the host return 0
+        Do not execute cmd if statement on the host returns 0
 
     docked_onlyif
-        Same as onlyif but executed in the context of the docker
+        Only execute cmd if statement in the container returns 0
 
     docked_unless
-        Same as unless but executed in the context of the docker
+        Do not execute cmd if statement in the container returns 0
 
     '''
     if not hostname:
         hostname = cid
     retcode = __salt__['docker.retcode']
-    dretcode = __salt__['cmd.retcode']
     drun = __salt__['docker.run']
     cmd_kwargs = ''
     if onlyif is not None:
@@ -562,6 +538,68 @@ def run(name,
     return drun(**cmd_kwargs)
 
 
+def running(name, container=None, port_bindings=None, binds=None,
+            publish_all_ports=False, links=None, lxc_conf=None,
+            privileged=False):
+    '''
+    Ensure that a container is running. (`docker inspect`)
+
+    name
+        name of the service
+
+    container
+        name of the container to start
+
+    binds
+        like -v of docker run command
+
+        .. code-block:: yaml
+
+            - binds:
+                - /var/log/service: /var/log/service
+
+    publish_all_ports
+
+    links
+        Link several container together
+
+        .. code-block:: yaml
+
+            - links:
+                name_other_container: alias_for_other_container
+
+    port_bindings
+        List of ports to expose on host system
+            - a mapping port's guest, hostname's host and port's host.
+
+        .. code-block:: yaml
+
+            - port_bindings:
+                "5000/tcp":
+                    HostIp: ""
+                    HostPort: "5000"
+    '''
+    is_running = __salt('docker.is_running')(container)
+    if is_running:
+        return _valid(
+            comment='Container {!r} is started'.format(container))
+    else:
+        started = __salt__['docker.start'](
+            container, binds=binds, port_bindings=port_bindings,
+            lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
+            links=links, privileged=privileged)
+        is_running = __salt__['docker.is_running'](container)
+        if is_running:
+            return _valid(
+                comment=('Container {!r} started.\n').format(container),
+                changes={name: True})
+        else:
+            return _invalid(
+                comment=('Container {!r}'
+                         ' cannot be started\n{!s}').format(container,
+                                                            started['out']))
+
+
 def script(name,
            cid=None,
            hostname=None,
@@ -572,11 +610,12 @@ def script(name,
            docked_onlyif=None,
            docked_unless=None,
            *args, **kwargs):
-    '''Run a command in a specific container
+    '''
+    Run a command in a specific container
 
     XXX: TODO: IMPLEMENT
 
-    You can match by either name or hostname
+    Matching can be done by either name or hostname
 
     name
         command to run in the docker
@@ -597,16 +636,15 @@ def script(name,
         Do not execute cmd if statement on the host return 0
 
     docked_onlyif
-        Same as onlyif but executed in the context of the docker
+        Only execute cmd if statement in the container returns 0
 
     docked_unless
-        Same as unless but executed in the context of the docker
+        Do not execute cmd if statement in the container returns 0
 
     '''
     if not hostname:
         hostname = cid
     retcode = __salt__['docker.retcode']
-    dretcode = __salt__['cmd.retcode']
     drun = __salt__['docker.run']
     cmd_kwargs = ''
     if onlyif is not None:

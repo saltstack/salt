@@ -20,6 +20,7 @@ import salt.client
 import salt.crypt
 import salt.loader
 import salt.payload
+import salt.transport
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
@@ -167,6 +168,16 @@ class Client(object):
         '''
         Download and cache all files on a master in a specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         ret = []
         for path in self.file_list(saltenv):
             ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
@@ -359,12 +370,14 @@ class Client(object):
                 for root, dirs, files in os.walk(path, topdown=True):
                     log.debug('Searching for states in dirs {0} and files '
                               '{1}'.format(dirs, files))
-                    if not [file.endswith('.sls') for file in files]:
+                    if not [filename.endswith('.sls') for filename in files]:
                         #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
                         for found_file in files:
                             stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            if salt.utils.is_windows():
+                                stripped_root = stripped_root.replace('\\', '/')
                             if found_file.endswith(('.sls')):
                                 if found_file.endswith('init.sls'):
                                     if stripped_root.endswith('.'):
@@ -378,6 +391,8 @@ class Client(object):
                                     states.append(stripped_root + found_file[:-4])
         else:
             for path in self.file_list(saltenv):
+                if salt.utils.is_windows():
+                    path = path.replace('\\', '/')
                 if path.endswith('.sls'):
                     # is an sls module!
                     if path.endswith('{0}init.sls'.format('/')):
@@ -838,28 +853,29 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
-
-    def _crypted_transfer(self, load, tries=3, timeout=60, payload='aes'):
-        '''
-        In case of authentication errors, try to renegotiate authentication
-        and retry the method.
-        Indeed, we can fail too early in case of a master restart during a
-        minion state execution call
-        '''
-        def _do_transfer():
-            return self.auth.crypticle.loads(
-                self.sreq.send(payload,
-                               self.auth.crypticle.dumps(load),
-                               tries,
-                               timeout)
-            )
-        try:
-            return _do_transfer()
-        except salt.crypt.AuthenticationError:
-            self.auth = salt.crypt.SAuth(self.opts)
-            return _do_transfer()
+        self.channel = salt.transport.Channel.factory(opts)
+        # self.auth = salt.crypt.SAuth(opts)
+        # self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+    #
+    # def _crypted_transfer(self, load, tries=3, timeout=60, payload='aes'):
+    #     '''
+    #     In case of authentication errors, try to renegotiate authentication
+    #     and retry the method.
+    #     Indeed, we can fail too early in case of a master restart during a
+    #     minion state execution call
+    #     '''
+    #     def _do_transfer():
+    #         return self.auth.crypticle.loads(
+    #             self.sreq.send(payload,
+    #                            self.auth.crypticle.dumps(load),
+    #                            tries,
+    #                            timeout)
+    #         )
+    #     try:
+    #         return _do_transfer()
+    #     except salt.crypt.AuthenticationError:
+    #         self.auth = salt.crypt.SAuth(self.opts)
+    #         return _do_transfer()
 
     def get_file(self,
                  path,
@@ -933,7 +949,7 @@ class RemoteClient(Client):
             else:
                 load['loc'] = fn_.tell()
             try:
-                data = self._crypted_transfer(load)
+                data = self.channel.send(load)
             except SaltReqTimeoutError:
                 return ''
 
@@ -998,7 +1014,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1020,7 +1036,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
-            self._crypted_transfer(load)
+            self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1042,7 +1058,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1054,7 +1070,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1091,7 +1107,7 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1099,10 +1115,20 @@ class RemoteClient(Client):
         '''
         Return a list of the files in the file server's specified environment
         '''
+        if env is not None:
+            salt.utils.warn_until(
+                'Boron',
+                'Passing a salt environment should be done using \'saltenv\' '
+                'not \'env\'. This functionality will be removed in Salt '
+                'Boron.'
+            )
+            # Backwards compatibility
+            saltenv = env
+
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1112,7 +1138,7 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_master_opts'}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1124,8 +1150,8 @@ class RemoteClient(Client):
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts,
-                'tok': self.auth.gen_token('salt')}
+                'tok': self.channel.auth.gen_token('salt')}
         try:
-            return self._crypted_transfer(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''

@@ -11,7 +11,6 @@ import logging
 # Import salt libs
 import salt.utils.validate.net as suvn
 import salt.utils.validate.user as suvu
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 

@@ -5,7 +5,6 @@ Utility functions for salt.cloud
 
 # Import python libs
 import os
-import pwd
 import sys
 import codecs
 import shutil
@@ -16,12 +15,17 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
-import types
 import re
-import warnings
 
-# Get logging started
-log = logging.getLogger(__name__)
+# Let's import pwd and catch the ImportError. We'll raise it if this is not
+# Windows
+try:
+    import pwd
+except ImportError:
+    if not sys.platform.lower().startswith('win'):
+        # We can't use salt.utils.is_windows() from the import a little down
+        # because that will cause issues under windows at install time.
+        raise
 
 # Import salt libs
 import salt.crypt
@@ -29,6 +33,8 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
+from salt import syspaths
+from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
 
 # Import salt cloud libs
@@ -51,6 +57,11 @@ NSTATES = {
     2: 'terminated',
     3: 'pending',
 }
+
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:')
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def __render_script(path, vm_=None, opts=None, minion=''):
@@ -304,6 +315,16 @@ def wait_for_port(host, port=22, timeout=900):
             )
 
 
+def validate_windows_cred(host, username='Administrator', password=None):
+    '''
+    Check if the windows credentials are valid
+    '''
+    retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
+        username, password, host
+    ))
+    return retcode == 0
+
+
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1, display_ssh_output=True):
@@ -390,31 +411,9 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         # Shell out to smbclient to create C:\salt\conf\pki\minion
         win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
         # Shell out to smbclient to copy over minion keys
-        ## minion_pub, minion_pem, minion_conf
+        ## minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
-
-        if minion_conf:
-            if not isinstance(minion_conf, dict):
-                # Let's not just fail regarding this change, specially
-                # since we can handle it
-                raise DeprecationWarning(
-                    '`salt.utils.cloud.deploy_windows` now only accepts '
-                    'dictionaries for its `minion_conf` parameter. '
-                    'Loading YAML...'
-                )
-            minion_grains = minion_conf.pop('grains', {})
-            if minion_grains:
-                smb_file(
-                    'salt\\conf\\grains',
-                    salt_config_to_yaml(minion_grains, line_break='\r\n'),
-                    kwargs
-                )
-            smb_file(
-                'salt\\conf\\minion',
-                salt_config_to_yaml(minion_conf, line_break='\r\n'),
-                kwargs
-            )
 
         if minion_pub:
             smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
@@ -433,9 +432,43 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             creds, local_path, installer
         ))
         # Shell out to winexe to execute win_installer
+        ## We don't actually need to set the master and the minion here since
+        ## the minion config file will be set next via smb_file
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
+
+        # Shell out to smbclient to copy over minion_conf
+        if minion_conf:
+            if not isinstance(minion_conf, dict):
+                # Let's not just fail regarding this change, specially
+                # since we can handle it
+                raise DeprecationWarning(
+                    '`salt.utils.cloud.deploy_windows` now only accepts '
+                    'dictionaries for its `minion_conf` parameter. '
+                    'Loading YAML...'
+                )
+            minion_grains = minion_conf.pop('grains', {})
+            if minion_grains:
+                smb_file(
+                    'salt\\conf\\grains',
+                    salt_config_to_yaml(minion_grains, line_break='\r\n'),
+                    kwargs
+                )
+            # Add special windows minion configuration
+            # that must be in the minion config file
+            windows_minion_conf = {
+                'ipc_mode': 'tcp',
+                'root_dir': 'c:\\salt',
+                'pki_dir': '/conf/pki/minion',
+                'multiprocessing': False,
+            }
+            minion_conf = dict(minion_conf, **windows_minion_conf)
+            smb_file(
+                'salt\\conf\\minion',
+                salt_config_to_yaml(minion_conf, line_break='\r\n'),
+                kwargs
+            )
         # Shell out to smbclient to delete C:\salttmp\ and installer file
         ## Unless keep_tmp is True
         if not keep_tmp:
@@ -816,8 +849,10 @@ def deploy_script(host, port=22, timeout=900, username='root',
     return False
 
 
-def fire_event(key, msg, tag, args=None, sock_dir='/var/run/salt/master'):
+def fire_event(key, msg, tag, args=None, sock_dir=None):
     # Fire deploy action
+    if sock_dir is None:
+        sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
     event = salt.utils.event.SaltEvent('master', sock_dir)
     try:
         event.fire_event(msg, tag)
@@ -867,32 +902,43 @@ def scp_file(dest_path, contents, kwargs):
     )
     log.debug('SCP command: {0!r}'.format(cmd))
 
-    if 'password' in kwargs:
-        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-
     try:
-        proc = NonBlockingPopen(
+        proc = vt.Terminal(
             cmd,
             shell=True,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stream_stds=kwargs.get('display_ssh_output', True),
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=kwargs.get('display_ssh_output', True),
+            stream_stderr=kwargs.get('display_ssh_output', True)
         )
-        log.debug(
-            'Uploading file(PID {0}): {1!r}'.format(
-                proc.pid, dest_path
-            )
-        )
-        proc.poll_and_read_until_finish()
-        proc.communicate()
-        return proc.returncode
-    except Exception as err:
+        log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
+
+        sent_password = False
+        while proc.isalive():
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                if sent_password:
+                    # second time??? Wrong password?
+                    log.warning(
+                        'Asking for password again. Wrong one provided???'
+                    )
+                    proc.terminate()
+                    return 1
+
+                proc.sendline(kwargs['password'])
+                sent_password = True
+
+            time.sleep(0.025)
+
+        return proc.exitstatus
+    except vt.TerminalException as err:
         log.error(
             'Failed to upload file {0!r}: {1}\n'.format(
                 dest_path, err
             ),
             exc_info=True
         )
+
     # Signal an error
     return 1
 
@@ -1003,32 +1049,42 @@ def root_cmd(command, tty, sudo, **kwargs):
     )
     log.debug('SSH command: {0!r}'.format(cmd))
 
-    if 'password' in kwargs:
-        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-
     try:
-        proc = NonBlockingPopen(
+        proc = vt.Terminal(
             cmd,
             shell=True,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stream_stds=kwargs.get('display_ssh_output', True),
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=kwargs.get('display_ssh_output', True),
+            stream_stderr=kwargs.get('display_ssh_output', True)
         )
-        log.debug(
-            'Executing command(PID {0}): {1!r}'.format(
-                proc.pid, command
-            )
-        )
-        proc.poll_and_read_until_finish()
-        proc.communicate()
-        return proc.returncode
-    except Exception as err:
+
+        sent_password = False
+        while proc.isalive():
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                if sent_password:
+                    # second time??? Wrong password?
+                    log.warning(
+                        'Asking for password again. Wrong one provided???'
+                    )
+                    proc.terminate()
+                    return 1
+
+                proc.sendline(kwargs['password'])
+                sent_password = True
+
+            time.sleep(0.025)
+
+        return proc.exitstatus
+    except vt.TerminalException as err:
         log.error(
             'Failed to execute command {0!r}: {1}\n'.format(
                 command, err
             ),
             exc_info=True
         )
+
     # Signal an error
     return 1
 
@@ -1210,6 +1266,36 @@ def simple_types_filter(datadict):
             value = repr(value)
         simpledict[key] = value
     return simpledict
+
+
+def list_nodes_select(nodes, selection, call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
+    ret = {}
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in selection:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
+
+    return ret
 
 
 def salt_cloud_force_ascii(exc):

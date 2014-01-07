@@ -26,7 +26,7 @@ import salt.loader
 import salt.utils
 import salt.utils.network
 import salt.pillar
-import salt.syspaths as syspaths
+import salt.syspaths
 
 # Import salt cloud libs
 import salt.cloud.exceptions
@@ -176,6 +176,9 @@ VALID_OPTS = {
     'jinja_lstrip_blocks': bool,
     'jinja_trim_blocks': bool,
     'minion_id_caching': bool,
+    'sign_pub_messages': bool,
+    'keysize': int,
+    'salt_transport': str,
 }
 
 # default configurations
@@ -184,13 +187,13 @@ DEFAULT_MINION_OPTS = {
     'master_port': '4506',
     'master_finger': '',
     'user': 'root',
-    'root_dir': syspaths.ROOT_DIR,
-    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'minion'),
+    'root_dir': salt.syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,
-    'cachedir': os.path.join(syspaths.CACHE_DIR, 'minion'),
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
-    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'minion'),
-    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'minion'),
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'failhard': False,
@@ -202,11 +205,11 @@ DEFAULT_MINION_OPTS = {
     'top_file': '',
     'file_client': 'remote',
     'file_roots': {
-        'base': [syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
     'fileserver_limit_traversal': False,
     'pillar_roots': {
-        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'hash_type': 'md5',
     'external_nodes': '',
@@ -228,7 +231,7 @@ DEFAULT_MINION_OPTS = {
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
-    'log_file': os.path.join(syspaths.LOGS_DIR, 'minion'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'minion'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -258,7 +261,7 @@ DEFAULT_MINION_OPTS = {
     'recon_default': 100,
     'recon_randomize': False,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
-    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-minion.pid'),
+    'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
@@ -267,6 +270,8 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
+    'keysize': 4096,
+    'salt_transport': 'zeromq',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -276,21 +281,21 @@ DEFAULT_MASTER_OPTS = {
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
-    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'master'),
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
     'ret_port': '4506',
     'timeout': 5,
     'keep_jobs': 24,
-    'root_dir': syspaths.ROOT_DIR,
-    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'master'),
-    'cachedir': os.path.join(syspaths.CACHE_DIR, 'master'),
+    'root_dir': salt.syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': [syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
     'master_roots': {
-        'base': [syspaths.BASE_MASTER_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
     'gitfs_root': '',
@@ -321,7 +326,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_limit_traversal': False,
     'max_open_files': 100000,
     'hash_type': 'md5',
-    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
@@ -336,7 +341,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipv6': False,
-    'log_file': os.path.join(syspaths.LOGS_DIR, 'master'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -344,7 +349,7 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
-    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-master.pid'),
+    'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
@@ -362,17 +367,20 @@ DEFAULT_MASTER_OPTS = {
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 0.18.0
-    'key_logfile': os.path.join(syspaths.LOGS_DIR, 'key'),
+    'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': os.path.join(syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
-    'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
+    'win_repo': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
     'syndic_wait': 1,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
+    'sign_pub_messages': False,
+    'keysize': 4096,
+    'salt_transport': 'zeromq',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -390,7 +398,7 @@ CLOUD_CONFIG_DEFAULTS = {
     # Custom deploy scripts
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
-    'log_file': os.path.join(syspaths.LOGS_DIR, 'cloud'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'cloud'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -418,7 +426,7 @@ def _validate_file_roots(opts):
     if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
+        return {'base': [salt.syspaths.BASE_FILE_ROOTS_DIR]}
     for saltenv, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             opts['file_roots'][saltenv] = []
@@ -691,7 +699,7 @@ def syndic_config(master_config_path,
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
-        'root_dir': opts.get('root_dir', syspaths.ROOT_DIR),
+        'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
         'id': minion_opts['id'],
@@ -722,8 +730,8 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir',
-        'extension_modules', 'autosign_file', 'token_dir'
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile'):
         if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
@@ -775,7 +783,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides = salt.config.load_config(
         path,
         env_var,
-        os.path.join(syspaths.CONFIG_DIR, 'cloud')
+        os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
     )
 
     if 'vm_config' in overrides and 'profiles_config' in overrides:
@@ -796,7 +804,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     if path:
         config_dir = os.path.dirname(path)
     else:
-        config_dir = syspaths.CONFIG_DIR
+        config_dir = salt.syspaths.CONFIG_DIR
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -895,7 +903,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                 # use the value from the cloud config file
                 'master_config',
                 # if not found, use the default path
-                os.path.join(syspaths.CONFIG_DIR, 'master')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'master')
             )
         )
     elif master_config_path is not None and master_config is None:
@@ -919,7 +927,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'providers_config',
             # if not found, use the default path
-            os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+            os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.providers')
         )
 
     if profiles_config_path is not None and profiles_config is not None:
@@ -931,7 +939,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'profiles_config',
             # if not found, use the default path
-            os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
+            os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.profiles')
         )
 
     # Apply the salt-cloud configuration
@@ -959,7 +967,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                     'the new one. The providers configuration should now go '
                     'in the file `{0}` or a separate `*.conf` file within '
                     '`cloud.providers.d/` which is relative to `{0}`.'.format(
-                        os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+                        os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.providers')
                     )
                 )
         # No exception was raised? It's the old configuration alone
@@ -1093,7 +1101,7 @@ def vm_profiles_config(path,
         defaults = VM_CONFIG_DEFAULTS
 
     overrides = salt.config.load_config(
-        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.profiles')
+        path, env_var, os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.profiles')
     )
 
     default_include = overrides.get(
@@ -1232,7 +1240,7 @@ def cloud_providers_config(path,
         defaults = PROVIDER_CONFIG_DEFAULTS
 
     overrides = salt.config.load_config(
-        path, env_var, os.path.join(syspaths.CONFIG_DIR, 'cloud.providers')
+        path, env_var, os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.providers')
     )
 
     default_include = overrides.get(
@@ -1619,11 +1627,11 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     not an IP address is being used for the ID.
     '''
     if root_dir is None:
-        root_dir = syspaths.ROOT_DIR
+        root_dir = salt.syspaths.ROOT_DIR
 
-    config_dir = syspaths.CONFIG_DIR
-    if config_dir.startswith(syspaths.ROOT_DIR):
-        config_dir = config_dir.split(syspaths.ROOT_DIR, 1)[-1]
+    config_dir = salt.syspaths.CONFIG_DIR
+    if config_dir.startswith(salt.syspaths.ROOT_DIR):
+        config_dir = config_dir.split(salt.syspaths.ROOT_DIR, 1)[-1]
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
@@ -1641,7 +1649,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
             pass
 
     log.debug('Guessing ID. The id can be explicitly in set {0}'
-              .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
+              .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     # Check socket.getfqdn()
     fqdn = socket.getfqdn()
@@ -1866,7 +1874,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'token_dir'
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -1967,6 +1975,14 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if os.path.isfile(opts['token_file']):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
+    # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
+    if opts['interface'] == '0.0.0.0':
+        opts['interface'] = '127.0.0.1'
+
+    # Make sure the master_uri is set
+    if 'master_uri' not in opts:
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
+                                                        port=opts['ret_port'])
     # Return the client options
     _validate_opts(opts)
     return opts

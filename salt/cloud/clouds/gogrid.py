@@ -8,20 +8,8 @@ service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
 create an api key. Do this by clicking on "My Account" and then going to the
 API Keys tab.
 
-Using the old providers configuration syntax format, the ``GOGRID.apikey`` and
-the ``GOGRID.sharedsecret`` configuration parameters need to be set in the
-configuration file to enable interfacing with GoGrid:
-
-.. code-block:: yaml
-
-    # The generated api key to use
-    GOGRID.apikey: asdff7896asdh789
-    # The apikey's shared secret
-    GOGRID.sharedsecret: saltybacon
-
-
-Using the new format, set up the cloud configuration at
-``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/gogrid.conf``:
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/gogrid.conf``:
 
 .. code-block:: yaml
 
@@ -241,11 +229,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(

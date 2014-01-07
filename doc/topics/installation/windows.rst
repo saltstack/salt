@@ -4,12 +4,12 @@ Windows
 
 Salt has full support for running the Salt Minion on Windows.
 
-There are no plans for the foreseeable future to develop a Salt
-Master on Windows. For now you must run your Salt Master on a
-supported operating system to control your Salt Minions on Windows.
+There are no plans for the foreseeable future to develop a Salt Master on
+Windows. For now you must run your Salt Master on a supported operating system
+to control your Salt Minions on Windows.
 
-Many of the standard Salt modules have been ported to work on Windows
-and many of the Salt States currently work on Windows, as well.
+Many of the standard Salt modules have been ported to work on Windows and many
+of the Salt States currently work on Windows, as well.
 
 
 Windows Installer
@@ -18,6 +18,10 @@ Windows Installer
 A Salt Minion Windows installer can be found here:
 
 .. admonition:: Download here
+
+    * 0.17.4
+    * http://docs.saltstack.com/downloads/Salt-Minion-0.17.4-win32-Setup.exe
+    * http://docs.saltstack.com/downloads/Salt-Minion-0.17.4-AMD64-Setup.exe
 
     * 0.17.2
     * http://docs.saltstack.com/downloads/Salt-Minion-0.17.2-win32-Setup.exe

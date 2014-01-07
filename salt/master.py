@@ -53,6 +53,7 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, inspect_stack
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
+from salt.pillar import git_pillar
 
 # Import halite libs
 try:
@@ -191,6 +192,16 @@ class Master(SMaster):
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
+        pillargitfs = None
+        for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
+            if 'git' in opts_dict:
+                br, loc = opts_dict['git'].strip().split()
+                pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
+                break
+
+        old_present = set()
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
@@ -223,7 +234,7 @@ class Master(SMaster):
                     search.index()
             try:
                 if not fileserver.servers:
-                    log.error('No fileservers loaded, The master will not be'
+                    log.error('No fileservers loaded, the master will not be'
                               'able to serve files to minions')
                     raise SaltMasterError('No fileserver backends available')
                 fileserver.update()
@@ -231,6 +242,16 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in file server update'.format(exc)
                 )
+
+            # check how close to FD limits you are
+            salt.utils.verify.check_max_open_files(self.opts)
+
+            try:
+                if pillargitfs is not None:
+                    pillargitfs.update()
+            except Exception as exc:
+                log.error('Exception {0} occurred in file server update '
+                          'for git_pillar module.'.format(exc))
             try:
                 schedule.eval()
                 # Check if scheduler requires lower loop interval than
@@ -242,11 +263,18 @@ class Master(SMaster):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             last = now
-            log.debug(
-                'ckminions.connected_ids: {0}'.format(
-                    ckminions.connected_ids()
-                )
-            )
+            if self.opts.get('presence_events', False):
+                present = ckminions.connected_ids()
+                new = present.difference(old_present)
+                lost = old_present.difference(present)
+                if new or lost:
+                    # Fire new minions present event
+                    data = {'new': list(new),
+                            'lost': list(lost)}
+                    event.fire_event(data, tagify('change', 'presense'))
+                data = {'present': list(present)}
+                event.fire_event(data, tagify('present', 'presense'))
+                old_present = present
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -1130,6 +1158,14 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
+            log.error(
+                'Exceeding file_recv_max_size limit: {0}'.format(
+                    file_recv_max_size
+                )
+            )
+            return False
         if 'tok' not in load:
             log.error(
                 'Received incomplete call from {0} for {1!r}, missing {2!r}'
@@ -1184,7 +1220,8 @@ class AESFuncs(object):
                 load['grains'],
                 load['id'],
                 load.get('saltenv', load.get('env')),
-                load.get('ext'))
+                load.get('ext'),
+                self.mminion.functions)
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -1448,13 +1485,13 @@ class AESFuncs(object):
             return {}
         # Set up the publication payload
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'expr_form': clear_load.get('tgt_type', 'glob'),
-                'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
-                'id': clear_load['id'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'expr_form': clear_load.get('tgt_type', 'glob'),
+            'tgt': clear_load['tgt'],
+            'ret': clear_load['ret'],
+            'id': clear_load['id'],
+        }
         if 'tgt_type' in clear_load:
             if clear_load['tgt_type'].startswith('node'):
                 if clear_load['tgt'] in self.opts['nodegroups']:
@@ -1502,13 +1539,13 @@ class AESFuncs(object):
             return {}
         # Set up the publication payload
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'expr_form': clear_load.get('tgt_type', 'glob'),
-                'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
-                'id': clear_load['id'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'expr_form': clear_load.get('tgt_type', 'glob'),
+            'tgt': clear_load['tgt'],
+            'ret': clear_load['ret'],
+            'id': clear_load['id'],
+        }
         if 'tmo' in clear_load:
             try:
                 load['timeout'] = int(clear_load['tmo'])
@@ -1661,41 +1698,7 @@ class ClearFuncs(object):
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
-    def _send_cluster(self):
-        '''
-        Send the cluster data out
-        '''
-        log.debug('Sending out cluster data')
-        ret = self.local.cmd(self.opts['cluster_masters'],
-                'cluster.distrib',
-                self._cluster_load(),
-                0,
-                'list'
-                )
-        log.debug('Cluster distributed: {0}'.format(ret))
-
-    def _cluster_load(self):
-        '''
-        Generates the data sent to the cluster nodes.
-        '''
-        minions = {}
-        master_pem = ''
-        with salt.utils.fopen(self.opts['conf_file'], 'r') as fp_:
-            master_conf = fp_.read()
-        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        for host in os.listdir(minion_dir):
-            pub = os.path.join(minion_dir, host)
-            minions[host] = salt.utils.fopen(pub, 'r').read()
-        if self.opts['cluster_mode'] == 'full':
-            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-            with salt.utils.fopen(master_pem_path) as fp_:
-                master_pem = fp_.read()
-        return [minions,
-                master_conf,
-                master_pem,
-                self.opts['conf_file']]
-
-    def _check_permissions(self, filename):
+    def __check_permissions(self, filename):
         '''
         Check if the specified filename has correct permissions
         '''
@@ -1746,25 +1749,19 @@ class ClearFuncs(object):
 
         return False
 
-    def _check_autosign(self, keyid):
+    def __check_signing_file(self, keyid, signing_file):
         '''
-        Checks if the specified keyid should automatically be signed.
+        Check a keyid for membership in a signing file
         '''
-
-        if self.opts['auto_accept']:
-            return True
-
-        autosign_file = self.opts.get('autosign_file', None)
-
-        if not autosign_file or not os.path.exists(autosign_file):
+        if not signing_file or not os.path.exists(signing_file):
             return False
 
-        if not self._check_permissions(autosign_file):
+        if not self.__check_permissions(signing_file):
             message = 'Wrong permissions for {0}, ignoring content'
-            log.warn(message.format(autosign_file))
+            log.warn(message.format(signing_file))
             return False
 
-        with salt.utils.fopen(autosign_file, 'r') as fp_:
+        with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
 
@@ -1781,13 +1778,31 @@ class ClearFuncs(object):
                 except re.error:
                     log.warn(
                         '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(
-                            line, autosign_file
-                        )
+                        'in {1}'.format(line, signing_file)
                     )
                     continue
 
         return False
+
+    def __check_autoreject(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be rejected.
+        '''
+        return self.__check_signing_file(
+            keyid,
+            self.opts.get('autoreject_file', None)
+        )
+
+    def __check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+        if self.opts['auto_accept']:
+            return True
+        return self.__check_signing_file(
+            keyid,
+            self.opts.get('autosign_file', None)
+        )
 
     def _auth(self, load):
         '''
@@ -1797,15 +1812,13 @@ class ClearFuncs(object):
         This method fires an event over the master event manager. The event is
         tagged "auth" and returns a dict with information about the auth
         event
-        '''
-        # 0. Check for max open files
-        # 1. Verify that the key we are receiving matches the stored key
-        # 2. Store the key if it is not there
-        # 3. make an RSA key with the pub key
-        # 4. encrypt the AES key as an encrypted salt.payload
-        # 5. package the return and return it
 
-        salt.utils.verify.check_max_open_files(self.opts)
+        # Verify that the key we are receiving matches the stored key
+        # Store the key if it is not there
+        # Make an RSA key with the pub key
+        # Encrypt the AES key as an encrypted salt.payload
+        # Package the return and return it
+        '''
 
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             log.info(
@@ -1814,6 +1827,11 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
+
+        # Check if key is configured to be auto-rejected/signed
+        auto_reject = self.__check_autoreject(load['id'])
+        auto_sign = self.__check_autosign(load['id'])
+
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
@@ -1830,106 +1848,145 @@ class ClearFuncs(object):
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
             log.info('Public key rejected for {id}'.format(**load))
-            ret = {'enc': 'clear',
-                   'load': {'ret': False}}
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
             self.event.fire_event(eload, tagify(prefix='auth'))
-            return ret
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
         elif os.path.isfile(pubfn):
-            # The key has been accepted check it
+            # The key has been accepted, check it
             if salt.utils.fopen(pubfn, 'r').read() != load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
                     'the Salt cluster.'.format(**load)
                 )
-                ret = {'enc': 'clear',
-                       'load': {'ret': False}}
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
-                return ret
-        elif not os.path.isfile(pubfn_pend)\
-                and not self._check_autosign(load['id']):
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+
+        elif not os.path.isfile(pubfn_pend):
+            # The key has not been accepted, this is a new minion
             if os.path.isdir(pubfn_pend):
                 # The key path is a directory, error out
                 log.info(
-                    'New public key id is a directory {id}'.format(**load)
+                    'New public key {id} is a directory'.format(**load)
                 )
-                ret = {'enc': 'clear',
-                       'load': {'ret': False}}
                 eload = {'result': False,
+                        'id': load['id'],
+                        'pub': load['pub']}
+                self.event.fire_event(eload, tagify(prefix='auth'))
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+
+            if auto_reject:
+                key_path = pubfn_rejected
+                log.info('New public key for {id} rejected via autoreject_file'
+                         .format(**load))
+                key_act = 'reject'
+                key_result = False
+            elif not auto_sign:
+                key_path = pubfn_pend
+                log.info('New public key for {id} placed in pending'
+                         .format(**load))
+                key_act = 'pend'
+                key_result = True
+            else:
+                # The key is being automatically accepted, don't do anything
+                # here and let the auto accept logic below handle it.
+                key_path = None
+
+            if key_path is not None:
+                # Write the key to the appropriate location
+                with salt.utils.fopen(key_path, 'w+') as fp_:
+                    fp_.write(load['pub'])
+                ret = {'enc': 'clear',
+                       'load': {'ret': key_result}}
+                eload = {'result': key_result,
+                         'act': key_act,
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
-            # This is a new key, stick it in pre
-            log.info(
-                'New public key placed in pending for {id}'.format(**load)
-            )
-            with salt.utils.fopen(pubfn_pend, 'w+') as fp_:
-                fp_.write(load['pub'])
-            ret = {'enc': 'clear',
-                   'load': {'ret': True}}
-            eload = {'result': True,
-                     'act': 'pend',
-                     'id': load['id'],
-                     'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix='auth'))
-            return ret
-        elif os.path.isfile(pubfn_pend)\
-                and not self._check_autosign(load['id']):
-            # This key is in pending, if it is the same key ret True, else
-            # ret False
-            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                log.error(
-                    'Authentication attempt from {id} failed, the public '
-                    'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.'.format(**load)
-                )
+
+        elif os.path.isfile(pubfn_pend):
+            # This key is in the pending dir and is awaiting acceptance
+            if auto_reject:
+                # We don't care if the keys match, this minion is being
+                # auto-rejected. Move the key file from the pending dir to the
+                # rejected dir.
+                try:
+                    shutil.move(pubfn_pend, pubfn_rejected)
+                except (IOError, OSError):
+                    pass
+                log.info('Pending public key for {id} rejected via '
+                         'autoreject_file'.format(**load))
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
                 eload = {'result': False,
+                         'act': 'reject',
                          'id': load['id'],
                          'pub': load['pub']}
                 self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
+                return ret
+
+            elif not auto_sign:
+                # This key is in the pending dir and is not being auto-signed.
+                # Check if the keys are the same and error out if this is the
+                # case. Otherwise log the fact that the minion is still
+                # pending.
+                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
+                    log.error(
+                        'Authentication attempt from {id} failed, the public '
+                        'key in pending did not match. This may be an '
+                        'attempt to compromise the Salt cluster.'
+                        .format(**load)
+                    )
+                    eload = {'result': False,
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': False}}
+                else:
+                    log.info(
+                        'Authentication failed from host {id}, the key is in '
+                        'pending and needs to be accepted with salt-key '
+                        '-a {id}'.format(**load)
+                    )
+                    eload = {'result': True,
+                             'act': 'pend',
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': True}}
             else:
-                log.info(
-                    'Authentication failed from host {id}, the key is in '
-                    'pending and needs to be accepted with salt-key '
-                    '-a {id}'.format(**load)
-                )
-                eload = {'result': True,
-                         'act': 'pend',
-                         'id': load['id'],
-                         'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': True}}
-        elif os.path.isfile(pubfn_pend)\
-                and self._check_autosign(load['id']):
-            # This key is in pending, if it is the same key auto accept it
-            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                log.error(
-                    'Authentication attempt from {id} failed, the public '
-                    'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.'.format(**load)
-                )
-                eload = {'result': False,
-                         'id': load['id'],
-                         'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
-            else:
-                pass
-        elif not os.path.isfile(pubfn_pend)\
-                and self._check_autosign(load['id']):
-            # This is a new key and it should be automatically be accepted
-            pass
+                # This key is in pending and has been configured to be
+                # auto-signed. Check to see if it is the same key, and if
+                # so, pass on doing anything here, and let it get automatically
+                # accepted below.
+                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
+                    log.error(
+                        'Authentication attempt from {id} failed, the public '
+                        'keys in pending did not match. This may be an '
+                        'attempt to compromise the Salt cluster.'
+                        .format(**load)
+                    )
+                    eload = {'result': False,
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': False}}
+                else:
+                    pass
+
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warn('Unaccounted for authentication failure')
@@ -2008,21 +2065,26 @@ class ClearFuncs(object):
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
-                return ''
+                msg = 'Exception occurred when generating auth token: {0}'.format(
+                        exc)
+                log.error(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if not token:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if token['eauth'] not in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             good = self.ckminions.runner_check(
                     self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
@@ -2030,7 +2092,8 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "token" occurred for '
                        'user {0}.').format(token['name'])
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
 
             try:
                 fun = clear_load.pop('fun')
@@ -2042,19 +2105,23 @@ class ClearFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                return ''
+                return dict(error=dict(name=exc.__class__.__name__,
+                                       args=exc.args,
+                                       message=exc.message))
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
-            return ''
+            return dict(error=dict(name='EauthAuthenticationError',
+                                   message=msg))
         if clear_load['eauth'] not in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
-            return ''
+            return dict(error=dict(name='EauthAuthenticationError',
+                                   message=msg))
 
         try:
             name = self.loadauth.load_name(clear_load)
@@ -2062,12 +2129,14 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
             if not self.loadauth.time_auth(clear_load):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
             good = self.ckminions.runner_check(
                     self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
                     clear_load['fun'])
@@ -2075,7 +2144,8 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
 
             try:
                 fun = clear_load.pop('fun')
@@ -2086,13 +2156,17 @@ class ClearFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                return ''
+                return dict(error=dict(name=exc.__class__.__name__,
+                                       args=exc.args,
+                                       message=exc.message))
 
         except Exception as exc:
             log.error(
-                'Exception occurred in the wheel system: {0}'.format(exc)
+                'Exception occurred in the runner system: {0}'.format(exc)
             )
-            return ''
+            return dict(error=dict(name=exc.__class__.__name__,
+                                   args=exc.args,
+                                   message=exc.message))
 
     def wheel(self, clear_load):
         '''
@@ -2103,21 +2177,26 @@ class ClearFuncs(object):
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
-                return ''
+                msg = 'Exception occurred when generating auth token: {0}'.format(
+                        exc)
+                log.error(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if not token:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if token['eauth'] not in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                msg = 'Authentication failure of type "token" occurred.'
+                log.warning(msg)
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][token['eauth']][token['name']]
                         if token['name'] in self.opts['external_auth'][token['eauth']]
@@ -2127,7 +2206,8 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "token" occurred for '
                        'user {0}.').format(token['name'])
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='TokenAuthenticationError',
+                                       message=msg))
 
             jid = salt.utils.gen_jid()
             fun = clear_load.pop('fun')
@@ -2138,34 +2218,39 @@ class ClearFuncs(object):
                     'user': token['name']}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag}
+                return {'tag': tag,
+                        'data': data}
             except Exception as exc:
                 log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}'.format(
+                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
                                             fun,
+                                            exc.__class__.__name__,
                                             exc,
                                             )
                 data['success'] = False
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag}
+                return {'tag': tag,
+                        'data': data}
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
-            return ''
+            return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
         if clear_load['eauth'] not in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
-            return ''
+            return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
 
         try:
             name = self.loadauth.load_name(clear_load)
@@ -2174,12 +2259,14 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
             if not self.loadauth.time_auth(clear_load):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name]
                         if name in self.opts['external_auth'][clear_load['eauth']]
@@ -2189,7 +2276,8 @@ class ClearFuncs(object):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
-                return ''
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
 
             jid = salt.utils.gen_jid()
             fun = clear_load.pop('fun')
@@ -2200,26 +2288,31 @@ class ClearFuncs(object):
                     'user': clear_load.get('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret = self.wheel_.call_func(fun, **clear_load)
                 data['return'] = ret
                 data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag}
+                return {'tag': tag,
+                        'data': data}
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}'.format(
-                                                            fun,
-                                                            exc,
-                                                            )
+                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                                            fun,
+                                            exc.__class__.__name__,
+                                            exc,
+                                            )
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag}
+                return {'tag': tag,
+                        'data': data}
 
         except Exception as exc:
             log.error(
                 'Exception occurred in the wheel system: {0}'.format(exc)
             )
-            return ''
+            return dict(error=dict(name=exc.__class__.__name__,
+                                   args=exc.args,
+                                   message=exc.message))
 
     def mk_token(self, clear_load):
         '''
@@ -2527,12 +2620,12 @@ class ClearFuncs(object):
         # touching this stuff, we can probably do what you want to do another
         # way that won't have a negative impact.
         load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'tgt': clear_load['tgt'],
-                'jid': clear_load['jid'],
-                'ret': clear_load['ret'],
-               }
+            'fun': clear_load['fun'],
+            'arg': clear_load['arg'],
+            'tgt': clear_load['tgt'],
+            'jid': clear_load['jid'],
+            'ret': clear_load['ret'],
+        }
 
         if 'id' in extra:
             load['id'] = extra['id']
@@ -2557,6 +2650,10 @@ class ClearFuncs(object):
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)
+        if self.opts['sign_pub_messages']:
+            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+            log.debug("Signing data packet")
+            payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)

@@ -91,11 +91,17 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(ssh).read())
 
 
-def avail_locations(conn=None):
+def avail_locations(conn=None, call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -122,11 +128,17 @@ def avail_locations(conn=None):
     return ret
 
 
-def avail_images(conn=None):
+def avail_images(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -151,11 +163,17 @@ def avail_images(conn=None):
     return ret
 
 
-def avail_sizes(conn=None):
+def avail_sizes(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -277,10 +295,16 @@ def script(vm_):
     )
 
 
-def destroy(name, conn=None, call=None):  # pylint disable=W0613
+def destroy(name, conn=None, call=None):
     '''
     Delete a single VM
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -346,10 +370,15 @@ def reboot(name, conn=None):
     return False
 
 
-def list_nodes(conn=None, call=None):  # pylint disable=W0613
+def list_nodes(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -362,16 +391,20 @@ def list_nodes(conn=None, call=None):  # pylint disable=W0613
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
-            'extra': node.extra,
             'state': node_state(node.state)
         }
     return ret
 
 
-def list_nodes_full(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_full(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with all fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
@@ -382,28 +415,20 @@ def list_nodes_full(conn=None, call=None):  # pylint disable=W0613
         for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
             pairs[key] = value
         ret[node.name] = pairs
+        del ret[node.name]['driver']
     return ret
 
 
-def list_nodes_select(conn=None, call=None):  # pylint disable=W0613
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
-    nodes = conn.list_nodes()
-    ret = {}
-    for node in nodes:
-        pairs = {}
-        data = node.__dict__
-        data.update(node.extra)
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node.name] = pairs
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(conn, 'function'), __opts__['query.selection'], call,
+    )
 
 
 def show_instance(name, call=None):

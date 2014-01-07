@@ -2,6 +2,8 @@
 Salt 0.9.9 Release Notes
 ========================
 
+:release: 2012-04-27
+
 0.9.9 is out and comes with some serious bug fixes and even more serious
 features. This release is the last major feature release before 1.0.0 and
 could be considered the 1.0.0 release candidate.

@@ -2,6 +2,8 @@
 Salt 0.16.2 Release Notes
 =========================
 
+:release: 2013-08-01
+
 Version 0.16.2 is a bugfix release for :doc:`0.16.0 </topics/releases/0.16.0>`,
 and contains a number of fixes.
 

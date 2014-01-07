@@ -158,12 +158,13 @@ def init(
             if name in data[hyper]['vm_info']:
                 print('Virtual machine {0} is already deployed'.format(name))
                 return 'fail'
-    if hyper:
-        if hyper not in data:
-            print('Hypervisor {0} was not found'.format(hyper))
-            return 'fail'
-    else:
+
+    if hyper is None:
         hyper = _determine_hyper(data)
+
+    if hyper not in data or not hyper:
+        print('Hypervisor {0} was not found'.format(hyper))
+        return 'fail'
 
     if seed:
         print('Minion will be preseeded')
@@ -183,13 +184,16 @@ def init(
                 image,
                 'seed={0}'.format(seed),
                 'nic={0}'.format(nic),
-                'install={0}'.format(install)
+                'install={0}'.format(install),
             ],
             timeout=600)
 
-    next(cmd_ret)
-    print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
+    ret = next(cmd_ret)
+    if not ret:
+        print('VM {0} was not initialized.'.format(name))
+        return 'fail'
 
+    print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
     return 'good'
 
 

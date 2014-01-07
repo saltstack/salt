@@ -607,8 +607,9 @@ def user_list(profile=None, **connection_args):
                           'name': user.name,
                           'email': user.email,
                           'enabled': user.enabled}
-        if hasattr(user.__dict__, 'tenantId'):
-            ret[user.name]['tenant_id'] = user.__dict__['tenantId']
+        tenant_id = getattr(user, 'tenantId', None)
+        if tenant_id:
+            ret[user.name]['tenant_id'] = tenant_id
     return ret
 
 
@@ -638,8 +639,9 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
                       'name': user.name,
                       'email': user.email,
                       'enabled': user.enabled}
-    if hasattr(user.__dict__, 'tenantId'):
-        ret[user.name]['tenant_id'] = user.__dict__['tenantId']
+    tenant_id = getattr(user, 'tenantId', None)
+    if tenant_id:
+        ret[user.name]['tenant_id'] = tenant_id
     return ret
 
 

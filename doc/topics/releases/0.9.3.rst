@@ -2,6 +2,8 @@
 Salt 0.9.3 Release Notes
 ========================
 
+:release: 2011-11-05
+
 Salt 0.9.3 is finally arrived. This is another big step forward for Salt, new
 features range from proper FreeBSD support to fixing issues seen when
 attaching a minion to a master over the Internet.
@@ -132,7 +134,7 @@ This example of a pure Python sls module is the same as this example in yaml:
     python-mako:
       pkg:
         - installed
-                      
+
 FreeBSD Support
 ```````````````
 
@@ -174,7 +176,7 @@ file.directory
     Make sure that a directory exists and has the right permissions.
 
     .. code-block:: yaml
-    
+
         /srv/foo:
           file:
             - directory
@@ -186,7 +188,7 @@ file.symlink
     Make a symlink.
 
     .. code-block:: yaml
-    
+
         /var/lib/www:
           file:
             - symlink
@@ -200,7 +202,7 @@ file.recurse
     powerful and has been tested by pushing out the full Linux kernel source.
 
     .. code-block:: yaml
-    
+
         /opt/code:
           file:
             - recurse
@@ -211,7 +213,7 @@ file.absent
     directories, files and symlinks.
 
     .. code-block:: yaml
-    
+
         /etc/httpd/conf.d/somebogusfile.conf:
           file:
             - absent
@@ -285,4 +287,3 @@ authorized keys can be present or absent.
         - user: frank
         - enc: dsa
         - comment: 'Frank's key'
-

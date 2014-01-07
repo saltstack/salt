@@ -769,12 +769,15 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         popts['test'] = True
     else:
         popts['test'] = __opts__.get('test', None)
-    for fn_ in os.listdir(root):
+    envs = os.listdir(root)
+    for fn_ in envs:
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
+    st_.functions['saltutil.sync_all'](envs)
+    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)

@@ -105,7 +105,7 @@ class Depends(object):
                     if fallback_function is not None:
                         functions[mod_key] = fallback_function
                     else:
-                        del(functions[mod_key])
+                        del functions[mod_key]
                 except AttributeError:
                     # we already did???
                     log.debug('{0} already removed, skipping'.format(mod_key))
