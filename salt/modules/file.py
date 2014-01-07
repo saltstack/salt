@@ -1747,7 +1747,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
             # have a uid and gid
             pstat = os.lstat(path)
         except OSError:
-            # Not a broken symlink, just a nonexistant path
+            # Not a broken symlink, just a nonexistent path
             return ret
     else:
         if follow_symlinks:
