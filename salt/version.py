@@ -40,7 +40,7 @@ class SaltStackVersion(object):
     )
 
     # Salt versions after 0.17.0 will be numbered like:
-    #   <2-digit-year>.<month>.<bugfix>
+    #   <4-digit-year>.<month>.<bugfix>
     #
     # Since the actual version numbers will only be know on release dates, the
     # periodic table element names will be what's going to be used to name
