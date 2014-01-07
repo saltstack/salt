@@ -29,6 +29,7 @@ import salt.pillar
 import salt.syspaths
 
 import sys
+#can't use salt.utils.is_windows, because config.py is included from salt.utils
 if not sys.platform.lower().startswith('win'):
     import salt.cloud.exceptions
 
