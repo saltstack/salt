@@ -292,7 +292,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlink=False):
+def stats(path, hash_type='md5', follow_symlinks=False):
     '''
     Return a dict containing the stats for a given file
 
@@ -305,7 +305,7 @@ def stats(path, hash_type='md5', follow_symlink=False):
     ret = {}
     if not os.path.exists(path):
         return ret
-    if follow_symlink:
+    if follow_symlinks:
         pstat = os.stat(path)
     else:
         pstat = os.lstat(path)
