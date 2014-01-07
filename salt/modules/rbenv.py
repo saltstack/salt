@@ -290,3 +290,24 @@ def do(cmdline=None, runas=None):
         return result['stdout']
     else:
         return False
+
+
+def do_with_ruby(ruby, cmdline, runas=None):
+    '''
+    Execute a ruby command with rbenv's shims using a specific ruby version.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler'
+        salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' deploy
+    '''
+
+    if ruby:
+        cmd = 'RBENV_VERSION={0} {1}'.format(ruby, cmdline)
+    else:
+        cmd = cmdline
+
+    return do(cmd, runas=runas)
+
