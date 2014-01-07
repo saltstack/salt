@@ -20,8 +20,7 @@ def __virtual__():
     return 'at.at' in __salt__
 
 
-def present(job, timespec, tag=None, runas=None):
-
+def present(name, timespec, tag=None, runas=None, job=None):
     '''
     Add a job to queue.
 
@@ -47,6 +46,8 @@ def present(job, timespec, tag=None, runas=None):
             - runas: jam
 
     '''
+    if job:
+        name = job
     ret = {'name': job,
            'changes': {},
            'result': True,
@@ -85,7 +86,7 @@ def present(job, timespec, tag=None, runas=None):
     return ret
 
 
-def absent(limit, jobid=None, **kwargs):
+def absent(name, jobid=None, **kwargs):
     '''
     Remove a job from queue
     The 'kwargs' can include hour. minute. day. month. year
@@ -129,8 +130,9 @@ def absent(limit, jobid=None, **kwargs):
             - day: 13
             - hour: 16
     '''
-
-    ret = {'name': 'remove job',
+    if 'limit' in kwargs:
+        name = kwargs['limit']
+    ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
@@ -142,18 +144,18 @@ def absent(limit, jobid=None, **kwargs):
         ret['comment'] = 'Remove jobs()'
         return ret
 
-    if limit != 'all':
-        ret['comment'] = 'limit parameter not supported {0}'.format(limit)
+    if name != 'all':
+        ret['comment'] = 'limit parameter not supported {0}'.format(name)
         ret['result'] = False
         return ret
 
-    if jobid:
-        output = __salt__['cmd.run']('{0} -d {1}'.format(binary, jobid))
-        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
-            ret['result'] = False
-            return ret
-        ret['comment'] = 'Remove job({0}) from queue'.format(' '.join(opts))
-        return ret
+    #if jobid:
+    #    output = __salt__['cmd.run']('{0} -d {1}'.format(binary, jobid))
+    #    if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+    #        ret['result'] = False
+    #        return ret
+    #    ret['comment'] = 'Remove job({0}) from queue'.format(' '.join(opts))
+    #    return ret
 
     if kwargs:
         opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])
@@ -165,7 +167,7 @@ def absent(limit, jobid=None, **kwargs):
         ret['comment'] = 'No match jobs or time format error'
         return ret
 
-    output = __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
+    __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
     fail = []
     for i in opts:
         if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
