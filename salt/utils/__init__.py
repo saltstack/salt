@@ -642,10 +642,14 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         pass
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
-    fstat = os.stat(dest)
+    try:
+        fstat = os.stat(dest)
+    except OSError:
+        fstat = None
     shutil.move(tgt, dest)
-    os.chown(dest, fstat.st_uid, fstat.st_gid)
-    os.chmod(dest, fstat.st_mode)
+    if fstat is not None:
+        os.chown(dest, fstat.st_uid, fstat.st_gid)
+        os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
