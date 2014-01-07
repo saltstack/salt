@@ -20,6 +20,7 @@ import salt.payload
 import salt.state
 import salt.client
 import salt.utils
+import salt.utils.process
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
