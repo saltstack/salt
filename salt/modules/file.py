@@ -173,14 +173,7 @@ def get_gid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        try:
-            # Broken symlinks will return false, but still have a uid and gid
-            return os.lstat(path).st_gid
-        except OSError:
-            pass
-        return -1
-    return os.stat(path).st_gid if follow_symlinks else os.lstat(path).st_gid
+    return stats(path, follow_symlinks=follow_symlinks).get('gid', -1)
 
 
 def get_group(path, follow_symlinks=True):
@@ -196,10 +189,7 @@ def get_group(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    gid = get_gid(path, follow_symlinks)
-    if gid == -1:
-        return False
-    return gid_to_group(gid)
+    return stats(path, follow_symlinks=follow_symlinks).get('group', False)
 
 
 def uid_to_user(uid):
@@ -249,14 +239,7 @@ def get_uid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        try:
-            # Broken symlinks will return false, but still have a uid and gid
-            return os.lstat(path).st_uid
-        except OSError:
-            pass
-        return -1
-    return os.stat(path).st_uid if follow_symlinks else os.lstat(path).st_uid
+    return stats(path, follow_symlinks=follow_symlinks).get('uid', -1)
 
 
 def get_user(path, follow_symlinks=True):
@@ -272,13 +255,10 @@ def get_user(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    uid = get_uid(path, follow_symlinks)
-    if uid == -1:
-        return False
-    return uid_to_user(uid)
+    return stats(path, follow_symlinks=follow_symlinks).get('user', False)
 
 
-def get_mode(path):
+def get_mode(path, follow_symlinks=True):
     '''
     Return the mode of a file
 
@@ -287,13 +267,11 @@ def get_mode(path):
     .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
+
+    .. versionchanged:: 2014.1.0
+        ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        return ''
-    mode = str(oct(os.stat(path).st_mode)[-4:])
-    if mode.startswith('0'):
-        return mode[1:]
-    return mode
+    return stats(path, follow_symlinks=follow_symlinks).get('mode', '')
 
 
 def set_mode(path, mode):
@@ -310,7 +288,7 @@ def set_mode(path, mode):
     if not mode:
         mode = '0'
     if not os.path.exists(path):
-        return 'File not found'
+        raise CommandExecutionError('{0}: File not found'.format(path))
     try:
         os.chmod(path, int(mode, 8))
     except Exception:
@@ -1752,7 +1730,7 @@ def statvfs(path):
     return False
 
 
-def stats(path, hash_type='md5', follow_symlink=False):
+def stats(path, hash_type='md5', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -1764,11 +1742,18 @@ def stats(path, hash_type='md5', follow_symlink=False):
     '''
     ret = {}
     if not os.path.exists(path):
-        return ret
-    if follow_symlink:
-        pstat = os.stat(path)
+        try:
+            # Broken symlinks will return False for os.path.exists(), but still
+            # have a uid and gid
+            pstat = os.lstat(path)
+        except OSError:
+            # Not a broken symlink, just a nonexistant path
+            return ret
     else:
-        pstat = os.lstat(path)
+        if follow_symlinks:
+            pstat = os.stat(path)
+        else:
+            pstat = os.lstat(path)
     ret['inode'] = pstat.st_ino
     ret['uid'] = pstat.st_uid
     ret['gid'] = pstat.st_gid
@@ -2192,9 +2177,12 @@ def check_perms(name, ret, user, group, mode):
 
     # Check permissions
     perms = {}
-    perms['luser'] = get_user(name)
-    perms['lgroup'] = get_group(name)
-    perms['lmode'] = __salt__['config.manage_mode'](get_mode(name))
+    cur = stats(name, follow_symlinks=False)
+    if not cur:
+        raise CommandExecutionError('{0} does not exist'.format(name))
+    perms['luser'] = cur['user']
+    perms['lgroup'] = cur['group']
+    perms['lmode'] = cur['mode']
 
     # Mode changes if needed
     if mode is not None:
@@ -2340,7 +2328,9 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    lstats = stats(name, source_sum.get('hash_type'), 'md5')
+    lstats = stats(
+        name, source_sum.get('hash_type', 'md5'), follow_symlinks=False
+    )
     if not lstats:
         changes['newfile'] = name
         return changes
