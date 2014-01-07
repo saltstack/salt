@@ -100,7 +100,7 @@ class Pillar(object):
             opts['grains'] = grains
 
         # if we didn't pass in functions, lets load them
-        elif functions is None:
+        if functions is None:
             if opts.get('file_client', '') == 'local':
                 self.functions = salt.loader.minion_mods(opts)
             else:
