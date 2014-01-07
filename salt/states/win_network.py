@@ -3,7 +3,7 @@
 Configuration of network interfaces on Windows hosts
 ====================================================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 This module provides the ``network`` state(s) on Windows hosts. DNS servers, IP
 addresses and default gateways can currently be managed.

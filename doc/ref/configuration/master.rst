@@ -305,7 +305,7 @@ insecure!
 ``autoreject_file``
 -------------------
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 Default: ``not defined``
 
