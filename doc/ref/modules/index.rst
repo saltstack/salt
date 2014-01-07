@@ -2,7 +2,8 @@
 Modules
 =======
 
-Salt modules are the functions called by the :command:`salt` command.
+Salt modules are the functions called by the :command:`salt` command. It should
+be noted that the modules listed here are execution modules, not state modules.
 
 .. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
 
