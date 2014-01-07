@@ -314,7 +314,7 @@ def check(table='filter', chain=None, rule=None):
 
 def check_chain(table='filter', chain=None):
     '''
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     Check for the existance of a chain in the table
 
@@ -341,7 +341,7 @@ def check_chain(table='filter', chain=None):
 
 def new_chain(table='filter', chain=None):
     '''
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     Create new custom chain to the specified table.
 
@@ -365,7 +365,7 @@ def new_chain(table='filter', chain=None):
 
 def delete_chain(table='filter', chain=None):
     '''
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     Delete custom chain to the specified table.
 

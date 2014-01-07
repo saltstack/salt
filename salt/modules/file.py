@@ -1034,7 +1034,7 @@ def blockreplace(path,
     '''
     Replace content of a text block in a file, delimited by line markers
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
@@ -1475,7 +1475,7 @@ def seek_read(path, size, offset):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1494,7 +1494,7 @@ def seek_write(path, data, offset):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1514,7 +1514,7 @@ def truncate(path, length):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1531,7 +1531,7 @@ def link(src, link):
     '''
     Create a hard link to a file
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1631,7 +1631,7 @@ def lstat(path):
 
     CLI Example:
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     .. code-block:: bash
 
@@ -1658,7 +1658,7 @@ def access(path, mode):
         w: Test the writability of the path
         x: Test whether the path can be executed
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1687,7 +1687,7 @@ def readlink(path):
     '''
     Return the path that a symlink points to
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1708,7 +1708,7 @@ def readdir(path):
     '''
     Return a list containing the contents of a directory
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1731,7 +1731,7 @@ def statvfs(path):
     '''
     Perform a statvfs call against the filesystem that the file resides on
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1803,7 +1803,7 @@ def rmdir(path):
     '''
     Remove the specified directory. Fails if a directory is not empty.
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 

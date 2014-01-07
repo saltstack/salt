@@ -3,7 +3,7 @@
 A dead simple module wrapping calls to the Chocolatey package manager
 (http://chocolatey.org)
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 '''
 
 import logging

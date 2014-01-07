@@ -3,7 +3,7 @@
 Management of NTP servers
 =========================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 This state is used to manage NTP servers. Currently only Windows is supported.
 
