@@ -247,6 +247,69 @@ def insert(name, **kwargs):
                               command.strip())
         return ret
 
+def delete(name, **kwargs):
+    '''
+    .. versionadded:: 0.17.0
+
+    Delete a rule to a chain
+
+    name
+        A user-defined name to call this rule by in another part of a state or
+        formula. This should not be an actual rule.
+
+    All other arguments are passed in with the same name as the long option
+    that would normally be used for iptables, with one exception: `--state` is
+    specified as `connstate` instead of `state` (not to be confused with
+    `ctstate`).
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    for ignore in _STATE_INTERNAL_KEYWORDS:
+        if ignore in kwargs:
+            del kwargs[ignore]
+    rule = __salt__['iptables.build_rule'](**kwargs)
+    command = __salt__['iptables.build_rule'](full=True, command='D', **kwargs)
+    if not __salt__['iptables.check'](kwargs['table'],
+                                  kwargs['chain'],
+                                  rule) is True:
+        ret['result'] = True
+        ret['comment'] = 'iptables rule for {0} already absent ({1})'.format(
+            name,
+            command.strip())
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'iptables rule for {0} needs to be deleted ({1})'.format(
+            name,
+            command.strip())
+        return ret
+
+    if 'position' in kwargs:
+        result = __salt__['iptables.delete'](kwargs['table'], kwargs['chain'], position = kwargs['position'])
+    else:
+        result = __salt__['iptables.delete'](kwargs['table'], kwargs['chain'], rule = rule)
+
+    if not result:
+        ret['changes'] = {'locale': name}
+        ret['result'] = True
+        ret['comment'] = 'Delete iptables rule for {1} {1}'.format(
+            name,
+            command.strip())
+        if 'save' in kwargs:
+            if kwargs['save']:
+                __salt__['iptables.save'](filename=None)
+                ret['comment'] = ('Deleted and Saved iptables rule for {0} '
+                                  '{1}'.format(name, command.strip()))
+        return ret
+    else:
+        ret['result'] = False
+        ret['comment'] = ('Failed to delete iptables rule for {0}.\n'
+                          'Attempted rule was {1}').format(
+                              name,
+                              command.strip())
+        return ret
 
 def set_policy(name, **kwargs):
     '''
