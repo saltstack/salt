@@ -233,7 +233,7 @@ def _run(cmd,
         if stack[-2][2] == 'script':
             cmd = 'Powershell -File ' + cmd
         else:
-            cmd = 'Powershell ' + cmd
+            cmd = 'Powershell "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template)
