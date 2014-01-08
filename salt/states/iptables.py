@@ -247,6 +247,7 @@ def insert(name, **kwargs):
                               command.strip())
         return ret
 
+
 def delete(name, **kwargs):
     '''
     .. versionadded:: 0.17.0
@@ -287,9 +288,15 @@ def delete(name, **kwargs):
         return ret
 
     if 'position' in kwargs:
-        result = __salt__['iptables.delete'](kwargs['table'], kwargs['chain'], position = kwargs['position'])
+        result = __salt__['iptables.delete'](
+                kwargs['table'],
+                kwargs['chain'],
+                position=kwargs['position'])
     else:
-        result = __salt__['iptables.delete'](kwargs['table'], kwargs['chain'], rule = rule)
+        result = __salt__['iptables.delete'](
+                kwargs['table'],
+                kwargs['chain'],
+                rule=rule)
 
     if not result:
         ret['changes'] = {'locale': name}
@@ -310,6 +317,7 @@ def delete(name, **kwargs):
                               name,
                               command.strip())
         return ret
+
 
 def set_policy(name, **kwargs):
     '''
