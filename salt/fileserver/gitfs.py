@@ -24,6 +24,13 @@ can be used to specify which provider should be used.
     is recommended to keep them both at the same major release to avoid
     unexpected behavior.
 
+.. warning::
+
+    `pygit2`_ does not yet support supplying passing SSH credentials, so at
+    this time only ``http://``, ``https://``, and ``file://`` URIs are
+    supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
+    used.
+
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
@@ -41,6 +48,7 @@ import subprocess
 import time
 
 VALID_PROVIDERS = ('gitpython', 'pygit2')
+PYGIT2_TRANSPORTS = ('http', 'https', 'file')
 
 # Import salt libs
 import salt.utils
@@ -304,6 +312,19 @@ def init():
     provider = _get_provider()
     repos = []
     for _, opt in enumerate(__opts__['gitfs_remotes']):
+        if provider == 'pygit2':
+            transport, _, uri = opt.partition('://')
+            if not uri:
+                log.error('Invalid gitfs remote {0!r}'.format(opt))
+                continue
+            elif transport.lower() not in PYGIT2_TRANSPORTS:
+                log.error(
+                    'Invalid transport {0!r} in gitfs remote {1!r}. Valid '
+                    'transports for pygit2 provider: {2}'
+                    .format(transport, opt, ', '.join(PYGIT2_TRANSPORTS))
+                )
+                continue
+
         repo_hash = hashlib.md5(opt).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
@@ -320,10 +341,11 @@ def init():
                     .format(provider, VALID_PROVIDERS)
                 )
         except Exception as exc:
-            log.error(
-                'Exception caught while initializing the repo for gitfs: '
-                '{0}. Perhaps git is not available.'.format(exc)
-            )
+            msg = ('Exception caught while initializing the repo for gitfs: '
+                   '{0}.'.format(exc))
+            if provider == 'gitpython':
+                msg += ' Perhaps git is not available.'
+            log.error(msg)
             return repos
 
         if not repo.remotes:
