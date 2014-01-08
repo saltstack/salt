@@ -233,7 +233,7 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
+from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -1590,11 +1590,12 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': {}  # { path: [comment, ...] }
-           }
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': {}  # { path: [comment, ...] }
+    }
 
     if 'mode' in kwargs:
         ret['result'] = False
@@ -1627,20 +1628,41 @@ def recurse(name,
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    # Verify the source exists.
-    try:
-        _src_proto, _src_path = source.split('://', 1)
-    except ValueError:
+    # Handle corner case where someone uses a numeric source
+    if isinstance(source, (integer_types, float)):
         ret['result'] = False
-        ret['comment'] = 'Could not parse source!\nDid you remember to specify a protocol like salt:// ?'
+        ret['comment'] = ('Invalid source {0} (cannot be numeric)'
+                          .format(source))
         return ret
 
-    if not _src_path:
-        pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](__env__):
+    # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
+    if isinstance(source, string_types):
+        source_precheck = [source]
+    else:
+        source_precheck = source
+    for precheck in source_precheck:
+        if not precheck.startswith('salt://'):
+            ret['result'] = False
+            ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
+                              .format(precheck))
+            return ret
+
+    # If source is a list, find which in the list actually exists
+    try:
+        source, source_hash = __salt__['file.source_list'](source, '', __env__)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Recurse failed: {0}'.format(exc)
+        return ret
+
+    # Check source path relative to fileserver root, make sure it is a
+    # directory
+    source_rel = source.partition('://')[2]
+    if source_rel not in __salt__['cp.list_master_dirs'](__env__):
         ret['result'] = False
         ret['comment'] = (
-            'The source: {0} does not exist on the master'.format(source)
+            'The directory {0!r} does not exist on the salt fileserver'
+            .format(source)
         )
         return ret
 
@@ -1777,8 +1799,6 @@ def recurse(name,
             # Add the path to the keep set in case clean is set to True
             keep.add(os.path.join(name, srelpath))
         return filenames
-    # If source is a list, find which in the list actually exists
-    source, source_hash = __salt__['file.source_list'](source, '', __env__)
 
     keep = set()
     vdir = set()
