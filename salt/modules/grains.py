@@ -352,7 +352,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     :param default: default lookup_dict's key used if the grain does not exists
          or if the grain value has no match on lookup_dict.
 
-         .. versionadded:: 2014.1
+         .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
