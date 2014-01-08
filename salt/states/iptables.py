@@ -34,6 +34,32 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+    httpd:
+      iptables.delete:
+        - table: filter
+        - chain: INPUT
+        - jump: ACCEPT
+        - match: state
+        - connstate: NEW
+        - dport: 80
+        - proto: tcp
+        - sport: 1025:65535
+        - save: True
+
+    httpd:
+      iptables.delete:
+        - position: 1
+        - table: filter
+        - chain: INPUT
+        - jump: ACCEPT
+        - match: state
+        - connstate: NEW
+        - dport: 80
+        - proto: tcp
+        - sport: 1025:65535
+        - save: True
+
+
 '''
 
 # Import salt libs
