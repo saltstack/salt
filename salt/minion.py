@@ -921,7 +921,12 @@ class Minion(object):
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
-            ret_val = ''
+            msg = ('The minion failed to return the job information for job '
+                   '{0}. This is often due to the master being shut down or '
+                   'overloaded. If the master is running consider incresing '
+                   'the worker_threads value.').format(jid)
+            log.warn(msg)
+            return ''
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
