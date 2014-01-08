@@ -27,7 +27,7 @@ salt_version = '.'.join(map(str, salt.version.__version_info__[0:3]))
 rpmbuild = join(os.environ['HOME'], 'rpmbuild')
 copy(join(src, 'pkg/rpm/salt.spec'), join(rpmbuild, 'SPECS'))
 for f in os.listdir(join(src, 'pkg/rpm')):
-    if f in ['salt.spec', 'build']:
+    if f in ['salt.spec', 'build.py']:
         continue
     copy(join(src, 'pkg/rpm', f), join(rpmbuild, 'SOURCES'))
 
