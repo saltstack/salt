@@ -30,7 +30,6 @@ import errno
 import signal
 import select
 import logging
-import resource
 import subprocess
 
 if subprocess.mswindows:
@@ -45,6 +44,7 @@ else:
     import fcntl
     import struct
     import termios
+    import resource
 
 # Import salt libs
 from salt._compat import string_types
