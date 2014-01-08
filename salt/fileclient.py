@@ -853,29 +853,11 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        self.channel = salt.transport.Channel.factory(opts)
-        # self.auth = salt.crypt.SAuth(opts)
-        # self.sreq = salt.payload.SREQ(self.opts['master_uri'])
-    #
-    # def _crypted_transfer(self, load, tries=3, timeout=60, payload='aes'):
-    #     '''
-    #     In case of authentication errors, try to renegotiate authentication
-    #     and retry the method.
-    #     Indeed, we can fail too early in case of a master restart during a
-    #     minion state execution call
-    #     '''
-    #     def _do_transfer():
-    #         return self.auth.crypticle.loads(
-    #             self.sreq.send(payload,
-    #                            self.auth.crypticle.dumps(load),
-    #                            tries,
-    #                            timeout)
-    #         )
-    #     try:
-    #         return _do_transfer()
-    #     except salt.crypt.AuthenticationError:
-    #         self.auth = salt.crypt.SAuth(self.opts)
-    #         return _do_transfer()
+        channel = salt.transport.Channel.factory(self.opts)
+        if channel.ttype == 'zeromq':
+            self.auth = salt.crypt.SAuth(opts)
+        else:
+            self.auth = ''
 
     def get_file(self,
                  path,
@@ -949,7 +931,10 @@ class RemoteClient(Client):
             else:
                 load['loc'] = fn_.tell()
             try:
-                data = self.channel.send(load)
+                channel = salt.transport.Channel.factory(
+                        self.opts,
+                        auth=self.auth)
+                data = channel.send(load)
             except SaltReqTimeoutError:
                 return ''
 
@@ -1014,7 +999,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1036,7 +1024,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
-            self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1058,7 +1049,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1070,7 +1064,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1107,7 +1104,10 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1128,7 +1128,10 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1138,7 +1141,10 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_master_opts'}
         try:
-            return self.channel.send(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1147,11 +1153,15 @@ class RemoteClient(Client):
         Return the metadata derived from the external nodes system on the
         master.
         '''
+        channel = salt.transport.Channel.factory(
+                self.opts,
+                auth=self.auth)
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
-                'opts': self.opts,
-                'tok': self.channel.auth.gen_token('salt')}
+                'opts': self.opts}
+        if self.auth:
+            load['tok'] = self.auth.gen_token('salt')
         try:
-            return self.channel.send(load)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
