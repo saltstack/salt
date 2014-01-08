@@ -78,9 +78,30 @@ def get(key, default=''):
     key is not defined.
     '''
 
-    stack = inspect.stack()
-    sls = inspect.getargvalues(stack[2][0]).locals.get('sls')
-    tmplpath = inspect.getargvalues(stack[2][0]).locals.get('tmplpath')
+    sls = None
+    tmplpath = None
+
+    for frame in inspect.stack():
+        if sls is not None and tmplpath is not None:
+            break
+
+        frame_args = inspect.getargvalues(frame[0]).locals
+
+        for _sls in (
+            frame_args.get('context', {}).get('__sls__'),
+            frame_args.get('sls')
+        ):
+            if sls is not None:
+                break
+            sls = _sls
+
+        for _tmpl in (
+            frame_args.get('tmplpath'),
+            frame_args.get('tmplsrc')
+        ):
+            if tmplpath is not None:
+                break
+            tmplpath = _tmpl
 
     if not sls: # this is the case when called from CLI
         return  __salt__['pillar.get'](key, default)
