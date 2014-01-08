@@ -95,7 +95,10 @@ def _get_options():
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]
             continue
-        _options[attr] = _attr
+        if attr == 'port':
+            _options[attr] = int(_attr)
+        else:
+            _options[attr] = _attr
 
     return _options
 
