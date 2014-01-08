@@ -21,6 +21,8 @@ def __virtual__():
         return __virtualname__
     return False
 
+def has_powershell():
+    return 'powershell' in __salt__['cmd.run']('where powershell', output_loglevel='quiet')
 
 def get_enabled():
     '''
@@ -32,23 +34,29 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    ret = set()
-    services = []
-    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-    lines = __salt__['cmd.run'](cmd).splitlines()
-    for line in lines:
-        if 'SERVICE_NAME:' in line:
-            comps = line.split(':', 1)
-            if not len(comps) > 1:
-                continue
-            services.append(comps[1].strip())
-    for service in services:
-        cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd2).splitlines()
+    
+    if has_powershell():
+        cmd = 'Get-WmiObject win32_service | where {$_.startmode -eq "Auto"} | select-object name'
+        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
+        return sorted([line.strip() for line in lines[3:]])
+    else:
+        ret = set()
+        services = []
+        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
+        lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
-            if 'AUTO_START' in line:
-                ret.add(service)
-    return sorted(ret)
+            if 'SERVICE_NAME:' in line:
+                comps = line.split(':', 1)
+                if not len(comps) > 1:
+                    continue
+                services.append(comps[1].strip())
+        for service in services:
+            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            lines = __salt__['cmd.run'](cmd2).splitlines()
+            for line in lines:
+                if 'AUTO_START' in line:
+                    ret.add(service)
+        return sorted(ret)
 
 
 def get_disabled():
@@ -61,25 +69,30 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    ret = set()
-    services = []
-    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-    lines = __salt__['cmd.run'](cmd).splitlines()
-    for line in lines:
-        if 'SERVICE_NAME:' in line:
-            comps = line.split(':', 1)
-            if not len(comps) > 1:
-                continue
-            services.append(comps[1].strip())
-    for service in services:
-        cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd2).splitlines()
+    if has_powershell():
+        cmd = 'Get-WmiObject win32_service | where {$_.startmode -ne "Auto"} | select-object name'
+        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL', quiet=True).splitlines()
+        return sorted([line.strip() for line in lines[3:]])
+    else:
+        ret = set()
+        services = []
+        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
+        lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
-            if 'DEMAND_START' in line:
-                ret.add(service)
-            elif 'DISABLED' in line:
-                ret.add(service)
-    return sorted(ret)
+            if 'SERVICE_NAME:' in line:
+                comps = line.split(':', 1)
+                if not len(comps) > 1:
+                    continue
+                services.append(comps[1].strip())
+        for service in services:
+            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            lines = __salt__['cmd.run'](cmd2).splitlines()
+            for line in lines:
+                if 'DEMAND_START' in line:
+                    ret.add(service)
+                elif 'DISABLED' in line:
+                    ret.add(service)
+        return sorted(ret)
 
 
 def available(name):
