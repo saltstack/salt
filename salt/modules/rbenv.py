@@ -110,7 +110,6 @@ def install(runas=None, path=None):
 
         salt '*' rbenv.install
     '''
-
     path = path or _rbenv_path(runas)
     path = os.path.expanduser(path)
     return _install_rbenv(path, runas) and _install_ruby_build(path, runas)
@@ -126,7 +125,6 @@ def update(runas=None, path=None):
 
         salt '*' rbenv.update
     '''
-
     path = path or _rbenv_path(runas)
     path = os.path.expanduser(path)
 
@@ -160,7 +158,6 @@ def install_ruby(ruby, runas=None):
 
         salt '*' rbenv.install_ruby 2.0.0-p0
     '''
-
     ruby = re.sub(r'^ruby-', '', ruby)
 
     env = None
@@ -200,7 +197,6 @@ def uninstall_ruby(ruby, runas=None):
 
         salt '*' rbenv.uninstall_ruby 2.0.0-p0
     '''
-
     ruby = re.sub(r'^ruby-', '', ruby)
 
     args = '--force {0}'.format(ruby)
@@ -218,7 +214,6 @@ def versions(runas=None):
 
         salt '*' rbenv.versions
     '''
-
     ret = _rbenv_exec('versions', '--bare', runas=runas)
     return [] if ret is False else ret.splitlines()
 
@@ -239,7 +234,6 @@ def default(ruby=None, runas=None):
         salt '*' rbenv.default
         salt '*' rbenv.default 2.0.0-p0
     '''
-
     if ruby:
         _rbenv_exec('global', ruby, runas=runas)
         return True
@@ -258,7 +252,6 @@ def list_(runas=None):
 
         salt '*' rbenv.list
     '''
-
     ret = []
     output = _rbenv_exec('install', '--list', runas=runas)
     if output:
@@ -279,8 +272,7 @@ def rehash(runas=None):
 
         salt '*' rbenv.rehash
     '''
-
-    ret = _rbenv_exec('rehash', runas=runas)
+    _rbenv_exec('rehash', runas=runas)
     return True
 
 
@@ -295,7 +287,6 @@ def do(cmdline=None, runas=None):
         salt '*' rbenv.do 'gem list bundler'
         salt '*' rbenv.do 'gem list bundler' deploy
     '''
-
     path = _rbenv_path(runas)
     result = __salt__['cmd.run_all'](
         'env PATH={0}/shims:$PATH {1}'.format(path, cmdline),
@@ -320,11 +311,9 @@ def do_with_ruby(ruby, cmdline, runas=None):
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler'
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' deploy
     '''
-
     if ruby:
         cmd = 'RBENV_VERSION={0} {1}'.format(ruby, cmdline)
     else:
         cmd = cmdline
 
     return do(cmd, runas=runas)
-
