@@ -1584,7 +1584,8 @@ class State(object):
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': comment,
-                                '__run_num__': self.__run_num}
+                                '__run_num__': self.__run_num,
+                                '__sls__': low['__sls__']}
                 self.__run_num += 1
                 self.event(running[tag], len(chunks))
                 return running
@@ -1606,7 +1607,8 @@ class State(object):
                                     'changes': {},
                                     'result': False,
                                     'comment': 'Recursive requisite found',
-                                    '__run_num__': self.__run_num}
+                                    '__run_num__': self.__run_num,
+                                    '__sls__': low['__sls__']}
                         self.__run_num += 1
                         self.event(running[tag], len(chunks))
                         return running
@@ -1634,7 +1636,8 @@ class State(object):
             running[tag] = {'changes': {},
                             'result': False,
                             'comment': 'One or more requisite failed',
-                            '__run_num__': self.__run_num}
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -1648,7 +1651,8 @@ class State(object):
             running[tag] = {'changes': {},
                             'result': True,
                             'comment': 'No changes detected',
-                            '__run_num__': self.__run_num}
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
