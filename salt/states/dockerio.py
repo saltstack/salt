@@ -293,7 +293,7 @@ def built(name,
 
 def installed(name,
               image,
-              command='/sbin/init',
+              command=None,
               hostname=None,
               user=None,
               detach=True,

@@ -546,7 +546,7 @@ def export(container, path, *args, **kwargs):
 
 
 def create_container(image,
-                     command='/sbin/init',
+                     command=None,
                      hostname=None,
                      user=None,
                      detach=True,
