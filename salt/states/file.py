@@ -1186,30 +1186,35 @@ def managed(name,
             context = {}
         context['accumulator'] = _ACCUMULATORS[name]
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = __salt__['file.check_managed'](
-            name,
+    try:
+        if __opts__['test']:
+            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                makedirs,
+                context,
+                defaults,
+                __env__,
+                contents,
+                **kwargs
+            )
+            return ret
+
+        # If the source is a list then find which file exists
+        source, source_hash = __salt__['file.source_list'](
             source,
             source_hash,
-            user,
-            group,
-            mode,
-            template,
-            makedirs,
-            context,
-            defaults,
-            __env__,
-            contents,
-            **kwargs
+            __env__
         )
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
         return ret
-
-    # If the source is a list then find which file exists
-    source, source_hash = __salt__['file.source_list'](
-        source,
-        source_hash,
-        __env__
-    )
 
     # Gather the source file from the server
     try:

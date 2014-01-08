@@ -1967,6 +1967,7 @@ def source_list(source, source_hash, saltenv):
                 mdirs += ['{0}?saltenv={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
+        ret = None
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -1985,14 +1986,21 @@ def source_list(source, source_hash, saltenv):
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
-                        source = single_src
-                        source_hash = single_hash
+                        ret = (single_src, single_hash)
                         break
             elif isinstance(single, salt._compat.string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
-                    source = single
+                    ret = (single, source_hash)
                     break
-    return source, source_hash
+        if ret is None:
+            # None of the list items matched
+            raise CommandExecutionError(
+                'none of the specified sources were found'
+            )
+        else:
+            return ret
+    else:
+        return source, source_hash
 
 
 def get_managed(
@@ -2016,8 +2024,7 @@ def get_managed(
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
-    # If the file is a template and the contents is managed
-    # then make sure to copy it down and templatize  things.
+    # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
     if template and source:
