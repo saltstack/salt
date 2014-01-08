@@ -17,7 +17,7 @@ def _gem(command, ruby=None, runas=None):
         return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
     if __salt__['rbenv.is_installed'](runas=runas):
-        return __salt__['rbenv.do_with_ruby'](ruby, cmdline, runas=runas)
+        return __salt__['rbenv.do'](cmdline, runas=runas)
 
     ret = __salt__['cmd.run_all'](
         cmdline,
