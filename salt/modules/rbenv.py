@@ -178,6 +178,7 @@ def install_ruby(ruby, runas=None):
     ret = {}
     ret = _rbenv_exec('install', ruby, env=env, runas=runas, ret=ret)
     if ret['retcode'] == 0:
+        rehash(runas=runas)
         return ret['stderr']
     else:
         # Cleanup the failed installation so it doesn't list as installed
@@ -268,6 +269,21 @@ def list_(runas=None):
     return ret
 
 
+def rehash(runas=None):
+    '''
+    Run rbenv rehash to update the installed shims.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbenv.rehash
+    '''
+
+    ret = _rbenv_exec('rehash', runas=runas)
+    return True
+
+
 def do(cmdline=None, runas=None):
     '''
     Execute a ruby command with rbenv's shims from the user or the system.
@@ -287,6 +303,7 @@ def do(cmdline=None, runas=None):
     )
 
     if result['retcode'] == 0:
+        rehash(runas=runas)
         return result['stdout']
     else:
         return False
