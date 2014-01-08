@@ -1979,7 +1979,7 @@ def source_list(source, source_hash, saltenv):
                 proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
-                        source = single_src
+                        ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
                     dest = salt.utils.mkstemp()
