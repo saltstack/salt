@@ -99,9 +99,9 @@ def add(path, index=0):
 
     # validate index boundaries
     if index < 0:
-        index = len(sysPath) + index
-    if index > len(sysPath) - 1:
-        index = len(sysPath) - 1
+        index = len(sysPath) + index + 1
+    if index > len(sysPath):
+        index = len(sysPath)
 
     # Check if we are in the system path at the right location
     try:
