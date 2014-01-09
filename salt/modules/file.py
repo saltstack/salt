@@ -2609,7 +2609,7 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    if dir_mode is None:
+                    if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
                         # directories created with makedirs() below can't be
