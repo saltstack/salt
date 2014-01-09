@@ -576,7 +576,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name=None, pkgs=None, version=None, **kwargs):
+def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwargs):
     '''
     Remove packages.
 
@@ -638,7 +638,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 and '(x86)' in cached_pkg:
             cached_pkg = cached_pkg.replace('(x86)', '')
         cmd = '"' + str(os.path.expandvars(
-            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', ''))
+            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', '') + " " + (extra_uninstall_flags or ''))
         if pkginfo[version].get('msiexec'):
             cmd = 'msiexec /x ' + cmd
         __salt__['cmd.run'](cmd, output_loglevel='debug')
