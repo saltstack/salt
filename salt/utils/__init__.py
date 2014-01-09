@@ -650,7 +650,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         except OSError:
             pass
     shutil.move(tgt, dest)
-    if fstat is not None:
+    if fstat is not None and not salt.utils.is_windows():
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
