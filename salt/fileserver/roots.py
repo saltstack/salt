@@ -281,7 +281,7 @@ def _file_lists(load, form):
             ret[saltenv] = {
                     'files': [],
                     'dirs': [],
-                    'empty_dirs': {},
+                    'empty_dirs': [],
                     'links': []}
             for path in __opts__['file_roots'][saltenv]:
                 for root, dirs, files in os.walk(
