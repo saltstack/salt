@@ -225,6 +225,7 @@ import re
 import fnmatch
 import json
 import pprint
+import traceback
 
 # Import third party libs
 import yaml
@@ -1226,6 +1227,7 @@ def managed(name,
         )
     except Exception as exc:
         ret['changes'] = {}
+        log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
     if comment_ and contents is None:
@@ -1250,6 +1252,7 @@ def managed(name,
             )
         except Exception as exc:
             ret['changes'] = {}
+            log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
 
