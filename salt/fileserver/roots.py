@@ -227,7 +227,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Reurn a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
     if 'env' in load:
         salt.utils.warn_until(
