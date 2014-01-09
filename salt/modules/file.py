@@ -1975,7 +1975,7 @@ def source_list(source, source_hash, saltenv):
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
-                single_hash = single[single_src]
+                single_hash = single[single_src] if single[single_src] else source_hash
                 proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
