@@ -327,6 +327,7 @@ def wait(name,
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
 watch = wait
 
+
 def wait_script(name,
                 source=None,
                 template=None,
