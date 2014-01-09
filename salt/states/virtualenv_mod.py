@@ -171,6 +171,7 @@ def managed(name,
         _ret = __salt__['pip.install'](
             requirements=requirements,
             bin_env=name,
+            use_wheel=use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
