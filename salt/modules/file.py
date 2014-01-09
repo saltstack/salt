@@ -2676,7 +2676,7 @@ def manage_file(name,
 
         # This is a new file, if no mode specified, use the umask to figure
         # out what mode to use for the new file.
-        if mode is None:
+        if mode is None and not salt.utils.is_windows():
             # Get current umask
             mask = os.umask(0)
             os.umask(mask)
