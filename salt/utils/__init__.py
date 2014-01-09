@@ -627,8 +627,16 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
+    # Get current file stats to they can be replicated after the new file is
+    # moved to the destination path.
+    fstat = None
+    if not salt.utils.is_windows():
+        try:
+            fstat = os.stat(dest)
+        except OSError:
+            pass
     shutil.move(tgt, dest)
-    if fstat is not None and not salt.utils.is_windows():
+    if fstat is not None:
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
