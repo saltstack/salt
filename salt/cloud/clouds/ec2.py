@@ -713,16 +713,24 @@ def get_availability_zone(vm_):
     return avz
 
 
+def get_tenancy(vm_):
+    '''
+    Returns the Tenancy to use.
+
+    Can be "dedicated" or "default". Cannot be present for spot instances.
+    '''
+    return config.get_cloud_config_value(
+        'tenancy', vm_, __opts__, search_global=False
+    )
+
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
     '''
-    subnetid = config.get_cloud_config_value(
+    return config.get_cloud_config_value(
         'subnetid', vm_, __opts__, search_global=False
     )
-    if subnetid is None:
-        return None
-    return subnetid
 
 
 def securitygroupid(vm_):
@@ -924,9 +932,18 @@ def create(vm_=None, call=None):
     if az_ is not None:
         params[spot_prefix + 'Placement.AvailabilityZone'] = az_
 
+    tenancy_ = get_tenancy(vm_)
+    if tenancy_ is not None:
+        if spot_config is not None:
+            raise SaltCloudConfigError(
+                'Spot instance config for {0} does not support '
+                'specifying tenancy.'.format(vm_['name'])
+            )
+        params['Placement.Tenancy'] = tenancy_
+
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
-        params['SubnetId'] = subnetid_
+        params[spot_prefix + 'SubnetId'] = subnetid_
 
     ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
@@ -956,7 +973,7 @@ def create(vm_=None, call=None):
             raise SaltCloudConfigError(
                 '\'ebs_optimized\' should be a boolean value.'
             )
-        params['EbsOptimized'] = set_ebs_optimized
+        params[spot_prefix + 'EbsOptimized'] = set_ebs_optimized
 
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
