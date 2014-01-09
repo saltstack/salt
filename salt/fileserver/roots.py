@@ -245,7 +245,7 @@ def _file_lists(load, form):
     if not os.path.isfile(list_cache):
         while os.path.isfile(w_lock):
             time.sleep(0.1)
-        with open(w_lock, 'w+') as fp_:
+        with salt.utils.fopen(w_lock, 'w+') as fp_:
             fp_.write('')
         r_cache = True
     else:
@@ -258,11 +258,11 @@ def _file_lists(load, form):
                 age = time.time() - cache_stat.st_mtime
                 if age < __opts__.get('fileserver_list_cache_time', 30):
                     # Young enough! Load this sucker up!
-                    with open(list_cache, 'r') as fp_:
+                    with salt.utils.fopen(list_cache, 'r') as fp_:
                         return serial.load(fp_)[load['saltenv']].get(form, 'files')
                 else:
                     # Set the w_lock and go
-                    with open(w_lock, 'w+') as fp_:
+                    with salt.utils.fopen(w_lock, 'w+') as fp_:
                         fp_.write('')
                     r_cache = True
                     break
@@ -304,7 +304,7 @@ def _file_lists(load, form):
                                 )
                         if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
                             ret[saltenv]['files'].append(rel_fn)
-        with open(list_cache, 'w+') as fp_:
+        with salt.utils.fopen(list_cache, 'w+') as fp_:
             fp_.write(serial.dumps(ret))
             os.remove(w_lock)
         return ret
