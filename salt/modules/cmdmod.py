@@ -952,17 +952,7 @@ def script(source,
         # Backwards compatibility
         saltenv = __env__
 
-    if not salt.utils.is_windows():
-        path = salt.utils.mkstemp(dir=cwd)
-    else:
-        path = __salt__['cp.cache_file'](source, saltenv)
-        if not path:
-            _cleanup_tempfile(path)
-            return {'pid': 0,
-                    'retcode': 1,
-                    'stdout': '',
-                    'stderr': '',
-                    'cache_error': True}
+    path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
         fn_ = __salt__['cp.get_template'](source,
@@ -978,16 +968,15 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
     else:
-        if not salt.utils.is_windows():
-            fn_ = __salt__['cp.cache_file'](source, saltenv)
-            if not fn_:
-                _cleanup_tempfile(path)
-                return {'pid': 0,
-                        'retcode': 1,
-                        'stdout': '',
-                        'stderr': '',
-                        'cache_error': True}
-            shutil.copyfile(fn_, path)
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        if not fn_:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
+        shutil.copyfile(fn_, path)
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
