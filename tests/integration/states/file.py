@@ -8,7 +8,6 @@ Tests for the file state
 import os
 import glob
 import shutil
-import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
