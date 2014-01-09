@@ -21,8 +21,19 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 def has_powershell():
+    '''
+    Confirm if Powershell is available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.has_powershell
+    '''
     return 'powershell' in __salt__['cmd.run']('where powershell', output_loglevel='quiet')
+
 
 def get_enabled():
     '''
@@ -34,7 +45,7 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    
+
     if has_powershell():
         cmd = 'Get-WmiObject win32_service | where {$_.startmode -eq "Auto"} | select-object name'
         lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
