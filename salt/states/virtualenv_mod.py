@@ -150,7 +150,7 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            user=user
+            runas=user
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -169,11 +169,7 @@ def managed(name,
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
-            requirements=requirements,
-            bin_env=name,
-            use_wheel=use_wheel,
-            user=user,
-            cwd=cwd,
+            requirements=requirements, bin_env=name, runas=user, cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
