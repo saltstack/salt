@@ -307,7 +307,7 @@ def _file_lists(load, form):
         with open(list_cache, 'w+') as fp_:
             fp_.write(serial.dumps(ret))
             os.remove(w_lock)
-        return ret
+        return ret[load['saltenv']][form]
 
 
 def file_list(load):
