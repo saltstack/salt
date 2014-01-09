@@ -315,90 +315,21 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            for fname in files:
-                if __opts__['fileserver_ignoresymlinks'] and os.path.islink(os.path.join(root, fname)):
-                    continue
-                rel_fn = os.path.relpath(
-                            os.path.join(root, fname),
-                            path
-                        )
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret.append(rel_fn)
-    return ret
+    return _file_lists(load, 'files')
 
 
 def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            if len(dirs) == 0 and len(files) == 0:
-                rel_fn = os.path.relpath(root, path)
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret.append(rel_fn)
-    return ret
+    return _file_lists(load, 'empty_dirs')
 
 
 def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            ret.append(os.path.relpath(root, path))
-    return ret
+    return _file_lists(load, 'dirs')
 
 
 def symlink_list(load):
