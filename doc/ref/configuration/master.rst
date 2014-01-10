@@ -32,6 +32,20 @@ The local interface to bind to.
 
     interface: 192.168.0.1
 
+.. conf_master:: ipv6
+
+``ipv6``
+--------
+
+Default: ``False``
+
+Whether the master should listen for IPv6 connections. If this is set to True,
+the interface option must be adjusted too (for example: "interface: '::'")
+
+.. code-block:: yaml
+
+    ipv6: True
+
 .. conf_master:: publish_port
 
 ``publish_port``
@@ -173,6 +187,19 @@ for executed salt commands.
 
     cachedir: /var/cache/salt
 
+.. conf_master:: verify_env
+
+``verify_env``
+--------------
+
+Default: ``True``
+
+Verify and set permissions on configuration directories at startup.
+
+.. code-block:: yaml
+
+    verify_env: True
+
 .. conf_master:: keep_jobs
 
 ``keep_jobs``
@@ -181,6 +208,49 @@ for executed salt commands.
 Default: ``24``
 
 Set the number of hours to keep old job information
+
+.. conf_master:: timeout
+
+``timeout``
+-----------
+
+Default: ``5``
+
+Set the default timeout for the salt command and api. 
+
+.. conf_master:: loop_interval
+
+``loop_interval``
+-----------------
+
+Default: ``60``
+
+The loop_interval option controls the seconds for the master's maintinance
+process check cycle. This process updates file server backends, cleans the
+job cache and executes the scheduler.
+
+.. conf_master:: output
+
+``output``
+----------
+
+Default: ``nested``
+
+Set the default outputter used by the salt command.
+
+.. conf_master:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored, to disable colored output set the color value
+to False
+
+.. code-block:: yaml
+
+    color: False
 
 .. conf_master:: job_cache
 
