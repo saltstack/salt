@@ -127,7 +127,10 @@ def extracted(name,
                                           cwd=name)
         if results['retcode'] != 0:
             return results
-        files = results['stdout']
+        if __salt__['cmd.retcode']('tar --version | grep bsdtar')  == 0:
+            files = results['stderr']
+        else:
+            files = results['stdout']
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
