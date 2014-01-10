@@ -1975,7 +1975,7 @@ def source_list(source, source_hash, saltenv):
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
-                single_hash = single[single_src]
+                single_hash = single[single_src] if single[single_src] else source_hash
                 proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
@@ -2676,7 +2676,7 @@ def manage_file(name,
 
         # This is a new file, if no mode specified, use the umask to figure
         # out what mode to use for the new file.
-        if mode is None:
+        if mode is None and not salt.utils.is_windows():
             # Get current umask
             mask = os.umask(0)
             os.umask(mask)

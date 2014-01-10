@@ -9,6 +9,7 @@ timeout: 3
 sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
+fileserver_list_cache_time: 0
 peer:
   '.*':
     - 'test.*'
