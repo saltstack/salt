@@ -85,7 +85,7 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs
     fqdn = '{0}.{1}.'.format(name, zone)
     parts = ip.split('.')[::-1]
     popped = []
-    
+
     # Iterate over possible reverse zones
     while len(parts) > 1:
         p = parts.pop(0)
