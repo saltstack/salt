@@ -436,7 +436,7 @@ def set_policy(name, family='ipv4', **kwargs):
 
     if __salt__['iptables.get_policy'](
             kwargs['table'],
-            kwargs['chain'], 
+            kwargs['chain'],
             family) == kwargs['policy']:
         ret['result'] = True
         ret['comment'] = ('iptables default policy for {0} for {1} already set to {2}'
