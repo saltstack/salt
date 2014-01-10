@@ -406,7 +406,7 @@ def parse():
         help='The sls file to execute')
     parser.add_option(
         '--pillar',
-        default='{{git_commit: {commit}, git_url: \'{salt_url}}}\'',
+        default='{{git_commit: {commit}, git_url: \'{salt_url}\'}}',
         help='Pillar values to pass to the sls file')
     parser.add_option(
         '--no-clean',
