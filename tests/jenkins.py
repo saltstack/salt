@@ -463,17 +463,17 @@ def parse():
         download_remote_logs(options)
         parser.exit(0)
 
-    if not options.platform:
+    if not options.platform and 'ghprbPullId' not in os.environ:
         parser.exit('--platform is required')
 
-    if not options.provider:
+    if not options.provider and 'ghprbPullId' not in os.environ:
         parser.exit('--provider is required')
 
     if options.echo_parseable_environment:
         echo_parseable_environment(options)
         parser.exit(0)
 
-    if not options.commit:
+    if not options.commit and 'ghprbPullId' not in os.environ:
         parser.exit('--commit is required')
 
     return options
