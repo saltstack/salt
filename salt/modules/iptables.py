@@ -23,23 +23,45 @@ def __virtual__():
     return False
 
 
-def _conf():
+def _iptables_cmd(family='ipv4'):
+    '''
+    Return correct command based on the family, eg. ipv4 or ipv6
+    '''
+    if family == 'ipv6':
+        return 'ip6tables'
+    else:
+        return 'iptables'
+
+
+def _conf(family='ipv4'):
     '''
     Some distros have a specific location for config files
     '''
     if __grains__['os_family'] == 'RedHat':
-        return '/etc/sysconfig/iptables'
+        if family == 'ipv6':
+            return '/etc/sysconfig/ip6tables'
+        else:
+            return '/etc/sysconfig/iptables'
     elif __grains__['os_family'] == 'Arch':
-        return '/etc/iptables/iptables.rules'
+        if family == 'ipv6':
+            return '/etc/iptables/ip6tables.rules'
+        else:
+            return '/etc/iptables/iptables.rules'
     elif __grains__['os_family'] == 'Debian':
-        return '/etc/iptables/rules.v4'
+        if family == 'ipv6':
+            return '/etc/iptables/rules.v4'
+        else:
+            return '/etc/iptables/rules.v6'
     elif __grains__['os'] == 'Gentoo':
-        return '/var/lib/iptables/rules-save'
+        if family == 'ipv6':
+            return '/var/lib/ip6tables/rules-save'
+        else:
+            return '/var/lib/iptables/rules-save'
     else:
         return False
 
 
-def version():
+def version(family='ipv4'):
     '''
     Return version from iptables --version
 
@@ -48,13 +70,16 @@ def version():
     .. code-block:: bash
 
         salt '*' iptables.version
+
+        IPv6:
+        salt '*' iptables.version family=ipv6
     '''
-    cmd = 'iptables --version'
+    cmd = '{0} --version' . format(_iptables_cmd(family))
     out = __salt__['cmd.run'](cmd).split()
     return out[1]
 
 
-def build_rule(table=None, chain=None, command=None, position='', full=None,
+def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
     Build a well-formatted iptables rule based on kwargs. Long options must be
@@ -79,6 +104,15 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+
+        IPv6:
+        salt '*' iptables.build_rule match=state \\
+            connstate=RELATED,ESTABLISHED jump=ACCEPT \\
+            family=ipv6
+        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
+            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            family=ipv6
+
     '''
     if 'target' in kwargs:
         kwargs['jump'] = kwargs['target']
@@ -162,13 +196,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         else:
             flag = '--'
 
-        return 'iptables -t {0} {1}{2} {3} {4} {5}'.format(table,
-            flag, command, chain, position, rule)
+        return '{0} -t {1} {2}{3} {4} {5} {6}'.format(_iptables_cmd(family),
+            table, flag, command, chain, position, rule)
 
     return rule
 
 
-def get_saved_rules(conf_file=None):
+def get_saved_rules(conf_file=None, family='ipv4'):
     '''
     Return a data structure of the rules in the conf file
 
@@ -177,11 +211,14 @@ def get_saved_rules(conf_file=None):
     .. code-block:: bash
 
         salt '*' iptables.get_saved_rules
+
+        IPv6:
+        salt '*' iptables.get_saved_rules family=ipv6
     '''
-    return _parse_conf(conf_file)
+    return _parse_conf(conf_file, family)
 
 
-def get_rules():
+def get_rules(family='ipv4'):
     '''
     Return a data structure of the current, in-memory rules
 
@@ -190,11 +227,15 @@ def get_rules():
     .. code-block:: bash
 
         salt '*' iptables.get_rules
+
+        IPv6:
+        salt '*' iptables.get_rules family=ipv6
+
     '''
-    return _parse_conf(in_mem=True)
+    return _parse_conf(in_mem=True, family=family)
 
 
-def get_saved_policy(table='filter', chain=None, conf_file=None):
+def get_saved_policy(table='filter', chain=None, conf_file=None, family='ipv4'):
     '''
     Return the current policy for the specified table/chain
 
@@ -205,15 +246,21 @@ def get_saved_policy(table='filter', chain=None, conf_file=None):
         salt '*' iptables.get_saved_policy filter INPUT
         salt '*' iptables.get_saved_policy filter INPUT \\
             conf_file=/etc/iptables.saved
+
+        IPv6:
+        salt '*' iptables.get_saved_policy filter INPUT family=ipv6
+        salt '*' iptables.get_saved_policy filter INPUT \\
+            conf_file=/etc/iptables.saved family=ipv6
+
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    rules = _parse_conf(conf_file)
+    rules = _parse_conf(conf_file, family=family)
     return rules[table][chain]['policy']
 
 
-def get_policy(table='filter', chain=None):
+def get_policy(table='filter', chain=None, family='ipv4'):
     '''
     Return the current policy for the specified table/chain
 
@@ -222,15 +269,18 @@ def get_policy(table='filter', chain=None):
     .. code-block:: bash
 
         salt '*' iptables.get_policy filter INPUT
+
+        IPv6:
+        salt '*' iptables.get_policy filter INPUT family=ipv6
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    rules = _parse_conf(in_mem=True)
+    rules = _parse_conf(in_mem=True, family=family)
     return rules[table][chain]['policy']
 
 
-def set_policy(table='filter', chain=None, policy=None):
+def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
     '''
     Set the current policy for the specified table/chain
 
@@ -239,18 +289,21 @@ def set_policy(table='filter', chain=None, policy=None):
     .. code-block:: bash
 
         salt '*' iptables.set_policy filter INPUT ACCEPT
+
+        IPv6:
+        salt '*' iptables.set_policy filter INPUT ACCEPT family=ipv6
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
     if not policy:
         return 'Error: Policy needs to be specified'
 
-    cmd = 'iptables -t {0} -P {1} {2}'.format(table, chain, policy)
+    cmd = '{0} -t {1} -P {2} {3}'.format(_iptables_cmd(family), table, chain, policy)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def save(filename=None):
+def save(filename=None, family='ipv4'):
     '''
     Save the current in-memory rules to disk
 
@@ -259,6 +312,9 @@ def save(filename=None):
     .. code-block:: bash
 
         salt '*' iptables.save /etc/sysconfig/iptables
+
+        IPv6:
+        salt '*' iptables.save /etc/sysconfig/iptables family=ipv6
     '''
     if _conf() and not filename:
         filename = _conf()
@@ -266,12 +322,12 @@ def save(filename=None):
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
-    cmd = 'iptables-save > {0}'.format(filename)
+    cmd = '{0}-save > {1}'.format(_iptables_cmd(family), filename)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def check(table='filter', chain=None, rule=None):
+def check(table='filter', chain=None, rule=None, family='ipv4'):
     '''
     Check for the existance of a rule in the table and chain
 
@@ -286,6 +342,11 @@ def check(table='filter', chain=None, rule=None):
 
         salt '*' iptables.check filter INPUT \\
             rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+
+        IPv6:
+        salt '*' iptables.check filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT' \\
+            family=ipv6
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -293,7 +354,7 @@ def check(table='filter', chain=None, rule=None):
         return 'Error: Rule needs to be specified'
 
     if __grains__['os_family'] == 'RedHat':
-        cmd = 'iptables-save'
+        cmd = '{0}-save' . format(_iptables_cmd(family))
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
             table,
             chain,
@@ -304,7 +365,7 @@ def check(table='filter', chain=None, rule=None):
         else:
             return False
     else:
-        cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
+        cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
         out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -312,7 +373,7 @@ def check(table='filter', chain=None, rule=None):
     return out
 
 
-def check_chain(table='filter', chain=None):
+def check_chain(table='filter', chain=None, family='ipv4'):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
@@ -323,12 +384,15 @@ def check_chain(table='filter', chain=None):
     .. code-block:: bash
 
         salt '*' iptables.check_chain filter INPUT
+
+        IPv6:
+        salt '*' iptables.check_chain filter INPUT family=ipv6
     '''
 
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = 'iptables-save -t {0}'.format(table)
+    cmd = '{0}-save -t {0}'.format(_iptables_cmd(family), table)
     out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
 
     if out != -1:
@@ -339,7 +403,7 @@ def check_chain(table='filter', chain=None):
     return out
 
 
-def new_chain(table='filter', chain=None):
+def new_chain(table='filter', chain=None, family='ipv4'):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
@@ -350,12 +414,15 @@ def new_chain(table='filter', chain=None):
     .. code-block:: bash
 
         salt '*' iptables.new_chain filter CUSTOM_CHAIN
+
+        IPv6:
+        salt '*' iptables.new_chain filter CUSTOM_CHAIN family=ipv6
     '''
 
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = 'iptables -t {0} -N {1}'.format(table, chain)
+    cmd = '{0} -t {1} -N {2}'.format(_iptables_cmd(family), table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -363,7 +430,7 @@ def new_chain(table='filter', chain=None):
     return out
 
 
-def delete_chain(table='filter', chain=None):
+def delete_chain(table='filter', chain=None, family='ipv4'):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
@@ -374,12 +441,15 @@ def delete_chain(table='filter', chain=None):
     .. code-block:: bash
 
         salt '*' iptables.delete_chain filter CUSTOM_CHAIN
+
+        IPv6:
+        salt '*' iptables.delete_chain filter CUSTOM_CHAIN family=ipv6
     '''
 
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = 'iptables -t {0} -X {1}'.format(table, chain)
+    cmd = '{0} -t {1} -X {2}'.format(_iptables_cmd(family), table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -387,7 +457,7 @@ def delete_chain(table='filter', chain=None):
     return out
 
 
-def append(table='filter', chain=None, rule=None):
+def append(table='filter', chain=None, rule=None, family='ipv4'):
     '''
     Append a rule to the specified table/chain.
 
@@ -402,13 +472,18 @@ def append(table='filter', chain=None, rule=None):
 
         salt '*' iptables.append filter INPUT \\
             rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+
+        IPv6:
+        salt '*' iptables.append filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT' \\
+            family=ipv6
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -A {1} {2}'.format(table, chain, rule)
+    cmd = '{0} -t {1} -A {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     if len(out) == 0:
         return True
@@ -416,7 +491,7 @@ def append(table='filter', chain=None, rule=None):
         return False
 
 
-def insert(table='filter', chain=None, position=None, rule=None):
+def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
     '''
     Insert a rule into the specified table/chain, at the specified position.
 
@@ -431,6 +506,11 @@ def insert(table='filter', chain=None, position=None, rule=None):
 
         salt '*' iptables.insert filter INPUT position=3 \\
             rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+
+        IPv6:
+        salt '*' iptables.insert filter INPUT position=3 \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT' \\
+            family=ipv6
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
@@ -439,12 +519,12 @@ def insert(table='filter', chain=None, position=None, rule=None):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -I {1} {2} {3}'.format(table, chain, position, rule)
+    cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def delete(table, chain=None, position=None, rule=None):
+def delete(table, chain=None, position=None, rule=None, family='ipv4'):
     '''
     Delete a rule from the specified table/chain, specifying either the rule
         in its entirety, or the rule's position in the chain.
@@ -461,6 +541,12 @@ def delete(table, chain=None, position=None, rule=None):
         salt '*' iptables.delete filter INPUT position=3
         salt '*' iptables.delete filter INPUT \\
             rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+
+        IPv6:
+        salt '*' iptables.delete filter INPUT position=3 family=ipv6
+        salt '*' iptables.delete filter INPUT \\
+            rule='-m state --state RELATED,ESTABLISHED -j ACCEPT' \\
+            family=ipv6
     '''
 
     if position and rule:
@@ -469,12 +555,12 @@ def delete(table, chain=None, position=None, rule=None):
     if position:
         rule = position
 
-    cmd = 'iptables -t {0} -D {1} {2}'.format(table, chain, rule)
+    cmd = '{0} -t {1} -D {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def flush(table='filter', chain=''):
+def flush(table='filter', chain='', family='ipv4'):
     '''
     Flush the chain in the specified table, flush all chains in the specified
     table if not specified chain.
@@ -484,30 +570,33 @@ def flush(table='filter', chain=''):
     .. code-block:: bash
 
         salt '*' iptables.flush filter INPUT
+
+        IPv6:
+        salt '*' iptables.flush filter INPUT family=ipv6
     '''
 
     if chain:
-        cmd = 'iptables -t {0} -F {1}'.format(table, chain)
+        cmd = '{0} -t {1} -F {2}'.format(_iptables_cmd(family), table, chain)
     else:
-        cmd = 'iptables -t {0} -F'.format(table)
+        cmd = '{0} -t {1} -F'.format(_iptables_cmd(family), table)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def _parse_conf(conf_file=None, in_mem=False):
+def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
     '''
     If a file is not passed in, and the correct one for this OS is not
     detected, return False
     '''
     if _conf() and not conf_file and not in_mem:
-        conf_file = _conf()
+        conf_file = _conf(family)
 
     rules = ''
     if conf_file:
         with salt.utils.fopen(conf_file, 'r') as ifile:
             rules = ifile.read()
     elif in_mem:
-        cmd = 'iptables-save'
+        cmd = '{0}-save' . format(_iptables_cmd(family))
         rules = __salt__['cmd.run'](cmd)
     else:
         raise SaltException('A file was not found to parse')
