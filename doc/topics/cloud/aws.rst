@@ -143,7 +143,7 @@ Keys in the us-west-1 region can be configured at
 https://console.aws.amazon.com/ec2/home?region=us-west-1#s=KeyPairs
 
 ...and so on. When creating a key pair, the browser will prompt to download a
-pem file. This file must be placed in a directory accessable by Salt Cloud,
+pem file. This file must be placed in a directory accessible by Salt Cloud,
 with permissions set to either 0400 or 0600.
 
 
@@ -171,7 +171,7 @@ instance, you can associate the instance with an instance profile, which in
 turn corresponds to the IAM role. Any software that runs on the EC2 instance
 is able to access AWS using the permissions associated with the IAM role.
 
-Scaffolding the profile is a 2 steps configurations:
+Scaffolding the profile is a 2-step configuration process:
 
  1. Configure an IAM Role from the `IAM Management Console`_.
  2. Attach this role to a new profile. It can be done with the `AWS CLI`_:
@@ -218,7 +218,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
 
 
-The profile can be realized now with a salt command:
+The profile can now be realized with a salt command:
 
 .. code-block:: bash
 
@@ -319,7 +319,7 @@ Multiple security groups can also be specified in the same fashion:
         - default
         - extra
 
-Your instances may optionally make use of EC2 Spot Instances by. The
+Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
 maximum bid will be $0.10. Keep in mind that different spot prices
 may be needed based on the current value of the various EC2 instance
@@ -377,8 +377,8 @@ created in the order provided and additional mappings will be ignored. Consult t
         - DeviceName: /dev/sdc
           VirtualName: ephemeral1
 
-You can also use block device mappings to change the size of the root device at the 
-provisioing time. For example, assuming the root device is '/dev/sda', you can set 
+You can also use block device mappings to change the size of the root device at the
+provisioning time. For example, assuming the root device is '/dev/sda', you can set
 its size to 100G by using the following configuration.
 
 .. code-block:: yaml
@@ -386,7 +386,7 @@ its size to 100G by using the following configuration.
     my-ec2-config:
       block_device_mappings:
         - DeviceName: /dev/sda
-          Ebs.VolumeSize: 100 
+          Ebs.VolumeSize: 100
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
@@ -568,7 +568,7 @@ the defaults that will be applied to an instance using a particular AMI.
 
 show_instance
 =============
-This action is a thin wrapper around --full-query, which displays details on a
+This action is a thin wrapper around ``--full-query``, which displays details on a
 single instance only. In an environment with several machines, this will save a
 user from having to sort through all instance data, just to examine a single
 instance.
@@ -788,7 +788,7 @@ Creating a Key Pair
 -------------------
 A key pair is required in order to create an instance. When creating a key pair
 with this function, the return data will contain a copy of the private key.
-This private key is not stored by Amazon, and will not be obtainable past this
+This private key is not stored by Amazon, will not be obtainable past this
 point, and should be stored immediately.
 
 .. code-block:: bash
