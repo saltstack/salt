@@ -90,7 +90,7 @@ def echo_parseable_environment(options):
         name = generate_vm_name(options.platform)
         output.extend([
             'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
-            'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name=name)
+            'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name)
         ])
 
     if options.provider:
