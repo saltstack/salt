@@ -18,6 +18,7 @@ def __virtual__():
         return 'service'
     return False
 
+
 def has_powershell():
     '''
     Confirm if Powershell is available
@@ -30,6 +31,7 @@ def has_powershell():
     '''
     return 'powershell' in __salt__['cmd.run']('where powershell', output_loglevel='debug')
 
+
 def get_enabled():
     '''
     Return the enabled services
@@ -40,7 +42,7 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    
+
     if has_powershell():
         cmd = 'Get-WmiObject win32_service | where {$_.startmode -eq "Auto"} | select-object name'
         lines = __salt__['cmd.run'](cmd, shell='POWERSHELL', output_loglevel='debug').splitlines()
@@ -113,6 +115,21 @@ def available(name):
         salt '*' service.available <service name>
     '''
     return name in get_all()
+
+
+def missing(name):
+    '''
+    The inverse of service.available.
+    Returns ``True`` if the specified service is not available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.missing <service name>
+    '''
+    return not name in get_all()
 
 
 def get_all():
@@ -214,17 +231,13 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    stopcmd = 'sc stop "{0}"'.format(name)
-    __salt__['cmd.run'](stopcmd)
-    servicestate = status(name)
-    while True:
-        servicestate = status(name)
-        if servicestate == '':
-            break
-        else:
+    stop(name)
+    for idx in xrange(5):
+        if status(name):
             time.sleep(2)
-    startcmd = 'sc start "{0}"'.format(name)
-    return not __salt__['cmd.retcode'](startcmd)
+            continue
+        return start(name)
+    return False
 
 
 def status(name, sig=None):
@@ -244,7 +257,7 @@ def status(name, sig=None):
     for line in statuses:
         if 'RUNNING' in line:
             return True
-        elif 'PENDING' in line:
+        elif 'STOP_PENDING' in line:
             return True
     return False
 
