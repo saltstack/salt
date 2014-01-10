@@ -30,9 +30,6 @@ import salt.log.setup as log
 import salt.utils
 from salt.utils.validate.path import is_writeable
 
-if not salt.utils.is_windows():
-    import salt.cloud.exceptions
-
 
 def _sorted(mixins_or_funcs):
     return sorted(
