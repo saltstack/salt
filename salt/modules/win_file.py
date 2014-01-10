@@ -22,6 +22,7 @@ import itertools  # same as above, do not remove, it's used in __clean_tmp
 # Import third party libs
 try:
     import win32security
+    import win32file
     from pywintypes import error as pywinerror
     import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
