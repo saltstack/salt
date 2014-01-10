@@ -319,6 +319,38 @@ Multiple security groups can also be specified in the same fashion:
         - default
         - extra
 
+Your instances may optionally make use of EC2 Spot Instances by. The
+following example will request that spot instances be used and your
+maximum bid will be $0.10. Keep in mind that different spot prices
+may be needed based on the current value of the various EC2 instance
+sizes. You can check current and past spot instance pricing via the
+EC2 API or AWS Console.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+
+By default, the spot instance type is set to 'one-time', meaning it will
+be launched and, if it's ever terminated for whatever reason, it will not
+be recreated. If you would like your spot instances to be relaunched after
+a termination (by your or AWS), set the ``type`` to 'persistent'.
+
+NOTE: Spot instances are a great way to save a bit of money, but you do
+run the risk of losing your spot instances if the current price for the
+instance size goes above your maximum bid.
+
+The following parameters may be set in the cloud configuration file to
+control various aspects of the spot instance launching:
+
+* ``wait_for_spot_timeout``: seconds to wait before giving up on spot instance launch (default=600)
+* ``wait_for_spot_interval``: seconds to wait in between polling requests to determine if a spot instance is available (default=30)
+* ``wait_for_spot_interval_multiplier``: a multiplier to add to the interval in between requests, which is useful if AWS is throttling your requests (default=1)
+* ``wait_for_spot_max_failures``: maximum number of failures before giving up on launching your spot instance (default=10)
+
+See the `AWS Spot Instances`_ documentation for more information.
+
 
 Block device mappings enable you to specify additional EBS volumes or instance
 store volumes when the instance is launched. This setting is also available on
@@ -347,6 +379,25 @@ its size to 100G by using the following configuration.
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100 
 
+Existing EBS volumes may also be attached (not created) to your instances or
+you can create new EBS volumes based on EBS snapshots. To simply attach an
+existing volume use the ``volume_id`` parameter.
+
+.. code-block:: yaml
+
+    device: /dev/xvdj
+    mount_point: /mnt/my_ebs
+    volume_id: vol-12345abcd
+
+Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
+
+.. code-block:: yaml
+
+    device: /dev/xvdj
+    mount_point: /mnt/my_ebs
+    snapshot: snap-abcd12345
+
+Note that ``volume_id`` will take precedence over the ``snapshot`` parameter.
 
 Tags can be set once an instance has been launched.
 
@@ -358,6 +409,7 @@ Tags can be set once an instance has been launched.
             tag2: value
 
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
+.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/spot-instances/
 
 Modify EC2 Tags
 ===============
@@ -752,4 +804,5 @@ This function removes the key pair from Amazon.
 .. code-block:: bash
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
+
 

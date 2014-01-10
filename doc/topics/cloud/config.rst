@@ -6,6 +6,16 @@ A number of core configuration options and some options that are global to the
 VM profiles can be set in the cloud configuration file. By default this file is 
 located at ``/etc/salt/cloud``.
 
+Thread Pool Size
+====================
+
+When salt cloud is operating in parallel mode via the ``-P`` argument, you can
+control the thread pool size by specifiying the ``pool_size`` parameter with
+a positive integer value.
+
+By default, the thread pool size will be set to the number of VMs that salt
+cloud is operating on.
+
 
 Minion Configuration
 ====================
