@@ -131,7 +131,7 @@ def echo_parseable_environment(options):
             ])
         except ValueError:
             print('# Failed to get the PR id from the environment')
-            pass
+
     sys.stdout.write('\n'.join(output))
     sys.stdout.flush()
 
