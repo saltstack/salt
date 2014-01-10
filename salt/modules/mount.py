@@ -224,7 +224,7 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name or comps[0] == device:
+                if comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True

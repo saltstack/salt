@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Only load if the mysql module is available
     '''
-    return 'ini' if 'ini_manage.set_option' in __salt__ else False
+    return 'ini' if 'ini.set_option' in __salt__ else False
 
 
 def options_present(name, sections=None):
@@ -35,8 +35,6 @@ def options_present(name, sections=None):
     dict will be untouched
     changes dict will contain the list of changes made
     '''
-    if sections is None:
-        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -44,11 +42,11 @@ def options_present(name, sections=None):
            }
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
+        ret['comment'] = ('ini file {0} shall be validated for presence of '
                           'given options under their respective '
                           'sections').format(name)
         return ret
-    for section in sections:
+    for section in sections or {}:
         for key in sections[section]:
             current_value = __salt__['ini.get_option'](name,
                                                        section,
@@ -83,8 +81,6 @@ def options_absent(name, sections=None):
     dict will be untouched
     changes dict will contain the list of changes made
     '''
-    if sections is None:
-        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -96,11 +92,11 @@ def options_absent(name, sections=None):
                           'given options under their respective '
                           'sections').format(name)
         return ret
-    for section in sections:
+    for section in sections or {}:
         for key in sections[section]:
             current_value = __salt__['ini.remove_option'](name,
-                                                                     section,
-                                                                     key)
+                                                          section,
+                                                          key)
             if not current_value:
                 continue
             if not section in ret['changes']:
@@ -126,8 +122,6 @@ def sections_present(name, sections=None):
     options present in file and not specified in sections will be deleted
     changes dict will contain the sections that changed
     '''
-    if sections is None:
-        sections = {}
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -135,11 +129,11 @@ def sections_present(name, sections=None):
            }
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given options under their respective '
-                          'sections').format(name)
+        ret['comment'] = ('ini file {0} shall be validated for '
+                          'presence of given sections with the '
+                          'exact contents').format(name)
         return ret
-    for section in sections:
+    for section in sections or {}:
         cur_section = __salt__['ini.get_section'](name, section)
         if _same(cur_section, sections[section]):
             continue
@@ -169,8 +163,6 @@ def sections_absent(name, sections=None):
     options present in file and not specified in sections will be deleted
     changes dict will contain the sections that changed
     '''
-    if sections is None:
-        sections = []
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -179,10 +171,9 @@ def sections_absent(name, sections=None):
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given options under their respective '
-                          'sections').format(name)
+                          'given sections').format(name)
         return ret
-    for section in sections:
+    for section in sections or []:
         cur_section = __salt__['ini.remove_section'](name, section)
         if not cur_section:
             continue
