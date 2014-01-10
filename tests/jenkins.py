@@ -129,10 +129,12 @@ def echo_parseable_environment(options):
                 'SALT_PR_GIT_URL={0}'.format(PR.head.repo.clone_url),
                 'SALT_PR_GIT_COMMIT={0}'.format(PR.head.sha)
             ])
+            options.salt_url = PR.head.repo.clone_url
+            options.commit = PR.head.sha
         except ValueError:
             print('# Failed to get the PR id from the environment')
 
-    sys.stdout.write('\n'.join(output))
+    sys.stdout.write('\n\n{0}\n\n'.format('\n'.join(output)))
     sys.stdout.flush()
 
 
