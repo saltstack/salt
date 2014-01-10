@@ -468,17 +468,17 @@ def parse():
         download_remote_logs(options)
         parser.exit(0)
 
-    if not options.platform and not opts.pull_request:
+    if not options.platform and not options.pull_request:
         parser.exit('--platform or --pull-request is required')
 
-    if not options.provider and not opts.pull_request:
+    if not options.provider and not options.pull_request:
         parser.exit('--provider or --pull-request is required')
 
     if options.echo_parseable_environment:
         echo_parseable_environment(options)
         parser.exit(0)
 
-    if not options.commit and 'ghprbPullId' not in os.environ:
+    if not options.commit and not options.pull_request:
         parser.exit('--commit or --pull-request is required')
 
     return options
