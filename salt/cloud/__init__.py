@@ -1583,7 +1583,12 @@ class Map(Cloud):
             output[name] = self.destroy(name)
 
         if self.opts['parallel'] and len(parallel_data) > 0:
-            output_multip = multiprocessing.Pool(len(parallel_data)).map(
+            if 'pool_size' in self.opts:
+                pool_size = self.opts['pool_size']
+            else:
+                pool_size = len(parallel_data)
+            log.info('Cloud pool size: {0}'.format(pool_size))
+            output_multip = multiprocessing.Pool(pool_size).map(
                 func=create_multiprocessing,
                 iterable=parallel_data
             )
