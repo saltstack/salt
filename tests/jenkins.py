@@ -47,6 +47,7 @@ try:
 except ImportError:
     HAS_GITHUB = False
 
+
 def generate_vm_name(platform):
     '''
     Generate a random enough vm name
@@ -83,12 +84,20 @@ def echo_parseable_environment(options):
     '''
     Echo NAME=VAL parseable output
     '''
-    name = generate_vm_name(options.platform)
-    output = [
-        'JENKINS_SALTCLOUD_VM_PROVIDER={0}'.format(options.provider),
-        'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
-        'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name=name)
-    ]
+    output = []
+
+    if options.platform:
+        name = generate_vm_name(options.platform)
+        output.extend([
+            'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
+            'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name=name)
+        ])
+
+    if options.provider:
+        output.append(
+            'JENKINS_SALTCLOUD_VM_PROVIDER={0}'.format(options.provider)
+        )
+
     if 'ghprbPullId' in os.environ:
         # This is a Jenkins triggered Pull Request
         # We need some more data about the Pull Request available to the
