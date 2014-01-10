@@ -98,7 +98,7 @@ def echo_parseable_environment(options):
             'JENKINS_SALTCLOUD_VM_PROVIDER={0}'.format(options.provider)
         )
 
-    if 'ghprbPullId' in os.environ:
+    if options.pull_request:
         # This is a Jenkins triggered Pull Request
         # We need some more data about the Pull Request available to the
         # environment
@@ -124,7 +124,7 @@ def echo_parseable_environment(options):
         GITHUB = github.Github(open(github_access_token_path).read().strip())
         REPO = GITHUB.get_repo('saltstack/salt')
         try:
-            PR = REPO.get_pull(int(os.environ['ghprbPullId']))
+            PR = REPO.get_pull(options.pull_request)
             output.extend([
                 'SALT_PR_GIT_URL={0}'.format(PR.head.repo.clone_url),
                 'SALT_PR_GIT_COMMIT={0}'.format(PR.head.sha)
@@ -419,6 +419,11 @@ def parse():
         help='Print a parseable KEY=VAL output'
     )
     parser.add_option(
+        '--pull-request',
+        type=int,
+        help='Include the PR info only'
+    )
+    parser.add_option(
         '--delete-vm',
         default=None,
         help='Delete a running VM'
@@ -463,18 +468,18 @@ def parse():
         download_remote_logs(options)
         parser.exit(0)
 
-    #if not options.platform and 'ghprbPullId' not in os.environ:
-    #    parser.exit('--platform is required')
+    if not options.platform and not opts.pull_request:
+        parser.exit('--platform or --pull-request is required')
 
-    #if not options.provider and 'ghprbPullId' not in os.environ:
-    #    parser.exit('--provider is required')
+    if not options.provider and not opts.pull_request:
+        parser.exit('--provider or --pull-request is required')
 
     if options.echo_parseable_environment:
         echo_parseable_environment(options)
         parser.exit(0)
 
     if not options.commit and 'ghprbPullId' not in os.environ:
-        parser.exit('--commit is required')
+        parser.exit('--commit or --pull-request is required')
 
     return options
 
