@@ -511,6 +511,7 @@ if IS_WINDOWS_PLATFORM:
         'win32api',
         'win32file',
         'win32con',
+        'win32net',
         'win32security',
         'ntsecuritycon',
         '_winreg',

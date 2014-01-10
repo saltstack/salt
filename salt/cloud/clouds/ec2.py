@@ -255,13 +255,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
         )
     except urllib2.URLError as exc:
-        log.error(
-            'EC2 Response Status Code: {0} {1}'.format(
-                exc.code, exc.msg
-            )
-        )
         root = ET.fromstring(exc.read())
         data = _xml_to_dict(root)
+        log.error(
+            'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                exc.code, exc.msg, data
+            )
+        )
         if return_url is True:
             return {'error': data}, requesturl
         return {'error': data}
@@ -298,8 +298,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
 def _wait_for_spot_instance(update_callback,
                             update_args=None,
                             update_kwargs=None,
-                            timeout=5 * 60,
-                            interval=5,
+                            timeout=10 * 60,
+                            interval=30,
+                            interval_multiplier=1,
                             max_failures=10):
     '''
     Helper function that waits for a spot instance request to become active
@@ -315,6 +316,8 @@ def _wait_for_spot_instance(update_callback,
                     address.
     :param interval: The looping interval, ie, the amount of time to sleep
                      before the next iteration.
+    :param interval_multiplier: Increase the interval by this multiplier after
+                                each request; helps with throttling
     :param max_failures: If update_callback returns ``False`` it's considered
                          query failure. This value is the amount of failures
                          accepted before giving up.
@@ -361,6 +364,13 @@ def _wait_for_spot_instance(update_callback,
             )
         time.sleep(interval)
         timeout -= interval
+
+        if interval_multiplier > 1:
+            interval *= interval_multiplier
+            if interval > timeout:
+                interval = timeout + 1
+            log.info('Interval multiplier in effect; interval is '
+                     'now {0}s'.format(interval))
 
 
 def avail_sizes(call=None):
@@ -1147,7 +1157,12 @@ def create(vm_=None, call=None):
                 update_args=(sir_id, location),
                 timeout=config.get_cloud_config_value(
                     'wait_for_spot_timeout', vm_, __opts__, default=10 * 60),
-                max_failures=5
+                interval=config.get_cloud_config_value(
+                    'wait_for_spot_interval', vm_, __opts__, default=30),
+                interval_multiplier=config.get_cloud_config_value(
+                    'wait_for_spot_interval_multiplier', vm_, __opts__, default=1),
+                max_failures=config.get_cloud_config_value(
+                    'wait_for_spot_max_failures', vm_, __opts__, default=10),
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
 
@@ -1242,6 +1257,8 @@ def create(vm_=None, call=None):
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
