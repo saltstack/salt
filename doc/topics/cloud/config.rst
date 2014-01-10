@@ -16,6 +16,10 @@ a positive integer value.
 By default, the thread pool size will be set to the number of VMs that salt
 cloud is operating on.
 
+.. code-block:: yaml
+
+    pool_size: 10
+
 
 Minion Configuration
 ====================
