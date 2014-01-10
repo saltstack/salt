@@ -349,6 +349,15 @@ control various aspects of the spot instance launching:
 * ``wait_for_spot_interval_multiplier``: a multiplier to add to the interval in between requests, which is useful if AWS is throttling your requests (default=1)
 * ``wait_for_spot_max_failures``: maximum number of failures before giving up on launching your spot instance (default=10)
 
+If you find that you're being throttled by AWS while polling for spot
+instances, you can set the following in your core cloud configuration
+file that will double the polling interval after each request to AWS.
+
+.. code-block:: yaml
+
+    wait_for_spot_interval: 1
+    wait_for_spot_interval_multiplier: 2
+
 See the `AWS Spot Instances`_ documentation for more information.
 
 
