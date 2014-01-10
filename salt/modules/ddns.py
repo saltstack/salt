@@ -83,16 +83,15 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs
         return False
 
     fqdn = '{0}.{1}.'.format(name, zone)
-    zone = 'in-addr.arpa.'
-    parts = ip.split('.')
+    parts = ip.split('.')[::-1]
     popped = []
-
+    
     # Iterate over possible reverse zones
     while len(parts) > 1:
         p = parts.pop(0)
         popped.append(p)
-        zone = '{0}.{1}'.format(p, zone)
-        name = ip.replace('{0}.'.format('.'.join(popped)), '', 1)
+        zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
+        name = '.'.join(popped)
         ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace, **kwargs)
         if ptr:
             return True
@@ -123,16 +122,15 @@ def delete_host(zone, name, nameserver='127.0.0.1', **kwargs):
 
     fqdn = fqdn + '.'
     for ip in ips:
-        zone = 'in-addr.arpa.'
-        parts = ip.split('.')
+        parts = ip.split('.')[::-1]
         popped = []
 
         # Iterate over possible reverse zones
         while len(parts) > 1:
             p = parts.pop(0)
             popped.append(p)
-            zone = '{0}.{1}'.format(p, zone)
-            name = ip.replace('{0}.'.format('.'.join(popped)), '', 1)
+            zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
+            name = '.'.join(popped)
             ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver, **kwargs)
         if ptr:
             res = True
