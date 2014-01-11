@@ -47,6 +47,8 @@ try:
 except ImportError:
     HAS_GITHUB = False
 
+SALT_GIT_URL = 'https://github.com/saltstack/salt.git'
+
 
 def generate_vm_name(platform):
     '''
@@ -311,6 +313,34 @@ def run(opts):
     print('Sleeping for 5 seconds to allow the minion to breathe a little')
     sys.stdout.flush()
     time.sleep(5)
+
+    # Do we need extra setup?
+    if opts.salt_url != SALT_GIT_URL:
+        cmds = (
+            'salt -t 100 {vm_name} git.remote_set /testing name={0!r} url={1!r}'.format(
+                'upstream',
+                SALT_GIT_URL,
+                vm_name=vm_name
+            ),
+            'salt -t 100 {vm_name} git.fetch /testing \'upstream --tags\''.format(
+                vm_name=vm_name
+            )
+        )
+        for cmd in cmds:
+            print('Running CMD: {0}'.format(cmd))
+            sys.stdout.flush()
+
+            proc = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, _ = proc.communicate()
+
+            if stdout:
+                print(stdout)
+            sys.stdout.flush()
 
     # Run tests here
     cmd = (
