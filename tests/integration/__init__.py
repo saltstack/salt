@@ -81,9 +81,9 @@ log = logging.getLogger(__name__)
 def skip_if_binaries_missing(binaries, check_all=False):
     # While there's no new release of salt-testing
     if sys.version_info < (2, 7):
-        from unittest2 import _id, skip
+        from unittest2 import _id, skip  # pylint: disable=E0611
     else:
-        from unittest import _id, skip
+        from unittest import _id, skip  # pylint: disable=E0611
 
     if check_all:
         for binary in binaries:
