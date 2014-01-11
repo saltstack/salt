@@ -62,7 +62,8 @@ def list_pkgs(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug'):
+    for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -92,7 +93,8 @@ def verify(*package):
         cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
-    for line in __salt__['cmd.run'](cmd).split('\n'):
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
@@ -141,7 +143,7 @@ def file_list(*packages):
         cmd = 'rpm -qla'
     else:
         cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](cmd).splitlines()
+    ret = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -168,7 +170,8 @@ def file_dict(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -177,7 +180,8 @@ def file_dict(*packages):
     for pkg in pkgs.keys():
         files = []
         cmd = 'rpm -ql {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        for line in out.splitlines():
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
