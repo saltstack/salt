@@ -12,6 +12,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -231,8 +232,9 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
-    @skipIf(salt.utils.which_bin(integration.KNOWN_BINARY_NAMES['virtualenv']) is None,
-            'virtualenv not installed')
+
+
+    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
