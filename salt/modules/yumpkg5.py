@@ -836,7 +836,7 @@ def group_list():
         else:
             line = out[idx].strip()
             try:
-                name, lang = re.match('(.+) \[(.+)\]', line).groups()
+                name, lang = re.match(r'(.+) \[(.+)\]', line).groups()
             except AttributeError:
                 pass
             else:
