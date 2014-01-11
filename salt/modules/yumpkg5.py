@@ -7,9 +7,11 @@ Support for YUM
 import copy
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -413,6 +415,116 @@ def refresh_db():
     return True
 
 
+def clean_metadata():
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Cleans local yum metadata. Functionally identical to :mod:`refresh_db()
+    <salt.modules.yumpkg5.refresh_db>`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.clean_metadata
+    '''
+    return refresh_db()
+
+
+def group_install(name,
+                  skip=(),
+                  include=(),
+                  **kwargs):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Install the passed package group(s). This is basically a wrapper around
+    pkg.install, which performs package group resolution for the user. This
+    function is currently considered experimental, and should be expected to
+    undergo changes.
+
+    name
+        Package group to install. To install more than one group, either use a
+        comma-separated list or pass the value as a python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'Group 1'
+            salt '*' pkg.group_install 'Group 1,Group 2'
+            salt '*' pkg.group_install '["Group 1", "Group 2"]'
+
+    skip
+        The name(s), in a list, of any packages that would normally be
+        installed by the package group ("default" packages), which should not
+        be installed. Can be passed either as a comma-separated list or a
+        python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'My Group' skip='foo,bar'
+            salt '*' pkg.group_install 'My Group' skip='["foo", "bar"]'
+
+    include
+        The name(s), in a list, of any packages which are included in a group,
+        which would not normally be installed ("optional" packages). Note that
+        this will not enforce group membership; if you include packages which
+        are not members of the specified groups, they will still be installed.
+        Can be passed either as a comma-separated list or a python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'My Group' include='foo,bar'
+            salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
+
+    .. note::
+
+        Because this is essentially a wrapper around pkg.install, any argument
+        which can be passed to pkg.install may also be included here, and it
+        will be passed along wholesale.
+    '''
+    groups = name.split(',') if isinstance(name, string_types) else name
+
+    if not groups:
+        raise SaltInvocationError('no groups specified')
+    elif not isinstance(groups, list):
+        raise SaltInvocationError('\'groups\' must be a list')
+
+    if isinstance(skip, string_types):
+        skip = skip.split(',')
+    if not isinstance(skip, (list, tuple)):
+        raise SaltInvocationError('\'skip\' must be a list')
+
+    if isinstance(include, string_types):
+        include = include.split(',')
+    if not isinstance(include, (list, tuple)):
+        raise SaltInvocationError('\'include\' must be a list')
+
+    targets = []
+    for group in groups:
+        group_detail = group_info(group)
+        targets.extend(group_detail.get('mandatory packages', []))
+        targets.extend(
+            [pkg for pkg in group_detail.get('default packages', [])
+             if pkg not in skip]
+        )
+    if include:
+        targets.extend(include)
+
+    # Don't install packages that are already installed, install() isn't smart
+    # enough to make this distinction.
+    pkgs = [x for x in targets if x not in list_pkgs()]
+    if not pkgs:
+        return {}
+
+    return install(pkgs=pkgs, **kwargs)
+
+
 def install(name=None,
             refresh=False,
             fromrepo=None,
@@ -670,6 +782,148 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return remove(name=name, pkgs=pkgs)
+
+
+def verify(*names):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Runs an rpm -Va on a system, and returns the results in a dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.verify
+    '''
+    return __salt__['lowpkg.verify'](*names)
+
+
+def group_list():
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Lists all groups known by yum on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_list
+    '''
+    ret = {'installed': [], 'available': [], 'available languages': {}}
+    cmd = 'yum grouplist'
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug').splitlines()
+    key = None
+    for idx in xrange(len(out)):
+        if out[idx] == 'Installed Groups:':
+            key = 'installed'
+            continue
+        elif out[idx] == 'Available Groups:':
+            key = 'available'
+            continue
+        elif out[idx] == 'Available Language Groups:':
+            key = 'available languages'
+            continue
+        elif out[idx] == 'Done':
+            continue
+
+        if key is None:
+            continue
+
+        if key != 'available languages':
+            ret[key].append(out[idx].strip())
+        else:
+            line = out[idx].strip()
+            try:
+                name, lang = re.match('(.+) \[(.+)\]', line).groups()
+            except AttributeError:
+                pass
+            else:
+                ret[key][line] = {'name': name, 'language': lang}
+    return ret
+
+
+def group_info(name):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Lists packages belonging to a certain group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_info 'Perl Support'
+    '''
+    # Not using _repoquery() here because group queries are handled
+    # differently, and ignore the '--queryformat' param
+    ret = {
+        'mandatory packages': [],
+        'optional packages': [],
+        'default packages': [],
+        'description': ''
+    }
+    cmd_template = 'repoquery --group --grouppkgs={0} --list {1!r}'
+
+    cmd = cmd_template.format('all', name)
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    all_pkgs = set(out.splitlines())
+
+    if not all_pkgs:
+        raise CommandExecutionError('Group {0!r} not found'.format(name))
+
+    for pkgtype in ('mandatory', 'optional', 'default'):
+        cmd = cmd_template.format(pkgtype, name)
+        packages = set(
+            __salt__['cmd.run_stdout'](
+                cmd, output_loglevel='debug'
+            ).splitlines()
+        )
+        ret['{0} packages'.format(pkgtype)].extend(sorted(packages))
+        all_pkgs -= packages
+
+    # 'contitional' is not a valid --grouppkgs value. Any pkgs that show up
+    # in '--grouppkgs=all' that aren't in mandatory, optional, or default are
+    # considered to be conditional packages.
+    ret['conditional packages'] = sorted(all_pkgs)
+
+    cmd = 'repoquery --group --info {0!r}'.format(name)
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    if out:
+        ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
+
+    return ret
+
+
+def group_diff(name):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Lists packages belonging to a certain group, and which are installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_diff 'Perl Support'
+    '''
+    ret = {
+        'mandatory packages': {'installed': [], 'not installed': []},
+        'optional packages': {'installed': [], 'not installed': []},
+        'default packages': {'installed': [], 'not installed': []},
+        'conditional packages': {'installed': [], 'not installed': []},
+    }
+    pkgs = list_pkgs()
+    group_pkgs = group_info(name)
+    for pkgtype in ('mandatory', 'optional', 'default', 'conditional'):
+        for member in group_pkgs.get('{0} packages'.format(pkgtype), []):
+            key = '{0} packages'.format(pkgtype)
+            if member in pkgs:
+                ret[key]['installed'].append(member)
+            else:
+                ret[key]['not installed'].append(member)
+    return ret
 
 
 def list_repos(basedir='/etc/yum.repos.d'):
@@ -937,6 +1191,44 @@ def _parse_repo_file(filename):
                 repos[repo][comps[0].strip()] = '='.join(comps[1:])
 
     return (header, repos)
+
+
+def file_list(*packages):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's rpm database (not generally
+    recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_list'](*packages)
+
+
+def file_dict(*packages):
+    '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of _every_ file on the system's
+    rpm database (not generally recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_dict'](*packages)
 
 
 def expand_repo_def(repokwargs):
