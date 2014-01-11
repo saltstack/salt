@@ -14,17 +14,24 @@ import os.path
 import salt.utils
 import salt.exceptions
 
+KNOWN_BINARY_NAMES = frozenset(
+    ['virtualenv',
+     'virtualenv2',
+     'virtualenv-2.6',
+     'virtualenv-2.7'
+     ]
+)
+
 log = logging.getLogger(__name__)
 
 __opts__ = {
-    'venv_bin': 'virtualenv'
+    'venv_bin': salt.utils.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
 }
 
 __pillar__ = {}
 
 # Define the module's virtual name
 __virtualname__ = 'virtualenv'
-
 
 def __virtual__():
     return __virtualname__
