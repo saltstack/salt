@@ -66,15 +66,6 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
-KNOWN_BINARY_NAMES = {
-    'virtualenv': (
-        'virtualenv',
-        'virtualenv2',
-        'virtualenv-2.6',
-        'virtualenv-2.7'
-    ),
-}
-
 log = logging.getLogger(__name__)
 
 
