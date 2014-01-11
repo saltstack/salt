@@ -62,7 +62,7 @@ def list_pkgs(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug'):
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
