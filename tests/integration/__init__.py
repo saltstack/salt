@@ -48,6 +48,7 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
+import salt.utils
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -75,6 +76,29 @@ KNOWN_BINARY_NAMES = {
 }
 
 log = logging.getLogger(__name__)
+
+
+def skip_if_binaries_missing(binaries, check_all=False):
+    # While there's no new release of salt-testing
+    if sys.version_info < (2, 7):
+        from unittest2 import _id, skip
+    else:
+        from unittest import _id, skip
+
+    if check_all:
+        for binary in binaries:
+            if salt.utils.which(binary) is None:
+                return skip(
+                    'The {0!r} binary was not found'
+                )
+
+    if salt.utils.which_bin(binaries) is None:
+        return skip(
+            'None of the following binaries was found: {0}'.format(
+                ', '.join(binaries)
+            )
+        )
+    return _id
 
 
 def run_tests(*test_cases, **kwargs):
