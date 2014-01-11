@@ -28,6 +28,7 @@ from salt.modules import virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {}
+virtualenv_mod.__opts__['venv_bin'] = 'virtualenv'
 base_virtualenv_mock = MagicMock()
 base_virtualenv_mock.__version__ = '1.9.1'
 
