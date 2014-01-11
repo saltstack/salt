@@ -86,7 +86,7 @@ def skip_if_binaries_missing(binaries, check_all=False):
     if sys.version_info < (2, 7):
         from unittest2 import skip
     else:
-        from unittest import skip
+        from unittest import skip  # pylint: disable=E0611
 
     if check_all:
         for binary in binaries:
