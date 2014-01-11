@@ -232,8 +232,6 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
-
-
     @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
