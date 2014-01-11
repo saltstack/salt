@@ -306,3 +306,4 @@ class Syndic(parsers.SyndicOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+     
