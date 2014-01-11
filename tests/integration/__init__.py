@@ -80,10 +80,13 @@ log = logging.getLogger(__name__)
 
 def skip_if_binaries_missing(binaries, check_all=False):
     # While there's no new release of salt-testing
+    def _id(obj):
+        return obj
+
     if sys.version_info < (2, 7):
-        from unittest2.case import _id, skip
+        from unittest2 import skip
     else:
-        from unittest.case import _id, skip
+        from unittest import skip
 
     if check_all:
         for binary in binaries:
