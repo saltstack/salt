@@ -33,6 +33,7 @@ __pillar__ = {}
 # Define the module's virtual name
 __virtualname__ = 'virtualenv'
 
+
 def __virtual__():
     return __virtualname__
 
