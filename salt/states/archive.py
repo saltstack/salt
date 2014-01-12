@@ -127,7 +127,7 @@ def extracted(name,
                                           cwd=name)
         if results['retcode'] != 0:
             return results
-        if __salt__['cmd.retcode']('tar --version | grep bsdtar')  == 0:
+        if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
             files = results['stderr']
         else:
             files = results['stdout']
