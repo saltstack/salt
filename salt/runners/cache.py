@@ -75,6 +75,33 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
     salt.output.display_output(cached_pillar, None, __opts__)
     return cached_pillar
 
+def mine(tgt=None, expr_form='glob', **kwargs):
+    '''
+    Return cached mine data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.mine
+    '''
+    deprecated_minion = kwargs.get('minion', None)
+    if tgt is None and deprecated_minion is None:
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = '*'  # targat all minions for backward compatibility
+    elif tgt is None and isinstance(deprecated_minion, string_types):
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = deprecated_minion
+    elif tgt is None:
+        return {}
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+                                                use_cached_grains=False,
+                                                grains_fallback=False,
+                                                use_cached_pillar=False,
+                                                pillar_fallback=False,
+                                                opts=__opts__)
+    cached_mine = pillar_util.get_cached_mine_data()
+    salt.output.display_output(cached_mine, None, __opts__)
 
 def _clear_cache(tgt=None,
                  expr_form='glob',
@@ -146,7 +173,7 @@ def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func=None):
 
     .. code-block:: bash
 
-        salt-run cache.clear_mine_func tgt='*',clear_mine_func='network.interfaces'
+        salt-run cache.clear_mine_func tgt='*' clear_mine_func='network.interfaces'
     '''
     return _clear_cache(tgt, expr_form, clear_mine_func=clear_mine_func)
 
