@@ -338,8 +338,6 @@ only the cache for the mine system.
 
     enforce_mine_cache: False
 
-.. conf_master:: sock_dir
-
 
 Master Security Settings
 ========================
@@ -544,8 +542,11 @@ a plugable system for the generation of external top data. The external_nodes
 option is deprecated by the master_tops option.
 To gain the capabilities of the classic external_nodes system, use the
 following configuration:
-master_tops:
-  ext_nodes: <Shell command which returns yaml>
+
+.. code-block:: yaml
+
+    master_tops:
+      ext_nodes: <Shell command which returns yaml>
 
 .. conf_master:: external_nodes
 
@@ -736,7 +737,7 @@ you could set this to '/\.svn($|/)'. By default nothing is ignored.
       - '/\.svn($|/)'
       - '/\.git($|/)'
 
-.. conf-master:: file_ignore_glob
+.. conf_master:: file_ignore_glob
 
 ``file_ignore_glob``
 --------------------
@@ -755,7 +756,7 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
-.. conf-master:: fileserver_backend
+.. conf_master:: fileserver_backend
 
 ``fileserver_backend``
 ----------------------
