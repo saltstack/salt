@@ -1074,7 +1074,7 @@ class Events(object):
 
         .. code-block:: bash
 
-            % curl -NsS localhost:8000/events |\
+            % curl -NsS localhost:8000/events |\\
                     while IFS= read -r line ; do
                         echo $line
                     done
@@ -1083,9 +1083,9 @@ class Events(object):
 
         .. code-block:: bash
 
-            % curl -NsS localhost:8000/events |\
+            % curl -NsS localhost:8000/events |\\
                     awk '
-                        BEGIN { RS=""; FS="\n" }
+                        BEGIN { RS=""; FS="\\n" }
                         $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
                     '
             tag: salt/job/20140112010149808995/new
