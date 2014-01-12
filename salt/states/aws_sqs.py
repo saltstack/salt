@@ -39,13 +39,13 @@ def exists(
         Name of the SQS queue.
 
     region
-        Region to create the queue
+        Region to create the queue.
 
     user
-        Name of the user performing the SQS operations
+        Name of the user performing the SQS operations.
 
     opts
-        Include additional arguments and options to the aws command line
+        Include additional arguments and options to the aws command line.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 

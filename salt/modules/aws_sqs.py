@@ -6,8 +6,7 @@ import json
 
 # Import salt libs
 import salt.utils
-
-_OUTPUT = '--output json'
+from salt.utils import aws
 
 
 def __virtual__():
@@ -15,41 +14,6 @@ def __virtual__():
         # awscli is installed, load the module
         return True
     return False
-
-
-def _region(region):
-    '''
-    Return the region argument.
-    '''
-    return ' --region {r}'.format(r=region)
-
-
-def _run_aws(cmd, region, opts, user, **kwargs):
-    '''
-    Runs the given command against AWS.
-    cmd
-        Command to run
-    region
-        Region to execute cmd in
-    opts
-        Pass in from salt
-    user
-        Pass in from salt
-    kwargs
-        Key-value arguments to pass to the command
-    '''
-    _formatted_args = [
-        '--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
-
-    cmd = 'aws sqs {cmd} {args} {region} {out}'.format(
-        cmd=cmd,
-        args=' '.join(_formatted_args),
-        region=_region(region),
-        out=_OUTPUT)
-
-    rtn = __salt__['cmd.run'](cmd, runas=user)
-
-    return json.loads(rtn) if rtn else ''
 
 
 def list_queues(region, opts=None, user=None):
@@ -70,7 +34,7 @@ def list_queues(region, opts=None, user=None):
     .. code-block:: bash
         salt '*' aws_sqs.list_queues eu-west-1
     '''
-    out = _run_aws('list-queues', region, opts, user)
+    out = aws.cli('sqs', 'list-queues', region, opts, user)
 
     ret = {
         'retcode': 0,
@@ -102,8 +66,8 @@ def create_queue(name, region, opts=None, user=None):
     '''
 
     create = {'queue-name': name}
-    out = _run_aws(
-        'create-queue', region=region, opts=opts,
+    out = aws.cli(
+        'sqs', 'create-queue', region=region, opts=opts,
         user=user, **create)
 
     ret = {
@@ -120,6 +84,7 @@ def delete_queue(name, region, opts=None, user=None):
 
     name
         Name of the SQS queue to deletes
+
     region
         Name of the region to delete the queue from
 
@@ -144,7 +109,8 @@ def delete_queue(name, region, opts=None, user=None):
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 
-        rtn = _run_aws(
+        rtn = aws.cli(
+            'sqs',
             'delete-queue',
             region=region,
             opts=opts,
