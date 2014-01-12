@@ -17,7 +17,7 @@ import os
 import yaml
 try:
     import msgpack
-except:
+except ImportError:
     import msgpack_pure as msgpack
 
 # Import salt libs
