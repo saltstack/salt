@@ -10,10 +10,7 @@ from salt.utils import aws
 
 
 def __virtual__():
-    if salt.utils.which('aws'):
-        # awscli is installed, load the module
-        return True
-    return False
+    return aws.installed()
 
 
 def list_queues(region, opts=None, user=None):
@@ -57,7 +54,7 @@ def create_queue(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
 
     CLI Example:
 

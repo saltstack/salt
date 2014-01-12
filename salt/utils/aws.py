@@ -4,11 +4,21 @@ Helper functions and constants for AWS integration.
 import json
 
 
+def installed():
+    '''
+    Called by __virtual__() to determine whether awscli is available.`
+    '''
+    if salt.utils.which('aws'):
+        # awscli is installed, load the module
+        return True
+    return False
+
+
 def output():
     '''
     Return the output data as json.
     '''
-    return '-- output json'
+    return u'-- output json'
 
 
 def region(region):
@@ -39,9 +49,9 @@ def cli(module, cmd, region, opts, user, **kwargs):
         Key-value arguments to pass to the command
     '''
     _formatted_args = [
-        '--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
+        u'--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
 
-    cmd = 'aws {module} {cmd} {args} {region} {out}'.format(
+    cmd = u'aws {module} {cmd} {args} {region} {out}'.format(
         module=module,
         cmd=cmd,
         args=' '.join(_formatted_args),
