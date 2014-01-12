@@ -1051,6 +1051,48 @@ class Events(object):
 
                 % curl -sS localhost:8000/events/6d1b722e
 
+        The event stream can be easily consumed via JavaScript:
+
+        .. code-block:: javascript
+
+            # Note, you must be authenticated!
+            var source = new EventSource('/events');
+            source.onopen = function() { console.debug('opening') };
+            source.onerror = function(e) { console.debug('error!', e) };
+            source.onmessage = function(e) { console.debug(e.data) };
+
+        It is also possible to consume the stream via the shell.
+
+        Records are separated by blank lines; the ``data: `` and ``tag: ``
+        prefixes will need to be removed manually before attempting to
+        unserialize the JSON.
+
+        curl's ``-N`` flag turns off input buffering which is required to
+        process the stream incrementally.
+
+        Here is a basic example of printing each event as it comes in:
+
+        .. code-block:: bash
+
+            % curl -NsS localhost:8000/events |\
+                    while IFS= read -r line ; do
+                        echo $line
+                    done
+
+        Here is an example of using awk to filter events based on tag:
+
+        .. code-block:: bash
+
+            % curl -NsS localhost:8000/events |\
+                    awk '
+                        BEGIN { RS=""; FS="\n" }
+                        $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
+                    '
+            tag: salt/job/20140112010149808995/new
+            data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
+            tag: 20140112010149808995
+            data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
+
         :status 200: success
         :status 401: could not authenticate using provided credentials
         '''
