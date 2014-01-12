@@ -1017,6 +1017,13 @@ class Events(object):
 
         .. versionadded:: 0.8.3
 
+        Browser clients currently lack Cross-origin resource sharing (CORS)
+        support for the ``EventSource()`` API. Cross-domain requests from a
+        browser may instead pass the :mailheader:`X-Auth-Token` value as an URL
+        parameter::
+
+            % curl -sS localhost:8000/events/6d1b722e
+
         .. http:get:: /events
 
             **Example request**::
@@ -1041,15 +1048,6 @@ class Events(object):
                 data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
 
                 data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
-
-        .. note:: Caveat when using CORS
-
-            Browser clients currently lack Cross-origin resource sharing (CORS)
-            support for the ``EventSource()`` API. Cross-domain requests from a
-            browser may instead pass the :mailheader:`X-Auth-Token` value as an
-            URL parameter::
-
-                % curl -sS localhost:8000/events/6d1b722e
 
         The event stream can be easily consumed via JavaScript:
 
