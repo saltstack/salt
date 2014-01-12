@@ -192,7 +192,7 @@
 # A value of 10 minutes is a reasonable default.
 #
 # If the value is set to zero, this check is disabled.
-#grains_refresh_every = 1
+#grains_refresh_every: 1
 
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
