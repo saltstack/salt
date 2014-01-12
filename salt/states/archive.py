@@ -131,11 +131,9 @@ def extracted(name,
         files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
     else:
         if tar_options is None:
-            tar = tarfile.open(filename, 'r')
-            files = []
-            for item in tar:
-                tar.extract(item, name)
-                files.append(item.name)
+            with tarfile.open(filename, 'r') as tar:
+                files = tar.getnames()
+                tar.extractall(name)
         else:
             # this is needed until merging PR 2651
             log.debug("Untar %s in %s", filename, name)
