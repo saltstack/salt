@@ -15,7 +15,12 @@ import salt.exceptions
 from salt.utils.decorators import which as _which
 
 import shlex
-import pipes
+try:
+    import pipes
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
+
 if hasattr(shlex, 'quote'):
     _quote = shlex.quote
 elif hasattr(pipes, 'quote'):
@@ -30,7 +35,7 @@ __func_alias__ = {
 
 
 def __virtual__():
-    if _quote is None:
+    if _quote is None and not HAS_DEPS:
         return False
     return 'openstack_config'
 

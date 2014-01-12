@@ -284,7 +284,7 @@ result to a variable that can be used throughout the formula.
     } %}
 
     {% set mysql = salt['grains.filter_by'](mysql_lookup_table,
-        merge=salt['pillar.get']('mysql:lookup')) 
+        merge=salt['pillar.get']('mysql:lookup')) %}
 
 The ``merge`` keyword specifies the location of a dictionary in Pillar that can
 be used to override values returned from the lookup table. If the value exists

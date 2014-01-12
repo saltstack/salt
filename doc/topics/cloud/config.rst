@@ -2,16 +2,30 @@
 Core Configuration
 ==================
 
-A number of core configuration options and some options that are global to the 
-VM profiles can be set in the cloud configuration file. By default this file is 
+A number of core configuration options and some options that are global to the
+VM profiles can be set in the cloud configuration file. By default this file is
 located at ``/etc/salt/cloud``.
+
+Thread Pool Size
+====================
+
+When salt cloud is operating in parallel mode via the ``-P`` argument, you can
+control the thread pool size by specifying the ``pool_size`` parameter with
+a positive integer value.
+
+By default, the thread pool size will be set to the number of VMs that salt
+cloud is operating on.
+
+.. code-block:: yaml
+
+    pool_size: 10
 
 
 Minion Configuration
 ====================
 
-The default minion configuration is set up in this file. This is where the 
-minions that are created derive their configuration.
+The default minion configuration is set up in this file. This is where the
+minions that are created derive their configuration from.
 
 .. code-block:: yaml
 
@@ -19,7 +33,7 @@ minions that are created derive their configuration.
         master: saltmaster.example.com
 
 
-This is the location in particular to specify the location of the salt master.
+In particular, this is the location to specify the location of the salt master.
 
 
 New Cloud Configuration Syntax
@@ -27,19 +41,19 @@ New Cloud Configuration Syntax
 
 The data specific to interacting with public clouds is set up here.
 
-**ATTENTION**: Since version 0.8.7 a new cloud provider configuration syntax 
-was implemented.  It will allow for multiple configurations of the same cloud 
-provider where only minor details can change, for example, the region for an 
-EC2 instance. While the old format is still supported and automatically 
-migrated every time salt-cloud configuration is parsed, a choice was made to 
+**ATTENTION**: Since version 0.8.7 a new cloud provider configuration syntax
+was implemented.  It will allow for multiple configurations of the same cloud
+provider where only minor details can change, for example, the region for an
+EC2 instance. While the old format is still supported and automatically
+migrated every time salt-cloud configuration is parsed, a choice was made to
 warn the user or even exit with an error if both formats are mixed.
 
 
 Migrating Configurations
 ------------------------
 
-If you wish to migrate, there are several alternatives. Since the old syntax 
-was mainly done on the main cloud configuration file, see the next before and 
+If you wish to migrate, there are several alternatives. Since the old syntax
+was mainly done on the main cloud configuration file, see the next before and
 after migration example.
 
 * Before migration in ``/etc/salt/cloud``:
@@ -67,21 +81,21 @@ after migration example.
         provider: aws
 
 
-Notice that it's not longer required to name a cloud provider's configuration 
-after it's provider, it can be an alias, though, an additional configuration 
-key is added, ``provider``. This allows for multiple configuration for the same 
+Notice that it's no longer required to name a cloud provider's configuration
+after its provider; it can be an alias, though an additional configuration
+key is added, ``provider``. This allows for multiple configuration for the same
 cloud provider to coexist.
 
-While moving towards an improved and extensible configuration handling 
-regarding the cloud providers, ``--providers-config``, which defaults to 
-``/etc/salt/cloud.providers``, was added to the cli parser.  It allows for the 
-cloud providers configuration to be provided in a different file, and/or even 
-any matching file on a sub-directory, ``cloud.providers.d/*.conf`` which is 
-relative to the providers configuration file(with the above configuration file 
+While moving towards an improved and extensible configuration handling
+regarding the cloud providers, ``--providers-config``, which defaults to
+``/etc/salt/cloud.providers``, was added to the cli parser.  It allows for the
+cloud providers configuration to be provided in a different file, and/or even
+any matching file on a sub-directory, ``cloud.providers.d/*.conf`` which is
+relative to the providers configuration file(with the above configuration file
 as an example, ``/etc/salt/cloud.providers.d/*.conf``).
 
-So, using the example configuration above, after migration in 
-``/etc/salt/cloud.providers`` or 
+So, using the example configuration above, after migration in
+``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/aws-migrated.conf``:
 
 
@@ -97,13 +111,13 @@ So, using the example configuration above, after migration in
 
 
 
-Notice that on this last migrated example, it **no longer** includes the 
+Notice that on this last migrated example, it **no longer** includes the
 ``providers`` starting key.
 
 
-While migrating the cloud providers configuration, if the provider alias(from 
-the above example ``my-aws-migrated-config``) changes from what you had(from 
-the above example ``aws``), you will also need to change the ``provider`` 
+While migrating the cloud providers configuration, if the provider alias (from
+the above example ``my-aws-migrated-config``) changes from what you had (from
+the above example ``aws``), you will also need to change the ``provider``
 configuration key in the defined profiles.
 
 * From:
@@ -126,7 +140,7 @@ configuration key in the defined profiles.
       size: Micro Instance
 
 
-This new configuration syntax even allows you to have multiple cloud 
+This new configuration syntax even allows you to have multiple cloud
 configurations under the same alias, for example:
 
 
@@ -148,7 +162,7 @@ configurations under the same alias, for example:
 **Notice the dash and indentation on the above example.**
 
 
-Having multiple entries for a configuration alias also makes the ``provider`` 
+Having multiple entries for a configuration alias also makes the ``provider``
 key on any defined profile to change, see the example:
 
 
@@ -172,14 +186,14 @@ key on any defined profile to change, see the example:
 
 
 
-Notice that because of the multiple entries, one has to be explicit about the 
+Notice that because of the multiple entries, one has to be explicit about the
 provider alias and name, from the above example, ``production-config:aws``.
 
-This new syntax also changes the interaction with the ``salt-cloud`` binary.  
-``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud 
-provider as an argument. Since 0.8.7 the argument used should be the configured 
-cloud provider alias. If the provider alias only as a single entry, use 
-``<provider-alias>``.  If it has multiple entries, 
+This new syntax also changes the interaction with the ``salt-cloud`` binary.
+``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud
+provider as an argument. Since 0.8.7 the argument used should be the configured
+cloud provider alias. If the provider alias only has a single entry, use
+``<provider-alias>``.  If it has multiple entries,
 ``<provider-alias>:<provider-name>`` should be used.
 
 
@@ -211,8 +225,8 @@ Rackspace cloud requires two configuration options:
       provider: rackspace
 
 
-**NOTE**: With the new providers configuration syntax you would have ``provider: 
-rackspace-config`` instead of ``provider: rackspace`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have ``provider:
+rackspace-config`` instead of ``provider: rackspace`` on a profile
 configuration.
 
 
@@ -253,15 +267,15 @@ A number of configuration options are required for Amazon AWS:
       provider: aws
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-aws-quick-start`` or ``provider: my-aws-default`` instead of 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-aws-quick-start`` or ``provider: my-aws-default`` instead of
 ``provider: aws`` on a profile configuration.
 
 
 Linode
 ------
 
-Linode requires a single API key, but the default root password also needs to 
+Linode requires a single API key, but the default root password also needs to
 be set:
 
 * Using the old format:
@@ -282,21 +296,21 @@ be set:
       provider: linode
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-linode-config`` instead of ``provider: linode`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-linode-config`` instead of ``provider: linode`` on a profile
 configuration.
 
-The password needs to be 8 characters and contain lowercase, uppercase and 
+The password needs to be 8 characters and contain lowercase, uppercase and
 numbers.
 
 
 Joyent Cloud
 ------------
 
-The Joyent cloud requires three configuration parameters. The user name and 
-password that are used to log into the Joyent system, and the location of the 
-private ssh key associated with the Joyent account. The ssh key is needed to 
-send the provisioning commands up to the freshly created virtual machine,
+The Joyent cloud requires three configuration parameters. The username and
+password that are used to log into the Joyent system, and the location of the
+private SSH key associated with the Joyent account. The SSH key is needed to
+send the provisioning commands up to the freshly created virtual machine.
 
 * Using the old format:
 
@@ -318,16 +332,16 @@ send the provisioning commands up to the freshly created virtual machine,
         provider: joyent
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-joyent-config`` instead of ``provider: joyent`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-joyent-config`` instead of ``provider: joyent`` on a profile
 configuration.
 
 
 GoGrid
 ------
 
-To use Salt Cloud with GoGrid log into the GoGrid web interface and create an 
-API key. Do this by clicking on "My Account" and then going to the API Keys 
+To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+API key. Do this by clicking on "My Account" and then going to the API Keys
 tab.
 
 The GOGRID.apikey and the GOGRID.sharedsecret configuration parameters need to
@@ -351,17 +365,17 @@ be set in the configuration file to enable interfacing with GoGrid:
       provider: gogrid
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-gogrid-config`` instead of ``provider: gogrid`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-gogrid-config`` instead of ``provider: gogrid`` on a profile
 configuration.
 
 
 OpenStack
 ---------
 
-OpenStack configuration differs between providers, and at the moment several 
-options need to be specified. This module has been officially tested against 
-the HP and the Rackspace implementations, and some examples are provided for 
+OpenStack configuration differs between providers, and at the moment several
+options need to be specified. This module has been officially tested against
+the HP and the Rackspace implementations, and some examples are provided for
 both.
 
 * Using the old format:
@@ -389,7 +403,7 @@ both.
   OPENSTACK.password: mypass
 
 
-If you have an API key for your provider, it may be specified instead of a 
+If you have an API key for your provider, it may be specified instead of a
 password:
 
 .. code-block:: yaml
@@ -403,7 +417,7 @@ password:
 
     # For HP
     my-openstack-hp-config:
-      identity_url: 
+      identity_url:
       'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
       compute_name: Compute
       compute_region: 'az-1.region-a.geo-1'
@@ -427,7 +441,7 @@ password:
       provider: openstack
 
 
-If you have an API key for your provider, it may be specified instead of a 
+If you have an API key for your provider, it may be specified instead of a
 password:
 
 .. code-block:: yaml
@@ -439,13 +453,13 @@ password:
       apikey: 901d3f579h23c8v73q9
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-openstack-hp-config`` or ``provider: 
-my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-openstack-hp-config`` or ``provider:
+my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile
 configuration.
 
 
-You will certainly need to configure the ``user``, ``tenant`` and either 
+You will certainly need to configure the ``user``, ``tenant`` and either
 ``password`` or ``apikey``.
 
 
@@ -466,7 +480,7 @@ Using the new syntax:
       ignore_cidr: 192.168.0.0/16
 
 
-For in-house Openstack Essex installation, libcloud needs the service_type :
+For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 .. code-block:: yaml
 
@@ -503,7 +517,7 @@ the API Access tab.
       location: New York 1
 
 
-**NOTE**: With the new providers configuration syntax you would have 
+**NOTE**: With the new providers configuration syntax you would have
 ``provider: my-digitalocean-config`` instead of ``provider: digital_ocean`` on a
 profile configuration.
 
@@ -511,7 +525,7 @@ profile configuration.
 Parallels
 ---------
 
-Using Salt with Parallels requires a user, password and url. These can be
+Using Salt with Parallels requires a user, password and URL. These can be
 obtained from your cloud provider.
 
 * Using the old format:
@@ -534,7 +548,7 @@ obtained from your cloud provider.
       provider: parallels
 
 
-**NOTE**: With the new providers configuration syntax you would have 
+**NOTE**: With the new providers configuration syntax you would have
 ``provider: my-parallels-config`` instead of ``provider: parallels`` on a
 profile configuration.
 
@@ -542,10 +556,10 @@ profile configuration.
 IBM SmartCloud Enterprise
 -------------------------
 
-In addition to a username and password, the IBM SCE module requires an SSH key, 
-which is currently configured inside IBM's web interface. A location is also 
-required to create instances, but not to query their cloud. This is important, 
-because you need to use salt-cloud --list-locations (with the other options 
+In addition to a username and password, the IBM SCE module requires an SSH key,
+which is currently configured inside IBM's web interface. A location is also
+required to create instances, but not to query their cloud. This is important,
+because you need to use salt-cloud --list-locations (with the other options
 already set) in order to find the name of the location that you want to use.
 
 * Using the old format:
@@ -573,8 +587,8 @@ already set) in order to find the name of the location that you want to use.
       provider: ibmsce
 
 
-**NOTE**: With the new providers configuration syntax you would have 
-``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile 
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile
 configuration.
 
 
@@ -612,18 +626,18 @@ And in the map file:
 Extending Profiles and Cloud Providers Configuration
 ====================================================
 
-As of 0.8.7, the option to extend both the profiles and cloud providers 
-configuration and avoid duplication was added. The extends feature works on the 
-current profiles configuration, but, regarding the cloud providers 
-configuration, **only** works in the new syntax and respective configuration 
-files, ie, ``/etc/salt/salt/cloud.providers`` or 
+As of 0.8.7, the option to extend both the profiles and cloud providers
+configuration and avoid duplication was added. The extends feature works on the
+current profiles configuration, but, regarding the cloud providers
+configuration, **only** works in the new syntax and respective configuration
+files, i.e. ``/etc/salt/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/*.conf``.
 
 
 Extending Profiles
 ------------------
 
-Some example usage on how to use ``extends`` with profiles. Consider 
+Some example usage on how to use ``extends`` with profiles. Consider
 ``/etc/salt/salt/cloud.profiles`` containing:
 
 .. code-block:: yaml
@@ -650,7 +664,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
       extends: development-instances
 
 
-The above configuration, once parsed would generate the following profiles 
+The above configuration, once parsed would generate the following profiles
 data:
 
 .. code-block:: python
@@ -689,7 +703,7 @@ Pretty cool right?
 Extending Providers
 -------------------
 
-Some example usage on how to use ``extends`` within the cloud providers 
+Some example usage on how to use ``extends`` within the cloud providers
 configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
 
 
@@ -720,7 +734,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
         availability_zone: us-east-1
 
 
-The above configuration, once parsed would generate the following providers 
+The above configuration, once parsed would generate the following providers
 data:
 
 .. code-block:: python

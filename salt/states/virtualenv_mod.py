@@ -24,7 +24,7 @@ def __virtual__():
 
 
 def managed(name,
-            venv_bin='virtualenv',
+            venv_bin=None,
             requirements=None,
             no_site_packages=None,
             system_site_packages=False,

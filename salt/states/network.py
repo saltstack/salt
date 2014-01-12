@@ -7,9 +7,13 @@ The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.
 
-Please note that only Redhat and Debian style networking is currently
-supported. This module will therefore only work on RH/CentOS/Fedora and
-Debian/Ubuntu.
+.. note::
+
+    Prior to version 2014.1.0 (Hydrogen), only RedHat-based systems (RHEL,
+    CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
+    new in 2014.1.0 and should be considered experimental.
+
+    Other platforms are not yet supported.
 
 .. code-block:: yaml
 
