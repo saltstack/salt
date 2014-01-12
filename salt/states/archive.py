@@ -7,6 +7,7 @@ Archive states.
 import logging
 import os
 import tarfile
+from contextlib import closing
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def extracted(name,
         files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
     else:
         if tar_options is None:
-            with tarfile.open(filename, 'r') as tar:
+            with closing(tarfile.open(filename, 'r')) as tar:
                 files = tar.getnames()
                 tar.extractall(name)
         else:
