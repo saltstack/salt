@@ -252,6 +252,31 @@ to False
 
     color: False
 
+.. conf_master:: sock_dir
+
+``sock_dir``
+------------
+
+Default: :file:`/var/run/salt/master`
+
+Set the location to use for creating Unix sockets for master process
+communication
+
+.. code-block:: yaml
+
+    sock_dir: /var/run/salt/master
+
+.. conf_master:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``False``
+
+The master can take a while to start up when lspci and/or dmidecode is used
+to populate the grains for the master. Enable if you want to see GPU hardware
+data for your master.
+
 .. conf_master:: job_cache
 
 ``job_cache``
@@ -265,6 +290,22 @@ Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
 sure the master has access to a faster IO system or a tmpfs is mounted to the
 jobs dir
+
+.. conf_master:: minion_data_cache
+
+``minion_data_cache``
+---------------------
+
+Default: ``True``
+
+The minion data cache is a cache of information about the minions stored on the
+master, this information is primarily the pillar and grains data. The data is
+cached in the Master cachedir under the name of the minion and used to pre
+determine what minions are expected to reply from executions.
+
+.. code-block:: yaml
+
+    minion_data_cache: True
 
 .. conf_master:: ext_job_cache
 
@@ -282,22 +323,6 @@ local job cache on the master
 
     ext_job_cache: redis
 
-.. conf_master:: minion_data_cache
-
-``minion_data_cache``
----------------------
-
-Default: True
-
-The minion data cache is a cache of information about the minions stored on the
-master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to pre
-determine what minions are expected to reply from executions.
-
-.. code-block:: yaml
-
-    minion_cache_dir: True
-
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
@@ -314,14 +339,6 @@ only the cache for the mine system.
     enforce_mine_cache: False
 
 .. conf_master:: sock_dir
-
-``sock_dir``
-------------
-
-Default: :file:`/tmp/salt-unix`
-
-Set the location to use for creating Unix sockets for master process
-communication
 
 
 Master Security Settings
@@ -496,41 +513,9 @@ the Salt master
 
     cython_enable: False
 
+
 Master State System Settings
 ============================
-
-.. conf_master:: state_verbose
-
-``state_verbose``
------------------
-
-Default: ``False``
-
-state_verbose allows for the data returned from the minion to be more
-verbose. Normally only states that fail or states that have changes are
-returned, but setting state_verbose to ``True`` will return all states that
-were checked
-
-.. code-block:: yaml
-
-    state_verbose: True
-
-.. conf_master:: state_output
-
-``state_output``
-----------------
-
-Default: ``full``
-
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.  If set to 'mixed', the output
-will be terse unless a state failed, in which case that output will be full.
-If set to 'changes', the output will be full unless the state didn't change.
-
-.. code-block:: yaml
-
-    state_output: full
 
 .. conf_master:: state_top
 
@@ -546,6 +531,21 @@ root of the base environment
 .. code-block:: yaml
 
     state_top: top.sls
+
+.. conf_master:: master_tops
+
+``master_tops``
+---------------
+
+Default: ``{}``
+
+The master_tops option replaces the external_nodes option by creating
+a plugable system for the generation of external top data. The external_nodes
+option is deprecated by the master_tops option.
+To gain the capabilities of the classic external_nodes system, use the
+following configuration:
+master_tops:
+  ext_nodes: <Shell command which returns yaml>
 
 .. conf_master:: external_nodes
 
@@ -591,6 +591,39 @@ at the moment a single state fails
 
     failhard: False
 
+.. conf_master:: state_verbose
+
+``state_verbose``
+-----------------
+
+Default: ``False``
+
+state_verbose allows for the data returned from the minion to be more
+verbose. Normally only states that fail or states that have changes are
+returned, but setting state_verbose to ``True`` will return all states that
+were checked
+
+.. code-block:: yaml
+
+    state_verbose: True
+
+.. conf_master:: state_output
+
+``state_output``
+----------------
+
+Default: ``full``
+
+The state_output setting changes if the output is the full multi line
+output for each changed state if set to 'full', but if set to 'terse'
+the output will be shortened to a single line.  If set to 'mixed', the output
+will be terse unless a state failed, in which case that output will be full.
+If set to 'changes', the output will be full unless the state didn't change.
+
+.. code-block:: yaml
+
+    state_output: full
+
 .. conf_master:: yaml_utf8 
 
 ``yaml_utf8``
@@ -620,33 +653,6 @@ or just post what changes are going to be made
 
 Master File Server Settings
 ===========================
-
-.. conf_master:: fileserver_backend
-
-``fileserver_backend``
-----------------------
-
-Default:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
-
-Salt supports a modular fileserver backend system, this system allows the salt
-master to link directly to third party systems to gather and manage the files
-available to minions. Multiple backends can be configured and will be searched
-for the requested file in the order in which they are defined here. The default
-setting only enables the standard backend ``roots``, which is configured using
-the :conf_master:`file_roots` option.
-
-Example:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
-      - git
 
 .. conf_master:: file_roots
 
@@ -709,6 +715,72 @@ The buffer size in the file server in bytes
 .. code-block:: yaml
 
     file_buffer_size: 1048576
+
+.. conf_master:: file_ignore_regex
+
+``file_ignore_regex``
+---------------------
+
+Default: ``''``
+
+A regular expression (or a list of expressions) that will be matched
+against the file path before syncing the modules and states to the minions.
+This includes files affected by the file.recurse state.
+For example, if you manage your custom modules and states in subversion
+and don't want all the '.svn' folders and content synced to your minions,
+you could set this to '/\.svn($|/)'. By default nothing is ignored.
+
+.. code-block:: yaml
+
+    file_ignore_regex:
+      - '/\.svn($|/)'
+      - '/\.git($|/)'
+
+.. conf-master:: file_ignore_glob
+
+``file_ignore_glob``
+--------------------
+
+Default ``''``
+
+A file glob (or list of file globs) that will be matched against the file
+path before syncing the modules and states to the minions. This is similar
+to file_ignore_regex above, but works on globs instead of regex. By default
+nothing is ignored.
+
+.. code-block:: yaml
+   
+    file_ignore_glob:
+      - '\*.pyc'
+      - '\*/somefolder/\*.bak'
+      - '\*.swp'
+
+.. conf-master:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - git
 
 .. conf_master:: gitfs_provider
 
@@ -898,18 +970,6 @@ master, specify the higher level master port with this configuration value
 
 .. conf_master:: syndic_log_file
 
-``syndic_log_file``
--------------------
-
-Default: ``syndic.log``
-
-If this master will be running a salt-syndic to connect to a higher level
-master, specify the log_file of the syndic daemon.
-
-.. code-block:: yaml
-
-    syndic_log_file: salt-syndic.log
-
 .. conf_master:: syndic_master_log_file
 
 ``syndic_pidfile``
@@ -923,6 +983,19 @@ master, specify the pidfile of the syndic daemon.
 .. code-block:: yaml
 
     syndic_pidfile: syndic.pid
+
+``syndic_log_file``
+-------------------
+
+Default: ``syndic.log``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the log_file of the syndic daemon.
+
+.. code-block:: yaml
+
+    syndic_log_file: salt-syndic.log
+
 
 Peer Publish Settings
 =====================
@@ -993,23 +1066,6 @@ runner:
     peer_run:
       foo.example.com:
           - manage.up
-
-Node Groups
-===========
-
-.. conf_master:: nodegroups
-
-Default: ``{}``
-
-Node groups allow for logical groupings of minion nodes.
-A group consists of a group name and a compound target.
-
-.. code-block:: yaml
-
-    nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
-      group2: 'G@os:Debian and foo.domain.com'
-
 
 
 .. _master-logging-settings:
@@ -1151,6 +1207,40 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+Node Groups
+===========
+
+.. conf_master:: nodegroups
+
+Default: ``{}``
+
+Node groups allow for logical groupings of minion nodes.
+A group consists of a group name and a compound target.
+
+.. code-block:: yaml
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+
+
+Range Cluster Settings
+======================
+
+.. conf_master:: range_server
+
+``range_server``
+----------------
+
+Default: ``''``
+
+The range server (and optional port) that serves your cluster information
+https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+
+.. code-block:: yaml
+
+  range_server: range:80
+
 
 Include Configuration
 =====================
@@ -1197,3 +1287,45 @@ option then the master will log a warning message.
       - master.d/*
       - /etc/roles/webserver
 
+
+Windows Software Repo Settings
+------------------------------
+
+.. conf_master:: win_repo
+
+``win_repo``
+------------
+
+Default: ``/srv/salt/win/repo``
+
+Location of the repo on the master
+
+
+.. code-block:: yaml
+
+    win_repo: '/srv/salt/win/repo'
+
+.. conf_master:: win_repo_mastercachefile
+
+``win_repo_mastercachefile``
+----------------------------
+
+Default: ``/srv/salt/win/repo/winrepo.p``
+
+.. code-block:: yaml
+
+    win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+
+.. conf_master:: win_gitrepos
+
+``win_gitrepos``
+----------------
+
+Default: ``''``
+
+List of git repositories to include with the local repo
+
+.. code-block:: yaml
+
+    win_gitrepos:
+      - 'https://github.com/saltstack/salt-winrepo.git'
