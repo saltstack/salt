@@ -1061,7 +1061,7 @@ class Events(object):
 
         It is also possible to consume the stream via the shell.
 
-        Records are separated by blank lines; the ``data: `` and ``tag: ``
+        Records are separated by blank lines; the ``data:`` and ``tag:``
         prefixes will need to be removed manually before attempting to
         unserialize the JSON.
 
