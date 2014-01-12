@@ -98,9 +98,9 @@ class MasterPillarUtil(object):
         mine_data = dict([(minion_id, {}) for minion_id in minion_ids])
         if (not self.opts.get('minion_data_cache', False)
                 and not self.opts.get('enforce_mine_cache', False)):
-                    log.debug('Skipping cached mine data minion_data_cache'
-                              'and enfore_mine_cache are both disabled.')
-                    return mine_data
+            log.debug('Skipping cached mine data minion_data_cache'
+                      'and enfore_mine_cache are both disabled.')
+            return mine_data
         mdir = os.path.join(self.opts['cachedir'], 'minions')
         try:
             for minion_id in minion_ids:
