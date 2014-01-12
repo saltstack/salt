@@ -23,7 +23,10 @@ except ImportError:
 # Import python libs
 import copy
 import logging
-import msgpack
+try:
+    import msgpack
+except:
+    import msgpack_pure as msgpack
 import os
 import locale
 from distutils.version import LooseVersion  # pylint: disable=E0611
