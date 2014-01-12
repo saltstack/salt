@@ -25,7 +25,7 @@ import copy
 import logging
 try:
     import msgpack
-except:
+except ImportError:
     import msgpack_pure as msgpack
 import os
 import locale
