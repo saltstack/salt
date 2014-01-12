@@ -385,7 +385,7 @@ def _memdata(osdata):
                 mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
             else:
                 mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
-            if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
+            if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
             grains['mem_total'] = int(mem) / 1024 / 1024
     elif osdata['kernel'] == 'SunOS':
@@ -510,6 +510,9 @@ def _virtual(osdata):
     isdir = os.path.isdir
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
+        if os.path.isfile('/proc/1/cgroup'):
+            if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
+                grains['virtual_subtype'] = 'LXC'
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -704,6 +707,7 @@ _OS_NAME_MAP = {
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
+    'enterprise': 'OEL',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
@@ -1073,6 +1077,20 @@ def ip_interfaces():
                 iface_ips.append(secondary['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
+
+
+def hwaddr_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their hw addresses (Mac Address)
+    '''
+    # Provides:
+    #   hwaddr_interfaces
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        if 'hwaddr' in ifaces[face]:
+            ret[face] = ifaces[face]['hwaddr']
+    return {'hwaddr_interfaces': ret}
 
 
 def path():

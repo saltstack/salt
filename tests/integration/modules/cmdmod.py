@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import sys
@@ -37,13 +39,15 @@ class CMDModuleTest(integration.ModuleCase):
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
     @patch('json.loads')
-    def test_os_environment_remains_intact(self, *mocks):
+    def test_os_environment_remains_intact(self,
+                                           loads_mock,
+                                           popen_mock,
+                                           getpwnam_mock):
         '''
         Make sure the OS environment is not tainted after running a command
         that specifies runas.
         '''
         environment = os.environ.copy()
-        loads_mock, popen_mock, getpwnam_mock = mocks
 
         popen_mock.return_value = Mock(
             communicate=lambda *args, **kwags: ['{}', None],
@@ -175,7 +179,7 @@ sys.stdout.write('cheese')
 
         try:
             runas = os.getlogin()
-        except:
+        except:  # pylint: disable=W0702
             # On some distros (notably Gentoo) os.getlogin() fails
             import pwd
             runas = pwd.getpwuid(os.getuid())[0]

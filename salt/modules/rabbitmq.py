@@ -448,21 +448,22 @@ def list_policies(runas=None):
     for line in res.splitlines():
         if '...' not in line and line != '\n':
             parts = line.split('\t')
-            if len(parts) != 5:
+            if len(parts) != 6:
                 continue
             vhost, name = parts[0], parts[1]
             if vhost not in ret:
                 ret[vhost] = {}
             ret[vhost][name] = {
-                'pattern': parts[2],
-                'definition': parts[3],
-                'priority': parts[4]
+                'apply_to': parts[2],
+                'pattern': parts[3],
+                'definition': parts[4],
+                'priority': parts[5]
             }
     log.debug('Listing policies: {0}'.format(ret))
     return ret
 
 
-def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
+def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
@@ -475,8 +476,13 @@ def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
         salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
     '''
     res = __salt__['cmd.run'](
-        "rabbitmqctl set_policy -p {0} {1} '{2}' '{3}' {4}".format(
-            vhost, name, pattern, definition.replace("'", '"'), priority),
+        "rabbitmqctl set_policy -p {0}{1}{2} {3} '{4}' '{5}'".format(
+            vhost,
+            ' --priority ' if priority else '',
+            priority if priority else '',
+            name,
+            pattern,
+            definition.replace("'", '"')),
         runas=runas)
     log.debug('Set policy: {0}'.format(res))
     return _format_response(res, 'Set')

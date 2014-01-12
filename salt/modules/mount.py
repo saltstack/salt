@@ -18,7 +18,16 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 log = logging.getLogger(__name__)
 
 
+def _list_mounts():
+    ret = {}
+    for line in __salt__['cmd.run_stdout']('mount -l').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        ret[comps[2]] = comps[0]
+    return ret
+
+
 def _active_mountinfo(ret):
+    _list = _list_mounts()
     filename = '/proc/self/mountinfo'
     if not os.access(filename, os.R_OK):
         msg = 'File not readable {0}'
@@ -36,11 +45,13 @@ def _active_mountinfo(ret):
                              'opts': comps[5].split(','),
                              'fstype': comps[7],
                              'device': comps[8],
+                             'alt_device': _list.get(comps[4], None),
                              'superopts': comps[9].split(',')}
     return ret
 
 
 def _active_mounts(ret):
+    _list = _list_mounts()
     filename = '/proc/self/mounts'
     if not os.access(filename, os.R_OK):
         msg = 'File not readable {0}'
@@ -50,6 +61,7 @@ def _active_mounts(ret):
         for line in ifile:
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
+                             'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
                              'opts': comps[3].split(',')}
     return ret
@@ -75,7 +87,7 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    if __grains__['os'] in ('FreeBSD'):
+    if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
     else:
         try:
@@ -212,13 +224,16 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name:
+                if comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
                     if comps[0] != device:
                         change = True
                         comps[0] = device
+                    if comps[1] != name:
+                        change = True
+                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype
@@ -267,13 +282,12 @@ def set_fstab(
         else:
             if not salt.utils.test_mode(test=test, **kwargs):
                 # The entry is new, add it to the end of the fstab
-                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
-                        device,
-                        name,
-                        fstype,
-                        opts,
-                        dump,
-                        pass_num)
+                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(device,
+                                                                   name,
+                                                                   fstype,
+                                                                   opts,
+                                                                   dump,
+                                                                   pass_num)
                 lines.append(newline)
                 try:
                     with salt.utils.fopen(config, 'w+') as ofile:
@@ -403,11 +417,10 @@ def swaps():
             if line.startswith('Filename'):
                 continue
             comps = line.split()
-            ret[comps[0]] = {
-                    'type': comps[1],
-                    'size': comps[2],
-                    'used': comps[3],
-                    'priority': comps[4]}
+            ret[comps[0]] = {'type': comps[1],
+                             'size': comps[2],
+                             'used': comps[3],
+                             'priority': comps[4]}
     return ret
 
 

@@ -1,9 +1,43 @@
+# -*- coding: utf-8 -*-
+
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (ensure_in_syspath, destructiveTest)
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
+from salttesting import skipIf
+
+# Import Python libs
+import os
+import shutil
+
+
+class DiskModuleVirtualizationTest(integration.ModuleCase):
+    '''
+    Test to make sure we return a clean result under Docker. Refs #8976
+
+    This is factored into its own class so that we can have some certainty that setUp() and tearDown() are run.
+    '''
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'No mtab on Windows')
+    def setUp(self):
+        # Make /etc/mtab unreadable
+        if os.path.isfile('/etc/mtab'):
+            shutil.move('/etc/mtab', '/tmp/mtab')
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'No mtab on Windows')
+    def test_no_mtab(self):
+        ret = self.run_function('disk.usage')
+        self.assertDictEqual(ret, {})
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'No mtab on Windows')
+    def tearDown(self):
+        if os.path.isfile('/tmp/mtab'):
+            shutil.move('/tmp/mtab', '/etc/mtab')
 
 
 class DiskModuleTest(integration.ModuleCase):

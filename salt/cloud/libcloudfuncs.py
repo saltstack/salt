@@ -9,7 +9,7 @@ import os
 import logging
 
 
-# pylint: disable-msg=W0611
+# pylint: disable=W0611
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -18,7 +18,7 @@ from libcloud.compute.deployment import (
     ScriptDeployment,
     SSHKeyDeployment
 )
-# pylint: enable-msg=W0611
+# pylint: enable=W0611
 
 
 # Import salt libs
@@ -26,8 +26,8 @@ import salt._compat
 import salt.utils.event
 
 # Import salt cloud libs
-import salt.cloud.utils
-import salt.cloud.config as config
+import salt.utils.cloud
+import salt.config as config
 from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
@@ -80,7 +80,7 @@ def ssh_pub(vm_):
     '''
     Deploy the primary ssh authentication key
     '''
-    ssh = config.get_config_value('ssh_auth', vm_, __opts__)
+    ssh = config.get_cloud_config_value('ssh_auth', vm_, __opts__)
     if not ssh:
         return None
 
@@ -91,13 +91,19 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(ssh).read())
 
 
-def avail_locations(conn=None):
+def avail_locations(conn=None, call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     locations = conn.list_locations()
     ret = {}
@@ -122,13 +128,19 @@ def avail_locations(conn=None):
     return ret
 
 
-def avail_images(conn=None):
+def avail_images(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     images = conn.list_images()
     ret = {}
@@ -151,13 +163,19 @@ def avail_images(conn=None):
     return ret
 
 
-def avail_sizes(conn=None):
+def avail_sizes(conn=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     sizes = conn.list_sizes()
     ret = {}
@@ -190,7 +208,7 @@ def get_location(conn, vm_):
     Return the location object to use
     '''
     locations = conn.list_locations()
-    vm_location = config.get_config_value('location', vm_, __opts__).encode(
+    vm_location = config.get_cloud_config_value('location', vm_, __opts__).encode(
         'ascii', 'salt-cloud-force-ascii'
     )
 
@@ -221,7 +239,7 @@ def get_image(conn, vm_):
     '''
     images = conn.list_images()
 
-    vm_image = config.get_config_value('image', vm_, __opts__).encode(
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
         'ascii', 'salt-cloud-force-ascii'
     )
 
@@ -249,7 +267,7 @@ def get_size(conn, vm_):
     Return the VM's size object
     '''
     sizes = conn.list_sizes()
-    vm_size = config.get_config_value('size', vm_, __opts__)
+    vm_size = config.get_cloud_config_value('size', vm_, __opts__)
     if not vm_size:
         return sizes[0]
 
@@ -266,22 +284,28 @@ def script(vm_):
     Return the script deployment object
     '''
     return ScriptDeployment(
-        salt.cloud.utils.os_script(
-            config.get_config_value('os', vm_, __opts__),
+        salt.utils.cloud.os_script(
+            config.get_cloud_config_value('os', vm_, __opts__),
             vm_,
             __opts__,
-            salt.cloud.utils.salt_config_to_yaml(
-                salt.cloud.utils.minion_config(__opts__, vm_)
+            salt.utils.cloud.salt_config_to_yaml(
+                salt.utils.cloud.minion_config(__opts__, vm_)
             )
         )
     )
 
 
-def destroy(name, conn=None):
+def destroy(name, conn=None, call=None):
     '''
     Delete a single VM
     '''
-    salt.cloud.utils.fire_event(
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -289,7 +313,7 @@ def destroy(name, conn=None):
     )
 
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
     if node is None:
@@ -300,14 +324,14 @@ def destroy(name, conn=None):
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
         event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
-        salt.cloud.utils.fire_event(
+        salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
         )
         if __opts__['delete_sshkeys'] is True:
-            salt.cloud.utils.remove_sshkey(node.public_ips[0])
+            salt.utils.cloud.remove_sshkey(node.public_ips[0])
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))
@@ -319,7 +343,7 @@ def reboot(name, conn=None):
     Reboot a single VM
     '''
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
     if node is None:
@@ -346,12 +370,17 @@ def reboot(name, conn=None):
     return False
 
 
-def list_nodes(conn=None):
+def list_nodes(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     nodes = conn.list_nodes()
     ret = {}
@@ -362,18 +391,22 @@ def list_nodes(conn=None):
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
-            'extra': node.extra,
             'state': node_state(node.state)
         }
     return ret
 
 
-def list_nodes_full(conn=None):
+def list_nodes_full(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with all fields
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
     nodes = conn.list_nodes()
     ret = {}
@@ -382,28 +415,20 @@ def list_nodes_full(conn=None):
         for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
             pairs[key] = value
         ret[node.name] = pairs
+        del ret[node.name]['driver']
     return ret
 
 
-def list_nodes_select(conn=None):
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
     if not conn:
-        conn = get_conn()   # pylint: disable-msg=E0602
+        conn = get_conn()   # pylint: disable=E0602
 
-    nodes = conn.list_nodes()
-    ret = {}
-    for node in nodes:
-        pairs = {}
-        data = node.__dict__
-        data.update(node.extra)
-        for key in data:
-            if str(key) in __opts__['query.selection']:
-                value = data[key]
-                pairs[key] = value
-        ret[node.name] = pairs
-    return ret
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(conn, 'function'), __opts__['query.selection'], call,
+    )
 
 
 def show_instance(name, call=None):

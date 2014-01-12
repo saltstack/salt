@@ -1,8 +1,14 @@
-=======
-Modules
-=======
+=================
+Execution Modules
+=================
 
-Salt modules are the functions called by the :command:`salt` command.
+Salt execution modules are the functions called by the :command:`salt` command.
+
+.. note::
+
+    Salt execution modules are different from state modules and cannot be
+    called directly within state files.  You must use the `module` state module
+    to execute execution modules within state runs.
 
 .. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
 

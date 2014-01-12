@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Managing Ruby installations and gemsets with Ruby Version Manager (RVM).
-========================================================================
+Managing Ruby installations and gemsets with Ruby Version Manager (RVM)
+=======================================================================
 
 This module is used to install and manage ruby installations and
 gemsets with RVM, the Ruby Version Manager. Different versions of ruby
@@ -188,7 +188,7 @@ def installed(name, default=False, runas=None, user=None):
     user: None
         The user to run rvm as.
 
-        ..versionadded:: 0.17.0
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 

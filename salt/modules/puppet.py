@@ -166,7 +166,7 @@ def noop(*args, **kwargs):
     return run(*args, **kwargs)
 
 
-def facts():
+def facts(puppet=False):
     '''
     Run facter and return the results
 
@@ -179,7 +179,8 @@ def facts():
     _check_facter()
 
     ret = {}
-    output = __salt__['cmd.run']('facter')
+    opt_puppet = '--puppet' if puppet else ''
+    output = __salt__['cmd.run']('facter {0}'.format(opt_puppet))
 
     # Loop over the facter output and  properly
     # parse it into a nice dictionary for using
@@ -194,7 +195,7 @@ def facts():
     return ret
 
 
-def fact(name):
+def fact(name, puppet=False):
     '''
     Run facter for a specific fact
 
@@ -206,7 +207,8 @@ def fact(name):
     '''
     _check_facter()
 
-    ret = __salt__['cmd.run']('facter {0}'.format(name))
+    opt_puppet = '--puppet' if puppet else ''
+    ret = __salt__['cmd.run']('facter {0} {1}'.format(opt_puppet, name))
     if not ret:
         return ''
     return ret

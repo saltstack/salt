@@ -109,3 +109,5 @@ Unit Tests
 
 Direct unit tests are also available, these tests are good for internal
 functions.
+
+* :doc:`Writing unit tests <unit>`

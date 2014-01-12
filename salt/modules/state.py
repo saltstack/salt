@@ -304,8 +304,9 @@ def sls(mods,
         env=None,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment, default
-    environment is base
+    Execute a set list of state modules from an environment. The default
+    environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
+    to specify a different environment
 
     CLI Example:
 
@@ -518,7 +519,9 @@ def show_low_sls(mods,
                  env=None,
                  **kwargs):
     '''
-    Display the low data from a specific sls
+    Display the low data from a specific sls. The default environment is
+    ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older) to specify a
+    different environment.
 
     CLI Example:
 
@@ -570,7 +573,11 @@ def show_low_sls(mods,
 def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
-    master
+    master. The default environment is ``base``, use ``saltenv`` (``env`` in
+    Salt 0.17.x and older) to specify a different environment.
+
+    This function does not support topfiles.  For ``top.sls`` please use
+    ``show_top`` instead.
 
     CLI Example:
 
@@ -762,12 +769,15 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         popts['test'] = True
     else:
         popts['test'] = __opts__.get('test', None)
-    for fn_ in os.listdir(root):
+    envs = os.listdir(root)
+    for fn_ in envs:
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
+    st_.functions['saltutil.sync_all'](envs)
+    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)

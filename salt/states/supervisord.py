@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Interaction with the Supervisor daemon.
-=======================================
+Interaction with the Supervisor daemon
+======================================
 
 .. code-block:: yaml
 

@@ -88,8 +88,8 @@ except NameError:
     docs_basepath = os.path.abspath(os.path.dirname('.'))
 
 addtl_paths = (
-        os.pardir, # salt itself (for autodoc)
-        '_ext', # custom Sphinx extensions
+        os.pardir,  # salt itself (for autodoc)
+        '_ext',  # custom Sphinx extensions
 )
 
 for path in addtl_paths:
@@ -100,6 +100,7 @@ for path in addtl_paths:
 import salt.version
 
 
+formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
@@ -116,7 +117,7 @@ copyright = '2013 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.17.2'
+release = '0.17.4'
 
 language = 'en'
 locale_dirs = [
@@ -128,13 +129,13 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
-    'saltdocs',
+    'saltdomain', # Must come early
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
     'youtube',
-    'saltautodoc'   # Needs to be listed AFTER sphunx.ext.autodoc
+    'saltautodoc', # Must be AFTER autodoc
 ]
 
 modindex_common_prefix = ['salt.']
@@ -144,8 +145,7 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
-.. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
-""" % salt.version.__version__
+"""
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
@@ -193,6 +193,8 @@ html_sidebars = {
         'sourcelink.html',
         'searchbox.html',
     ],
+    'ref/formula/all/*': [
+    ],
 }
 
 html_context = {
@@ -208,7 +210,6 @@ html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
 #html_use_opensearch = ''
-
 
 ### Latex options
 latex_documents = [

@@ -46,6 +46,15 @@ import salt._compat
 
 log = logging.getLogger(__name__)
 
+HASHES = [
+            ['sha512', 128],
+            ['sha384', 96],
+            ['sha256', 64],
+            ['sha224', 56],
+            ['sha1', 40],
+            ['md5', 32],
+         ]
+
 
 def __virtual__():
     '''
@@ -164,14 +173,7 @@ def get_gid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        try:
-            # Broken symlinks will return false, but still have a uid and gid
-            return os.lstat(path).st_gid
-        except OSError:
-            pass
-        return -1
-    return os.stat(path).st_gid if follow_symlinks else os.lstat(path).st_gid
+    return stats(path, follow_symlinks=follow_symlinks).get('gid', -1)
 
 
 def get_group(path, follow_symlinks=True):
@@ -187,10 +189,7 @@ def get_group(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    gid = get_gid(path, follow_symlinks)
-    if gid == -1:
-        return False
-    return gid_to_group(gid)
+    return stats(path, follow_symlinks=follow_symlinks).get('group', False)
 
 
 def uid_to_user(uid):
@@ -240,14 +239,7 @@ def get_uid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        try:
-            # Broken symlinks will return false, but still have a uid and gid
-            return os.lstat(path).st_uid
-        except OSError:
-            pass
-        return -1
-    return os.stat(path).st_uid if follow_symlinks else os.lstat(path).st_uid
+    return stats(path, follow_symlinks=follow_symlinks).get('uid', -1)
 
 
 def get_user(path, follow_symlinks=True):
@@ -263,13 +255,10 @@ def get_user(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    uid = get_uid(path, follow_symlinks)
-    if uid == -1:
-        return False
-    return uid_to_user(uid)
+    return stats(path, follow_symlinks=follow_symlinks).get('user', False)
 
 
-def get_mode(path):
+def get_mode(path, follow_symlinks=True):
     '''
     Return the mode of a file
 
@@ -278,13 +267,11 @@ def get_mode(path):
     .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
+
+    .. versionchanged:: 2014.1.0
+        ``follow_symlinks`` option added
     '''
-    if not os.path.exists(path):
-        return ''
-    mode = str(oct(os.stat(path).st_mode)[-4:])
-    if mode.startswith('0'):
-        return mode[1:]
-    return mode
+    return stats(path, follow_symlinks=follow_symlinks).get('mode', '')
 
 
 def set_mode(path, mode):
@@ -301,7 +288,7 @@ def set_mode(path, mode):
     if not mode:
         mode = '0'
     if not os.path.exists(path):
-        return 'File not found'
+        raise CommandExecutionError('{0}: File not found'.format(path))
     try:
         os.chmod(path, int(mode, 8))
     except Exception:
@@ -597,6 +584,10 @@ def sed(path,
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
     #
+
+    if not os.path.exists(path):
+        return False
+
     # Mandate that before and after are strings
     before = str(before)
     after = str(after)
@@ -894,15 +885,15 @@ def _get_flags(flags):
 
 
 def replace(path,
-        pattern,
-        repl,
-        count=0,
-        flags=0,
-        bufsize=1,
-        backup='.bak',
-        dry_run=False,
-        search_only=False,
-        show_changes=True,
+            pattern,
+            repl,
+            count=0,
+            flags=0,
+            bufsize=1,
+            backup='.bak',
+            dry_run=False,
+            search_only=False,
+            show_changes=True,
         ):
     '''
     Replace occurances of a pattern in a file
@@ -970,9 +961,14 @@ def replace(path,
         pre_user = get_user(path)
         pre_group = get_group(path)
         pre_mode = __salt__['config.manage_mode'](get_mode(path))
+
+    # Avoid TypeErrors by forcing repl to be a string
+    repl = str(repl)
     for line in fileinput.input(path,
-            inplace=not dry_run, backup=False if dry_run else backup,
-            bufsize=bufsize, mode='rb'):
+                                inplace=not dry_run,
+                                backup=False if dry_run else backup,
+                                bufsize=bufsize,
+                                mode='rb'):
 
         if search_only:
             # Just search; bail as early as a match is found
@@ -1008,6 +1004,7 @@ def blockreplace(path,
         marker_end='#-- end managed zone --',
         content='',
         append_if_not_found=False,
+        prepend_if_not_found=False,
         backup='.bak',
         dry_run=False,
         show_changes=True,
@@ -1015,7 +1012,7 @@ def blockreplace(path,
     '''
     Replace content of a text block in a file, delimited by line markers
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
@@ -1049,6 +1046,11 @@ def blockreplace(path,
         If markers are not found and set to ``True`` then, the markers and
         content will be appended to the file.
 
+    prepend_if_not_found : False
+        If markers are not found and set to ``True`` then, the markers and
+        content will be prepended to the file.
+
+
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set to ``False`` to skip making a backup.
@@ -1070,6 +1072,9 @@ def blockreplace(path,
     '''
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if append_if_not_found and prepend_if_not_found:
+        raise SaltInvocationError('Choose between append or prepend_if_not_found')
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1129,7 +1134,13 @@ def blockreplace(path,
         )
 
     if not done:
-        if append_if_not_found:
+        if prepend_if_not_found:
+            # add the markers and content at the beginning of file
+            new_file.insert(0, marker_end + '\n')
+            new_file.insert(0, content + '\n')
+            new_file.insert(0, marker_start + '\n')
+            done = True
+        elif append_if_not_found:
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
             new_file.append(content + '\n')
@@ -1438,6 +1449,85 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def seek_read(path, size, offset):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.seek_read /path/to/file 4096 0
+    '''
+    seek_fh = os.open(path, os.O_RDONLY)
+    os.lseek(seek_fh, int(offset), 0)
+    data = os.read(seek_fh, int(size))
+    os.close(seek_fh)
+    return data
+
+
+def seek_write(path, data, offset):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.seek_write /path/to/file 'some data' 4096
+    '''
+    seek_fh = os.open(path, os.O_WRONLY)
+    os.lseek(seek_fh, int(offset), 0)
+    ret = os.write(seek_fh, data)
+    os.fsync(seek_fh)
+    os.close(seek_fh)
+    return ret
+
+
+def truncate(path, length):
+    '''
+    Seek to a position on a file and write to it
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.truncate /path/to/file 512
+    '''
+    seek_fh = open(path, 'r+')
+    seek_fh.truncate(int(length))
+    seek_fh.close()
+
+
+def link(src, link):
+    '''
+    Create a hard link to a file
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.link /path/to/file /path/to/link
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.link(src, link)
+        return True
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
+    return False
+
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
@@ -1512,7 +1602,135 @@ def copy(src, dst):
     return True
 
 
-def stats(path, hash_type='md5', follow_symlink=False):
+def lstat(path):
+    '''
+    Returns the lstat attributes for the given file or dir. Does not support
+    symbolic links.
+
+    CLI Example:
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    .. code-block:: bash
+
+        salt '*' file.lstat /path/to/file
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to file must be absolute.')
+
+    try:
+        lst = os.lstat(path)
+        return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
+            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+    except Exception:
+        return {}
+
+
+def access(path, mode):
+    '''
+    Test whether the Salt process has the specified access to the file. One of
+    the following modes must be specified:
+
+        f: Test the existence of the path
+        r: Test the readability of the path
+        w: Test the writability of the path
+        x: Test whether the path can be executed
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.access /path/to/file f
+        salt '*' file.access /path/to/file x
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    modes = {'f': os.F_OK,
+             'r': os.R_OK,
+             'w': os.W_OK,
+             'x': os.X_OK}
+
+    if mode in modes:
+        return os.access(path, modes[mode])
+    elif mode in modes.values():
+        return os.access(path, mode)
+    else:
+        raise SaltInvocationError('Invalid mode specified.')
+
+
+def readlink(path):
+    '''
+    Return the path that a symlink points to
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readlink /path/to/link
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    if not os.path.islink(path):
+        raise SaltInvocationError('A valid link was not specified.')
+
+    return os.readlink(path)
+
+
+def readdir(path):
+    '''
+    Return a list containing the contents of a directory
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readdir /path/to/dir/
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Dir path must be absolute.')
+
+    if not os.path.isdir(path):
+        raise SaltInvocationError('A valid directory was not specified.')
+
+    dirents = ['.', '..']
+    dirents.extend(os.listdir(path))
+    return dirents
+
+
+def statvfs(path):
+    '''
+    Perform a statvfs call against the filesystem that the file resides on
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.statvfs /path/to/file
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        stv = os.statvfs(path)
+        return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
+            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
+            'f_frsize', 'f_namemax'))
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create {0!r}'.format(link))
+    return False
+
+
+def stats(path, hash_type='md5', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -1524,11 +1742,18 @@ def stats(path, hash_type='md5', follow_symlink=False):
     '''
     ret = {}
     if not os.path.exists(path):
-        return ret
-    if follow_symlink:
-        pstat = os.stat(path)
+        try:
+            # Broken symlinks will return False for os.path.exists(), but still
+            # have a uid and gid
+            pstat = os.lstat(path)
+        except OSError:
+            # Not a broken symlink, just a nonexistent path
+            return ret
     else:
-        pstat = os.lstat(path)
+        if follow_symlinks:
+            pstat = os.stat(path)
+        else:
+            pstat = os.lstat(path)
     ret['inode'] = pstat.st_ino
     ret['uid'] = pstat.st_uid
     ret['gid'] = pstat.st_gid
@@ -1557,6 +1782,31 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def rmdir(path):
+    '''
+    Remove the specified directory. Fails if a directory is not empty.
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.rmdir /tmp/foo/
+    '''
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    if not os.path.isdir(path):
+        raise SaltInvocationError('A valid directory was not specified.')
+
+    try:
+        os.rmdir(path)
+        return True
+    except OSError as exc:
+        return exc.strerror
 
 
 def remove(path):
@@ -1717,6 +1967,7 @@ def source_list(source, source_hash, saltenv):
                 mdirs += ['{0}?saltenv={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
+        ret = None
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -1724,25 +1975,32 @@ def source_list(source, source_hash, saltenv):
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
-                single_hash = single[single_src]
+                single_hash = single[single_src] if single[single_src] else source_hash
                 proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
-                        source = single_src
+                        ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
                     dest = salt.utils.mkstemp()
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
-                        source = single_src
-                        source_hash = single_hash
+                        ret = (single_src, single_hash)
                         break
             elif isinstance(single, salt._compat.string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
-                    source = single
+                    ret = (single, source_hash)
                     break
-    return source, source_hash
+        if ret is None:
+            # None of the list items matched
+            raise CommandExecutionError(
+                'none of the specified sources were found'
+            )
+        else:
+            return ret
+    else:
+        return source, source_hash
 
 
 def get_managed(
@@ -1766,8 +2024,7 @@ def get_managed(
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
-    # If the file is a template and the contents is managed
-    # then make sure to copy it down and templatize  things.
+    # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
     if template and source:
@@ -1819,25 +2076,12 @@ def get_managed(
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                             source_hash)
-                    hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
-                    for line in hash_fn_fopen.read().splitlines():
-                        line = line.strip()
-                        if ' ' not in line:
-                            hashstr = line
-                            break
-                        elif line.startswith('{0} '.format(name)):
-                            hashstr = line.split()[1]
-                            break
-                    else:
-                        hashstr = ''  # NOT FOUND
-                    comps = hashstr.split('=')
-                    if len(comps) < 2:
-                        return '', {}, ('Source hash file {0} contains an '
-                                        'invalid hash format, it must be in '
-                                        'the format <hash type>=<hash>'
-                                        ).format(source_hash)
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
+                    source_sum = extract_hash(hash_fn, '', name)
+                    if source_sum is None:
+                        return '', {}, ('Source hash file {0} contains an invalid '
+                            'hash format, it must be in the format <hash type>=<hash>.'
+                            ).format(source_hash)
+
                 else:
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
@@ -1854,11 +2098,71 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def check_perms(name,
-                ret,
-                user,
-                group,
-                mode):
+def extract_hash(hash_fn, hash_type='md5', file_name=''):
+    '''
+    This routine is called from the :mod:`file.managed
+    <salt.states.file.managed>` state to pull a hash from a remote file.
+    Regular expressions are used line by line on the ``source_hash`` file, to
+    find a potential candidate of the indicated hash type.  This avoids many
+    problems of arbitrary file lay out rules. It specifically permits pulling
+    hash codes from debian ``*.dsc`` files.
+
+    For example:
+
+    .. code-block:: yaml
+
+        openerp_7.0-latest-1.tar.gz:
+          file.managed:
+            - name: /tmp/openerp_7.0-20121227-075624-1_all.deb
+            - source: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.tar.gz
+            - source_hash: http://nightly.openerp.com/7.0/nightly/deb/openerp_7.0-20121227-075624-1.dsc
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.extract_hash /etc/foo sha512 /path/to/hash/file
+    '''
+    source_sum = None
+    partial_id = False
+    name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
+    log.debug('modules.file.py - extract_hash(): Extracting hash for file named: {}'.format(name_sought))
+    hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
+    for hash_variant in HASHES:
+        if hash_type == '' or hash_type == hash_variant[0]:
+            log.debug('modules.file.py - extract_hash(): Will use regex to get'
+                ' a purely hexadecimal number of length ({0}), presumably hash'
+                ' type : {1}'.format(hash_variant[1], hash_variant[0]))
+            hash_fn_fopen.seek(0)
+            for line in hash_fn_fopen.read().splitlines():
+                hash_array = re.findall(r'(?i)(?<![a-z0-9])[a-f0-9]{' + str(hash_variant[1]) + '}(?![a-z0-9])', line)
+                log.debug('modules.file.py - extract_hash(): '
+                    'From "line": {} got : {}'.format(line, hash_array))
+                if hash_array:
+                    if not partial_id:
+                        source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
+                        partial_id = True
+
+                    log.debug('modules.file.py - extract_hash(): Found : {} -- {}'.format(
+                                            source_sum['hash_type'], source_sum['hsum']))
+
+                    if re.search(name_sought, line):
+                        source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
+                        log.debug('modules.file.py - extract_hash: '
+                        'For {} -- returning the {} hash "{}".'.format(
+                                 name_sought, source_sum['hash_type'], source_sum['hsum']))
+                        return source_sum
+
+    if partial_id:
+        log.debug('modules.file.py - extract_hash: '
+                'Returning the partially identified {} hash "{}".'.format(
+                       source_sum['hash_type'], source_sum['hsum']))
+    else:
+        log.debug('modules.file.py - extract_hash: Returning None.')
+    return source_sum
+
+
+def check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
 
@@ -1880,9 +2184,12 @@ def check_perms(name,
 
     # Check permissions
     perms = {}
-    perms['luser'] = get_user(name)
-    perms['lgroup'] = get_group(name)
-    perms['lmode'] = __salt__['config.manage_mode'](get_mode(name))
+    cur = stats(name, follow_symlinks=False)
+    if not cur:
+        raise CommandExecutionError('{0} does not exist'.format(name))
+    perms['luser'] = cur['user']
+    perms['lgroup'] = cur['group']
+    perms['lmode'] = cur['mode']
 
     # Mode changes if needed
     if mode is not None:
@@ -2028,7 +2335,9 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    lstats = stats(name, source_sum.get('hash_type'), 'md5')
+    lstats = stats(
+        name, source_sum.get('hash_type', 'md5'), follow_symlinks=False
+    )
     if not lstats:
         changes['newfile'] = name
         return changes
@@ -2297,7 +2606,17 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=dir_mode or mode)
+                    if dir_mode is None and mode is not None:
+                        # Add execute bit to each nonzero digit in the mode, if
+                        # dir_mode was not specified. Otherwise, any
+                        # directories created with makedirs() below can't be
+                        # listed via a shell.
+                        mode_list = [x for x in str(mode)][-3:]
+                        for idx in xrange(len(mode_list)):
+                            if mode_list[idx] != '0':
+                                mode_list[idx] = str(int(mode_list[idx]) | 1)
+                        dir_mode = ''.join(mode_list)
+                    makedirs(name, user=user, group=group, mode=dir_mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
@@ -2312,7 +2631,7 @@ def manage_file(name,
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
             if mode:
-                current_umask = os.umask(63)
+                current_umask = os.umask(077)
 
             # Create a new file when test is False and source is None
             if contents is None:
@@ -2342,12 +2661,10 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
-            current_umask = os.umask(63)
             salt.utils.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
-            os.umask(current_umask)
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
@@ -2357,7 +2674,14 @@ def manage_file(name,
                                 __opts__['cachedir'])
             __clean_tmp(sfn)
 
-        # Check and set the permissions if necessary
+        # This is a new file, if no mode specified, use the umask to figure
+        # out what mode to use for the new file.
+        if mode is None and not salt.utils.is_windows():
+            # Get current umask
+            mask = os.umask(0)
+            os.umask(mask)
+            # Calculate the mode value that results from the umask
+            mode = oct((0777 ^ mask) & 0666)
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
@@ -2899,3 +3223,54 @@ def delete_backup(path, backup_id):
     return ret
 
 remove_backup = delete_backup
+
+
+def grep(path,
+         pattern,
+         *args):
+    '''
+    Grep for a string in the specified file
+
+    .. note::
+        This function's return value is slated for refinement in future
+        versions of Salt
+
+    path
+        A file path
+    pattern
+        A string. For example:
+        ``test``
+        ``a[0-5]``
+    args
+        grep options. For example:
+        ``" -v"``
+        ``" -i -B2"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.grep /etc/passwd nobody
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i"
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i -B2"
+        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr " -i -l"
+    '''
+    if args:
+        options = ' '.join(args)
+    else:
+        options = ''
+    cmd = (
+        r'''grep  {options} {pattern} {path}'''
+        .format(
+            options=options,
+            pattern=pattern,
+            path=path,
+        )
+    )
+
+    try:
+        ret = __salt__['cmd.run_all'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
+
+    return ret

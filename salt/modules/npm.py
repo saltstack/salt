@@ -52,7 +52,8 @@ def install(pkg=None,
     package in the given directory will be installed.
 
     pkg
-        A package name in any format accepted by NPM
+        A package name in any format accepted by NPM, including a version
+        identifier
 
     dir
         The target directory in which to install the package, or None for
@@ -66,6 +67,8 @@ def install(pkg=None,
     .. code-block:: bash
 
         salt '*' npm.install coffee-script
+
+        salt '*' npm.install coffee-script@1.0.1
 
     '''
     if not _valid_version():

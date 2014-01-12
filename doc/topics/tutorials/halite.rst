@@ -201,10 +201,19 @@ the .crt and .key files.
 If you want to use a self-signed cert, you can create one using the Salt.tls
 module:
 
+.. note::
+
+    You might wish to target only a specific minion. The example below
+    targets all connected minions.
+
 .. code-block:: bash
 
     salt '*' tls.create_self_signed_cert test 
 
+You can also use ``salt-call`` to create a self-signed cert.
+.. code-block:: bash
+
+    salt-call tls.create_self_signed_cert tls
 
 When using self-signed certs, browsers will need approval before accepting the
 cert. If the web application page has been cached with a non-HTTPS version of

@@ -1,12 +1,14 @@
+# -*- coding: utf-8 -*-
+
 '''
 Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import re
 import os
 import sys
 import time
+import errno
 import shutil
 import pprint
 import logging
@@ -46,6 +48,7 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
+import salt.utils
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -64,6 +67,31 @@ TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
+
+
+def skip_if_binaries_missing(binaries, check_all=False):
+    # While there's no new release of salt-testing
+    def _id(obj):
+        return obj
+
+    if sys.version_info < (2, 7):
+        from unittest2 import skip
+    else:
+        from unittest import skip  # pylint: disable=E0611
+
+    if check_all:
+        for binary in binaries:
+            if salt.utils.which(binary) is None:
+                return skip(
+                    'The {0!r} binary was not found'
+                )
+    elif salt.utils.which_bin(binaries) is None:
+        return skip(
+            'None of the following binaries was found: {0}'.format(
+                ', '.join(binaries)
+            )
+        )
+    return _id
 
 
 def run_tests(*test_cases, **kwargs):
@@ -96,7 +124,7 @@ def run_tests(*test_cases, **kwargs):
                 help='Disable colour printing.'
             )
 
-        def run_testcase(self, testcase, needs_daemon=True):
+        def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
                 print('Setting up Salt daemons to execute tests')
                 with TestDaemon(self):
@@ -459,7 +487,7 @@ class TestDaemon(object):
                 sys.stdout.flush()
             time.sleep(1)
             now = datetime.now()
-        else:
+        else:  # pylint: disable=W0120
             sys.stdout.write(
                 '\n {RED_BOLD}*{ENDC} ERROR: Failed to get information '
                 'back\n'.format(**self.colors)
@@ -522,7 +550,7 @@ class TestDaemon(object):
 
             time.sleep(1)
             now = datetime.now()
-        else:
+        else:  # pylint: disable=W0120
             print(
                 '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
@@ -600,6 +628,8 @@ class AdaptedConfigurationTestCaseMixIn(object):
             return integration_config_dir
 
         for fname in os.listdir(integration_config_dir):
+            if fname.startswith(('.', '_')):
+                continue
             self.get_config_file_path(fname)
         return TMP_CONF_DIR
 
@@ -797,6 +827,13 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     def run_call(self, arg_str, with_retcode=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
+
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+        '''
+        Execute salt-cloud
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
@@ -1007,3 +1044,21 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+
+
+class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
+    '''
+    A base class containing relevant options for starting the various Salt
+    Python API entrypoints
+    '''
+    def get_opts(self):
+        return salt.config.client_config(self.get_config_file_path('master'))
+
+    def mkdir_p(self, path):
+        try:
+            os.makedirs(path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise

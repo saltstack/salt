@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Manage SQS Queues.
-==================
+Manage SQS Queues
+=================
 
 Create and destroy SQS queues. Be aware that this interacts with Amazon's
 services, and so may incur charges.

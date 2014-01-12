@@ -29,12 +29,19 @@ Getting Started
 
 * :doc:`Installing salt cloud <install/index>`
 
-Some quick guides covering getting started with Amazon AWS, Rackspace, and
-Parallels.
+Some quick guides covering getting started with each of the various cloud
+providers.
 
-* :doc:`Getting Started With AWS <aws>`
-* :doc:`Getting Started With Rackspace <rackspace>`
+* :doc:`Getting Started With Azure <azure>`
+* :doc:`Getting Started With Digital Ocean <digitalocean>`
+* :doc:`Getting Started With EC2 <aws>`
+* :doc:`Getting Started With GoGrid <gogrid>`
+* :doc:`Getting Started With Google Compute Engine <gce>`
+* :doc:`Getting Started With Joyent <joyent>`
+* :doc:`Getting Started With Linode <linode>`
+* :doc:`Getting Started With OpenStack <openstack>`
 * :doc:`Getting Started With Parallels <parallels>`
+* :doc:`Getting Started With Rackspace <rackspace>`
 * :doc:`Getting Started With SoftLayer <softlayer>`
 
 Core Configuration
@@ -80,15 +87,28 @@ Miscellaneous Options
 
 * :doc:`Miscellaneous <misc>`
 
+Troubleshooting Steps
+=====================
+
+* :doc:`Troubleshooting <troubleshooting>`
+
 Extending Salt Cloud
 ====================
 
-Salt cloud extensions work in a way similar to Salt modules. Therefore
+Salt Cloud extensions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
 * :doc:`Adding Cloud Providers <cloud>`
 * :doc:`Adding OS Support <deploy>`
+
+Using Salt Cloud from Salt
+==========================
+
+Several Salt Cloud modules exist within Salt itself in order to manage cloud
+instances using Salt's own powerful feature set.
+
+* :doc:`Using Salt Cloud from Salt <salt>`
 
 Feature Comparison
 ==================
@@ -101,9 +121,9 @@ supported cloud providers.
 Legacy Releases
 ===============
 
-.. versionchanged:: Hydrogen
+.. versionchanged:: 2014.1.0 (Hydrogen)
     Release notes will be part of Salt's main release notes starting with
-    Salt's Hydrogen release.
+    Salt's 2014.1.0 (Hydrogen) release.
 
 * :doc:`Legacy Release Notes <releases/index>`
 

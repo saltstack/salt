@@ -5,6 +5,7 @@ Module for gathering disk information
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
@@ -52,6 +53,13 @@ def usage(args=None):
         salt '*' disk.usage
     '''
     flags = _clean_flags(args, 'disk.usage')
+    if not os.path.isfile('/etc/mtab'):
+        log.warn('df cannot run without /etc/mtab')
+        if __grains__.get('virtual_subtype') == 'LXC':
+            log.warn('df command failed and LXC detected. If you are running '
+                     'a Docker container, consider linking /proc/mounts to '
+                     '/etc/mtab or consider running Docker with -privileged')
+        return {}
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
@@ -92,7 +100,7 @@ def usage(args=None):
                         'capacity': comps[4],
                 }
         except IndexError:
-            log.warn("Problem parsing disk usage information")
+            log.warn('Problem parsing disk usage information')
             ret = {}
     return ret
 
@@ -139,7 +147,7 @@ def inodeusage(args=None):
                     'filesystem': comps[0],
                 }
         except (IndexError, ValueError):
-            log.warn("Problem parsing inode usage information")
+            log.warn('Problem parsing inode usage information')
             ret = {}
     return ret
 
@@ -175,7 +183,7 @@ def percent(args=None):
             else:
                 ret[comps[5]] = comps[4]
         except IndexError:
-            log.warn("Problem parsing disk usage information")
+            log.warn('Problem parsing disk usage information')
             ret = {}
     if args:
         return ret[args]

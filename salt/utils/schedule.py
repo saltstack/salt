@@ -243,15 +243,17 @@ class Schedule(object):
                               'job {0}, defaulting to 1.'.format(job))
                     data['maxrunning'] = 1
 
-            if self.opts.get('multiprocessing', True):
-                thread_cls = multiprocessing.Process
-            else:
-                thread_cls = threading.Thread
-            proc = thread_cls(target=self.handle_func, args=(func, data))
-            proc.start()
-            if self.opts.get('multiprocessing', True):
-                proc.join()
-            self.intervals[job] = int(time.time())
+            try:
+                if self.opts.get('multiprocessing', True):
+                    thread_cls = multiprocessing.Process
+                else:
+                    thread_cls = threading.Thread
+                proc = thread_cls(target=self.handle_func, args=(func, data))
+                proc.start()
+                if self.opts.get('multiprocessing', True):
+                    proc.join()
+            finally:
+                self.intervals[job] = int(time.time())
 
 
 def clean_proc_dir(opts):
@@ -267,7 +269,7 @@ def clean_proc_dir(opts):
             job = salt.payload.Serial(opts).load(fp_)
             log.debug('schedule.clean_proc_dir: checking job {0} for process '
                       'existence'.format(job))
-            if 'pid' in job:
+            if job is not None and 'pid' in job:
                 if salt.utils.process.os_is_running(job['pid']):
                     log.debug('schedule.clean_proc_dir: Cleaning proc dir, '
                               'pid {0} still exists.'.format(job['pid']))

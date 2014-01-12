@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Plugins.
+Manage RabbitMQ Plugins
+=======================
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+Example:
 
 .. code-block:: yaml
 

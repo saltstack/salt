@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Manage RabbitMQ Users.
+Manage RabbitMQ Users
+=====================
+
+Example:
 
 .. code-block:: yaml
 
@@ -9,7 +12,7 @@ Manage RabbitMQ Users.
             - password: password
             - force: True
             - tags: administrator
-            - permissions:
+            - perms:
               - '/':
                 - '.*'
                 - '.*'

@@ -1,0 +1,48 @@
+{% if data.enabled %}auto {{name}}
+{%endif%}{% if data.hotplug %}allow-hotplug {{name}}
+{%endif%}{% if data.data['inet'] %}
+{%- set interface = data.data['inet'] -%}
+iface {{name}} {{interface.inet_type}} {{interface.proto}}
+{% if interface.address %}    address {{interface.address}}
+{%endif%}{% if interface.netmask %}    netmask {{interface.netmask}}
+{%endif%}{% if interface.broadcast %}    broadcast {{interface.broadcast}}
+{%endif%}{% if interface.gateway %}    gateway {{interface.gateway}}
+{%endif%}{% if interface.addr %}    hwaddress {{interface.addr}}
+{%endif%}{% if interface.vlan_raw_device %}    vlan-raw-device {{interface.vlan_raw_device}}
+{%endif%}{% if interface.mtu %}    mtu {{interface.mtu}}
+{%endif%}{% if interface.dns %}    dns-nameservers {%for item in interface.dns %}{{item}} {%endfor%}
+{%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
+{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    {{item}} {{interface.bonding[item]}}
+{%endfor%}{%endif%}{% if interface.bridgeing %}{%for item in interface.bridgeing_keys %}    {{item}} {{interface.bridgeing[item]}}
+{%endfor%}{%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.down_cmds %}{% for cmd in interface.down_cmds %}    down {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.pre_up_cmds %}{% for cmd in interface.pre_up_cmds %}    pre-up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.post_up_cmds %}{% for cmd in interface.post_up_cmds %}    post-up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.pre_down_cmds %}{% for cmd in interface.pre_down_cmds %}    pre-down {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.post_down_cmds %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
+{%endfor-%}{%endif%}
+{%endif%}{% if data.data['inet6'] %}
+{%- set interface = data.data['inet6'] -%}
+iface {{name}} {{interface.inet_type}} {{interface.proto}}
+{% if interface.address %}    address {{interface.address}}
+{%endif%}{% if interface.netmask %}    netmask {{interface.netmask}}
+{%endif%}{% if interface.broadcast %}    broadcast {{interface.broadcast}}
+{%endif%}{% if interface.gateway %}    gateway {{interface.gateway}}
+{%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.down_cmds %}{% for cmd in interface.down_cmds %}    down {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.pre_up_cmds %}{% for cmd in interface.pre_up_cmds %}    pre-up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.post_up_cmds %}{% for cmd in interface.post_up_cmds %}    post-up {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.pre_down_cmds %}{% for cmd in interface.pre_down_cmds %}    pre-down {{ cmd }}
+{%endfor-%}
+{%endif%}{% if interface.post_down_cmds %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
+{%endfor-%}{%endif%}
+{%endif%}

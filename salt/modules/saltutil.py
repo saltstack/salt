@@ -20,6 +20,8 @@ import salt.payload
 import salt.state
 import salt.client
 import salt.utils
+import salt.utils.process
+import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
@@ -40,11 +42,12 @@ def _sync(form, saltenv=None):
     if saltenv is None:
         # No environment passed, detect them based on gathering the top files
         # from the master
-        saltenv = 'base'
         st_ = salt.state.HighState(__opts__)
         top = st_.get_top()
         if top:
             saltenv = st_.top_matches(top).keys()
+        if not saltenv:
+            saltenv = 'base'
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -515,15 +518,18 @@ def revoke_auth():
 
         salt '*' saltutil.revoke_auth
     '''
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
             'tok': tok}
+
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        return auth.crypticle.loads(
-                sreq.send('aes', auth.crypticle.dumps(load), 1))
+        sreq.send(load)
+        # return auth.crypticle.loads(
+        #         sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return False
     return False
@@ -548,11 +554,9 @@ def cmd(tgt,
         salt '*' saltutil.cmd
     '''
     if ssh:
-        client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.LocalClient(__opts__['conf_file'])
     ret = {}
     for ret_comp in client.cmd_iter(
             tgt,
@@ -586,11 +590,9 @@ def cmd_iter(tgt,
         salt '*' saltutil.cmd
     '''
     if ssh:
-        client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_file']))
+        client = salt.client.LocalClient(__opts__['conf_file'])
     for ret in client.cmd_iter(
             tgt,
             fun,

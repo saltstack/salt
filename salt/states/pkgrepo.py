@@ -272,6 +272,12 @@ def managed(name, **kwargs):
         ret['comment'] = ('Failed to configure repo {0!r}: {1}'
                           .format(name, str(e)))
         return ret
+    else:
+        # Repo was modified, refresh the pkg db if on an apt-based OS. Other
+        # package managers do this sort of thing automatically.
+        if __grains__['os_family'] == 'Debian':
+            __salt__['pkg.refresh_db']()
+
     try:
         repodict = __salt__['pkg.get_repo'](kwargs['repo'],
                                             ppa_auth=kwargs.get('ppa_auth',

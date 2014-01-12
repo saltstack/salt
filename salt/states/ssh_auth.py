@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Control of entries in SSH authorized_key files.
-===============================================
+Control of entries in SSH authorized_key files
+==============================================
 
 The information stored in a user's SSH authorized key file can be easily
 controlled via the ssh_auth state. Defaults can be set by the enc, options,
@@ -269,7 +269,11 @@ def absent(name,
            'comment': ''}
 
     # Get just the key
-    name = name.split(' ')[0]
+    keydata = name.split(' ')
+    if len(keydata) > 1:
+        name = keydata[1]
+    else:
+        name = keydata[0]
 
     if __opts__['test']:
         check = __salt__['ssh.check_key'](

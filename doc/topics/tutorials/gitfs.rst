@@ -202,6 +202,14 @@ for the user running the salt-master.
 .. note::
 
     GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
+    If your Master runs Ubuntu 12.04 LTS, you will likely need to install
+    GitPython using `pip`_.
+
+    .. code-block:: bash
+
+        # pip install GitPython
+
+.. _`pip`: http://www.pip-installer.org/
 
 
 Using Git as an External Pillar Source

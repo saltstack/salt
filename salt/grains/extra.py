@@ -4,9 +4,12 @@ import os
 
 # Import third party libs
 import yaml
+import logging
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def shell():
@@ -39,5 +42,6 @@ def config():
             try:
                 return yaml.safe_load(fp_.read())
             except Exception:
+                log.warn("Bad syntax in grains file! Skipping.")
                 return {}
     return {}

@@ -33,9 +33,10 @@ about this, at least.
     stop on runlevel [016]
 
 .. warning::
-    This module should not be used on Red Hat systems. For these, the
-    :mod:`rh_service <salt.modules.rh_service>` module should be used, as it
-    supports the hybrid upstart/sysvinit system used in RHEL/CentOS 6.
+    This module should not be used on Red Hat systems. For these,
+    the :mod:`rh_service <salt.modules.rh_service>` module should be
+    used, as it supports the hybrid upstart/sysvinit system used in
+    RHEL/CentOS 6.
 '''
 
 # Import python libs

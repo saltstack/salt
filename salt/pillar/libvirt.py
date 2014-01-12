@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Load up the libvirt keys into pillar for a given minion if said keys have
-been generated using the libvirt key runner.
+Load up the libvirt keys into Pillar for a given minion if said keys have been generated using the libvirt key runner
 '''
+
+# Don't "fix" the above docstring to put it on two lines, as the sphinx
+# autosummary pulls only the first line for its description.
 
 # Import python libs
 import os

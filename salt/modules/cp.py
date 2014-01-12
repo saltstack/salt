@@ -12,6 +12,7 @@ import salt.minion
 import salt.fileclient
 import salt.utils
 import salt.crypt
+import salt.transport
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -448,6 +449,15 @@ def list_master(saltenv='base', prefix='', env=None):
 
         salt '*' cp.list_master
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     return __context__['cp.fileclient'].file_list(saltenv, prefix)
 
@@ -557,6 +567,15 @@ def hash_file(path, saltenv='base', env=None):
 
         salt '*' cp.hash_file salt://path/to/file
     '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
     _mk_client()
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
@@ -589,13 +608,16 @@ def push(path):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep),
             'tok': auth.gen_token('salt')}
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.transport.Channel.factory(__opts__)
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data']:
                 return True
-            ret = sreq.send('aes', auth.crypticle.dumps(load))
+
+            # ret = sreq.send('aes', auth.crypticle.dumps(load))
+            ret = sreq.send(load)
             if not ret:
                 return ret

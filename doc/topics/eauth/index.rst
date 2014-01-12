@@ -29,8 +29,10 @@ So, the above allows the user thatch to execute functions in the test and
 network modules on the minions that match the web* target. User steve is
 given unrestricted access to minion commands.
 
+.. note:: The PAM module does not allow authenticating as ``root``.
+
 To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
-modules <all-salt.runner>` the following ``@`` syntax must be used:
+modules <all-salt.runners>` the following ``@`` syntax must be used:
 
 .. code-block:: yaml
 

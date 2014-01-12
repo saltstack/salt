@@ -33,7 +33,7 @@ def __virtual__():
     return False
 
 
-class _GSettings:
+class _GSettings(object):
     def __init__(self, user, schema, key):
         self.SCHEMA = schema
         self.KEY = key
@@ -244,7 +244,7 @@ def setIdleActivation(kvalue, **kwargs):
     return _gsession._set(kvalue)
 
 
-def get(schema=None, key=None, user=None, value=None, **kwargs):
+def get(schema=None, key=None, user=None, **kwargs):
     '''
     Get key in a particular GNOME schema
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import yaml
@@ -176,12 +178,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
-    def test_exsel(self):
-        data = self.run_salt('-X test.ping test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
-
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
@@ -206,7 +202,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt('-d \* user')
+        data = self.run_salt(r'-d \* user')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_arguments_not_assumed(self):

@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 class LoadAuth(object):
     '''
-    Wrap the authentication system to handle periphrial components
+    Wrap the authentication system to handle peripheral components
     '''
     def __init__(self, opts):
         self.opts = opts

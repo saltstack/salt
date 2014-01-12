@@ -34,13 +34,13 @@ class SaltStackVersion(object):
     __slots__ = ('name', 'major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
 
     git_describe_regex = re.compile(
-        r'(?:[^\d]+)?(?P<major>[\d]{1,2})\.(?P<minor>[\d]{1,2})'
+        r'(?:[^\d]+)?(?P<major>[\d]{1,4})\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
     )
 
     # Salt versions after 0.17.0 will be numbered like:
-    #   <2-digit-year>.<month>.<bugfix>
+    #   <4-digit-year>.<month>.<bugfix>
     #
     # Since the actual version numbers will only be know on release dates, the
     # periodic table element names will be what's going to be used to name
@@ -333,7 +333,7 @@ class SaltStackVersion(object):
 #
 # Please bump version information for __saltstack_version__ on new releases
 # ----------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion(0, 17, 0)
+__saltstack_version__ = SaltStackVersion(2014, 1, 0)
 __version_info__ = __saltstack_version__.info
 __version__ = __saltstack_version__.string
 # <---- Hardcoded Salt Version Information -----------------------------------
@@ -436,11 +436,11 @@ del __get_version
 # <---- Dynamic/Runtime Salt Version Information -----------------------------
 
 
-def versions_information():
+def versions_information(include_salt_cloud=False):
     '''
     Report on all of the versions for dependent software
     '''
-    libs = (
+    libs = [
         ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
@@ -451,7 +451,13 @@ def versions_information():
         ('PyYAML', 'yaml', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version')
-    )
+    ]
+
+    if include_salt_cloud:
+        libs.append(
+            ('Apache Libcloud', 'libcloud', '__version__'),
+        )
+
     for name, imp, attr in libs:
         if imp is None:
             yield name, attr
@@ -468,11 +474,11 @@ def versions_information():
             yield name, None
 
 
-def versions_report():
+def versions_report(include_salt_cloud=False):
     '''
     Yield each library properly formatted for a console clean output.
     '''
-    libs = list(versions_information())
+    libs = list(versions_information(include_salt_cloud=include_salt_cloud))
 
     padding = max(len(lib[0]) for lib in libs) + 1
 

@@ -40,7 +40,7 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
 
 if salt.utils.is_windows():
@@ -332,6 +332,10 @@ def installed(
         :mod:`yumpkg5 <salt.modules.yumpkg5>`, and
         :mod:`zypper <salt.modules.zypper>`.
 
+    refresh
+        Update the repo database of available packages prior to installing the
+        requested package.
+
     Usage::
 
         httpd:
@@ -339,7 +343,7 @@ def installed(
             - fromrepo: mycustomrepo
             - skip_verify: True
             - version: 2.0.6~ubuntu3
-
+            - refresh: True
 
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
@@ -415,14 +419,10 @@ def installed(
               - qux: /minion/path/to/qux.rpm
     '''
     rtag = __gen_rtag()
+    refresh = bool(salt.utils.is_true(refresh) or os.path.isfile(rtag))
 
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
-
-    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
-        __salt__['pkg.refresh_db']()
-        if os.path.isfile(rtag):
-            os.remove(rtag)
 
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo, **kwargs)
@@ -455,14 +455,25 @@ def installed(
                 'comment': comment}
 
     comment = []
-    pkg_ret = __salt__['pkg.install'](name,
-                                      refresh=False,
-                                      version=version,
-                                      fromrepo=fromrepo,
-                                      skip_verify=skip_verify,
-                                      pkgs=pkgs,
-                                      sources=sources,
-                                      **kwargs)
+    try:
+        pkg_ret = __salt__['pkg.install'](name,
+                                          refresh=refresh,
+                                          version=version,
+                                          fromrepo=fromrepo,
+                                          skip_verify=skip_verify,
+                                          pkgs=pkgs,
+                                          sources=sources,
+                                          **kwargs)
+
+        if os.path.isfile(rtag):
+            os.remove(rtag)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while installing '
+                           'package(s): {0}'.format(exc)}
+
     if isinstance(pkg_ret, dict):
         changes = pkg_ret
     elif isinstance(pkg_ret, basestring):
@@ -491,11 +502,17 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in modified])
-        if len(summary) < 10:
+        if len(summary) < 20:
             comment.append('The following packages were installed/updated: '
                            '{0}.'.format(summary))
         else:
-            comment.append('{0} packages were installed/updated.'.format(len(summary)))
+            comment.append(
+                '{0} targeted package{1} {2} installed/updated.'.format(
+                    len(modified),
+                    's' if len(modified) > 1 else '',
+                    'were' if len(modified) > 1 else 'was'
+                )
+            )
 
     if not_modified:
         if sources:
@@ -503,11 +520,17 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in not_modified])
-        if len(summary) <= 10:
+        if len(not_modified) <= 20:
             comment.append('The following packages were already installed: '
                            '{0}.'.format(summary))
         else:
-            comment.append('{0} packages were already installed.'.format(len(summary)))
+            comment.append(
+                '{0} targeted package{1} {2} already installed.'.format(
+                    len(not_modified),
+                    's' if len(not_modified) > 1 else '',
+                    'were' if len(not_modified) > 1 else 'was'
+                )
+            )
 
     if failed:
         if sources:
@@ -664,14 +687,21 @@ def latest(
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
 
-        # No need to refresh, if a refresh was necessary it would have been
-        # performed above when pkg.latest_version was run.
-        changes = __salt__['pkg.install'](name,
-                                          refresh=False,
-                                          fromrepo=fromrepo,
-                                          skip_verify=skip_verify,
-                                          pkgs=targeted_pkgs,
-                                          **kwargs)
+        try:
+            # No need to refresh, if a refresh was necessary it would have been
+            # performed above when pkg.latest_version was run.
+            changes = __salt__['pkg.install'](name,
+                                              refresh=False,
+                                              fromrepo=fromrepo,
+                                              skip_verify=skip_verify,
+                                              pkgs=targeted_pkgs,
+                                              **kwargs)
+        except CommandExecutionError as exc:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while installing '
+                               'package(s): {0}'.format(exc)}
 
         if changes:
             # Find failed and successful updates
@@ -704,11 +734,12 @@ def latest(
                     'comment': ' '.join(comments)}
         else:
             if len(targets) > 10:
-                comment = 'All targeted {0} packages failed to update.'\
-                    .format(len(targets))
+                comment = ('{0} targeted packages failed to update. '
+                           'See debug log for details.'.format(len(targets)))
             elif len(targets) > 1:
-                comment = 'All targeted packages failed to update: ' \
-                          '({0}).'.format(', '.join(sorted(targets.keys())))
+                comment = ('The following targeted packages failed to update. '
+                           'See debug log for details: ({0}).'
+                           .format(', '.join(sorted(targets.keys()))))
             else:
                 comment = 'Package {0} failed to ' \
                           'update.'.format(targets.keys()[0])
@@ -753,7 +784,14 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
                 'comment': 'Invalid action {0!r}. '
                            'This is probably a bug.'.format(action)}
 
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while parsing targets: '
+                           '{0}'.format(exc)}
     old = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     targets = [x for x in pkg_params if x in old]
     if action == 'purge':

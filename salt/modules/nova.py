@@ -45,10 +45,17 @@ try:
 except ImportError:
     pass
 
+# Import python libs
+import time
+import logging
+
 # Import salt libs
 import salt.utils
 
-# Function alias to not shadow built-in's
+# Get logging started
+log = logging.getLogger(__name__)
+
+# Function alias to not shadow built-ins
 __func_alias__ = {
     'list_': 'list'
 }
@@ -96,13 +103,24 @@ def _auth(profile=None):
     return client.Client(**kwargs)
 
 
-def boot(name, flavor_id=0, image_id=0, profile=None):
+def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
     '''
     Boot (create) a new instance
 
-    <name>        Name of the new instance (must be first)
-    <flavor_id>   Unique integer ID for the flavor
-    <image_id>    Unique integer ID for the image
+    name
+        Name of the new instance (must be first)
+
+    flavor_id
+        Unique integer ID for the flavor
+
+    image_id
+        Unique integer ID for the image
+
+    timeout
+        How long to wait, after creating the instance, for the provider to
+        return information about it (default 300 seconds).
+
+        .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -122,14 +140,32 @@ def boot(name, flavor_id=0, image_id=0, profile=None):
     response = nt_ks.servers.create(
         name=name, flavor=flavor_id, image=image_id
     )
-    return server_show(response.id)
+
+    start = time.time()
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            return server_show(response.id, profile=profile)
+        except Exception as exc:
+            log.debug('Server information not yet available: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Timed out after {0} seconds '
+                          'while waiting for data'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying server_show() (try {0})'.format(trycount)
+            )
 
 
 def suspend(instance_id, profile=None):
     '''
     Suspend an instance
 
-    <instance_id>        ID of the instance to be suspended
+    instance_id
+        ID of the instance to be suspended
 
     CLI Example:
 
@@ -147,7 +183,8 @@ def resume(instance_id, profile=None):
     '''
     Resume an instance
 
-    <instance_id>        ID of the instance to be resumed
+    instance_id
+        ID of the instance to be resumed
 
     CLI Example:
 
@@ -165,7 +202,8 @@ def lock(instance_id, profile=None):
     '''
     Lock an instance
 
-    <instance_id>        ID of the instance to be locked
+    instance_id
+        ID of the instance to be locked
 
     CLI Example:
 
@@ -183,7 +221,8 @@ def delete(instance_id, profile=None):
     '''
     Delete an instance
 
-    <instance_id>        ID of the instance to be deleted
+    instance_id
+        ID of the instance to be deleted
 
     CLI Example:
 
@@ -237,11 +276,16 @@ def flavor_create(name,      # pylint: disable=C0103
     Add a flavor to nova (nova flavor-create). The following parameters are
     required:
 
-    <name>   Name of the new flavor (must be first)
-    <id>     Unique integer ID for the new flavor
-    <ram>    Memory size in MB
-    <disk>   Disk size in GB
-    <vcpus>  Number of vcpus
+    name
+        Name of the new flavor (must be first)
+    id
+        Unique integer ID for the new flavor
+    ram
+        Memory size in MB
+    disk
+        Disk size in GB
+    vcpus
+        Number of vcpus
 
     CLI Example:
 
@@ -268,7 +312,7 @@ def flavor_delete(id, profile=None):  # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_delete 7'
+        salt '*' nova.flavor_delete 7
     '''
     nt_ks = _auth(profile)
     nt_ks.flavors.delete(id)
@@ -457,6 +501,12 @@ def show(server_id, profile=None):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_show function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.show
     '''
     return server_show(server_id, profile)
 
@@ -503,19 +553,26 @@ def server_list_detailed(profile=None):
                 'diskConfig': item.__dict__['OS-DCF:diskConfig']
             }
         if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = item.__dict__['OS-EXT-SRV-ATTR:host']
+            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:host']
         if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
+            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
         if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = item.__dict__['OS-EXT-SRV-ATTR:instance_name']
+            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:instance_name']
         if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
-            ret[item.name]['OS-EXT-STS']['power_state'] = item.__dict__['OS-EXT-STS:power_state']
+            ret[item.name]['OS-EXT-STS']['power_state'] = \
+                item.__dict__['OS-EXT-STS:power_state']
         if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
-            ret[item.name]['OS-EXT-STS']['task_state'] = item.__dict__['OS-EXT-STS:task_state']
+            ret[item.name]['OS-EXT-STS']['task_state'] = \
+                item.__dict__['OS-EXT-STS:task_state']
         if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
-            ret[item.name]['OS-EXT-STS']['vm_state'] = item.__dict__['OS-EXT-STS:vm_state']
+            ret[item.name]['OS-EXT-STS']['vm_state'] = \
+                item.__dict__['OS-EXT-STS:vm_state']
         if hasattr(item.__dict__, 'security_groups'):
-            ret[item.name]['security_groups'] = item.__dict__['security_groups']
+            ret[item.name]['security_groups'] = \
+                item.__dict__['security_groups']
     return ret
 
 

@@ -205,6 +205,10 @@ Install Salt (and dependencies) into the virtualenv:
     This also means that pulling in the M2Crypto installed using apt requires using
     ``--system-site-packages`` when creating the virtualenv.
 
+    If you're using a platform other than Debian or Ubuntu, and you are
+    installing M2Crypto via pip instead of a system package, then you will also
+    need the ``gcc`` compiler.
+
 .. note:: Installing psutil
 
     Python header files are required to build this module, otherwise the pip
@@ -213,21 +217,6 @@ Install Salt (and dependencies) into the virtualenv:
     Linux distributions which split the headers into their own package, this
     can be done by installing the ``python-dev`` or ``python-devel`` package.
     For other platforms, the package will likely be similarly named.
-
-.. note:: Important note for those developing using RedHat variants
-
-    For developers using a RedHat variant, be advised that the package
-    provider for newer Redhat-based systems (:doc:`yumpkg.py
-    <../ref/modules/all/salt.modules.yumpkg>`) relies on RedHat's python
-    interface for yum. The variants that use this module to provide package
-    support include the following:
-
-    * `RHEL`_ and `CentOS`_ releases 6 and later
-    * `Fedora Linux`_ releases 11 and later
-    * `Amazon Linux`_
-
-    Developers using one of these systems should create the salt virtualenv using the
-    ``--system-site-packages`` option to ensure that the correct modules are available.
 
 .. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
 .. _`CentOS`: http://centos.org/

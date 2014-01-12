@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of user accounts.
-============================
+Management of user accounts
+===========================
 
 The user module is used to create and manage user settings, users can be set
 as either absent or present
@@ -227,6 +227,7 @@ def present(name,
     homephone
         The user's home phone number (not supported in MacOS)
     '''
+    fullname = str(fullname) if fullname is not None else fullname
     roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
     workphone = str(workphone) if workphone is not None else workphone
     homephone = str(homephone) if homephone is not None else homephone

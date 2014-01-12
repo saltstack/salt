@@ -11,6 +11,7 @@
 
 # Import python libraries
 import warnings
+import os
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -27,6 +28,7 @@ from salt.modules import virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {}
+virtualenv_mod.__opts__['venv_bin'] = 'virtualenv'
 base_virtualenv_mock = MagicMock()
 base_virtualenv_mock.__version__ = '1.9.1'
 
@@ -315,12 +317,16 @@ class VirtualenvTestCase(TestCase):
 
     def test_python_argument(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        if os.path.isfile('/usr/bin/python2.7'):
+            python = '/usr/bin/python2.7'
+        elif os.path.isfile('/usr/bin/python2.6'):
+            python = '/usr/bin/python2.6'
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create(
-                '/tmp/foo', python='/usr/bin/python2.7',
+                '/tmp/foo', python=python,
             )
             mock.assert_called_once_with(
-                'virtualenv --python=/usr/bin/python2.7 /tmp/foo',
+                'virtualenv --python={0} /tmp/foo'.format(python),
                 runas=None
             )
 

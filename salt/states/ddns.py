@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Dynamic DNS updates.
-====================
+Dynamic DNS updates
+===================
 
 Ensure a DNS record is present or absent utilizing RFC 2136
 type dynamic updates. Requires dnspython module.

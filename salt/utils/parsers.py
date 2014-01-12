@@ -8,7 +8,7 @@
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
-    This is were all the black magic happens on all of salt's CLI tools.
+    This is where all the black magic happens on all of salt's CLI tools.
 '''
 
 # Import python libs
@@ -27,7 +27,11 @@ import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
+import salt.utils
 from salt.utils.validate.path import is_writeable
+
+if not salt.utils.is_windows():
+    import salt.cloud.exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -235,6 +239,11 @@ class MergeConfigMixIn(object):
                 # value, this allows to tweak settings on the configuration
                 # files bypassing the shell option flags
                 self.config[option.dest] = value
+            elif option.dest in self.config:
+                # Let's update the option value with the one from the
+                # configuration file. This allows the parsers to make use of
+                # the updated value by using self.options.<option>
+                setattr(self.options, option.dest, self.config[option.dest])
 
         # Merge parser group options if any
         for group in self.option_groups:
@@ -249,12 +258,18 @@ class MergeConfigMixIn(object):
                     if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
-                else:
-                    if value is not None and value != default:
-                        # Only set the value in the config file IF it's not the
-                        # default value, this allows to tweak settings on the
-                        # configuration files bypassing the shell option flags
-                        self.config[option.dest] = value
+                elif value is not None and value != default:
+                    # Only set the value in the config file IF it's not the
+                    # default value, this allows to tweak settings on the
+                    # configuration files bypassing the shell option flags
+                    self.config[option.dest] = value
+                elif option.dest in self.config:
+                    # Let's update the option value with the one from the
+                    # configuration file. This allows the parsers to make use
+                    # of the updated value by using self.options.<option>
+                    setattr(self.options,
+                            option.dest,
+                            self.config[option.dest])
 
 
 class ConfigDirMixIn(object):
@@ -927,6 +942,385 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
         return instance
 
 
+class CloudConfigMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = -11    # Evaluate before ConfigDirMixin
+
+    def _mixin_setup(self):
+        group = self.config_group = optparse.OptionGroup(
+            self,
+            'Configuration Options',
+            # Include description here as a string
+        )
+        group.add_option(
+            '-C', '--cloud-config',
+            default=None,
+            help='DEPRECATED. The location of the salt-cloud config file.'
+        )
+        group.add_option(
+            '-M', '--master-config',
+            default=None,
+            help='DEPRECATED. The location of the salt master config file.'
+        )
+        group.add_option(
+            '-V', '--profiles', '--vm_config',
+            dest='vm_config',
+            default=None,
+            help='DEPRECATED. The location of the salt.cloud VM config file.'
+        )
+        group.add_option(
+            '--providers-config',
+            default=None,
+            help='DEPRECATED. The location of the salt cloud VM providers '
+                 'configuration file.'
+        )
+        self.add_option_group(group)
+
+    def __assure_absolute_paths(self, name):
+        # Need to check if file exists?
+        optvalue = getattr(self.options, name)
+        if optvalue:
+            setattr(self.options, name, os.path.abspath(optvalue))
+
+    def _mixin_after_parsed(self):
+        for option in self.config_group.option_list:
+            if option.dest is None:
+                # This should not happen.
+                #
+                # --version does not have dest attribute set for example.
+                # All options defined by us, even if not explicitly(by kwarg),
+                # will have the dest attribute set
+                continue
+            self.__assure_absolute_paths(option.dest)
+
+        # Grab data from the 4 sources (done in self.process_cloud_config)
+        # 1st - Master config
+        # 2nd - Override master config with salt-cloud config
+        # 3rd - Include Cloud Providers
+        # 4th - Include VM config
+        # 5th - Override config with cli options
+        # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
+
+        # Remove log_level_logfile from config if set to None so it can be
+        # equal to console log_level
+        if self.config['log_level_logfile'] is None:
+            self.config.pop('log_level_logfile')
+
+    def process_cloud_config(self):
+        if self.options.cloud_config is not None:
+
+            utils.warn_until(
+                'Helium',
+                'Don\'t forget to remove this support in Helium',
+                _dont_call_warnings=True
+            )
+            logging.getLogger(__name__).info(
+                'Passing \'--cloud-config\' has been deprecated. Instead, store '
+                'all of the salt cloud related configuration files in a single '
+                'directory and pass that directory to \'--config-dir\'. This '
+                'support will be removed in Salt Helium. Note that the '
+                '\'SALT_CLOUD_CONFIG\' environment variable is still valid.'
+            )
+
+    def process_vm_config(self):
+        if self.options.vm_config is not None:
+            utils.warn_until(
+                'Helium',
+                'Don\'t forget to remove this support in Helium',
+                _dont_call_warnings=True
+            )
+            logging.getLogger(__name__).info(
+                'Passing \'--vm_config\' has been deprecated. Instead, store all '
+                'of the salt cloud related configuration files in a single '
+                'directory and pass that directory to \'--config-dir\'. This '
+                'support will be removed in Salt Helium. Note that the '
+                '\'SALT_CLOUDVM_CONFIG\' environment variable is still valid and '
+                'you can also set an absolute path to this setting on the main '
+                'cloud configuration file under \'vm_config\'.'
+            )
+
+    def process_providers_config(self):
+        if self.options.providers_config is not None:
+            utils.warn_until(
+                'Helium',
+                'Don\'t forget to remove this support in Helium',
+                _dont_call_warnings=True
+            )
+            logging.getLogger(__name__).info(
+                'Passing \'--providers-config\' has been deprecated. Instead, '
+                'store all of the salt cloud related configuration files in a '
+                'single directory and pass that directory to \'--config-dir\'. '
+                'This support will be removed in Salt Helium. Note that the '
+                '\'SALT_CLOUD_PROVIDERS_CONFIG\' environment variable is still '
+                'valid and you can also set an absolute path to this setting on '
+                'the main cloud configuration file under \'providers_config\'.'
+            )
+
+    def process_master_config(self):
+        if self.options.master_config is not None:
+            utils.warn_until(
+                'Helium',
+                'Don\'t forget to remove this support in Helium',
+                _dont_call_warnings=True
+            )
+            logging.getLogger(__name__).info(
+                'Passing \'--master-config\' has been deprecated. Instead, store '
+                'all of the salt cloud related configuration files in a single '
+                'directory and pass that directory to \'--config-dir\'. This '
+                'support will be removed in Salt Helium. Note that the '
+                '\'SALT_MASTER_CONFIG\' environment variable is still valid and '
+                'you can also set an absolute path to this setting on the main '
+                'cloud configuration file under \'providers_config\'.'
+            )
+
+
+class ExecutionOptionsMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 10
+
+    def _mixin_setup(self):
+        group = self.execution_group = optparse.OptionGroup(
+            self,
+            'Execution Options',
+            # Include description here as a string
+        )
+        group.add_option(
+            '-L', '--location',
+            default=None,
+            help='Specify which region to connect to.'
+        )
+        group.add_option(
+            '-a', '--action',
+            default=None,
+            help='Perform an action that may be specific to this cloud '
+                 'provider. This argument requires one or more instance '
+                 'names to be specified.'
+        )
+        group.add_option(
+            '-f', '--function',
+            nargs=2,
+            default=None,
+            metavar='<FUNC-NAME> <PROVIDER>',
+            help='Perform an function that may be specific to this cloud '
+                 'provider, that does not apply to an instance. This '
+                 'argument requires a provider to be specified (i.e.: nova).'
+        )
+        group.add_option(
+            '-p', '--profile',
+            default=None,
+            help='Create an instance using the specified profile.'
+        )
+        group.add_option(
+            '-m', '--map',
+            default=None,
+            help='Specify a cloud map file to use for deployment. This option '
+                 'may be used alone, or in conjunction with -Q, -F, -S or -d.'
+        )
+        group.add_option(
+            '-H', '--hard',
+            default=False,
+            action='store_true',
+            help='Delete all VMs that are not defined in the map file. '
+                 'CAUTION!!! This operation can irrevocably destroy VMs! It '
+                 'must be explicitly enabled in the cloud config file.'
+        )
+        group.add_option(
+            '-d', '--destroy',
+            default=False,
+            action='store_true',
+            help='Destroy the specified instance(s).'
+        )
+        group.add_option(
+            '--no-deploy',
+            default=True,
+            dest='deploy',
+            action='store_false',
+            help='Don\'t run a deploy script after instance creation.'
+        )
+        group.add_option(
+            '-P', '--parallel',
+            default=False,
+            action='store_true',
+            help='Build all of the specified instances in parallel.'
+        )
+        group.add_option(
+            '-u', '--update-bootstrap',
+            default=False,
+            action='store_true',
+            help='Update salt-bootstrap to the latest develop version on '
+                 'GitHub.'
+        )
+        group.add_option(
+            '-y', '--assume-yes',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions.'
+        )
+        group.add_option(
+            '-k', '--keep-tmp',
+            default=False,
+            action='store_true',
+            help='Do not remove files from /tmp/ after deploy.sh finishes.'
+        )
+        group.add_option(
+            '--show-deploy-args',
+            default=False,
+            action='store_true',
+            help='Include the options used to deploy the minion in the data '
+                 'returned.'
+        )
+        group.add_option(
+            '--script-args',
+            default=None,
+            help='Script arguments to be fed to the bootstrap script when '
+                 'deploying the VM'
+        )
+        self.add_option_group(group)
+
+    def process_function(self):
+        if self.options.function:
+            self.function_name, self.function_provider = self.options.function
+            if self.function_provider.startswith('-') or \
+                    '=' in self.function_provider:
+                self.error(
+                    '--function expects two arguments: <function-name> '
+                    '<provider>'
+                )
+
+
+class CloudQueriesMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 20
+
+    selected_query_option = None
+
+    def _mixin_setup(self):
+        group = self.cloud_queries_group = optparse.OptionGroup(
+            self,
+            'Query Options',
+            # Include description here as a string
+        )
+        group.add_option(
+            '-Q', '--query',
+            default=False,
+            action='store_true',
+            help=('Execute a query and return some information about the '
+                  'nodes running on configured cloud providers')
+        )
+        group.add_option(
+            '-F', '--full-query',
+            default=False,
+            action='store_true',
+            help=('Execute a query and return all information about the '
+                  'nodes running on configured cloud providers')
+        )
+        group.add_option(
+            '-S', '--select-query',
+            default=False,
+            action='store_true',
+            help=('Execute a query and return select information about '
+                  'the nodes running on configured cloud providers')
+        )
+        group.add_option(
+            '--list-providers',
+            default=False,
+            action='store_true',
+            help=('Display a list of configured providers.')
+        )
+        self.add_option_group(group)
+        self._create_process_functions()
+
+    def _create_process_functions(self):
+        for option in self.cloud_queries_group.option_list:
+            def process(opt):
+                if getattr(self.options, opt.dest):
+                    query = 'list_nodes'
+                    if opt.dest == 'full_query':
+                        query += '_full'
+                    elif opt.dest == 'select_query':
+                        query += '_select'
+                    elif opt.dest == 'list_providers':
+                        query = 'list_providers'
+                        if self.args:
+                            self.error(
+                                '\'--list-providers\' does not accept any '
+                                'arguments'
+                            )
+                    self.selected_query_option = query
+
+            funcname = 'process_{0}'.format(option.dest)
+            if not hasattr(self, funcname):
+                setattr(self, funcname, partial(process, option))
+
+    def _mixin_after_parsed(self):
+        group_options_selected = filter(
+            lambda option: getattr(self.options, option.dest) is not False,
+            self.cloud_queries_group.option_list
+        )
+        if len(group_options_selected) > 1:
+            self.error(
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format('/'.join([
+                    option.get_opt_string() for option in
+                    group_options_selected
+                ]))
+            )
+        self.config['selected_query_option'] = self.selected_query_option
+
+
+class CloudProvidersListsMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        group = self.providers_listings_group = optparse.OptionGroup(
+            self,
+            'Cloud Providers Listings',
+            # Include description here as a string
+        )
+        group.add_option(
+            '--list-locations',
+            default=None,
+            help=('Display a list of locations available in configured cloud '
+                  'providers. Pass the cloud provider that available '
+                  'locations are desired on, aka "linode", or pass "all" to '
+                  'list locations for all configured cloud providers')
+        )
+        group.add_option(
+            '--list-images',
+            default=None,
+            help=('Display a list of images available in configured cloud '
+                  'providers. Pass the cloud provider that available images '
+                  'are desired on, aka "linode", or pass "all" to list images '
+                  'for all configured cloud providers')
+        )
+        group.add_option(
+            '--list-sizes',
+            default=None,
+            help=('Display a list of sizes available in configured cloud '
+                  'providers. Pass the cloud provider that available sizes '
+                  'are desired on, aka "AWS", or pass "all" to list sizes '
+                  'for all configured cloud providers')
+        )
+        self.add_option_group(group)
+
+    def _mixin_after_parsed(self):
+        list_options_selected = filter(
+            lambda option: getattr(self.options, option.dest) is not None,
+            self.providers_listings_group.option_list
+        )
+        if len(list_options_selected) > 1:
+            self.error(
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format(
+                    '/'.join([
+                        option.get_opt_string() for option in
+                        list_options_selected
+                    ])
+                )
+            )
+
+
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
                          PidfileMixin):
@@ -1119,10 +1513,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.args[2] = self.args[2]
 
         if self.options.list:
-            if ',' in self.args[0]:
-                self.config['tgt'] = self.args[0].split(',')
-            else:
-                self.config['tgt'] = self.args[0].split()
+            try:
+                if ',' in self.args[0]:
+                    self.config['tgt'] = self.args[0].split(',')
+                else:
+                    self.config['tgt'] = self.args[0].split()
+            except IndexError:
+                self.exit(42, '\nCannot execute command without defining a target.\n\n')
         else:
             try:
                 self.config['tgt'] = self.args[0]
@@ -1130,35 +1527,39 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         # Detect compound command and set up the data for it
         if self.args:
-            if ',' in self.args[1]:
-                self.config['fun'] = self.args[1].split(',')
-                self.config['arg'] = [[]]
-                cmd_index = 0
-                if (self.args[2:].count(self.options.args_separator) ==
-                        len(self.config['fun']) - 1):
-                    # new style parsing: standalone argument separator
-                    for arg in self.args[2:]:
-                        if arg == self.options.args_separator:
-                            cmd_index += 1
-                            self.config['arg'].append([])
-                        else:
-                            self.config['arg'][cmd_index].append(arg)
-                else:
-                    # old style parsing: argument separator can be inside args
-                    for arg in self.args[2:]:
-                        if self.options.args_separator in arg:
-                            sub_args = arg.split(self.options.args_separator)
-                            for sub_arg_index, sub_arg in enumerate(sub_args):
-                                if sub_arg:
-                                    self.config['arg'][cmd_index].append(sub_arg)
-                                if sub_arg_index != len(sub_args) - 1:
-                                    cmd_index += 1
-                                    self.config['arg'].append([])
-                        else:
-                            self.config['arg'][cmd_index].append(arg)
-                    if len(self.config['fun']) != len(self.config['arg']):
-                        self.exit(42, 'Cannot execute compound command without '
-                                      'defining all arguments.')
+            try:
+                if ',' in self.args[1]:
+                    self.config['fun'] = self.args[1].split(',')
+                    self.config['arg'] = [[]]
+                    cmd_index = 0
+                    if (self.args[2:].count(self.options.args_separator) ==
+                            len(self.config['fun']) - 1):
+                        # new style parsing: standalone argument separator
+                        for arg in self.args[2:]:
+                            if arg == self.options.args_separator:
+                                cmd_index += 1
+                                self.config['arg'].append([])
+                            else:
+                                self.config['arg'][cmd_index].append(arg)
+                    else:
+                        # old style parsing: argument separator can be inside args
+                        for arg in self.args[2:]:
+                            if self.options.args_separator in arg:
+                                sub_args = arg.split(self.options.args_separator)
+                                for sub_arg_index, sub_arg in enumerate(sub_args):
+                                    if sub_arg:
+                                        self.config['arg'][cmd_index].append(sub_arg)
+                                    if sub_arg_index != len(sub_args) - 1:
+                                        cmd_index += 1
+                                        self.config['arg'].append([])
+                            else:
+                                self.config['arg'][cmd_index].append(arg)
+                        if len(self.config['fun']) != len(self.config['arg']):
+                            self.exit(42, 'Cannot execute compound command without '
+                                          'defining all arguments.')
+            except IndexError:
+                self.exit(42, '\nIncomplete options passed.\n\n')
+
             else:
                 self.config['fun'] = self.args[1]
                 self.config['arg'] = self.args[2:]
@@ -1258,14 +1659,15 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '-L', '--list-all',
             default=False,
             action='store_true',
-            help='List all public keys. Deprecated: use "--list all"'
+            help='List all public keys. (Deprecated: use "--list all")'
         )
 
         actions_group.add_option(
             '-a', '--accept',
             default='',
             help='Accept the specified public key (use --include-all to '
-                 'match rejected keys in addition to pending keys)'
+                 'match rejected keys in addition to pending keys). Globs are '
+                 'supported.'
         )
 
         actions_group.add_option(
@@ -1279,7 +1681,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '-r', '--reject',
             default='',
             help='Reject the specified public key (use --include-all to '
-                 'match accepted keys in addition to pending keys)'
+                 'match accepted keys in addition to pending keys). Globs are '
+                 'supported.'
         )
 
         actions_group.add_option(
@@ -1312,7 +1715,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-d', '--delete',
             default='',
-            help='Delete the named key'
+            help='Delete the specified key. Globs are supported.'
         )
 
         actions_group.add_option(
@@ -1325,14 +1728,14 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-f', '--finger',
             default='',
-            help='Print the named key\'s fingerprint'
+            help='Print the specified key\'s fingerprint'
         )
 
         actions_group.add_option(
             '-F', '--finger-all',
             default=False,
             action='store_true',
-            help='Print all key\'s fingerprints'
+            help='Print all keys\' fingerprints'
         )
         self.add_option_group(actions_group)
 
@@ -1401,6 +1804,17 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             keys_config['pki_dir'] = self.options.gen_keys_dir
 
         return keys_config
+
+    def process_list(self):
+        # Filter accepted list arguments as soon as possible
+        if not self.options.list:
+            return
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej')):
+            self.error(
+                '{0!r} is not a valid argument to \'--list\''.format(
+                    self.options.list
+                )
+            )
 
     def process_keysize(self):
         if self.options.keysize < 2048:
@@ -1701,3 +2115,52 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
+
+
+class SaltCloudParser(OptionParser,
+                      LogLevelMixIn,
+                      MergeConfigMixIn,
+                      OutputOptionsMixIn,
+                      ConfigDirMixIn,
+                      CloudConfigMixIn,
+                      CloudQueriesMixIn,
+                      ExecutionOptionsMixIn,
+                      CloudProvidersListsMixIn):
+
+    __metaclass__ = OptionParserMeta
+
+    # ConfigDirMixIn attributes
+    _config_filename_ = 'cloud'
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = 'info'
+    _logfile_config_setting_name_ = 'log_file'
+    _loglevel_config_setting_name_ = 'log_level_logfile'
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
+
+    def print_versions_report(self, file=sys.stdout):
+        print >> file, '\n'.join(
+            version.versions_report(include_salt_cloud=True))
+        self.exit()
+
+    def _mixin_after_parsed(self):
+        if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:
+            import pprint
+
+            print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
+            pprint.pprint(self.config)
+            self.exit(0)
+
+        if self.args:
+            self.config['names'] = self.args
+
+    def setup_config(self):
+        try:
+            return config.cloud_config(
+                self.options.cloud_config or self.get_config_file_path(),
+                master_config_path=self.options.master_config,
+                providers_config_path=self.options.providers_config,
+                profiles_config_path=self.options.vm_config
+            )
+        except salt.cloud.exceptions.SaltCloudConfigError as exc:
+            self.error(exc)

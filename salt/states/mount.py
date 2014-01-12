@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Mounting of filesystems.
-========================
+Mounting of filesystems
+=======================
 
 Mount any type of mountable filesystem with the mounted function:
 
@@ -15,6 +15,9 @@ Mount any type of mountable filesystem with the mounted function:
         - opts:
           - defaults
 '''
+
+# Import python libs
+import os.path
 
 # Import salt libs
 from salt._compat import string_types
@@ -82,15 +85,34 @@ def mounted(name,
 
     # Get the active data
     active = __salt__['mount.active']()
-    if name in active:
-        if active.__getitem__(name).__getitem__('device') != device:
+    real_name = os.path.realpath(name)
+    if device[0:1] == "/":
+        real_device = os.path.realpath(device)
+    else:
+        real_device = device
+    device_list = []
+    if real_name in active:
+        device_list.append(active[real_name]['device'])
+        device_list.append(os.path.realpath(device_list[0]))
+        if active[real_name]['alt_device'] not in device_list:
+            device_list.append(active[real_name]['alt_device'])
+        if real_device not in device_list:
             # name matches but device doesn't - need to umount
-            out = __salt__['mount.umount'](name)
+            ret['changes']['umount'] = "Forced unmount because devices " \
+                                       + "don't match. Wanted: " + device
+            if real_device != device:
+                ret['changes']['umount'] += " (" + real_device + ")"
+            ret['changes']['umount'] += ", current: " + ', '.join(device_list)
+            out = __salt__['mount.umount'](real_name)
             active = __salt__['mount.active']()
+            if real_name in active:
+                ret['comment'] = "Unable to unmount"
+                ret['result'] = None
+                return ret
         else:
             ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
-    if name not in active:
+    if real_name not in active:
         # The mount is not present! Mount it
         if __opts__['test']:
             ret['result'] = None
@@ -104,12 +126,12 @@ def mounted(name,
             ret['comment'] = out
             ret['result'] = False
             return ret
-        elif name in active:
+        elif real_name in active:
             # (Re)mount worked!
             ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
 
-    if persist and name in active:
+    if persist and real_name in active:
         if __opts__['test']:
             out = __salt__['mount.set_fstab'](name,
                                               device,
@@ -207,7 +229,7 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name:
+            if fstab_data['none']['device'] == name and fstab_data['none']['fstype'] != 'swap':
                 return ret
 
         # present, new, change, bad config

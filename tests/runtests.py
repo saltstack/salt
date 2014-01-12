@@ -9,7 +9,7 @@ import resource
 import tempfile
 
 # Import salt libs
-from integration import TestDaemon, TMP
+from integration import TestDaemon, TMP  # pylint: disable=W0403
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
@@ -186,13 +186,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             resource.RLIMIT_NOFILE
         )
         if smax_open_files < REQUIRED_OPEN_FILES:
-            print('~' * PNUM)
             print(
-                'Max open files setting is too low({0}) for running the '
+                ' * Max open files setting is too low({0}) for running the '
                 'tests'.format(smax_open_files)
             )
             print(
-                'Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES)
+                ' * Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES)
             )
             if hmax_open_files < 4096:
                 hmax_open_files = 4096  # Decent default?
@@ -282,7 +281,6 @@ def main():
     parser = SaltTestsuiteParser(
         TEST_DIR,
         xml_output_dir=XML_OUTPUT_DIR,
-        html_output_dir=HTML_OUTPUT_DIR,
         tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
     )
     parser.parse_args()

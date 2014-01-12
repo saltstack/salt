@@ -196,6 +196,7 @@ loaded in the order in which they are included.
 In the following case:
 
 ``foo.sls``
+
 .. code-block:: yaml
 
     include:
@@ -203,12 +204,14 @@ In the following case:
       - baz
 
 ``bar.sls``
+
 .. code-block:: yaml
 
     include:
       - quo
 
 ``baz.sls``
+
 .. code-block:: yaml
 
     include:

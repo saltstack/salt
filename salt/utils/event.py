@@ -54,6 +54,7 @@ import glob
 import hashlib
 import errno
 import logging
+import time
 import datetime
 import multiprocessing
 from multiprocessing import Process
@@ -116,7 +117,7 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
-    return (TAGPARTER.join([part for part in parts if part]))
+    return TAGPARTER.join([part for part in parts if part])
 
 
 class SaltEvent(object):
@@ -130,6 +131,7 @@ class SaltEvent(object):
         self.cpub = False
         self.cpush = False
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        self.pending_events = []
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
@@ -175,22 +177,18 @@ class SaltEvent(object):
         )
         return puburi, pulluri
 
-    def subscribe(self, tag):
+    def subscribe(self, tag=None):
         '''
         Subscribe to events matching the passed tag.
         '''
         if not self.cpub:
             self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
 
-    def unsubscribe(self, tag):
+    def unsubscribe(self, tag=None):
         '''
         Un-subscribe to events matching the passed tag.
         '''
-        if not self.cpub:
-            # There's no way we've even subscribed to this tag
-            return
-        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+        return
 
     def connect_pub(self):
         '''
@@ -199,13 +197,24 @@ class SaltEvent(object):
         self.sub = self.context.socket(zmq.SUB)
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
+        self.sub.setsockopt(zmq.SUBSCRIBE, '')
         self.cpub = True
 
-    def connect_pull(self):
+    def connect_pull(self, timeout=1000):
         '''
         Establish a connection with the event pull socket
+        Set the send timeout of the socket options to timeout (in milliseconds)
+        Default timeout is 1000 ms
+        The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
+        try:
+            # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
+            self.push.setsockopt(zmq.SNDTIMEO, timeout)
+        except AttributeError:
+            # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
+            #                        CentOS5, which still uses 2.1.9)
+            pass
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -217,10 +226,22 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        self.subscribe(tag)
-        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-            raw = self.sub.recv()
+        self.subscribe()
+
+        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
+            self.pending_events.remove(evt)
+            if full:
+                return evt
+            else:
+                return evt['data']
+
+        start = int(time.time())
+        while not wait or int(time.time()) <= start + wait:
+            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+            else:
+                continue
             if ord(raw[20]) >= 0x80:  # old style
                 mtag = raw[0:20].rstrip('|')
                 mdata = raw[20:]
@@ -228,13 +249,14 @@ class SaltEvent(object):
                 mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
             data = self.serial.loads(mdata)
+            ret = {'data': data,
+                    'tag': mtag}
 
             if not mtag.startswith(tag):  # tag not match
-                return None
+                self.pending_events.append(ret)
+                continue
 
             if full:
-                ret = {'data': data,
-                        'tag': mtag}
                 return ret
             return data
         return None
@@ -249,12 +271,15 @@ class SaltEvent(object):
                 continue
             yield data
 
-    def fire_event(self, data, tag):
+    def fire_event(self, data, tag, timeout=1000):
         '''
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
 
         Supports new style long tags.
+        The 0MQ push timeout on the send is set to timeout in milliseconds
+        The default is 1000 ms
+        Note the linger timeout must be at least as long as this timeout
         '''
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
@@ -263,7 +288,7 @@ class SaltEvent(object):
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
 
         if not self.cpush:
-            self.connect_pull()
+            self.connect_pull(timeout=timeout)
 
         data['_stamp'] = datetime.datetime.now().isoformat('_')
 
@@ -274,18 +299,22 @@ class SaltEvent(object):
             tagend = TAGEND
 
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
-        self.push.send(event)
+        try:
+            self.push.send(event)
+        except Exception as ex:
+            log.debug(ex)
+            raise
         return True
 
-    def destroy(self):
+    def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, 1)
+            self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
-            self.push.setsockopt(zmq.LINGER, 1)
+            self.push.setsockopt(zmq.LINGER, linger)
             self.push.close()
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
@@ -293,13 +322,13 @@ class SaltEvent(object):
         if isinstance(self.poller.sockets, dict):
             for socket in self.poller.sockets.keys():
                 if socket.closed is False:
-                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
                 self.poller.unregister(socket)
         else:
             for socket in self.poller.sockets:
                 if socket[0].closed is False:
-                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].setsockopt(zmq.LINGER, linger)
                     socket[0].close()
                 self.poller.unregister(socket[0])
         if self.context.closed is False:
@@ -378,6 +407,7 @@ class EventPublisher(Process):
         '''
         Bind the pub and pull sockets for events
         '''
+        linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
         # Prepare the master event publisher
@@ -421,10 +451,10 @@ class EventPublisher(Process):
                     raise exc
         except KeyboardInterrupt:
             if self.epub_sock.closed is False:
-                self.epub_sock.setsockopt(zmq.LINGER, 1)
+                self.epub_sock.setsockopt(zmq.LINGER, linger)
                 self.epub_sock.close()
             if self.epull_sock.closed is False:
-                self.epull_sock.setsockopt(zmq.LINGER, 1)
+                self.epull_sock.setsockopt(zmq.LINGER, linger)
                 self.epull_sock.close()
             if self.context.closed is False:
                 self.context.term()
@@ -573,9 +603,8 @@ class ReactWrap(object):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(**kwargs)
+        return wheel.call_func(fun, **kwargs)
 
 
 class StateFire(object):
@@ -610,9 +639,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True
@@ -640,9 +669,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True

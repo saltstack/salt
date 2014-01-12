@@ -10,113 +10,111 @@ been deprecated in favor of the `ec2` provider. Configuration using the old
 `aws` provider will still function, but that driver is no longer in active
 development.
 
-Set up the cloud config at ``/etc/salt/cloud``:
-
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud
+    # Note: This example is for /etc/salt/cloud.providers or any file in the
+    # /etc/salt/cloud.providers.d/ directory.
 
-    providers:
-      my-ec2-southeast-public-ips:
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
+    my-ec2-southeast-public-ips:
+      # Set up the location of the salt master
+      #
+      minion:
+        master: saltmaster.example.com
 
-        # Set up grains information, which will be common for all nodes
-        # using this provider
-        grains:
-          node_type: broker
-          release: 1.0.1
+      # Set up grains information, which will be common for all nodes
+      # using this provider
+      grains:
+        node_type: broker
+        release: 1.0.1
 
-        # Specify whether to use public or private IP for deploy script.
-        #
-        # Valid options are:
-        #     private_ips - The salt-master is also hosted with EC2
-        #     public_ips - The salt-master is hosted outside of EC2
-        #
-        ssh_interface: public_ips
+      # Specify whether to use public or private IP for deploy script.
+      #
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with EC2
+      #     public_ips - The salt-master is hosted outside of EC2
+      #
+      ssh_interface: public_ips
 
-        # Set the EC2 access credentials (see below)
-        #
-        id: HJGRYCILJLKJYG
-        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      # Set the EC2 access credentials (see below)
+      #
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
-        # Make sure this key is owned by root with permissions 0400.
-        #
-        private_key: /etc/salt/my_test_key.pem
-        keyname: my_test_key
-        securitygroup: default
+      # Make sure this key is owned by root with permissions 0400.
+      #
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
 
-        # Optionally configure default region
-        #
-        location: ap-southeast-1
-        availability_zone: ap-southeast-1b
+      # Optionally configure default region
+      #
+      location: ap-southeast-1
+      availability_zone: ap-southeast-1b
 
-        # Configure which user to use to run the deploy script. This setting is
-        # dependent upon the AMI that is used to deploy. It is usually safer to
-        # configure this individually in a profile, than globally. Typical users
-        # are:
-        #
-        # Amazon Linux -> ec2-user
-        # RHEL         -> ec2-user
-        # CentOS       -> ec2-user
-        # Ubuntu       -> ubuntu
-        #
-        ssh_username: ec2-user
+      # Configure which user to use to run the deploy script. This setting is
+      # dependent upon the AMI that is used to deploy. It is usually safer to
+      # configure this individually in a profile, than globally. Typical users
+      # are:
+      #
+      # Amazon Linux -> ec2-user
+      # RHEL         -> ec2-user
+      # CentOS       -> ec2-user
+      # Ubuntu       -> ubuntu
+      #
+      ssh_username: ec2-user
 
-        # Optionally add an IAM profile
-        iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
+      # Optionally add an IAM profile
+      iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
 
-        provider: ec2
+      provider: ec2
 
 
-      my-ec2-southeast-private-ips:
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
+    my-ec2-southeast-private-ips:
+      # Set up the location of the salt master
+      #
+      minion:
+        master: saltmaster.example.com
 
-        # Specify whether to use public or private IP for deploy script.
-        #
-        # Valid options are:
-        #     private_ips - The salt-master is also hosted with EC2
-        #     public_ips - The salt-master is hosted outside of EC2
-        #
-        ssh_interface: private_ips
+      # Specify whether to use public or private IP for deploy script.
+      #
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with EC2
+      #     public_ips - The salt-master is hosted outside of EC2
+      #
+      ssh_interface: private_ips
 
-        # Set the EC2 access credentials (see below)
-        #
-        id: HJGRYCILJLKJYG
-        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      # Set the EC2 access credentials (see below)
+      #
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
-        # Make sure this key is owned by root with permissions 0400.
-        #
-        private_key: /etc/salt/my_test_key.pem
-        keyname: my_test_key
-        securitygroup: default
+      # Make sure this key is owned by root with permissions 0400.
+      #
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
 
-        # Optionally configure default region
-        #
-        location: ap-southeast-1
-        availability_zone: ap-southeast-1b
+      # Optionally configure default region
+      #
+      location: ap-southeast-1
+      availability_zone: ap-southeast-1b
 
-        # Configure which user to use to run the deploy script. This setting is
-        # dependent upon the AMI that is used to deploy. It is usually safer to
-        # configure this individually in a profile, than globally. Typical users
-        # are:
-        #
-        # Amazon Linux -> ec2-user
-        # RHEL         -> ec2-user
-        # CentOS       -> ec2-user
-        # Ubuntu       -> ubuntu
-        #
-        ssh_username: ec2-user
+      # Configure which user to use to run the deploy script. This setting is
+      # dependent upon the AMI that is used to deploy. It is usually safer to
+      # configure this individually in a profile, than globally. Typical users
+      # are:
+      #
+      # Amazon Linux -> ec2-user
+      # RHEL         -> ec2-user
+      # CentOS       -> ec2-user
+      # Ubuntu       -> ubuntu
+      #
+      ssh_username: ec2-user
 
-        # Optionally add an IAM profile
-        iam_profile: 'my other profile name'
+      # Optionally add an IAM profile
+      iam_profile: 'my other profile name'
 
-        provider: ec2
+      provider: ec2
 
 
 Access Credentials
@@ -145,7 +143,7 @@ Keys in the us-west-1 region can be configured at
 https://console.aws.amazon.com/ec2/home?region=us-west-1#s=KeyPairs
 
 ...and so on. When creating a key pair, the browser will prompt to download a
-pem file. This file must be placed in a directory accessable by Salt Cloud,
+pem file. This file must be placed in a directory accessible by Salt Cloud,
 with permissions set to either 0400 or 0600.
 
 
@@ -173,7 +171,7 @@ instance, you can associate the instance with an instance profile, which in
 turn corresponds to the IAM role. Any software that runs on the EC2 instance
 is able to access AWS using the permissions associated with the IAM role.
 
-Scaffolding the profile is a 2 steps configurations:
+Scaffolding the profile is a 2-step configuration process:
 
  1. Configure an IAM Role from the `IAM Management Console`_.
  2. Attach this role to a new profile. It can be done with the `AWS CLI`_:
@@ -220,7 +218,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
 
 
-The profile can be realized now with a salt command:
+The profile can now be realized with a salt command:
 
 .. code-block:: bash
 
@@ -321,6 +319,47 @@ Multiple security groups can also be specified in the same fashion:
         - default
         - extra
 
+Your instances may optionally make use of EC2 Spot Instances. The
+following example will request that spot instances be used and your
+maximum bid will be $0.10. Keep in mind that different spot prices
+may be needed based on the current value of the various EC2 instance
+sizes. You can check current and past spot instance pricing via the
+EC2 API or AWS Console.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+
+By default, the spot instance type is set to 'one-time', meaning it will
+be launched and, if it's ever terminated for whatever reason, it will not
+be recreated. If you would like your spot instances to be relaunched after
+a termination (by your or AWS), set the ``type`` to 'persistent'.
+
+NOTE: Spot instances are a great way to save a bit of money, but you do
+run the risk of losing your spot instances if the current price for the
+instance size goes above your maximum bid.
+
+The following parameters may be set in the cloud configuration file to
+control various aspects of the spot instance launching:
+
+* ``wait_for_spot_timeout``: seconds to wait before giving up on spot instance launch (default=600)
+* ``wait_for_spot_interval``: seconds to wait in between polling requests to determine if a spot instance is available (default=30)
+* ``wait_for_spot_interval_multiplier``: a multiplier to add to the interval in between requests, which is useful if AWS is throttling your requests (default=1)
+* ``wait_for_spot_max_failures``: maximum number of failures before giving up on launching your spot instance (default=10)
+
+If you find that you're being throttled by AWS while polling for spot
+instances, you can set the following in your core cloud configuration
+file that will double the polling interval after each request to AWS.
+
+.. code-block:: yaml
+
+    wait_for_spot_interval: 1
+    wait_for_spot_interval_multiplier: 2
+
+See the `AWS Spot Instances`_ documentation for more information.
+
 
 Block device mappings enable you to specify additional EBS volumes or instance
 store volumes when the instance is launched. This setting is also available on
@@ -338,8 +377,8 @@ created in the order provided and additional mappings will be ignored. Consult t
         - DeviceName: /dev/sdc
           VirtualName: ephemeral1
 
-You can also use block device mappings to change the size of the root device at the 
-provisioing time. For example, assuming the root device is '/dev/sda', you can set 
+You can also use block device mappings to change the size of the root device at the
+provisioning time. For example, assuming the root device is '/dev/sda', you can set
 its size to 100G by using the following configuration.
 
 .. code-block:: yaml
@@ -347,8 +386,27 @@ its size to 100G by using the following configuration.
     my-ec2-config:
       block_device_mappings:
         - DeviceName: /dev/sda
-          Ebs.VolumeSize: 100 
+          Ebs.VolumeSize: 100
 
+Existing EBS volumes may also be attached (not created) to your instances or
+you can create new EBS volumes based on EBS snapshots. To simply attach an
+existing volume use the ``volume_id`` parameter.
+
+.. code-block:: yaml
+
+    device: /dev/xvdj
+    mount_point: /mnt/my_ebs
+    volume_id: vol-12345abcd
+
+Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
+
+.. code-block:: yaml
+
+    device: /dev/xvdj
+    mount_point: /mnt/my_ebs
+    snapshot: snap-abcd12345
+
+Note that ``volume_id`` will take precedence over the ``snapshot`` parameter.
 
 Tags can be set once an instance has been launched.
 
@@ -360,6 +418,7 @@ Tags can be set once an instance has been launched.
             tag2: value
 
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
+.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/spot-instances/
 
 Modify EC2 Tags
 ===============
@@ -420,6 +479,38 @@ configuration file:
       rename_on_destroy: True
 
 
+Listing Images
+==============
+Normally, images can be queried on a cloud provider by passing the
+``--list-images`` argument to Salt Cloud. This still holds true for EC2:
+
+.. code-block:: bash
+
+    salt-cloud --list-images my-ec2-config
+
+However, the full list of images on EC2 is extremely large, and querying all of
+the available images may cause Salt Cloud to behave as if frozen. Therefore,
+the default behavior of this option may be modified, by adding an ``owner``
+argument to the provider configuration:
+
+.. code-block:: yaml
+
+    owner: aws-marketplace
+
+The possible values for this setting are ``amazon``, ``aws-marketplace``,
+``self``, ``<AWS account ID>`` or ``all``. The default setting is ``amazon``.
+Take note that ``all`` and ``aws-marketplace`` may cause Salt Cloud to appear
+as if it is freezing, as it tries to handle the large amount of data.
+
+It is also possible to perform this query using different settings without
+modifying the configuration files. To do this, call the ``avail_images``
+function directly:
+
+.. code-block:: bash
+
+    salt-cloud -f avail_images my-ec2-config owner=aws-marketplace
+
+
 EC2 Images
 ==========
 The following are lists of available AMI images, generally sorted by OS. These
@@ -477,7 +568,7 @@ the defaults that will be applied to an instance using a particular AMI.
 
 show_instance
 =============
-This action is a thin wrapper around --full-query, which displays details on a
+This action is a thin wrapper around ``--full-query``, which displays details on a
 single instance only. In an environment with several machines, this will save a
 user from having to sort through all instance data, just to examine a single
 instance.
@@ -485,6 +576,32 @@ instance.
 .. code-block:: bash
 
     $ salt-cloud -a show_instance myinstance
+
+
+ebs_optimized
+=============
+This argument enables switching of the EbsOptimized setting which default
+to 'false'. Indicates whether the instance is optimized for EBS I/O. This
+optimization provides dedicated throughput to Amazon EBS and an optimized
+configuration stack to provide optimal Amazon EBS I/O performance. This
+optimization isn't available with all instance types. Additional usage
+charges apply when using an EBS-optimized instance.
+
+This setting can be added to the profile or map file for an instance.
+
+If set to True, this setting will enable an instance to be EbsOptimized
+
+.. code-block:: yaml
+
+   ebs_optimized: True
+
+This can also be set as a cloud provider setting in the EC2 cloud
+configuration:
+
+.. code-block:: yaml
+
+   my-ec2-config:
+     ebs_optimized: True
 
 
 del_root_vol_on_destroy
@@ -671,7 +788,7 @@ Creating a Key Pair
 -------------------
 A key pair is required in order to create an instance. When creating a key pair
 with this function, the return data will contain a copy of the private key.
-This private key is not stored by Amazon, and will not be obtainable past this
+This private key is not stored by Amazon, will not be obtainable past this
 point, and should be stored immediately.
 
 .. code-block:: bash
@@ -696,4 +813,5 @@ This function removes the key pair from Amazon.
 .. code-block:: bash
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
+
 

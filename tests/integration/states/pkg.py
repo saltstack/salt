@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 tests for pkg state
 '''
@@ -30,6 +32,12 @@ _PKG_TARGETS = {
 
 _PKG_TARGETS_32 = {
     'CentOS': 'xz-devel.i686'
+}
+
+# Test packages with dot in pkg name
+# (https://github.com/saltstack/salt/issues/8614)
+_PKG_TARGETS_DOT = {
+    'CentOS': 'java-1.6.0-openjdk'
 }
 
 
@@ -244,6 +252,22 @@ class PkgTest(integration.ModuleCase,
             ret = self.run_state('pkg.installed', name=target, version=version)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_with_dot_in_pkgname(self, grains=None):
+        '''
+        This tests for the regression found in the following issue:
+        https://github.com/saltstack/salt/issues/8614
+
+        This is a destructive test as it installs a package
+        '''
+        os_name = grains.get('os', '')
+        target = _PKG_TARGETS_DOT.get(os_name, '')
+        if target:
+            ret = self.run_state('pkg.installed', name=target)
             self.assertSaltTrueReturn(ret)
 
 

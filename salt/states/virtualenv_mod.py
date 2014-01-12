@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Setup of Python virtualenv sandboxes.
-=====================================
+Setup of Python virtualenv sandboxes
+====================================
 
 '''
 
 # Import python libs
 import logging
 import os
-import salt.utils
 
 # Import salt libs
 import salt.version
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def __virtual__():
 
 
 def managed(name,
-            venv_bin='virtualenv',
+            venv_bin=None,
             requirements=None,
             no_site_packages=None,
             system_site_packages=False,
@@ -41,7 +41,8 @@ def managed(name,
             cwd=None,
             index_url=None,
             extra_index_url=None,
-            pre_releases=False):
+            pre_releases=False,
+            no_deps=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -54,6 +55,8 @@ def managed(name,
         Path to the working directory where "pip install" is executed.
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
+    no_deps: False
+        Pass `--no-deps` to `pip`.
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -160,7 +163,7 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            runas=user
+            user=user
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -193,12 +196,13 @@ def managed(name,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
-            runas=user,
+            user=user,
             cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
-            pre_releases=pre_releases
+            pre_releases=pre_releases,
+            no_deps=no_deps,
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

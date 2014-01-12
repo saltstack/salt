@@ -199,8 +199,8 @@ def arg_type(*args, **kwargs):
     '''
     ret = {'args': [], 'kwargs': {}}
     # all the args
-    for arg in args:
-        ret['args'].append(str(type(arg)))
+    for argument in args:
+        ret['args'].append(str(type(argument)))
 
     # all the kwargs
     for key, val in kwargs.iteritems():

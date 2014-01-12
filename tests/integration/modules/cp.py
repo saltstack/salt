@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import hashlib
@@ -310,7 +312,6 @@ class CPModuleTest(integration.ModuleCase):
                 self.assertIn('Comte', data)
         finally:
             os.unlink(tgt)
-
 
 
 if __name__ == '__main__':

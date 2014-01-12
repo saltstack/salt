@@ -114,7 +114,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
              exit 1
          fi
       fi
-      echo {{4}} > /tmp/.salt/minion
+      echo '{{4}}' > /tmp/.salt/minion
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
 EOF'''.format(salt.__version__, RSTR)
@@ -444,7 +444,11 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
-        self.minion_config = yaml.dump({'root_dir': '/tmp/.salt/running_data'})
+        self.minion_config = yaml.dump(
+                {
+                    'root_dir': '/tmp/.salt/running_data',
+                    'id': self.id,
+                }).strip()
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
@@ -481,11 +485,13 @@ class Single(object):
 
         Returns tuple of (stdout, stderr)
         '''
-
         stdout, stderr = None, None
+        arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):
-            stdout, stderr = self.shell.exec_cmd(self.arg_str)
+            if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
+                arg_str = "'{0}'".format(arg_str)
+            stdout, stderr = self.shell.exec_cmd(arg_str)
 
         elif self.fun in self.wfuncs:
             stdout, stderr = self.run_wfunc()
@@ -516,7 +522,7 @@ class Single(object):
             refresh = True
         else:
             passed_time = (time.time() - os.stat(datap).st_mtime) / 60
-            if (passed_time > self.opts.get('cache_life', 60)):
+            if passed_time > self.opts.get('cache_life', 60):
                 refresh = True
         if self.opts.get('refresh_cache'):
             refresh = True
@@ -527,8 +533,9 @@ class Single(object):
                 self.opts,
                 self.id,
                 **self.target)
-            default_opts = pre_wrapper['test.opts_pkg']()
-            opts_pkg = dict(default_opts.items() + self.opts.items())
+            opts_pkg = pre_wrapper['test.opts_pkg']()
+            opts_pkg['file_roots'] = self.opts['file_roots']
+            opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],

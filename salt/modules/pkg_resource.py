@@ -18,6 +18,7 @@ import yaml
 import salt.utils
 
 log = logging.getLogger(__name__)
+__SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
 
 
 def _parse_pkg_meta(path):
@@ -27,7 +28,6 @@ def _parse_pkg_meta(path):
     '''
     def parse_rpm(path):
         try:
-            import collections  # needed by _parse_pkginfo, DO NOT REMOVE
             from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
             from salt.utils import namespaced_function as _namespaced_function
             _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
@@ -35,9 +35,14 @@ def _parse_pkg_meta(path):
             log.critical('Error importing helper functions. This is almost '
                          'certainly a bug.')
             return '', ''
-        pkginfo = __salt__['cmd.run_all'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(__QUERYFORMAT, path)
-        ).get('stdout', '').strip()
+        pkginfo = __salt__['cmd.run_stdout'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(
+                # Binary packages have no REPOID, replace this so the rpm
+                # command does not fail with "invalid tag" error
+                __QUERYFORMAT.replace('%{REPOID}', 'binarypkg'),
+                path
+            )
+        ).strip()
         pkginfo = _parse_pkginfo(pkginfo)
         if pkginfo is None:
             return '', ''

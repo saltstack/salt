@@ -1,24 +1,27 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import tempfile
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
+@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class VirtualenvModuleTest(integration.ModuleCase):
     '''
     Validate the virtualenv module
     '''
     def setUp(self):
         super(VirtualenvModuleTest, self).setUp()
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
         self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 

@@ -8,6 +8,7 @@ master to the minion and vice-versa.
 import salt.crypt
 import salt.utils.event
 import salt.payload
+import salt.transport
 
 
 def fire_master(data, tag, preload=None):
@@ -18,7 +19,7 @@ def fire_master(data, tag, preload=None):
 
     .. code-block:: bash
 
-        salt '*' event.fire_master 'stuff to be in the event' 'tag'
+        salt '*' event.fire_master '{"data":"my event data"}' 'tag'
     '''
     load = {}
     if preload:
@@ -31,9 +32,10 @@ def fire_master(data, tag, preload=None):
             'tok': auth.gen_token('salt'),
             'cmd': '_minion_event'})
 
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        sreq.send('aes', auth.crypticle.dumps(load))
+        sreq.send(load)
     except Exception:
         pass
     return True
@@ -41,13 +43,13 @@ def fire_master(data, tag, preload=None):
 
 def fire(data, tag):
     '''
-    Fire an event on the local minion event bus
+    Fire an event on the local minion event bus. Data must be formed as a dict.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' event.fire 'stuff to be in the event' 'tag'
+        salt '*' event.fire '{"data":"my event data"}' 'tag'
     '''
     try:
         return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)

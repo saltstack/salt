@@ -16,7 +16,7 @@ import logging
 
 # Import third party libs
 try:
-    from M2Crypto import RSA
+    from M2Crypto import RSA, EVP
     from Crypto.Cipher import AES
 except ImportError:
     # No need for crypt in local mode
@@ -40,6 +40,34 @@ def dropfile(cachedir, user=None):
     '''
     dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
+
+    def ready():
+        '''
+        Because MWorker._update_aes uses second-precision mtime
+        to detect changes to the file, we must avoid writing two
+        versions with the same mtime.
+
+        Note that this only makes rapid updates in serial safe: concurrent
+        updates could still both pass this check and then write two different
+        keys with the same mtime.
+        '''
+        try:
+            stats = os.stat(dfn)
+        except os.error:
+            # Not there, go ahead and write it
+            return True
+        else:
+            if stats.st_mtime == time.time():
+                # The mtime is the current time, we must
+                # wait until time has moved on.
+                return False
+            else:
+                return True
+
+    while not ready():
+        log.warning('Waiting before writing {0}'.format(dfn))
+        time.sleep(1)
+
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with salt.utils.fopen(dfnt, 'w+') as fp_:
@@ -83,6 +111,35 @@ def gen_keys(keydir, keyname, keysize, user=None):
     return priv
 
 
+def sign_message(privkey_path, message):
+    '''
+    Use M2Crypto's EVP ("Envelope") functions to sign a message.  Returns the signature.
+    '''
+    log.debug('salt.crypt.sign_message: Loading private key')
+    evp_rsa = EVP.load_key(privkey_path)
+    evp_rsa.sign_init()
+    evp_rsa.sign_update(message)
+    log.debug('salt.crypt.sign_message: Signing message.')
+    return evp_rsa.sign_final()
+
+
+def verify_signature(pubkey_path, message, signature):
+    '''
+    Use M2Crypto's EVP ("Envelope") functions to verify the signature on a message.
+    Returns True for valid signature.
+    '''
+    # Verify that the signature is valid
+    log.debug('salt.crypt.verify_signature: Loading public key')
+    pubkey = RSA.load_pub_key(pubkey_path)
+    verify_evp = EVP.PKey()
+    verify_evp.assign_rsa(pubkey)
+    verify_evp.verify_init()
+    verify_evp.verify_update(message)
+    log.debug('salt.crypt.verify_signature: Verifying signature')
+    result = verify_evp.verify_final(signature)
+    return result
+
+
 class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
@@ -107,7 +164,7 @@ class MasterKeys(dict):
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      'master',
-                     4096,
+                     self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
@@ -161,7 +218,7 @@ class Auth(object):
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      'minion',
-                     4096,
+                     self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key

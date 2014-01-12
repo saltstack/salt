@@ -14,11 +14,13 @@ Full list of Salt Cloud modules
     cloudstack
     digital_ocean
     ec2
+    gce
     gogrid
     ibmsce
     joyent
     libcloud_aws
     linode
+    msazure
     nova
     openstack
     parallels

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of debconf selections.
-=================================
+Management of debconf selections
+================================
 
 The debconfmod state module manages the enforcement of debconf selections,
 this state can set those selections prior to package installation.

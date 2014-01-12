@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath

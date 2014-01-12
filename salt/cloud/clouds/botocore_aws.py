@@ -5,25 +5,11 @@ The AWS Cloud Module
 
 The AWS cloud module is used to interact with the Amazon Web Services system.
 
-To use the AWS cloud module, using the old cloud providers configuration
-syntax, the following configuration parameters need to be set in the main cloud
-configuration file:
+This module has been replaced by the EC2 cloud module, and is no longer
+supported. The documentation shown here is for reference only; it is highly
+recommended to change all usages of this driver over to the EC2 driver.
 
-.. code-block:: yaml
-
-    # The AWS API authentication id
-    AWS.id: GKTADJGHEIQSXMKKRBJ08H
-    # The AWS API authentication key
-    AWS.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    # The ssh keyname to use
-    AWS.keyname: default
-    # The amazon security group
-    AWS.securitygroup: ssh_open
-    # The location of the private key which corresponds to the keyname
-    AWS.private_key: /root/default.pem
-
-
-Using the new format, set up the cloud configuration at
+If this driver is still needed, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/aws.conf``:
 
 .. code-block:: yaml
@@ -50,9 +36,9 @@ import stat
 import logging
 
 # Import salt.cloud libs
-import salt.cloud.config as config
-from salt.cloud.utils import namespaced_function
-from salt.cloud.libcloudfuncs import *        # pylint: disable-msg=W0614,W0401
+import salt.config as config
+from salt.utils import namespaced_function
+from salt.cloud.libcloudfuncs import *        # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
@@ -61,7 +47,7 @@ from salt.cloud.clouds import libcloud_aws
 # Import libcloud_aws, storing pre and post locals so we can namespace any
 # callable to this module.
 PRE_IMPORT_LOCALS_KEYS = locals().copy()
-from salt.cloud.clouds.libcloud_aws import *  # pylint: disable-msg=W0614,W0401
+from salt.cloud.clouds.libcloud_aws import *  # pylint: disable=W0614,W0401
 POST_IMPORT_LOCALS_KEYS = locals().copy()
 
 # Get logging started
@@ -93,7 +79,7 @@ def __virtual__():
     libcloudfuncs.__opts__ = __opts__
 
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no AWS cloud provider configuration available. Not '
             'loading module'
         )
@@ -217,10 +203,10 @@ def _toggle_term_protect(name, enabled):
     vm_ = get_configured_provider()
     session = botocore.session.get_session()  # pylint: disable=E0602
     session.set_credentials(
-        access_key=config.get_config_value(
+        access_key=config.get_cloud_config_value(
             'id', vm_, __opts__, search_global=False
         ),
-        secret_key=config.get_config_value(
+        secret_key=config.get_cloud_config_value(
             'key', vm_, __opts__, search_global=False
         )
     )

@@ -1,14 +1,18 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -228,10 +232,8 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
+    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )
@@ -362,6 +364,432 @@ fi
         self.assertEqual(ret, [
             'The state "C" in sls syntax.badlist2 is not formed as a list'
         ])
+
+    def test_requisites_mixed_require_prereq_use(self):
+        '''
+        Call sls file containing several requisites.
+        '''
+        expected_simple_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo A" run',
+                'result': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B" run',
+                'result': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo C" run',
+                'result': True}
+        }
+        expected_result = {
+            'cmd_|-A_|-echo A fifth_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo A fifth" run',
+                'result': True},
+            'cmd_|-B_|-echo B third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo B third" run',
+                'result': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True},
+            'cmd_|-D_|-echo D first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo D first" run',
+                'result': True},
+            'cmd_|-E_|-echo E fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo E fourth" run',
+                'result': True}
+        }
+        expected_req_use_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo A" run',
+                'result': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo B" run',
+                'result': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo C" run',
+                'result': True},
+            'cmd_|-D_|-echo D_|-run': {
+                '__run_num__': 5,
+                'comment': 'Command "echo D" run',
+                'result': True},
+            'cmd_|-E_|-echo E_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo E" run',
+                'result': True},
+            'cmd_|-F_|-echo F_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo F" run',
+                'result': True}
+        }
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.mixed_simple')
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result']
+            }
+        self.assertEqual(expected_simple_result, result)
+
+        # test Traceback recursion prereq+require #8785
+        # TODO: this is actually failing badly
+        #ret = self.run_function('state.sls', mods='requisites.prereq_require_recursion_error2')
+        #self.assertEqual(
+        #    ret,
+        #    ['A recursive requisite was found, SLS "requisites.prereq_require_recursion_error2" ID "B" ID "A"']
+        #)
+
+        # test Infinite recursion prereq+require #8785 v2
+        # TODO: this is actually failing badly
+        #ret = self.run_function('state.sls', mods='requisites.prereq_require_recursion_error3')
+        #self.assertEqual(
+        #    ret,
+        #    ['A recursive requisite was found, SLS "requisites.prereq_require_recursion_error2" ID "B" ID "A"']
+        #)
+
+        # test Infinite recursion prereq+require #8785 v3
+        # TODO: this is actually failing badly, and expected result is maybe not a recursion
+        #ret = self.run_function('state.sls', mods='requisites.prereq_require_recursion_error4')
+        #self.assertEqual(
+        #    ret,
+        #    ['A recursive requisite was found, SLS "requisites.prereq_require_recursion_error2" ID "B" ID "A"']
+        #)
+
+        # undetected infinite loopS prevents this test from running...
+        # TODO: this is actually failing badly
+        #result = {}
+        #ret = self.run_function('state.sls', mods='requisites.mixed_complex1')
+        #for item, descr in ret.iteritems():
+        #    result[item] = {
+        #        '__run_num__': descr['__run_num__'],
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
+        #    }
+        #self.assertEqual(expected_result, result)
+
+    def test_requisites_require_ordering_and_errors(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A fifth_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo A fifth" run',
+                'result': True
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True
+            },
+            'cmd_|-C_|-echo C third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo C third" run',
+                'result': True
+            },
+            'cmd_|-D_|-echo D first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo D first" run',
+                'result': True
+            },
+            'cmd_|-E_|-echo E fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo E fourth" run',
+                'result': True
+            },
+            'cmd_|-F_|-echo F_|-run': {
+                '__run_num__': 5,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       foobar: A\n',
+                'result': False
+            },
+            'cmd_|-G_|-echo G_|-run': {
+                '__run_num__': 6,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       cmd: Z\n',
+                'result': False
+            },
+            'cmd_|-H_|-echo H_|-run': {
+                '__run_num__': 7,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       cmd: Z\n',
+                'result': False
+            }
+        }
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.require')
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result']
+            }
+        self.assertEqual(expected_result, result)
+
+        ret = self.run_function('state.sls', mods='requisites.require_error1')
+        self.assertEqual(ret, [
+            'Cannot extend ID W in "base:requisites.require_error1".'
+            + ' It is not part of the high state.'
+        ])
+
+        # issue #8235
+        # FIXME: Why is require enforcing list syntax while require_in does not?
+        # And why preventing it?
+        # Currently this state fails, should return C/B/A
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
+        self.assertEqual(ret, [
+            'The require statement in state "B" in sls '
+          + '"requisites.require_simple_nolist" needs to be formed as a list'
+        ])
+
+        # commented until a fix is made for issue #8772
+        # TODO: this test actually fails
+        #ret = self.run_function('state.sls', mods='requisites.require_error2')
+        #self.assertEqual(ret, [
+        #    'Cannot extend state foobar for ID A in "base:requisites.require_error2".'
+        #    + ' It is not part of the high state.'
+        #])
+
+        ret = self.run_function('state.sls', mods='requisites.require_recursion_error1')
+        self.assertEqual(
+            ret,
+            ['A recursive requisite was found, SLS "requisites.require_recursion_error1" ID "B" ID "A"']
+        )
+
+    def test_requisites_full_sls(self):
+        '''
+        Teste the sls special command in requisites
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo A" run',
+                'result': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B" run',
+                'result': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C" run',
+                'result': True},
+        }
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.fullsls_require')
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result']
+            }
+        self.assertEqual(expected_result, result)
+
+        # TODO: not done
+        #ret = self.run_function('state.sls', mods='requisites.fullsls_require_in')
+        #self.assertEqual(['sls command can only be used with require requisite'], ret)
+
+        # issue #8233: traceback on prereq sls
+        # TODO: not done
+        #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
+        #self.assertEqual(['sls command can only be used with require requisite'], ret)
+
+    def test_requisites_prereq_simple_ordering_and_errors(self):
+        '''
+        Call sls file containing several prereq_in and prereq.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result_simple = {
+            'cmd_|-A_|-echo A third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo A third" run',
+                'result': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True},
+            'cmd_|-I_|-echo I_|-run': {
+                '__run_num__': 3,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       cmd: Z\n',
+                'result': False},
+            'cmd_|-J_|-echo J_|-run': {
+                '__run_num__': 4,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       foobar: A\n',
+                'result': False}
+        }
+        expected_result_simple2 = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo A" run',
+                'result': True},
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo B" run',
+                'result': True},
+            'cmd_|-C_|-echo C_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo C" run',
+                'result': True},
+            'cmd_|-D_|-echo D_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo D" run',
+                'result': True},
+            'cmd_|-E_|-echo E_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo E" run',
+                'result': True}
+        }
+        expected_result_complex = {
+            'cmd_|-A_|-echo A fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo A fourth" run',
+                'result': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True},
+            'cmd_|-D_|-echo D third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo D third" run',
+                'result': True},
+        }
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple')
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result']
+            }
+        self.assertEqual(expected_result_simple, result)
+
+        # same test, but not using lists in yaml syntax
+        # TODO: issue #8235, prereq ignored when not used in list syntax
+        # Currently fails badly with :
+        # TypeError encountered executing state.sls: string indices must be integers, not str.
+        #result = {}
+        #expected_result_simple.pop('cmd_|-I_|-echo I_|-run')
+        #expected_result_simple.pop('cmd_|-J_|-echo J_|-run')
+        #ret = self.run_function('state.sls', mods='requisites.prereq_simple_nolist')
+        #for item, descr in ret.iteritems():
+        #    result[item] = {
+        #        '__run_num__': descr['__run_num__'],
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
+        #    }
+        #self.assertEqual(expected_result_simple, result)
+
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result']
+            }
+        self.assertEqual(expected_result_simple2, result)
+
+        #ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
+        #self.assertEqual(
+        #    ret,
+        #    ['Cannot extend ID Z in "base:requisites.prereq_error_nolist".'
+        #    + ' It is not part of the high state.']
+        #)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_compile_error1')
+        self.assertEqual(
+            ret['cmd_|-B_|-echo B_|-run']['comment'],
+            'The following requisites were not found:\n'
+            + '                   prereq:\n'
+            + '                       foobar: A\n'
+        )
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_compile_error2')
+        self.assertEqual(
+            ret['cmd_|-B_|-echo B_|-run']['comment'],
+            'The following requisites were not found:\n'
+            + '                   prereq:\n'
+            + '                       foobar: C\n'
+        )
+
+        # issue #8211, chaining complex prereq & prereq_in
+        # TODO: Actually this test fails
+        #result = {}
+        #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
+        #for item, descr in ret.iteritems():
+        #    result[item] = {
+        #        '__run_num__': descr['__run_num__'],
+        #        'comment': descr['comment'],
+        #        'result': descr['result']
+        #    }
+        #self.assertEqual(expected_result_complex, result)
+
+        # issue #8210 : prereq recursion undetected
+        # TODO: this test fails
+        #ret = self.run_function('state.sls', mods='requisites.prereq_recursion_error')
+        #self.assertEqual(
+        #    ret,
+        #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
+        #)
+
+    def test_requisites_use(self):
+        '''
+        Call sls file containing several use_in and use.
+
+        '''
+        # TODO issue #8235 & #8774 some examples are still commented in the test file
+        ret = self.run_function('state.sls', mods='requisites.use')
+        for item, descr in ret.iteritems():
+            self.assertEqual(descr['comment'], 'onlyif execution failed')
+
+        # TODO: issue #8802 : use recursions undetected
+        # issue is closed as use does not actually inherit requisites
+        # if chain-use is added after #8774 resolution theses tests would maybe become useful
+        #ret = self.run_function('state.sls', mods='requisites.use_recursion')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion"'
+        #    + ' ID "B" ID "A"'
+        #])
+
+        #ret = self.run_function('state.sls', mods='requisites.use_recursion2')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion2"'
+        #    + ' ID "C" ID "A"'
+        #])
+
+        #ret = self.run_function('state.sls', mods='requisites.use_auto_recursion')
+        #self.assertEqual(ret, [
+        #    'A recursive requisite was found, SLS "requisites.use_recursion"'
+        #    + ' ID "A" ID "A"'
+        #])
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')

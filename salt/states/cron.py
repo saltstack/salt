@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of cron, the Unix command scheduler.
-===============================================
+Management of cron, the Unix command scheduler
+==============================================
 
 The cron state module allows for user crontabs to be cleanly managed.
 
@@ -35,6 +35,18 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
+Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+convention of using ``*/5`` to have a job run every five minutes. In Salt, this
+looks like:
+
+.. code-block:: yaml
+
+    date > /tmp/crontest:
+      cron.present:
+        - user: root
+        - minute: '*/5'
+
+The job will now run every 5 minutes.
 
 Additionally, the temporal parameters (minute, hour, etc.) can be randomized by
 using ``random`` instead of using a specific value. For example, by using the
@@ -117,6 +129,9 @@ def _get_cron_info():
     elif __grains__['os'] == 'Solaris':
         group = 'root'
         crontab_dir = '/var/spool/cron/crontabs'
+    elif __grains__['os'] == 'MacOS':
+        group = 'wheel'
+        crontab_dir = '/usr/lib/cron/tabs'
     else:
         group = 'root'
         crontab_dir = '/var/spool/cron'
@@ -375,34 +390,51 @@ def file(name,
                                                        env)
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](cron_path,
-                                                            template,
-                                                            source,
-                                                            source_hash,
-                                                            owner,
-                                                            group,
-                                                            mode,
-                                                            env,
-                                                            context,
-                                                            defaults,
-                                                            **kwargs
-                                                            )
+    try:
+        sfn, source_sum, comment = __salt__['file.get_managed'](
+            cron_path,
+            template,
+            source,
+            source_hash,
+            owner,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs
+        )
+    except Exception as exc:
+        ret['result'] = False
+        ret['changes'] = {}
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
+        return ret
+
     if comment:
         ret['comment'] = comment
         ret['result'] = False
         os.unlink(cron_path)
         return ret
 
-    ret = __salt__['file.manage_file'](cron_path,
-                                       sfn,
-                                       ret,
-                                       source,
-                                       source_sum,
-                                       owner,
-                                       group,
-                                       mode,
-                                       env,
-                                       backup)
+    try:
+        ret = __salt__['file.manage_file'](
+            cron_path,
+            sfn,
+            ret,
+            source,
+            source_sum,
+            owner,
+            group,
+            mode,
+            env,
+            backup
+        )
+    except Exception as exc:
+        ret['result'] = False
+        ret['changes'] = {}
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
+        return ret
+
     if ret['changes']:
         ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)

@@ -82,7 +82,7 @@ the discrete states are split or groups into separate sls files:
 
     include:
       - network
-      
+
     httpd:
       pkg:
         - installed
@@ -196,6 +196,18 @@ installed. This is normal require behavior, but if the watched file changes,
 or the watched package is installed or upgraded, then the redis service is
 restarted.
 
+.. note::
+
+    To reiterate:  watch does not alter the original behavior of a function in
+    any way.  The original behavior stays, but additional behavior (defined by
+    mod_watch as explored below) will be run if there are changes in the
+    watched state.  This is why, for example, we have to have a ``cmd.wait``
+    state for watching purposes.  If you examine the source code, you'll see
+    that ``cmd.wait`` is an empty function.  However, you'll notice that
+    ``mod_watch`` is actually just an alias of ``cmd.run``. So if there are
+    changes, we run the command, otherwise, we do nothing.
+
+
 Watch and the mod_watch Function
 --------------------------------
 
@@ -273,9 +285,10 @@ earlier ``service.running`` example above,  the service can be set to
 The Order Option
 ================
 
-Before using the order option, remember that the majority of state ordering
+Before using the `order` option, remember that the majority of state ordering
 should be done with a :term:`requisite declaration`, and that a requisite
-declaration will override an order option.
+declaration will override an `order` option, so a state with order option
+should not require or required by other states.
 
 The order option is used by adding an order number to a state declaration
 with the option `order`:
@@ -302,17 +315,3 @@ a state to the end of the line. To do this, set the order to ``last``:
       pkg.installed:
         - order: last
 
-Remember that requisite statements overrid<e the order option. So the order
-option should be applied to the highest component of the requisite chain:
-
-.. code-block:: yaml
-
-    vim:
-      pkg.installed:
-        - order: last
-        - require:
-          - file: /etc/vimrc
-
-    /etc/vimrc:
-      file.managed:
-        - source: salt://edit/vimrc

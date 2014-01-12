@@ -1,0 +1,23 @@
+base_ec2:
+  provider: my-ec2-config
+  image: ami-e565ba8c
+  size: Micro Instance
+  script: python-bootstrap
+  minion:
+      cheese: edam
+
+ubuntu_rs:
+  provider: my-openstack-rackspace-config
+  image: Ubuntu 12.04 LTS
+  size: 256 server
+  script: Ubuntu
+  minion:
+      cheese: edam
+
+fedora_rs:
+  provider: my-openstack-rackspace-config
+  image: Fedora 17
+  size: 256 server
+  script: Fedora
+  minion:
+      cheese: edam

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import re
 
@@ -58,7 +60,8 @@ class SysModuleTest(integration.ModuleCase):
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',
                 'runtests_decorators.missing_depends',
-                'runtests_decorators.missing_depends_will_fallback',)
+                'runtests_decorators.missing_depends_will_fallback',
+        )
 
         for fun in docs:
             if fun.startswith('runtests_helpers'):

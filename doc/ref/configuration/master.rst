@@ -201,7 +201,7 @@ jobs dir
 ``ext_job_cache``
 -----------------
 
-Default: ''
+Default: ``''``
 
 Used to specify a default returner for all minions, when this option is set
 the specified returner needs to be properly configured and the minions will
@@ -284,7 +284,7 @@ mode set this value to ``True``.
 Default: ``False``
 
 Enable auto_accept. This setting will automatically accept all incoming
-public keys from the minions
+public keys from minions.
 
 .. code-block:: yaml
 
@@ -295,12 +295,24 @@ public keys from the minions
 ``autosign_file``
 -----------------
 
-Default ``not defined``
+Default: ``not defined``
 
-If the autosign_file is specified incoming keys specified in the autosign_file
-will be automatically accepted.  Matches will be searched for first by string
-comparison, then by globbing, then by full-string regex matching.  This is
+If the ``autosign_file`` is specified incoming keys specified in the autosign_file
+will be automatically accepted. Matches will be searched for first by string
+comparison, then by globbing, then by full-string regex matching. This is
 insecure!
+
+``autoreject_file``
+-------------------
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+Default: ``not defined``
+
+Works like :conf_master:`autosign_file`, but instead allows you to specify
+minion IDs for which keys will automatically be rejected. Will override both
+membership in the :conf_master:`autosign_file` and the
+:conf_master:`auto_accept` setting.
 
 .. conf_master:: client_acl
 
@@ -509,6 +521,19 @@ at the moment a single state fails
 
     failhard: False
 
+.. conf_master:: yaml_utf8 
+
+``yaml_utf8``
+-------------
+
+Default: ``False``
+
+Enable extra yaml render routines for states containing UTF characters
+
+.. code-block:: yaml
+
+    yaml_utf8: False
+
 .. conf_master:: test
 
 ``test``
@@ -551,7 +576,7 @@ Example:
 
     fileserver_backend:
       - roots
-      - gitfs
+      - git
 
 .. conf_master:: file_roots
 
@@ -614,6 +639,83 @@ The buffer size in the file server in bytes
 .. code-block:: yaml
 
     file_buffer_size: 1048576
+
+.. conf_master:: gitfs_provider
+
+``gitfs_provider``
+------------------
+
+.. versionadded:: Helium
+
+Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
+If using pygit2, both libgit2 and git itself must also be installed. More
+information can be found in the :mod:`gitfs backend documentation
+<salt.fileserver.gitfs>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+
+.. code-block:: yaml
+
+    gitfs_provider: pygit2
+
+.. conf_master:: gitfs_remotes
+
+``gitfs_remotes``
+-----------------
+
+Default: ``[]``
+
+When using the git fileserver backend at least one git remote needs to be
+defined. The user running the salt master will need read access to the repo.
+
+The repos will be searched in order to find the file requested by a client
+and the first repo to have the file will return it.
+When using the git backend branches and tags are translated into salt
+environments.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - git://github.com/saltstack/salt-states.git
+      - file:///var/git/saltmaster
+
+.. note::
+    ``file://`` repos will be treated as a remote, so refs you want used must
+    exist in that repo as *local* refs.
+
+.. conf_master:: gitfs_ssl_verify
+
+``gitfs_ssl_verify``
+--------------------
+
+Default: ``[]``
+
+The ``gitfs_ssl_verify`` option specifies whether to ignore ssl certificate
+errors when contacting the gitfs backend. You might want to set this to
+false if you're using a git backend that uses a self-signed certificate but
+keep in mind that setting this flag to anything other than the default of True
+is a security concern, you may want to try using the ssh transport.
+
+.. code-block:: yaml
+
+    gitfs_ssl_verify: True
+
+.. conf_master:: gitfs_root
+
+``gitfs_root``
+--------------
+
+Default: ``''``
+
+The ``gitfs_root`` option gives the ability to serve files from a subdirectory
+within the repository. The path is defined relative to the root of the
+repository and defaults to the repository root.
+
+.. code-block:: yaml
+
+    gitfs_root: somefolder/otherfolder
+
 
 .. _pillar-configuration:
 
@@ -853,7 +955,7 @@ Master Logging Settings
 Default: ``/var/log/salt/master``
 
 The master log can be sent to a regular file, local path name, or network
-location. See also :conf-log:`log_file`.
+location. See also :conf_log:`log_file`.
 
 Examples:
 
@@ -878,7 +980,7 @@ Examples:
 
 Default: ``warning``
 
-The level of messages to send to the console. See also :conf-log:`log_level`.
+The level of messages to send to the console. See also :conf_log:`log_level`.
 
 .. code-block:: yaml
 
@@ -895,7 +997,7 @@ The level of messages to send to the console. See also :conf-log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf-log:`log_level_logfile`.
+:conf_log:`log_level_logfile`.
 
 .. code-block:: yaml
 
@@ -911,7 +1013,7 @@ The level of messages to send to the log file. See also
 Default: ``%H:%M:%S``
 
 The date and time format used in console log messages. See also
-:conf-log:`log_datefmt`.
+:conf_log:`log_datefmt`.
 
 .. code-block:: yaml
 
@@ -928,7 +1030,7 @@ The date and time format used in console log messages. See also
 Default: ``%Y-%m-%d %H:%M:%S``
 
 The date and time format used in log file messages. See also
-:conf-log:`log_datefmt_logfile`.
+:conf_log:`log_datefmt_logfile`.
 
 .. code-block:: yaml
 
@@ -944,7 +1046,7 @@ The date and time format used in log file messages. See also
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. See also
-:conf-log:`log_fmt_console`.
+:conf_log:`log_fmt_console`.
 
 .. code-block:: yaml
 
@@ -960,7 +1062,7 @@ The format of the console logging messages. See also
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
-:conf-log:`log_fmt_logfile`.
+:conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
@@ -976,7 +1078,7 @@ The format of the log file logging messages. See also
 Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
-:conf-log:`log_granular_levels`.
+:conf_log:`log_granular_levels`.
 
 
 

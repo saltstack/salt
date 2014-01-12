@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Read pillar data from a mongodb collection.
+Read Pillar data from a mongodb collection
 
 This module will load a node-specific pillar dictionary from a mongo
 collection. It uses the node's id for lookups and can load either the whole

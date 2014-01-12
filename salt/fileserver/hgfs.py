@@ -12,6 +12,7 @@ the desired branch method. Possible values are: ``branches``, ``bookmarks``, or
 mapped to ``base``.
 
 :depends:   - mercurial
+            - python bindings for mercurial (``python-hglib``)
 '''
 
 # Import python libs
@@ -46,10 +47,16 @@ def __virtual__():
     Only load if mercurial is available
     '''
     if not isinstance(__opts__['hgfs_remotes'], list):
+        log.error('Mercurial fileserver backend is enabled in configuration '
+                  'but could not be loaded. Did you specify `hgfs_remotes` as a list? It is required.')
         return False
     if not isinstance(__opts__['hgfs_root'], str):
+        log.error('Mercurial fileserver backend is enabled in configuration '
+                  'but could not be loaded. Did you specify `hgfs_root` as a string? It is required.')
         return False
     if not isinstance(__opts__['hgfs_branch_method'], str):
+        log.error('Mercurial fileserver backend is enabled in configuration'
+                  'but could not be loaded. Did you specify `hgfs_branch_method` as a string? It is required')
         return False
     if not 'hg' in __opts__['fileserver_backend']:
         return False
@@ -190,8 +197,9 @@ def update():
             pass
 
     # if there is a change, fire an event
-    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
+    if __opts__.get('fileserver_events', False):
+        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'hgfs/hash'),
@@ -228,6 +236,7 @@ def envs():
             # Avoid adding the special 'tip' tag as an env.
             if tag_name != 'tip':
                 ret.add(tag_name)
+        repo.close()
     return list(ret)
 
 
@@ -280,6 +289,7 @@ def find_file(path, short='base', **kwargs):
         ref = _get_ref(repo, short)
         if not ref:
             # Branch or tag not found in repo, try the next
+            repo.close()
             continue
         _wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
@@ -288,10 +298,12 @@ def find_file(path, short='base', **kwargs):
                 if sha == ref[2]:
                     fnd['rel'] = local_path
                     fnd['path'] = dest
+                    repo.close()
                     return fnd
         try:
             repo.cat(['path:{0}'.format(path)], rev=ref[2], output=dest)
         except hglib.error.CommandError:
+            repo.close()
             continue
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
@@ -308,6 +320,7 @@ def find_file(path, short='base', **kwargs):
             pass
         fnd['rel'] = local_path
         fnd['path'] = dest
+        repo.close()
         return fnd
     return fnd
 

@@ -10,6 +10,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
+
 @requires_salt_modules('virt.get_profiles')
 class VirtTest(integration.ModuleCase):
     '''
