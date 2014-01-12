@@ -75,6 +75,7 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
     salt.output.display_output(cached_pillar, None, __opts__)
     return cached_pillar
 
+
 def mine(tgt=None, expr_form='glob', **kwargs):
     '''
     Return cached mine data of the targeted minions
@@ -102,6 +103,7 @@ def mine(tgt=None, expr_form='glob', **kwargs):
                                                 opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
     salt.output.display_output(cached_mine, None, __opts__)
+
 
 def _clear_cache(tgt=None,
                  expr_form='glob',
