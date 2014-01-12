@@ -24,7 +24,7 @@ def list_queues(region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
 
     CLI Example:
 
@@ -89,7 +89,7 @@ def delete_queue(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
 
     CLI Example:
 
@@ -144,7 +144,7 @@ def queue_exists(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
 
     CLI Example:
 

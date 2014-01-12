@@ -83,3 +83,44 @@ def create_bucket(name, region, opts=None, user=None):
         'stdout': out['Location'].replace('/', ''),
         'stderr': '',
     }
+
+
+def delete_bucket(name, region, user=None, opts=None):
+    '''
+    Deletes the named bucket. The named bucket must be in the region
+    specified.
+
+    name
+        Name of bucket to delete
+
+    region
+        Region the bucket resides in
+
+    force : False
+        If the bucket is not empty, you must set this flag to delete it
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run awscli as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_bucket.delete_bucket saltbucket eu-west-1
+    '''
+    delete = {'bucket': name}
+    rtn = aws.cli(
+        's3api',
+        'delete-bucket',
+        region=region,
+        opts=opts,
+        user=user,
+        **delete)
+
+    return {
+        'retcode': 0,
+        'stdout': name,
+        'stderr': '',
+    }
