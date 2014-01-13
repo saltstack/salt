@@ -144,7 +144,7 @@ def queue_exists(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run awscli as a user other than what the minion runs as
+        Run awscli as a different user
 
     CLI Example:
 

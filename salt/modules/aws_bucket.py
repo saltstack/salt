@@ -124,3 +124,28 @@ def delete_bucket(name, region, user=None, opts=None):
         'stdout': name,
         'stderr': '',
     }
+
+
+def bucket_exists(name, region, opts=None, user=None):
+    '''
+    Returns True or False on whether the bucket exists in the region
+
+    name
+        Name of the S3 bucket to search for
+
+    region
+        Name of the region to search in
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run awscli as a different user
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_bucket.bucket_exists saltbucket eu-west-1
+    '''
+    buckets = list_buckets(region, opts, user)
+    return name in buckets
