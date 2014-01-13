@@ -743,6 +743,8 @@ def destroy(name):
     ret = {}
 
     newname = name
+    location = get_configured_provider()['location']
+    
     if config.get_cloud_config_value('rename_on_destroy',
                                get_configured_provider(),
                                __opts__, search_global=False) is True:
@@ -757,7 +759,7 @@ def destroy(name):
         ret['newname'] = newname
 
     try:
-        result = libcloudfuncs_destroy(newname, get_conn())
+        result = libcloudfuncs_destroy(newname, get_conn(location=location))
         ret.update({'Destroyed': result})
     except Exception as exc:
         if not exc.message.startswith('OperationNotPermitted'):
