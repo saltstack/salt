@@ -6,6 +6,8 @@ Archive states.
 
 import logging
 import os
+import tarfile
+from contextlib import closing
 
 log = logging.getLogger(__name__)
 
@@ -27,10 +29,21 @@ def extracted(name,
           archive:
             - extracted
             - name: /opt/
+            - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
+            - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
+            - tar_options: J
+            - archive_format: tar
+            - if_missing: /opt/graylog2-server-0.9.6p1/
+
+    .. code-block:: yaml
+
+        graylog2-server:
+          archive:
+            - extracted
+            - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
-            - tar_options: z
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
@@ -49,8 +62,11 @@ def extracted(name,
 
     tar_options
         Only used for tar format, it need to be the tar argument specific to
-        this archive, such as 'j' for bzip2, 'z' for gzip, '' for uncompressed
-        tar, 'J' for LZMA.
+        this archive, such as 'J' for LZMA.
+        Using this option means that the tar executable on the target will
+        be used, which is less platform independant.
+        If this option is not set, then the Python tarfile module is used.
+        The tarfile module supports gzip and bz2 in Python 2.
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -59,11 +75,6 @@ def extracted(name,
         ret['result'] = False
         ret['comment'] = '{0} is not supported, valids: {1}'.format(
             name, ','.join(valid_archives))
-        return ret
-
-    if archive_format == 'tar' and tar_options is None:
-        ret['result'] = False
-        ret['comment'] = 'tar archive need argument tar_options'
         return ret
 
     if if_missing is None:
@@ -120,17 +131,22 @@ def extracted(name,
         log.debug("Extract %s in %s", filename, name)
         files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
     else:
-        # this is needed until merging PR 2651
-        log.debug("Untar %s in %s", filename, name)
-        results = __salt__['cmd.run_all']('tar -xv{0}f {1}'.format(tar_options,
-                                                             filename),
-                                          cwd=name)
-        if results['retcode'] != 0:
-            return results
-        if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
-            files = results['stderr']
+        if tar_options is None:
+            with closing(tarfile.open(filename, 'r')) as tar:
+                files = tar.getnames()
+                tar.extractall(name)
         else:
-            files = results['stdout']
+            # this is needed until merging PR 2651
+            log.debug("Untar %s in %s", filename, name)
+            results = __salt__['cmd.run_all']('tar -xv{0}f {1}'.format(tar_options,
+                                                                 filename),
+                                              cwd=name)
+            if results['retcode'] != 0:
+                return results
+            if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+                files = results['stderr']
+            else:
+                files = results['stdout']
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
