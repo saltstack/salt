@@ -226,7 +226,7 @@ class Master(SMaster):
                                 shutil.rmtree(f_path)
 
             if self.opts.get('publish_session'):
-                if now - rotate >= self.opts['publish_session'] * 60:
+                if now - rotate >= self.opts['publish_session']:
                     salt.crypt.dropfile(self.opts['cachedir'])
                     rotate = now
             if self.opts.get('search'):
