@@ -484,10 +484,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     fn_,
                     tag=tag,
                     data=data))
-            except:
+            except Exception:
                 log.error('Failed to render "{0}"'.format(fn_))
         return react
-
 
     def list_reactors(self, tag):
         '''
