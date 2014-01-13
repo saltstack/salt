@@ -2926,7 +2926,7 @@ def serialize(name,
     simple configuration files.
 
     name
-        The location of the symlink to create
+        The location of the file to create
 
     dataset
         the dataset that will be serialized
