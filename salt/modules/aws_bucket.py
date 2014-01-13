@@ -40,7 +40,7 @@ def list_buckets(region, opts=None, user=None):
         salt '*' aws_bucket.list_buckets eu-west-1
     '''
     out = aws.cli(
-        's3api', 'list-buckets', region=region, opts=opts, user=user)
+        's3api', 'list-buckets', region, __salt__, opts=opts, user=user)
 
     ret = {
         'retcode': 0,
@@ -74,14 +74,25 @@ def create_bucket(name, region, opts=None, user=None):
     create = {'bucket': name}
 
     out = aws.cli(
-        's3api', 'create-bucket', region=region, opts=opts, user=user,
+        's3api', 'create-bucket', region, __salt__, opts=opts, user=user,
         **create)
 
+    retcode = 0
+
+    if isinstance(out, basestring):
+        retcode = 1
+        stdout = ''
+        stderr = out
+    else:
+        retcode = 0
+        stdout = out['Location'].replace('/', '')
+        stderr = ''
+
     # Remove the leading / so we just see the bucket's name
-    ret = {
-        'retcode': 0,
-        'stdout': out['Location'].replace('/', ''),
-        'stderr': '',
+    return {
+        'retcode': retcode,
+        'stdout': stdout,
+        'stderr': stderr,
     }
 
 
@@ -112,17 +123,22 @@ def delete_bucket(name, region, user=None, opts=None):
     '''
     delete = {'bucket': name}
     rtn = aws.cli(
-        's3api',
-        'delete-bucket',
-        region=region,
-        opts=opts,
-        user=user,
+        's3api', 'delete-bucket', region, __salt__, opts=opts, user=user,
         **delete)
 
+    if rtn:
+        retcode = 1
+        stdout = ''
+        stderr = rtn
+    else:
+        retcode = 0
+        stdout = name
+        stderr = ''
+
     return {
-        'retcode': 0,
-        'stdout': name,
-        'stderr': '',
+        'retcode': retcode,
+        'stdout': stdout,
+        'stderr': stderr,
     }
 
 
@@ -148,4 +164,4 @@ def bucket_exists(name, region, opts=None, user=None):
         salt '*' aws_bucket.bucket_exists saltbucket eu-west-1
     '''
     buckets = list_buckets(region, opts, user)
-    return name in buckets
+    return name in buckets['stdout']

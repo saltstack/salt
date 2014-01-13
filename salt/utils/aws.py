@@ -3,6 +3,9 @@ Helper functions and constants for AWS integration.
 '''
 import json
 
+# Import salt libs
+import salt.utils
+
 
 def installed():
     '''
@@ -18,7 +21,7 @@ def output():
     '''
     Return the output data as json.
     '''
-    return u'-- output json'
+    return u'--output json'
 
 
 def region(region):
@@ -31,9 +34,13 @@ def region(region):
     return u' --region {r}'.format(r=region)
 
 
-def cli(module, cmd, region, opts, user, **kwargs):
+_region = region
+
+
+def cli(module, cmd, region, salt_cmd, opts, user, **kwargs):
     '''
-    Runs the given command against awscli.
+    Runs the given command against awscli. Returns either a JSON string, or
+    a raw error message.
 
     module
         Module to execute
@@ -41,6 +48,9 @@ def cli(module, cmd, region, opts, user, **kwargs):
         Command to run
     region
         Region to execute cmd in
+    salt_cmd
+        The salt command to run. We need this because __salt__ isn't injected
+        into utils
     opts
         Pass in from salt
     user
@@ -55,9 +65,12 @@ def cli(module, cmd, region, opts, user, **kwargs):
         module=module,
         cmd=cmd,
         args=' '.join(_formatted_args),
-        region=region(region),
+        region=_region(region),
         out=output())
 
-    rtn = __salt__['cmd.run'](cmd, runas=user)
+    rtn = salt_cmd['cmd.run'](cmd, runas=user)
 
-    return json.loads(rtn) if rtn else ''
+    try:
+        return json.loads(rtn)
+    except ValueError:
+        return rtn
