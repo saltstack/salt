@@ -154,6 +154,27 @@ Then pass the signal to the master when it seems to be unresponsive:
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon, be sure to include this information if possible.
 
+
+Live Salt-Master Profiling
+==========================
+
+When faced with perfomance problems one can turn on master process profiling by
+sending it SIGUSR2.
+
+.. code-block:: bash
+
+    # killall -SIGUSR2 salt-master
+
+This will activate ``yappi`` profiler inside salt-master code, then after some
+time one must send SIGUSR2 again to stop profiling and save results to file. If
+run in foreground salt-master will report filename for the results, which are
+usually located under ``/tmp`` on Unix-based OSes and ``c:\temp`` on windows.
+
+Results can then be analyzed with `kcachegrind`_ or similar tool.
+
+.. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
+
+
 Commands Time Out or Do Not Return Output
 =========================================
 
