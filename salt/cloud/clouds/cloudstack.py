@@ -35,6 +35,7 @@ from salt.cloud.exceptions import SaltCloudSystemExit
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
+    from libcloud.common.cloudstack import CloudStackConnection
     HASLIBS = True
 except ImportError:
     HASLIBS = False
@@ -228,6 +229,11 @@ def create(vm_):
 
     if get_networkid(vm_) is not False:
         kwargs['networkids'] = get_networkid(vm_)
+        kwargs['networks'] = (   # The only attr that is used is 'id'.
+                                 CloudStackNetwork( None, None, None,
+                                                    kwargs['networkids'],
+                                                    None, None ),
+                             )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -262,7 +268,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': get_ip(data),
             'username': ssh_username,
-            #'password': data.extra['password'],
+            'password': data.extra['password'],
             'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
