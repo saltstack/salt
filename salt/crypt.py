@@ -336,8 +336,9 @@ class Auth(object):
                 True,
                 self.opts['ipv6']
             )
-        except SaltClientError:
+        except SaltClientError as e:
             if safe:
+                log.warning('SaltClientError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
 
@@ -349,8 +350,9 @@ class Auth(object):
                 self.minion_sign_in_payload(),
                 timeout=timeout
             )
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as e:
             if safe:
+                log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
 
