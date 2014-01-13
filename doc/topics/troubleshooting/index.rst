@@ -215,5 +215,8 @@ The pass the signal to the master or minion when it seems to be unresponsive:
     killall -SIGUSR1 salt-master
     killall -SIGUSR1 salt-minion
 
+Also under BSD and Mac OS X in addition to SIGUSR1 signal, debug subroutine set
+up for SIGINFO which has an advantage of being sent by Ctrl+T shortcut.
+
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon this information can be invaluable.
