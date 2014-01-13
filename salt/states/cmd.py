@@ -131,6 +131,22 @@ executed when the state it is watching changes. Example:
         - installed
         - require:
           - file: /usr/local/bin/postinstall.sh
+
+How do I create a environment from a pillar map?
+---------------------------------------------------------------------------------------------
+
+The map that comes from a pillar cannot be directly consumed by the env option. To use it
+one must convert it to a list. Example:
+
+.. code-block:: yaml
+
+    printenv:
+    cmd.run:
+        - env:
+            {% for key, value in pillar['keys'].iteritems() %}
+             - '{{ key }}': '{{ value }}'
+            {% endfor %}
+
 '''
 
 # Import python libs
