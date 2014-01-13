@@ -18,8 +18,9 @@
 '''
 
 # Import Python Libs
-import urllib2
 import contextlib
+import socket
+import urllib2
 
 # Import salt libs
 from salt.utils.validate.net import ipv4_addr as _ipv4_addr
@@ -40,7 +41,9 @@ def external_ip():
                 if not _ipv4_addr(ip_):
                     continue
             return {'external_ip': ip_}
-        except (urllib2.HTTPError, urllib2.URLError):
+        except (urllib2.HTTPError,
+                urllib2.URLError,
+                socket.timeout):
             continue
 
     # Return an empty value as a last resort
