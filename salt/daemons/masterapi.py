@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 # Things to do in lower layers:
 # only accept valid minion ids
 
+
 class RemoteFuncs(object):
     '''
     Funcitons made available to minions, this class includes the raw routines
@@ -620,7 +621,6 @@ class RemoteFuncs(object):
         keyapi = salt.key.Key(self.opts)
         keyapi.delete_key(load['id'])
         return True
-
 
 
 class LocalFuncs(object):
