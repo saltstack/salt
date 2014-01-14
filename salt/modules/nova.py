@@ -120,7 +120,7 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
         How long to wait, after creating the instance, for the provider to
         return information about it (default 300 seconds).
 
-        .. versionadded:: Hydrogen
+        .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 

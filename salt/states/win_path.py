@@ -52,11 +52,13 @@ def absent(name):
     return ret
 
 
-def exists(name, index=0):
+def exists(name, index=None):
     '''
     Add the directory to the system PATH at index location
 
-    index: where the directory should be placed in the PATH (default: 0)
+    index: where the directory should be placed in the PATH (default: None)
+    [Note:  Providing no index will append directory to PATH and
+    will not enforce its location within the PATH.]
 
     Example::
 
@@ -76,23 +78,29 @@ def exists(name, index=0):
     sysPath = __salt__['win_path.get_path']()
     path = _normalize_dir(name)
 
-    index = int(index)
-    if index < 0:
-        index = len(sysPath) + index
-    if index > len(sysPath) - 1:
-        index = len(sysPath) - 1
-
     try:
         currIndex = sysPath.index(path)
-        if currIndex != index:
-            sysPath.pop(currIndex)
-            ret['changes']['removed'] = '{0} was removed from index {1}'.format(name, currIndex)
-        else:
+        if index:
+            index = int(index)
+            if index < 0:
+                index = len(sysPath) + index + 1
+            if index > len(sysPath):
+                index = len(sysPath)
+            # check placement within PATH
+            if currIndex != index:
+                sysPath.pop(currIndex)
+                ret['changes']['removed'] = '{0} was removed from index {1}'.format(name, currIndex)
+            else:
+                ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
+                return ret
+        else:  # path is in system PATH; don't care where
             ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
             return ret
     except ValueError:
         pass
 
+    if not index:
+        index = len(sysPath)    # put it at the end
     ret['changes']['added'] = '{0} will be added at index {1}'.format(name, index)
     if __opts__['test']:
         ret['result'] = None

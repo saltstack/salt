@@ -28,8 +28,10 @@ import salt.utils.network
 import salt.pillar
 import salt.syspaths
 
-# Import salt cloud libs
-import salt.cloud.exceptions
+import sys
+#can't use salt.utils.is_windows, because config.py is included from salt.utils
+if not sys.platform.lower().startswith('win'):
+    import salt.cloud.exceptions
 
 log = logging.getLogger(__name__)
 

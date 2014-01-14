@@ -77,7 +77,7 @@ def get_printout(out, opts=None, **kwargs):
 
         if opts.get('force_color', False):
             opts['color'] = True
-        elif opts.get('no_color', False) or is_pipe():
+        elif opts.get('no_color', False) or is_pipe() or salt.utils.is_windows():
             opts['color'] = False
         else:
             opts['color'] = True

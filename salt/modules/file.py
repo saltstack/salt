@@ -1012,7 +1012,7 @@ def blockreplace(path,
     '''
     Replace content of a text block in a file, delimited by line markers
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
@@ -1453,7 +1453,7 @@ def seek_read(path, size, offset):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1472,7 +1472,7 @@ def seek_write(path, data, offset):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1492,7 +1492,7 @@ def truncate(path, length):
     '''
     Seek to a position on a file and write to it
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1509,7 +1509,7 @@ def link(src, link):
     '''
     Create a hard link to a file
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1609,7 +1609,7 @@ def lstat(path):
 
     CLI Example:
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     .. code-block:: bash
 
@@ -1636,7 +1636,7 @@ def access(path, mode):
         w: Test the writability of the path
         x: Test whether the path can be executed
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1665,7 +1665,7 @@ def readlink(path):
     '''
     Return the path that a symlink points to
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1686,7 +1686,7 @@ def readdir(path):
     '''
     Return a list containing the contents of a directory
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1709,7 +1709,7 @@ def statvfs(path):
     '''
     Perform a statvfs call against the filesystem that the file resides on
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1747,7 +1747,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
             # have a uid and gid
             pstat = os.lstat(path)
         except OSError:
-            # Not a broken symlink, just a nonexistant path
+            # Not a broken symlink, just a nonexistent path
             return ret
     else:
         if follow_symlinks:
@@ -1788,7 +1788,7 @@ def rmdir(path):
     '''
     Remove the specified directory. Fails if a directory is not empty.
 
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1967,6 +1967,7 @@ def source_list(source, source_hash, saltenv):
                 mdirs += ['{0}?saltenv={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
+        ret = None
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -1974,25 +1975,32 @@ def source_list(source, source_hash, saltenv):
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
-                single_hash = single[single_src]
+                single_hash = single[single_src] if single[single_src] else source_hash
                 proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
-                        source = single_src
+                        ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
                     dest = salt.utils.mkstemp()
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
-                        source = single_src
-                        source_hash = single_hash
+                        ret = (single_src, single_hash)
                         break
             elif isinstance(single, salt._compat.string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
-                    source = single
+                    ret = (single, source_hash)
                     break
-    return source, source_hash
+        if ret is None:
+            # None of the list items matched
+            raise CommandExecutionError(
+                'none of the specified sources were found'
+            )
+        else:
+            return ret
+    else:
+        return source, source_hash
 
 
 def get_managed(
@@ -2016,8 +2024,7 @@ def get_managed(
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
-    # If the file is a template and the contents is managed
-    # then make sure to copy it down and templatize  things.
+    # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
     if template and source:
@@ -2119,7 +2126,8 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     source_sum = None
     partial_id = False
     name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
-    log.debug('modules.file.py - extract_hash(): Extracting hash for file named: {}'.format(name_sought))
+    log.debug('modules.file.py - extract_hash(): Extracting hash for file '
+              'named: {0}'.format(name_sought))
     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
     for hash_variant in HASHES:
         if hash_type == '' or hash_type == hash_variant[0]:
@@ -2129,26 +2137,29 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
             hash_fn_fopen.seek(0)
             for line in hash_fn_fopen.read().splitlines():
                 hash_array = re.findall(r'(?i)(?<![a-z0-9])[a-f0-9]{' + str(hash_variant[1]) + '}(?![a-z0-9])', line)
-                log.debug('modules.file.py - extract_hash(): '
-                    'From "line": {} got : {}'.format(line, hash_array))
+                log.debug('modules.file.py - extract_hash(): From "line": {0} '
+                          'got : {1}'.format(line, hash_array))
                 if hash_array:
                     if not partial_id:
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
                         partial_id = True
 
-                    log.debug('modules.file.py - extract_hash(): Found : {} -- {}'.format(
-                                            source_sum['hash_type'], source_sum['hsum']))
+                    log.debug('modules.file.py - extract_hash(): Found: {0} '
+                              '-- {1}'.format(source_sum['hash_type'],
+                                              source_sum['hsum']))
 
                     if re.search(name_sought, line):
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
-                        log.debug('modules.file.py - extract_hash: '
-                        'For {} -- returning the {} hash "{}".'.format(
-                                 name_sought, source_sum['hash_type'], source_sum['hsum']))
+                        log.debug('modules.file.py - extract_hash: For {0} -- '
+                                  'returning the {1} hash "{2}".'.format(
+                                      name_sought,
+                                      source_sum['hash_type'],
+                                      source_sum['hsum']))
                         return source_sum
 
     if partial_id:
-        log.debug('modules.file.py - extract_hash: '
-                'Returning the partially identified {} hash "{}".'.format(
+        log.debug('modules.file.py - extract_hash: Returning the partially '
+                  'identified {0} hash "{1}".'.format(
                        source_sum['hash_type'], source_sum['hsum']))
     else:
         log.debug('modules.file.py - extract_hash: Returning None.')
@@ -2599,7 +2610,7 @@ def manage_file(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    if dir_mode is None:
+                    if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
                         # directories created with makedirs() below can't be
@@ -2669,7 +2680,7 @@ def manage_file(name,
 
         # This is a new file, if no mode specified, use the umask to figure
         # out what mode to use for the new file.
-        if mode is None:
+        if mode is None and not salt.utils.is_windows():
             # Get current umask
             mask = os.umask(0)
             os.umask(mask)
