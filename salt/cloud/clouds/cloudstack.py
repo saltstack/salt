@@ -230,9 +230,9 @@ def create(vm_):
     if get_networkid(vm_) is not False:
         kwargs['networkids'] = get_networkid(vm_)
         kwargs['networks'] = (   # The only attr that is used is 'id'.
-                                 CloudStackNetwork( None, None, None,
-                                                    kwargs['networkids'],
-                                                    None, None ),
+                                 CloudStackNetwork(None, None, None,
+                                                   kwargs['networkids'],
+                                                   None, None),
                              )
 
     salt.utils.cloud.fire_event(
