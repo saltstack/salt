@@ -227,14 +227,21 @@ And then in salt.proxy.junos we find
 
 .. code-block:: python
 
-    def ping():
+     def ping():
 
-        if 'proxytype' in __opts__:
-            fun = 'salt.proxy.{0}.ping'.format(__opts__['proxytype'])
-            if fun in __salt__:
-                return __salt__[fun]()
-            else:
-                return False
-        else:
+        try:
+            got = junos.rpc.get_config(
+                      E.system(
+                          E('host-name'),
+                          E('domain-name')
+                      ),
+                      JXML.INHERIT
+                  )
             return True
+    except Exception:
+        return False
 
+The Junos API layer lacks the ability to do a traditional 'ping', so the
+example simply requests a very small bit of data via RPC.  If the RPC call
+throws an exception or times out, the device is unavailable and ping returns
+False.  Otherwise, we can return True.
