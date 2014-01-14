@@ -229,7 +229,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                     # chown the file for the new user
                     os.chown(dir_, uid, gid)
             for root, dirs, files in os.walk(dir_):
-                if 'jobs' in root:
+                if 'jobs' in root and not root.endswith('jobs'):
                     continue
                 for name in files:
                     if name.startswith('.'):
