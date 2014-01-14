@@ -48,6 +48,7 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
+import salt.utils
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -65,16 +66,32 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
-KNOWN_BINARY_NAMES = {
-    'virtualenv': (
-        'virtualenv',
-        'virtualenv2',
-        'virtualenv-2.6',
-        'virtualenv-2.7'
-    ),
-}
-
 log = logging.getLogger(__name__)
+
+
+def skip_if_binaries_missing(binaries, check_all=False):
+    # While there's no new release of salt-testing
+    def _id(obj):
+        return obj
+
+    if sys.version_info < (2, 7):
+        from unittest2 import skip
+    else:
+        from unittest import skip  # pylint: disable=E0611
+
+    if check_all:
+        for binary in binaries:
+            if salt.utils.which(binary) is None:
+                return skip(
+                    'The {0!r} binary was not found'
+                )
+    elif salt.utils.which_bin(binaries) is None:
+        return skip(
+            'None of the following binaries was found: {0}'.format(
+                ', '.join(binaries)
+            )
+        )
+    return _id
 
 
 def run_tests(*test_cases, **kwargs):

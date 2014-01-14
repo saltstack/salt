@@ -479,10 +479,13 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         react = {}
         for fn_ in glob.glob(glob_ref):
-            react.update(self.render_template(
+            try:
+                react.update(self.render_template(
                     fn_,
                     tag=tag,
                     data=data))
+            except Exception:
+                log.error('Failed to render "{0}"'.format(fn_))
         return react
 
     def list_reactors(self, tag):

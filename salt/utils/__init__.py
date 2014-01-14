@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -379,7 +380,7 @@ def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, (list, tuple)):
+    if not isinstance(exes, collections.Iterable):
         return None
     for exe in exes:
         path = which(exe)

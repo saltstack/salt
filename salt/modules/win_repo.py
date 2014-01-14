@@ -15,7 +15,10 @@ import os
 
 # Import third party libs
 import yaml
-import msgpack
+try:
+    import msgpack
+except ImportError:
+    import msgpack_pure as msgpack
 
 # Import salt libs
 import salt.output

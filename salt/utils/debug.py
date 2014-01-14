@@ -42,15 +42,52 @@ def _handle_sigusr1(sig, stack):
             _makepretty(output, stack)
 
 
+def _handle_sigusr2(sig, stack):
+    '''
+    Signal handler for SIGUSR2, only available on Unix-like systems
+    '''
+    try:
+        import yappi
+    except ImportError:
+        return
+    if yappi.is_running():
+        yappi.stop()
+        filename = 'callgrind.salt-{0}-{1}'.format(int(time.time()), os.getpid())
+        destfile = os.path.join(tempfile.gettempdir(), filename)
+        yappi.get_func_stats().save(destfile, type='CALLGRIND')
+        if sys.stderr.isatty():
+            sys.stderr.write('Saved profiling data to: {0}\n'.format(destfile))
+        yappi.clear_stats()
+    else:
+        if sys.stderr.isatty():
+            sys.stderr.write('Profiling started\n')
+        yappi.start()
+
+
+def enable_sig_handler(signal_name, handler):
+    '''
+    Add signal handler for signal name if it exists on given platform
+    '''
+    if hasattr(signal, signal_name):
+        signal.signal(getattr(signal, signal_name), handler)
+
+
 def enable_sigusr1_handler():
     '''
     Pretty print a stack trace to the console or a debug log under /tmp
     when any of the salt daemons such as salt-master are sent a SIGUSR1
     '''
-    #  Skip setting up this signal on Windows
-    #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
-    if not salt.utils.is_windows():
-        signal.signal(signal.SIGUSR1, _handle_sigusr1)
+    enable_sig_handler('SIGUSR1', _handle_sigusr1)
+    # Also canonical BSD-way of printing profress is SIGINFO
+    # which on BSD-deriviatives can be sent via Ctrl+T
+    enable_sig_handler('SIGINFO', _handle_sigusr1)
+
+
+def enable_sigusr2_handler():
+    '''
+    Toggle YAPPI profiler
+    '''
+    enable_sig_handler('SIGUSR2', _handle_sigusr2)
 
 
 def inspect_stack():

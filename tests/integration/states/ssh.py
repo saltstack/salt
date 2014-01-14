@@ -17,6 +17,11 @@ from salttesting.helpers import (
 )
 ensure_in_syspath('../../')
 
+try:
+    from salttesting.helpers import skip_if_binaries_missing
+except ImportError:
+    from integration import skip_if_binaries_missing
+
 # Import salt libs
 import integration
 
@@ -25,6 +30,7 @@ GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 GITHUB_IP = '192.30.252.129'
 
 
+@skip_if_binaries_missing(['ssh', 'ssh-rsa', 'ssh-keygen'], check_all=True)
 class SSHKnownHostsStateTest(integration.ModuleCase,
                              integration.SaltReturnAssertsMixIn):
     '''

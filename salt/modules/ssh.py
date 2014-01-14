@@ -303,9 +303,18 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
 
-    if cache_keys:
-        for pub_key in set(current).difference(set(cache_keys)):
-            rm_auth_key(user, pub_key)
+    # Removing existing keys from the auth_keys isnt really a good idea
+    # in fact
+    #
+    # as:
+    #   - We can have non-salt managed keys in that file
+    #   - We can have multiple states defining keys for an user
+    #     and with such code only one state will win
+    #     the remove all-other-keys war
+    #
+    # if cache_keys:
+    #     for pub_key in set(current).difference(set(cache_keys)):
+    #         rm_auth_key(user, pub_key)
 
     if key in current:
         cline = _format_auth_line(key,

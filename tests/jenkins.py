@@ -47,6 +47,8 @@ try:
 except ImportError:
     HAS_GITHUB = False
 
+SALT_GIT_URL = 'https://github.com/saltstack/salt.git'
+
 
 def generate_vm_name(platform):
     '''
@@ -129,10 +131,12 @@ def echo_parseable_environment(options):
                 'SALT_PR_GIT_URL={0}'.format(PR.head.repo.clone_url),
                 'SALT_PR_GIT_COMMIT={0}'.format(PR.head.sha)
             ])
+            options.salt_url = PR.head.repo.clone_url
+            options.commit = PR.head.sha
         except ValueError:
             print('# Failed to get the PR id from the environment')
 
-    sys.stdout.write('\n'.join(output))
+    sys.stdout.write('\n\n{0}\n\n'.format('\n'.join(output)))
     sys.stdout.flush()
 
 
@@ -310,6 +314,34 @@ def run(opts):
     sys.stdout.flush()
     time.sleep(5)
 
+    # Do we need extra setup?
+    if opts.salt_url != SALT_GIT_URL:
+        cmds = (
+            'salt -t 100 {vm_name} git.remote_set /testing name={0!r} url={1!r}'.format(
+                'upstream',
+                SALT_GIT_URL,
+                vm_name=vm_name
+            ),
+            'salt -t 100 {vm_name} git.fetch /testing \'upstream --tags\''.format(
+                vm_name=vm_name
+            )
+        )
+        for cmd in cmds:
+            print('Running CMD: {0}'.format(cmd))
+            sys.stdout.flush()
+
+            proc = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, _ = proc.communicate()
+
+            if stdout:
+                print(stdout)
+            sys.stdout.flush()
+
     # Run tests here
     cmd = (
         'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
@@ -404,7 +436,7 @@ def parse():
         help='The sls file to execute')
     parser.add_option(
         '--pillar',
-        default='{{git_commit: {commit}, git_url: {salt_url}}}',
+        default='{{git_commit: {commit}, git_url: \'{salt_url}\'}}',
         help='Pillar values to pass to the sls file')
     parser.add_option(
         '--no-clean',

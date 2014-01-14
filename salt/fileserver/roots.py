@@ -242,9 +242,8 @@ def _file_lists(load, form):
     list_cache = os.path.join(__opts__['cachedir'], 'file_cache.p')
     w_lock = os.path.join(__opts__['cachedir'], '.file_cache.w')
     r_cache = False
-    if not os.path.isfile(list_cache):
-        while os.path.isfile(w_lock):
-            time.sleep(0.1)
+    save_cache = True
+    if not os.path.isfile(list_cache) and not os.path.isfile(w_lock):
         with salt.utils.fopen(w_lock, 'w+') as fp_:
             fp_.write('')
         r_cache = True
@@ -252,8 +251,6 @@ def _file_lists(load, form):
         attempt = 0
         while attempt < 11:
             try:
-                while os.path.isfile(w_lock):
-                    time.sleep(0.1)
                 cache_stat = os.stat(list_cache)
                 age = time.time() - cache_stat.st_mtime
                 if age < __opts__.get('fileserver_list_cache_time', 30):
@@ -266,15 +263,12 @@ def _file_lists(load, form):
                         fp_.write('')
                     r_cache = True
                     break
-            except os.error:
+            except Exception:
                 time.sleep(0.2)
                 attempt += 1
                 continue
-            except ValueError:
-                return []
-            except Exception:
-                # log failure
-                return []
+        if attempt > 10:
+            save_cache = False
     if r_cache:
         ret = {}
         for saltenv in __opts__['file_roots']:
@@ -304,9 +298,10 @@ def _file_lists(load, form):
                                 )
                         if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
                             ret[saltenv]['files'].append(rel_fn)
-        with salt.utils.fopen(list_cache, 'w+') as fp_:
-            fp_.write(serial.dumps(ret))
-            os.remove(w_lock)
+        if save_cache:
+            with salt.utils.fopen(list_cache, 'w+') as fp_:
+                fp_.write(serial.dumps(ret))
+                os.remove(w_lock)
         return ret[load['saltenv']][form]
 
 

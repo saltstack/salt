@@ -50,7 +50,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
-from salt.utils.debug import enable_sigusr1_handler, inspect_stack
+from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
@@ -226,7 +226,7 @@ class Master(SMaster):
                                 shutil.rmtree(f_path)
 
             if self.opts.get('publish_session'):
-                if now - rotate >= self.opts['publish_session'] * 60:
+                if now - rotate >= self.opts['publish_session']:
                     salt.crypt.dropfile(self.opts['cachedir'])
                     rotate = now
             if self.opts.get('search'):
@@ -359,6 +359,7 @@ class Master(SMaster):
         )
 
         enable_sigusr1_handler()
+        enable_sigusr2_handler()
 
         self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
