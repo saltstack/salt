@@ -11,8 +11,23 @@ from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 ensure_in_syspath('../../')
 
+try:
+    from salttesting.helpers import skip_if_binaries_missing
+except ImportError:
+    from integration import skip_if_binaries_missing
+
 # Import salt libs
 import integration
+import salt.utils
+
+
+AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
+    'python',
+    'python2',
+    'python2.6',
+    'python2.7'
+
+])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -133,6 +148,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0']), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1']), 1)
 
+    @skip_if_binaries_missing(['which'])
     def test_which(self):
         '''
         cmd.which
@@ -144,7 +160,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.has_exec
         '''
-        self.assertTrue(self.run_function('cmd.has_exec', ['python']))
+        self.assertTrue(self.run_function('cmd.has_exec',
+                                          [AVAILABLE_PYTHON_EXECUTABLE]))
         self.assertFalse(self.run_function('cmd.has_exec',
                                            ['alllfsdfnwieulrrh9123857ygf']))
 
@@ -157,7 +174,8 @@ import sys
 sys.stdout.write('cheese')
         '''
         self.assertEqual(self.run_function('cmd.exec_code',
-                                           ['python', code]).rstrip(),
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code]).rstrip(),
                          'cheese')
 
     def test_quotes(self):
