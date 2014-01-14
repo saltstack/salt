@@ -5,6 +5,7 @@ import os
 import tempfile
 import urllib2
 import logging
+import shutil
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -12,12 +13,15 @@ from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
 )
-
 ensure_in_syspath('../../')
-import integration
-import shutil
+
+try:
+    from salttesting.helpers import skip_if_binaries_missing
+except ImportError:
+    from integration import skip_if_binaries_missing
 
 # Import Salt libs
+import integration
 import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -113,6 +117,7 @@ class Base(TestCase):
 
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
+@skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
     @requires_network()
