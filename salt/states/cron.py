@@ -115,6 +115,23 @@ def _check_cron(user,
     return 'absent'
 
 
+def _check_cron_env(user,
+                    name,
+                    value=None):
+    '''
+    Return the environment changes
+    '''
+    if value is None:
+        value = ""  # Matching value set in salt.modules.cron._render_tab
+    lst = __salt__['cron.list_tab'](user)
+    for env in lst['env']:
+        if name == env['name']:
+            if value != env['value']:
+                return 'update'
+            return 'present'
+    return 'absent'
+
+
 def _get_cron_info():
     '''
     Returns the proper group owner and path to the cron directory
@@ -157,7 +174,7 @@ def present(name,
         The command that should be executed by the cron job.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
 
     minute
@@ -242,7 +259,7 @@ def absent(name,
         The command that should be absent in the user crontab.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
@@ -449,4 +466,102 @@ def file(name,
         ret['result'] = False
 
     os.unlink(cron_path)
+    return ret
+
+
+def env_present(name,
+                value=None,
+                user='root'):
+    '''
+    Verifies that the specified environment variable is present in the crontab
+    for the specified user.
+
+    name
+        The name of the environment variable to set in the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+
+    value
+        The value to set for the given environment variable
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+    if __opts__['test']:
+        status = _check_cron_env(user, name, value=value)
+        ret['result'] = None
+        if status == 'absent':
+            ret['comment'] = 'Cron env {0} is set to be added'.format(name)
+        elif status == 'present':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} already present'.format(name)
+        elif status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be updated'.format(name)
+        return ret
+
+    data = __salt__['cron.set_env'](user, name, value=value)
+    if data == 'present':
+        ret['comment'] = 'Cron env {0} already present'.format(name)
+        return ret
+
+    if data == 'new':
+        ret['comment'] = 'Cron env {0} added to {1}\'s crontab'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+
+    if data == 'updated':
+        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'
+                      .format(name, user, data))
+    ret['result'] = False
+    return ret
+
+
+def env_absent(name,
+               user='root'):
+    '''
+    Verifies that the specified environment variable is absent from the crontab
+    for the specified user
+
+    name
+        The name of the environment variable to remove from the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+    '''
+
+    name = ' '.join(name.strip().split())
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    if __opts__['test']:
+        status = _check_cron_env(user, name)
+        ret['result'] = None
+        if status == 'absent':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} is absent'.format(name)
+        elif status == 'present' or status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be removed'.format(name)
+        return ret
+
+    data = __salt__['cron.rm_env'](user, name)
+    if data == 'absent':
+        ret['comment'] = "Cron env {0} already absent".format(name)
+        return ret
+    if data == 'removed':
+        ret['comment'] = ("Cron env {0} removed from {1}'s crontab"
+                          .format(name, user))
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ("Cron env {0} for user {1} failed to commit with error {2}"
+                      .format(name, user, data))
+    ret['result'] = False
     return ret
