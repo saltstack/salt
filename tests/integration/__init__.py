@@ -304,7 +304,6 @@ class TestDaemon(object):
                 print_header(
                     '~~~~~~~ Versions Report ', inline=True,
                     width=getattr(self.parser.options, 'output_columns', PNUM)
-
                 )
             except TypeError:
                 print_header('~~~~~~~ Versions Report ', inline=True)
@@ -315,7 +314,6 @@ class TestDaemon(object):
                 print_header(
                     '~~~~~~~ Minion Grains Information ', inline=True,
                     width=getattr(self.parser.options, 'output_columns', PNUM)
-
                 )
             except TypeError:
                 print_header('~~~~~~~ Minion Grains Information ', inline=True)
