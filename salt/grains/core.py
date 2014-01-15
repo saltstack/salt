@@ -755,6 +755,11 @@ _OS_FAMILY_MAP = {
     'Raspbian': 'Debian'
 }
 
+def _linux_bin_exists(bin):
+    '''
+    Does a binary exist in linux (depends on which)
+    '''
+    return __salt__['cmd.run']('which {0} > /dev/null; echo $?'.format(bin)) == '0'
 
 def os_data():
     '''
@@ -782,10 +787,12 @@ def os_data():
         grains.update(_ps(grains))
         return grains
     elif salt.utils.is_linux():
-        # Add SELinux grain
-        grains['selinux'] = {'enabled': __salt__['cmd.run']('selinuxenabled; echo $?').strip() == '0',
-                             'enforced': __salt__['cmd.run']('getenforce').strip() }
-
+        # Add SELinux grain, if you have it
+        if _linux_bin_exists('selinuxenabled'):
+            grains['selinux'] = {}
+            grains['selinux']['enabled'] = __salt__['cmd.run']('selinuxenabled; echo $?').strip() == '0'
+            if _linux_bin_exists('getenforcde'):
+                grains['selinux']['enforced'] = __salt__['cmd.run']('getenforce').strip()
 
         # Add lsb grains on any distro with lsb-release
         try:

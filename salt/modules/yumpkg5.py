@@ -54,9 +54,8 @@ def __virtual__():
 
     enabled = ('amazon', 'xcp', 'xenserver')
 
-    if (os_family == 'redhat' and selinux) or os_grain in enabled:
+    if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
-    return 'testpkg'
     return False
 
 

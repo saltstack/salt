@@ -143,11 +143,12 @@ def __virtual__():
     '''
     try:
         os_family = __grains__['os_family'].lower()
+        os_major_version = int(__grains__['osrelease'].split('.')[0])
         selinux = __grains__['selinux']['enabled']
     except Exception:
         return False
 
-    if os_family == 'redhat' and not selinux:
+    if os_family == 'redhat' and os_major_version == 6 and not selinux:
         return __virtualname__
 
     return False
