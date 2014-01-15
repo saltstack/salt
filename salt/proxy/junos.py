@@ -12,15 +12,31 @@ import jnpr.junos.utils
 import jnpr.junos.cfg
 HAS_JUNOS = True
 
+class Proxyconn(object):
 
-def proxyconn(user=None, host=None, passwd=None):
-    jdev = jnpr.junos.Device(user=user, host=host, password=passwd)
-    jdev.open()
-    jdev.bind(cu=jnpr.junos.utils.Config)
-    return jdev
 
-def proxytype():
-    return 'junos'
+    def __init__(self, details):
+        self.conn = jnpr.junos.Device(user=details['username'], host=details['host'], password=details['passwd'])
+        self.conn.open()
+        self.conn.bind(cu=jnpr.junos.cfg.Resource)
 
-def id(opts):
-    return opts['proxyconn'].facts['hostname']
+
+    def proxytype(self):
+        return 'junos'
+
+
+    def id(self, opts):
+        return self.conn.facts['hostname']
+
+
+    def ping(self):
+        return self.conn.connected
+
+
+    def shutdown(self, opts):
+
+        print('Proxy module {} shutting down!!'.format(opts['id']))
+        try:
+            self.conn.close()
+        except Exception:
+            pass
