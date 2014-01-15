@@ -184,6 +184,7 @@ VALID_OPTS = {
     'salt_transport': str,
     'gather_job_timeout': int,
     'auth_timeout': int,
+    'enumerate_proxy_minions': bool,
 }
 
 # default configurations
@@ -391,6 +392,7 @@ DEFAULT_MASTER_OPTS = {
     'keysize': 4096,
     'salt_transport': 'zeromq',
     'gather_job_timeout': 2,
+    'enumerate_proxy_minions': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
