@@ -1307,27 +1307,28 @@ class AESFuncs(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {jid}'.format(**load)
-            )
-            return False
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
         hn_dir = os.path.join(jid_dir, load['id'])
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        # Otherwise the minion has already returned this jid and it should
-        # be dropped
-        else:
-            log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
+        try:
+            os.mkdir(hn_dir)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                # Minion has already returned this jid and it should be dropped
+                log.error(
+                    'An extra return was detected from minion {0}, please verify '
+                    'the minion, this could be a replay attack'.format(
+                        load['id']
+                    )
                 )
-            )
-            return False
+                return False
+            elif e.errno == errno.ENOENT:
+                log.error(
+                    'An inconsistency occurred, a job was received with a job id '
+                    'that is not present on the master: {jid}'.format(**load)
+                )
+                return False
+            raise
 
         self.serial.dump(
             load['return'],
