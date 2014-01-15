@@ -98,7 +98,6 @@ def _create_loader(
     )
 
 
-
 def minion_mods(opts, context=None, whitelist=None):
     '''
     Returns the minion modules
@@ -134,7 +133,7 @@ def proxy(opts, functions, whitelist=None):
     '''
     load = _create_loader(opts, 'proxy', 'proxy')
     pack = {'name': '__proxy__',
-            'value': functions }
+            'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
 

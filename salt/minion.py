@@ -542,7 +542,8 @@ class Minion(object):
         self.grains_cache = self.opts['grains']
 
         if 'proxy' in self.opts['pillar']:
-            log.debug('I am {} and I need to start some proxies for {}'.format(self.opts['id'], self.opts['pillar']['proxy']))
+            log.debug('I am {0} and I need to start some proxies for {0}'.format(self.opts['id'],
+                                                                                 self.opts['pillar']['proxy']))
             for p in self.opts['pillar']['proxy']:
                 log.debug('Starting {} proxy.'.format(p))
                 pid = os.fork()
@@ -1903,6 +1904,7 @@ class ProxyMinion(object):
             mod_opts[key] = val
         return mod_opts
 
+
     def __load_modules(self):
         '''
         Return the functions and the returners loaded up from the loader
@@ -2721,4 +2723,3 @@ class ProxyMinion(object):
 
     def __del__(self):
         self.destroy()
-

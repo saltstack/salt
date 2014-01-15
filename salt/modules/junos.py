@@ -34,6 +34,7 @@ __virtualname__ = 'junos'
 
 __proxyenabled__ = ['junos']
 
+
 def __virtual__():
     '''
     We need the Junos adapter libraries for this
@@ -65,7 +66,7 @@ def set_hostname(hostname=None, commit=True):
 
     # Added to recent versions of JunOs
     # Use text format instead
-    set_string = 'set system host-name {}'.format(hostname)
+    set_string = 'set system host-name {0}'.format(hostname)
 
     conn.cu.load(set_string, format='set')
     if commit:
@@ -126,5 +127,3 @@ def ping():
     conn = __opt__['proxyconn']
     ret['message'] = conn.cli('show system uptime')
     ret['out'] = True
-
-
