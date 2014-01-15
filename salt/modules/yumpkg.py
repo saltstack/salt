@@ -1299,4 +1299,3 @@ def expand_repo_def(repokwargs):
     '''
     # YUM doesn't need the data massaged.
     return repokwargs
-
