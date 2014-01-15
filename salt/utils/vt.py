@@ -186,7 +186,7 @@ class Terminal(object):
         # ----- Spawn our terminal ------------------------------------------>
         try:
             self._spawn()
-        except Exception as err:
+        except Exception as err:  # pylint: disable=W0703
             # A lot can go wrong, so that's why we're catching the most general
             # exception type
             log.warning(
