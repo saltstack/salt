@@ -636,7 +636,6 @@ class MWorker(multiprocessing.Process):
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
-
             while True:
                 try:
                     package = socket.recv()
@@ -1622,7 +1621,13 @@ class AESFuncs(object):
         # Run the func
         if hasattr(self, func):
             try:
+                start = time.time()
                 ret = getattr(self, func)(load)
+                log.trace(
+                        'Master function call {0} took {1} seconds'.format(
+                            func, time.time() - start
+                            )
+                        )
             except Exception:
                 ret = ''
                 log.error(
