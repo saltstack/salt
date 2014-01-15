@@ -64,7 +64,7 @@ start() {
             RETVAL=0
         fi
     else
-        if [[ $(pidofproc $PROCESS) ]]; then
+        if [[ ! -z "$(pidofproc $PROCESS)" ]]; then
             RETVAL=$?
             echo -n "already running"
         else
