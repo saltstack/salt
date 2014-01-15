@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8 -*-
 '''
 Make me some salt!
 '''
@@ -239,7 +239,7 @@ class ProxyMinion(parsers.MinionOptionParser):
     '''
     Create a proxy minion server
     '''
-    def prepare(self):
+    def prepare(self, proxydetails):
         '''
         Run the preparation sequence required to start a salt minion.
 
@@ -280,7 +280,10 @@ class ProxyMinion(parsers.MinionOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                logfile = self.config['log_file']
+                if 'proxy_log' in proxydetails:
+                    logfile = proxydetails['proxy_log']
+                else:
+                    logfile = None
                 if logfile is not None and not logfile.startswith(('tcp://',
                                                                    'udp://',
                                                                    'file://')):
@@ -289,6 +292,7 @@ class ProxyMinion(parsers.MinionOptionParser):
         except OSError as err:
             sys.exit(err.errno)
 
+        self.config['proxy'] = proxydetails
         self.setup_logfile_logger()
         logger.info(
             'Setting up a Salt Proxy Minion "{0}"'.format(
@@ -309,7 +313,7 @@ class ProxyMinion(parsers.MinionOptionParser):
         else:
             self.minion = salt.minion.ProxyMinion(self.config)
 
-    def start(self):
+    def start(self, proxydetails):
         '''
         Start the actual minion.
 
@@ -319,23 +323,26 @@ class ProxyMinion(parsers.MinionOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
-        try:
-            if check_user(self.config['user']):
-                self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
-            if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
-            else:
-                logger.error(str(exc))
-        finally:
-            self.shutdown()
+        self.prepare(proxydetails)
+        self.minion.tune_in()
+        # try:
+        #     if check_user(self.config['user']):
+        # except (KeyboardInterrupt, SaltSystemExit) as exc:
+        #     logger.warn('Stopping the Salt Minion')
+        #     if isinstance(exc, KeyboardInterrupt):
+        #         logger.warn('Exiting on Ctrl-c')
+        #     else:
+        #         logger.error(str(exc))
+        # finally:
+        #     self.shutdown()
 
     def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+        if 'proxy' in self.minion.opts:
+            self.minion.opts['proxyobject'].shutdown(self.minion.opts)
+
 
 
 class Syndic(parsers.SyndicOptionParser):
