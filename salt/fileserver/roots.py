@@ -238,71 +238,57 @@ def _file_lists(load, form):
         load['saltenv'] = load.pop('env')
     if load['saltenv'] not in __opts__['file_roots']:
         return []
-    serial = salt.payload.Serial(__opts__)
-    list_cache = os.path.join(__opts__['cachedir'], 'file_cache.p')
-    w_lock = os.path.join(__opts__['cachedir'], '.file_cache.w')
-    r_cache = False
-    save_cache = True
-    if not os.path.isfile(list_cache) and not os.path.isfile(w_lock):
-        with salt.utils.fopen(w_lock, 'w+') as fp_:
-            fp_.write('')
-        r_cache = True
-    else:
-        attempt = 0
-        while attempt < 11:
-            try:
-                cache_stat = os.stat(list_cache)
-                age = time.time() - cache_stat.st_mtime
-                if age < __opts__.get('fileserver_list_cache_time', 30):
-                    # Young enough! Load this sucker up!
-                    with salt.utils.fopen(list_cache, 'r') as fp_:
-                        return serial.load(fp_)[load['saltenv']].get(form, 'files')
-                else:
-                    # Set the w_lock and go
-                    with salt.utils.fopen(w_lock, 'w+') as fp_:
-                        fp_.write('')
-                    r_cache = True
-                    break
-            except Exception:
-                time.sleep(0.2)
-                attempt += 1
-                continue
-        if attempt > 10:
-            save_cache = False
-    if r_cache:
-        ret = {}
-        for saltenv in __opts__['file_roots']:
-            ret[saltenv] = {
-                    'files': [],
-                    'dirs': [],
-                    'empty_dirs': [],
-                    'links': []}
-            for path in __opts__['file_roots'][saltenv]:
-                for root, dirs, files in os.walk(
-                        path,
-                        followlinks=__opts__['fileserver_followsymlinks']):
-                    dir_rel_fn = os.path.relpath(root, path)
-                    ret[saltenv]['dirs'].append(dir_rel_fn)
-                    if len(dirs) == 0 and len(files) == 0:
-                        if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
-                            ret[saltenv]['empty_dirs'].append(dir_rel_fn)
-                    for fname in files:
-                        is_link = os.path.islink(os.path.join(root, fname))
-                        if is_link:
-                            ret[saltenv]['links'].append(fname)
-                        if __opts__['fileserver_ignoresymlinks'] and is_link:
-                            continue
-                        rel_fn = os.path.relpath(
-                                    os.path.join(root, fname),
-                                    path
-                                )
-                        if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                            ret[saltenv]['files'].append(rel_fn)
+
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    if not os.path.isdir(list_cachedir):
+        try:
+            os.makedirs(list_cachedir)
+        except os.error:
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            return []
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    cache_match, refresh_cache, save_cache = \
+        salt.fileserver.check_file_list_cache(
+            __opts__, form, list_cache, w_lock
+        )
+    if cache_match is not None:
+        return cache_match
+    if refresh_cache:
+        ret = {
+            'files': [],
+            'dirs': [],
+            'empty_dirs': [],
+            'links': []
+        }
+        for path in __opts__['file_roots'][load['saltenv']]:
+            for root, dirs, files in os.walk(
+                    path,
+                    followlinks=__opts__['fileserver_followsymlinks']):
+                dir_rel_fn = os.path.relpath(root, path)
+                ret['dirs'].append(dir_rel_fn)
+                if len(dirs) == 0 and len(files) == 0:
+                    if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
+                        ret['empty_dirs'].append(dir_rel_fn)
+                for fname in files:
+                    is_link = os.path.islink(os.path.join(root, fname))
+                    if is_link:
+                        ret['links'].append(fname)
+                    if __opts__['fileserver_ignoresymlinks'] and is_link:
+                        continue
+                    rel_fn = os.path.relpath(
+                                os.path.join(root, fname),
+                                path
+                            )
+                    if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                        ret['files'].append(rel_fn)
         if save_cache:
-            with salt.utils.fopen(list_cache, 'w+') as fp_:
-                fp_.write(serial.dumps(ret))
-                os.remove(w_lock)
-        return ret[load['saltenv']][form]
+            salt.fileserver.write_file_list_cache(
+                __opts__, ret, list_cache, w_lock
+            )
+        return ret.get(form, [])
+    # Shouldn't get here, but if we do, this prevents a TypeError
+    return []
 
 
 def file_list(load):
