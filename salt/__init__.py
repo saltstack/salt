@@ -346,7 +346,6 @@ class ProxyMinion(parsers.MinionOptionParser):
             self.minion.opts['proxyobject'].shutdown(self.minion.opts)
 
 
-
 class Syndic(parsers.SyndicOptionParser):
     '''
     Create a syndic server
