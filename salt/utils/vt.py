@@ -184,7 +184,19 @@ class Terminal(object):
         # <---- Direct Streaming Setup ---------------------------------------
 
         # ----- Spawn our terminal ------------------------------------------>
-        self._spawn()
+        try:
+            self._spawn()
+        except Exception as err:  # pylint: disable=W0703
+            # A lot can go wrong, so that's why we're catching the most general
+            # exception type
+            log.warning(
+                'Failed to spawn the VT: {0}'.format(err),
+                 exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            raise TerminalException(
+                'Failed to spawn the VT. Error: {0}'.format(err)
+            )
+
         log.debug(
             'Child Forked! PID: {0}  STDOUT_FD: {1}  STDERR_FD: '
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
@@ -383,15 +395,17 @@ class Terminal(object):
                 # Set the terminal size
                 self.child_fd = self.stdin
 
-                try:
-                    self.setwinsize(self.rows, self.cols)
-                except IOError, err:
-                    log.warning(
-                        'Failed to set the VT terminal size: {0}'.format(
-                            err,
+                if self.child_fd.isatty():
+                    # Only try to set the window size if the parent IS a tty
+                    try:
+                        self.setwinsize(self.rows, self.cols)
+                    except IOError as err:
+                        log.warning(
+                            'Failed to set the VT terminal size: {0}'.format(
+                                err
+                            ),
                             exc_info=log.isEnabledFor(logging.DEBUG)
                         )
-                    )
 
                 # Do not allow child to inherit open file descriptors from
                 # parent
