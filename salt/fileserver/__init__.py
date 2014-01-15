@@ -16,6 +16,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def check_file_list_cache(opts, form, list_cache, w_lock):
     '''
     Checks the cache file to see if there is a new enough file list cache, and
