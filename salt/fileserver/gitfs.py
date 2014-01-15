@@ -395,7 +395,56 @@ def file_hash(load, fnd):
         return ret
 
 
+def _file_lists(load, form):
+    '''
+    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/gitfs')
+    if not os.path.isdir(list_cachedir):
+        try:
+            os.makedirs(list_cachedir)
+        except os.error:
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            return []
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    cache_match, refresh_cache, save_cache = \
+        salt.fileserver.check_file_list_cache(
+            __opts__, form, list_cache, w_lock
+        )
+    if cache_match is not None:
+        return cache_match
+    if refresh_cache:
+        ret = {'links': []}
+        ret['files'] = _get_file_list(load)
+        ret['dirs'] = _get_dir_list(load)
+        ret['empty_dirs'] = _get_file_list_emptydirs(load)
+        if save_cache:
+            salt.fileserver.write_file_list_cache(
+                __opts__, ret, list_cache, w_lock
+            )
+        return ret.get(form, [])
+    # Shouldn't get here, but if we do, this prevents a TypeError
+    return []
+
+
 def file_list(load):
+    '''
+    Return a list of all files on the file server in a specified
+    environment
+    '''
+    return _file_lists(load, 'files')
+
+
+def _get_file_list(load):
     '''
     Return a list of all files on the file server in a specified
     environment
@@ -439,6 +488,13 @@ def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
+    return _file_lists(load, 'empty_dirs')
+
+
+def _get_file_list_emptydirs(load):
+    '''
+    Return a list of all empty directories on the master
+    '''
     if 'env' in load:
         salt.utils.warn_until(
             'Boron',
@@ -479,6 +535,13 @@ def file_list_emptydirs(load):
 
 
 def dir_list(load):
+    '''
+    Return a list of all directories on the master
+    '''
+    return _file_lists(load, 'dirs')
+
+
+def _get_dir_list(load):
     '''
     Return a list of all directories on the master
     '''
