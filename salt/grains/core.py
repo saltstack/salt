@@ -782,6 +782,11 @@ def os_data():
         grains.update(_ps(grains))
         return grains
     elif salt.utils.is_linux():
+        # Add SELinux grain
+        grains['selinux'] = {'enabled': __salt__['cmd.run']('selinuxenabled; echo $?').strip() == '0',
+                             'enforced': __salt__['cmd.run']('getenforce').strip() }
+
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release
