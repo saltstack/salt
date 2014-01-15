@@ -35,7 +35,7 @@ class Proxyconn(object):
 
     def shutdown(self, opts):
 
-        print('Proxy module {} shutting down!!'.format(opts['id']))
+        print('Proxy module {0} shutting down!!'.format(opts['id']))
         try:
             self.conn.close()
         except Exception:
