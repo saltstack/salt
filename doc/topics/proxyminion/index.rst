@@ -2,10 +2,11 @@
 Salt Proxy Minion Documentation
 ===============================
 
-Proxy minions are a Salt feature that enables controlling devices that, for
-whatever reason, cannot run a standard salt-minion.  Examples include network
-gear that has an API but runs a proprietary OS, devices with limited CPU or
-memory, or devices that could run a minion, but for security reasons, will not.
+Proxy minions are a developing Salt feature that enables controlling devices
+that, for whatever reason, cannot run a standard salt-minion.  Examples include
+network gear that has an API but runs a proprietary OS, devices with limited
+CPU or memory, or devices that could run a minion, but for security reasons,
+will not.
 
 *Proxy minions are not an "out of the box" feature*.  Because
 there are an infinite number of controllable devices,
@@ -41,21 +42,15 @@ any way with the minion that started it.
 Configuration parameters on the master
 ######################################
 
-In ``/etc/salt/master``, add the following key:
+Proxy minions require no configuration parameters in /etc/salt/master.
 
-.. code-block:: yaml
-
-    enumerate_proxy_minions: True
-
-This will invoke the salt-master routines to look for other configuration parameters
-to drive the proxies.
-
-Salt's Pillar system is ideally suited for configuring proxy-minions.  Proxies can
-either be designated via a pillar file in pillar_roots, or through an external pillar.
-External pillars afford the opportunity for interfacing with a configuration management
-system, database, or other knowledgeable system that that may already contain all the details
-of proxy targets.  To use static files in pillar_roots, pattern your files after the following
-examples, which are based on the diagram above:
+Salt's Pillar system is ideally suited for configuring proxy-minions.  Proxies
+can either be designated via a pillar file in pillar_roots, or through an
+external pillar.  External pillars afford the opportunity for interfacing with
+a configuration management system, database, or other knowledgeable system that
+that may already contain all the details of proxy targets.  To use static files
+in pillar_roots, pattern your files after the following examples, which are
+based on the diagram above:
 
 ``/srv/salt/pillar/top.sls``
 
@@ -145,21 +140,25 @@ to enable control.
 Proxytypes
 ##########
 
-A proxytype is a Python file that encapsulates all the code necessary to interface with
-a device.  Proxytypes are located inside the salt.proxy module.
-At a minimum a proxytype must implement the following functions:
+A proxytype is a Python class called 'Proxyconn' that encapsulates all the code
+necessary to interface with a device.  Proxytypes are located inside the
+salt.proxy module.  At a minimum a proxytype object must implement the
+following methods:
 
-``proxytype()``: Returns a string with the name of the proxy type.
+``proxytype(self)``: Returns a string with the name of the proxy type.
 
-``proxyconn(*args, **kwargs)``: Provides the primary way to connect and communicate
+``proxyconn(self, **kwargs)``: Provides the primary way to connect and communicate
 with the device. Some proxyconns instantiate a particular object that opens a
 network connection to a device and leaves the connection open for communication.
 Others simply abstract a serial connection or even implement endpoints to communicate
 via REST over HTTP.
 
-``id(opts)``: Returns a unique, unchanging id for the controlled device.  This is
+``id(self, opts)``: Returns a unique, unchanging id for the controlled device.  This is
 the "name" of the device, and is used by the salt-master for targeting and key
 authentication.
+
+Optionally, the class may define a ``shutdown(self, opts)`` method if the
+controlled device should be informed when the minion goes away cleanly.
 
 It is highly recommended that the ``test.ping`` execution module also be defined
 for a proxytype. The code for ``ping`` should contact the controlled device and make
@@ -169,6 +168,7 @@ Here is an example proxytype used to interface to Juniper Networks devices that 
 the Junos operating system.  Note the additional library requirements--most of the
 "hard part" of talking to these devices is handled by the jnpr.junos, jnpr.junos.utils
 and jnpr.junos.cfg modules.
+
 
 .. code-block:: python
 
@@ -181,32 +181,49 @@ and jnpr.junos.cfg modules.
     import jnpr.junos.cfg
     HAS_JUNOS = True
 
-    def proxyconn(user=None, host=None, passwd=None):
-        jdev = jnpr.junos.Device(user=user, host=host, password=passwd)
-        jdev.open()
-        jdev.bind(cu=jnpr.junos.utils.Config)
-        return jdev
+    class Proxyconn(object):
 
-    def proxytype():
-        return 'junos'
 
-    def id(opts):
-        return opts['proxyconn'].facts['hostname']
+        def __init__(self, details):
+            self.conn = jnpr.junos.Device(user=details['username'], host=details['host'], password=details['passwd'])
+            self.conn.open()
+            self.conn.bind(cu=jnpr.junos.cfg.Resource)
+
+
+        def proxytype(self):
+            return 'junos'
+
+
+        def id(self, opts):
+            return self.conn.facts['hostname']
+
+
+        def ping(self):
+            return self.conn.connected
+
+
+        def shutdown(self, opts):
+
+            print('Proxy module {} shutting down!!'.format(opts['id']))
+            try:
+                self.conn.close()
+            except Exception:
+                pass
 
 
 The __proxyenabled__ directive
 ##############################
 
-Salt states and execution modules, by and large, cannot "automatically" work with
-proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no meaning on
-a network switch or a housecat.  For a state/execution module to be available to
-a proxy-minion, the ``__proxyenabled__`` variable must be defined in the module as an
-array containing the names of all the proxytypes that this module can support.  The
-array can contain the special value ``*`` to indicate that the module supports all
-proxies.
+Salt states and execution modules, by and large, cannot "automatically" work
+with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
+meaning on a network switch or a housecat.  For a state/execution module to be
+available to a proxy-minion, the ``__proxyenabled__`` variable must be defined
+in the module as an array containing the names of all the proxytypes that this
+module can support.  The array can contain the special value ``*`` to indicate
+that the module supports all proxies.
 
-If no ``__proxyenabled__`` variable is defined, then by default, the state/execution
-module is unavailable to any proxy.
+If no ``__proxyenabled__`` variable is defined, then by default, the
+state/execution module is unavailable to any proxy.
 
 Here is an excerpt from a module that was modified to support proxy-minions:
 
@@ -214,10 +231,9 @@ Here is an excerpt from a module that was modified to support proxy-minions:
 
     def ping():
 
-        if 'proxytype' in __opts__:
-            fun = 'salt.proxy.{0}.ping'.format(__opts__['proxytype'])
-            if fun in __salt__:
-                return __salt__[fun]()
+        if 'proxyobject' in __opts__:
+            if 'ping' in __opts__['proxyobject'].__attr__():
+                return __opts['proxyobject'].ping()
             else:
                 return False
         else:
@@ -227,21 +243,11 @@ And then in salt.proxy.junos we find
 
 .. code-block:: python
 
-     def ping():
+     def ping(self):
 
-        try:
-            got = junos.rpc.get_config(
-                      E.system(
-                          E('host-name'),
-                          E('domain-name')
-                      ),
-                      JXML.INHERIT
-                  )
-            return True
-    except Exception:
-        return False
+        return self.connected
+
 
 The Junos API layer lacks the ability to do a traditional 'ping', so the
-example simply requests a very small bit of data via RPC.  If the RPC call
-throws an exception or times out, the device is unavailable and ping returns
-False.  Otherwise, we can return True.
+example simply checks the connection object field that indicates
+if the ssh connection was successfully made to the device.

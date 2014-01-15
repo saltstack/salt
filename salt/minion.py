@@ -19,6 +19,7 @@ import traceback
 import sys
 import signal
 from random import randint
+import salt
 import importlib
 
 # Import third party libs
@@ -537,7 +538,21 @@ class Minion(object):
             self.opts,
             self.functions,
             self.returners)
+
         self.grains_cache = self.opts['grains']
+
+        if 'proxy' in self.opts['pillar']:
+            log.debug('I am {} and I need to start some proxies for {}'.format(self.opts['id'], self.opts['pillar']['proxy']))
+            for p in self.opts['pillar']['proxy']:
+                log.debug('Starting {} proxy.'.format(p))
+                pid = os.fork()
+                if pid > 0:
+                    continue
+                else:
+                    proxyminion = salt.ProxyMinion()
+                    proxyminion.start(self.opts['pillar']['proxy'][p])
+        else:
+            log.debug("I am {} and I am not supposed to start any proxies.".format(self.opts['id']))
 
     def __prep_mod_opts(self):
         '''
@@ -1852,11 +1867,10 @@ class ProxyMinion(object):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         # print opts['proxymodule']
-        fq_proxyname = 'proxy.'+opts['proxymodule']
-        proxymodule = salt.loader.proxy(opts, fq_proxyname)
-        opts['proxytype'] = proxymodule[opts['proxymodule']+'.proxytype']()
-        opts['proxyconn'] = proxymodule[opts['proxymodule']+'.proxyconn'](user='cro', host='junos', passwd='croldham123')
-        opts['id'] = proxymodule[opts['proxymodule']+'.id'](opts)
+        fq_proxyname = 'proxy.'+opts['proxy']['proxytype']
+        self.proxymodule = salt.loader.proxy(opts, fq_proxyname)
+        opts['proxyobject'] = self.proxymodule[opts['proxy']['proxytype']+'.Proxyconn'](opts['proxy'])
+        opts['id'] = opts['proxyobject'].id(opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
@@ -1876,7 +1890,6 @@ class ProxyMinion(object):
             self.functions,
             self.returners)
         self.grains_cache = self.opts['grains']
-
 
 
     def __prep_mod_opts(self):
@@ -2509,14 +2522,14 @@ class ProxyMinion(object):
             self.opts['id'],
             time.asctime()
             ),
-            'minion_start'
+            'proxy_minion_start'
         )
         self._fire_master(
             'Minion {0} started at {1}'.format(
             self.opts['id'],
             time.asctime()
             ),
-            tagify([self.opts['id'], 'start'], 'minion'),
+            tagify([self.opts['id'], 'start'], 'proxy_minion'),
         )
 
         # Make sure to gracefully handle SIGUSR1
@@ -2640,11 +2653,11 @@ class ProxyMinion(object):
             self.opts['id'],
             time.asctime()
             ),
-            'minion_start'
+            'proxy_minion_start'
         )
         # dup name spaced event
         self._fire_master(
-            'Minion {0} started at {1}'.format(
+            'Proxy Minion {0} started at {1}'.format(
             self.opts['id'],
             time.asctime()
             ),
@@ -2665,7 +2678,7 @@ class ProxyMinion(object):
                 yield True
             except Exception:
                 log.critical(
-                    'An exception occurred while polling the minion',
+                    'An exception occurred while polling the proxy minion',
                     exc_info=True
                 )
             yield True
