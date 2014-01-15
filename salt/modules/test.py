@@ -41,12 +41,8 @@ def ping():
         salt '*' test.ping
     '''
 
-    if 'proxytype' in __opts__:
-        fun = 'salt.proxy.{0}.ping'.format(__opts__['proxytype'])
-        if fun in __salt__:
-            return __salt__[fun]()
-        else:
-            return False
+    if 'proxyobject' in __opts__:
+        return __opts__['proxyobject'].ping()
     else:
         return True
 

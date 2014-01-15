@@ -181,6 +181,7 @@ VALID_OPTS = {
     'sign_pub_messages': bool,
     'keysize': int,
     'salt_transport': str,
+    'enumerate_proxy_minions': bool,
 }
 
 # default configurations
@@ -383,6 +384,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
+    'enumerate_proxy_minions': False
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
