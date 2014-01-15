@@ -8,11 +8,69 @@ import os
 import re
 import fnmatch
 import logging
+import time
 
 # Import salt libs
 import salt.loader
+import salt.utils
 
 log = logging.getLogger(__name__)
+
+
+def check_file_list_cache(opts, form, list_cache, w_lock):
+    '''
+    Checks the cache file to see if there is a new enough file list cache, and
+    returns the match (if found, along with booleans used by the fileserver
+    backend to determine if the cache needs to be refreshed/written).
+    '''
+    refresh_cache = False
+    save_cache = True
+    serial = salt.payload.Serial(opts)
+    if not os.path.isfile(list_cache) and not os.path.isfile(w_lock):
+        with salt.utils.fopen(w_lock, 'w+') as fp_:
+            fp_.write('')
+            log.trace('Lockfile {0} created'.format(w_lock))
+        refresh_cache = True
+    else:
+        attempt = 0
+        while attempt < 11:
+            try:
+                cache_stat = os.stat(list_cache)
+                age = time.time() - cache_stat.st_mtime
+                if age < opts.get('fileserver_list_cache_time', 30):
+                    # Young enough! Load this sucker up!
+                    with salt.utils.fopen(list_cache, 'r') as fp_:
+                        log.trace('Returning file_lists cache data from '
+                                  '{0}'.format(list_cache))
+                        return serial.load(fp_).get(form, []), False, False
+                else:
+                    # Set the w_lock and go
+                    with salt.utils.fopen(w_lock, 'w+') as fp_:
+                        fp_.write('')
+                        log.trace('Lockfile {0} created'.format(w_lock))
+                    refresh_cache = True
+                    break
+            except Exception:
+                time.sleep(0.2)
+                attempt += 1
+                continue
+        if attempt > 10:
+            save_cache = False
+            refresh_cache = True
+    return None, refresh_cache, save_cache
+
+
+def write_file_list_cache(opts, data, list_cache, w_lock):
+    '''
+    Checks the cache file to see if there is a new enough file list cache, and
+    returns the match (if found, along with booleans used by the fileserver
+    backend to determine if the cache needs to be refreshed/written).
+    '''
+    serial = salt.payload.Serial(opts)
+    with salt.utils.fopen(list_cache, 'w+') as fp_:
+        fp_.write(serial.dumps(data))
+        os.remove(w_lock)
+        log.trace('Lockfile {0} removed'.format(w_lock))
 
 
 def generate_mtime_map(path_map):
