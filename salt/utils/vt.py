@@ -383,15 +383,17 @@ class Terminal(object):
                 # Set the terminal size
                 self.child_fd = self.stdin
 
-                try:
-                    self.setwinsize(self.rows, self.cols)
-                except IOError, err:
-                    log.warning(
-                        'Failed to set the VT terminal size: {0}'.format(
-                            err,
-                            exc_info=log.isEnabledFor(logging.DEBUG)
+                if self.child_fd.isatty():
+                    # Only try to set the window size if the parent IS a tty
+                    try:
+                        self.setwinsize(self.rows, self.cols)
+                    except IOError, err:
+                        log.warning(
+                            'Failed to set the VT terminal size: {0}'.format(
+                                err,
+                                exc_info=log.isEnabledFor(logging.DEBUG)
+                            )
                         )
-                    )
 
                 # Do not allow child to inherit open file descriptors from
                 # parent
