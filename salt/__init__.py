@@ -324,17 +324,16 @@ class ProxyMinion(parsers.MinionOptionParser):
         NOTE: Run any required code before calling `super()`.
         '''
         self.prepare(proxydetails)
-        self.minion.tune_in()
-        # try:
-        #     if check_user(self.config['user']):
-        # except (KeyboardInterrupt, SaltSystemExit) as exc:
-        #     logger.warn('Stopping the Salt Minion')
-        #     if isinstance(exc, KeyboardInterrupt):
-        #         logger.warn('Exiting on Ctrl-c')
-        #     else:
-        #         logger.error(str(exc))
-        # finally:
-        #     self.shutdown()
+        try:
+            self.minion.tune_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Proxy Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
 
     def shutdown(self):
         '''
