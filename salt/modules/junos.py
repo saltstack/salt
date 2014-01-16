@@ -72,8 +72,8 @@ def set_hostname(hostname=None, commit=True):
     if commit:
         return commit()
     else:
-        single['out'] = True
-        single['message'] = 'set system host-name {} is queued'.format(hostname)
+        ret['out'] = True
+        ret['msg'] = 'set system host-name {0} is queued'.format(hostname)
 
     return ret
 
@@ -82,15 +82,16 @@ def commit():
 
     conn = __opts__['proxyconn']
 
+    ret = {}
     commit_ok = conn.cu.commit_check()
     if commit_ok:
         try:
             conn.cu.commit(confirm=True)
             ret['out'] = True
             ret['message'] = 'Commit Successful.'
-        except EzNcException as e:
+        except Exception as e:
             ret['out'] = False
-            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{}"'.format(e.message)
+            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{0}"'.format(e.message)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'

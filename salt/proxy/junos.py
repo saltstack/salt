@@ -15,23 +15,20 @@ HAS_JUNOS = True
 
 class Proxyconn(object):
 
+
     def __init__(self, details):
         self.conn = jnpr.junos.Device(user=details['username'], host=details['host'], password=details['passwd'])
         self.conn.open()
         self.conn.bind(cu=jnpr.junos.cfg.Resource)
 
-
     def proxytype(self):
         return 'junos'
-
 
     def id(self, opts):
         return self.conn.facts['hostname']
 
-
     def ping(self):
         return self.conn.connected
-
 
     def shutdown(self, opts):
 
