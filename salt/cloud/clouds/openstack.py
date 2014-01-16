@@ -670,7 +670,7 @@ def create(vm_):
         log.debug(
             'Using {0} as SSH key file'.format(key_filename)
         )
-    elif 'password' in data.extra:
+    elif hasattr(data, 'extra') and 'password' in data.extra:
         deploy_kwargs['password'] = data.extra['password']
         log.debug('Logging into SSH using password')
 
@@ -745,14 +745,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data.__dict__)
+
+    if hasattr(data, 'extra') and 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',
