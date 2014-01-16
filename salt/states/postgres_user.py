@@ -23,11 +23,11 @@ def __virtual__():
 
 
 def present(name,
-            createdb=False,
-            createuser=False,
-            encrypted=False,
-            superuser=False,
-            replication=False,
+            createdb=None,
+            createuser=None,
+            encrypted=None,
+            superuser=None,
+            replication=None,
             password=None,
             groups=None,
             runas=None,
@@ -99,7 +99,29 @@ def present(name,
         runas = None
 
     # check if user exists
+    if __salt__['postgres.user_exists'](name,
+                                        createdb=createdb,
+                                        createuser=createuser,
+                                        superuser=superuser,
+                                        replication=replication,
+                                        rolepassword=password,
+                                        runas=user):
+        return ret
+    # User might exist with different password or attributes
     if __salt__['postgres.user_exists'](name, runas=user):
+        # User does exist with different password or attributes
+        # Lets update it
+        ret['changes']['Updated user "{0}" successfully'.format(name)] = \
+                        __salt__['postgres.user_update'](name,
+                                                        createdb=createdb,
+                                                        createuser=createuser,
+                                                        encrypted=encrypted,
+                                                        superuser=superuser,
+                                                        replication=replication,
+                                                        rolepassword=password,
+                                                        groups=groups,
+                                                        runas=runas,
+                                                        user=user)
         return ret
 
     # The user is not present, make it!
@@ -107,6 +129,19 @@ def present(name,
         ret['result'] = None
         ret['comment'] = 'User {0} is set to be created'.format(name)
         return ret
+
+    # Setting default values
+    if createdb is None:
+        createdb = False
+    if createuser is None:
+        createuser = False
+    if encrypted is None:
+        encrypted = False
+    if superuser is None:
+        superuser = False
+    if replication is None:
+        replication = False
+
     if __salt__['postgres.user_create'](username=name,
                                         createdb=createdb,
                                         createuser=createuser,
