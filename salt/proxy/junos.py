@@ -12,8 +12,8 @@ import jnpr.junos.utils
 import jnpr.junos.cfg
 HAS_JUNOS = True
 
-class Proxyconn(object):
 
+class Proxyconn(object):
 
     def __init__(self, details):
         self.conn = jnpr.junos.Device(user=details['username'], host=details['host'], password=details['passwd'])

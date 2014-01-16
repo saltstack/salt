@@ -38,6 +38,13 @@ After the proxy minion is started and initiates its connection to the 'dumb'
 device, it connects back to the salt-master and ceases to be affiliated in
 any way with the minion that started it.
 
+To create support for a proxied device one needs to create four things:
+
+1. The `proxytype connection class`_ (located in salt/proxy).
+2. The `grains support code`_ (located in salt/grains).
+3. `Salt modules`_ specific to the controlled device.
+4. _`Salt states` specific to the controlled device.
+
 
 Configuration parameters on the master
 ######################################
@@ -126,16 +133,27 @@ In the above example
 
 - dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a serial port.
 
-Also, in general, proxy-minions are lightweight, so the machines that run them could
-conceivably control a large number of devices.  The example above is just to illustrate
-that it is possible for the proxy services to be spread across many machines if necessary, or
-intentionally run on machines that need to control devices because of some physical interface
-(e.g. i2c and serial above).  Another reason to divide proxy services might be security.  In
-more secure environments only certain machines may have a network path to certain devices.
+Because of the way pillar works, each of the salt-minions that fork off the
+proxy minions will only see the keys specific to the proxies it will be
+handling.  In other words, from the above example, only minioncontroller1 will
+see the connection information for dumbdevices 1, 2, and 3.  Minioncontroller2
+will see configuration data for dumbdevices 4, 5, and 6, and minioncontroller3
+will be privy to dumbdevice7.
 
-Now our salt-minions know if they are supposed to spawn a proxy-minion process to control
-a particular device.  That proxy-minion process will initiate a connection back to the master
-to enable control.
+Also, in general, proxy-minions are lightweight, so the machines that run them
+could conceivably control a large number of devices.  The example above is just
+to illustrate that it is possible for the proxy services to be spread across
+many machines if necessary, or intentionally run on machines that need to
+control devices because of some physical interface (e.g. i2c and serial above).
+Another reason to divide proxy services might be security.  In more secure
+environments only certain machines may have a network path to certain devices.
+
+Now our salt-minions know if they are supposed to spawn a proxy-minion process
+to control a particular device.  That proxy-minion process will initiate
+a connection back to the master to enable control.
+
+
+.. _proxytype connection class:
 
 Proxytypes
 ##########
@@ -211,8 +229,23 @@ and jnpr.junos.cfg modules.
                 pass
 
 
+.. _grains support code:
+
+Grains are data about minions.  Most proxied devices will have a paltry amount
+of data as compared to a typical Linux server.  Because proxy-minions are
+started by a regular minion, they inherit a sizeable number of grain settings
+which can be useful, especially when targeting (PYTHONPATH, for example).
+
+All proxy minions set a grain called 'proxy'.  If it is present, you know the
+minion is controlling another device.  To add more grains to your proxy minion
+for a particular device, create a file in salt/grains named [proxytype].py and
+place inside it the different functions that need to be run to collect the data
+you are interested in.  Here's an example:
+
+
+
 The __proxyenabled__ directive
-##############################
+------------------------------
 
 Salt states and execution modules, by and large, cannot "automatically" work
 with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
