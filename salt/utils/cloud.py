@@ -1048,6 +1048,26 @@ def root_cmd(command, tty, sudo, **kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = '22'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+
+        ssh_args.extend([
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0}:{1} nc -q0 %h %p"'.format(
+                ssh_gateway,
+                ssh_gateway_port
+            ),
+            # Forward the SSH agent
+            '-oForwardAgent=yes'
+        ])
+        log.info(
+            'Using SSH gateway {0}:{1}'.format(
+                ssh_gateway, ssh_gateway_port
+            )
+        )
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
