@@ -84,7 +84,7 @@ echoinfo() {
 
 #---  FUNCTION  ----------------------------------------------------------------
 #          NAME:  echowarn
-#   DESCRIPTION:  Echo warning information to stdout.
+#   DESCRIPTION:  Echo warning informations to stdout.
 #-------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";

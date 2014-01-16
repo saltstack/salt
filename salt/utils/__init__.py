@@ -1164,9 +1164,17 @@ def is_windows():
 @real_memoize
 def is_linux():
     '''
-    Simple function to return if a host is Linux or not
+    Simple function to return if a host is Linux or not.
+    Note for a proxy minion, we need to return something else
     '''
-    return sys.platform.startswith('linux')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    if ('salt-proxy-minion' in main.__file__):
+        return False
+    else:
+        return sys.platform.startswith('linux')
 
 
 @real_memoize
