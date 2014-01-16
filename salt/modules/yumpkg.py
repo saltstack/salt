@@ -141,16 +141,8 @@ def __virtual__():
     '''
     Deprecated, yumpkg5 is being used now.
     '''
-    try:
-        os_family = __grains__['os_family'].lower()
-        os_major_version = int(__grains__['osrelease'].split('.')[0])
-        selinux = __grains__['selinux']['enabled']
-    except Exception:
-        return False
-
-    if os_family == 'redhat' and os_major_version == 6 and not selinux:
+    if __opts__['yum_provider'] == 'yumpkg':
         return __virtualname__
-
     return False
 
 
