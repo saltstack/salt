@@ -10,6 +10,8 @@ from salt import exceptions, utils
 
 # Import python libs
 import logging
+import random
+import string
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +105,7 @@ def vhost_exists(name, runas=None):
     return name in list_vhosts(runas=runas)
 
 
-def add_user(name, password, runas=None):
+def add_user(name, password=None, runas=None):
     '''
     Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
 
@@ -113,9 +115,28 @@ def add_user(name, password, runas=None):
 
         salt '*' rabbitmq.add_user rabbit_user password
     '''
+    clear_password = False
+
+    if password is None:
+        # Generate a random, temporary password. RabbitMQ requires one.
+        clear_password = True
+        password = ''.join(random.choice(
+            string.ascii_uppercase + string.digits) for x in range(15))
+
     res = __salt__['cmd.run'](
         'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
+
+    if clear_password:
+        # Now, Clear the random password from the account, if necessary
+        res2 = clear_password(name, runas)
+
+        if 'Error' in res2.keys():
+            # Clearing the password failed. We should try to cleanup
+            # and reurun and error.
+            delete_user(name, runas)
+            msg = 'Error'
+            return _format_response(res2, msg)
 
     msg = 'Added'
     return _format_response(res, msg)
