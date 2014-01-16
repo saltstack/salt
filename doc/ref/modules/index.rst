@@ -293,7 +293,7 @@ If a "fallback_function" is defined, it will replace the function instead of rem
     try:
         import dependency_that_sometimes_exists
     except ImportError as e:
-        print("Failed to import dependency_that_sometimes_exists: {}".format(e))
+        log.trace('Failed to import dependency_that_sometimes_exists: {0}'.format(e))
 
     @depends('dependency_that_sometimes_exists')
     def foo():
