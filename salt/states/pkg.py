@@ -918,6 +918,10 @@ def mod_init(low):
     It also runs the "ex_mod_init" from the package manager module that is
     currently loaded. The "ex_mod_init" is expected to work as a normal
     "mod_init" function.
+
+    .. seealso::
+       :py:func:`salt.modules.ebuild.ex_mod_init`
+
     '''
     ret = True
     if 'pkg.ex_mod_init' in __salt__:
