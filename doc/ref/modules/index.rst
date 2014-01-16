@@ -292,8 +292,8 @@ If a "fallback_function" is defined, it will replace the function instead of rem
     from salt.utils.decorators import depends
     try:
         import dependency_that_sometimes_exists
-    except ImportError:
-        pass
+    except ImportError as e:
+        print("Failed to import dependency_that_sometimes_exists: {}".format(e))
 
     @depends('dependency_that_sometimes_exists')
     def foo():
