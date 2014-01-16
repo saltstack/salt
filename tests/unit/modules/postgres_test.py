@@ -185,7 +185,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c (\'|\")ALTER ROLE testgroup WITH PASSWORD',
+            '/usr/bin/pgsql --no-align --no-readline --username testuser --host testhost --port testport --dbname maint_db -c (\'|\")ALTER ROLE testgroup WITH UNENCRYPTED PASSWORD',
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql', Mock(return_value={'retcode': None}))
@@ -223,6 +223,7 @@ class PostgresTestCase(TestCase):
             'can update system catalogs': 't',
             'can login': 't',
             'replication': None,
+            'password': 'test_password',
             'connections': '-1',
             'defaults variables': None
         }]))
