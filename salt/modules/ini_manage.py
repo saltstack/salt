@@ -25,8 +25,8 @@ def __virtual__():
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
-option_regexp1 = re.compile(r'\s*(.+)\s*(=)\s*(.+)\s*')
-option_regexp2 = re.compile(r'\s*(.+)\s*(:)\s*(.+)\s*')
+option_regexp1 = re.compile(r'\s*(.+?)\s*(=)\s*(.+)\s*')
+option_regexp2 = re.compile(r'\s*(.+?)\s*(:)\s*(.+)\s*')
 
 
 def set_option(file_name, sections=None, summary=True):
