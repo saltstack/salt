@@ -116,7 +116,7 @@ def rollback():
 def diff():
 
     ret = dict()
-    conn = __opt__['proxyconn']
+    conn = __opts__['proxyconn']
     ret['out'] = True
     ret['message'] = conn.cu.diff()
 
@@ -126,6 +126,6 @@ def diff():
 def ping():
 
     ret = dict()
-    conn = __opt__['proxyconn']
+    conn = __opts__['proxyconn']
     ret['message'] = conn.cli('show system uptime')
     ret['out'] = True
