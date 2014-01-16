@@ -28,6 +28,7 @@ import tempfile
 try:
     import pipes
     import csv
+    import hashlib
     HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_ALL_IMPORTS = False
@@ -126,7 +127,8 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     if psql_version:
         return distutils.version.LooseVersion(psql_version)
     else:
-        log.warning('Attempt to parse version of Postgres server failed. Is the server responding?')
+        log.warning('Attempt to parse version of Postgres server failed.'
+                    'Is the server responding?')
         return None
 
 
@@ -179,7 +181,7 @@ def _psql_cmd(*args, **kwargs):
         maintenance_db = 'postgres'
     cmd += ['--dbname', maintenance_db]
     cmd += args
-    cmdstr = ' '.join(map(pipes.quote, cmd))
+    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     return cmdstr
 
 
@@ -394,9 +396,11 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
 # User related actions
 
 def user_list(user=None, host=None, port=None, maintenance_db=None,
-              password=None, runas=None):
+              password=None, runas=None, return_password=False):
     '''
     Return a dict with information about users of a Postgres server.
+
+    Set return_password to True to get password hash in the result.
 
     CLI Example:
 
@@ -414,30 +418,24 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas)
     if ver >= distutils.version.LooseVersion('9.1'):
-        query = (
-            'SELECT rolname as "name", rolsuper as "superuser", '
-            'rolinherit as "inherits privileges", '
-            'rolcreaterole as "can create roles", '
-            'rolcreatedb as "can create databases", '
-            'rolcatupdate as "can update system catalogs", '
-            'rolcanlogin as "can login", rolreplication as "replication", '
-            'rolconnlimit as "connections", '
-            'rolvaliduntil::timestamp(0) as "expiry time", '
-            'rolconfig  as "defaults variables" '
-            'FROM pg_roles'
-        )
+        replication_column = 'rolreplication'
     else:
-        query = (
+        replication_column = 'NULL'
+
+    query = (
             'SELECT rolname as "name", rolsuper as "superuser", '
             'rolinherit as "inherits privileges", '
             'rolcreaterole as "can create roles", '
             'rolcreatedb as "can create databases", '
             'rolcatupdate as "can update system catalogs", '
-            'rolcanlogin as "can login", NULL as "replication", '
+            'rolcanlogin as "can login", {0} as "replication", '
             'rolconnlimit as "connections", '
             'rolvaliduntil::timestamp(0) as "expiry time", '
-            'rolconfig  as "defaults variables" '
-            'FROM pg_roles'
+            'rolconfig  as "defaults variables", '
+            'pg_shadow.passwd as "password" '
+            'FROM pg_roles '
+            'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
+            .format(replication_column)
         )
 
     rows = psql_query(query, runas=runas, host=host, user=user,
@@ -445,6 +443,9 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                       password=password)
 
     def get_bool(rowdict, key):
+        '''
+        Returns the boolean value of the key, instead of 't' and 'f' strings.
+        '''
         if rowdict[key] == 't':
             return True
         elif rowdict[key] == 'f':
@@ -465,13 +466,18 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             except (ValueError, KeyError):
                 retrow[date_key] = None
         retrow['defaults variables'] = row['defaults variables']
+        if return_password:
+            retrow['password'] = row['password']
         ret[row['name']] = retrow
 
     return ret
 
 
 def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
-                password=None, runas=None):
+                password=None,
+                createdb=None, createuser=None, superuser=None,
+                replication=None, rolepassword=None,
+                runas=None):
     '''
     Checks if a user exists on the Postgres server.
 
@@ -482,12 +488,39 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
         salt '*' postgres.user_exists 'username'
     '''
 
-    return name in user_list(user=user,
+    all_users = user_list(user=user,
                              host=host,
                              port=port,
                              maintenance_db=maintenance_db,
                              password=password,
-                             runas=runas)
+                             runas=runas,
+                             return_password=True)
+    if name not in all_users:
+        # User does not exist at all
+        return False
+
+    # Check user attributes
+    user_attr = all_users[name]
+
+    if not user_attr['can login']:
+        return False
+    if createdb is not None and user_attr['can create databases'] != createdb \
+            or createuser is not None and user_attr['can create roles'] != createuser \
+            or replication is not None and user_attr['replication'] != replication \
+            or superuser is not None and user_attr['superuser'] != superuser:
+        return False
+
+    if rolepassword is not None and \
+        user_attr['password'] != "md5{0}".format(
+                    hashlib.md5('{0}{1}'.format(rolepassword, name)).hexdigest()
+                ):
+        log.info('MD5 hash of the password of user {0} '
+                 'is not what was expected. However, '
+                 'Please note that postgres.user_exists '
+                 'only supports MD5 hashed passwords'.format(name))
+        return False
+
+    return True
 
 
 def _role_create(name,
@@ -600,6 +633,7 @@ def _role_update(name,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
+                 superuser=False,
                  replication=False,
                  rolepassword=None,
                  groups=None,
@@ -615,16 +649,33 @@ def _role_update(name,
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    if encrypted is not None:
+        if encrypted:
+            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
+        else:
+            sub_cmd = '{0} UNENCRYPTED'.format(sub_cmd)
     if rolepassword is not None:
         sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, rolepassword)
-    if createdb:
-        sub_cmd = '{0} CREATEDB'.format(sub_cmd)
-    if createuser:
-        sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
-    if encrypted:
-        sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
-    if replication:
-        sub_cmd = '{0} REPLICATION'.format(sub_cmd)
+    if createdb is not None:
+        if createdb:
+            sub_cmd = '{0} CREATEDB'.format(sub_cmd)
+        else:
+            sub_cmd = '{0} NOCREATEDB'.format(sub_cmd)
+    if createuser is not None:
+        if createuser:
+            sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
+        else:
+            sub_cmd = '{0} NOCREATEUSER'.format(sub_cmd)
+    if superuser is not None:
+        if superuser:
+            sub_cmd = '{0} SUPERUSER'.format(sub_cmd)
+        else:
+            sub_cmd = '{0} NOSUPERUSER'.format(sub_cmd)
+    if replication is not None:
+        if replication:
+            sub_cmd = '{0} REPLICATION'.format(sub_cmd)
+        else:
+            sub_cmd = '{0} NOREPLICATION'.format(sub_cmd)
 
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
@@ -636,7 +687,7 @@ def _role_update(name,
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
                     maintenance_db=maintenance_db, password=password)
     ret = _run_psql(cmd, runas=runas, password=password, host=host,
-                     run_cmd='cmd.run')
+                     run_cmd='cmd.run_all')
 
     return ret['retcode'] == 0
 
@@ -647,10 +698,11 @@ def user_update(username,
                 port=None,
                 maintenance_db=None,
                 password=None,
-                createdb=False,
-                createuser=False,
-                encrypted=False,
-                replication=False,
+                createdb=None,
+                createuser=None,
+                encrypted=None,
+                superuser=None,
+                replication=None,
                 rolepassword=None,
                 groups=None,
                 runas=None):
@@ -674,6 +726,7 @@ def user_update(username,
                         createdb,
                         createuser,
                         encrypted,
+                        superuser,
                         replication,
                         rolepassword,
                         groups,
