@@ -382,7 +382,7 @@ def purge_cache():
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, r) for r in remove_dirs
-                   if r not in ('hash', 'refs')]
+                   if r not in ('hash', 'refs', 'envs.p')]
     if remove_dirs:
         for r in remove_dirs:
             shutil.rmtree(r)
@@ -428,6 +428,14 @@ def update():
         except (IOError, OSError):
             pass
 
+    env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+    if data.get('changed', False) is True or not os.path.isfile(env_cache):
+        new_envs = envs(ignore_cache=True)
+        serial = salt.payload.Serial(__opts__)
+        with salt.utils.fopen(env_cache, 'w+') as fp_:
+            fp_.write(serial.dumps(new_envs))
+            log.trace('Wrote env cache data to {0}'.format(env_cache))
+
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
         event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
@@ -442,10 +450,15 @@ def update():
         pass
 
 
-def envs():
+def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
     '''
+    if not ignore_cache:
+        env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+        cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
+        if cache_match is not None:
+            return cache_match
     base_branch = __opts__['gitfs_base']
     provider = _get_provider()
     ret = set()
