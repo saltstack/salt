@@ -8,7 +8,6 @@ option.
 
 # Import python libs
 import os
-import time
 import logging
 
 try:
