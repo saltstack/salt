@@ -756,6 +756,13 @@ _OS_FAMILY_MAP = {
 }
 
 
+def _linux_bin_exists(bin):
+    '''
+    Does a binary exist in linux (depends on which)
+    '''
+    return __salt__['cmd.run']('which {0} > /dev/null; echo $?'.format(bin)) == '0'
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -782,6 +789,13 @@ def os_data():
         grains.update(_ps(grains))
         return grains
     elif salt.utils.is_linux():
+        # Add SELinux grain, if you have it
+        if _linux_bin_exists('selinuxenabled'):
+            grains['selinux'] = {}
+            grains['selinux']['enabled'] = __salt__['cmd.run']('selinuxenabled; echo $?').strip() == '0'
+            if _linux_bin_exists('getenforce'):
+                grains['selinux']['enforced'] = __salt__['cmd.run']('getenforce').strip()
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release
