@@ -53,7 +53,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family', False) != 'Debian':
         return False
     return __virtualname__
 

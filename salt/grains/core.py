@@ -38,7 +38,6 @@ __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet
 }
-
 log = logging.getLogger(__name__)
 
 HAS_WMI = False
@@ -772,12 +771,14 @@ def os_data():
         'gpus': [],
         }
 
+    log.debug('*'*80)
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
     # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+
     if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']
         grains['osversion'] = grains['kernelrelease'] = version
@@ -995,6 +996,10 @@ def locale_info():
         defaultencoding
     '''
     grains = {}
+
+    if 'proxyminion' in __opts__:
+        return grains
+
     try:
         (grains['defaultlanguage'], grains['defaultencoding']) = locale.getdefaultlocale()
     except Exception:
@@ -1016,6 +1021,10 @@ def hostname():
     #   localhost
     #   domain
     grains = {}
+
+    if 'proxyminion' in __opts__:
+        return grains
+
     grains['localhost'] = socket.gethostname()
     if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
@@ -1029,7 +1038,12 @@ def append_domain():
     '''
     Return append_domain if set
     '''
+
     grain = {}
+
+    if 'proxyminion' in __opts__:
+        return grain
+
     if 'append_domain' in __opts__:
         grain['append_domain'] = __opts__['append_domain']
     return grain
@@ -1039,6 +1053,10 @@ def ip4():
     '''
     Return a list of ipv4 addrs
     '''
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
 
 
@@ -1046,6 +1064,10 @@ def fqdn_ip4():
     '''
     Return a list of ipv4 addrs of fqdn
     '''
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
         addrs = list(set(item[4][0] for item in info))
@@ -1058,6 +1080,10 @@ def ip6():
     '''
     Return a list of ipv6 addrs
     '''
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
 
 
@@ -1065,6 +1091,10 @@ def fqdn_ip6():
     '''
     Return a list of ipv6 addrs of fqdn
     '''
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
         addrs = list(set(item[4][0] for item in info))
@@ -1079,6 +1109,10 @@ def ip_interfaces():
     '''
     # Provides:
     #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     ret = {}
     ifaces = salt.utils.network.interfaces()
     for face in ifaces:
@@ -1113,6 +1147,7 @@ def path():
     '''
     # Provides:
     #   path
+
     return {'path': os.environ['PATH'].strip()}
 
 
@@ -1176,6 +1211,9 @@ def _dmidecode_data(regex_dict):
     '''
     ret = {}
 
+    if 'proxyminion' in __opts__:
+        return {}
+
     # No use running if dmidecode/smbios isn't in the path
     if salt.utils.which('dmidecode'):
         out = __salt__['cmd.run']('dmidecode')
@@ -1231,6 +1269,10 @@ def _hw_data(osdata):
 
     .. versionadded:: 0.9.5
     '''
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     grains = {}
     # TODO: *BSD dmidecode output
     if osdata['kernel'] == 'Linux':
@@ -1307,6 +1349,10 @@ def _smartos_zone_data():
     # Provides:
     #   pkgsrcversion
     #   imageversion
+
+    if 'proxyminion' in __opts__:
+        return {}
+
     grains = {}
 
     pkgsrcversion = re.compile('^release:\\s(.+)')
@@ -1338,6 +1384,9 @@ def get_server_id():
     '''
     # Provides:
     #   server_id
+
+    if 'proxyminion' in __opts__:
+        return {}
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
 
 
