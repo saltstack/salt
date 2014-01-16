@@ -130,10 +130,10 @@ class SMaster(object):
                     user
                 )
             )
-            cumask = os.umask(191)
+
             if user not in users:
                 try:
-                    founduser = pwd.getpwnam(user)
+                    user = pwd.getpwnam(user)
                 except KeyError:
                     log.error('ACL user {0} is not available'.format(user))
                     continue
@@ -146,6 +146,7 @@ class SMaster(object):
                 os.unlink(keyfile)
 
             key = salt.crypt.Crypticle.generate_key_string()
+            cumask = os.umask(191)
             with salt.utils.fopen(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
