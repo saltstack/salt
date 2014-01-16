@@ -282,7 +282,7 @@ class _Ini(object):
                 file_contents += '[%s]\n' % section.section_name
             for item in section:
                 if isinstance(item, _Option):
-                    file_contents += '%s %s %s\n' % (item.name, item.separator,
+                    file_contents += '%s%s%s\n' % (item.name, item.separator,
                                                      item.value)
                 else:
                     file_contents += '# %s\n' % item
@@ -335,7 +335,7 @@ class _Ini(object):
         if not ma:
             ma = re.match(option_regexp2, line)
         return _Option(ma.group(1).strip(), ma.group(3).strip(),
-                      ma.group(2).strip())
+                       ma.group(2).strip())
 
     @staticmethod
     def iscomment(line):
