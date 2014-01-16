@@ -122,6 +122,7 @@ def diff():
 
     return ret
 
+
 def ping():
 
     ret = dict()

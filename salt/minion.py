@@ -1319,7 +1319,6 @@ class Minion(object):
                     exc_info=True
                 )
 
-
     def tune_in_no_block(self):
         '''
         Executes the tune_in sequence but omits extra logging and the
@@ -1894,13 +1893,11 @@ class ProxyMinion(Minion):
             self.returners)
         self.grains_cache = self.opts['grains']
 
-
     def _prep_mod_opts(self):
         '''
         Returns a copy of the opts with key bits stripped out
         '''
         return super(ProxyMinion, self)._prep_mod_opts()
-
 
     def _load_modules(self):
         '''
