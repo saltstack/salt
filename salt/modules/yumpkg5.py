@@ -48,7 +48,6 @@ def __virtual__():
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
         os_major_version = int(__grains__['osrelease'].split('.')[0])
-        selinux = __grains__['selinux']['enabled']
     except Exception:
         return False
 
