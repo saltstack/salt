@@ -545,7 +545,7 @@ class Minion(object):
             log.debug('I am {0} and I need to start some proxies for {0}'.format(self.opts['id'],
                                                                                  self.opts['pillar']['proxy']))
             for p in self.opts['pillar']['proxy']:
-                log.debug('Starting {} proxy.'.format(p))
+                log.debug('Starting {0} proxy.'.format(p))
                 pid = os.fork()
                 if pid > 0:
                     continue
@@ -554,7 +554,7 @@ class Minion(object):
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
-            log.debug("I am {} and I am not supposed to start any proxies.".format(self.opts['id']))
+            log.debug("I am {0} and I am not supposed to start any proxies.".format(self.opts['id']))
 
     def _prep_mod_opts(self):
         '''

@@ -16,6 +16,7 @@ import salt.loader
 
 __proxyenabled__ = ['*']
 
+
 def echo(text):
     '''
     Return a string - used for testing the connection
