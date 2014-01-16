@@ -395,7 +395,7 @@ class Terminal(object):
                 # Set the terminal size
                 self.child_fd = self.stdin
 
-                if self.child_fd.isatty():
+                if os.isatty(self.child_fd):
                     # Only try to set the window size if the parent IS a tty
                     try:
                         self.setwinsize(self.rows, self.cols)
