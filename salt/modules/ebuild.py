@@ -158,7 +158,25 @@ def check_db(*names, **kwargs):
 
 def ex_mod_init(low):
     '''
-    Enforce a nice tree structure for /etc/portage/package.* configuration files.
+    If the config option ``ebuild.enforce_nice_config`` is set to True, this
+    module will enforce a nice tree structure for /etc/portage/package.*
+    configuration files.
+
+    .. versionadded:: 0.17.0
+       Initial automatic enforcement added when pkg is used on a Gentoo system.
+
+    .. versionchanged:: 2014.1.0-Hydrogen
+       Configure option added to make this behaviour optional, defaulting to
+       off.
+
+    .. seealso::
+       ``ebuild.ex_mod_init`` is called automatically when a state invokes a
+       pkg state on a Gentoo system.
+       :py:func:`salt.states.pkg.mod_init`
+
+       ``ebuild.ex_mod_init`` uses ``portage_config.enforce_nice_config`` to do
+       the lifting.
+       :py:func:`salt.modules.portage_config.enforce_nice_config`
 
     CLI Example:
 
@@ -166,7 +184,8 @@ def ex_mod_init(low):
 
         salt '*' pkg.ex_mod_init
     '''
-    __salt__['portage_config.enforce_nice_config']()
+    if __salt__['config.get']('ebuild.enforce_nice_config', False):
+        __salt__['portage_config.enforce_nice_config']()
     return True
 
 
