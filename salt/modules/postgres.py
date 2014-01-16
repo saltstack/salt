@@ -504,10 +504,10 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
 
     if not user_attr['can login']:
         return False
-    if  createdb is not None and user_attr['can create databases'] != createdb \
-     or createuser is not None and user_attr['can create roles'] != createuser \
-     or replication is not None and user_attr['replication'] != replication \
-     or superuser is not None and user_attr['superuser'] != superuser:
+    if createdb is not None and user_attr['can create databases'] != createdb \
+            or createuser is not None and user_attr['can create roles'] != createuser \
+            or replication is not None and user_attr['replication'] != replication \
+            or superuser is not None and user_attr['superuser'] != superuser:
         return False
 
     if rolepassword is not None and \
