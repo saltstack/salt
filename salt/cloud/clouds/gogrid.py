@@ -258,13 +258,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
+    if password in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',

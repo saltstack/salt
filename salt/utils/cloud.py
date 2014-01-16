@@ -351,7 +351,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
                 kwargs['password'] = password
-                log.debug('Using {0} as the password'.format(password))
+                log.debug('Using password authentication'.format(password))
 
             trycount += 1
             log.debug(
