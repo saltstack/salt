@@ -283,7 +283,7 @@ class _Ini(object):
             for item in section:
                 if isinstance(item, _Option):
                     file_contents += '%s%s%s\n' % (item.name, item.separator,
-                                                     item.value)
+                                                   item.value)
                 else:
                     file_contents += '# %s\n' % item
             file_contents += '\n'
