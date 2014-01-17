@@ -645,6 +645,15 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+def ssh_gateway(vm_):
+    '''
+    Return the ssh_gateway IP address to connect to.
+    '''
+    return config.get_cloud_config_value(
+        'ssh_gateway', vm_, __opts__, default=None,
+        search_global=False
+    )
+
 
 def get_location(vm_=None):
     '''
