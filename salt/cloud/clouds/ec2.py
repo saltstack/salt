@@ -1355,8 +1355,7 @@ def create(vm_=None, call=None):
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
-        {'ip_address': ip_address,
-         'ssh_gateway': ssh_gateway_config},
+        {'ip_address': ip_address},
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
@@ -1478,6 +1477,10 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
+        # Copy ssh_gateway_config into deploy scripts
+        if ssh_gateway_config:
+            deploy_kwargs['gateway'] = ssh_gateway_config
+
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
         del event_kwargs['minion_pem']
@@ -1485,6 +1488,9 @@ def create(vm_=None, call=None):
         del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
             del event_kwargs['password']
+        if 'gateway' in event_kwargs:
+            if 'ssh_gateway_password' in event_kwargs['gateway']:
+                del event_kwargs['gateway']['ssh_gateway_password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
