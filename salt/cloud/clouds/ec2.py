@@ -690,7 +690,7 @@ def get_ssh_gateway_config(vm_):
                 key_filename
             )
         )
-    elif not ssh_gateway_config['password']:
+    elif key_filename is None and not ssh_gateway_config['password']:
         raise SaltCloudConfigError(
             'No authentication method. Please define: '
             ' ssh_gateway_password or ssh_gateway_private_key'
@@ -1391,7 +1391,8 @@ def create(vm_=None, call=None):
                 ssh_timeout=config.get_cloud_config_value(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=key_filename,
-                display_ssh_output=display_ssh_output
+                display_ssh_output=display_ssh_output,
+                gateway=ssh_gateway_config
             ):
                 username = user
                 break

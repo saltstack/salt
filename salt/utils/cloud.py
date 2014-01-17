@@ -283,11 +283,6 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
-    log.debug(
-        'Attempting connection to host {0} on port {1}'.format(
-            host, port
-        )
-    )
     # Assign test ports because if a gateway is defined
     # we first want to test the gateway before the host.
     test_ssh_host = host
@@ -299,6 +294,18 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
         test_ssh_host = ssh_gateway
         test_ssh_port = ssh_gateway_port
+        log.debug(
+            'Attempting connection to host {0} on port {1} '
+            'via gateway {2} on port {3}'.format(
+                host, port, ssh_gateway, ssh_gateway_port
+            )
+        )
+    else:
+        log.debug(
+            'Attempting connection to host {0} on port {1}'.format(
+                host, port
+            )
+        )
     trycount = 0
     while True:
         trycount += 1
@@ -427,7 +434,7 @@ def validate_windows_cred(host, username='Administrator', password=None):
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
-                    trysleep=1, display_ssh_output=True):
+                    trysleep=1, display_ssh_output=True, gateway=None):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -440,6 +447,11 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output}
+            if gateway:
+                kwargs['ssh_gateway'] = gateway['gateway']
+                kwargs['ssh_gateway_key'] = gateway['key_filename']
+                kwargs['ssh_gateway_user'] = gateway['username']
+
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
@@ -1150,20 +1162,28 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = '22'
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} -p {1} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+                ssh_gateway_key,
+                ssh_gateway_user,
                 ssh_gateway,
                 ssh_gateway_port
             )
         ])
         log.info(
-            'Using SSH gateway {0}:{1}'.format(
-                ssh_gateway, ssh_gateway_port
+            'Using SSH gateway {0}@{1}:{2}'.format(
+                ssh_gateway_user, ssh_gateway, ssh_gateway_port
             )
         )
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
