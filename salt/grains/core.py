@@ -756,11 +756,11 @@ _OS_FAMILY_MAP = {
 }
 
 
-def _linux_bin_exists(bin):
+def _linux_bin_exists(binary):
     '''
     Does a binary exist in linux (depends on which)
     '''
-    return __salt__['cmd.run']('which {0} > /dev/null; echo $?'.format(bin)) == '0'
+    return __salt__['cmd.run']('which {0} > /dev/null; echo $?'.format(binary)) == '0'
 
 
 def os_data():
