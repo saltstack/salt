@@ -28,6 +28,7 @@ account when configuring your syslog daemon.
 
 # Import python libs
 import copy
+import fnmatch
 import logging
 import os
 import re
@@ -390,34 +391,64 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def list_repo_pkgs():
+def list_repo_pkgs(*args, **kwargs):
     '''
-    List the packages from repo in a dict::
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
-        {'repo':{'<repo_name>':['<package_name>']}}
+    Returns all available packages. Optionally, package names can be passed and
+    the results will be filtered to packages matching those names. This can be
+    helpful in discovering the version or repo to specify in a pkg.installed
+    state. The return data is a dictionary of repo names, with each repo having
+    a list of dictionaries denoting the package name and version. An example of
+    the return data would look like this:
+
+    .. code-block:: python
+
+        {
+            '<repo_name>': [
+                {'<package1>': '<version1>'},
+                {'<package2>': '<version2>'},
+                {'<package3>': '<version3>'}
+            ]
+        }
+
+    fromrepo : None
+        Only include results from the specified repo(s). Multiple repos can be
+        specified, comma-separated.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
     '''
+    try:
+        repos = tuple(x.strip() for x in kwargs.get('fromrepo').split(','))
+    except AttributeError:
+        # Search in all enabled repos
+        repos = tuple(
+            x for x, y in list_repos().iteritems()
+            if str(y.get('enabled', '1')) == '1'
+        )
+
     yb = yum.YumBase()
     yb.conf.cache = 1
-    ret = {'repo': {}}
+    ret = {}
+    suffix_notneeded = rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']
     for pkg in sorted(yb.pkgSack.returnPackages()):
-        pkgname = '{0}-{1}-{2}.{3}.rpm'.format(pkg.name,
-                                               pkg.ver,
-                                               pkg.release,
-                                               pkg.arch)
-        pkgrepo = pkg.repoid
-        if ret['repo'].keys() == '' or pkgrepo not in ret['repo'].keys():
-            ret['repo'].update({pkgrepo: []})
-        elif pkgrepo in ret['repo'].keys():
-            pkglist = ret['repo'][pkgrepo]
-            pkglist.append(pkgname)
-        else:
-            ret = {}
+        if pkg.repoid in repos:
+            if pkg.arch in suffix_notneeded:
+                name = pkg.name
+            else:
+                name = '.'.join((pkg.name, pkg.arch))
+            version = '-'.join((pkg.version, pkg.release))
+            if (not args) or any(fnmatch.fnmatch(name, x) for x in args):
+                ret.setdefault(pkg.repoid, []).append({name: version})
+
+    for reponame in ret:
+        ret[reponame].sort()
     return ret
 
 
