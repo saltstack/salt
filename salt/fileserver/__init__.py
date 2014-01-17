@@ -15,6 +15,22 @@ import salt.loader
 log = logging.getLogger(__name__)
 
 
+def check_env_cache(opts, env_cache):
+    '''
+    Returns cached env names, if present. Otherwise returns None.
+    '''
+    if not os.path.isfile(env_cache):
+        return None
+    try:
+        with salt.utils.fopen(env_cache, 'r') as fp_:
+            log.trace('Returning env cache data from {0}'.format(env_cache))
+            serial = salt.payload.Serial(opts)
+            return serial.load(fp_)
+    except (IOError, OSError):
+        pass
+    return None
+
+
 def generate_mtime_map(path_map):
     '''
     Generate a dict of filename -> mtime
