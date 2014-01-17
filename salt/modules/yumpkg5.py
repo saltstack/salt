@@ -86,6 +86,7 @@ def _parse_pkginfo(line):
 
     return pkginfo(name, pkg_version, arch, repoid)
 
+
 def _repoquery_pkginfo(repoquery_args):
     '''
     Wrapper to call repoquery and parse out all the tuples
