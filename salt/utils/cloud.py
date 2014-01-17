@@ -1013,6 +1013,28 @@ def scp_file(dest_path, contents, kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.extend([
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        ])
+
     cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
         ' '.join(ssh_args), tmppath, kwargs, dest_path
     )
