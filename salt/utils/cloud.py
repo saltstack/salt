@@ -292,6 +292,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         ssh_gateway_port = 22
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in gateway:
+            ssh_gateway_port = gateway['ssh_gateway_port']
         test_ssh_host = ssh_gateway
         test_ssh_port = ssh_gateway_port
         log.debug(
@@ -1020,6 +1022,8 @@ def scp_file(dest_path, contents, kwargs):
         ssh_gateway_user = 'root'
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
         if 'ssh_gateway_key' in kwargs:
             ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
         if 'ssh_gateway_user' in kwargs:
@@ -1189,6 +1193,8 @@ def root_cmd(command, tty, sudo, **kwargs):
         ssh_gateway_user = 'root'
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
         if 'ssh_gateway_key' in kwargs:
             ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
         if 'ssh_gateway_user' in kwargs:

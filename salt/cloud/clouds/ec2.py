@@ -32,13 +32,17 @@ To use the EC2 cloud module, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
-      # SSH Gateway's can be used with this provider. Gateways can be used
+      # SSH Gateways can be used with this provider. Gateways can be used
       # when a salt-master is not on the same private network as the instance
       # that is being deployed.
 
-      # Defaults to port 22
+      # Defaults to None
       # Required
-      ssh_gateway: gateway.example.com:22
+      ssh_gateway: gateway.example.com
+
+      # Defaults to port 22
+      # Optional
+      ssh_gateway_port: 22
 
       # Defaults to root
       # Optional
@@ -684,6 +688,12 @@ def get_ssh_gateway_config(vm_):
 
     # ssh_gateway
     ssh_gateway_config = {'ssh_gateway': ssh_gateway}
+
+    # ssh_gateway_port
+    ssh_gateway_config['ssh_gateway_port'] = config.get_cloud_config_value(
+        'ssh_gateway_port', vm_, __opts__, default=None,
+        search_global=False
+    )
 
     # ssh_gateway_username
     ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
