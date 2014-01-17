@@ -109,6 +109,13 @@ def _salt_callback(func):
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
+        # before returning, trying to compact the log output
+        for k in ['comment', 'out', 'outlog']:
+            if status[k] and isinstance(status[k], string_types):
+                status[k] = '\n'.join([
+                    log
+                    for log in status[k].split('\n')
+                    if log.strip()])
         return status
     _call_callback.__doc__ = func.__doc__
     return _call_callback
