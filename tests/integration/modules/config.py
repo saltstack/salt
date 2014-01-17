@@ -45,11 +45,11 @@ class ConfigTest(integration.ModuleCase):
         # interpreter is breaking it for remote calls
         # The correct standard is the four digit form.
         self.assertEqual(
-            self.run_function('config.manage_mode', ['775']), '0775')
+            self.run_function('config.manage_mode', ['"775"']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['1775']), '1775')
+            self.run_function('config.manage_mode', ['"1775"']), '1775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['0775']), '0775')
+            self.run_function('config.manage_mode', ['"0775"']), '0775')
 
     def test_option(self):
         '''
