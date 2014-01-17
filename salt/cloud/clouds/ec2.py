@@ -690,6 +690,11 @@ def get_ssh_gateway_config(vm_):
                 key_filename
             )
         )
+    elif not ssh_gateway_config['password']:
+        raise SaltCloudConfigError(
+            'No authentication method. Please define: '
+            ' ssh_gateway_password or ssh_gateway_private_key'
+        )
 
     return ssh_gateway_config
 
