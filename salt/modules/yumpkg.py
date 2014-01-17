@@ -29,13 +29,12 @@ account when configuring your syslog daemon.
 # Import python libs
 import copy
 import logging
-import os
 import re
 import yaml
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 from salt.utils import namespaced_function as _namespaced_function
 from salt.modules.yumpkg5 import (
     _parse_repo_file, list_repos, mod_repo, get_repo, del_repo,
