@@ -69,7 +69,10 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     serial = salt.payload.Serial(opts)
     with salt.utils.fopen(list_cache, 'w+') as fp_:
         fp_.write(serial.dumps(data))
-        os.remove(w_lock)
+        try:
+            os.remove(w_lock)
+        except OSError, e:
+            log.trace("Error removing lockfile {0}:  {1}".format(w_lock, e))
         log.trace('Lockfile {0} removed'.format(w_lock))
 
 
