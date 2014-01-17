@@ -32,6 +32,27 @@ To use the EC2 cloud module, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
+      # SSH Gateway's can be used with this provider. Gateways can be used
+      # when a salt-master is not on the same private network as the instance
+      # that is being deployed.
+
+      # Defaults to port 22
+      # Required
+      ssh_gateway: gateway.example.com:22
+
+      # Defaults to root
+      # Optional
+      ssh_gateway_username: root
+
+      # One authentication method is required. If both
+      # are specified, Private key wins.
+
+      # Private key defaults to None
+      ssh_gateway_private_key: /path/to/key.pem
+
+      # Password defaults to None
+      ssh_gateway_password: ExamplePasswordHere
+
       provider: ec2
 
 '''
