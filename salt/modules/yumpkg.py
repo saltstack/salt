@@ -141,7 +141,7 @@ def __virtual__():
     '''
     Deprecated, yumpkg5 is being used now.
     '''
-    if __opts__['yum_provider'] == 'yumpkg':
+    if __opts__.get('yum_provider') == 'yumpkg':
         return __virtualname__
     return False
 

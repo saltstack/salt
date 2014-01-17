@@ -44,7 +44,7 @@ def __virtual__():
     Confine this module to yum based systems
     '''
     # Work only on RHEL/Fedora based distros with python 2.5 and below
-    if __opts__['yum_provider'] == 'yumpkg':
+    if __opts__.get('yum_provider') == 'yumpkg':
         return False
     try:
         os_grain = __grains__['os'].lower()
