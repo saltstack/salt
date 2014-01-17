@@ -629,15 +629,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 key_filename
             )
         )
+    gateway=None
+    if kwargs['gateway']:
+        gateway = kwargs['gateway']
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
-    if wait_for_port(host=host, port=port):
+
+    if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
-                           display_ssh_output=display_ssh_output):
+                           display_ssh_output=display_ssh_output, gateway=gateway):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -652,20 +656,16 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 'display_ssh_output': display_ssh_output,
                 'sudo_password': sudo_password,
             }
+            if gateway:
+                kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
             elif password:
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
-
-            #FIXME: this try-except doesn't make sense! Something is missing...
-            try:
-                log.debug('SSH connection to {0} successful'.format(host))
-            except Exception as exc:
-                log.error(
-                    'There was an error in deploy_script: {0}'.format(exc)
-                )
 
             if provider == 'ibmsce':
                 subsys_command = (
