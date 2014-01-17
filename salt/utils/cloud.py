@@ -275,7 +275,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             )
 
 
-def wait_for_port(host, gateway=None, port=22, timeout=900):
+def wait_for_port(host, port=22, timeout=900, gateway=None):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
