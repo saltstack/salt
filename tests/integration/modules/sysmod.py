@@ -61,6 +61,8 @@ class SysModuleTest(integration.ModuleCase):
                 'runtests_decorators.depends_will_fallback',
                 'runtests_decorators.missing_depends',
                 'runtests_decorators.missing_depends_will_fallback',
+                'yumpkg.expand_repo_def',
+                'yumpkg5.expand_repo_def',
         )
 
         for fun in docs:
