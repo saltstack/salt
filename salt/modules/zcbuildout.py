@@ -79,6 +79,7 @@ def _salt_callback(func):
         unless = kw.get('unless', None)
         runas = kw.get('runas', None)
         env = kw.get('env', ())
+        status = BASE_STATUS.copy()
         try:
             # may rise _ResultTransmission
             status = _check_onlyif_unless(onlyif,
