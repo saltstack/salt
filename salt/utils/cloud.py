@@ -294,7 +294,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     test_ssh_port = port
     if gateway:
         ssh_gateway = gateway['gateway']
-        ssh_gateway_port = '22'
+        ssh_gateway_port = 22
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
         test_ssh_host = ssh_gateway
@@ -369,7 +369,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
     # SSH command
     cmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
-        ' '.join(ssh_args), ssh_gateway['username'], ssh_gateway,
+        ' '.join(ssh_args), gateway['username'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
@@ -395,8 +395,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                     )
                     proc.terminate()
                     return 1
-            proc.sendline(ssh_gateway['password'])
+            proc.sendline(gateway['password'])
             sent_password = True
+            time.sleep(0.25)
         # Get the exit code of the SSH command.
         # If 0 then the port is open.
         if proc.status == 0:
