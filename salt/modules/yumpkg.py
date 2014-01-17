@@ -12,6 +12,15 @@ whatever is logged to /var/log/yum.log. See the manpage for ``yum.conf(5)`` for
 information on how to use the ``syslog_facility`` and ``syslog_device`` config
 parameters to configure how syslog is handled, or take the above defaults into
 account when configuring your syslog daemon.
+
+.. note::
+
+    As of version 2014.1.0 (Hydrogen), this module is only used for yum-based
+    distros if the minion has the following config parameter set:
+
+    .. code-block:: yaml
+
+        yum_provider: yumpkg
 '''
 
 # NOTE: This is no longer being developed and is not guaranteed to be
