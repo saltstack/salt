@@ -31,9 +31,13 @@ can be used to specify which provider should be used.
     supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
     used.
 
+    Additionally, `pygit2`_ does not yet support passing http/https credentials
+    via a `.netrc`_ file.
+
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
 # Import python libs
