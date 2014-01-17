@@ -52,7 +52,10 @@ def find_file(path, env='base', **kwargs):
         log.debug('minionfs will NOT serve top.sls '
                      'for security reasons: {0}'.format(path))
         return fnd
-    minion, pushed_file = path.split(os.sep, 1)
+    try:
+        minion, pushed_file = path.split(os.sep, 1)
+    except ValueError:
+        return fnd
     full = os.path.join(__opts__['cachedir'], 'minions',
                                      minion, 'files', pushed_file)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
