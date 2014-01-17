@@ -1377,7 +1377,7 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address,
+    elif salt.utils.cloud.wait_for_port(ip_address, ssh_gateway_config,
                                         timeout=ssh_connect_timeout):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(

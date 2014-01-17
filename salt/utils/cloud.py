@@ -275,7 +275,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             )
 
 
-def wait_for_port(host, port=22, timeout=900):
+def wait_for_port(host, gateway=None, port=22, timeout=900):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -299,7 +299,6 @@ def wait_for_port(host, port=22, timeout=900):
             sock.shutdown(socket.SHUT_RDWR)
             # Close it!
             sock.close()
-            return True
         except socket.error as exc:
             log.debug('Caught exception in wait_for_port: {0}'.format(exc))
             time.sleep(1)
@@ -313,6 +312,90 @@ def wait_for_port(host, port=22, timeout=900):
                     host, port, trycount
                 )
             )
+    if not gateway:
+        return True
+    # Let the user know that his gateway is good!
+    log.debug(
+        'Gateway {0} on port {1} '
+        'is reachable.'.format(
+            host, port
+        )
+    )
+    ssh_gateway = gateway['gateway']
+    ssh_gateway_port = '22'
+    if ':' in ssh_gateway:
+        ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+    # Now we need to test the host via the gateway.
+    # We will use netcat on the gateway to test the port
+    ssh_args = []
+    ssh_args.extend([
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ])
+    # There should never be both a password and an ssh key passed in, so
+    if 'key_filename' in gateway:
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(gateway['key_filename'])
+        ])
+    # Netcat command testing remote port
+    command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
+    # SSH command
+    cmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
+        ' '.join(ssh_args), ssh_gateway['username'], ssh_gateway,
+        ssh_gateway_port, pipes.quote(command)
+    )
+    log.debug('SSH command: {0!r}'.format(cmd))
+    trycount = 0
+    while True:
+        trycount += 1
+        proc = vt.Terminal(
+            cmd,
+            shell=True,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=False,
+            stream_stderr=False
+        )
+        sent_password = False
+        while proc.isalive():
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                if sent_password:
+                    # second time??? Wrong password?
+                    log.warning(
+                        'Asking for password again. Wrong one provided???'
+                    )
+                    proc.terminate()
+                    return 1
+            proc.sendline(ssh_gateway['password'])
+            sent_password = True
+        # Get the exit code of the SSH command.
+        # If 0 then the port is open.
+        if proc.status == 0:
+            return True
+        time.sleep(1)
+        if time.time() - start > timeout:
+            log.error('Port connection timed out: {0}'.format(timeout))
+            return False
+        log.debug(
+            'Retrying connection to host {0} on port {1} '
+            'via gateway {2} on port {3}. (try {4})'.format(
+                host, port, ssh_gateway, ssh_gateway_port,
+                trycount
+            )
+        )
 
 
 def validate_windows_cred(host, username='Administrator', password=None):
@@ -1056,12 +1139,10 @@ def root_cmd(command, tty, sudo, **kwargs):
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0}:{1} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} -p {1} nc -q0 %h %p"'.format(
                 ssh_gateway,
                 ssh_gateway_port
-            ),
-            # Forward the SSH agent
-            '-oForwardAgent=yes'
+            )
         ])
         log.info(
             'Using SSH gateway {0}:{1}'.format(
