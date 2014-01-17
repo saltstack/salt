@@ -379,20 +379,17 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
     '''
     repo_arg = _get_repo_options(**kwargs)
-    deplist_base = 'yum {0} deplist --quiet'.format(repo_arg) + ' {0!r}'
     repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
+
+    # get list of available packages
+    available_packages = __salt__['cmd.run']('repoquery --pkgnarrow=all --qf "%{name}"  -a').splitlines()
 
     ret = {}
     for name in names:
-        ret.setdefault(name, {})['found'] = bool(
-            __salt__['cmd.run'](
-                deplist_base.format(name),
-                output_loglevel='debug'
-            )
-        )
-        if ret[name]['found'] is False:
+        ret.setdefault(name, {})['found'] = name in available_packages
+        if not ret[name]['found']:
             repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
-            provides = set([x.name for x in _repoquery(repoquery_cmd)])
+            provides = set(x.name for x in _repoquery(repoquery_cmd))
             if provides:
                 for pkg in provides:
                     ret[name]['suggestions'] = list(provides)
