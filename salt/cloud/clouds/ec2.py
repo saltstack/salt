@@ -645,14 +645,53 @@ def ssh_interface(vm_):
         search_global=False
     )
 
-def ssh_gateway(vm_):
+
+def get_ssh_gateway_config(vm_):
     '''
-    Return the ssh_gateway IP address to connect to.
+    Return the ssh_gateway configuration.
     '''
-    return config.get_cloud_config_value(
+    ssh_gateway = config.get_cloud_config_value(
         'ssh_gateway', vm_, __opts__, default=None,
         search_global=False
     )
+
+    # Check to see if a SSH Gateway will be used.
+    if not isinstance(ssh_gateway, str):
+        return None
+
+    # Create dictionary of configuration items
+
+    # ssh_gateway
+    ssh_gateway_config = {'gateway': ssh_gateway}
+
+    # ssh_gateway_username
+    ssh_gateway_config['username'] = config.get_cloud_config_value(
+        'ssh_gateway_username', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_private_key
+    ssh_gateway_config['key_filename'] = config.get_cloud_config_value(
+        'ssh_gateway_private_key', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_password
+    ssh_gateway_config['password'] = config.get_cloud_config_value(
+        'ssh_gateway_password', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check if private key exists
+    key_filename = ssh_gateway_config['key_filename']
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    return ssh_gateway_config
 
 
 def get_location(vm_=None):
