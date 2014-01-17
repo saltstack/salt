@@ -616,15 +616,15 @@ class Single(object):
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
-        log.debug("Performing shimmed command as follows:\n{0}".format(cmd))
+        log.debug('Performing shimmed command as follows:\n{0}'.format(cmd))
         stdout, stderr = self.shell.exec_cmd(cmd)
 
-        log.debug("STDOUT {1}\n{0}".format(stdout, self.target['host']))
-        log.debug("STDERR {1}\n{0}".format(stderr, self.target['host']))
+        log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
+        log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
 
         error = self.categorize_shim_errors(stdout, stderr)
         if error:
-            return "ERROR: {0}".format(error), stderr
+            return 'ERROR: {0}'.format(error), stderr
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
@@ -637,22 +637,22 @@ class Single(object):
         return stdout, stderr
 
     def categorize_shim_errors(self, stdout, stderr):
-        perm_error_fmt = "Permissions problem, target user may need "\
-                         "to be root or use sudo:\n {0}"
+        perm_error_fmt = 'Permissions problem, target user may need '\
+                         'to be root or use sudo:\n {0}'
         if stderr.startswith('Permission denied'):
             return None
         errors = [
-            ("sudo: no tty present and no askpass program specified",
-                "sudo expected a password, NOPASSWD required"),
-            ("Python too old",
-                "salt requires python 2.6 or better on target hosts"),
-            ("sudo: sorry, you must have a tty to run sudo",
-                "sudo is configured with requiretty"),
-            ("Failed to open log file",
+            ('sudo: no tty present and no askpass program specified',
+                'sudo expected a password, NOPASSWD required'),
+            ('Python too old',
+                'salt requires python 2.6 or better on target hosts'),
+            ('sudo: sorry, you must have a tty to run sudo',
+                'sudo is configured with requiretty'),
+            ('Failed to open log file',
                 perm_error_fmt.format(stderr)),
-            ("Permission denied:.*/salt",
+            ('Permission denied:.*/salt',
                 perm_error_fmt.format(stderr)),
-            ("Failed to create directory path.*/salt",
+            ('Failed to create directory path.*/salt',
                 perm_error_fmt.format(stderr)),
             ]
 
