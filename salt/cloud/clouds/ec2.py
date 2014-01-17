@@ -919,6 +919,11 @@ def create(vm_=None, call=None):
             )
         )
 
+    # Get SSH Gateway config early to verify the private_key,
+    # if used, exists or not. We don't want to deploy an instance
+    # and not be able to access it via the gateway.
+    ssh_gateway_config = get_ssh_gateway_config(vm_)
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
@@ -1345,7 +1350,8 @@ def create(vm_=None, call=None):
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
-        {'ip_address': ip_address},
+        {'ip_address': ip_address,
+         'ssh_gateway': ssh_gateway_config},
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
