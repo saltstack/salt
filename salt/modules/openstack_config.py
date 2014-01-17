@@ -23,7 +23,7 @@ except ImportError:
 
 if hasattr(shlex, 'quote'):
     _quote = shlex.quote
-elif hasattr(pipes, 'quote'):
+elif HAS_DEPS and hasattr(pipes, 'quote'):
     _quote = pipes.quote
 else:
     _quote = None
