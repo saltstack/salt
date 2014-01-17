@@ -403,14 +403,13 @@ def check_db(*names, **kwargs):
 
 def refresh_db():
     '''
-    Since yum refreshes the database automatically, this runs a yum clean,
-    so that the next yum operation will have a clean database
+    Check the yum repos for updated packages
 
     Returns:
 
-    - ``True``: Database updated successfully
-    - ``False``: Problem updating database
-    - ``None``: Database already up-to-date
+    - ``True``: Updates are available
+    - ``False``: An error occured
+    - ``None``: No updates are available
 
     CLI Example:
 
@@ -424,7 +423,7 @@ def refresh_db():
         1: False,
     }
 
-    cmd = 'yum -q check-update'
+    cmd = 'yum -q expire-cache && yum -q check-update'
     ret = __salt__['cmd.retcode'](cmd)
     return retcodes.get(ret, False)
 
