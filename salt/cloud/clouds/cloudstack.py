@@ -367,7 +367,7 @@ def create(vm_):
 
     ret.update(data.__dict__)
 
-    if password in data.extra:
+    if 'password' in data.extra:
         del data.extra['password']
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
