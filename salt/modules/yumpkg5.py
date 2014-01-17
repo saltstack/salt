@@ -423,7 +423,7 @@ def refresh_db():
         1: False,
     }
 
-    cmd = 'yum -q expire-cache && yum -q check-update'
+    cmd = 'yum -q clean expire-cache && yum -q check-update'
     ret = __salt__['cmd.retcode'](cmd)
     return retcodes.get(ret, False)
 
