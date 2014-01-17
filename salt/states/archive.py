@@ -19,6 +19,8 @@ def extracted(name,
               source_hash=None,
               if_missing=None):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     State that make sure an archive is extracted in a directory.
     The downloaded archive is erased if succesfully extracted.
     The archive is downloaded only if necessary.
