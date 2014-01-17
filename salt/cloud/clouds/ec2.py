@@ -662,35 +662,35 @@ def get_ssh_gateway_config(vm_):
     # Create dictionary of configuration items
 
     # ssh_gateway
-    ssh_gateway_config = {'gateway': ssh_gateway}
+    ssh_gateway_config = {'ssh_gateway': ssh_gateway}
 
     # ssh_gateway_username
-    ssh_gateway_config['username'] = config.get_cloud_config_value(
+    ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
         'ssh_gateway_username', vm_, __opts__, default=None,
         search_global=False
     )
 
     # ssh_gateway_private_key
-    ssh_gateway_config['key_filename'] = config.get_cloud_config_value(
+    ssh_gateway_config['ssh_gateway_key'] = config.get_cloud_config_value(
         'ssh_gateway_private_key', vm_, __opts__, default=None,
         search_global=False
     )
 
     # ssh_gateway_password
-    ssh_gateway_config['password'] = config.get_cloud_config_value(
+    ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
         'ssh_gateway_password', vm_, __opts__, default=None,
         search_global=False
     )
 
     # Check if private key exists
-    key_filename = ssh_gateway_config['key_filename']
+    key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined ssh_gateway_private_key {0!r} does not exist'.format(
                 key_filename
             )
         )
-    elif key_filename is None and not ssh_gateway_config['password']:
+    elif key_filename is None and not ssh_gateway_config['ssh_gateway_password']:
         raise SaltCloudConfigError(
             'No authentication method. Please define: '
             ' ssh_gateway_password or ssh_gateway_private_key'

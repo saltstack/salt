@@ -288,7 +288,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     test_ssh_host = host
     test_ssh_port = port
     if gateway:
-        ssh_gateway = gateway['gateway']
+        ssh_gateway = gateway['ssh_gateway']
         ssh_gateway_port = 22
         if ':' in ssh_gateway:
             ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
@@ -360,7 +360,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         '-oControlPath=none'
     ])
     # There should never be both a password and an ssh key passed in, so
-    if 'key_filename' in gateway:
+    if 'ssh_gateway_key' in gateway:
         ssh_args.extend([
             # tell SSH to skip password authentication
             '-oPasswordAuthentication=no',
@@ -370,7 +370,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
-            '-i {0}'.format(gateway['key_filename'])
+            '-i {0}'.format(gateway['ssh_gateway_key'])
         ])
     # Netcat command testing remote port
     command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
@@ -402,7 +402,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                     )
                     proc.terminate()
                     return 1
-            proc.sendline(gateway['password'])
+            proc.sendline(gateway['ssh_gateway_password'])
             sent_password = True
             time.sleep(0.25)
         # Get the exit code of the SSH command.
@@ -448,9 +448,9 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output}
             if gateway:
-                kwargs['ssh_gateway'] = gateway['gateway']
-                kwargs['ssh_gateway_key'] = gateway['key_filename']
-                kwargs['ssh_gateway_user'] = gateway['username']
+                kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
 
             if key_filename:
                 if not os.path.isfile(key_filename):
