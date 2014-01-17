@@ -155,13 +155,9 @@ class BuildoutTestCase(Base):
 
         self.assertTrue(u'Log summary:\n' in ret1['outlog'])
         self.assertTrue(
-            u'\n'
             u'INFO: ibar\n'
-            u'\n'
             u'WARN: wbar\n'
-            u'\n'
             u'DEBUG: dbar\n'
-            u'\n'
             u'ERROR: ebar\n'
             in ret1['outlog']
         )
