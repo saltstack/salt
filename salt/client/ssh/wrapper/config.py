@@ -76,7 +76,7 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    return str(mode).lstrip('0').zfill(3)
+    return str(mode).lstrip('0').zfill(4)
 
 
 def valid_fileproto(uri):
