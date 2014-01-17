@@ -205,6 +205,7 @@ Full list of builtin execution modules
     win_useradd
     xapi
     xmpp
+    yumpkg
     yumpkg5
     zcbuildout
     zfs
