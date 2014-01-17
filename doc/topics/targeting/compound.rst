@@ -51,3 +51,9 @@ something like the following must be done:
 .. code-block:: bash
 
     salt -C '* and not G@kernel:Darwin' test.ping
+
+Excluding a minion based on its ID is also possible:
+
+.. code-block:: bash
+
+    salt -C '* and not web-dc1-srv' test.ping
