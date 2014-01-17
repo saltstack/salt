@@ -288,43 +288,59 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             host, port
         )
     )
+    # Assign test ports because if a gateway is defined
+    # we first want to test the gateway before the host.
+    test_ssh_host = host
+    test_ssh_port = port
+    if gateway:
+        ssh_gateway = gateway['gateway']
+        ssh_gateway_port = '22'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        test_ssh_host = ssh_gateway
+        test_ssh_port = ssh_gateway_port
     trycount = 0
     while True:
         trycount += 1
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(30)
-            sock.connect((host, port))
+            sock.connect((test_ssh_host, test_ssh_port))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)
             # Close it!
             sock.close()
+            break
         except socket.error as exc:
             log.debug('Caught exception in wait_for_port: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('Port connection timed out: {0}'.format(timeout))
                 return False
-
-            log.debug(
-                'Retrying connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host, port, trycount
+            if not gateway:
+                log.debug(
+                    'Retrying connection to host {0} on port {1} '
+                    '(try {2})'.format(
+                        test_ssh_host, test_ssh_port, trycount
+                    )
                 )
-            )
+            else:
+                log.debug(
+                    'Retrying connection to Gateway {0} on port {1} '
+                    '(try {2})'.format(
+                        test_ssh_host, test_ssh_port, trycount
+                    )
+                )
     if not gateway:
         return True
     # Let the user know that his gateway is good!
     log.debug(
         'Gateway {0} on port {1} '
         'is reachable.'.format(
-            host, port
+            test_ssh_host, test_ssh_port
         )
     )
-    ssh_gateway = gateway['gateway']
-    ssh_gateway_port = '22'
-    if ':' in ssh_gateway:
-        ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+
     # Now we need to test the host via the gateway.
     # We will use netcat on the gateway to test the port
     ssh_args = []
