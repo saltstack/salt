@@ -376,7 +376,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
     # SSH command
     cmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
-        ' '.join(ssh_args), gateway['username'], ssh_gateway,
+        ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
