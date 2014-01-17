@@ -341,6 +341,11 @@ class Auth(object):
                 return 'retry'
             raise SaltClientError
 
+        if self.opts['master_ip'] not in self.opts['master_uri']:
+            self.opts['master_uri'] = (self.opts['master_uri'].replace(
+                self.opts['master_uri'].split(':')[1][2:],
+                self.opts['master_ip']))
+
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
