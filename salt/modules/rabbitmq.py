@@ -115,11 +115,11 @@ def add_user(name, password=None, runas=None):
 
         salt '*' rabbitmq.add_user rabbit_user password
     '''
-    clear_password = False
+    clear_pw = False
 
     if password is None:
         # Generate a random, temporary password. RabbitMQ requires one.
-        clear_password = True
+        clear_pw = True
         password = ''.join(random.choice(
             string.ascii_uppercase + string.digits) for x in range(15))
 
@@ -127,13 +127,13 @@ def add_user(name, password=None, runas=None):
         'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
 
-    if clear_password:
+    if clear_pw:
         # Now, Clear the random password from the account, if necessary
         res2 = clear_password(name, runas)
 
         if 'Error' in res2.keys():
             # Clearing the password failed. We should try to cleanup
-            # and reurun and error.
+            # and rerun and error.
             delete_user(name, runas)
             msg = 'Error'
             return _format_response(res2, msg)
