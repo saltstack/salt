@@ -631,7 +631,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 key_filename
             )
         )
-    gateway=None
+    gateway = None
     if kwargs['gateway']:
         gateway = kwargs['gateway']
     starttime = time.mktime(time.localtime())
