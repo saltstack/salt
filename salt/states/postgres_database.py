@@ -31,7 +31,11 @@ def present(name,
             owner=None,
             template=None,
             runas=None,
-            user=None):
+            user=None,
+            db_password=None,
+            db_host=None,
+            db_port=None,
+            db_user=None):
     '''
     Ensure that the named database is present with the specified properties.
     For more information about all of these options see man createdb(1)
@@ -65,6 +69,18 @@ def present(name,
     user
         System user all operations should be performed on behalf of
 
+    db_user
+        database username if different from config or defaul
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
@@ -96,7 +112,14 @@ def present(name,
         user = runas
         runas = None
 
-    dbs = __salt__['postgres.db_list'](runas=user)
+    db_args = {
+        'runas': user,
+        'host': db_host,
+        'user': db_user,
+        'port': db_port,
+        'password': db_password,
+    }
+    dbs = __salt__['postgres.db_list'](**db_args)
     db_params = dbs.get(name, {})
 
     if name in dbs and all((
@@ -126,20 +149,26 @@ def present(name,
             ret['comment'] = 'Database {0} exists, but parameters ' \
                              'need to be changed'.format(name)
         return ret
-    if name not in dbs and __salt__['postgres.db_create'](
-                                                    name,
-                                                    tablespace=tablespace,
-                                                    encoding=encoding,
-                                                    lc_collate=lc_collate,
-                                                    lc_ctype=lc_ctype,
-                                                    owner=owner,
-                                                    template=template,
-                                                    runas=user):
+    if (
+        name not in dbs and __salt__['postgres.db_create'](
+            name,
+            tablespace=tablespace,
+            encoding=encoding,
+            lc_collate=lc_collate,
+            lc_ctype=lc_ctype,
+            owner=owner,
+            template=template,
+            **db_args)
+    ):
         ret['comment'] = 'The database {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
-    elif name in dbs and __salt__['postgres.db_alter'](name,
-                                                       tablespace=tablespace,
-                                                       owner=owner):
+    elif (
+        name in dbs and __salt__['postgres.db_alter'](
+            name,
+            tablespace=tablespace,
+            user=db_user,
+            owner=owner, **db_args)
+    ):
         ret['comment'] = ('Parameters for database {0} have been changed'
                           ).format(name)
         ret['changes'][name] = 'Parameters changed'
@@ -154,12 +183,30 @@ def present(name,
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name,
+           runas=None,
+           user=None,
+           db_password=None,
+           db_host=None,
+           db_port=None,
+           db_user=None):
     '''
     Ensure that the named database is absent
 
     name
         The name of the database to remove
+
+    db_user
+        database username if different from config or defaul
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
 
     runas
         System user all operations should be performed on behalf of
@@ -199,13 +246,20 @@ def absent(name, runas=None, user=None):
         user = runas
         runas = None
 
+    db_args = {
+        'runas': user,
+        'host': db_host,
+        'user': db_user,
+        'port': db_port,
+        'password': db_password,
+    }
     #check if db exists and remove it
-    if __salt__['postgres.db_exists'](name, runas=user):
+    if __salt__['postgres.db_exists'](name, **db_args):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Database {0} is set to be removed'.format(name)
             return ret
-        if __salt__['postgres.db_remove'](name, runas=user):
+        if __salt__['postgres.db_remove'](name, **db_args):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret

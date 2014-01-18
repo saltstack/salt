@@ -31,7 +31,11 @@ def present(name,
             password=None,
             groups=None,
             runas=None,
-            user=None):
+            user=None,
+            db_password=None,
+            db_host=None,
+            db_port=None,
+            db_user=None):
     '''
     Ensure that the named group is present with the specified privileges
 
@@ -68,6 +72,18 @@ def present(name,
         System user all operations should be performed on behalf of
 
         .. versionadded:: 0.17.0
+
+    db_user
+        database username if different from config or defaul
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
     '''
     ret = {'name': name,
            'changes': {},
@@ -98,8 +114,15 @@ def present(name,
         user = runas
         runas = None
 
+    db_args = {
+        'runas': user,
+        'host': db_host,
+        'user': db_user,
+        'port': db_port,
+        'password': db_password,
+    }
     # check if user exists
-    if __salt__['postgres.user_exists'](name, runas=user):
+    if __salt__['postgres.user_exists'](name, **db_args):
         return ret
 
     # The user is not present, make it!
@@ -115,7 +138,7 @@ def present(name,
                                          replication=replication,
                                          rolepassword=password,
                                          groups=groups,
-                                         runas=user):
+                                         **db_args):
         ret['comment'] = 'The group {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
@@ -125,7 +148,13 @@ def present(name,
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name,
+           runas=None,
+           user=None,
+           db_password=None,
+           db_host=None,
+           db_port=None,
+           db_user=None):
     '''
     Ensure that the named group is absent
 
@@ -141,6 +170,18 @@ def absent(name, runas=None, user=None):
         System user all operations should be performed on behalf of
 
         .. versionadded:: 0.17.0
+
+    db_user
+        database username if different from config or defaul
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
     '''
     ret = {'name': name,
            'changes': {},
@@ -171,13 +212,20 @@ def absent(name, runas=None, user=None):
         user = runas
         runas = None
 
+    db_args = {
+        'runas': user,
+        'host': db_host,
+        'user': db_user,
+        'port': db_port,
+        'password': db_password,
+    }
     # check if group exists and remove it
-    if __salt__['postgres.user_exists'](name, runas=user):
+    if __salt__['postgres.user_exists'](name, **db_args):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Group {0} is set to be removed'.format(name)
             return ret
-        if __salt__['postgres.group_remove'](name, runas=user):
+        if __salt__['postgres.group_remove'](name, **db_args):
             ret['comment'] = 'Group {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
