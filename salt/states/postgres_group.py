@@ -12,26 +12,42 @@ The postgres_group module is used to create and manage Postgres groups.
 '''
 
 # Import salt libs
+try:
+    import hashlib
+    HAS_ALL_IMPORTS = True
+except ImportError:
+    HAS_ALL_IMPORTS = False
 import salt.utils
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_group' if 'postgres.user_exists' in __salt__ else False
+    return 'postgres_group' if (
+        'postgres.group_create' in __salt__
+        and True == HAS_ALL_IMPORTS
+    ) else False
 
 
 def present(name,
-            createdb=False,
-            createuser=False,
-            encrypted=False,
-            superuser=False,
-            replication=False,
+            createdb=None,
+            createroles=None,
+            createuser=None,
+            encrypted=None,
+            superuser=None,
+            inherit=None,
+            login=None,
+            replication=None,
             password=None,
             groups=None,
             runas=None,
             user=None,
+            maintenance_db=None,
             db_password=None,
             db_host=None,
             db_port=None,
@@ -45,11 +61,21 @@ def present(name,
     createdb
         Is the group allowed to create databases?
 
+    createroles
+        Is the group allowed to create other roles/users
+
     createuser
-        Is the group allowed to create other users?
+        Alias to create roles, and history problem, in pgsql normally
+        createuser == superuser
 
     encrypted
         Should the password be encrypted in the system catalog?
+
+    login
+        Should the group have login perm
+
+    inherit
+        Should the group inherit permissions
 
     superuser
         Should the new group be a "superuser"
@@ -96,6 +122,8 @@ def present(name,
         'added in 0.17.0',
         _dont_call_warnings=True
     )
+    if createuser:
+        createroles = True
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
@@ -115,35 +143,86 @@ def present(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,
         'port': db_port,
         'password': db_password,
     }
-    # check if user exists
-    if __salt__['postgres.user_exists'](name, **db_args):
-        return ret
+
+    # check if group exists
+    mode = 'create'
+    group_attr = __salt__['postgres.role_get'](name, **db_args)
+    if group_attr is not None:
+        mode = 'update'
 
     # The user is not present, make it!
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Group {0} is set to be created'.format(name)
+        ret['comment'] = 'Group {0} is set to be {1}d'.format(name, mode)
         return ret
-    if __salt__['postgres.group_create'](groupname=name,
-                                         createdb=createdb,
-                                         createuser=createuser,
-                                         encrypted=encrypted,
-                                         superuser=superuser,
-                                         replication=replication,
-                                         rolepassword=password,
-                                         groups=groups,
-                                         **db_args):
-        ret['comment'] = 'The group {0} has been created'.format(name)
-        ret['changes'][name] = 'Present'
+    cret = None
+    update = {}
+    if mode == 'update':
+        if (
+            createdb is not None
+            and group_attr['can create databases'] != createdb
+        ):
+            update['createdb'] = createdb
+        if (
+            inherit is not None
+            and group_attr['inherits privileges'] != inherit
+        ):
+            update['inherit'] = inherit
+        if (login is not None and group_attr['can login'] != login):
+            update['createdb'] = createdb
+        if (
+            createroles is not None
+            and group_attr['can create roles'] != createroles
+        ):
+            update['createroles'] = createroles
+        if (
+            replication is not None
+            and group_attr['replication'] != replication
+        ):
+            update['replication'] = replication
+        if (superuser is not None and group_attr['superuser'] != superuser):
+            update['superuser'] = superuser
+        if (
+            password is not None
+            and group_attr['password'] != "md5{0}".format(
+                hashlib.md5('{0}{1}'.format(password, name)).hexdigest())
+        ):
+            log.info('MD5 hash of the password of user {0} '
+                     'is not what was expected. However, '
+                     'Please note that postgres.user_exists '
+                     'only supports MD5 hashed passwords'.format(name))
+            update['password'] = True
+    if (mode == 'create' or (mode == 'update' and update)):
+        cret = __salt__['postgres.group_{0}'.format(mode)](
+            groupname=name,
+            createdb=createdb,
+            createroles=createroles,
+            encrypted=encrypted,
+            login=login,
+            inherit=inherit,
+            superuser=superuser,
+            replication=replication,
+            rolepassword=password,
+            groups=groups,
+            **db_args)
     else:
+        cret = None
+    if cret:
+        ret['comment'] = 'The group {0} has been {1}d'.format(name, mode)
+        if update:
+            ret['changes'][name] = update
+    elif cret is not None:
         ret['comment'] = 'Failed to create group {0}'.format(name)
         ret['result'] = False
+    else:
+        ret['result'] = True
 
     return ret
 
@@ -151,6 +230,7 @@ def present(name,
 def absent(name,
            runas=None,
            user=None,
+           maintenance_db=None,
            db_password=None,
            db_host=None,
            db_port=None,
@@ -213,6 +293,7 @@ def absent(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,

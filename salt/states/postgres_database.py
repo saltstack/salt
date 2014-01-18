@@ -32,6 +32,7 @@ def present(name,
             template=None,
             runas=None,
             user=None,
+            maintenance_db=None,
             db_password=None,
             db_host=None,
             db_port=None,
@@ -113,6 +114,7 @@ def present(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,
@@ -124,14 +126,17 @@ def present(name,
 
     if name in dbs and all((
         db_params.get('Tablespace') == tablespace if tablespace else True,
-        db_params.get('Encoding') == encoding if encoding else True,
+        (
+            db_params.get('Encoding').lower() == encoding.lower()
+            if encoding else True
+        ),
         db_params.get('Collate') == lc_collate if lc_collate else True,
         db_params.get('Ctype') == lc_ctype if lc_ctype else True,
         db_params.get('Owner') == owner if owner else True
     )):
         return ret
     elif name in dbs and any((
-        db_params.get('Encoding') != encoding if encoding else False,
+        db_params.get('Encoding').lower() != encoding.lower() if encoding else False,
         db_params.get('Collate') != lc_collate if lc_collate else False,
         db_params.get('Ctype') != lc_ctype if lc_ctype else False
     )):
@@ -166,7 +171,6 @@ def present(name,
         name in dbs and __salt__['postgres.db_alter'](
             name,
             tablespace=tablespace,
-            user=db_user,
             owner=owner, **db_args)
     ):
         ret['comment'] = ('Parameters for database {0} have been changed'
@@ -186,6 +190,7 @@ def present(name,
 def absent(name,
            runas=None,
            user=None,
+           maintenance_db=None,
            db_password=None,
            db_host=None,
            db_port=None,
@@ -247,6 +252,7 @@ def absent(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,
