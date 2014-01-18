@@ -62,7 +62,7 @@ def returner(ret):
     for field in fields:
         if field in ret.keys():
             subject += ' {0}'.format(ret[field])
-    log.debug('subject')
+    log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     content = pprint.pformat(ret['return'])
     message = ('From: {0}\r\n'
