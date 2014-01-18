@@ -12,26 +12,41 @@ The postgres_users module is used to create and manage Postgres users.
 '''
 
 # Import salt libs
+try:
+    import hashlib
+    HAS_ALL_IMPORTS = True
+except ImportError:
+    HAS_ALL_IMPORTS = False
 import salt.utils
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_user' if 'postgres.user_exists' in __salt__ else False
+    return 'postgres_user' if (
+        'postgres.user_exists' in __salt__
+        and True == HAS_ALL_IMPORTS
+    ) else False
 
 
 def present(name,
             createdb=None,
+            createroles=None,
             createuser=None,
             encrypted=None,
             superuser=None,
             replication=None,
+            inherit=None,
+            login=None,
             password=None,
             groups=None,
             runas=None,
             user=None,
+            maintenance_db=None,
             db_password=None,
             db_host=None,
             db_port=None,
@@ -45,11 +60,20 @@ def present(name,
     createdb
         Is the user allowed to create databases?
 
-    createuser
+    createroles
         Is the user allowed to create other users?
+
+    createuser
+        Alias to create roles
 
     encrypted
         Should the password be encrypted in the system catalog?
+
+    login
+        Should the group have login perm
+
+    inherit
+        Should the group inherit permissions
 
     superuser
         Should the new user be a "superuser"
@@ -96,6 +120,8 @@ def present(name,
         'added in 0.17.0',
         _dont_call_warnings=True
     )
+    if createuser:
+        createroles = True
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
@@ -115,6 +141,7 @@ def present(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,
@@ -123,62 +150,77 @@ def present(name,
     }
 
     # check if user exists
-    if __salt__['postgres.user_exists'](name,
-                                        createdb=createdb,
-                                        createuser=createuser,
-                                        superuser=superuser,
-                                        replication=replication,
-                                        rolepassword=password,
-                                        **db_args):
-        return ret
-    # User might exist with different password or attributes
-    if __salt__['postgres.user_exists'](name, **db_args):
-        # User does exist with different password or attributes
-        # Lets update it
-        ret['changes']['Updated user "{0}" successfully'.format(name)] = (
-            __salt__['postgres.user_update'](name,
-                                             createdb=createdb,
-                                             createuser=createuser,
-                                             encrypted=encrypted,
-                                             superuser=superuser,
-                                             replication=replication,
-                                             rolepassword=password,
-                                             groups=groups,
-                                             **db_args))
-        return ret
+    mode = 'create'
+    user_attr = __salt__['postgres.role_get'](name, **db_args)
+    if user_attr is not None:
+        mode = 'update'
 
     # The user is not present, make it!
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'User {0} is set to be created'.format(name)
+        ret['comment'] = 'User {0} is set to be {1}d'.format(name, mode)
         return ret
-
-    # Setting default values
-    if createdb is None:
-        createdb = False
-    if createuser is None:
-        createuser = False
-    if encrypted is None:
-        encrypted = False
-    if superuser is None:
-        superuser = False
-    if replication is None:
-        replication = False
-
-    if __salt__['postgres.user_create'](username=name,
-                                        createdb=createdb,
-                                        createuser=createuser,
-                                        encrypted=encrypted,
-                                        superuser=superuser,
-                                        replication=replication,
-                                        rolepassword=password,
-                                        groups=groups,
-                                        **db_args):
-        ret['comment'] = 'The user {0} has been created'.format(name)
-        ret['changes'][name] = 'Present'
+    cret = None
+    update = {}
+    if mode == 'update':
+        if (
+            createdb is not None
+            and user_attr['can create databases'] != createdb
+        ):
+            update['createdb'] = createdb
+        if (
+            inherit is not None
+            and user_attr['inherits privileges'] != inherit
+        ):
+            update['inherit'] = inherit
+        if (login is not None and user_attr['can login'] != login):
+            update['createdb'] = createdb
+        if (
+            createroles is not None
+            and user_attr['can create roles'] != createroles
+        ):
+            update['createroles'] = createroles
+        if (
+            replication is not None
+            and user_attr['replication'] != replication
+        ):
+            update['replication'] = replication
+        if (superuser is not None and user_attr['superuser'] != superuser):
+            update['superuser'] = superuser
+        if (
+            password is not None
+            and user_attr['password'] != "md5{0}".format(
+                hashlib.md5('{0}{1}'.format(password, name)).hexdigest())
+        ):
+            log.info('MD5 hash of the password of user {0} '
+                     'is not what was expected. However, '
+                     'Please note that postgres.user_exists '
+                     'only supports MD5 hashed passwords'.format(name))
+            update['password'] = True
+    if (mode == 'create' or (mode == 'update' and update)):
+        cret = __salt__['postgres.user_{0}'.format(mode)](
+            username=name,
+            createdb=createdb,
+            createroles=createroles,
+            encrypted=encrypted,
+            superuser=superuser,
+            login=login,
+            inherit=inherit,
+            replication=replication,
+            rolepassword=password,
+            groups=groups,
+            **db_args)
     else:
+        cret = None
+    if cret:
+        ret['comment'] = 'The user {0} has been {1}d'.format(name, mode)
+        if update:
+            ret['changes'][name] = update
+    elif cret is not None:
         ret['comment'] = 'Failed to create user {0}'.format(name)
         ret['result'] = False
+    else:
+        ret['result'] = True
 
     return ret
 
@@ -186,6 +228,7 @@ def present(name,
 def absent(name,
            runas=None,
            user=None,
+           maintenance_db=None,
            db_password=None,
            db_host=None,
            db_port=None,
@@ -248,6 +291,7 @@ def absent(name,
         runas = None
 
     db_args = {
+        'maintenance_db': maintenance_db,
         'runas': user,
         'host': db_host,
         'user': db_user,

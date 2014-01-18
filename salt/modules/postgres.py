@@ -28,7 +28,6 @@ import tempfile
 try:
     import pipes
     import csv
-    import hashlib
     HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_ALL_IMPORTS = False
@@ -415,6 +414,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
+                                port=port,
                                 runas=runas,
                                 maintenance_db=maintenance_db,
                                 password=password)
@@ -505,6 +505,30 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
     return ret
 
 
+def role_get(name, user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None, return_password=False):
+    '''
+    Return a dict with information about users of a Postgres server.
+
+    Set return_password to True to get password hash in the result.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.role_get postgres
+    '''
+    all_users = user_list(user=user,
+                          host=host,
+                          port=port,
+                          maintenance_db=maintenance_db,
+                          password=password,
+                          runas=runas,
+                          return_password=True)
+
+    return all_users.get(name, None)
+
+
 def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
                 password=None,
                 createdb=None, createuser=None, superuser=None,
@@ -519,63 +543,110 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
 
         salt '*' postgres.user_exists 'username'
     '''
+    return bool(
+        role_get(name,
+                 user=user,
+                 host=host,
+                 port=port,
+                 maintenance_db=maintenance_db,
+                 password=password,
+                 runas=runas,
+                 return_password=True))
 
-    all_users = user_list(user=user,
-                          host=host,
-                          port=port,
-                          maintenance_db=maintenance_db,
-                          password=password,
-                          runas=runas,
-                          return_password=True)
-    if name not in all_users:
-        # User does not exist at all
-        return False
 
-    # Check user attributes
-    user_attr = all_users[name]
+def _add_role_flag(string,
+                   test,
+                   flag,
+                   cond=None,
+                   prefix='NO',
+                   addtxt='',
+                   skip=False):
+    if not skip:
+        if cond is None:
+            cond = test
+        if test is not None:
+            if cond:
+                string = '{0} {1}'.format(string, flag)
+            else:
+                string = '{0} {2}{1}'.format(string, flag, prefix)
+        if addtxt:
+            string = '{0} {1}'.format(string, addtxt)
+    return string
 
-    if not user_attr['can login']:
-        return False
-    if (
-        (createdb is not None
-         and user_attr['can create databases'] != createdb)
-        or (
-            createuser is not None
-            and user_attr['can create roles'] != createuser)
-        or (replication is not None
-            and user_attr['replication'] != replication)
-        or (superuser is not None
-            and user_attr['superuser'] != superuser)
-    ):
-        return False
 
-    if (
-        rolepassword is not None
-        and user_attr['password'] != "md5{0}".format(
-            hashlib.md5('{0}{1}'.format(rolepassword, name)).hexdigest())
-    ):
-        log.info('MD5 hash of the password of user {0} '
-                 'is not what was expected. However, '
-                 'Please note that postgres.user_exists '
-                 'only supports MD5 hashed passwords'.format(name))
-        return False
-
-    return True
+def _role_cmd_args(name,
+                   sub_cmd='',
+                   typ_='role',
+                   encrypted=None,
+                   login=None,
+                   inherit=None,
+                   createdb=None,
+                   createuser=None,
+                   createroles=None,
+                   superuser=None,
+                   groups=None,
+                   replication=None,
+                   rolepassword=None):
+    if createuser is not None and superuser is None:
+        superuser = createuser
+    if inherit is None:
+        if typ_ in ['user', 'group']:
+            inherit = True
+    if login is None:
+        if typ_ == 'user':
+            login = True
+        if typ_ == 'group':
+            login = False
+    # ORDER IS IMPORTANT HERE !
+    escaped_password = ''
+    if rolepassword is not None:
+        escaped_password = '{0!r}'.format(rolepassword.replace('\'', '\'\''))
+    flags = (
+        ('INHERIT', inherit,),
+        ('CREATEDB', createdb,),
+        ('CREATEROLE', createroles,),
+        ('SUPERUSER', superuser,),
+        ('REPLICATION', replication,),
+        ('LOGIN', login,),
+        ('ENCRYPTED', encrypted and rolepassword, 'UN'),
+        ('PASSWORD', rolepassword, 'NO', escaped_password),
+    )
+    for data in flags:
+        test, flag = data[1], data[0]
+        try:
+            prefix = data[2]
+        except:
+            prefix = 'NO'
+        try:
+            addtxt = data[3]
+        except:
+            addtxt = ''
+        sub_cmd = _add_role_flag(
+            sub_cmd, test, flag, prefix=prefix, addtxt=addtxt)
+    if sub_cmd.endswith('WITH'):
+        sub_cmd = sub_cmd.replace(' WITH', '')
+    if groups:
+        for group in groups.split(','):
+            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+    return sub_cmd
 
 
 def _role_create(name,
-                 login,
                  user=None,
                  host=None,
                  port=None,
                  maintenance_db=None,
                  password=None,
-                 createdb=False,
-                 createuser=False,
-                 encrypted=False,
-                 superuser=False,
-                 replication=False,
+                 createdb=None,
+                 createroles=None,
+                 createuser=None,
+                 encrypted=None,
+                 superuser=None,
+                 login=None,
+                 inherit=None,
+                 replication=None,
                  rolepassword=None,
+                 typ_='role',
                  groups=None,
                  runas=None):
     '''
@@ -583,37 +654,27 @@ def _role_create(name,
     However, users can login, groups cannot.
     '''
 
-    if login:
-        create_type = 'USER'
-    else:
-        create_type = 'ROLE'
-
     # check if role exists
     if user_exists(name, user, host, port, maintenance_db,
                    password=password, runas=runas):
-        log.info('{0} {1!r} already exists'.format(create_type, name))
+        log.info('{0} {1!r} already exists'.format(typ_.capitalize(), name))
         return False
 
-    sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name)
-    if rolepassword is not None:
-        if encrypted:
-            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
-        escaped_password = rolepassword.replace('\'', '\'\'')
-        sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, escaped_password)
-    if createdb:
-        sub_cmd = '{0} CREATEDB'.format(sub_cmd)
-    if createuser and not superuser:
-        sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
-    if superuser:
-        sub_cmd = '{0} SUPERUSER'.format(sub_cmd)
-    if replication:
-        sub_cmd = '{0} REPLICATION'.format(sub_cmd)
-    if groups:
-        sub_cmd = '{0} IN GROUP {1}'.format(sub_cmd, groups)
-
-    if sub_cmd.endswith('WITH'):
-        sub_cmd = sub_cmd.replace(' WITH', '')
-
+    sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
+    sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
+        name,
+        typ_=typ_,
+        encrypted=encrypted,
+        login=login,
+        inherit=inherit,
+        createdb=createdb,
+        createroles=createroles,
+        createuser=createuser,
+        superuser=superuser,
+        groups=groups,
+        replication=replication,
+        rolepassword=rolepassword
+    ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 runas=runas, host=host, user=user, port=port,
                                 maintenance_db=maintenance_db,
@@ -628,11 +689,14 @@ def user_create(username,
                 port=None,
                 maintenance_db=None,
                 password=None,
-                createdb=False,
-                createuser=False,
-                encrypted=False,
-                superuser=False,
-                replication=False,
+                createdb=None,
+                createuser=None,
+                createroles=None,
+                inherit=None,
+                login=None,
+                encrypted=None,
+                superuser=None,
+                replication=None,
                 rolepassword=None,
                 groups=None,
                 runas=None):
@@ -648,7 +712,7 @@ def user_create(username,
                 rolepassword='rolepassword'
     '''
     return _role_create(username,
-                        True,
+                        typ_='user',
                         user=user,
                         host=host,
                         port=port,
@@ -656,6 +720,9 @@ def user_create(username,
                         password=password,
                         createdb=createdb,
                         createuser=createuser,
+                        createroles=createroles,
+                        inherit=inherit,
+                        login=login,
                         encrypted=encrypted,
                         superuser=superuser,
                         replication=replication,
@@ -670,11 +737,15 @@ def _role_update(name,
                  port=None,
                  maintenance_db=None,
                  password=None,
-                 createdb=False,
-                 createuser=False,
-                 encrypted=False,
-                 superuser=False,
-                 replication=False,
+                 createdb=None,
+                 createuser=None,
+                 typ_='role',
+                 createroles=None,
+                 inherit=None,
+                 login=None,
+                 encrypted=None,
+                 superuser=None,
+                 replication=None,
                  rolepassword=None,
                  groups=None,
                  runas=None):
@@ -685,45 +756,23 @@ def _role_update(name,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db, password,
                        runas=runas):
-        log.info('User {0!r} does not exist'.format(name))
+        log.info('{0} {1!r} does not exist'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
-    if encrypted is not None:
-        if encrypted:
-            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd)
-        else:
-            sub_cmd = '{0} UNENCRYPTED'.format(sub_cmd)
-    if rolepassword is not None:
-        sub_cmd = '{0} PASSWORD {1!r}'.format(sub_cmd, rolepassword)
-    if createdb is not None:
-        if createdb:
-            sub_cmd = '{0} CREATEDB'.format(sub_cmd)
-        else:
-            sub_cmd = '{0} NOCREATEDB'.format(sub_cmd)
-    if createuser is not None:
-        if createuser:
-            sub_cmd = '{0} CREATEUSER'.format(sub_cmd)
-        else:
-            sub_cmd = '{0} NOCREATEUSER'.format(sub_cmd)
-    if superuser is not None:
-        if superuser:
-            sub_cmd = '{0} SUPERUSER'.format(sub_cmd)
-        else:
-            sub_cmd = '{0} NOSUPERUSER'.format(sub_cmd)
-    if replication is not None:
-        if replication:
-            sub_cmd = '{0} REPLICATION'.format(sub_cmd)
-        else:
-            sub_cmd = '{0} NOREPLICATION'.format(sub_cmd)
-
-    if sub_cmd.endswith('WITH'):
-        sub_cmd = sub_cmd.replace(' WITH', '')
-
-    if groups:
-        for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
-
+    sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
+        name,
+        encrypted=encrypted,
+        login=login,
+        inherit=inherit,
+        createdb=createdb,
+        createuser=createuser,
+        createroles=createroles,
+        superuser=superuser,
+        groups=groups,
+        replication=replication,
+        rolepassword=rolepassword
+    ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 runas=runas, host=host, user=user, port=port,
                                 maintenance_db=maintenance_db,
@@ -740,8 +789,11 @@ def user_update(username,
                 password=None,
                 createdb=None,
                 createuser=None,
+                createroles=None,
                 encrypted=None,
                 superuser=None,
+                inherit=None,
+                login=None,
                 replication=None,
                 rolepassword=None,
                 groups=None,
@@ -763,8 +815,12 @@ def user_update(username,
                         port=port,
                         maintenance_db=maintenance_db,
                         password=password,
+                        typ_='user',
+                        inherit=inherit,
+                        login=login,
                         createdb=createdb,
                         createuser=createuser,
+                        createroles=createroles,
                         encrypted=encrypted,
                         superuser=superuser,
                         replication=replication,
@@ -833,11 +889,14 @@ def group_create(groupname,
                  port=None,
                  maintenance_db=None,
                  password=None,
-                 createdb=False,
-                 createuser=False,
-                 encrypted=False,
-                 superuser=False,
-                 replication=False,
+                 createdb=None,
+                 createuser=None,
+                 createroles=None,
+                 encrypted=None,
+                 login=None,
+                 inherit=None,
+                 superuser=None,
+                 replication=None,
                  rolepassword=None,
                  groups=None,
                  runas=None):
@@ -854,15 +913,18 @@ def group_create(groupname,
                 rolepassword='rolepassword'
     '''
     return _role_create(groupname,
-                        False,
                         user=user,
+                        typ_='group',
                         host=host,
                         port=port,
                         maintenance_db=maintenance_db,
                         password=password,
                         createdb=createdb,
+                        createroles=createroles,
                         createuser=createuser,
                         encrypted=encrypted,
+                        login=login,
+                        inherit=inherit,
                         superuser=superuser,
                         replication=replication,
                         rolepassword=rolepassword,
@@ -876,10 +938,14 @@ def group_update(groupname,
                  port=None,
                  maintenance_db=None,
                  password=None,
-                 createdb=False,
-                 createuser=False,
-                 encrypted=False,
-                 replication=False,
+                 createdb=None,
+                 createroles=None,
+                 createuser=None,
+                 encrypted=None,
+                 inherit=None,
+                 login=None,
+                 superuser=None,
+                 replication=None,
                  rolepassword=None,
                  groups=None,
                  runas=None):
@@ -901,8 +967,13 @@ def group_update(groupname,
                         maintenance_db=maintenance_db,
                         password=password,
                         createdb=createdb,
+                        typ_='group',
+                        createroles=createroles,
                         createuser=createuser,
                         encrypted=encrypted,
+                        login=login,
+                        inherit=inherit,
+                        superuser=superuser,
                         replication=replication,
                         rolepassword=rolepassword,
                         groups=groups,
