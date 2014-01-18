@@ -19,8 +19,8 @@ There are a few things to keep in mind:
 
 * If a username is used, a password is also required.
 * If gpgowner is left unset, no encryption will be used.
-* The field gpgowner specifies the user which has a gpg public key in his
-  respective ~/.gpg directory
+* The field gpgowner specifies the user which has a gpg public key matching the
+  adress the mail is sent to in his respective ~/.gpg directory
 * You should at least declare a subject, but you don't have to.
 * smtp.fields lets you include the value(s) of various fields in the subject
   line of the email. These are comma-delimited. For instance:
