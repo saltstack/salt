@@ -864,6 +864,10 @@ def fire_event(key, msg, tag, args=None, sock_dir=None):
             args = {key: msg}
         event.fire_event(args, tag)
 
+    # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
+    # Assertion failed: get_load () == 0 (poller_base.cpp:32)
+    time.sleep(0.025)
+
 
 def scp_file(dest_path, contents, kwargs):
     '''
