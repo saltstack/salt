@@ -43,8 +43,7 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Work only on RHEL/Fedora based distros with python 2.5 and below
-    if __opts__.get('yum_provider') == 'yumpkg':
+    if __opts__.get('yum_provider') == 'yumpkg_api':
         return False
     try:
         os_grain = __grains__['os'].lower()
@@ -438,7 +437,7 @@ def clean_metadata():
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     Cleans local yum metadata. Functionally identical to :mod:`refresh_db()
-    <salt.modules.yumpkg5.refresh_db>`.
+    <salt.modules.yumpkg.refresh_db>`.
 
     CLI Example:
 

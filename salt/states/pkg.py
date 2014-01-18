@@ -331,8 +331,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.apt>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`,
-        :mod:`yumpkg5 <salt.modules.yumpkg5>`, and
+        :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`.
 
     refresh
@@ -365,7 +364,6 @@ def installed(
     ``NOTE:`` For :mod:`apt <salt.modules.apt>`,
     :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-    :mod:`yumpkg5 <salt.modules.yumpkg5>`,
     and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
     in the ``pkgs`` argument. Example::
 
