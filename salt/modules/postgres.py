@@ -8,7 +8,7 @@ Module to provide Postgres compatibility to salt.
 
         postgres.host: 'localhost'
         postgres.port: '5432'
-        postgres.user: 'postgres'
+        postgres.user: 'postgres' -> db user
         postgres.pass: ''
         postgres.maintenance_db: 'postgres'
 
@@ -48,7 +48,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None,
+def _run_psql(cmd, runas=None, password=None, host=None, port=None,
               run_cmd="cmd.run_all"):
     '''
     Helper function to call psql, because the password requirement
@@ -103,10 +103,14 @@ def version(user=None, host=None, port=None, maintenance_db=None,
     '''
     query = 'SELECT setting FROM pg_catalog.pg_settings ' \
             'WHERE name = \'server_version\''
-    cmd = _psql_cmd('-c', query, '-t', host=host, user=user,
-                    port=port, maintenance_db=maintenance_db,
+    cmd = _psql_cmd('-c', query,
+                    '-t',
+                    host=host,
+                    user=user,
+                    port=port,
+                    maintenance_db=maintenance_db,
                     password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host)
+    ret = _run_psql(cmd, runas=runas, password=password, host=host, port=port)
 
     for line in ret['stdout'].splitlines():
         return line
@@ -121,7 +125,12 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     '''
 
     psql_version = version(
-        user, host, port, maintenance_db, password, runas
+        user,
+        host=host,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password,
+        runas=runas,
     )
 
     if psql_version:
@@ -185,6 +194,22 @@ def _psql_cmd(*args, **kwargs):
     return cmdstr
 
 
+def _psql_prepare_and_run(cmd,
+                          host=None,
+                          port=None,
+                          maintenance_db=None,
+                          password=None,
+                          runas=None,
+                          user=None):
+    rcmd = _psql_cmd(
+        host=host, user=user, port=port,
+        maintenance_db=maintenance_db, password=password,
+        *cmd)
+    cmdret = _run_psql(
+        rcmd, runas=runas, password=password, host=host, port=port)
+    return cmdret
+
+
 def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                password=None, runas=None):
     '''
@@ -202,15 +227,14 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     csv_query = 'COPY ({0}) TO STDOUT WITH CSV HEADER'.format(
         query.strip().rstrip(';'))
 
-    cmd = _psql_cmd(
-        # always use the same datestyle settings to allow parsing dates
-        # regardless what server settings are configured
-        '-v', 'datestyle=ISO,MDY',
-        '-c', csv_query,
-        host=host, user=user, port=port, maintenance_db=maintenance_db,
-        password=password)
-
-    cmdret = _run_psql(cmd, runas=runas, password=password)
+    # always use the same datestyle settings to allow parsing dates
+    # regardless what server settings are configured
+    cmdret = _psql_prepare_and_run(['-v', 'datestyle=ISO,MDY',
+                                    '-c', csv_query],
+                                   runas=runas,
+                                   host=host, user=user, port=port,
+                                   maintenance_db=maintenance_db,
+                                   password=password)
 
     if cmdret['retcode'] > 0:
         return ret
@@ -332,16 +356,16 @@ def db_create(name,
         query += ' '.join(with_chunks)
 
     # Execute the command
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
-                    maintenance_db=maintenance_db,
-                    password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host)
-
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user, host=host, port=port,
+                                maintenance_db=maintenance_db,
+                                password=password, runas=runas)
     return ret['retcode'] == 0
 
 
 def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
-             password=None, tablespace=None, owner=None, runas=None):
+             password=None, tablespace=None, owner=None,
+             runas=None):
     '''
     Change tablesbase or/and owner of databse.
 
@@ -364,9 +388,10 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
             name, tablespace
         ))
     for query in queries:
-        cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
-                        maintenance_db=maintenance_db, password=password)
-        ret = _run_psql(cmd, runas=runas, password=password, host=host)
+        ret = _psql_prepare_and_run(['-c', query],
+                                    user=user, host=host, port=port,
+                                    maintenance_db=maintenance_db,
+                                    password=password, runas=runas)
         if ret['retcode'] != 0:
             return False
 
@@ -387,9 +412,12 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
 
     # db doesn't exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
-                    maintenance_db=maintenance_db, password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host)
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                runas=runas,
+                                maintenance_db=maintenance_db,
+                                password=password)
     return ret['retcode'] == 0
 
 
@@ -423,23 +451,27 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         replication_column = 'NULL'
 
     query = (
-            'SELECT rolname as "name", rolsuper as "superuser", '
-            'rolinherit as "inherits privileges", '
-            'rolcreaterole as "can create roles", '
-            'rolcreatedb as "can create databases", '
-            'rolcatupdate as "can update system catalogs", '
-            'rolcanlogin as "can login", {0} as "replication", '
-            'rolconnlimit as "connections", '
-            'rolvaliduntil::timestamp(0) as "expiry time", '
-            'rolconfig  as "defaults variables", '
-            'pg_shadow.passwd as "password" '
-            'FROM pg_roles '
-            'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
-            .format(replication_column)
-        )
+        'SELECT rolname as "name", rolsuper as "superuser", '
+        'rolinherit as "inherits privileges", '
+        'rolcreaterole as "can create roles", '
+        'rolcreatedb as "can create databases", '
+        'rolcatupdate as "can update system catalogs", '
+        'rolcanlogin as "can login", {0} as "replication", '
+        'rolconnlimit as "connections", '
+        'rolvaliduntil::timestamp(0) as "expiry time", '
+        'rolconfig  as "defaults variables", '
+        'pg_shadow.passwd as "password" '
+        'FROM pg_roles '
+        'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
+        .format(replication_column)
+    )
 
-    rows = psql_query(query, runas=runas, host=host, user=user,
-                      port=port, maintenance_db=maintenance_db,
+    rows = psql_query(query,
+                      runas=runas,
+                      host=host,
+                      user=user,
+                      port=port,
+                      maintenance_db=maintenance_db,
                       password=password)
 
     def get_bool(rowdict, key):
@@ -489,12 +521,12 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
     '''
 
     all_users = user_list(user=user,
-                             host=host,
-                             port=port,
-                             maintenance_db=maintenance_db,
-                             password=password,
-                             runas=runas,
-                             return_password=True)
+                          host=host,
+                          port=port,
+                          maintenance_db=maintenance_db,
+                          password=password,
+                          runas=runas,
+                          return_password=True)
     if name not in all_users:
         # User does not exist at all
         return False
@@ -504,16 +536,24 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
 
     if not user_attr['can login']:
         return False
-    if createdb is not None and user_attr['can create databases'] != createdb \
-            or createuser is not None and user_attr['can create roles'] != createuser \
-            or replication is not None and user_attr['replication'] != replication \
-            or superuser is not None and user_attr['superuser'] != superuser:
+    if (
+        (createdb is not None
+         and user_attr['can create databases'] != createdb)
+        or (
+            createuser is not None
+            and user_attr['can create roles'] != createuser)
+        or (replication is not None
+            and user_attr['replication'] != replication)
+        or (superuser is not None
+            and user_attr['superuser'] != superuser)
+    ):
         return False
 
-    if rolepassword is not None and \
-        user_attr['password'] != "md5{0}".format(
-                    hashlib.md5('{0}{1}'.format(rolepassword, name)).hexdigest()
-                ):
+    if (
+        rolepassword is not None
+        and user_attr['password'] != "md5{0}".format(
+            hashlib.md5('{0}{1}'.format(rolepassword, name)).hexdigest())
+    ):
         log.info('MD5 hash of the password of user {0} '
                  'is not what was expected. However, '
                  'Please note that postgres.user_exists '
@@ -574,10 +614,10 @@ def _role_create(name,
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
-                    maintenance_db=maintenance_db, password=password)
-
-    ret = _run_psql(cmd, runas=runas, password=password, host=host)
+    ret = _psql_prepare_and_run(['-c', sub_cmd],
+                                runas=runas, host=host, user=user, port=port,
+                                maintenance_db=maintenance_db,
+                                password=password)
 
     return ret['retcode'] == 0
 
@@ -609,19 +649,19 @@ def user_create(username,
     '''
     return _role_create(username,
                         True,
-                        user,
-                        host,
-                        port,
-                        maintenance_db,
-                        password,
-                        createdb,
-                        createuser,
-                        encrypted,
-                        superuser,
-                        replication,
-                        rolepassword,
-                        groups,
-                        runas)
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        createdb=createdb,
+                        createuser=createuser,
+                        encrypted=encrypted,
+                        superuser=superuser,
+                        replication=replication,
+                        rolepassword=rolepassword,
+                        groups=groups,
+                        runas=runas)
 
 
 def _role_update(name,
@@ -684,10 +724,10 @@ def _role_update(name,
         for group in groups.split(','):
             sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
-                    maintenance_db=maintenance_db, password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host,
-                     run_cmd='cmd.run_all')
+    ret = _psql_prepare_and_run(['-c', sub_cmd],
+                                runas=runas, host=host, user=user, port=port,
+                                maintenance_db=maintenance_db,
+                                password=password)
 
     return ret['retcode'] == 0
 
@@ -718,19 +758,19 @@ def user_update(username,
                 rolepassword='rolepassword'
     '''
     return _role_update(username,
-                        user,
-                        host,
-                        port,
-                        maintenance_db,
-                        password,
-                        createdb,
-                        createuser,
-                        encrypted,
-                        superuser,
-                        replication,
-                        rolepassword,
-                        groups,
-                        runas)
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        createdb=createdb,
+                        createuser=createuser,
+                        encrypted=encrypted,
+                        superuser=superuser,
+                        replication=replication,
+                        rolepassword=rolepassword,
+                        groups=groups,
+                        runas=runas)
 
 
 def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
@@ -747,11 +787,11 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
 
     # user exists, proceed
     sub_cmd = 'DROP ROLE {0}'.format(name)
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port,
-                    maintenance_db=maintenance_db, password=password)
-    _run_psql(
-        cmd, runas=runas, password=password, host=host, run_cmd='cmd.run'
-    )
+    _psql_prepare_and_run(
+        ['-c', sub_cmd],
+        runas=runas, host=host, user=user, port=port,
+        maintenance_db=maintenance_db, password=password)
+
     if not user_exists(name, user, host, port, maintenance_db,
                        password=password, runas=runas):
         return True
@@ -776,8 +816,13 @@ def user_remove(username,
 
         salt '*' postgres.user_remove 'username'
     '''
-    return _role_remove(username, user, host, port, maintenance_db,
-                        password, runas)
+    return _role_remove(username,
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        runas=runas)
 
 
 # Group related actions
@@ -810,19 +855,19 @@ def group_create(groupname,
     '''
     return _role_create(groupname,
                         False,
-                        user,
-                        host,
-                        port,
-                        maintenance_db,
-                        password,
-                        createdb,
-                        createuser,
-                        encrypted,
-                        superuser,
-                        replication,
-                        rolepassword,
-                        groups,
-                        runas)
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        createdb=createdb,
+                        createuser=createuser,
+                        encrypted=encrypted,
+                        superuser=superuser,
+                        replication=replication,
+                        rolepassword=rolepassword,
+                        groups=groups,
+                        runas=runas)
 
 
 def group_update(groupname,
@@ -850,18 +895,18 @@ def group_update(groupname,
                 rolepassword='rolepassword'
     '''
     return _role_update(groupname,
-                        user,
-                        host,
-                        port,
-                        maintenance_db,
-                        password,
-                        createdb,
-                        createuser,
-                        encrypted,
-                        replication,
-                        rolepassword,
-                        groups,
-                        runas)
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        createdb=createdb,
+                        createuser=createuser,
+                        encrypted=encrypted,
+                        replication=replication,
+                        rolepassword=rolepassword,
+                        groups=groups,
+                        runas=runas)
 
 
 def group_remove(groupname,
@@ -880,8 +925,13 @@ def group_remove(groupname,
 
         salt '*' postgres.group_remove 'groupname'
     '''
-    return _role_remove(groupname, user, host, port, maintenance_db,
-                        password, runas)
+    return _role_remove(groupname,
+                        user=user,
+                        host=host,
+                        port=port,
+                        maintenance_db=maintenance_db,
+                        password=password,
+                        runas=runas)
 
 
 def owner_to(dbname,
@@ -949,7 +999,11 @@ def owner_to(dbname,
     os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
-    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port,
-                    password=password, maintenance_db=dbname)
-    cmdret = _run_psql(cmd, runas=runas, password=password)
+    cmdret = _psql_prepare_and_run(['-f', sqlfile.name],
+                                   user=user,
+                                   runas=runas,
+                                   host=host,
+                                   port=port,
+                                   password=password,
+                                   maintenance_db=dbname)
     return cmdret
