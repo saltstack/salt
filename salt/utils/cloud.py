@@ -275,7 +275,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             )
 
 
-def wait_for_port(host, port=22, timeout=900):
+def wait_for_port(host, port=22, timeout=900, gateway=None):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -283,36 +283,145 @@ def wait_for_port(host, port=22, timeout=900):
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
-    log.debug(
-        'Attempting connection to host {0} on port {1}'.format(
-            host, port
+    # Assign test ports because if a gateway is defined
+    # we first want to test the gateway before the host.
+    test_ssh_host = host
+    test_ssh_port = port
+    if gateway:
+        ssh_gateway = gateway['ssh_gateway']
+        ssh_gateway_port = 22
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in gateway:
+            ssh_gateway_port = gateway['ssh_gateway_port']
+        test_ssh_host = ssh_gateway
+        test_ssh_port = ssh_gateway_port
+        log.debug(
+            'Attempting connection to host {0} on port {1} '
+            'via gateway {2} on port {3}'.format(
+                host, port, ssh_gateway, ssh_gateway_port
+            )
         )
-    )
+    else:
+        log.debug(
+            'Attempting connection to host {0} on port {1}'.format(
+                host, port
+            )
+        )
     trycount = 0
     while True:
         trycount += 1
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(30)
-            sock.connect((host, port))
+            sock.connect((test_ssh_host, test_ssh_port))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)
             # Close it!
             sock.close()
-            return True
+            break
         except socket.error as exc:
             log.debug('Caught exception in wait_for_port: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('Port connection timed out: {0}'.format(timeout))
                 return False
-
-            log.debug(
-                'Retrying connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host, port, trycount
+            if not gateway:
+                log.debug(
+                    'Retrying connection to host {0} on port {1} '
+                    '(try {2})'.format(
+                        test_ssh_host, test_ssh_port, trycount
+                    )
                 )
+            else:
+                log.debug(
+                    'Retrying connection to Gateway {0} on port {1} '
+                    '(try {2})'.format(
+                        test_ssh_host, test_ssh_port, trycount
+                    )
+                )
+    if not gateway:
+        return True
+    # Let the user know that his gateway is good!
+    log.debug(
+        'Gateway {0} on port {1} '
+        'is reachable.'.format(
+            test_ssh_host, test_ssh_port
+        )
+    )
+
+    # Now we need to test the host via the gateway.
+    # We will use netcat on the gateway to test the port
+    ssh_args = []
+    ssh_args.extend([
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ])
+    # There should never be both a password and an ssh key passed in, so
+    if 'ssh_gateway_key' in gateway:
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(gateway['ssh_gateway_key'])
+        ])
+    # Netcat command testing remote port
+    command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
+    # SSH command
+    cmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
+        ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
+        ssh_gateway_port, pipes.quote(command)
+    )
+    log.debug('SSH command: {0!r}'.format(cmd))
+    trycount = 0
+    while True:
+        trycount += 1
+        proc = vt.Terminal(
+            cmd,
+            shell=True,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=False,
+            stream_stderr=False
+        )
+        sent_password = False
+        while proc.isalive():
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                if sent_password:
+                    # second time??? Wrong password?
+                    log.warning(
+                        'Asking for password again. Wrong one provided???'
+                    )
+                    proc.terminate()
+                    return 1
+            proc.sendline(gateway['ssh_gateway_password'])
+            sent_password = True
+            time.sleep(0.25)
+        # Get the exit code of the SSH command.
+        # If 0 then the port is open.
+        if proc.status == 0:
+            return True
+        time.sleep(1)
+        if time.time() - start > timeout:
+            log.error('Port connection timed out: {0}'.format(timeout))
+            return False
+        log.debug(
+            'Retrying connection to host {0} on port {1} '
+            'via gateway {2} on port {3}. (try {4})'.format(
+                host, port, ssh_gateway, ssh_gateway_port,
+                trycount
             )
+        )
 
 
 def validate_windows_cred(host, username='Administrator', password=None):
@@ -327,7 +436,7 @@ def validate_windows_cred(host, username='Administrator', password=None):
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
-                    trysleep=1, display_ssh_output=True):
+                    trysleep=1, display_ssh_output=True, gateway=None):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -340,6 +449,11 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output}
+            if gateway:
+                kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
@@ -517,15 +631,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 key_filename
             )
         )
+    gateway=None
+    if kwargs['gateway']:
+        gateway = kwargs['gateway']
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
-    if wait_for_port(host=host, port=port):
+
+    if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
-                           display_ssh_output=display_ssh_output):
+                           display_ssh_output=display_ssh_output, gateway=gateway):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -540,20 +658,16 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 'display_ssh_output': display_ssh_output,
                 'sudo_password': sudo_password,
             }
+            if gateway:
+                kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
             elif password:
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
-
-            #FIXME: this try-except doesn't make sense! Something is missing...
-            try:
-                log.debug('SSH connection to {0} successful'.format(host))
-            except Exception as exc:
-                log.error(
-                    'There was an error in deploy_script: {0}'.format(exc)
-                )
 
             if provider == 'ibmsce':
                 subsys_command = (
@@ -901,6 +1015,30 @@ def scp_file(dest_path, contents, kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.extend([
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        ])
+
     cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
         ' '.join(ssh_args), tmppath, kwargs, dest_path
     )
@@ -1048,6 +1186,34 @@ def root_cmd(command, tty, sudo, **kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.extend([
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        ])
+        log.info(
+            'Using SSH gateway {0}@{1}:{2}'.format(
+                ssh_gateway_user, ssh_gateway, ssh_gateway_port
+            )
+        )
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
