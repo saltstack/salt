@@ -12,11 +12,15 @@ The following fields can be set in the minion conf file:
     smtp.password (optional)
     smtp.tls (optional, defaults to False)
     smtp.subject (optional, but helpful)
+    smtp.gpgowner (optional)
     smtp.fields (optional)
 
 There are a few things to keep in mind:
 
 * If a username is used, a password is also required.
+* If gpgowner is left unset, no encryption will be used.
+* The field gpgowner specifies the user which has a gpg public key in his
+  respective ~/.gpg directory
 * You should at least declare a subject, but you don't have to.
 * smtp.fields lets you include the value(s) of various fields in the subject
   line of the email. These are comma-delimited. For instance:
@@ -30,6 +34,8 @@ There are a few things to keep in mind:
 '''
 
 # Import python libs
+import os
+import gnupg
 import pprint
 import logging
 import smtplib
@@ -57,6 +63,7 @@ def returner(ret):
     user = __salt__['config.option']('smtp.username')
     passwd = __salt__['config.option']('smtp.password')
     subject = __salt__['config.option']('smtp.subject')
+    gpgowner = __salt__['config.option']('smtp.gpgowner')
 
     fields = __salt__['config.option']('smtp.fields').split(',')
     for field in fields:
@@ -64,24 +71,35 @@ def returner(ret):
             subject += ' {0}'.format(ret[field])
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
-    content = pprint.pformat(ret['return'])
+    content = ('id: {0}\r\n'
+            'function: {1}\r\n'
+            'function args: {2}\r\n'
+            'jid: {3}\r\n'
+            'return: {4}\r\n').format(
+                    ret['id'],
+                    ret['fun'],
+                    ret['fun_args'],
+                    ret['jid'],
+                    pprint.pformat(ret['return']))
+    if gpgowner:
+        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
+        encrypted_data = gpg.encrypt(content, to_addrs)
+        if encrypted_data.ok:
+            log.debug('smtp_return: Encryption successful')
+            content = str(encrypted_data)
+        else:
+            log.debug('smtp_return: Encryption failed, only an error message will be sent')
+            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(encrypted_data.status, encrypted_data.stderr)
+
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
                'Date: {2}\r\n'
                'Subject: {3}\r\n'
                '\r\n'
-               'id: {4}\r\n'
-               'function: {5}\r\n'
-               'function args: {6}\r\n'
-               'jid: {7}\r\n'
-               '{8}').format(from_addr,
+               '{4}').format(from_addr,
                              to_addrs,
                              formatdate(localtime=True),
                              subject,
-                             ret['id'],
-                             ret['fun'],
-                             ret['fun_args'],
-                             ret['jid'],
                              content)
 
     log.debug('smtp_return: Connecting to the server...')
