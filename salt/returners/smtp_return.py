@@ -78,7 +78,7 @@ def returner(ret):
             'return: {4}\r\n').format(
                     ret['id'],
                     ret['fun'],
-                    ret['fun_args'],
+                    ret.get('fun_args'),
                     ret['jid'],
                     pprint.pformat(ret['return']))
     if gpgowner:
