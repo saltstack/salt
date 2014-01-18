@@ -32,6 +32,31 @@ To use the EC2 cloud module, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
+      # SSH Gateways can be used with this provider. Gateways can be used
+      # when a salt-master is not on the same private network as the instance
+      # that is being deployed.
+
+      # Defaults to None
+      # Required
+      ssh_gateway: gateway.example.com
+
+      # Defaults to port 22
+      # Optional
+      ssh_gateway_port: 22
+
+      # Defaults to root
+      # Optional
+      ssh_gateway_username: root
+
+      # One authentication method is required. If both
+      # are specified, Private key wins.
+
+      # Private key defaults to None
+      ssh_gateway_private_key: /path/to/key.pem
+
+      # Password defaults to None
+      ssh_gateway_password: ExamplePasswordHere
+
       provider: ec2
 
 '''
@@ -646,6 +671,65 @@ def ssh_interface(vm_):
     )
 
 
+def get_ssh_gateway_config(vm_):
+    '''
+    Return the ssh_gateway configuration.
+    '''
+    ssh_gateway = config.get_cloud_config_value(
+        'ssh_gateway', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check to see if a SSH Gateway will be used.
+    if not isinstance(ssh_gateway, str):
+        return None
+
+    # Create dictionary of configuration items
+
+    # ssh_gateway
+    ssh_gateway_config = {'ssh_gateway': ssh_gateway}
+
+    # ssh_gateway_port
+    ssh_gateway_config['ssh_gateway_port'] = config.get_cloud_config_value(
+        'ssh_gateway_port', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_username
+    ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
+        'ssh_gateway_username', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_private_key
+    ssh_gateway_config['ssh_gateway_key'] = config.get_cloud_config_value(
+        'ssh_gateway_private_key', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_password
+    ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
+        'ssh_gateway_password', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check if private key exists
+    key_filename = ssh_gateway_config['ssh_gateway_key']
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+    elif key_filename is None and not ssh_gateway_config['ssh_gateway_password']:
+        raise SaltCloudConfigError(
+            'No authentication method. Please define: '
+            ' ssh_gateway_password or ssh_gateway_private_key'
+        )
+
+    return ssh_gateway_config
+
+
 def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
@@ -870,6 +954,11 @@ def create(vm_=None, call=None):
                 key_filename
             )
         )
+
+    # Get SSH Gateway config early to verify the private_key,
+    # if used, exists or not. We don't want to deploy an instance
+    # and not be able to access it via the gateway.
+    ssh_gateway_config = get_ssh_gateway_config(vm_)
 
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
@@ -1323,8 +1412,8 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address,
-                                        timeout=ssh_connect_timeout):
+    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout,
+                                        gateway=ssh_gateway_config):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
@@ -1332,7 +1421,8 @@ def create(vm_=None, call=None):
                 ssh_timeout=config.get_cloud_config_value(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=key_filename,
-                display_ssh_output=display_ssh_output
+                display_ssh_output=display_ssh_output,
+                gateway=ssh_gateway_config
             ):
                 username = user
                 break
@@ -1418,6 +1508,10 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
+        # Copy ssh_gateway_config into deploy scripts
+        if ssh_gateway_config:
+            deploy_kwargs['gateway'] = ssh_gateway_config
+
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
         del event_kwargs['minion_pem']
@@ -1425,6 +1519,9 @@ def create(vm_=None, call=None):
         del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
             del event_kwargs['password']
+        if 'gateway' in event_kwargs:
+            if 'ssh_gateway_password' in event_kwargs['gateway']:
+                del event_kwargs['gateway']['ssh_gateway_password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
