@@ -76,11 +76,11 @@ def returner(ret):
             'function args: {2}\r\n'
             'jid: {3}\r\n'
             'return: {4}\r\n').format(
-                    ret['id'],
-                    ret['fun'],
+                    ret.get('id'),
+                    ret.get('fun'),
                     ret.get('fun_args'),
-                    ret['jid'],
-                    pprint.pformat(ret['return']))
+                    ret.get('jid'),
+                    pprint.pformat(ret.get('return')))
     if gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
