@@ -4,7 +4,7 @@ Management of cron, the Unix command scheduler
 ==============================================
 
 Cron declarations require a number of parameters. The following are the
-parameters used to define the various timing values for a cron job:
+parameters used by Salt to define the various timing values for a cron job:
 
 * ``minute``
 * ``hour``
