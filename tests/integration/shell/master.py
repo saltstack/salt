@@ -68,7 +68,6 @@ class MasterTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-            # We now fail when we're unable to properly set the syslog logger
             self.assertIn(
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
             )
