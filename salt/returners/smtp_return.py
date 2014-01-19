@@ -17,11 +17,14 @@ The following fields can be set in the minion conf file:
 
 There are a few things to keep in mind:
 
-* If a username is used, a password is also required.
-* If gpgowner is left unset, no encryption will be used.
-* The field gpgowner specifies the user which has a gpg public key matching the
-  adress the mail is sent to in his respective ~/.gpg directory
+* If a username is used, a password is also required. It is recommended (but
+  not required) to use the TLS setting when authenticating.
 * You should at least declare a subject, but you don't have to.
+* The use of encryption, i.e. setting gpgowner in your settings, requires
+  python-gnupg to be installed.
+* The field gpgowner specifies a user's ~/.gpg directory. This must contain a
+  gpg public key matching the adress the mail is sent to. If left unset, no
+  encryption will be used.
 * smtp.fields lets you include the value(s) of various fields in the subject
   line of the email. These are comma-delimited. For instance:
 
@@ -30,12 +33,12 @@ There are a few things to keep in mind:
   ...will display the id of the minion and the name of the function in the
   subject line. You may also use 'jid' (the job id), but it is generally
   recommended not to use 'return', which contains the entire return data
-  structure (which can be very large).
+  structure (which can be very large). Also note that the subject is always
+  unencrypted.
 '''
 
 # Import python libs
 import os
-import gnupg
 import pprint
 import logging
 import smtplib
@@ -43,10 +46,16 @@ from email.utils import formatdate
 
 log = logging.getLogger(__name__)
 
+try:
+    import gnupg
+    HAS_GNUPG = True
+except ImportError:
+    HAS_GNUPG = False
 
 def __virtual__():
+    if not HAS_GNUPG:
+        log.info('smtp_return: python-gnupg not available, no encryption will be used.')
     return 'smtp_return'
-
 
 def returner(ret):
     '''
@@ -81,14 +90,14 @@ def returner(ret):
                     ret.get('fun_args'),
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
-    if gpgowner:
+    if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
         if encrypted_data.ok:
             log.debug('smtp_return: Encryption successful')
             content = str(encrypted_data)
         else:
-            log.debug('smtp_return: Encryption failed, only an error message will be sent')
+            log.error('smtp_return: Encryption failed, only an error message will be sent')
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(encrypted_data.status, encrypted_data.stderr)
 
     message = ('From: {0}\r\n'
