@@ -46,14 +46,15 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             yaml.dump(config, default_flow_style=False)
         )
 
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} --pid-file {1} -l debug'.format(
                 config_dir,
                 pid_path
             ),
             timeout=5,
-            catch_stderr=True
+            catch_stderr=True,
+            with_retcode=True
         )
 
         # Now kill it if still running
@@ -64,6 +65,10 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
