@@ -38,6 +38,18 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+_EXTENSION_NOT_INSTALLED = 'EXTENSION NOT INSTALLED'
+_EXTENSION_INSTALLED = 'EXTENSION INSTALLED'
+_EXTENSION_TO_UPGRADE = 'EXTENSION TO UPGRADE'
+_EXTENSION_TO_MOVE = 'EXTENSION TO MOVE'
+_EXTENSION_FLAGS = (
+    _EXTENSION_NOT_INSTALLED,
+    _EXTENSION_INSTALLED,
+    _EXTENSION_TO_UPGRADE,
+    _EXTENSION_TO_MOVE,
+)
+
+
 def __virtual__():
     '''
     Only load this module if the psql bin exists
@@ -599,30 +611,39 @@ def _role_cmd_args(name,
             login = False
     # ORDER IS IMPORTANT HERE !
     escaped_password = ''
-    if rolepassword is not None:
+    skip_passwd = False
+    if not (
+        rolepassword is not None
+        # first is passwd set
+        # second is for handling NOPASSWD
+        and (
+            isinstance(rolepassword, basestring) and bool(rolepassword)
+        )
+        or (
+            isinstance(rolepassword, bool)
+        )
+    ):
+        skip_passwd = True
+    if isinstance(rolepassword, basestring) and bool(rolepassword):
         escaped_password = '{0!r}'.format(rolepassword.replace('\'', '\'\''))
     flags = (
-        ('INHERIT', inherit,),
-        ('CREATEDB', createdb,),
-        ('CREATEROLE', createroles,),
-        ('SUPERUSER', superuser,),
-        ('REPLICATION', replication,),
-        ('LOGIN', login,),
-        ('ENCRYPTED', encrypted and rolepassword, 'UN'),
-        ('PASSWORD', rolepassword, 'NO', escaped_password),
+        {'flag': 'INHERIT', 'test': inherit},
+        {'flag': 'CREATEDB', 'test': createdb},
+        {'flag': 'CREATEROLE', 'test': createroles},
+        {'flag': 'SUPERUSER', 'test': superuser},
+        {'flag': 'REPLICATION', 'test': replication},
+        {'flag': 'LOGIN', 'test': login},
+        {'flag': 'ENCRYPTED',
+         'test': (encrypted is not None and bool(rolepassword)),
+         'skip': skip_passwd or isinstance(rolepassword, bool),
+         'cond': encrypted,
+         'prefix': 'UN'},
+        {'flag': 'PASSWORD', 'test': bool(rolepassword),
+         'skip': skip_passwd,
+         'addtxt': escaped_password},
     )
     for data in flags:
-        test, flag = data[1], data[0]
-        try:
-            prefix = data[2]
-        except:
-            prefix = 'NO'
-        try:
-            addtxt = data[3]
-        except:
-            addtxt = ''
-        sub_cmd = _add_role_flag(
-            sub_cmd, test, flag, prefix=prefix, addtxt=addtxt)
+        sub_cmd = _add_role_flag(sub_cmd, **data)
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
@@ -854,6 +875,387 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
     else:
         log.info('Failed to delete user {0!r}.'.format(name))
         return False
+
+
+def available_extensions(user=None,
+                         host=None,
+                         port=None,
+                         maintenance_db=None,
+                         password=None,
+                         runas=None):
+    '''
+    List available postgresql extensions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.available_extensions
+
+    '''
+    exts = []
+    query = (
+        'select * '
+        'from pg_available_extensions();'
+    )
+    ret = psql_query(query, user=user, host=host, port=port,
+                     maintenance_db=maintenance_db,
+                     password=password, runas=runas)
+    exts = {}
+    for row in ret:
+        if 'default_version' in row and 'name' in row:
+            exts[row['name']] = row
+    return exts
+
+
+def installed_extensions(user=None,
+                         host=None,
+                         port=None,
+                         maintenance_db=None,
+                         password=None,
+                         runas=None):
+    '''
+    List installed postgresql extensions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.installed_extensions
+
+    '''
+    exts = []
+    query = (
+        'select a.*, b.nspname as schema_name '
+        'from pg_extension a,  pg_namespace b where a.extnamespace = b.oid;'
+    )
+    ret = psql_query(query, user=user, host=host, port=port,
+                     maintenance_db=maintenance_db,
+                     password=password, runas=runas)
+    exts = {}
+    for row in ret:
+        if 'extversion' in row and 'extname' in row:
+            exts[row['extname']] = row
+    return exts
+
+
+def get_available_extension(name,
+                            user=None,
+                            host=None,
+                            port=None,
+                            maintenance_db=None,
+                            password=None,
+                            runas=None):
+    '''
+    Get info about an available postgresql extension
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.get_available_extension plpgsql
+
+    '''
+    return available_extensions(user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas).get(name, None)
+
+
+def get_installed_extension(name,
+                            user=None,
+                            host=None,
+                            port=None,
+                            maintenance_db=None,
+                            password=None,
+                            runas=None):
+    '''
+    Get info about an installed postgresql extension
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.get_installed_extension plpgsql
+
+    '''
+    return installed_extensions(user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas).get(name, None)
+
+
+def is_available_extension(name,
+                           user=None,
+                           host=None,
+                           port=None,
+                           maintenance_db=None,
+                           password=None,
+                           runas=None):
+    '''
+    Test if a specific extension is installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.is_installed_extension
+
+    '''
+    exts = available_extensions(user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+    if name.lower() in [
+        a.lower()
+        for a in exts
+    ]:
+        return True
+    return False
+
+
+def _pg_is_older_ext_ver(a, b):
+    '''Return true if version a is lesser than b
+    TODO: be more intelligent to test versions
+
+    '''
+    return a < b
+
+
+def is_installed_extension(name,
+                           from_version=None,
+                           ext_version=None,
+                           schema=None,
+                           user=None,
+                           host=None,
+                           port=None,
+                           maintenance_db=None,
+                           password=None,
+                           runas=None):
+    '''
+    Test if a specific extension is installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.is_installed_extension
+
+    '''
+    installed_ext = get_installed_extension(
+        name,
+        user=user,
+        host=host,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password,
+        runas=runas)
+    return bool(installed_ext)
+
+
+def create_metadata(name,
+                    from_version=None,
+                    ext_version=None,
+                    schema=None,
+                    user=None,
+                    host=None,
+                    port=None,
+                    maintenance_db=None,
+                    password=None,
+                    runas=None):
+    '''
+    Get lifecycle informations about an extension
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.create_metadata adminpack
+
+    '''
+    installed_ext = get_installed_extension(
+        name,
+        user=user,
+        host=host,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password,
+        runas=runas)
+    ret = [_EXTENSION_NOT_INSTALLED]
+    if installed_ext:
+        ret = [_EXTENSION_INSTALLED]
+        if (
+            ext_version is not None
+            and _pg_is_older_ext_ver(
+                installed_ext.get('extversion', ext_version),
+                ext_version
+            )
+        ):
+            ret.append(_EXTENSION_TO_UPGRADE)
+        if (
+            schema is not None
+            and installed_ext.get('extrelocatable', 'f') == 't'
+            and installed_ext.get('schema_name', schema) != schema
+        ):
+            ret.append(_EXTENSION_TO_MOVE)
+    return ret
+
+
+def drop_extension(name,
+                   if_exists=None,
+                   restrict=None,
+                   cascade=None,
+                   user=None,
+                   host=None,
+                   port=None,
+                   maintenance_db=None,
+                   password=None,
+                   runas=None):
+    '''
+    Drop an installed postgresql extension
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.drop_extension 'adminpack'
+
+    '''
+    if cascade is None:
+        cascade = True
+    if if_exists is None:
+        if_exists = False
+    if restrict is None:
+        restrict = False
+    args = ['DROP EXTENSION']
+    if if_exists:
+        args.append('IF EXISTS')
+    args.append(name)
+    if cascade:
+        args.append('CASCADE')
+    if restrict:
+        args.append('RESTRICT')
+    args.append(';')
+    cmd = ' '.join(args)
+    if is_installed_extension(name,
+                              user=user,
+                              host=host,
+                              port=port,
+                              maintenance_db=maintenance_db,
+                              password=password,
+                              runas=runas):
+        _psql_prepare_and_run(
+            ['-c', cmd],
+            runas=runas, host=host, user=user, port=port,
+            maintenance_db=maintenance_db, password=password)
+    ret = not is_installed_extension(name,
+                                     user=user,
+                                     host=host,
+                                     port=port,
+                                     maintenance_db=maintenance_db,
+                                     password=password,
+                                     runas=runas)
+    if not ret:
+        log.info('Failed to drop ext: {0}'.format(name))
+    return ret
+
+
+def create_extension(name,
+                     if_not_exists=None,
+                     schema=None,
+                     ext_version=None,
+                     from_version=None,
+                     user=None,
+                     host=None,
+                     port=None,
+                     maintenance_db=None,
+                     password=None,
+                     runas=None):
+    '''
+    Install a postgresql extension
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.create_extension 'adminpack'
+
+    '''
+    if if_not_exists is None:
+        if_not_exists = True
+    mtdata = create_metadata(name,
+                             from_version=from_version,
+                             ext_version=ext_version,
+                             schema=schema,
+                             user=user,
+                             host=host,
+                             port=port,
+                             maintenance_db=maintenance_db,
+                             password=password,
+                             runas=runas)
+    installed = _EXTENSION_NOT_INSTALLED not in mtdata
+    installable = is_available_extension(name,
+                                         user=user,
+                                         host=host,
+                                         port=port,
+                                         maintenance_db=maintenance_db,
+                                         password=password,
+                                         runas=runas)
+    if installable:
+        if not installed:
+            args = ['CREATE EXTENSION']
+            if if_not_exists:
+                args.append('IF NOT EXISTS')
+            args.append(name)
+            sargs = []
+            if schema:
+                sargs.append('SCHEMA {0}'.format(schema))
+            if ext_version:
+                sargs.append('VERSION {0}'.format(ext_version))
+            if from_version:
+                sargs.append('FROM {0}'.format(from_version))
+            if sargs:
+                args.append('WITH')
+                args.extend(sargs)
+            args.append(';')
+            cmd = ' '.join(args).strip()
+        else:
+            args = []
+            if schema and _EXTENSION_TO_MOVE in mtdata:
+                args.append('ALTER EXTENSION {0} SET SCHEMA {1};'.format(
+                    name, schema))
+            if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
+                args.append('ALTER EXTENSION {0} UPDATE TO {1};'.format(
+                    name, ext_version))
+            cmd = ' '.join(args).strip()
+        if cmd:
+            _psql_prepare_and_run(
+                ['-c', cmd],
+                runas=runas, host=host, user=user, port=port,
+                maintenance_db=maintenance_db, password=password)
+    mtdata = create_metadata(name,
+                             from_version=from_version,
+                             ext_version=ext_version,
+                             schema=schema,
+                             user=user,
+                             host=host,
+                             port=port,
+                             maintenance_db=maintenance_db,
+                             password=password,
+                             runas=runas)
+    ret = True
+    for i in _EXTENSION_FLAGS:
+        if (i in mtdata) and (i != _EXTENSION_INSTALLED):
+            ret = False
+    if not ret:
+        log.info('Failed to create ext: {0}'.format(name))
+    return ret
 
 
 def user_remove(username,

@@ -382,6 +382,69 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    def test_user_update2(self):
+        postgres.user_update(
+            'test_username',
+            user='test_user',
+            host='test_host',
+            port='test_port',
+            maintenance_db='test_maint',
+            password='test_pass',
+            createdb=False,
+            createroles=True,
+            createuser=False,
+            encrypted=False,
+            inherit=True,
+            login=True,
+            replication=False,
+            groups='test_groups',
+            runas='foo'
+        )
+        self.assertTrue(
+            re.match(
+                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '--host test_host --port test_port --dbname test_maint '
+                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN;'
+                ' GRANT test_groups TO test_username\'',
+                postgres._run_psql.call_args[0][0])
+        )
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    def test_user_update3(self):
+        postgres.user_update(
+            'test_username',
+            user='test_user',
+            host='test_host',
+            port='test_port',
+            maintenance_db='test_maint',
+            password='test_pass',
+            createdb=False,
+            createroles=True,
+            createuser=False,
+            encrypted=False,
+            inherit=True,
+            login=True,
+            rolepassword=False,
+            replication=False,
+            groups='test_groups',
+            runas='foo'
+        )
+        self.assertTrue(
+            re.match(
+                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '--host test_host --port test_port --dbname test_maint '
+                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN NOPASSWORD;'
+                ' GRANT test_groups TO test_username\'',
+                postgres._run_psql.call_args[0][0])
+        )
+
+    @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
     def test_version(self):
         postgres.version(
@@ -399,8 +462,155 @@ class PostgresTestCase(TestCase):
             '-c (\'|\")SELECT setting FROM pg_catalog.pg_settings',
             postgres._run_psql.call_args[0][0]))
 
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[{'extname': "foo", 'extversion': "1"}]))
+    def test_installed_extensions(self):
+        exts = postgres.installed_extensions()
+        self.assertEqual(
+            exts,
+            {'foo': {'extversion': '1', 'extname': 'foo'}}
+        )
+
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[{'name': "foo", 'default_version': "1"}]))
+    def test_available_extensions(self):
+        exts = postgres.available_extensions()
+        self.assertEqual(
+            exts,
+            {'foo': {'default_version': '1', 'name': 'foo'}}
+        )
+
+    @patch('salt.modules.postgres.installed_extensions',
+           Mock(side_effect=[{}, {}]))
+    @patch('salt.modules.postgres._psql_prepare_and_run',
+           Mock(return_value=None))
+    @patch('salt.modules.postgres.available_extensions',
+           Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}}))
+    def test_drop_extension2(self):
+        self.assertEqual(postgres.drop_extension('foo'), True)
+
+    @patch('salt.modules.postgres.installed_extensions',
+           Mock(side_effect=[{'foo': {'extversion': '1', 'extname': 'foo'}},
+                             {}]))
+    @patch('salt.modules.postgres._psql_prepare_and_run',
+           Mock(return_value=None))
+    @patch('salt.modules.postgres.available_extensions',
+           Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}}))
+    def test_drop_extension3(self):
+        self.assertEqual(postgres.drop_extension('foo'), True)
+
+    @patch('salt.modules.postgres.installed_extensions',
+           Mock(side_effect=[{'foo': {'extversion': '1', 'extname': 'foo'}},
+                             {'foo': {'extversion': '1', 'extname': 'foo'}}]))
+    @patch('salt.modules.postgres._psql_prepare_and_run',
+           Mock(return_value=None))
+    @patch('salt.modules.postgres.available_extensions',
+           Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}}))
+    def test_drop_extension1(self):
+        self.assertEqual(postgres.drop_extension('foo'), False)
+
+    @patch('salt.modules.postgres.installed_extensions',
+           Mock(return_value=
+               {'foo': {'extversion': '0.8',
+                        'extrelocatable': 't',
+                        'schema_name': 'foo',
+                        'extname': 'foo'}},
+           ))
+    @patch('salt.modules.postgres.available_extensions',
+           Mock(return_value={'foo': {'default_version': '1.4',
+                                      'name': 'foo'}}))
+    def test_create_mtdata(self):
+        ret = postgres.create_metadata('foo', schema='bar', ext_version='1.4')
+        self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
+        self.assertTrue(postgres._EXTENSION_TO_UPGRADE in ret)
+        self.assertTrue(postgres._EXTENSION_TO_MOVE in ret)
+        ret = postgres.create_metadata('foo', schema='foo', ext_version='0.4')
+        self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
+        self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
+        self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+        ret = postgres.create_metadata('foo')
+        self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
+        self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
+        self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+        ret = postgres.create_metadata('foobar')
+        self.assertTrue(postgres._EXTENSION_NOT_INSTALLED in ret)
+        self.assertFalse(postgres._EXTENSION_INSTALLED in ret)
+        self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
+        self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+
+    @patch('salt.modules.postgres.create_metadata',
+           Mock(side_effect=[
+               # create suceeded
+               [postgres._EXTENSION_NOT_INSTALLED],
+               [postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_NOT_INSTALLED],
+               [postgres._EXTENSION_INSTALLED],
+               # create failed
+               [postgres._EXTENSION_NOT_INSTALLED],
+               [postgres._EXTENSION_NOT_INSTALLED],
+               # move+upgrade succeeded
+               [postgres._EXTENSION_TO_MOVE,
+                postgres._EXTENSION_TO_UPGRADE,
+                postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_INSTALLED],
+               # move suceeded
+               [postgres._EXTENSION_TO_MOVE,
+                postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_INSTALLED],
+               # upgrade suceeded
+               [postgres._EXTENSION_TO_UPGRADE,
+                postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_INSTALLED],
+               # upgrade failed
+               [postgres._EXTENSION_TO_UPGRADE, postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_TO_UPGRADE, postgres._EXTENSION_INSTALLED],
+               # move failed
+               [postgres._EXTENSION_TO_MOVE, postgres._EXTENSION_INSTALLED],
+               [postgres._EXTENSION_TO_MOVE, postgres._EXTENSION_INSTALLED],
+           ]))
+    @patch('salt.modules.postgres._psql_prepare_and_run',
+           Mock(return_value=None))
+    @patch('salt.modules.postgres.available_extensions',
+           Mock(return_value={'foo': {'default_version': '1.4',
+                                      'name': 'foo'}}))
+    def test_create_extension_newerthan(self):
+        '''
+        scenario of creating upgrading extensions with possible schema and
+        version specifications
+        '''
+        self.assertTrue(postgres.create_extension('foo'))
+        self.assertTrue(re.match(
+            'CREATE EXTENSION IF NOT EXISTS foo ;',
+            postgres._psql_prepare_and_run.call_args[0][0][1]))
+        self.assertTrue(postgres.create_extension(
+            'foo', schema='a', ext_version='b', from_version='c'))
+        self.assertTrue(re.match(
+            'CREATE EXTENSION IF NOT EXISTS foo '
+            'WITH SCHEMA a VERSION b FROM c ;',
+            postgres._psql_prepare_and_run.call_args[0][0][1]))
+        self.assertFalse(postgres.create_extension('foo'))
+        ret = postgres.create_extension('foo', ext_version='a', schema='b')
+        self.assertTrue(ret)
+        self.assertTrue(re.match(
+            'ALTER EXTENSION foo SET SCHEMA b;'
+            ' ALTER EXTENSION foo UPDATE TO a;',
+            postgres._psql_prepare_and_run.call_args[0][0][1]))
+        ret = postgres.create_extension('foo', ext_version='a', schema='b')
+        self.assertTrue(ret)
+        self.assertTrue(re.match(
+            'ALTER EXTENSION foo SET SCHEMA b;',
+            postgres._psql_prepare_and_run.call_args[0][0][1]))
+        ret = postgres.create_extension('foo', ext_version='a', schema='b')
+        self.assertTrue(ret)
+        self.assertTrue(re.match(
+            'ALTER EXTENSION foo UPDATE TO a;',
+            postgres._psql_prepare_and_run.call_args[0][0][1]))
+        self.assertFalse(postgres.create_extension(
+            'foo', ext_version='a', schema='b'))
+        self.assertFalse(postgres.create_extension(
+            'foo', ext_version='a', schema='b'))
+
 
 if __name__ == '__main__':
     from integration import run_tests
-
     run_tests(PostgresTestCase, needs_daemon=False)

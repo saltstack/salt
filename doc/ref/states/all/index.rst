@@ -69,6 +69,7 @@ Full list of builtin state modules
     postgres_database
     postgres_group
     postgres_user
+    postgres_extension
     powerpath
     process
     quota
