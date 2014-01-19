@@ -44,16 +44,21 @@ import logging
 import smtplib
 from email.utils import formatdate
 
-log = logging.getLogger(__name__)
-
 try:
     import gnupg
     HAS_GNUPG = True
 except ImportError:
     HAS_GNUPG = False
 
+
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'smtp'
+
+
 def __virtual__():
-    return 'smtp'
+    return __virtualname__
+
 
 def returner(ret):
     '''
