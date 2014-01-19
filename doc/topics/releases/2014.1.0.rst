@@ -16,8 +16,8 @@ system.
 Major Features
 ==============
 
-Salt Cloud Merged in Salt
--------------------------
+Salt Cloud Merged into Salt
+---------------------------
 
 Salt Cloud is a tool for provisioning salted minions across various cloud
 providers. Prior to this release, Salt Cloud was a seperate project but this
@@ -57,11 +57,31 @@ Documentation for Salt and GCE can be found :doc:`here </topics/cloud/gce>`.
 
 .. _this blog post: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
 
+
+GitFS Optimizations
+-------------------
+
+Several performance improvements have been made to the :mod:`Git fileserver
+backend <salt.fileserver.gitfs>`.
+
+
 BSD Package Management
 ----------------------
 
-BSD package management has been entirely rewritten and expanded with support for
-ports added.
+BSD package management has been entirely rewritten. FreeBSD 9 and older now
+default to using pkg_add, while FreeBSD 10 and newer will use pkgng. FreeBSD 9
+can be forced to use pkgng, however, by specifying the following option in the
+minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgng
+
+In addition, support for installing software from the ports tree has been
+added. See the documentation for the ports :mod:`state <salt.states.ports>` and
+:mod:`execution module <salt.modules.freebsdports>` for more information.
+
 
 Network Management for Debian/Ubuntu
 ------------------------------------
