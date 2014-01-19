@@ -131,15 +131,24 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             yaml.dump(config, default_flow_style=False)
         )
 
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} \'*\' test.ping'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=15,
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
+            self.assertIn('local:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            # We now fail when we're unable to properly set the syslog logger
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             if old_cwd is not None:
                 os.chdir(old_cwd)
