@@ -225,7 +225,7 @@ def create(vm_):
     }
 
     if get_keypair(vm_) is not False:
-        kwargs['extra_args'] = {'keypair': get_keypair(vm_)}
+        kwargs['ex_keyname'] = get_keypair(vm_)
 
     if get_networkid(vm_) is not False:
         kwargs['networkids'] = get_networkid(vm_)
