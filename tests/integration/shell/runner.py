@@ -62,15 +62,21 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         open(os.path.join(config_dir, config_file_name), 'w').write(
             yaml.dump(config, default_flow_style=False)
         )
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=15,
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
