@@ -631,9 +631,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 key_filename
             )
         )
+
     gateway = None
-    if kwargs['gateway']:
+    if 'gateway' in kwargs:
         gateway = kwargs['gateway']
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
