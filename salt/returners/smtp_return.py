@@ -53,8 +53,6 @@ except ImportError:
     HAS_GNUPG = False
 
 def __virtual__():
-    if not HAS_GNUPG:
-        log.info('smtp_return: python-gnupg not available, no encryption will be used.')
     return 'smtp'
 
 def returner(ret):
