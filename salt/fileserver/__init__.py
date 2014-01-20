@@ -17,16 +17,6 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-def _lock_cache(w_lock):
-    try:
-        os.mkdir(w_lock)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            raise
-        return False
-    else:
-        log.trace('Lockfile {0} created'.format(w_lock))
-        return True
 
 def _lock_cache(w_lock):
     try:
