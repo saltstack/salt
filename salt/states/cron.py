@@ -3,17 +3,30 @@
 Management of cron, the Unix command scheduler
 ==============================================
 
-The cron state module allows for user crontabs to be cleanly managed.
+Cron declarations require a number of parameters. The following are the
+parameters used by Salt to define the various timing values for a cron job:
 
-Cron declarations require a number of parameters. The timing parameters need
-to be declared: minute, hour, daymonth, month, and dayweek. The user whose
-crontab is to be edited also needs to be defined.
+* ``minute``
+* ``hour``
+* ``daymonth``
+* ``month``
+* ``dayweek`` (0 to 6 are Sunday through Saturday, 7 can also be used for
+  Sunday)
 
-By default, the timing arguments are all ``*`` (**Caution**: This means just
-setting ``hour`` to ``5`` and not defining minute will execute the cron entry
-every minute between 5 and 6 am!) and the user is root. When making changes to
-an existing cron job, the name declaration is the unique factor, so if an
-existing cron that looks like this:
+.. warning::
+
+    Any timing arguments not specified take a value of ``*``. This means that
+    setting ``hour`` to ``5``, while not defining the ``minute`` param, will
+    result in Salt adding a job that will execute every minute between 5 and 6
+    A.M.!
+
+    Additionally, the default user for these states is ``root``. Therefore, if
+    the cron job is for another user, it is necessary to specify that user with
+    the ``user`` parameter.
+
+When making changes to an existing cron job, the name declaration is the
+parameter used to uniquely identify the job, so if an existing cron that looks
+like this:
 
 .. code-block:: yaml
 
