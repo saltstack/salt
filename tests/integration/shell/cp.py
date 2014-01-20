@@ -133,18 +133,21 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} \'*\' test.ping'.format(
+            '--config-dir {0} \'*\' foo {0}/foo'.format(
                 config_dir
             ),
-            timeout=15,
             catch_stderr=True,
             with_retcode=True
         )
         try:
-            self.assertIn('local:', ret[0])
+            self.assertIn('minion', '\n'.join(ret[0]))
+            self.assertIn('sub_minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
-            # We now fail when we're unable to properly set the syslog logger
+            if os.path.exists('/dev/log') and ret[2] != 2:
+                # If there's a syslog device and the exit code was not 2, 'No
+                # such file or directory', raise the error
+                raise
             self.assertIn(
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
             )
