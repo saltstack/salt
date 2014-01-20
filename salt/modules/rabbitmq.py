@@ -124,7 +124,7 @@ def add_user(name, password=None, runas=None):
             string.ascii_uppercase + string.digits) for x in range(15))
 
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
+        'rabbitmqctl add_user {0} {1!r}'.format(name, password),
         runas=runas)
 
     if clear_pw:
@@ -321,7 +321,6 @@ def cluster_status(user=None):
 
         salt '*' rabbitmq.cluster_status
     '''
-    ret = {}
     res = __salt__['cmd.run'](
         'rabbitmqctl cluster_status',
         runas=user)
