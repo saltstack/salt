@@ -40,7 +40,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         config = yaml.load(
             open(self.get_config_file_path(config_file_name), 'r').read()
         )
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
 
         open(os.path.join(config_dir, config_file_name), 'w').write(
             yaml.dump(config, default_flow_style=False)
