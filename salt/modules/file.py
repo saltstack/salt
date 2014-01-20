@@ -1892,8 +1892,12 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
-    out = selinux.getfilecon(path)
-    return out[1]
+    try:
+        return selinux.getfilecon(path)[1]
+    except NameError:
+        return 'Unable to find the selinux module for python. It may not be installed.'
+    except OSError, error:
+        return '{0}'.format(error)
 
 
 def set_selinux_context(path,
