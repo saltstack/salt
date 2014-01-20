@@ -138,14 +138,19 @@ def state(
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    ret['changes'] = cmd_ret
+    changes = {}
+    for mid, mdata in cmd_ret.iteritems():
+        if mdata['out'] != 'highstate':
+            log.warning("Output from salt state not highstate")
+        changes[mid] = mdata['ret']
+    ret['changes'] = {'out': 'highstate', 'ret': changes}
     fail = set()
     if isinstance(fail_minions, str):
         fail_minions = [fail_minions]
-    for minion, m_ret in cmd_ret.items():
+    for minion, m_ret in changes.iteritems():
         if minion in fail_minions:
             continue
-        m_state = salt.utils.check_state_result(m_ret)
+        m_state = salt.utils.check_state_result({minion: m_ret})
         if not m_state:
             fail.add(minion)
     if fail:
