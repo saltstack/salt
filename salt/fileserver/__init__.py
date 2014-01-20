@@ -17,6 +17,16 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+def _lock_cache(w_lock):
+    try:
+        os.mkdir(w_lock)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+        return False
+    else:
+        log.trace('Lockfile {0} created'.format(w_lock))
+        return True
 
 def _lock_cache(w_lock):
     try:
@@ -77,7 +87,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     with salt.utils.fopen(list_cache, 'w+') as fp_:
         fp_.write(serial.dumps(data))
         try:
-            os.remove(w_lock)
+            os.rmdir(w_lock)
         except OSError, e:
             log.trace("Error removing lockfile {0}:  {1}".format(w_lock, e))
         log.trace('Lockfile {0} removed'.format(w_lock))
