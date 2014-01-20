@@ -34,6 +34,12 @@ service, then set the reload value to True:
         - reload: True
         - watch:
           - pkg: redis
+
+.. note::
+
+    More details regarding ``watch`` can be found in the
+    :doc:`Requisites </ref/states/requisites>` documentation.
+
 '''
 
 
