@@ -41,7 +41,7 @@ class MasterTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             open(self.get_config_file_path(config_file_name), 'r').read()
         )
         config['root_dir'] = config_dir
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
         config['ret_port'] = config['ret_port'] + 10
         config['publish_port'] = config['publish_port'] + 10
 
