@@ -9,6 +9,7 @@ import re
 import fnmatch
 import logging
 import time
+import errno
 
 # Import salt libs
 import salt.loader
@@ -16,6 +17,16 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+def _lock_cache(w_lock):
+    try:
+        os.mkdir(w_lock)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+        return False
+    else:
+        log.trace('Lockfile {0} created'.format(w_lock))
+        return True
 
 def check_file_list_cache(opts, form, list_cache, w_lock):
     '''
@@ -26,10 +37,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
     refresh_cache = False
     save_cache = True
     serial = salt.payload.Serial(opts)
-    if not os.path.isfile(list_cache) and not os.path.isfile(w_lock):
-        with salt.utils.fopen(w_lock, 'w+') as fp_:
-            fp_.write('')
-            log.trace('Lockfile {0} created'.format(w_lock))
+    if not os.path.isfile(list_cache) and _lock_cache(w_lock):
         refresh_cache = True
     else:
         attempt = 0
@@ -43,11 +51,8 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                         log.trace('Returning file_lists cache data from '
                                   '{0}'.format(list_cache))
                         return serial.load(fp_).get(form, []), False, False
-                else:
+                elif _lock_cache(w_lock):
                     # Set the w_lock and go
-                    with salt.utils.fopen(w_lock, 'w+') as fp_:
-                        fp_.write('')
-                        log.trace('Lockfile {0} created'.format(w_lock))
                     refresh_cache = True
                     break
             except Exception:
@@ -69,7 +74,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     serial = salt.payload.Serial(opts)
     with salt.utils.fopen(list_cache, 'w+') as fp_:
         fp_.write(serial.dumps(data))
-        os.remove(w_lock)
+        os.rmdir(w_lock)
         log.trace('Lockfile {0} removed'.format(w_lock))
 
 
