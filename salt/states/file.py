@@ -1511,26 +1511,26 @@ def recurse(name,
         Require other resources such as packages or files
 
     user
-        The user to own the directory, this defaults to the user salt is
+        The user to own the directory. This defaults to the user salt is
         running as on the minion
 
     group
-        The group ownership set for the directory, this defaults to the group
+        The group ownership set for the directory. This defaults to the group
         salt is running as on the minion
 
     dir_mode
-        The permissions mode to set any directories created
+        The permissions mode to set on any directories created
 
     file_mode
-        The permissions mode to set any files created
+        The permissions mode to set on any files created
 
     sym_mode
         The permissions mode to set on any symlink created
 
     template
         If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        used to render the downloaded file. Supported templates are:
+        `jinja`, `mako` and `wempy`.
 
     .. note::
 
@@ -1557,8 +1557,8 @@ def recurse(name,
                                          'hello01' ...
 
     exclude_pat
-        When copying, exclude this pattern from the source. If both
-        include_pat and exclude_pat are supplied, then it will apply
+        Exclude this pattern from the source when copying. If both
+        `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -1572,8 +1572,8 @@ def recurse(name,
                                                    or TEMPDATA for exclusion
 
     maxdepth
-        When copying, only copy paths which are depth maxdepth from the source
-        path.
+        When copying, only copy paths which are of depth `maxdepth` from the
+        source path.
         Example::
 
           - maxdepth: 0      :: Only include files located in the source
@@ -1583,8 +1583,8 @@ def recurse(name,
 
     keep_symlinks
         Keep symlinks when copying from the source. This option will cause
-        the copy operation to terminate at the symlink. If you are after
-        rsync-ish behavior, then set this to True.
+        the copy operation to terminate at the symlink. If desire behavior
+        similar to rsync, then set this to True.
 
     force_symlinks
         Force symlink creation. This option will force the symlink creation.
@@ -1960,7 +1960,7 @@ def blockreplace(name,
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining
-    an unmanaged file containing manual edits.
+    an un-managed file containing manual edits.
     Note: this function will store two copies of the file in-memory
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
@@ -1975,7 +1975,7 @@ def blockreplace(name,
         be considered, so whitespaces or extra content before or after the
         marker is included in final output.
         Note: you can use file.accumulated and target this state. All accumulated
-        datas dictionnaries content will be added as new lines in the content.
+        data dictionaries content will be added as new lines in the content.
     :param content: The content to be used between the two lines identified by
         marker_start and marker_stop.
     :param append_if_not_found: False by default, if markers are not found and
@@ -1990,7 +1990,7 @@ def blockreplace(name,
 
     :rtype: bool or str
 
-     Exemple of usage with an accumulator and with a variable::
+     Example of usage with an accumulator and with a variable::
 
         {% set myvar = 42 %}
         hosts-config-block-{{ myvar }}:
