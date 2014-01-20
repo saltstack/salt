@@ -321,7 +321,6 @@ def cluster_status(user=None):
 
         salt '*' rabbitmq.cluster_status
     '''
-    ret = {}
     res = __salt__['cmd.run'](
         'rabbitmqctl cluster_status',
         runas=user)
