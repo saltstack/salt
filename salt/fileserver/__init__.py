@@ -17,6 +17,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def _lock_cache(w_lock):
     try:
         os.mkdir(w_lock)
@@ -27,6 +28,7 @@ def _lock_cache(w_lock):
     else:
         log.trace('Lockfile {0} created'.format(w_lock))
         return True
+
 
 def check_file_list_cache(opts, form, list_cache, w_lock):
     '''
