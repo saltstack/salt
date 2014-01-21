@@ -207,7 +207,7 @@ def _chroot_exec(root, cmd):
     if os.path.isfile(os.path.join(root, 'bin/bash')):
         sh_ = '/bin/bash'
 
-    cmd = 'chroot {0} {1} -c \'{2}\''.format(
+    cmd = 'chroot {0} {1} -c {2!r}'.format(
         root,
         sh_,
         cmd)
