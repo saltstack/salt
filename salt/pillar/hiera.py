@@ -32,7 +32,7 @@ def ext_pillar(minion_id, pillar, conf):
     cmd = 'hiera -c {0}'.format(conf)
     for key, val in __grains__.items():
         if isinstance(val, string_types):
-            cmd += ' {0}=\'{1}\''.format(key, val)
+            cmd += ' {0}={1!r}'.format(key, val)
     try:
         data = yaml.safe_load(__salt__['cmd.run'](cmd))
     except Exception:
