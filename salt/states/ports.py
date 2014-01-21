@@ -25,6 +25,9 @@ import salt.utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.freebsdports import _normalize, _options_file_exists
 
+# Needed by imported function _options_file_exists
+import os  # pylint: disable=W0611
+
 log = logging.getLogger(__name__)
 
 
