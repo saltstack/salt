@@ -1144,7 +1144,7 @@ def managed(name,
 
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
-            pipe character, and the mutli-line string is indented two more
+            pipe character, and the mutliline string is indented two more
             spaces.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
