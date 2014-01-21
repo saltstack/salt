@@ -18,7 +18,7 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 
 # Import third party libs
 try:
-    from Crypto.Util import asn1
+    import Crypto.Util
     import OpenSSL
     HAS_DEPS = True
 except ImportError:
@@ -74,7 +74,7 @@ def auth(pem, **kwargs):
     cert_asn1 = c.dump_certificate(c.FILETYPE_ASN1, cert)
 
     # Decode the certificate
-    der = asn1.DerSequence()
+    der = Crypto.Util.asn1.DerSequence()
     der.decode(cert_asn1)
 
     # The certificate has three parts:
@@ -88,7 +88,7 @@ def auth(pem, **kwargs):
 
     # The signature is a BIT STRING (Type 3)
     # Decode that as well
-    der_sig_in = asn1.DerObject()
+    der_sig_in = Crypto.util.asn1.DerObject()
     der_sig_in.decode(der_sig)
 
     # Get the payload
