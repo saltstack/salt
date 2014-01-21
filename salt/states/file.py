@@ -1125,7 +1125,27 @@ def managed(name,
                 - contents_pillar: userdata:deployer:id_rsa
 
         This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
-        ``pillar['userdata']['deployer']['id_rsa']``.
+        ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
+        setup would be like so:
+
+        .. code-block:: yaml:
+
+            userdata:
+              deployer:
+                id_rsa: |
+                  -----BEGIN RSA PRIVATE KEY-----
+                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                  -----END RSA PRIVATE KEY-----
+
+        .. note::
+
+            The private key above is shortened to keep the example brief, but
+            shows how to do multiline string in YAML. The key is followed by a
+            pipe character, and the mutli-line string is indented two more
+            spaces.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
