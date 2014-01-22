@@ -11,12 +11,10 @@ The postgres_users module is used to create and manage Postgres users.
       postgres_user.present
 '''
 
+# Import Python libs
+import hashlib
+
 # Import salt libs
-try:
-    import hashlib
-    HAS_ALL_IMPORTS = True
-except ImportError:
-    HAS_ALL_IMPORTS = False
 import salt.utils
 import logging
 
@@ -29,7 +27,6 @@ def __virtual__():
     '''
     return 'postgres_user' if (
         'postgres.user_exists' in __salt__
-        and True == HAS_ALL_IMPORTS
     ) else False
 
 

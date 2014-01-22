@@ -11,14 +11,12 @@ The postgres_users module is used to create and manage Postgres extensions.
       postgres_extension.present
 '''
 
+# Import Python libs
+import hashlib
+
 # Import salt libs
-try:
-    import hashlib
-    HAS_ALL_IMPORTS = True
-except ImportError:
-    HAS_ALL_IMPORTS = False
-import salt.utils
 import logging
+import salt.utils
 
 from salt.modules import postgres
 
@@ -31,7 +29,6 @@ def __virtual__():
     '''
     return 'postgres_extension' if (
         'postgres.create_extension' in __salt__
-        and True == HAS_ALL_IMPORTS
     ) else False
 
 
