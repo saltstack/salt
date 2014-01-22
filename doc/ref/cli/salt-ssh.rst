@@ -21,7 +21,7 @@ Options
 
     Execute a raw shell command.
 
-.. option:: --roster-file
+.. option:: --roster
 
     Define which roster system to use, this defines if a database backend,
     scanner, or custom roster system is used. Default is the flat file roster.
