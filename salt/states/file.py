@@ -2873,6 +2873,36 @@ def accumulated(name, filename, text, **kwargs):
     require_in / watch_in
         One of them required for sure we fill up accumulator before we manage
         the file. Probably the same as filename
+
+    Example:
+
+    Given the following:
+
+        animals_doing_things:
+          file.accumulated:
+            - filename: /tmp/animal_file.txt
+            - text: ' jumps over the lazy dog.'
+            - require_in:
+              - file: animal_file
+
+        animal_file:
+          file.managed:
+            - name: /tmp/animal_file.txt
+            - source: salt://animal_file.txt
+            - template: jinja
+
+    One might write a template for animal_file.txt like the following:
+
+        The quick brown fox{% for animal in accumulator['animals_doing_things'] %}{{ animal }}{% endfor %}
+
+    Collectively, the above states and template file will produce:
+        The quick brown fox jumps over the lazy dog.
+
+    Multiple accumulators can be "chained" together.
+
+    .. note::
+        The 'accumulator' data structure is a Python dictionary.
+        Do not expect any loop over the keys in a deterministic order!
     '''
     ret = {
         'name': name,
