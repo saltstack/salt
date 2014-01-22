@@ -1167,6 +1167,8 @@ class API(object):
             'global': {
                 'server.socket_host': self.apiopts.get('host', '0.0.0.0'),
                 'server.socket_port': self.apiopts.get('port', 8000),
+                'server.thread_pool': self.apiopts.get('thread_pool', 100),
+                'server.socket_queue_size': self.apiopts.get('queue_size', 30),
                 'debug': self.apiopts.get('debug', False),
             },
             '/': {
