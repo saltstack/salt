@@ -124,7 +124,7 @@ def ext(external):
 
     .. code-block:: bash
 
-        salt '*' pillar.ext 'libvirt: _'
+        salt '*' pillar.ext '{libvirt: _}'
     '''
     if isinstance(external, basestring):
         external = yaml.safe_load(external)
