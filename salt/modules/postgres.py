@@ -25,12 +25,8 @@ import logging
 import StringIO
 import os
 import tempfile
-try:
-    import pipes
-    import csv
-    HAS_ALL_IMPORTS = True
-except ImportError:
-    HAS_ALL_IMPORTS = False
+import csv
+import pipes
 
 # Import salt libs
 import salt.utils
@@ -54,7 +50,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
+    if salt.utils.which('psql'):
         return 'postgres'
     return False
 

@@ -11,12 +11,10 @@ The postgres_group module is used to create and manage Postgres groups.
       postgres_group.present
 '''
 
+# Import Python libs
+import hashlib
+
 # Import salt libs
-try:
-    import hashlib
-    HAS_ALL_IMPORTS = True
-except ImportError:
-    HAS_ALL_IMPORTS = False
 import salt.utils
 import logging
 
@@ -30,7 +28,6 @@ def __virtual__():
     '''
     return 'postgres_group' if (
         'postgres.group_create' in __salt__
-        and True == HAS_ALL_IMPORTS
     ) else False
 
 
