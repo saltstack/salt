@@ -2204,15 +2204,15 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
-                    if not isinstance(state[name][s_dec], list):
-                        # Bad syntax, let the verify seq pick it up later on
-                        continue
                     if not isinstance(s_dec, string_types):
                         # PyDSL OrderedDict?
                         continue
 
                     if not isinstance(state[name], dict):
                         # Include's or excludes as lists?
+                        continue
+                    if not isinstance(state[name][s_dec], list):
+                        # Bad syntax, let the verify seq pick it up later on
                         continue
 
                     found = False
