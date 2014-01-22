@@ -46,8 +46,9 @@ import salt.utils.verify
 import salt.utils.event
 import salt.utils.minions
 import salt.syspaths as syspaths
-from salt.exceptions import SaltInvocationError
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import (
+    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
+)
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -1339,7 +1340,15 @@ class LocalClient(object):
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
         sreq = salt.transport.Channel.factory(self.opts, crypt='clear', master_uri=master_uri)
-        payload = sreq.send(payload_kwargs)
+
+        try:
+            payload = sreq.send(payload_kwargs)
+        except SaltReqTimeoutError:
+            log.error(
+                'Salt request timed out. If this error persists, '
+                'worker_threads may need to be increased.'
+            )
+            return {}
 
         if not payload:
             # The master key could have changed out from under us! Regen
