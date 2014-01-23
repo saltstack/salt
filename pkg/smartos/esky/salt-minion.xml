@@ -32,7 +32,7 @@
                    timeout_seconds="60">
         <method_context>
           <method_environment>
-            <envvar name="PATH" value="/bin:/usr/bin:/opt/local/bin:SALT_PREFIX/bin" />
+            <envvar name="PATH" value="/usr/local/sbin:/usr/local/bin:/opt/local/sbin:/opt/local/bin:/usr/sbin:/usr/bin:/sbin:SALT_PREFIX/bin" />
           </method_environment>
         </method_context>
       </exec_method>
