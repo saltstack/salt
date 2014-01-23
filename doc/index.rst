@@ -219,6 +219,9 @@ Salt is many splendid things.
 :doc:`Testing Salt <topics/tests/index>`
     A howto for writing unit tests and integration tests.
 
+:doc:`Salt Proxy Minions <topics/proxyminion/index>`
+    Controlling devices and machines unable to run a salt-minion.
+
 :ref:`Python API interface <python-api>`
     Use Salt programmatically from scripts and programs easily and
     simply via ``import salt``.
