@@ -1610,7 +1610,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, OutputOptionsMixIn):
+                          LogLevelMixIn, OutputOptionsMixIn, RunUserMixin):
 
     __metaclass__ = OptionParserMeta
 
