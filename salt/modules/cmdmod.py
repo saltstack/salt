@@ -852,7 +852,7 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
     else:
-        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        fn_ = __salt__['cp.cache_file'](source, __env__)
         if not fn_:
             _cleanup_tempfile(path)
             return {'pid': 0,
