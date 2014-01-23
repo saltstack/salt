@@ -194,6 +194,16 @@
 # If the value is set to zero, this check is disabled.
 #grains_refresh_every: 1
 
+# Cache grains on the minion. Default is False.
+# grains_cache: False
+
+# Grains cache expiration, in seconds. If the cache file is older than this
+# number of seconds then the grains cache will be dumped and fully re-populated
+# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
+# is not enabled.
+# grains_cache_expiration: 300
+
+
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
 # your environment, set this value to False.
