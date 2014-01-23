@@ -20,7 +20,6 @@ import sys
 import signal
 from random import randint
 import salt
-import importlib
 
 # Import third party libs
 try:
@@ -1853,7 +1852,7 @@ class ProxyMinion(Minion):
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
     '''
-    def __init__(self, opts, timeout=60, safe=True): # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
