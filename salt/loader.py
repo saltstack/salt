@@ -10,6 +10,7 @@ import sys
 import salt
 import logging
 import tempfile
+import time
 
 # Import salt libs
 from salt.exceptions import LoaderError
@@ -280,6 +281,8 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
+    if opts.get('skip_grains', False):
+        return {}
     if 'conf_file' in opts:
         pre_opts = {}
         pre_opts.update(salt.config.load_config(
@@ -425,6 +428,8 @@ class Loader(object):
         self.opts = self.__prep_mod_opts(opts)
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        if self.opts.get('grains_cache', False):
+            self.serial = salt.payload.Serial(self.opts)
 
     def __prep_mod_opts(self, opts):
         '''
@@ -965,6 +970,28 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
+        if self.opts.get('grains_cache', False):
+            cfn = os.path.join(
+            self.opts['cachedir'],
+            '{0}.cache.p'.format('grains')
+            )
+            if os.path.isfile(cfn):
+                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
+                if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
+                    self.opts.get('refresh_grains_cache', False):
+                    log.debug('Retrieving grains from cache')
+                    try:
+                        with salt.utils.fopen(cfn, 'r') as fp_:
+                            cached_grains = self.serial.load(fp_)
+                        return cached_grains
+                    except (IOError, OSError):
+                        pass
+                else:
+                    log.debug('Grains cache last modified {0} seconds ago and cache expiration is set to {1}. '
+                         'Grains cache expired. Refreshing.'.format(
+                    grains_cache_age, self.opts.get('grains_cache_expiration', 300)))
+            else:
+                log.debug('Grains cache file does not exist.')
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
@@ -991,4 +1018,21 @@ class Loader(object):
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)
+        # Write cache if enabled
+        if self.opts.get('grains_cache', False):
+            cumask = os.umask(191)
+            try:
+                if salt.utils.is_windows():
+                    # Make sure cache file isn't read-only
+                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
+                with salt.utils.fopen(cfn, 'w+') as fp_:
+                    try:
+                        self.serial.dump(grains_data, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                msg = 'Unable to write to grains cache file {0}'
+                log.error(msg.format(cfn))
+            os.umask(cumask)
         return grains_data

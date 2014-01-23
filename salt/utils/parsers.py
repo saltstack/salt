@@ -1937,6 +1937,18 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Specify the minion id to use. If this option is omitted, '
                   'the id option from the minion config will be used.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
+        self.add_option(
+            '--refresh-grains-cache',
+            default=False,
+            action='store_true',
+            help=('Force a refresh of the grains cache')
+    )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
