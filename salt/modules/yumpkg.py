@@ -388,12 +388,26 @@ def check_db(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
 
-    # get list of available packages
-    available_packages = _repoquery('--pkgnarrow=all -a', query_format='%{name}')
+    if 'avail' in __context__:
+        avail = __context__['avail']
+    else:
+        # get list of available packages
+        pkg_data = (
+            x.split('_|-') for x in _repoquery(
+                '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
+            )
+        )
+        avail = []
+        for name, arch in pkg_data:
+            if arch in __ARCHES and arch != __grains__['osarch']:
+                avail.append('.'.join((name, arch)))
+            else:
+                avail.append(name)
+        __context__['avail'] = avail
 
     ret = {}
     for name in names:
-        ret.setdefault(name, {})['found'] = name in available_packages
+        ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
             repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
             provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
