@@ -33,6 +33,7 @@ import time
 try:
     import grp
     import pwd
+    import selinux
 except ImportError:
     pass
 
@@ -1891,8 +1892,12 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
-    out = __salt__['cmd.run']('ls -Z {0}'.format(path))
-    return out.split(' ')[4]
+    try:
+        return selinux.getfilecon(path)[1]
+    except NameError:
+        return 'Unable to find the selinux module for python. It may not be installed.'
+    except OSError, error:
+        return '{0}'.format(error)
 
 
 def set_selinux_context(path,
