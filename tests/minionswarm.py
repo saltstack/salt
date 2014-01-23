@@ -65,6 +65,12 @@ def parse():
             dest='root_dir',
             default=None,
             help='Override the minion root_dir config')
+    parser.add_option(
+            '-c', '--config-dir', default='/etc/salt',
+            help=('Pass in an alternative configuration directory. Default: '
+                  '%default')
+        )
+    parser.add_option('-u', '--user', default='root')
 
     options, args = parser.parse_args()
 
