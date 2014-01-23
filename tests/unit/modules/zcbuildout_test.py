@@ -452,9 +452,24 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+class BuildoutAPITestCase(TestCase):
+
+    def test_setup(self):
+        buildout.LOG.clear()
+        buildout.LOG.info('àé')
+        buildout.LOG.info('uàé')
+        buildout.LOG.error('àé')
+        buildout.LOG.error('uàé')
+        ret = buildout._set_status({}, out='éà')
+        uret = buildout._set_status({}, out=u'éà')
+        self.assertTrue(ret['outlog'] == uret['outlog'])
+        self.assertTrue(u'àé' in uret['outlog_by_level'])
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(
+        BuildoutAPITestCase,
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)
