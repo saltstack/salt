@@ -197,13 +197,16 @@ def _format_host(host, data):
 
 
 def _format_changes(changes):
-    global __opts__
+    '''
+    Format the changes dict based on what the data is
+    '''
+    global __opts__  # pylint: disable=W0601
 
     if not changes:
         return False, ''
 
     if not isinstance(changes, dict):
-        return True, 'Invalid Changes data: {0}'.format(ret['changes'])
+        return True, 'Invalid Changes data: {0}'.format(changes)
 
     ret = changes.get('ret')
     if ret is not None and changes.get('out') == 'highstate':
@@ -211,7 +214,7 @@ def _format_changes(changes):
         changed = False
         for host, hostdata in ret.iteritems():
             s, c = _format_host(host, hostdata)
-            ctext += '\n' + '\n'.join((' '* 14 + l) for l in s.splitlines())
+            ctext += '\n' + '\n'.join((' ' * 14 + l) for l in s.splitlines())
             changed = changed or c
     else:
         changed = True
@@ -268,5 +271,4 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                             result,
                             colors['ENDC'],
                             ret)
-
     return msg
