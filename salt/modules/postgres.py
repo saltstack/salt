@@ -23,6 +23,7 @@ import datetime
 import distutils.version  # pylint: disable=E0611
 import logging
 import StringIO
+import hashlib
 import os
 import tempfile
 import csv
@@ -34,6 +35,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+_DEFAULT_PASSWORDS_ENCRYPTION = True
 _EXTENSION_NOT_INSTALLED = 'EXTENSION NOT INSTALLED'
 _EXTENSION_INSTALLED = 'EXTENSION INSTALLED'
 _EXTENSION_TO_UPGRADE = 'EXTENSION TO UPGRADE'
@@ -55,7 +57,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None,
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
               run_cmd="cmd.run_all"):
     '''
     Helper function to call psql, because the password requirement
@@ -73,6 +75,9 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None,
             else:
                 runas = 'postgres'
 
+    if user is None:
+        user = runas
+
     if runas:
         kwargs['runas'] = runas
 
@@ -81,10 +86,11 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None,
     if password is not None:
         pgpassfile = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
-            fp_.write('{0}:*:*:{1}:{2}'.format(
+            fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
-                runas if runas else '*',
-                password
+                port if port else '*',
+                user if user else '*',
+                password,
             ))
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
@@ -117,7 +123,8 @@ def version(user=None, host=None, port=None, maintenance_db=None,
                     port=port,
                     maintenance_db=maintenance_db,
                     password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host, port=port)
+    ret = _run_psql(
+        cmd, runas=runas, password=password, host=host, port=port, user=user)
 
     for line in ret['stdout'].splitlines():
         return line
@@ -213,7 +220,7 @@ def _psql_prepare_and_run(cmd,
         maintenance_db=maintenance_db, password=password,
         *cmd)
     cmdret = _run_psql(
-        rcmd, runas=runas, password=password, host=host, port=port)
+        rcmd, runas=runas, password=password, host=host, port=port, user=user)
     return cmdret
 
 
@@ -459,17 +466,21 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         replication_column = 'NULL'
 
     query = (
-        'SELECT rolname as "name", rolsuper as "superuser", '
-        'rolinherit as "inherits privileges", '
-        'rolcreaterole as "can create roles", '
-        'rolcreatedb as "can create databases", '
-        'rolcatupdate as "can update system catalogs", '
-        'rolcanlogin as "can login", {0} as "replication", '
-        'rolconnlimit as "connections", '
-        'rolvaliduntil::timestamp(0) as "expiry time", '
-        'rolconfig  as "defaults variables", '
-        'pg_shadow.passwd as "password" '
+        'SELECT '
+        'pg_roles.rolname as "name",'
+        'pg_roles.rolsuper as "superuser", '
+        'pg_roles.rolinherit as "inherits privileges", '
+        'pg_roles.rolcreaterole as "can create roles", '
+        'pg_roles.rolcreatedb as "can create databases", '
+        'pg_roles.rolcatupdate as "can update system catalogs", '
+        'pg_roles.rolcanlogin as "can login", '
+        'pg_roles.{0} as "replication", '
+        'pg_roles.rolconnlimit as "connections", '
+        'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
+        'pg_roles.rolconfig  as "defaults variables", '
+        'COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '
         'FROM pg_roles '
+        'LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid '
         'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
         .format(replication_column)
     )
@@ -514,7 +525,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
 
 
 def role_get(name, user=None, host=None, port=None, maintenance_db=None,
-              password=None, runas=None, return_password=False):
+             password=None, runas=None, return_password=False):
     '''
     Return a dict with information about users of a Postgres server.
 
@@ -532,15 +543,13 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas,
-                          return_password=True)
-
+                          return_password=return_password)
     return all_users.get(name, None)
 
 
-def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
+def user_exists(name,
+                user=None, host=None, port=None, maintenance_db=None,
                 password=None,
-                createdb=None, createuser=None, superuser=None,
-                replication=None, rolepassword=None,
                 runas=None):
     '''
     Checks if a user exists on the Postgres server.
@@ -582,6 +591,18 @@ def _add_role_flag(string,
     return string
 
 
+def _maybe_encrypt_password(role,
+                            password,
+                            encrypted=_DEFAULT_PASSWORDS_ENCRYPTION):
+    '''
+    pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
+    '''
+    if encrypted and password and not password.startswith('md5'):
+        password = "md5{0}".format(
+            hashlib.md5('{0}{1}'.format(password, role)).hexdigest())
+    return password
+
+
 def _role_cmd_args(name,
                    sub_cmd='',
                    typ_='role',
@@ -605,9 +626,11 @@ def _role_cmd_args(name,
             login = True
         if typ_ == 'group':
             login = False
-    # ORDER IS IMPORTANT HERE !
-    escaped_password = ''
+    # defaults to encrypted passwords (md5{password}{rolename})
+    if encrypted is None:
+        encrypted = _DEFAULT_PASSWORDS_ENCRYPTION
     skip_passwd = False
+    escaped_password = ''
     if not (
         rolepassword is not None
         # first is passwd set
@@ -621,7 +644,10 @@ def _role_cmd_args(name,
     ):
         skip_passwd = True
     if isinstance(rolepassword, basestring) and bool(rolepassword):
-        escaped_password = '{0!r}'.format(rolepassword.replace('\'', '\'\''))
+        escaped_password = '{0!r}'.format(
+            _maybe_encrypt_password(name,
+                                    rolepassword.replace('\'', '\'\''),
+                                    encrypted=encrypted))
     flags = (
         {'flag': 'INHERIT', 'test': inherit},
         {'flag': 'CREATEDB', 'test': createdb},
@@ -1025,9 +1051,6 @@ def _pg_is_older_ext_ver(a, b):
 
 
 def is_installed_extension(name,
-                           from_version=None,
-                           ext_version=None,
-                           schema=None,
                            user=None,
                            host=None,
                            port=None,
@@ -1056,7 +1079,6 @@ def is_installed_extension(name,
 
 
 def create_metadata(name,
-                    from_version=None,
                     ext_version=None,
                     schema=None,
                     user=None,
@@ -1186,7 +1208,6 @@ def create_extension(name,
     if if_not_exists is None:
         if_not_exists = True
     mtdata = create_metadata(name,
-                             from_version=from_version,
                              ext_version=ext_version,
                              schema=schema,
                              user=user,
@@ -1236,7 +1257,6 @@ def create_extension(name,
                 runas=runas, host=host, user=user, port=port,
                 maintenance_db=maintenance_db, password=password)
     mtdata = create_metadata(name,
-                             from_version=from_version,
                              ext_version=ext_version,
                              schema=schema,
                              user=user,

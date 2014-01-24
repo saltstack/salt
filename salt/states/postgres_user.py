@@ -12,11 +12,14 @@ The postgres_users module is used to create and manage Postgres users.
 '''
 
 # Import Python libs
-import hashlib
 
 # Import salt libs
 import salt.utils
 import logging
+
+# Salt imports
+from salt.modules import postgres
+
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +53,9 @@ def present(name,
             db_user=None):
     '''
     Ensure that the named user is present with the specified privileges
+    Please note that the user/group notion in postgresql is just abstract, we
+    have roles, where users can be seens as roles with the LOGIN privilege
+    and groups the others.
 
     name
         The name of the user to manage
@@ -80,6 +86,13 @@ def present(name,
 
     password
         The user's password
+        It can be either a plain string or a md5 postgresql hashed password::
+
+            'md5{MD5OF({password}{role}}'
+
+        If encrypted is None or True, the password will be automaticly
+        encrypted to the previous
+        format if it is not already done.
 
     groups
         A string of comma separated groups the user should be in
@@ -119,6 +132,14 @@ def present(name,
     )
     if createuser:
         createroles = True
+    # default to encrypted passwords
+    if encrypted is not False:
+        encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
+    # maybe encrypt if if not already and neccesary
+    password = postgres._maybe_encrypt_password(name,
+                                                password,
+                                                encrypted=encrypted)
+
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
@@ -148,7 +169,8 @@ def present(name,
 
     # check if user exists
     mode = 'create'
-    user_attr = __salt__['postgres.role_get'](name, **db_args)
+    user_attr = __salt__['postgres.role_get'](
+        name, return_password=True, **db_args)
     if user_attr is not None:
         mode = 'update'
 
@@ -170,8 +192,8 @@ def present(name,
             and user_attr['inherits privileges'] != inherit
         ):
             update['inherit'] = inherit
-        if login is not None and user_attr['can login'] != login:
-            update['createdb'] = createdb
+        if (login is not None and user_attr['can login'] != login):
+            update['login'] = login
         if (
             createroles is not None
             and user_attr['can create roles'] != createroles
@@ -184,15 +206,7 @@ def present(name,
             update['replication'] = replication
         if superuser is not None and user_attr['superuser'] != superuser:
             update['superuser'] = superuser
-        if (
-            password is not None
-            and user_attr['password'] != "md5{0}".format(
-                hashlib.md5('{0}{1}'.format(password, name)).hexdigest())
-        ):
-            log.info('MD5 hash of the password of user {0} '
-                     'is not what was expected. However, '
-                     'Please note that postgres.user_exists '
-                     'only supports MD5 hashed passwords'.format(name))
+        if (password is not None and user_attr['password'] != password):
             update['password'] = True
     if mode == 'create' or (mode == 'update' and update):
         cret = __salt__['postgres.user_{0}'.format(mode)](
