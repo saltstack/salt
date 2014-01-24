@@ -170,7 +170,7 @@ def present(name,
             and user_attr['inherits privileges'] != inherit
         ):
             update['inherit'] = inherit
-        if (login is not None and user_attr['can login'] != login):
+        if login is not None and user_attr['can login'] != login:
             update['createdb'] = createdb
         if (
             createroles is not None
@@ -182,7 +182,7 @@ def present(name,
             and user_attr['replication'] != replication
         ):
             update['replication'] = replication
-        if (superuser is not None and user_attr['superuser'] != superuser):
+        if superuser is not None and user_attr['superuser'] != superuser:
             update['superuser'] = superuser
         if (
             password is not None
@@ -194,7 +194,7 @@ def present(name,
                      'Please note that postgres.user_exists '
                      'only supports MD5 hashed passwords'.format(name))
             update['password'] = True
-    if (mode == 'create' or (mode == 'update' and update)):
+    if mode == 'create' or (mode == 'update' and update):
         cret = __salt__['postgres.user_{0}'.format(mode)](
             username=name,
             createdb=createdb,
