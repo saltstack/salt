@@ -21,6 +21,7 @@ import fnmatch
 import logging
 import collections
 import traceback
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -1293,6 +1294,7 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        log.info('Running state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1395,6 +1397,7 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         return ret
 
     def call_chunks(self, chunks):
