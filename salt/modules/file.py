@@ -1894,7 +1894,7 @@ def get_selinux_context(path):
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
 
     try:
-        ret = re.search('\w+:\w+:\w+:\w+', out).group(0)
+        ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
     except AttributeError:
         ret = 'No selinux context information is available for {0}'.format(path)
 
