@@ -492,6 +492,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                       port=port,
                       maintenance_db=maintenance_db,
                       password=password)
+
     def get_bool(rowdict, key):
         '''
         Returns the boolean value of the key, instead of 't' and 'f' strings.
