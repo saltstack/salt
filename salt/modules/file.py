@@ -1892,7 +1892,13 @@ def get_selinux_context(path):
         salt '*' file.get_selinux_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
-    return out.split(' ')[4]
+
+    try:
+        ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
+    except AttributeError:
+        ret = 'No selinux context information is available for {0}'.format(path)
+
+    return ret
 
 
 def set_selinux_context(path,
