@@ -281,7 +281,7 @@ def install(name=None,
         if _check_pkgng():
             args.extend(('install', '-y'))  # Assume yes when asked
             if not refresh:
-                args.append('-L')  # do not update repo db
+                args.append('-U')  # do not update repo db
         else:
             args.append('-r')  # use remote repo
 
