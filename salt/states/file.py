@@ -3084,7 +3084,9 @@ def serialize(name,
                               separators=(',', ': '),
                               sort_keys=True)
     elif formatter == 'python':
-        contents = pprint.pformat(dataset)
+        # round-trip this through JSON to avoid OrderedDict types
+        # there's probably a more performant way to do this...
+        contents = pprint.pformat(json.loads(json.dumps(dataset)))
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
