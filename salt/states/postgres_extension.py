@@ -12,12 +12,9 @@ The postgres_users module is used to create and manage Postgres extensions.
 '''
 
 # Import Python libs
-import hashlib
+import logging
 
 # Import salt libs
-import logging
-import salt.utils
-
 from salt.modules import postgres
 
 log = logging.getLogger(__name__)
