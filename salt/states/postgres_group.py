@@ -53,7 +53,7 @@ def present(name,
             db_user=None):
     '''
     Ensure that the named group is present with the specified privileges
-    Please note that the guser/roup notion in postgresql is just abstract, we
+    Please note that the user/group notion in postgresql is just abstract, we
     have roles, where users can be seens as roles with the LOGIN privilege
     and groups the others.
 
