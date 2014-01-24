@@ -336,9 +336,35 @@ def init():
 
         try:
             if provider == 'gitpython':
-                repo = git.Repo.init(rp_)
+                if not os.listdir(rp_):
+                    repo = git.Repo.init(rp_)
+                else:
+                    try:
+                        repo = git.Repo(rp_)
+                    except git.exc.InvalidGitRepositoryError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
             elif provider == 'pygit2':
-                repo = pygit2.init_repository(rp_)
+                if not os.listdir(rp_):
+                    repo = pygit2.init_repository(rp_)
+                else:
+                    try:
+                        repo = pygit2.Repository(rp_)
+                    except KeyError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
             else:
                 raise SaltException(
                     'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
