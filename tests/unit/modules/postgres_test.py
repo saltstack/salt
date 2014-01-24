@@ -63,7 +63,8 @@ class PostgresTestCase(TestCase):
             '/usr/bin/pgsql --no-align --no-readline --username testuser '
             '--host testhost --port testport --dbname maint_db '
             '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
-            host='testhost', password='foo', runas='foo', port='testport')
+            host='testhost', user='testuser',
+            password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
@@ -84,7 +85,8 @@ class PostgresTestCase(TestCase):
             '--host testhost --port testport --dbname maint_db -c '
             '\'CREATE DATABASE "dbname" '
             'WITH TABLESPACE = testspace OWNER = "otheruser"\'',
-            host='testhost', password='foo', runas='foo', port='testport')
+            host='testhost', user='testuser',
+            password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None,
@@ -149,7 +151,8 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username testuser "
             "--host testhost --port testport --dbname maint_db "
             "-c 'DROP DATABASE test_db'",
-            host='testhost', password='foo', runas='foo', port='testport')
+            host='testhost', user='testuser',
+            password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
@@ -194,7 +197,8 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
-            host='testhost', password='foo', runas='foo', port='testport')
+            host='testhost',  user='testuser',
+            password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
@@ -345,7 +349,7 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username test_user "
             "--host test_host --port test_port "
             "--dbname maint_db -c 'DROP ROLE test_user'",
-            host='test_host', port='test_port',
+            host='test_host', port='test_port', user='test_user',
             password='test_password', runas='foo')
 
     @patch('salt.modules.postgres._run_psql',

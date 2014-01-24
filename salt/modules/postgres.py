@@ -55,7 +55,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None,
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
               run_cmd="cmd.run_all"):
     '''
     Helper function to call psql, because the password requirement
@@ -73,6 +73,9 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None,
             else:
                 runas = 'postgres'
 
+    if user is None:
+        user = runas
+
     if runas:
         kwargs['runas'] = runas
 
@@ -81,10 +84,11 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None,
     if password is not None:
         pgpassfile = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
-            fp_.write('{0}:*:*:{1}:{2}'.format(
+            fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
-                runas if runas else '*',
-                password
+                port if port else '*',
+                user if user else '*',
+                password,
             ))
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
@@ -117,7 +121,8 @@ def version(user=None, host=None, port=None, maintenance_db=None,
                     port=port,
                     maintenance_db=maintenance_db,
                     password=password)
-    ret = _run_psql(cmd, runas=runas, password=password, host=host, port=port)
+    ret = _run_psql(
+        cmd, runas=runas, password=password, host=host, port=port, user=user)
 
     for line in ret['stdout'].splitlines():
         return line
@@ -213,7 +218,7 @@ def _psql_prepare_and_run(cmd,
         maintenance_db=maintenance_db, password=password,
         *cmd)
     cmdret = _run_psql(
-        rcmd, runas=runas, password=password, host=host, port=port)
+        rcmd, runas=runas, password=password, host=host, port=port, user=user)
     return cmdret
 
 
@@ -514,7 +519,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
 
 
 def role_get(name, user=None, host=None, port=None, maintenance_db=None,
-              password=None, runas=None, return_password=False):
+             password=None, runas=None, return_password=False):
     '''
     Return a dict with information about users of a Postgres server.
 
@@ -532,15 +537,13 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas,
-                          return_password=True)
-
+                          return_password=return_password)
     return all_users.get(name, None)
 
 
-def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
+def user_exists(name,
+                user=None, host=None, port=None, maintenance_db=None,
                 password=None,
-                createdb=None, createuser=None, superuser=None,
-                replication=None, rolepassword=None,
                 runas=None):
     '''
     Checks if a user exists on the Postgres server.
@@ -1025,9 +1028,6 @@ def _pg_is_older_ext_ver(a, b):
 
 
 def is_installed_extension(name,
-                           from_version=None,
-                           ext_version=None,
-                           schema=None,
                            user=None,
                            host=None,
                            port=None,
@@ -1056,7 +1056,6 @@ def is_installed_extension(name,
 
 
 def create_metadata(name,
-                    from_version=None,
                     ext_version=None,
                     schema=None,
                     user=None,
@@ -1186,7 +1185,6 @@ def create_extension(name,
     if if_not_exists is None:
         if_not_exists = True
     mtdata = create_metadata(name,
-                             from_version=from_version,
                              ext_version=ext_version,
                              schema=schema,
                              user=user,
@@ -1236,7 +1234,6 @@ def create_extension(name,
                 runas=runas, host=host, user=user, port=port,
                 maintenance_db=maintenance_db, password=password)
     mtdata = create_metadata(name,
-                             from_version=from_version,
                              ext_version=ext_version,
                              schema=schema,
                              user=user,
