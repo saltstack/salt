@@ -617,7 +617,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
-        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
+        log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -634,14 +634,14 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not an absolute path'.format(
                         mod_dir
                     )
                 )
                 continue
             if not os.path.isdir(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not a directory'.format(
                         mod_dir
                     )
@@ -653,7 +653,7 @@ class Loader(object):
                     # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it is disabled by configuration'.format(
                             fn_
                         )
@@ -670,7 +670,7 @@ class Loader(object):
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it does not end with an expected '
                         'extension'.format(
                             fn_
