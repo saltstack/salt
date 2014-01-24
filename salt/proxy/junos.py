@@ -4,9 +4,6 @@ Routines to set up a minion
 '''
 
 # Import python libs
-import logging
-import os
-
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.cfg
