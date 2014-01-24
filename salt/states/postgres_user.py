@@ -170,8 +170,8 @@ def present(name,
             and user_attr['inherits privileges'] != inherit
         ):
             update['inherit'] = inherit
-        if login is not None and user_attr['can login'] != login:
-            update['createdb'] = createdb
+        if (login is not None and user_attr['can login'] != login):
+            update['login'] = login
         if (
             createroles is not None
             and user_attr['can create roles'] != createroles
