@@ -7,11 +7,7 @@ ALPHA QUALITY code.
 '''
 
 # Import python libraries
-import re
 import logging
-
-# Salt libraries
-import salt.roster
 
 # Juniper interface libraries
 # https://github.com/jeremyschulman/py-junos-eznc

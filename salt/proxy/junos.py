@@ -4,9 +4,6 @@ Interface with a Junos device via proxy-minion.
 '''
 
 # Import python libs
-import logging
-import os
-
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.cfg
