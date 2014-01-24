@@ -206,7 +206,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'sc start "{0}"'.format(name)
+    cmd = 'net start "{0}"'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -220,7 +220,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'sc stop "{0}"'.format(name)
+    cmd = 'net stop "{0}"'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -235,12 +235,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     stop(name)
-    for idx in xrange(5):
-        if status(name):
-            time.sleep(2)
-            continue
-        return start(name)
-    return False
+    return start(name)
 
 
 def status(name, sig=None):
