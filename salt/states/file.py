@@ -3086,7 +3086,12 @@ def serialize(name,
     elif formatter == 'python':
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
-        contents = pprint.pformat(json.loads(json.dumps(dataset)))
+        contents = pprint.pformat(
+                json.loads(
+                    json.dumps(dataset),
+                    object_hook=salt.utils.decode_dict
+                    )
+                )
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
