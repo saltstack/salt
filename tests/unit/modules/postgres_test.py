@@ -449,6 +449,40 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    def test_user_update_encrypted_passwd(self):
+        postgres.user_update(
+            'test_username',
+            user='test_user',
+            host='test_host',
+            port='test_port',
+            maintenance_db='test_maint',
+            password='test_pass',
+            createdb=False,
+            createroles=True,
+            createuser=False,
+            encrypted=True,
+            inherit=True,
+            login=True,
+            rolepassword='foobar',
+            replication=False,
+            groups='test_groups',
+            runas='foo'
+        )
+        self.assertTrue(
+            re.match(
+                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '--host test_host --port test_port --dbname test_maint '
+                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
+                'ENCRYPTED PASSWORD '
+                '\'"\'"\'md531c27e68d3771c392b52102c01be1da1\'"\'"\''
+                '; GRANT test_groups TO test_username\'',
+                postgres._run_psql.call_args[0][0])
+        )
+
+    @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
     def test_version(self):
         postgres.version(
@@ -613,6 +647,16 @@ class PostgresTestCase(TestCase):
             'foo', ext_version='a', schema='b'))
         self.assertFalse(postgres.create_extension(
             'foo', ext_version='a', schema='b'))
+
+    def test_encrypt_passwords(self):
+        self.assertEqual(
+            postgres._maybe_encrypt_password(
+                'foo', 'bar', False),
+            'bar')
+        self.assertEqual(
+            postgres._maybe_encrypt_password(
+                'foo', 'bar', True),
+            'md596948aad3fcae80c08a35c9b5958cd89')
 
 
 if __name__ == '__main__':
