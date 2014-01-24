@@ -44,6 +44,7 @@ This is how a state configuration could look like:
 # Import python libs
 import re
 import copy
+
 # Import salt libs
 import salt.utils
 
@@ -270,13 +271,13 @@ def _check_and_install_rbenv(ret, user=None):
 
 def install_rbenv(name, user=None):
     '''
-    Install rbenv if necessary. Useful if you want to install rbenv plugins
-    via the git or file modules and need them installed before installing any
-    rubies. Allows you to require rbenv be installed prior to installing the
-    plugins.
+    Install rbenv if not installed. Allows you to require rbenv be installed
+    prior to installing the plugins. Useful if you want to install rbenv
+    plugins via the git or file modules and need them installed before
+    installing any rubies.
 
     Use the rbenv.root configuration option to set the path for rbenv if you
-    want a system wide install.
+    want a system wide install that is not in a user home dir.
 
     user: None
         The user to run rbenv as.
