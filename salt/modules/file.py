@@ -1896,7 +1896,7 @@ def get_selinux_context(path):
     try:
         ret = re.search('\w+:\w+:\w+:\w+', out).group(0)
     except AttributeError:
-        ret = "No selinux context information is available for {0}".format(path)
+        ret = 'No selinux context information is available for {0}'.format(path)
 
     return ret
 
