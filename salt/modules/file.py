@@ -2795,12 +2795,20 @@ def makedirs_perms(name,
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
+
+    if type(mode) == int:
+        mode = oct(mode)
+    elif type(mode) == str:
+        mode = oct(int(mode, 8))
+    else:
+        mode = None
+
     os.mkdir(name)
     check_perms(name,
                 None,
                 user,
                 group,
-                oct(int(str(mode), 8)) if mode else None)
+                mode)
 
 
 def get_devmm(name):
