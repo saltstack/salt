@@ -128,12 +128,26 @@ def init():
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
 
-        try:
+        if not os.listdir(rp_):
             repo = git.Repo.init(rp_)
-        except Exception as e:
-            log.error('GitPython exception caught while initializing the repo '
-                      'for gitfs: {0}. Maybe git is not available.'.format(e))
-            return repos
+        else:
+            try:
+                repo = git.Repo(rp_)
+            except git.exc.InvalidGitRepositoryError:
+                log.error(
+                    'Cache path {0} (corresponding remote: {1}) exists but '
+                    'is not a valid git repository. You will need to manually '
+                    'delete this directory on the master to continue to use '
+                    'this gitfs remote.'.format(rp_, opt)
+                )
+                continue
+            except Exception as exc:
+                log.error(
+                    'GitPython exception caught while initializing repo {0}'
+                    'for gitfs: {1}. Perhaps git is not available.'
+                    .format(opt, exc)
+                )
+                continue
 
         if not repo.remotes:
             try:
