@@ -2204,7 +2204,7 @@ def check_perms(name, ret, user, group, mode):
     # Mode changes if needed
     if mode is not None:
         mode = __salt__['config.manage_mode'](mode)
-        if mode != perms['lmode']:
+        if int(mode, base=8) != int(perms['lmode'], base=8):
             if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
             else:
@@ -2800,7 +2800,7 @@ def makedirs_perms(name,
                 None,
                 user,
                 group,
-                int('{0}'.format(mode)) if mode else None)
+                oct(int(str(mode), 8)) if mode else None)
 
 
 def get_devmm(name):
