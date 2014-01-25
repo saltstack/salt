@@ -22,6 +22,7 @@ def __virtual__():
     name = 'rabbitmq'
     try:
         utils.check_or_die('rabbitmqctl')
+        utils.check_or_die('rabbitmq-plugins')
     except exceptions.CommandNotFoundError:
         name = False
     return name
