@@ -25,8 +25,8 @@ def __virtual__():
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
-option_regexp1 = re.compile(r'\s*(.+)\s*(=)\s*(.+)\s*')
-option_regexp2 = re.compile(r'\s*(.+)\s*(:)\s*(.+)\s*')
+option_regexp1 = re.compile(r'\s*(.+?)\s*(=)\s*(.+)\s*')
+option_regexp2 = re.compile(r'\s*(.+?)\s*(:)\s*(.+)\s*')
 
 
 def set_option(file_name, sections=None, summary=True):
@@ -282,8 +282,8 @@ class _Ini(object):
                 file_contents += '[%s]\n' % section.section_name
             for item in section:
                 if isinstance(item, _Option):
-                    file_contents += '%s %s %s\n' % (item.name, item.separator,
-                                                     item.value)
+                    file_contents += '%s%s%s\n' % (item.name, item.separator,
+                                                   item.value)
                 else:
                     file_contents += '# %s\n' % item
             file_contents += '\n'
@@ -335,7 +335,7 @@ class _Ini(object):
         if not ma:
             ma = re.match(option_regexp2, line)
         return _Option(ma.group(1).strip(), ma.group(3).strip(),
-                      ma.group(2).strip())
+                       ma.group(2).strip())
 
     @staticmethod
     def iscomment(line):

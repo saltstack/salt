@@ -163,12 +163,12 @@ class RunnerClient(object):
 
         .. code-block:: python
 
-            runner.master_call({
-                'fun': 'jobs.list_jobs',
-                'username': 'saltdev',
-                'password': 'saltdev',
-                'eauth': 'pam',
-            })
+            runner.master_call(
+                fun='jobs.list_jobs',
+                username='saltdev',
+                password='saltdev',
+                eauth='pam'
+            )
         '''
         load = kwargs
         load['cmd'] = 'runner'

@@ -43,7 +43,8 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Work only on RHEL/Fedora based distros with python 2.5 and below
+    if __opts__.get('yum_provider') == 'yumpkg_api':
+        return False
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
@@ -87,20 +88,28 @@ def _parse_pkginfo(line):
     return pkginfo(name, pkg_version, arch, repoid)
 
 
-def _repoquery(repoquery_args):
+def _repoquery_pkginfo(repoquery_args):
+    '''
+    Wrapper to call repoquery and parse out all the tuples
+    '''
+    ret = []
+    for line in _repoquery(repoquery_args):
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is not None:
+            ret.append(pkginfo)
+    return ret
+
+
+def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
     ret = []
     cmd = 'repoquery --queryformat="{0}" {1}'.format(
-        __QUERYFORMAT, repoquery_args
+        query_format, repoquery_args
     )
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
-    for line in out.splitlines():
-        pkginfo = _parse_pkginfo(line)
-        if pkginfo is not None:
-            ret.append(pkginfo)
-    return ret
+    return out.splitlines()
 
 
 def _get_repo_options(**kwargs):
@@ -193,7 +202,7 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery(
+    updates = _repoquery_pkginfo(
         '{0} --pkgnarrow=available {1}'.format(repo_arg, ' '.join(names))
     )
 
@@ -268,7 +277,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    for pkginfo in _repoquery('--all --pkgnarrow=installed'):
+    for pkginfo in _repoquery_pkginfo('--all --pkgnarrow=installed'):
         if pkginfo is None:
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
@@ -327,7 +336,7 @@ def list_repo_pkgs(*args, **kwargs):
         repoquery_cmd = '--all --repoid="{0}"'.format(repo)
         for arg in args:
             repoquery_cmd += ' "{0}"'.format(arg)
-        all_pkgs = _repoquery(repoquery_cmd)
+        all_pkgs = _repoquery_pkginfo(repoquery_cmd)
         for pkg in all_pkgs:
             ret.setdefault(pkg.repoid, []).append({pkg.name: pkg.version})
 
@@ -350,7 +359,7 @@ def list_upgrades(refresh=True, **kwargs):
         refresh_db()
 
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery('{0} --all --pkgnarrow=updates'.format(repo_arg))
+    updates = _repoquery_pkginfo('{0} --all --pkgnarrow=updates'.format(repo_arg))
     return dict([(x.name, x.version) for x in updates])
 
 
@@ -377,20 +386,31 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
     '''
     repo_arg = _get_repo_options(**kwargs)
-    deplist_base = 'yum {0} deplist --quiet'.format(repo_arg) + ' {0!r}'
     repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
+
+    if 'avail' in __context__:
+        avail = __context__['avail']
+    else:
+        # get list of available packages
+        pkg_data = (
+            x.split('_|-') for x in _repoquery(
+                '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
+            )
+        )
+        avail = []
+        for name, arch in pkg_data:
+            if arch in __ARCHES and arch != __grains__['osarch']:
+                avail.append('.'.join((name, arch)))
+            else:
+                avail.append(name)
+        __context__['avail'] = avail
 
     ret = {}
     for name in names:
-        ret.setdefault(name, {})['found'] = bool(
-            __salt__['cmd.run'](
-                deplist_base.format(name),
-                output_loglevel='debug'
-            )
-        )
-        if ret[name]['found'] is False:
+        ret.setdefault(name, {})['found'] = name in avail
+        if not ret[name]['found']:
             repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
-            provides = set([x.name for x in _repoquery(repoquery_cmd)])
+            provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
             if provides:
                 for pkg in provides:
                     ret[name]['suggestions'] = list(provides)
@@ -401,8 +421,13 @@ def check_db(*names, **kwargs):
 
 def refresh_db():
     '''
-    Since yum refreshes the database automatically, this runs a yum clean,
-    so that the next yum operation will have a clean database
+    Check the yum repos for updated packages
+
+    Returns:
+
+    - ``True``: Updates are available
+    - ``False``: An error occured
+    - ``None``: No updates are available
 
     CLI Example:
 
@@ -410,9 +435,15 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'yum -q clean dbcache'
-    __salt__['cmd.retcode'](cmd)
-    return True
+    retcodes = {
+        100: True,
+        0: None,
+        1: False,
+    }
+
+    cmd = 'yum -q clean expire-cache && yum -q check-update'
+    ret = __salt__['cmd.retcode'](cmd)
+    return retcodes.get(ret, False)
 
 
 def clean_metadata():
@@ -420,7 +451,7 @@ def clean_metadata():
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     Cleans local yum metadata. Functionally identical to :mod:`refresh_db()
-    <salt.modules.yumpkg5.refresh_db>`.
+    <salt.modules.yumpkg.refresh_db>`.
 
     CLI Example:
 
@@ -756,7 +787,7 @@ def remove(name=None, pkgs=None, **kwargs):
 def purge(name=None, pkgs=None, **kwargs):
     '''
     Package purges are not supported by yum, this function is identical to
-    ``remove()``.
+    :mod:`pkg.remove <salt.modules.yumpkg.remove>`.
 
     name
         The name of the package to be deleted.
@@ -856,7 +887,7 @@ def group_info(name):
 
         salt '*' pkg.group_info 'Perl Support'
     '''
-    # Not using _repoquery() here because group queries are handled
+    # Not using _repoquery_pkginfo() here because group queries are handled
     # differently, and ignore the '--queryformat' param
     ret = {
         'mandatory packages': [],

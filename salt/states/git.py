@@ -213,7 +213,7 @@ def latest(name,
                                           identity=identity)
                 elif rev:
 
-                    cmd = "git rev-parse " + rev + '^{commit}'
+                    cmd = 'git rev-parse {0} ^{{commit}}'.format(rev)
                     retcode = __salt__['cmd.retcode'](cmd,
                                                       cwd=target,
                                                       runas=user)

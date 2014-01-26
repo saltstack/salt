@@ -112,6 +112,24 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    def test_numeric_rev(self):
+        '''
+        git.latest with numeric revision
+        '''
+        name = os.path.join(integration.TMP, 'salt_repo')
+        try:
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt.git'.format(self.__domain),
+                rev=0.11,
+                target=name,
+                submodules=True
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
     def test_present(self):
         '''
         git.present

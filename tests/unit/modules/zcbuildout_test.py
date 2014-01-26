@@ -5,6 +5,7 @@ import os
 import tempfile
 import urllib2
 import logging
+import shutil
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -12,12 +13,15 @@ from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
 )
-
 ensure_in_syspath('../../')
-import integration
-import shutil
+
+try:
+    from salttesting.helpers import skip_if_binaries_missing
+except ImportError:
+    from integration import skip_if_binaries_missing
 
 # Import Salt libs
+import integration
 import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -113,6 +117,7 @@ class Base(TestCase):
 
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
+@skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
     @requires_network()
@@ -150,13 +155,9 @@ class BuildoutTestCase(Base):
 
         self.assertTrue(u'Log summary:\n' in ret1['outlog'])
         self.assertTrue(
-            u'\n'
             u'INFO: ibar\n'
-            u'\n'
             u'WARN: wbar\n'
-            u'\n'
             u'DEBUG: dbar\n'
-            u'\n'
             u'ERROR: ebar\n'
             in ret1['outlog']
         )
@@ -451,9 +452,24 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+class BuildoutAPITestCase(TestCase):
+
+    def test_setup(self):
+        buildout.LOG.clear()
+        buildout.LOG.info('àé')
+        buildout.LOG.info('uàé')
+        buildout.LOG.error('àé')
+        buildout.LOG.error('uàé')
+        ret = buildout._set_status({}, out='éà')
+        uret = buildout._set_status({}, out=u'éà')
+        self.assertTrue(ret['outlog'] == uret['outlog'])
+        self.assertTrue(u'àé' in uret['outlog_by_level'])
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(
+        BuildoutAPITestCase,
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)

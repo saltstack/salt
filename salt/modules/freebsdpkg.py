@@ -19,7 +19,7 @@ Remote package support using ``pkg_add(1)``
         salt bsdminion sys.doc pkg
 
 
-This module acts as the default package provider for FreeBSD 9 and newer. If
+This module acts as the default package provider for FreeBSD 9 and older. If
 you need to use pkgng on a FreeBSD 9 system, you will need to override the
 ``pkg`` provider by setting the :conf_minion:`providers` parameter in your
 Minion config file, in order to use pkgng.

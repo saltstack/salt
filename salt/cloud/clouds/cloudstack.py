@@ -35,6 +35,7 @@ from salt.cloud.exceptions import SaltCloudSystemExit
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
+    from libcloud.common.cloudstack import CloudStackConnection
     HASLIBS = True
 except ImportError:
     HASLIBS = False
@@ -224,10 +225,15 @@ def create(vm_):
     }
 
     if get_keypair(vm_) is not False:
-        kwargs['extra_args'] = {'keypair': get_keypair(vm_)}
+        kwargs['ex_keyname'] = get_keypair(vm_)
 
     if get_networkid(vm_) is not False:
         kwargs['networkids'] = get_networkid(vm_)
+        kwargs['networks'] = (   # The only attr that is used is 'id'.
+                                 CloudStackNetwork(None, None, None,
+                                                   kwargs['networkids'],
+                                                   None, None),
+                             )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -262,7 +268,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': get_ip(data),
             'username': ssh_username,
-            #'password': data.extra['password'],
+            'password': data.extra['password'],
             'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
@@ -359,14 +365,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data.__dict__)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',

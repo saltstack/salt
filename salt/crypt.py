@@ -336,10 +336,16 @@ class Auth(object):
                 True,
                 self.opts['ipv6']
             )
-        except SaltClientError:
+        except SaltClientError as e:
             if safe:
+                log.warning('SaltClientError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
+
+        if self.opts['master_ip'] not in self.opts['master_uri']:
+            self.opts['master_uri'] = (self.opts['master_uri'].replace(
+                self.opts['master_uri'].split(':')[1][2:],
+                self.opts['master_ip']))
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
@@ -349,8 +355,9 @@ class Auth(object):
                 self.minion_sign_in_payload(),
                 timeout=timeout
             )
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as e:
             if safe:
+                log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
 

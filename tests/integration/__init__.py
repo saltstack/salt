@@ -300,19 +300,37 @@ class TestDaemon(object):
         self.setup_minions()
 
         if self.parser.options.sysinfo:
-            print_header('~~~~~~~ Versions Report ', inline=True)
+            try:
+                print_header(
+                    '~~~~~~~ Versions Report ', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            except TypeError:
+                print_header('~~~~~~~ Versions Report ', inline=True)
+
             print('\n'.join(salt.version.versions_report()))
 
-            print_header(
-                '~~~~~~~ Minion Grains Information ', inline=True,
-            )
+            try:
+                print_header(
+                    '~~~~~~~ Minion Grains Information ', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            except TypeError:
+                print_header('~~~~~~~ Minion Grains Information ', inline=True)
+
             grains = self.client.cmd('minion', 'grains.items')
 
             minion_opts = self.minion_opts.copy()
             minion_opts['color'] = self.parser.options.no_colors is False
             salt.output.display_output(grains, 'grains', minion_opts)
 
-        print_header('', sep='=', inline=True)
+        try:
+            print_header(
+                '=', sep='=', inline=True,
+                width=getattr(self.parser.options, 'output_columns', PNUM)
+            )
+        except TypeError:
+            print_header('', sep='=', inline=True)
 
         try:
             return self
@@ -467,7 +485,11 @@ class TestDaemon(object):
         job_finished = False
         while now <= expire:
             running = self.__client_job_running(targets, jid)
-            sys.stdout.write('\r' + ' ' * PNUM + '\r')
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
             if not running and job_finished is False:
                 # Let's not have false positives and wait one more seconds
                 job_finished = True
@@ -519,7 +541,11 @@ class TestDaemon(object):
         now = datetime.now()
         expire = now + timedelta(seconds=timeout)
         while now <= expire:
-            sys.stdout.write('\r' + ' ' * PNUM + '\r')
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
             sys.stdout.write(
                 ' * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
@@ -537,7 +563,12 @@ class TestDaemon(object):
                     # Someone(minion) else "listening"?
                     continue
                 expected_connections.remove(target)
-                sys.stdout.write('\r' + ' ' * PNUM + '\r')
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns',
+                                      PNUM)
+                    )
+                )
                 sys.stdout.write(
                     '   {LIGHT_GREEN}*{ENDC} {0} connected.\n'.format(
                         target, **self.colors
@@ -555,7 +586,14 @@ class TestDaemon(object):
                 '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
             )
-            print_header('=', sep='=', inline=True)
+            try:
+                print_header(
+                    '=', sep='=', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+
+                )
+            except TypeError:
+                print_header('=', sep='=', inline=True)
             raise SystemExit()
 
     def sync_minion_modules(self, targets, timeout=120):

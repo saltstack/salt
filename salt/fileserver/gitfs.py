@@ -31,9 +31,13 @@ can be used to specify which provider should be used.
     supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
     used.
 
+    Additionally, `pygit2`_ does not yet support passing http/https credentials
+    via a `.netrc`_ file.
+
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
 # Import python libs
@@ -332,9 +336,35 @@ def init():
 
         try:
             if provider == 'gitpython':
-                repo = git.Repo.init(rp_)
+                if not os.listdir(rp_):
+                    repo = git.Repo.init(rp_)
+                else:
+                    try:
+                        repo = git.Repo(rp_)
+                    except git.exc.InvalidGitRepositoryError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
             elif provider == 'pygit2':
-                repo = pygit2.init_repository(rp_)
+                if not os.listdir(rp_):
+                    repo = pygit2.init_repository(rp_)
+                else:
+                    try:
+                        repo = pygit2.Repository(rp_)
+                    except KeyError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
             else:
                 raise SaltException(
                     'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
@@ -382,7 +412,7 @@ def purge_cache():
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, r) for r in remove_dirs
-                   if r not in ('hash', 'refs')]
+                   if r not in ('hash', 'refs', 'envs.p')]
     if remove_dirs:
         for r in remove_dirs:
             shutil.rmtree(r)
@@ -428,6 +458,14 @@ def update():
         except (IOError, OSError):
             pass
 
+    env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+    if data.get('changed', False) is True or not os.path.isfile(env_cache):
+        new_envs = envs(ignore_cache=True)
+        serial = salt.payload.Serial(__opts__)
+        with salt.utils.fopen(env_cache, 'w+') as fp_:
+            fp_.write(serial.dumps(new_envs))
+            log.trace('Wrote env cache data to {0}'.format(env_cache))
+
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
         event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
@@ -442,19 +480,24 @@ def update():
         pass
 
 
-def envs():
+def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
     '''
+    if not ignore_cache:
+        env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+        cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
+        if cache_match is not None:
+            return cache_match
     base_branch = __opts__['gitfs_base']
     provider = _get_provider()
     ret = set()
     repos = init()
     for repo in repos:
         if provider == 'gitpython':
-            ret.update(_checkenv_gitpython(repo, base_branch))
+            ret.update(_envs_gitpython(repo, base_branch))
         elif provider == 'pygit2':
-            ret.update(_checkenv_pygit2(repo, base_branch))
+            ret.update(_envs_pygit2(repo, base_branch))
         else:
             raise SaltException(
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
@@ -463,7 +506,7 @@ def envs():
     return sorted(ret)
 
 
-def _checkenv_gitpython(repo, base_branch):
+def _envs_gitpython(repo, base_branch):
     '''
     Check the refs and return a list of the ones which can be used as salt
     environments.
@@ -483,7 +526,7 @@ def _checkenv_gitpython(repo, base_branch):
     return ret
 
 
-def _checkenv_pygit2(repo, base_branch):
+def _envs_pygit2(repo, base_branch):
     '''
     Check the refs and return a list of the ones which can be used as salt
     environments.
@@ -681,7 +724,56 @@ def file_hash(load, fnd):
         return ret
 
 
+def _file_lists(load, form):
+    '''
+    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/gitfs')
+    if not os.path.isdir(list_cachedir):
+        try:
+            os.makedirs(list_cachedir)
+        except os.error:
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            return []
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    cache_match, refresh_cache, save_cache = \
+        salt.fileserver.check_file_list_cache(
+            __opts__, form, list_cache, w_lock
+        )
+    if cache_match is not None:
+        return cache_match
+    if refresh_cache:
+        ret = {'links': []}
+        ret['files'] = _get_file_list(load)
+        ret['dirs'] = _get_dir_list(load)
+        ret['empty_dirs'] = _get_file_list_emptydirs(load)
+        if save_cache:
+            salt.fileserver.write_file_list_cache(
+                __opts__, ret, list_cache, w_lock
+            )
+        return ret.get(form, [])
+    # Shouldn't get here, but if we do, this prevents a TypeError
+    return []
+
+
 def file_list(load):
+    '''
+    Return a list of all files on the file server in a specified
+    environment
+    '''
+    return _file_lists(load, 'files')
+
+
+def _get_file_list(load):
     '''
     Return a list of all files on the file server in a specified
     environment
@@ -778,6 +870,13 @@ def _file_list_pygit2(repo, ref_tgt, gitfs_root):
 
 
 def file_list_emptydirs(load):
+    '''
+    Return a list of all empty directories on the master
+    '''
+    return _file_lists(load, 'empty_dirs')
+
+
+def _get_file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
@@ -880,6 +979,13 @@ def _file_list_emptydirs_pygit2(repo, ref_tgt, gitfs_root):
 
 
 def dir_list(load):
+    '''
+    Return a list of all directories on the master
+    '''
+    return _file_lists(load, 'dirs')
+
+
+def _get_dir_list(load):
     '''
     Get a list of all directories on the master
     '''

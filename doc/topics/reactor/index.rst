@@ -145,6 +145,19 @@ Example output:
      'pretag': None,
      'tag': 'salt/minion/fuzzer.domain.tld/start'}
 
+Debugging the Reactor
+=====================
+
+The best window into the Reactor is to run the master in the foreground with
+debug logging enabled. The output will include when the master sees the event,
+what the master does in response to that event, and it will also include the
+rendered SLS file (or any errors generated while rendering the SLS file).
+
+1.  Stop the master.
+2.  Start the master manually::
+
+        salt-master -l debug
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 

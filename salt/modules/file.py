@@ -1892,7 +1892,13 @@ def get_selinux_context(path):
         salt '*' file.get_selinux_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
-    return out.split(' ')[4]
+
+    try:
+        ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
+    except AttributeError:
+        ret = 'No selinux context information is available for {0}'.format(path)
+
+    return ret
 
 
 def set_selinux_context(path,
@@ -2126,7 +2132,8 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     source_sum = None
     partial_id = False
     name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
-    log.debug('modules.file.py - extract_hash(): Extracting hash for file named: {}'.format(name_sought))
+    log.debug('modules.file.py - extract_hash(): Extracting hash for file '
+              'named: {0}'.format(name_sought))
     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
     for hash_variant in HASHES:
         if hash_type == '' or hash_type == hash_variant[0]:
@@ -2136,26 +2143,29 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
             hash_fn_fopen.seek(0)
             for line in hash_fn_fopen.read().splitlines():
                 hash_array = re.findall(r'(?i)(?<![a-z0-9])[a-f0-9]{' + str(hash_variant[1]) + '}(?![a-z0-9])', line)
-                log.debug('modules.file.py - extract_hash(): '
-                    'From "line": {} got : {}'.format(line, hash_array))
+                log.debug('modules.file.py - extract_hash(): From "line": {0} '
+                          'got : {1}'.format(line, hash_array))
                 if hash_array:
                     if not partial_id:
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
                         partial_id = True
 
-                    log.debug('modules.file.py - extract_hash(): Found : {} -- {}'.format(
-                                            source_sum['hash_type'], source_sum['hsum']))
+                    log.debug('modules.file.py - extract_hash(): Found: {0} '
+                              '-- {1}'.format(source_sum['hash_type'],
+                                              source_sum['hsum']))
 
                     if re.search(name_sought, line):
                         source_sum = {'hsum': hash_array[0], 'hash_type': hash_variant[0]}
-                        log.debug('modules.file.py - extract_hash: '
-                        'For {} -- returning the {} hash "{}".'.format(
-                                 name_sought, source_sum['hash_type'], source_sum['hsum']))
+                        log.debug('modules.file.py - extract_hash: For {0} -- '
+                                  'returning the {1} hash "{2}".'.format(
+                                      name_sought,
+                                      source_sum['hash_type'],
+                                      source_sum['hsum']))
                         return source_sum
 
     if partial_id:
-        log.debug('modules.file.py - extract_hash: '
-                'Returning the partially identified {} hash "{}".'.format(
+        log.debug('modules.file.py - extract_hash: Returning the partially '
+                  'identified {0} hash "{1}".'.format(
                        source_sum['hash_type'], source_sum['hsum']))
     else:
         log.debug('modules.file.py - extract_hash: Returning None.')
@@ -2194,7 +2204,7 @@ def check_perms(name, ret, user, group, mode):
     # Mode changes if needed
     if mode is not None:
         mode = __salt__['config.manage_mode'](mode)
-        if mode != perms['lmode']:
+        if int(mode, base=8) != int(perms['lmode'], base=8):
             if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
             else:
@@ -2790,7 +2800,7 @@ def makedirs_perms(name,
                 None,
                 user,
                 group,
-                int('{0}'.format(mode)) if mode else None)
+                oct(int(str(mode), 8)) if mode else None)
 
 
 def get_devmm(name):

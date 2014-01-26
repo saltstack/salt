@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 A module to wrap archive calls
+
+.. versionadded:: 2014.1.0 (Hydrogen)
 '''
 
 # Import salt libs

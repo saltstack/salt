@@ -53,7 +53,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family', False) != 'Debian':
         return False
     return __virtualname__
 
@@ -1222,6 +1222,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
+        if 'comments' in kwargs:
+            mod_source.comment = kwargs['comments'][0]
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable

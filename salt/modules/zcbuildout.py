@@ -79,6 +79,7 @@ def _salt_callback(func):
         unless = kw.get('unless', None)
         runas = kw.get('runas', None)
         env = kw.get('env', ())
+        status = BASE_STATUS.copy()
         try:
             # may rise _ResultTransmission
             status = _check_onlyif_unless(onlyif,
@@ -108,6 +109,13 @@ def _salt_callback(func):
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
+        # before returning, trying to compact the log output
+        for k in ['comment', 'out', 'outlog']:
+            if status[k] and isinstance(status[k], string_types):
+                status[k] = '\n'.join([
+                    log
+                    for log in status[k].split('\n')
+                    if log.strip()])
         return status
     _call_callback.__doc__ = func.__doc__
     return _call_callback
@@ -121,6 +129,8 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
+        if not isinstance(msg, unicode):
+            msg = msg.decode('utf-8')
         if not level in self._by_level:
             self._by_level[level] = []
         self._msgs.append((level, msg))
@@ -177,6 +187,8 @@ def _set_status(m,
     if out and isinstance(out, string_types):
         outlog += HR
         outlog += u'OUTPUT:\n'
+        if not isinstance(out, unicode):
+            out = out.decode('utf-8')
         outlog += u'{0}\n'.format(out)
         outlog += HR
     if m['logs']:
@@ -187,13 +199,13 @@ def _set_status(m,
         outlog_by_level += u'Log summary by level:\n'
         outlog_by_level += HR
         for level, msg in m['logs']:
-            outlog += '\n{0}: {1}\n'.format(level.upper(), msg)
+            outlog += u'\n{0}: {1}\n'.format(level.upper(), msg)
         for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
-                outlog_by_level += '\n{0}:\n'.format(logger.upper())
-                outlog_by_level += '\n'.join(logs)
-                outlog_by_level += '\n'
+                outlog_by_level += u'\n{0}:\n'.format(logger.upper())
+                outlog_by_level += u'\n'.join(logs)
+                outlog_by_level += u'\n'
         outlog += HR
     m['outlog'] = outlog
     m['outlog_by_level'] = outlog_by_level

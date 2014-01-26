@@ -338,7 +338,7 @@ def insert(name, family='ipv4', **kwargs):
 
 def delete(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 0.17.0
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     Delete a rule to a chain
 
