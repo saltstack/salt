@@ -1128,7 +1128,7 @@ def managed(name,
         ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
         setup would be like so:
 
-        .. code-block:: yaml:
+        .. code-block:: yaml
 
             userdata:
               deployer:
