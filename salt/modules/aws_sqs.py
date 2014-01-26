@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 Support for the Amazon Simple Queue Service.
+
+:configuration: This module uses the awscli tool provided by Amazon. Install
+    awscli on the minion executing these commands through pip. The awscli
+    documentation contains the configuration instructions.
 '''
 import json
 

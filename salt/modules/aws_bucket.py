@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Create and destroy S3 Buckets
-=============================
+Manage S3 buckets.
 
-Create and destroy S3 buckets. This interacts with Amazon's services, and so
-may incur charges.
+This module is intended to replace the s3 module for performing operations on
+AWS S3 buckets.
 
-This differs from the raw s3 module in that it uses the awscli tool provided by
-Amazon.  This can be downloaded from pip. Check the documentation for awscli
-for configuration information.
+:configuration: This module uses the awscli tool provided by Amazon. Install
+    awscli on the minion executing these commands through pip. The awscli
+    documentation contains the configuration instructions.
 '''
 import json
 
@@ -32,7 +31,7 @@ def list_buckets(region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run aws_bucket as a user other than what the minion runs as
 
     CLI Example:
 
