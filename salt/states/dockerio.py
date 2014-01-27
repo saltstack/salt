@@ -87,7 +87,7 @@ Available Functions
 
     We should add magic to all methods to also match containers by name
     now that the 'naming link' stuff has been merged in docker.
-    This applies for exemple to:
+    This applies for example to:
 
         - running
         - absent

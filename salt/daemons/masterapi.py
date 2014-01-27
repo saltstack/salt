@@ -824,7 +824,7 @@ class LocalFuncs(object):
                 log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,
@@ -893,7 +893,7 @@ class LocalFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,

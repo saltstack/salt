@@ -770,7 +770,7 @@ def stop(container, timeout=10, *args, **kwargs):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while stopping '
+                    'An exception occurred while stopping '
                     'your container {0}').format(container))
     return status
 

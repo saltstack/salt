@@ -917,7 +917,7 @@ def script(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
     Arguments for the script can be specified as well.
 
     CLI Example:
@@ -1019,7 +1019,7 @@ def script_retcode(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
 
     Only evaluate the script return code and do not block for terminal output
 

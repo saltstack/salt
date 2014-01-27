@@ -896,7 +896,7 @@ def replace(path,
             show_changes=True,
         ):
     '''
-    Replace occurances of a pattern in a file
+    Replace occurrences of a pattern in a file
 
     .. versionadded:: 0.17.0
 
@@ -1124,7 +1124,7 @@ def blockreplace(path,
         orig_file.append(line)
         if result is not None:
             new_file.append(result)
-    # end for. If we are here without block managment we maybe have some problems,
+    # end for. If we are here without block management we maybe have some problems,
     # or we need to initialise the marked block
 
     if in_block:
@@ -1191,7 +1191,7 @@ def search(path,
         bufsize=1,
         ):
     '''
-    Search for occurances of a pattern in a file
+    Search for occurrences of a pattern in a file
 
     .. versionadded:: 0.17.0
 

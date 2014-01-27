@@ -86,7 +86,7 @@ AWS Improvements
 
 AWS is much more complex to work with than any of the other supported cloud
 providers. As such, additional configuration has been added in order to
-accomodate their usage:
+accommodate their usage:
 
 AWS.ssh_username:
   Because AWS images can include a variety of different usernames for the
