@@ -48,7 +48,7 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 

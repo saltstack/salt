@@ -4,7 +4,7 @@ Support for ``pkgng``, the new package manager for FreeBSD
 
 .. warning::
 
-    This module has been completely rewritten. Up to and includng version
+    This module has been completely rewritten. Up to and including version
     0.17.x, it was available as the ``pkgng`` module, (``pkgng.install``,
     ``pkgng.delete``, etc.), but moving forward this module will no longer be
     available as ``pkgng``, as it will behave like a normal Salt ``pkg``

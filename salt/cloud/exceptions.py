@@ -50,5 +50,5 @@ class SaltCloudExecutionTimeout(SaltCloudException):
 
 class SaltCloudExecutionFailure(SaltCloudException):
     '''
-    Raised when too much failures have ocurred while querying/waiting for data.
+    Raised when too much failures have occurred while querying/waiting for data.
     '''

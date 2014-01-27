@@ -36,7 +36,7 @@ roughly as follows:
 3. If so, run the installer command.
 4. Execute ``pkg.list_pkgs`` and compare to the result stored from
    before installation.
-5. Sucess/Failure/Changes will be reported based on the differences
+5. Success/Failure/Changes will be reported based on the differences
    between the original and final ``pkg.list_pkgs`` results.
 
 If there are any problems in using the package manager it is likely to

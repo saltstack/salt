@@ -51,7 +51,7 @@ and each event tag has a list of reactor SLS files to be run.
 Reactor sls files are similar to state and pillar sls files.  They are
 by default yaml + Jinja templates and are passed familar context variables.
 
-They differ because of the addtion of the ``tag`` and ``data`` variables.
+They differ because of the addition of the ``tag`` and ``data`` variables.
 
 - The ``tag`` variable is just the tag in the fired event.
 - The ``data`` variable is the event's data dict.

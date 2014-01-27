@@ -93,7 +93,7 @@ the discrete states are split or groups into separate sls files:
           - pkg: httpd
           - sls: network
 
-In this example, the httpd sevice running state will not be applied
+In this example, the httpd service running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
 installed AND the network state is satisfied.
 

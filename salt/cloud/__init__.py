@@ -620,7 +620,7 @@ class Cloud(object):
                 ret_multip.update(obj)
 
             # build up a datastructure similar to what the non-parallel
-            # destory uses
+            # destroy uses
             for obj in parallel_data:
                 alias = obj['alias']
                 driver = obj['driver']

@@ -381,7 +381,7 @@ objShell.Exec("{1}{2}")'''
 
     # First off, change to the local temp directory, stop salt-minion (if
     # running), and remove the master's public key.
-    # This is to accomodate for reinstalling Salt over an old or broken build,
+    # This is to accommodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
     batch = 'cd /d %TEMP%\nnet stop salt-minion\ndel c:\\salt\\conf\\pki\\minion\\minion_master.pub\n'

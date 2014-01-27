@@ -303,7 +303,7 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
 
-    # Removing existing keys from the auth_keys isnt really a good idea
+    # Removing existing keys from the auth_keys isn't really a good idea
     # in fact
     #
     # as:

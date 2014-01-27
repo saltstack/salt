@@ -285,7 +285,7 @@ class Compiler(object):
                                name, body['__sls__'], type(name))
                 errors.append(err)
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictionary'
+                err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
                 errors.append(err)
                 continue
@@ -756,7 +756,7 @@ class State(object):
                                name, body['__sls__'], type(name))
                 errors.append(err)
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictionary'
+                err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
                 errors.append(err)
                 continue
@@ -1123,7 +1123,7 @@ class State(object):
                         rkey = key.split('_')[0]
                         items = arg[key]
                         if isinstance(items, dict):
-                            # Formated as a single req_in
+                            # Formatted as a single req_in
                             for _state, name in items.items():
 
                                 # Not a use requisite_in

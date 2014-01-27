@@ -578,7 +578,7 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres.create_metadata',
            Mock(side_effect=[
-               # create suceeded
+               # create succeeded
                [postgres._EXTENSION_NOT_INSTALLED],
                [postgres._EXTENSION_INSTALLED],
                [postgres._EXTENSION_NOT_INSTALLED],
@@ -591,11 +591,11 @@ class PostgresTestCase(TestCase):
                 postgres._EXTENSION_TO_UPGRADE,
                 postgres._EXTENSION_INSTALLED],
                [postgres._EXTENSION_INSTALLED],
-               # move suceeded
+               # move succeeded
                [postgres._EXTENSION_TO_MOVE,
                 postgres._EXTENSION_INSTALLED],
                [postgres._EXTENSION_INSTALLED],
-               # upgrade suceeded
+               # upgrade succeeded
                [postgres._EXTENSION_TO_UPGRADE,
                 postgres._EXTENSION_INSTALLED],
                [postgres._EXTENSION_INSTALLED],

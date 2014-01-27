@@ -2140,7 +2140,7 @@ install_red_hat_enterprise_server_testing_post() {
 #   Amazon Linux AMI Install Functions
 #
 install_amazon_linux_ami_deps() {
-    # Acording to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
+    # According to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
     # enable the EPEL 6 repo
     if [ $CPU_ARCH_L = "i686" ]; then
         EPEL_ARCH="i386"
@@ -2380,7 +2380,7 @@ __freebsd_get_packagesite() {
     set -o nounset
 }
 
-# Using a seperate conf step to head for idempotent install...
+# Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
 
     ## pkg.conf is deprecated.  

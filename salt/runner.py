@@ -58,7 +58,7 @@ class RunnerClient(object):
             data['return'] = self.low(fun, low)
             data['success'] = True
         except Exception as exc:
-            data['return'] = 'Exception occured in runner {0}: {1}: {2}'.format(
+            data['return'] = 'Exception occurred in runner {0}: {1}: {2}'.format(
                             fun,
                             exc.__class__.__name__,
                             exc,

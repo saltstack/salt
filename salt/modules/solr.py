@@ -1260,7 +1260,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
     if not resp['success']:
         return resp
     options = _merge_options(options)
-    #if we're nuking data, and we're multi-core disable replication for safty
+    #if we're nuking data, and we're multi-core disable replication for safety
     if options['clean'] and _check_for_cores():
         resp = set_replication_enabled(False, host=host, core_name=core_name)
         if not resp['success']:

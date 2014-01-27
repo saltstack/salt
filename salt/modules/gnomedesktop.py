@@ -191,7 +191,7 @@ def getClockShowDate(**kwargs):
 
 def setClockShowDate(kvalue, **kwargs):
     '''
-    Set whether the date is visable in the clock
+    Set whether the date is visible in the clock
 
     CLI Example:
 

@@ -33,7 +33,7 @@ def present(name, zone, ttl, data, rdtype='A'):
         TTL for the record
 
     data
-        Data for the DNS record. E.g., the IP addres for an A record.
+        Data for the DNS record. E.g., the IP address for an A record.
 
     rdtype
         DNS resource type. Default 'A'.
@@ -80,7 +80,7 @@ def absent(name, zone, data=None, rdtype=None):
         The zone to check
 
     data
-        Data for the DNS record. E.g., the IP addres for an A record. If omitted,
+        Data for the DNS record. E.g., the IP address for an A record. If omitted,
         all records matching name (and rdtype, if provided) will be purged.
 
     rdtype
