@@ -7,7 +7,7 @@
 #
 #   DESCRIPTION: Bootstrap salt installation for various systems/distributions
 #
-#          BUGS: https://github.com/saltstack/salt-boostrap/issues
+#          BUGS: https://github.com/saltstack/salt-bootstrap/issues
 #
 #     COPYRIGHT: (c) 2012-2013 by the SaltStack Team, see AUTHORS.rst for more
 #                details.
@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #===============================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="1.5.9"
+__ScriptVersion="1.5.11"
 __ScriptName="bootstrap-salt.sh"
 
 #===============================================================================
@@ -84,7 +84,7 @@ echoinfo() {
 
 #---  FUNCTION  ----------------------------------------------------------------
 #          NAME:  echowarn
-#   DESCRIPTION:  Echo warning information to stdout.
+#   DESCRIPTION:  Echo warning informations to stdout.
 #-------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";
@@ -111,66 +111,6 @@ check_pip_allowed() {
         usage
         exit 1
     fi
-}
-
-#===  FUNCTION  ================================================================
-#         NAME:  usage
-#  DESCRIPTION:  Display usage information.
-#===============================================================================
-usage() {
-    cat << EOT
-
-  Usage :  ${__ScriptName} [options] <install-type> <install-type-args>
-
-  Installation types:
-    - stable (default)
-    - daily  (ubuntu specific)
-    - git
-
-  Examples:
-    $ ${__ScriptName}
-    $ ${__ScriptName} stable
-    $ ${__ScriptName} daily
-    $ ${__ScriptName} git
-    $ ${__ScriptName} git develop
-    $ ${__ScriptName} git v0.17.0
-    $ ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
-
-  Options:
-  -h  Display this message
-  -v  Display script version
-  -n  No colours.
-  -D  Show debug output.
-  -c  Temporary configuration directory
-  -k  Temporary directory holding the minion keys which will pre-seed
-      the master.
-  -M  Also install salt-master
-  -S  Also install salt-syndic
-  -N  Do not install salt-minion
-  -X  Do not start daemons after installation
-  -C  Only run the configuration function. This option automatically
-      bypasses any installation.
-  -P  Allow pip based installations. On some distributions the required salt
-      packages or its dependencies are not available as a package for that
-      distribution. Using this flag allows the script to use pip as a last
-      resort method. NOTE: This works for functions which actually implement
-      pip based installations.
-  -F  Allow copied files to overwrite existing(config, init.d, etc)
-  -U  If set, fully upgrade the system prior to bootstrapping salt
-  -K  If set, keep the temporary files in the temporary directories specified
-      with -c and -k.
-
-EOT
-}   # ----------  end of function usage  ----------
-
-#===  FUNCTION  ================================================================
-#         NAME:  __fetch_url
-#  DESCRIPTION:  Retrieves a URL and writes it to a given path
-#===============================================================================
-__fetch_url() {
-    curl --insecure -s -o "$1" "$2" >/dev/null 2>&1 ||
-        wget --no-check-certificate -q -O "$1" "$2" >/dev/null 2>&1 ||
-            fetch -q -o "$1" "$2" >/dev/null 2>&1
 }
 
 #===  FUNCTION  ================================================================
@@ -222,11 +162,68 @@ __check_config_dir() {
     echo "${CC_DIR_NAME}"
 }
 
+
+#===  FUNCTION  ================================================================
+#         NAME:  usage
+#  DESCRIPTION:  Display usage information.
+#===============================================================================
+usage() {
+    cat << EOT
+
+  Usage :  ${__ScriptName} [options] <install-type> <install-type-args>
+
+  Installation types:
+    - stable (default)
+    - daily  (ubuntu specific)
+    - git
+
+  Examples:
+    $ ${__ScriptName}
+    $ ${__ScriptName} stable
+    $ ${__ScriptName} daily
+    $ ${__ScriptName} git
+    $ ${__ScriptName} git develop
+    $ ${__ScriptName} git v0.17.0
+    $ ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
+
+  Options:
+  -h  Display this message
+  -v  Display script version
+  -n  No colours.
+  -D  Show debug output.
+  -c  Temporary configuration directory
+  -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
+  -k  Temporary directory holding the minion keys which will pre-seed
+      the master.
+  -M  Also install salt-master
+  -S  Also install salt-syndic
+  -N  Do not install salt-minion
+  -X  Do not start daemons after installation
+  -C  Only run the configuration function. This option automatically
+      bypasses any installation.
+  -P  Allow pip based installations. On some distributions the required salt
+      packages or its dependencies are not available as a package for that
+      distribution. Using this flag allows the script to use pip as a last
+      resort method. NOTE: This only works for functions which actually
+      implement pip based installations.
+  -F  Allow copied files to overwrite existing(config, init.d, etc)
+  -U  If set, fully upgrade the system prior to bootstrapping salt
+  -K  If set, keep the temporary files in the temporary directories specified
+      with -c and -k.
+  -I  If set, allow insecure connections while downloading any files. For
+      example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
+
+EOT
+}   # ----------  end of function usage  ----------
+
+
+
 #-----------------------------------------------------------------------
 #  Handle command line arguments
 #-----------------------------------------------------------------------
 _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
+_SALTSTACK_REPO_URL="git://github.com/saltstack/salt.git"
 _TEMP_KEYS_DIR="null"
 _INSTALL_MASTER=$BS_FALSE
 _INSTALL_SYNDIC=$BS_FALSE
@@ -241,17 +238,20 @@ _FORCE_OVERWRITE=${BS_FORCE_OVERWRITE:-$BS_FALSE}
 _GENTOO_USE_BINHOST=${BS_GENTOO_USE_BINHOST:-$BS_FALSE}
 _EPEL_REPO=${BS_EPEL_REPO:-epel}
 _UPGRADE_SYS=${BS_UPGRADE_SYS:-$BS_FALSE}
+_INSECURE_DL=${BS_INSECURE_DL:-$BS_FALSE}
+_WGET_ARGS=${BS_WGET_ARGS:-}
+_CURL_ARGS=${BS_CURL_ARGS:-}
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
 __SIMPLIFY_VERSION=$BS_TRUE
 
-while getopts ":hvnDc:k:MSNXCPFUK" opt
+while getopts ":hvnDc:g:k:MSNXCPFUKI" opt
 do
   case "${opt}" in
 
     h )  usage; exit 0                                  ;;
 
-    v )  echo "$0 -- Version $__ScriptVersion"; exit 0    ;;
-    n )  _COLORS=0; __detect_color_support               ;;
+    v )  echo "$0 -- Version $__ScriptVersion"; exit 0  ;;
+    n )  _COLORS=0; __detect_color_support              ;;
     D )  _ECHO_DEBUG=$BS_TRUE                           ;;
     c )  _TEMP_CONFIG_DIR=$(__check_config_dir "$OPTARG")
          # If the configuration directory does not exist, error out
@@ -264,6 +264,7 @@ do
              exit 1
          fi
          ;;
+    g ) _SALTSTACK_REPO_URL=$OPTARG                     ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"
          # If the configuration directory does not exist, error out
          if [ ! -d "$_TEMP_KEYS_DIR" ]; then
@@ -280,6 +281,7 @@ do
     F )  _FORCE_OVERWRITE=$BS_TRUE                      ;;
     U )  _UPGRADE_SYS=$BS_TRUE                          ;;
     K )  _KEEP_TEMP_FILES=$BS_TRUE                      ;;
+    I )  _INSECURE_DL=$BS_TRUE                          ;;
 
     \?)  echo
          echoerror "Option does not exist : $OPTARG"
@@ -300,7 +302,7 @@ __check_unparsed_options() {
     else
         grep='grep'
     fi
-    unparsed_options=$( echo "$shellopts" | ${grep} -E '[-]+[[:alnum:]]' )
+    unparsed_options=$( echo "$shellopts" | ${grep} -E '(^|[[:space:]])[-]+[[:alnum:]]' )
     if [ "x$unparsed_options" != "x" ]; then
         usage
         echo
@@ -340,7 +342,7 @@ fi
 # If doing a git install, check what branch/tag/sha will be checked out
 if [ $ITYPE = "git" ]; then
     if [ "$#" -eq 0 ];then
-        GIT_REV="master"
+        GIT_REV="develop"
     else
         __check_unparsed_options "$*"
         GIT_REV="$1"
@@ -399,6 +401,17 @@ echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 __exit_cleanup() {
     EXIT_CODE=$?
 
+    if [ $ITYPE = "git" ] && [ -d /tmp/git/salt ]; then
+        if [ $_KEEP_TEMP_FILES -eq $BS_FALSE ]; then
+            # Clean up the checked out repositry
+            echodebug "Cleaning up the Salt Temporary Git Repository"
+            rm -rf /tmp/git/salt
+        else
+            echoinfo "Not cleaning up the Salt Temporary git repository on request"
+            echoinfo "Note that if you intend to re-run this script using the git approach, you might encounter some issues"
+        fi
+    fi
+
     # Remove the logging pipe when the script exits
     echodebug "Removing the logging pipe $LOGPIPE"
     rm -f $LOGPIPE
@@ -449,6 +462,23 @@ exec 1>$LOGPIPE
 # Close STDERR, reopen it directing it to the logpipe
 exec 2>&-
 exec 2>$LOGPIPE
+
+
+# Handle the insecure flags
+if [ $_INSECURE_DL -eq $BS_TRUE ]; then
+    _CURL_ARGS="${_CURL_ARGS} --insecure"
+    _WGET_ARGS="${_WGET_ARGS} --no-check-certificate"
+fi
+
+#===  FUNCTION  ================================================================
+#         NAME:  __fetch_url
+#  DESCRIPTION:  Retrieves a URL and writes it to a given path
+#===============================================================================
+__fetch_url() {
+    curl $_CURL_ARGS -s -o "$1" "$2" >/dev/null 2>&1 ||
+        wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1 ||
+            fetch -q -o "$1" "$2" >/dev/null 2>&1
+}
 
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -811,6 +841,9 @@ __ubuntu_derivatives_translation() {
     #linuxmint_15_ubuntu_base="13.04"
     # Bug preventing add-apt-repository from working on Mint 15:
     # https://bugs.launchpad.net/linuxmint/+bug/1198751
+
+    linuxmint_16_ubuntu_base="13.10"
+
     linaro_12_ubuntu_base="12.04"
 
     # Translate Ubuntu derivatives to their base Ubuntu version
@@ -949,7 +982,7 @@ __git_clone_and_checkout() {
             git pull --rebase || return 1
         fi
     else
-        git clone git://github.com/saltstack/salt.git || return 1
+        git clone $_SALTSTACK_REPO_URL || return 1
         cd $SALT_GIT_CHECKOUT_DIR
         git checkout $GIT_REV || return 1
     fi
@@ -1277,6 +1310,9 @@ install_ubuntu_deps() {
 
     apt-get update
 
+    # Minimal systems might not have upstart installed, install it
+    __apt_get_install_noinput upstart
+
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
     fi
@@ -1445,7 +1481,7 @@ install_debian_6_deps() {
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
-    wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
+    wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
@@ -1516,7 +1552,7 @@ install_debian_7_deps() {
             /etc/apt/sources.list.d/saltstack.list
     fi
 
-    wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
+    wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
@@ -1733,7 +1769,7 @@ install_fedora_stable() {
 
 install_fedora_git_deps() {
     install_fedora_deps || return 1
-    yum install -y git || return 1
+    yum install -y git yum-utils || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -1848,7 +1884,7 @@ install_centos_stable_post() {
 
 install_centos_git_deps() {
     install_centos_stable_deps || return 1
-    yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    yum -y install git yum-utils --enablerepo=${_EPEL_REPO} || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -2104,7 +2140,7 @@ install_red_hat_enterprise_server_testing_post() {
 #   Amazon Linux AMI Install Functions
 #
 install_amazon_linux_ami_deps() {
-    # Acording to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
+    # According to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
     # enable the EPEL 6 repo
     if [ $CPU_ARCH_L = "i686" ]; then
         EPEL_ARCH="i386"
@@ -2330,40 +2366,71 @@ __freebsd_get_packagesite() {
         BSD_ARCH="x86:32"
     fi
 
-    # Since the variable might not be set, don't, momentarily treat it as a failure
+    # Since the variable might not be set, don't, momentarily treat it as a
+    # failure
     set +o nounset
 
-    _PACKAGESITE=${PACKAGESITE:-"http://pkg.cdn.pcbsd.org/9.1-RELEASE/amd64/"}
-    SALTREPO=${SALTREPO:-"http://freebsd.saltstack.com/freebsd:${DISTRO_MAJOR_VERSION}:${BSD_ARCH}/"}
+    # ABI is a std format for identifying release / architecture combos
+    ABI="freebsd:${DISTRO_MAJOR_VERSION}:${BSD_ARCH}"
+    _PACKAGESITE="http://pkg.freebsd.org/${ABI}/latest"
+    # Awkwardly, we want the `${ABI}` to be in conf file without escaping
+    PKGCONFURL="pkg+http://pkg.freebsd.org/\${ABI}/latest"
 
     # Treat unset variables as errors once more
     set -o nounset
 }
 
-install_freebsd_9_stable_deps() {
-    if [ ! -x /usr/local/sbin/pkg ]; then
-        __freebsd_get_packagesite
+# Using a separate conf step to head for idempotent install...
+__configure_freebsd_pkg_details() {
 
+    ## pkg.conf is deprecated.  
+    ## We use conf files in /usr/local or /etc instead
+    mkdir -p /usr/local/etc/pkg/repos/
+    mkdir -p /etc/pkg/
+
+    ## Use new JSON-like format for pkg repo configs
+    conf_file=/usr/local/etc/pkg/repos/freebsd.conf
+    echo "FreeBSD:{" > $conf_file
+    echo "    url: \"${PKGCONFURL}\"," >> $conf_file
+    echo "    mirror_type: \"SRV\"," >> $conf_file
+    echo "    enabled: true" >> $conf_file
+    echo "}" >> $conf_file
+    copyfile $conf_file /etc/pkg/FreeBSD.conf
+    SALT_PKG_FLAGS="-r FreeBSD"
+    ## ensure future ports builds use pkgng
+    echo "WITH_PKGNG=	yes" >> /etc/make.conf
+}
+
+install_freebsd_9_stable_deps() {
+
+    #make variables available even if pkg already installed
+    __freebsd_get_packagesite
+
+    if [ ! -x /usr/local/sbin/pkg ]; then
+
+        # install new `pkg` code from its own tarball.
         fetch "${_PACKAGESITE}/Latest/pkg.txz" || return 1
         tar xf ./pkg.txz -s ",/.*/,,g" "*/pkg-static" || return 1
         ./pkg-static add ./pkg.txz || return 1
         /usr/local/sbin/pkg2ng || return 1
-
-        echo "PACKAGESITE: ${_PACKAGESITE}" > /usr/local/etc/pkg.conf
-        echo "PKG_MULTIREPOS: YES" >> /usr/local/etc/pkg.conf
-
-        mkdir -p /usr/local/etc/pkg/repos/
-        echo "salt:" > /usr/local/etc/pkg/repos/salt.conf
-        echo "    URL: ${SALTREPO}" >> /usr/local/etc/pkg/repos/salt.conf
-        echo "    ENABLED: YES" >> /usr/local/etc/pkg/repos/salt.conf
     fi
 
-    /usr/local/sbin/pkg install -r salt -y swig || return 1
+    # Configure the pkg repository using new approach
+    __configure_freebsd_pkg_details || return 1
 
-    # Lets set _SALT_ETC_DIR to ports default
+    # Now install swig
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y swig || return 1
+
+    return 0
+}
+
+config_freebsd_salt() {
+    # Set _SALT_ETC_DIR to ports default
     _SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
     # We also need to redefine the PKI directory
     _PKI_DIR=${_SALT_ETC_DIR}/pki
+
+    config_salt || return 1
 
     return 0
 }
@@ -2413,12 +2480,12 @@ install_freebsd_git_deps() {
 }
 
 install_freebsd_9_stable() {
-    /usr/local/sbin/pkg install -r salt -y sysutils/py-salt || return 1
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y sysutils/py-salt || return 1
     return 0
 }
 
 install_freebsd_git() {
-    /usr/local/sbin/pkg install -r salt -y sysutils/py-salt || return 1
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y sysutils/py-salt || return 1
 
     # Let's keep the rc.d files before deleting the package
     mkdir /tmp/rc-scripts || return 1
@@ -2519,11 +2586,11 @@ install_smartos_deps() {
 
         # Let's download, since they were not provided, the default configuration files
         if [ ! -f $_SALT_ETC_DIR/minion ] && [ ! -f $_TEMP_CONFIG_DIR/minion ]; then
-            curl -sk -o $_TEMP_CONFIG_DIR/minion -L \
+            curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/minion -L \
                 https://raw.github.com/saltstack/salt/develop/conf/minion || return 1
         fi
         if [ ! -f $_SALT_ETC_DIR/master ] && [ ! -f $_TEMP_CONFIG_DIR/master ]; then
-            curl -sk -o $_TEMP_CONFIG_DIR/master -L \
+            curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/master -L \
                 https://raw.github.com/saltstack/salt/develop/conf/master || return 1
         fi
     fi
@@ -2570,7 +2637,8 @@ install_smartos_post() {
         svcs network/salt-$fname > /dev/null 2>&1
         if [ $? -eq 1 ]; then
             if [ ! -f $_TEMP_CONFIG_DIR/salt-$fname.xml ]; then
-                curl -sk -o $_TEMP_CONFIG_DIR/salt-$fname.xml -L https://raw.github.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
+                curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/salt-$fname.xml -L \
+                    https://raw.github.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
             fi
             svccfg import $_TEMP_CONFIG_DIR/salt-$fname.xml
             if [ "${VIRTUAL_TYPE}" = "global" ]; then
@@ -2821,7 +2889,7 @@ install_suse_11_stable_deps() {
 
                 # Let's download, since they were not provided, the default configuration files
                 if [ ! -f $_SALT_ETC_DIR/$fname ] && [ ! -f $_TEMP_CONFIG_DIR/$fname ]; then
-                    curl -sk -o $_TEMP_CONFIG_DIR/$fname -L \
+                    curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/$fname -L \
                         https://raw.github.com/saltstack/salt/develop/conf/$fname || return 1
                 fi
             done
@@ -2873,12 +2941,12 @@ install_suse_11_stable_post() {
             [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
             if [ -f /bin/systemctl ]; then
-                curl -k -L https://github.com/saltstack/salt/raw/develop/pkg/salt-$fname.service \
+                curl $_CURL_ARGS -L https://github.com/saltstack/salt/raw/develop/pkg/salt-$fname.service \
                     -o /lib/systemd/system/salt-$fname.service || return 1
                 continue
             fi
 
-            curl -k -L https://github.com/saltstack/salt/raw/develop/pkg/rpm/salt-$fname \
+            curl $_CURL_ARGS -L https://github.com/saltstack/salt/raw/develop/pkg/rpm/salt-$fname \
                 -o /etc/init.d/salt-$fname || return 1
             chmod +x /etc/init.d/salt-$fname
 

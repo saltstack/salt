@@ -19,6 +19,7 @@ import traceback
 import sys
 import signal
 from random import randint
+import salt
 
 # Import third party libs
 try:
@@ -53,7 +54,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltClientError
+    SaltInvocationError, SaltReqTimeoutError, SaltClientError, SaltSystemExit
 )
 import salt.client
 import salt.crypt
@@ -61,9 +62,12 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
+import salt.utils.event
+
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +115,11 @@ def resolve_dns(opts):
                         pass
             else:
                 ret['master_ip'] = '127.0.0.1'
+        except SaltSystemExit:
+            err = 'Master address: {0} could not be resolved. Invalid or unresolveable address.'.format(
+                opts.get('master', 'Unknown'))
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
     else:
         ret['master_ip'] = '127.0.0.1'
 
@@ -463,6 +472,11 @@ class MultiMinion(object):
                             module_refresh = True
                         elif package.startswith('pillar_refresh'):
                             pillar_refresh = True
+                        elif package.startswith('fire_master'):
+                            tag, data = salt.utils.event.MinionEvent.unpack(package)
+                            log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+
                         self.epub_sock.send(package)
                 except Exception:
                     pass
@@ -522,17 +536,33 @@ class Minion(object):
             opts['environment'],
         ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
-        self.mod_opts = self.__prep_mod_opts()
-        self.functions, self.returners = self.__load_modules()
+        self.mod_opts = self._prep_mod_opts()
+        self.functions, self.returners = self._load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
             self.returners)
+
         self.grains_cache = self.opts['grains']
 
-    def __prep_mod_opts(self):
+        if 'proxy' in self.opts['pillar']:
+            log.debug('I am {0} and I need to start some proxies for {0}'.format(self.opts['id'],
+                                                                                 self.opts['pillar']['proxy']))
+            for p in self.opts['pillar']['proxy']:
+                log.debug('Starting {0} proxy.'.format(p))
+                pid = os.fork()
+                if pid > 0:
+                    continue
+                else:
+                    proxyminion = salt.ProxyMinion()
+                    proxyminion.start(self.opts['pillar']['proxy'][p])
+                    self.clean_die(signal.SIGTERM, None)
+        else:
+            log.debug("I am {0} and I am not supposed to start any proxies.".format(self.opts['id']))
+
+    def _prep_mod_opts(self):
         '''
         Returns a copy of the opts with key bits stripped out
         '''
@@ -543,7 +573,7 @@ class Minion(object):
             mod_opts[key] = val
         return mod_opts
 
-    def __load_modules(self):
+    def _load_modules(self):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -687,7 +717,7 @@ class Minion(object):
         '''
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
-                self.functions, self.returners = self.__load_modules()
+                self.functions, self.returners = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
@@ -915,7 +945,12 @@ class Minion(object):
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
-            ret_val = ''
+            msg = ('The minion failed to return the job information for job '
+                   '{0}. This is often due to the master being shut down or '
+                   'overloaded. If the master is running consider incresing '
+                   'the worker_threads value.').format(jid)
+            log.warn(msg)
+            return ''
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
@@ -1012,7 +1047,7 @@ class Minion(object):
         '''
         Refresh the functions and returners.
         '''
-        self.functions, self.returners = self.__load_modules()
+        self.functions, self.returners = self._load_modules()
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -1097,6 +1132,33 @@ class Minion(object):
                 self.__class__.__name__, epull_uri
             )
         )
+
+        # Check to make sure the sock_dir is available, create if not
+        default_minion_sock_dir = os.path.join(
+            salt.syspaths.SOCK_DIR,
+            'minion'
+        )
+        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
+
+        if not os.path.isdir(minion_sock_dir):
+            # Let's try to create the directory defined on the configuration
+            # file
+            try:
+                os.makedirs(minion_sock_dir, 0755)
+            except OSError as exc:
+                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                # Let's not fail yet and try using the default path
+                if minion_sock_dir == default_minion_sock_dir:
+                    # We're already trying the default system path, stop now!
+                    raise
+
+            if not os.path.isdir(default_minion_sock_dir):
+                try:
+                    os.makedirs(default_minion_sock_dir, 0755)
+                except OSError as exc:
+                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                    # Let's stop at this stage
+                    raise
 
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
@@ -1249,7 +1311,13 @@ class Minion(object):
                                 if self.grains_cache != self.opts['grains']:
                                     self.pillar_refresh()
                                     self.grains_cache = self.opts['grains']
+                            elif package.startswith('fire_master'):
+                                tag, data = salt.utils.event.MinionEvent.unpack(package)
+                                log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+
                             self.epub_sock.send(package)
+
                     except Exception:
                         pass
             except zmq.ZMQError:
@@ -1569,7 +1637,7 @@ class Matcher(object):
         Takes the data passed to a top file environment and determines if the
         data matches this minion
         '''
-        matcher = 'glob'
+        matcher = 'compound'
         if not data:
             log.error('Received bad data when setting the match from the top '
                       'file')
@@ -1667,7 +1735,7 @@ class Matcher(object):
         '''
         if tgt not in self.functions:
             return False
-        return(self.functions[tgt]())
+        return self.functions[tgt]()
 
     def pillar_match(self, tgt, delim=':'):
         '''
@@ -1790,3 +1858,62 @@ class Matcher(object):
                 salt.utils.minions.nodegroup_comp(tgt, nodegroups)
             )
         return False
+
+
+class ProxyMinion(Minion):
+    '''
+    This class instantiates a 'proxy' minion--a minion that does not manipulate
+    the host it runs on, but instead manipulates a device that cannot run a minion.
+    '''
+    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
+        '''
+        Pass in the options dict
+        '''
+
+        # Warn if ZMQ < 3.2
+        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
+                        zmq.zmq_version_info() < (3, 2)):
+            # PyZMQ 2.1.9 does not have zmq_version_info
+            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
+                        'are known connection keep-alive issues with ZMQ < '
+                        '3.2 which may result in loss of contact with '
+                        'minions. Please upgrade your ZMQ!')
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        # print opts['proxymodule']
+        fq_proxyname = 'proxy.'+opts['proxy']['proxytype']
+        self.proxymodule = salt.loader.proxy(opts, fq_proxyname)
+        opts['proxyobject'] = self.proxymodule[opts['proxy']['proxytype']+'.Proxyconn'](opts['proxy'])
+        opts['id'] = opts['proxyobject'].id(opts)
+        opts.update(resolve_dns(opts))
+        self.opts = opts
+        self.authenticate(timeout, safe)
+        self.opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+        ).compile_pillar()
+        self.serial = salt.payload.Serial(self.opts)
+        self.mod_opts = self._prep_mod_opts()
+        self.functions, self.returners = self._load_modules()
+        self.matcher = Matcher(self.opts, self.functions)
+        self.proc_dir = get_proc_dir(opts['cachedir'])
+        self.schedule = salt.utils.schedule.Schedule(
+            self.opts,
+            self.functions,
+            self.returners)
+        self.grains_cache = self.opts['grains']
+
+    def _prep_mod_opts(self):
+        '''
+        Returns a copy of the opts with key bits stripped out
+        '''
+        return super(ProxyMinion, self)._prep_mod_opts()
+
+    def _load_modules(self):
+        '''
+        Return the functions and the returners loaded up from the loader
+        module
+        '''
+        return super(ProxyMinion, self)._load_modules()

@@ -16,6 +16,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.exceptions import SaltException
 
+__proxyenabled__ = ['*']
+
 # Seed the grains dict so cython will build
 __grains__ = {}
 
@@ -197,7 +199,7 @@ def setval(key, val, destructive=False):
     if val is None and destructive is True:
         print('SETVAL DESTRUCTIVE ')
         if key in grains:
-            del(grains[key])
+            del grains[key]
     else:
         grains[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
@@ -352,7 +354,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     :param default: default lookup_dict's key used if the grain does not exists
          or if the grain value has no match on lookup_dict.
 
-         .. versionadded:: 0.17.2
+         .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 

@@ -21,6 +21,7 @@ import fnmatch
 import logging
 import collections
 import traceback
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -284,7 +285,7 @@ class Compiler(object):
                                name, body['__sls__'], type(name))
                 errors.append(err)
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictionary'
+                err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
                 errors.append(err)
                 continue
@@ -755,7 +756,7 @@ class State(object):
                                name, body['__sls__'], type(name))
                 errors.append(err)
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictionary'
+                err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
                 errors.append(err)
                 continue
@@ -986,14 +987,22 @@ class State(object):
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
-                    errors.append(
-                        'Cannot extend ID {0} in "{1}:{2}". It is not part '
-                        'of the high state.'.format(
-                            name,
-                            body.get('__env__', 'base'),
-                            body.get('__sls__', 'base'))
-                        )
-                    continue
+                    state_type = next(
+                        x for x in body if not x.startswith('__')
+                    )
+                    # Check for a matching 'name' override in high data
+                    id_ = find_name(name, state_type, high)
+                    if id_:
+                        name = id_
+                    else:
+                        errors.append(
+                            'Cannot extend ID {0} in "{1}:{2}". It is not '
+                            'part of the high state.'.format(
+                                name,
+                                body.get('__env__', 'base'),
+                                body.get('__sls__', 'base'))
+                            )
+                        continue
                 for state, run in body.items():
                     if state.startswith('__'):
                         continue
@@ -1114,7 +1123,7 @@ class State(object):
                         rkey = key.split('_')[0]
                         items = arg[key]
                         if isinstance(items, dict):
-                            # Formated as a single req_in
+                            # Formatted as a single req_in
                             for _state, name in items.items():
 
                                 # Not a use requisite_in
@@ -1285,6 +1294,7 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        log.info('Running state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1387,6 +1397,7 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         return ret
 
     def call_chunks(self, chunks):
@@ -1576,7 +1587,8 @@ class State(object):
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': comment,
-                                '__run_num__': self.__run_num}
+                                '__run_num__': self.__run_num,
+                                '__sls__': low['__sls__']}
                 self.__run_num += 1
                 self.event(running[tag], len(chunks))
                 return running
@@ -1598,7 +1610,8 @@ class State(object):
                                     'changes': {},
                                     'result': False,
                                     'comment': 'Recursive requisite found',
-                                    '__run_num__': self.__run_num}
+                                    '__run_num__': self.__run_num,
+                                    '__sls__': low['__sls__']}
                         self.__run_num += 1
                         self.event(running[tag], len(chunks))
                         return running
@@ -1626,7 +1639,8 @@ class State(object):
             running[tag] = {'changes': {},
                             'result': False,
                             'comment': 'One or more requisite failed',
-                            '__run_num__': self.__run_num}
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -1640,7 +1654,8 @@ class State(object):
             running[tag] = {'changes': {},
                             'result': True,
                             'comment': 'No changes detected',
-                            '__run_num__': self.__run_num}
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
@@ -2084,7 +2099,7 @@ class BaseHighState(object):
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        mods.add(sls)
+        mods.add('{0}:{1}'.format(saltenv, sls))
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -2150,10 +2165,12 @@ class BaseHighState(object):
                         ) or [inc_sls]
 
                         for sls_target in sls_targets:
-                            if sls_target not in mods:
+                            r_env = resolved_envs[0] if len(resolved_envs) == 1 else saltenv
+                            mod_tgt = '{0}:{1}'.format(r_env, sls_target)
+                            if mod_tgt not in mods:
                                 nstate, err = self.render_state(
                                     sls_target,
-                                    resolved_envs[0] if len(resolved_envs) == 1 else saltenv,
+                                    r_env,
                                     mods,
                                     matches
                                 )
@@ -2196,6 +2213,9 @@ class BaseHighState(object):
 
                     if not isinstance(state[name], dict):
                         # Include's or excludes as lists?
+                        continue
+                    if not isinstance(state[name][s_dec], list):
+                        # Bad syntax, let the verify seq pick it up later on
                         continue
 
                     found = False
@@ -2326,8 +2346,8 @@ class BaseHighState(object):
         '''
         highstate = self.building_highstate
         all_errors = []
+        mods = set()
         for saltenv, states in matches.items():
-            mods = set()
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
                 if not statefiles:
@@ -2338,7 +2358,8 @@ class BaseHighState(object):
                         )
                     )
                 for sls in statefiles:
-                    if sls in mods:
+                    r_env = '{0}:{1}'.format(saltenv, sls)
+                    if r_env in mods:
                         continue
                     state, errors = self.render_state(sls, saltenv, mods, matches)
                     if state:
@@ -2454,12 +2475,20 @@ class BaseHighState(object):
         if not high:
             return ret
         cumask = os.umask(191)
-        with salt.utils.fopen(cfn, 'w+') as fp_:
-            try:
-                self.serial.dump(high, fp_)
-            except TypeError:
-                # Can't serialize pydsl
-                pass
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
+            with salt.utils.fopen(cfn, 'w+') as fp_:
+                try:
+                    self.serial.dump(high, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            msg = 'Unable to write to "state.highstate" cache file {0}'
+            log.error(msg.format(cfn))
+
         os.umask(cumask)
         return self.state.call_high(high)
 
@@ -2603,8 +2632,8 @@ class RemoteHighState(object):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
-        self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+        # self.auth = salt.crypt.SAuth(opts)
+        self.sreq = salt.transport.Channel.factory(self.opts['master_uri'])
 
     def compile_master(self):
         '''
@@ -2614,10 +2643,11 @@ class RemoteHighState(object):
                 'opts': self.opts,
                 'cmd': '_master_state'}
         try:
-            return self.auth.crypticle.loads(self.sreq.send(
-                    'aes',
-                    self.auth.crypticle.dumps(load),
-                    3,
-                    72000))
+            return self.sreq.send(load, tries=3, timeout=72000)
+            # return self.auth.crypticle.loads(self.sreq.send(
+            #         'aes',
+            #         self.auth.crypticle.dumps(load),
+            #         3,
+            #         72000))
         except SaltReqTimeoutError:
             return {}

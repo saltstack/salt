@@ -2,6 +2,8 @@
 Salt 0.11.0 Release Notes
 =========================
 
+:release: 2012-12-14
+
 Salt 0.11.0 is here, with some highly sought after and exciting features.
 These features include the new overstate system, the reactor system, a new
 state run scope component called __context__, the beginning of the search

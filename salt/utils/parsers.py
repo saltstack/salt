@@ -29,8 +29,8 @@ import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
 
-# Import salt cloud libs
-import salt.cloud.exceptions
+if not utils.is_windows():
+    import salt.cloud.exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -1610,7 +1610,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, OutputOptionsMixIn):
+                          LogLevelMixIn, OutputOptionsMixIn, RunUserMixin):
 
     __metaclass__ = OptionParserMeta
 
@@ -1804,6 +1804,17 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         return keys_config
 
+    def process_list(self):
+        # Filter accepted list arguments as soon as possible
+        if not self.options.list:
+            return
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej')):
+            self.error(
+                '{0!r} is not a valid argument to \'--list\''.format(
+                    self.options.list
+                )
+            )
+
     def process_keysize(self):
         if self.options.keysize < 2048:
             self.error('The minimum value for keysize is 2048')
@@ -1926,6 +1937,18 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Specify the minion id to use. If this option is omitted, '
                   'the id option from the minion config will be used.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
+        self.add_option(
+            '--refresh-grains-cache',
+            default=False,
+            action='store_true',
+            help=('Force a refresh of the grains cache')
+    )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \

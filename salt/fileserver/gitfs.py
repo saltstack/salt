@@ -1,35 +1,79 @@
 # -*- coding: utf-8 -*-
 '''
-The backend for the git based file server system.
+Git Fileserver Backend
 
-After enabling this backend, branches and tags in a remote git repository
-are exposed to salt as different environments. This feature is managed by
-the fileserver_backend option in the salt master config.
+With this backend, branches and tags in a remote git repository are exposed to
+salt as different environments.
 
-:depends:   - gitpython Python module
+To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
+master config file.
+
+As of the :strong:`Helium` release, the Git fileserver backend will support
+both `GitPython`_ and `pygit2`_, with pygit2 being preferred if both are
+present. An optional master config parameter (:conf_master:`gitfs_provider`)
+can be used to specify which provider should be used.
+
+.. note:: Minimum requirements
+
+    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well as
+    git itself.
+
+    Using `pygit2`_ requires a minimum pygit2 version of 0.19.0. Additionally,
+    using pygit2 as a provider requires `libgit2`_ 0.19.0 or newer, as well as
+    git itself. pygit2 and libgit2 are developed alongside one another, so it
+    is recommended to keep them both at the same major release to avoid
+    unexpected behavior.
+
+.. warning::
+
+    `pygit2`_ does not yet support supplying passing SSH credentials, so at
+    this time only ``http://``, ``https://``, and ``file://`` URIs are
+    supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
+    used.
+
+    Additionally, `pygit2`_ does not yet support passing http/https credentials
+    via a `.netrc`_ file.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
 # Import python libs
+import distutils.version  # pylint: disable=E0611
 import glob
-import os
-import shutil
-import time
 import hashlib
 import logging
-import distutils.version  # pylint: disable=E0611
+import os
+import re
+import shutil
+import subprocess
+import time
 
-# Import third party libs
-HAS_GIT = False
-try:
-    import git
-    HAS_GIT = True
-except ImportError:
-    pass
+VALID_PROVIDERS = ('gitpython', 'pygit2')
+PYGIT2_TRANSPORTS = ('http', 'https', 'file')
 
 # Import salt libs
 import salt.utils
 import salt.fileserver
+from salt.exceptions import SaltException
 from salt.utils.event import tagify
+
+# Import third party libs
+HAS_GITPYTHON = False
+HAS_PYGIT2 = False
+try:
+    import git
+    HAS_GITPYTHON = True
+except ImportError:
+    pass
+
+try:
+    import pygit2
+    HAS_PYGIT2 = True
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -37,40 +81,167 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'git'
 
 
+def _verify_gitpython(quiet=False):
+    '''
+    Check if GitPython is available and at a compatible version (>= 0.3.0)
+    '''
+    recommend_pygit2 = (
+        'pygit2 is installed, you may wish to set gitfs_provider to '
+        '\'pygit2\' in the master config file to use pygit2 for '
+        'gitfs support.'
+    )
+    if not HAS_GITPYTHON:
+        log.error(
+            'Git fileserver backend is enabled in master config file, but '
+            'could not be loaded, is GitPython installed?'
+        )
+        if HAS_PYGIT2 and not quiet:
+            log.error(recommend_pygit2)
+        return False
+    gitver = distutils.version.LooseVersion(git.__version__)
+    minver_str = '0.3.0'
+    minver = distutils.version.LooseVersion(minver_str)
+    errors = []
+    if gitver < minver:
+        errors.append(
+            'Git fileserver backend is enabled in master config file, but '
+            'the GitPython version is earlier than {0}. Version {1} '
+            'detected.'.format(minver_str, git.__version__)
+        )
+    if errors:
+        if HAS_PYGIT2 and not quiet:
+            errors.append(recommend_pygit2)
+        for error in errors:
+            log.error(error)
+        return False
+    log.info('gitpython gitfs_provider enabled')
+    __opts__['verified_gitfs_provider'] = 'gitpython'
+    return True
+
+
+def _verify_pygit2(quiet=False):
+    '''
+    Check if pygit2/libgit2 are available and at a compatible version. Both
+    must be at least 0.19.0.
+    '''
+    recommend_gitpython = (
+        'GitPython is installed, you may wish to set gitfs_provider to '
+        '\'gitpython\' in the master config file to use GitPython for '
+        'gitfs support.'
+    )
+    if not HAS_PYGIT2:
+        log.error(
+            'Git fileserver backend is enabled in master config file, but '
+            'could not be loaded, are pygit2 and libgit2 installed?'
+        )
+        if HAS_GITPYTHON and not quiet:
+            log.error(recommend_gitpython)
+        return False
+    pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
+    libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
+    minver_str = '0.19.0'
+    minver = distutils.version.LooseVersion(minver_str)
+    errors = []
+    if pygit2ver < minver:
+        errors.append(
+            'Git fileserver backend is enabled in master config file, but '
+            'pygit2 version is earlier than {0}. Version {1} detected.'
+            .format(minver_str, pygit2.__version__)
+        )
+    if libgit2ver < minver:
+        errors.append(
+            'Git fileserver backend is enabled in master config file, but '
+            'libgit2 version is earlier than {0}. Version {1} detected.'
+            .format(minver_str, pygit2.__version__)
+        )
+    if not salt.utils.which('git'):
+        errors.append(
+            'The git command line utility is required by the Git fileserver '
+            'backend when using the \'pygit2\' provider.'
+        )
+    if errors:
+        if HAS_GITPYTHON and not quiet:
+            errors.append(recommend_gitpython)
+        for error in errors:
+            log.error(error)
+        return False
+    log.info('pygit2 gitfs_provider enabled')
+    __opts__['verified_gitfs_provider'] = 'pygit2'
+    return True
+
+
+def _get_provider():
+    '''
+    Determin which gitfs_provider to use
+    '''
+    # Don't re-perform all the verification if we already have a verified
+    # provider
+    if 'verified_gitfs_provider' in __opts__:
+        return __opts__['verified_gitfs_provider']
+    provider = __opts__.get('gitfs_provider', '').lower()
+    if not provider:
+        # Prefer pygit2 if it's available and verified
+        if _verify_pygit2(quiet=True):
+            return 'pygit2'
+        elif _verify_gitpython(quiet=True):
+            return 'gitpython'
+        else:
+            log.error(
+                'No suitable versions of pygit2/libgit2 or GitPython is '
+                'installed.'
+            )
+    else:
+        if provider not in VALID_PROVIDERS:
+            raise SaltException(
+                'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                .format(provider, VALID_PROVIDERS)
+            )
+        elif provider == 'pygit2' and _verify_pygit2():
+            return 'pygit2'
+        elif provider == 'gitpython' and _verify_gitpython():
+            return 'gitpython'
+    return ''
+
+
 def __virtual__():
     '''
-    Only load if gitpython is available
+    Only load if the desired provider module is present and gitfs is enabled
+    properly in the master config file.
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
     if not isinstance(__opts__['gitfs_root'], str):
         return False
-    if not 'git' in __opts__['fileserver_backend']:
+    if not __virtualname__ in __opts__['fileserver_backend']:
         return False
-    if not HAS_GIT:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is GitPython installed?')
-        return False
-    gitver = distutils.version.LooseVersion(git.__version__)
-    minver = distutils.version.LooseVersion('0.3.0')
-    if gitver < minver:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'GitPython version is not greater than 0.3.0, '
-                  'version {0} detected'.format(git.__version__))
-        return False
-    return __virtualname__
+    provider = _get_provider()
+    return __virtualname__ if provider else False
 
 
-def _get_ref(repo, short):
+def _get_ref_gitpython(repo, short):
     '''
-    Return bool if the short ref is in the repo
+    Return the ref if found, otherwise return False
     '''
     for ref in repo.refs:
-        if isinstance(ref, git.RemoteReference):
+        if isinstance(ref, (git.RemoteReference, git.TagReference)):
             parted = ref.name.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
                 return ref
+    return False
+
+
+def _get_ref_pygit2(repo, short):
+    '''
+    Return the ref if found, otherwise return False
+    '''
+    for ref in repo.listall_references():
+        _, rtype, rspec = ref.split('/', 2)
+        if rtype in ('remotes', 'tags'):
+            parted = rspec.partition('/')
+            refname = parted[2] if parted[2] else parted[0]
+            if short == refname:
+                return repo.lookup_reference(ref)
     return False
 
 
@@ -116,33 +287,107 @@ def _wait_lock(lk_fn, dest):
     return False
 
 
+def _stale_refs_pygit2(repo):
+    '''
+    Return a list of stale refs by running git remote prune --dry-run <remote>,
+    since libgit2 can't do this.
+    '''
+    remote = repo.remotes[0].name
+    key = ' * [would prune] '
+    ret = []
+    for line in subprocess.Popen(
+            'git remote prune --dry-run {0!r}'.format(remote),
+            shell=True,
+            close_fds=True,
+            cwd=repo.workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT).communicate()[0].splitlines():
+        if line.startswith(key):
+            line = line.replace(key, '')
+            ret.append(line)
+    return ret
+
+
 def init():
     '''
     Return the git repo object for this session
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
+    provider = _get_provider()
     repos = []
     for _, opt in enumerate(__opts__['gitfs_remotes']):
+        if provider == 'pygit2':
+            transport, _, uri = opt.partition('://')
+            if not uri:
+                log.error('Invalid gitfs remote {0!r}'.format(opt))
+                continue
+            elif transport.lower() not in PYGIT2_TRANSPORTS:
+                log.error(
+                    'Invalid transport {0!r} in gitfs remote {1!r}. Valid '
+                    'transports for pygit2 provider: {2}'
+                    .format(transport, opt, ', '.join(PYGIT2_TRANSPORTS))
+                )
+                continue
+
         repo_hash = hashlib.md5(opt).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
 
         try:
-            repo = git.Repo.init(rp_)
-        except Exception as e:
-            log.error('GitPython exception caught while initializing the repo '
-                      'for gitfs: {0}. Maybe git is not available.'.format(e))
+            if provider == 'gitpython':
+                if not os.listdir(rp_):
+                    repo = git.Repo.init(rp_)
+                else:
+                    try:
+                        repo = git.Repo(rp_)
+                    except git.exc.InvalidGitRepositoryError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
+            elif provider == 'pygit2':
+                if not os.listdir(rp_):
+                    repo = pygit2.init_repository(rp_)
+                else:
+                    try:
+                        repo = pygit2.Repository(rp_)
+                    except KeyError:
+                        log.error(
+                            'Cache path {0} (corresponding remote: {1}) '
+                            'exists but is not a valid git repository. You '
+                            'will need to manually delete this directory on '
+                            'the master to continue to use this gitfs remote.'
+                            .format(rp_, opt)
+                        )
+                        continue
+            else:
+                raise SaltException(
+                    'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                    .format(provider, VALID_PROVIDERS)
+                )
+        except Exception as exc:
+            msg = ('Exception caught while initializing the repo for gitfs: '
+                   '{0}.'.format(exc))
+            if provider == 'gitpython':
+                msg += ' Perhaps git is not available.'
+            log.error(msg)
             return repos
 
         if not repo.remotes:
             try:
                 repo.create_remote('origin', opt)
                 # ignore git ssl verification if requested
-                if __opts__.get('gitfs_ssl_verify', True):
-                    repo.git.config('http.sslVerify', 'true')
-                else:
-                    repo.git.config('http.sslVerify', 'false')
+                ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) \
+                    else 'false'
+                if provider == 'gitpython':
+                    repo.git.config('http.sslVerify', ssl_verify)
+                elif provider == 'pygit2':
+                    repo.config.set_multivar('http.sslVerify', '', ssl_verify)
             except os.error:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
@@ -166,7 +411,8 @@ def purge_cache():
             remove_dirs.remove(repo_hash)
         except ValueError:
             pass
-    remove_dirs = [os.path.join(bp_, r) for r in remove_dirs if r not in ('hash', 'refs')]
+    remove_dirs = [os.path.join(bp_, r) for r in remove_dirs
+                   if r not in ('hash', 'refs', 'envs.p')]
     if remove_dirs:
         for r in remove_dirs:
             shutil.rmtree(r)
@@ -181,25 +427,44 @@ def update():
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'gitfs'}
+    provider = _get_provider()
     pid = os.getpid()
     data['changed'] = purge_cache()
     repos = init()
     for repo in repos:
         origin = repo.remotes[0]
-        lk_fn = os.path.join(repo.working_dir, 'update.lk')
+        if provider == 'gitpython':
+            working_dir = repo.working_dir
+        elif provider == 'pygit2':
+            working_dir = repo.workdir
+        lk_fn = os.path.join(working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         try:
-            for fetch in origin.fetch():
-                if fetch.old_commit is not None:
+            if provider == 'gitpython':
+                for fetch in origin.fetch():
+                    if fetch.old_commit is not None:
+                        data['changed'] = True
+            elif provider == 'pygit2':
+                fetch = origin.fetch()
+                if fetch.get('received_objects', 0):
                     data['changed'] = True
         except Exception as exc:
-            log.warning('GitPython exception caught while fetching: '
-                        '{0}'.format(exc))
+            log.warning(
+                'Exception caught while fetching: {0}'.format(exc)
+            )
         try:
             os.remove(lk_fn)
         except (IOError, OSError):
             pass
+
+    env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+    if data.get('changed', False) is True or not os.path.isfile(env_cache):
+        new_envs = envs(ignore_cache=True)
+        serial = salt.payload.Serial(__opts__)
+        with salt.utils.fopen(env_cache, 'w+') as fp_:
+            fp_.write(serial.dumps(new_envs))
+            log.trace('Wrote env cache data to {0}'.format(env_cache))
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
@@ -215,26 +480,73 @@ def update():
         pass
 
 
-def envs():
+def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
     '''
+    if not ignore_cache:
+        env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
+        cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
+        if cache_match is not None:
+            return cache_match
     base_branch = __opts__['gitfs_base']
+    provider = _get_provider()
     ret = set()
     repos = init()
     for repo in repos:
-        remote = repo.remote()
-        for ref in repo.refs:
-            parted = ref.name.partition('/')
-            short = parted[2] if parted[2] else parted[0]
-            if isinstance(ref, git.Head):
+        if provider == 'gitpython':
+            ret.update(_envs_gitpython(repo, base_branch))
+        elif provider == 'pygit2':
+            ret.update(_envs_pygit2(repo, base_branch))
+        else:
+            raise SaltException(
+                'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
+                .format(provider, VALID_PROVIDERS)
+            )
+    return sorted(ret)
+
+
+def _envs_gitpython(repo, base_branch):
+    '''
+    Check the refs and return a list of the ones which can be used as salt
+    environments.
+    '''
+    ret = set()
+    remote = repo.remotes[0]
+    for ref in repo.refs:
+        parted = ref.name.partition('/')
+        short = parted[2] if parted[2] else parted[0]
+        if isinstance(ref, git.Head):
+            if short == base_branch:
+                short = 'base'
+            if ref not in remote.stale_refs:
+                ret.add(short)
+        elif isinstance(ref, git.Tag):
+            ret.add(short)
+    return ret
+
+
+def _envs_pygit2(repo, base_branch):
+    '''
+    Check the refs and return a list of the ones which can be used as salt
+    environments.
+    '''
+    ret = set()
+    remote = repo.remotes[0]
+    stale_refs = _stale_refs_pygit2(repo)
+    for ref in repo.listall_references():
+        ref = re.sub('^refs/', '', ref)
+        rtype, rspec = ref.split('/', 1)
+        if rtype == 'tags':
+            ret.add(rspec)
+        elif rtype == 'remotes':
+            if rspec not in stale_refs:
+                parted = rspec.partition('/')
+                short = parted[2] if parted[2] else parted[0]
                 if short == base_branch:
                     short = 'base'
-                if ref not in remote.stale_refs:
-                    ret.add(short)
-            elif isinstance(ref, git.Tag):
                 ret.add(short)
-    return list(ret)
+    return ret
 
 
 def find_file(path, short='base', **kwargs):
@@ -245,6 +557,7 @@ def find_file(path, short='base', **kwargs):
     fnd = {'path': '',
            'rel': ''}
     base_branch = __opts__['gitfs_base']
+    provider = _get_provider()
     if os.path.isabs(path):
         return fnd
 
@@ -284,20 +597,33 @@ def find_file(path, short='base', **kwargs):
             # Invalid index option
             return fnd
     for repo in repos:
-        ref = _get_ref(repo, short)
-        if not ref:
-            # Branch or tag not found in repo, try the next
-            continue
-        tree = ref.commit.tree
-        try:
-            blob = tree / path
-        except KeyError:
-            continue
+        if provider == 'gitpython':
+            ref = _get_ref_gitpython(repo, short)
+            if not ref:
+                # Branch or tag not found in repo, try the next
+                continue
+            tree = ref.commit.tree
+            try:
+                blob = tree / path
+            except KeyError:
+                continue
+            blob_hexsha = blob.hexsha
+        elif provider == 'pygit2':
+            ref = _get_ref_pygit2(repo, short)
+            if not ref:
+                # Branch or tag not found in repo, try the next
+                continue
+            tree = ref.get_object().tree
+            try:
+                blob = repo[tree[path].oid]
+            except KeyError:
+                continue
+            blob_hexsha = blob.hex
         _wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
-                if sha == blob.hexsha:
+                if sha == blob_hexsha:
                     fnd['rel'] = local_path
                     fnd['path'] = dest
                     return fnd
@@ -309,9 +635,12 @@ def find_file(path, short='base', **kwargs):
             except Exception:
                 pass
         with salt.utils.fopen(dest, 'w+') as fp_:
-            blob.stream_data(fp_)
+            if provider == 'gitpython':
+                blob.stream_data(fp_)
+            elif provider == 'pygit2':
+                fp_.write(blob.data)
         with salt.utils.fopen(blobshadest, 'w+') as fp_:
-            fp_.write(blob.hexsha)
+            fp_.write(blob_hexsha)
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
@@ -395,7 +724,56 @@ def file_hash(load, fnd):
         return ret
 
 
+def _file_lists(load, form):
+    '''
+    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/gitfs')
+    if not os.path.isdir(list_cachedir):
+        try:
+            os.makedirs(list_cachedir)
+        except os.error:
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            return []
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    cache_match, refresh_cache, save_cache = \
+        salt.fileserver.check_file_list_cache(
+            __opts__, form, list_cache, w_lock
+        )
+    if cache_match is not None:
+        return cache_match
+    if refresh_cache:
+        ret = {'links': []}
+        ret['files'] = _get_file_list(load)
+        ret['dirs'] = _get_dir_list(load)
+        ret['empty_dirs'] = _get_file_list_emptydirs(load)
+        if save_cache:
+            salt.fileserver.write_file_list_cache(
+                __opts__, ret, list_cache, w_lock
+            )
+        return ret.get(form, [])
+    # Shouldn't get here, but if we do, this prevents a TypeError
+    return []
+
+
 def file_list(load):
+    '''
+    Return a list of all files on the file server in a specified
+    environment
+    '''
+    return _file_lists(load, 'files')
+
+
+def _get_file_list(load):
     '''
     Return a list of all files on the file server in a specified
     environment
@@ -408,34 +786,97 @@ def file_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    ret = []
     base_branch = __opts__['gitfs_base']
+    gitfs_root = __opts__['gitfs_root']
+    provider = _get_provider()
     if 'saltenv' not in load:
-        return ret
+        return []
     if load['saltenv'] == 'base':
         load['saltenv'] = base_branch
     repos = init()
+    ret = set()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
+        if provider == 'gitpython':
+            ret.update(
+                _file_list_gitpython(repo, load['saltenv'], gitfs_root)
+            )
+        elif provider == 'pygit2':
+            ret.update(
+                _file_list_pygit2(repo, load['saltenv'], gitfs_root)
+            )
+    return sorted(ret)
+
+
+def _file_list_gitpython(repo, ref_tgt, gitfs_root):
+    '''
+    Get file list using GitPython
+    '''
+    ret = set()
+    ref = _get_ref_gitpython(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.commit.tree
+    if gitfs_root:
+        try:
+            tree = tree / gitfs_root
+        except KeyError:
+            return ret
+    for blob in tree.traverse():
+        if not isinstance(blob, git.Blob):
             continue
-        tree = ref.commit.tree
-        if __opts__['gitfs_root']:
-            try:
-                tree = tree / __opts__['gitfs_root']
-            except KeyError:
-                continue
-        for blob in tree.traverse():
-            if not isinstance(blob, git.Blob):
-                continue
-            if __opts__['gitfs_root']:
-                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
-                continue
-            ret.append(blob.path)
+        if gitfs_root:
+            ret.add(os.path.relpath(blob.path, gitfs_root))
+            continue
+        ret.add(blob.path)
+    return ret
+
+
+def _file_list_pygit2(repo, ref_tgt, gitfs_root):
+    '''
+    Get file list using pygit2
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a pygit2 Tree object recursively, accumulating all the
+        blob paths within it in the "blobs" list
+        '''
+        for entry in iter(tree):
+            blob = repo[entry.oid]
+            if isinstance(blob, pygit2.Blob):
+                blobs.append(os.path.join(prefix, entry.name))
+            elif isinstance(blob, pygit2.Tree):
+                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
+    ret = set()
+    ref = _get_ref_pygit2(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.get_object().tree
+    if gitfs_root:
+        try:
+            tree = repo[tree[gitfs_root].oid]
+        except KeyError:
+            return ret
+        if not isinstance(tree, pygit2.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
     return ret
 
 
 def file_list_emptydirs(load):
+    '''
+    Return a list of all empty directories on the master
+    '''
+    return _file_lists(load, 'empty_dirs')
+
+
+def _get_file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
@@ -447,40 +888,106 @@ def file_list_emptydirs(load):
         )
         load['saltenv'] = load.pop('env')
 
-    ret = []
     base_branch = __opts__['gitfs_base']
+    gitfs_root = __opts__['gitfs_root']
+    provider = _get_provider()
     if 'saltenv' not in load:
-        return ret
+        return []
     if load['saltenv'] == 'base':
         load['saltenv'] = base_branch
     repos = init()
+    ret = set()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
-            continue
+        if provider == 'gitpython':
+            ret.update(
+                _file_list_emptydirs_gitpython(
+                    repo, load['saltenv'], gitfs_root
+                )
+            )
+        elif provider == 'pygit2':
+            ret.update(
+                _file_list_emptydirs_pygit2(
+                    repo, load['saltenv'], gitfs_root
+                )
+            )
+    return sorted(ret)
 
-        tree = ref.commit.tree
-        if __opts__['gitfs_root']:
-            try:
-                tree = tree / __opts__['gitfs_root']
-            except KeyError:
+
+def _file_list_emptydirs_gitpython(repo, ref_tgt, gitfs_root):
+    '''
+    Get empty directories using GitPython
+    '''
+    ret = set()
+    ref = _get_ref_gitpython(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.commit.tree
+    if gitfs_root:
+        try:
+            tree = tree / gitfs_root
+        except KeyError:
+            return ret
+    for blob in tree.traverse():
+        if not isinstance(blob, git.Tree):
+            continue
+        if not blob.blobs:
+            if __opts__['gitfs_root']:
+                ret.add(os.path.relpath(blob.path, gitfs_root))
                 continue
-        for blob in tree.traverse():
-            if not isinstance(blob, git.Tree):
-                continue
-            if not blob.blobs:
-                if __opts__['gitfs_root']:
-                    ret.append(
-                        os.path.relpath(blob.path, __opts__['gitfs_root'])
-                    )
-                    continue
-                ret.append(blob.path)
+            ret.add(blob.path)
     return ret
+
+
+def _file_list_emptydirs_pygit2(repo, ref_tgt, gitfs_root):
+    '''
+    Get empty directories using pygit2
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a pygit2 Tree object recursively, accumulating all the
+        empty directories within it in the "blobs" list
+        '''
+        for entry in iter(tree):
+            blob = repo[entry.oid]
+            if not isinstance(blob, pygit2.Tree):
+                continue
+            if not len(blob):
+                blobs.append(os.path.join(prefix, entry.name))
+            else:
+                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
+    ret = set()
+    ref = _get_ref_pygit2(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.get_object().tree
+    if gitfs_root:
+        try:
+            tree = repo[tree[gitfs_root].oid]
+        except KeyError:
+            return ret
+        if not isinstance(tree, pygit2.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
+    return sorted(ret)
 
 
 def dir_list(load):
     '''
     Return a list of all directories on the master
+    '''
+    return _file_lists(load, 'dirs')
+
+
+def _get_dir_list(load):
+    '''
+    Get a list of all directories on the master
     '''
     if 'env' in load:
         salt.utils.warn_until(
@@ -490,29 +997,81 @@ def dir_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    ret = []
     base_branch = __opts__['gitfs_base']
+    gitfs_root = __opts__['gitfs_root']
+    provider = _get_provider()
     if 'saltenv' not in load:
-        return ret
+        return []
     if load['saltenv'] == 'base':
         load['saltenv'] = base_branch
     repos = init()
+    ret = set()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
-            continue
+        if provider == 'gitpython':
+            ret.update(_dir_list_gitpython(repo, load['saltenv'], gitfs_root))
+        elif provider == 'pygit2':
+            ret.update(_dir_list_pygit2(repo, load['saltenv'], gitfs_root))
+    return sorted(ret)
 
-        tree = ref.commit.tree
-        if __opts__['gitfs_root']:
-            try:
-                tree = tree / __opts__['gitfs_root']
-            except KeyError:
+
+def _dir_list_gitpython(repo, ref_tgt, gitfs_root):
+    '''
+    Get list of directories using GitPython
+    '''
+    ret = set()
+    ref = _get_ref_gitpython(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.commit.tree
+    if gitfs_root:
+        try:
+            tree = tree / gitfs_root
+        except KeyError:
+            return ret
+    for blob in tree.traverse():
+        if not isinstance(blob, git.Tree):
+            continue
+        if gitfs_root:
+            ret.add(os.path.relpath(blob.path, gitfs_root))
+            continue
+        ret.add(blob.path)
+    return ret
+
+
+def _dir_list_pygit2(repo, ref_tgt, gitfs_root):
+    '''
+    Get a list of directories using pygit2
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a pygit2 Tree object recursively, accumulating all the
+        empty directories within it in the "blobs" list
+        '''
+        for entry in iter(tree):
+            blob = repo[entry.oid]
+            if not isinstance(blob, pygit2.Tree):
                 continue
-        for blob in tree.traverse():
-            if not isinstance(blob, git.Tree):
-                continue
-            if __opts__['gitfs_root']:
-                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
-                continue
-            ret.append(blob.path)
+            blobs.append(os.path.join(prefix, entry.name))
+            if len(blob):
+                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
+    ret = set()
+    ref = _get_ref_pygit2(repo, ref_tgt)
+    if not ref:
+        return ret
+    tree = ref.get_object().tree
+    if gitfs_root:
+        try:
+            tree = repo[tree[gitfs_root].oid]
+        except KeyError:
+            return ret
+        if not isinstance(tree, pygit2.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
     return ret

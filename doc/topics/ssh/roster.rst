@@ -20,7 +20,7 @@ file is located at /etc/salt/roster.
 How Rosters Work
 ================
 
-The roster system compiles a data structure internally refered to as
+The roster system compiles a data structure internally referred to as
 `targets`. The `targets` is a list of target systems and attributes about how
 to connect to said systems. The only requirement for a roster module in Salt
 is to return the `targets` data structure.

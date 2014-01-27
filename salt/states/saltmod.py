@@ -138,22 +138,54 @@ def state(
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    ret['changes'] = cmd_ret
+
+    changes = {}
     fail = set()
+    failures = {}
+    no_change = set()
     if isinstance(fail_minions, str):
         fail_minions = [fail_minions]
-    for minion, m_ret in cmd_ret.items():
-        if minion in fail_minions:
-            continue
-        m_state = salt.utils.check_state_result(m_ret)
+
+    for minion, mdata in cmd_ret.iteritems():
+        if mdata['out'] != 'highstate':
+            log.warning("Output from salt state not highstate")
+        m_ret = mdata['ret']
+        m_state = salt.utils.check_state_result({minion: m_ret})
         if not m_state:
-            fail.add(minion)
+            if minion not in fail_minions:
+                fail.add(minion)
+            failures[minion] = m_ret
+            continue
+        for state_item in m_ret.itervalues():
+            if state_item['changes']:
+                changes[minion] = m_ret
+                break
+        else:
+            no_change.add(minion)
+
+    if changes:
+        ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
-        return ret
-    ret['comment'] = 'States ran successfully on {0}'.format(
-            ', '.join(cmd_ret))
+    else:
+        ret['comment'] = 'States ran successfully.'
+        if changes:
+            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
+        if no_change:
+            ret['comment'] += ' Without changing {0}.'.format(', '.join(no_change))
+    if failures:
+        ret['comment'] += '\nFailures:\n'
+        for minion, failure in failures.iteritems():
+            ret['comment'] += '\n'.join(
+                    (' '*4 + l)
+                    for l in salt.output.out_format(
+                        {minion: failure},
+                        'highstate',
+                        __opts__,
+                        ).splitlines()
+                    )
+            ret['comment'] += '\n'
     return ret
 
 

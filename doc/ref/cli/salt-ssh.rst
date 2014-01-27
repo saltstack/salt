@@ -21,10 +21,18 @@ Options
 
     Execute a raw shell command.
 
-.. option:: --roster-file
+.. option:: --roster
 
     Define which roster system to use, this defines if a database backend,
     scanner, or custom roster system is used. Default is the flat file roster.
+
+.. option:: --roster-file
+
+    Define an alternative location for the default roster file location. The
+    default roster file is called ``roster`` and is found in the same directory
+    as the master config file.
+
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
 .. option:: --refresh, --refresh-cache
 

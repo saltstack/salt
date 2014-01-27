@@ -1,8 +1,14 @@
-=======
-Modules
-=======
+=================
+Execution Modules
+=================
 
-Salt modules are the functions called by the :command:`salt` command.
+Salt execution modules are the functions called by the :command:`salt` command.
+
+.. note::
+
+    Salt execution modules are different from state modules and cannot be
+    called directly within state files.  You must use the `module` state module
+    to execute execution modules within state runs.
 
 .. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
 
@@ -286,8 +292,8 @@ If a "fallback_function" is defined, it will replace the function instead of rem
     from salt.utils.decorators import depends
     try:
         import dependency_that_sometimes_exists
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.trace('Failed to import dependency_that_sometimes_exists: {0}'.format(e))
 
     @depends('dependency_that_sometimes_exists')
     def foo():

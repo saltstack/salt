@@ -17,7 +17,9 @@ import yaml
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltInvocationError
+)
 
 
 log = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family', False) != 'Debian':
         return False
     return __virtualname__
 
@@ -114,12 +116,13 @@ def _get_virtual():
     Return a dict of virtual package information
     '''
     if 'pkg._get_virtual' not in __context__:
-        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-        out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
-        virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
         __context__['pkg._get_virtual'] = {}
-        for realpkg, provides in virtpkg_re.findall(out):
-            __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+        if __salt__['cmd.has_exec']('grep-available'):
+            cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+            for realpkg, provides in virtpkg_re.findall(out):
+                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
     return __context__['pkg._get_virtual']
 
 
@@ -361,6 +364,7 @@ def install(name=None,
         Passes ``--force-yes`` to the apt-get command.  Don't use this unless
         you know what you're doing.
 
+        .. versionadded:: 0.17.4
 
     Returns a dict containing the new package names and versions::
 
@@ -373,10 +377,12 @@ def install(name=None,
     if debconf:
         __salt__['debconf.set_file'](debconf)
 
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
@@ -437,8 +443,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     remove and purge do identical things but with different apt-get commands,
     this function performs the common logic.
     '''
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
     old_removed = list_pkgs(removed=True)
     targets = [x for x in pkg_params if x in old]
@@ -669,7 +678,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -734,7 +743,7 @@ def version_cmp(pkg1, pkg2):
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
-            if __salt__['cmd.retcode'](cmd) == 0:
+            if __salt__['cmd.retcode'](cmd, output_loglevel='debug') == 0:
                 return ret
     except Exception as e:
         log.error(e)
@@ -818,7 +827,7 @@ def get_repo(repo, **kwargs):
     '''
     Display a repo from the sources.list / sources.list.d
 
-    The repo passwd in needs to be a complete repo entry.
+    The repo passed in needs to be a complete repo entry.
 
     CLI Examples:
 
@@ -1213,6 +1222,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
+        if 'comments' in kwargs:
+            mod_source.comment = kwargs['comments'][0]
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable

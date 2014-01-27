@@ -79,6 +79,7 @@ def _salt_callback(func):
         unless = kw.get('unless', None)
         runas = kw.get('runas', None)
         env = kw.get('env', ())
+        status = BASE_STATUS.copy()
         try:
             # may rise _ResultTransmission
             status = _check_onlyif_unless(onlyif,
@@ -108,6 +109,13 @@ def _salt_callback(func):
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
+        # before returning, trying to compact the log output
+        for k in ['comment', 'out', 'outlog']:
+            if status[k] and isinstance(status[k], string_types):
+                status[k] = '\n'.join([
+                    log
+                    for log in status[k].split('\n')
+                    if log.strip()])
         return status
     _call_callback.__doc__ = func.__doc__
     return _call_callback
@@ -121,6 +129,8 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
+        if not isinstance(msg, unicode):
+            msg = msg.decode('utf-8')
         if not level in self._by_level:
             self._by_level[level] = []
         self._msgs.append((level, msg))
@@ -177,6 +187,8 @@ def _set_status(m,
     if out and isinstance(out, string_types):
         outlog += HR
         outlog += u'OUTPUT:\n'
+        if not isinstance(out, unicode):
+            out = out.decode('utf-8')
         outlog += u'{0}\n'.format(out)
         outlog += HR
     if m['logs']:
@@ -187,13 +199,13 @@ def _set_status(m,
         outlog_by_level += u'Log summary by level:\n'
         outlog_by_level += HR
         for level, msg in m['logs']:
-            outlog += '\n{0}: {1}\n'.format(level.upper(), msg)
+            outlog += u'\n{0}: {1}\n'.format(level.upper(), msg)
         for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
-                outlog_by_level += '\n{0}:\n'.format(logger.upper())
-                outlog_by_level += '\n'.join(logs)
-                outlog_by_level += '\n'
+                outlog_by_level += u'\n{0}:\n'.format(logger.upper())
+                outlog_by_level += u'\n'.join(logs)
+                outlog_by_level += u'\n'
         outlog += HR
     m['outlog'] = outlog
     m['outlog_by_level'] = outlog_by_level
@@ -295,8 +307,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 def _find_cfgs(path, cfgs=None):
     '''
-    Find all buildout configs in a sudirectory.
-    only builout.cfg and etc/buildout.cfg are valid in::
+    Find all buildout configs in a subdirectory.
+    only buildout.cfg and etc/buildout.cfg are valid in::
 
     path
         directory where to start to search
@@ -386,7 +398,7 @@ def _get_buildout_ver(directory='.'):
 
 def _get_bootstrap_url(directory):
     '''
-    Get the most appropriate download url for the bootstrap script.
+    Get the most appropriate download URL for the bootstrap script.
 
     directory
         directory to execute in
@@ -419,7 +431,7 @@ def upgrade_bootstrap(directory='.',
     Upgrade current bootstrap.py with the last released one.
 
     Indeed, when we first run a buildout, a common source of problem
-    is to have an locally stale boostrap, we just try rab a new copy
+    is to have a locally stale bootstrap, we just try to grab a new copy
 
     directory
         directory to execute in
@@ -448,7 +460,7 @@ def upgrade_bootstrap(directory='.',
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
     LOG.debug('Using %s' % booturl)
-    # try to donwload an uptodate bootstrap
+    # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
     directory = os.path.abspath(directory)
@@ -735,7 +747,7 @@ def run_buildout(directory='.',
         run buildout in newest mode
 
     force
-        run buildout unconditionnaly
+        run buildout unconditionally
 
     verbose
         run buildout in verbose mode (-vvvvv)
@@ -753,9 +765,10 @@ def run_buildout(directory='.',
     if verbose:
         LOG.debug(u'Buildout is running in verbose mode!')
         argv.append('-vvvvvvv')
-    if newest and not os.path.exists(installed_cfg):
+    if not newest and os.path.exists(installed_cfg):
+        LOG.debug(u'Buildout is running in non newest mode!')
         argv.append('-N')
-    else:
+    if newest:
         LOG.debug(u'Buildout is running in newest mode!')
         argv.append('-n')
     if offline:

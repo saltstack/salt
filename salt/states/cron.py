@@ -3,17 +3,30 @@
 Management of cron, the Unix command scheduler
 ==============================================
 
-The cron state module allows for user crontabs to be cleanly managed.
+Cron declarations require a number of parameters. The following are the
+parameters used by Salt to define the various timing values for a cron job:
 
-Cron declarations require a number of parameters. The timing parameters need
-to be declared: minute, hour, daymonth, month, and dayweek. The user whose
-crontab is to be edited also needs to be defined.
+* ``minute``
+* ``hour``
+* ``daymonth``
+* ``month``
+* ``dayweek`` (0 to 6 are Sunday through Saturday, 7 can also be used for
+  Sunday)
 
-By default, the timing arguments are all ``*`` (**Caution**: This means just
-setting ``hour`` to ``5`` and not defining minute will execute the cron entry
-every minute between 5 and 6 am!) and the user is root. When making changes to
-an existing cron job, the name declaration is the unique factor, so if an
-existing cron that looks like this:
+.. warning::
+
+    Any timing arguments not specified take a value of ``*``. This means that
+    setting ``hour`` to ``5``, while not defining the ``minute`` param, will
+    result in Salt adding a job that will execute every minute between 5 and 6
+    A.M.!
+
+    Additionally, the default user for these states is ``root``. Therefore, if
+    the cron job is for another user, it is necessary to specify that user with
+    the ``user`` parameter.
+
+When making changes to an existing cron job, the name declaration is the
+parameter used to uniquely identify the job, so if an existing cron that looks
+like this:
 
 .. code-block:: yaml
 
@@ -35,7 +48,7 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
@@ -115,6 +128,23 @@ def _check_cron(user,
     return 'absent'
 
 
+def _check_cron_env(user,
+                    name,
+                    value=None):
+    '''
+    Return the environment changes
+    '''
+    if value is None:
+        value = ""  # Matching value set in salt.modules.cron._render_tab
+    lst = __salt__['cron.list_tab'](user)
+    for env in lst['env']:
+        if name == env['name']:
+            if value != env['value']:
+                return 'update'
+            return 'present'
+    return 'absent'
+
+
 def _get_cron_info():
     '''
     Returns the proper group owner and path to the cron directory
@@ -129,6 +159,9 @@ def _get_cron_info():
     elif __grains__['os'] == 'Solaris':
         group = 'root'
         crontab_dir = '/var/spool/cron/crontabs'
+    elif __grains__['os'] == 'MacOS':
+        group = 'wheel'
+        crontab_dir = '/usr/lib/cron/tabs'
     else:
         group = 'root'
         crontab_dir = '/var/spool/cron'
@@ -154,7 +187,7 @@ def present(name,
         The command that should be executed by the cron job.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
 
     minute
@@ -239,7 +272,7 @@ def absent(name,
         The command that should be absent in the user crontab.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
@@ -387,34 +420,51 @@ def file(name,
                                                        env)
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](cron_path,
-                                                            template,
-                                                            source,
-                                                            source_hash,
-                                                            owner,
-                                                            group,
-                                                            mode,
-                                                            env,
-                                                            context,
-                                                            defaults,
-                                                            **kwargs
-                                                            )
+    try:
+        sfn, source_sum, comment = __salt__['file.get_managed'](
+            cron_path,
+            template,
+            source,
+            source_hash,
+            owner,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs
+        )
+    except Exception as exc:
+        ret['result'] = False
+        ret['changes'] = {}
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
+        return ret
+
     if comment:
         ret['comment'] = comment
         ret['result'] = False
         os.unlink(cron_path)
         return ret
 
-    ret = __salt__['file.manage_file'](cron_path,
-                                       sfn,
-                                       ret,
-                                       source,
-                                       source_sum,
-                                       owner,
-                                       group,
-                                       mode,
-                                       env,
-                                       backup)
+    try:
+        ret = __salt__['file.manage_file'](
+            cron_path,
+            sfn,
+            ret,
+            source,
+            source_sum,
+            owner,
+            group,
+            mode,
+            env,
+            backup
+        )
+    except Exception as exc:
+        ret['result'] = False
+        ret['changes'] = {}
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
+        return ret
+
     if ret['changes']:
         ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
@@ -429,4 +479,102 @@ def file(name,
         ret['result'] = False
 
     os.unlink(cron_path)
+    return ret
+
+
+def env_present(name,
+                value=None,
+                user='root'):
+    '''
+    Verifies that the specified environment variable is present in the crontab
+    for the specified user.
+
+    name
+        The name of the environment variable to set in the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+
+    value
+        The value to set for the given environment variable
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+    if __opts__['test']:
+        status = _check_cron_env(user, name, value=value)
+        ret['result'] = None
+        if status == 'absent':
+            ret['comment'] = 'Cron env {0} is set to be added'.format(name)
+        elif status == 'present':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} already present'.format(name)
+        elif status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be updated'.format(name)
+        return ret
+
+    data = __salt__['cron.set_env'](user, name, value=value)
+    if data == 'present':
+        ret['comment'] = 'Cron env {0} already present'.format(name)
+        return ret
+
+    if data == 'new':
+        ret['comment'] = 'Cron env {0} added to {1}\'s crontab'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+
+    if data == 'updated':
+        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'
+                      .format(name, user, data))
+    ret['result'] = False
+    return ret
+
+
+def env_absent(name,
+               user='root'):
+    '''
+    Verifies that the specified environment variable is absent from the crontab
+    for the specified user
+
+    name
+        The name of the environment variable to remove from the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+    '''
+
+    name = ' '.join(name.strip().split())
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    if __opts__['test']:
+        status = _check_cron_env(user, name)
+        ret['result'] = None
+        if status == 'absent':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} is absent'.format(name)
+        elif status == 'present' or status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be removed'.format(name)
+        return ret
+
+    data = __salt__['cron.rm_env'](user, name)
+    if data == 'absent':
+        ret['comment'] = "Cron env {0} already absent".format(name)
+        return ret
+    if data == 'removed':
+        ret['comment'] = ("Cron env {0} removed from {1}'s crontab"
+                          .format(name, user))
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ("Cron env {0} for user {1} failed to commit with error {2}"
+                      .format(name, user, data))
+    ret['result'] = False
     return ret

@@ -71,7 +71,8 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
-Require statements can refer to the following requisite types: pkg, file, sls
+Require statements can refer to any state defined in Salt. The basic examples
+are `pkg`, `service` and `file`, but any used state can be referenced.
 
 In addition to state declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
@@ -92,7 +93,7 @@ the discrete states are split or groups into separate sls files:
           - pkg: httpd
           - sls: network
 
-In this example, the httpd sevice running state will not be applied
+In this example, the httpd service running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
 installed AND the network state is satisfied.
 

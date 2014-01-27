@@ -28,8 +28,10 @@ import salt.utils.network
 import salt.pillar
 import salt.syspaths
 
-# Import salt cloud libs
-import salt.cloud.exceptions
+import sys
+#can't use salt.utils.is_windows, because config.py is included from salt.utils
+if not sys.platform.lower().startswith('win'):
+    import salt.cloud.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -177,7 +179,9 @@ VALID_OPTS = {
     'jinja_trim_blocks': bool,
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
-    'keysize': int
+    'keysize': int,
+    'salt_transport': str,
+    'enumerate_proxy_minions': bool,
 }
 
 # default configurations
@@ -191,6 +195,8 @@ DEFAULT_MINION_OPTS = {
     'id': None,
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
+    'grains_cache': False,
+    'grains_cache_expiration': 300,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
@@ -269,7 +275,8 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
-    'keysize': 4096
+    'keysize': 4096,
+    'salt_transport': 'zeromq',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -377,7 +384,9 @@ DEFAULT_MASTER_OPTS = {
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
-    'keysize': 4096
+    'keysize': 4096,
+    'salt_transport': 'zeromq',
+    'enumerate_proxy_minions': False
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -727,8 +736,8 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir',
-        'extension_modules', 'autosign_file', 'token_dir'
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile'):
         if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
@@ -1640,7 +1649,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
             if name:
-                log.info('Using cached minion ID: {0}'.format(name))
+                log.info('Using cached minion ID from {0}: {1}'
+                         .format(id_cache, name))
                 return name, False
         except (IOError, OSError):
             pass
@@ -1871,7 +1881,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'token_dir'
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -1972,6 +1982,14 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if os.path.isfile(opts['token_file']):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
+    # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
+    if opts['interface'] == '0.0.0.0':
+        opts['interface'] = '127.0.0.1'
+
+    # Make sure the master_uri is set
+    if 'master_uri' not in opts:
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
+                                                        port=opts['ret_port'])
     # Return the client options
     _validate_opts(opts)
     return opts

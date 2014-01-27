@@ -15,6 +15,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 # Import third party libs
 HAS_PORTAGE = False
@@ -162,7 +163,25 @@ def check_db(*names, **kwargs):
 
 def ex_mod_init(low):
     '''
-    Enforce a nice tree structure for /etc/portage/package.* configuration files.
+    If the config option ``ebuild.enforce_nice_config`` is set to True, this
+    module will enforce a nice tree structure for /etc/portage/package.*
+    configuration files.
+
+    .. versionadded:: 0.17.0
+       Initial automatic enforcement added when pkg is used on a Gentoo system.
+
+    .. versionchanged:: 2014.1.0-Hydrogen
+       Configure option added to make this behaviour optional, defaulting to
+       off.
+
+    .. seealso::
+       ``ebuild.ex_mod_init`` is called automatically when a state invokes a
+       pkg state on a Gentoo system.
+       :py:func:`salt.states.pkg.mod_init`
+
+       ``ebuild.ex_mod_init`` uses ``portage_config.enforce_nice_config`` to do
+       the lifting.
+       :py:func:`salt.modules.portage_config.enforce_nice_config`
 
     CLI Example:
 
@@ -170,7 +189,8 @@ def ex_mod_init(low):
 
         salt '*' pkg.ex_mod_init
     '''
-    __salt__['portage_config.enforce_nice_config']()
+    if __salt__['config.get']('ebuild.enforce_nice_config', False):
+        __salt__['portage_config.enforce_nice_config']()
     return True
 
 
@@ -474,7 +494,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-
     log.debug('Called modules.pkg.install: {0}'.format(
         {
             'name': name,
@@ -487,10 +506,12 @@ def install(name=None,
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
@@ -676,9 +697,12 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
+    old = list_pkgs()
     if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
         fullatom = name
         if slot is not None:
@@ -765,9 +789,12 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
 
         salt '*' pkg.depclean <package name>
     '''
-    old = list_pkgs()
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
+    old = list_pkgs()
     if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
         fullatom = name
         if slot is not None:

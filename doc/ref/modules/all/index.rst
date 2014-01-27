@@ -113,13 +113,13 @@ Full list of builtin execution modules
     nginx
     nova
     npm
-    nzbget
     omapi
     openbsdpkg
     openbsdservice
     openstack_config
     osxdesktop
     pacman
+    pagerduty
     pam
     parted
     pecl
@@ -204,7 +204,8 @@ Full list of builtin execution modules
     win_timezone
     win_useradd
     xapi
-    yumpkg5
+    xmpp
+    yumpkg
     zcbuildout
     zfs
     zpool

@@ -5,10 +5,10 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import re
 import os
 import sys
 import time
+import errno
 import shutil
 import pprint
 import logging
@@ -48,6 +48,7 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
+import salt.utils
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -66,6 +67,31 @@ TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
+
+
+def skip_if_binaries_missing(binaries, check_all=False):
+    # While there's no new release of salt-testing
+    def _id(obj):
+        return obj
+
+    if sys.version_info < (2, 7):
+        from unittest2 import skip
+    else:
+        from unittest import skip  # pylint: disable=E0611
+
+    if check_all:
+        for binary in binaries:
+            if salt.utils.which(binary) is None:
+                return skip(
+                    'The {0!r} binary was not found'
+                )
+    elif salt.utils.which_bin(binaries) is None:
+        return skip(
+            'None of the following binaries was found: {0}'.format(
+                ', '.join(binaries)
+            )
+        )
+    return _id
 
 
 def run_tests(*test_cases, **kwargs):
@@ -274,19 +300,37 @@ class TestDaemon(object):
         self.setup_minions()
 
         if self.parser.options.sysinfo:
-            print_header('~~~~~~~ Versions Report ', inline=True)
+            try:
+                print_header(
+                    '~~~~~~~ Versions Report ', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            except TypeError:
+                print_header('~~~~~~~ Versions Report ', inline=True)
+
             print('\n'.join(salt.version.versions_report()))
 
-            print_header(
-                '~~~~~~~ Minion Grains Information ', inline=True,
-            )
+            try:
+                print_header(
+                    '~~~~~~~ Minion Grains Information ', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            except TypeError:
+                print_header('~~~~~~~ Minion Grains Information ', inline=True)
+
             grains = self.client.cmd('minion', 'grains.items')
 
             minion_opts = self.minion_opts.copy()
             minion_opts['color'] = self.parser.options.no_colors is False
             salt.output.display_output(grains, 'grains', minion_opts)
 
-        print_header('', sep='=', inline=True)
+        try:
+            print_header(
+                '=', sep='=', inline=True,
+                width=getattr(self.parser.options, 'output_columns', PNUM)
+            )
+        except TypeError:
+            print_header('', sep='=', inline=True)
 
         try:
             return self
@@ -441,7 +485,11 @@ class TestDaemon(object):
         job_finished = False
         while now <= expire:
             running = self.__client_job_running(targets, jid)
-            sys.stdout.write('\r' + ' ' * PNUM + '\r')
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
             if not running and job_finished is False:
                 # Let's not have false positives and wait one more seconds
                 job_finished = True
@@ -493,7 +541,11 @@ class TestDaemon(object):
         now = datetime.now()
         expire = now + timedelta(seconds=timeout)
         while now <= expire:
-            sys.stdout.write('\r' + ' ' * PNUM + '\r')
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
             sys.stdout.write(
                 ' * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
@@ -511,7 +563,12 @@ class TestDaemon(object):
                     # Someone(minion) else "listening"?
                     continue
                 expected_connections.remove(target)
-                sys.stdout.write('\r' + ' ' * PNUM + '\r')
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns',
+                                      PNUM)
+                    )
+                )
                 sys.stdout.write(
                     '   {LIGHT_GREEN}*{ENDC} {0} connected.\n'.format(
                         target, **self.colors
@@ -529,7 +586,14 @@ class TestDaemon(object):
                 '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
             )
-            print_header('=', sep='=', inline=True)
+            try:
+                print_header(
+                    '=', sep='=', inline=True,
+                    width=getattr(self.parser.options, 'output_columns', PNUM)
+
+                )
+            except TypeError:
+                print_header('=', sep='=', inline=True)
             raise SystemExit()
 
     def sync_minion_modules(self, targets, timeout=120):
@@ -1027,3 +1091,12 @@ class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
     '''
     def get_opts(self):
         return salt.config.client_config(self.get_config_file_path('master'))
+
+    def mkdir_p(self, path):
+        try:
+            os.makedirs(path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise

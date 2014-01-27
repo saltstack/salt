@@ -3,7 +3,7 @@
 Manage RabbitMQ Plugins
 =======================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 Example:
 

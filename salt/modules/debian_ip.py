@@ -67,7 +67,6 @@ _ETHTOOL_CONFIG_OPTS = {
     'hardware-dma-ring-rx-mini': 'hardware-dma-ring-rx-mini',
     'hardware-dma-ring-rx-jumbo': 'hardware-dma-ring-rx-jumbo',
     'hardware-dma-ring-tx': 'hardware-dma-ring-tx',
-    'mtu': 'mtu'
 }
 
 _REV_ETHTOOL_CONFIG_OPTS = {
@@ -96,7 +95,6 @@ _REV_ETHTOOL_CONFIG_OPTS = {
     'hardware-dma-ring-rx-mini': 'hardware-dma-ring-rx-mini',
     'hardware-dma-ring-rx-jumbo': 'hardware-dma-ring-rx-jumbo',
     'hardware-dma-ring-tx': 'hardware-dma-ring-tx',
-    'mtu': 'mtu'
 }
 
 _DEB_CONFIG_OPTS = [
@@ -175,7 +173,7 @@ def _log_default_network(opt, value):
 
 def _raise_error_iface(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_iface(iface, option, expected)
     log.error(msg)
@@ -184,7 +182,7 @@ def _raise_error_iface(iface, option, expected):
 
 def _raise_error_network(option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_network(option, expected)
     log.error(msg)
@@ -193,7 +191,7 @@ def _raise_error_network(option, expected):
 
 def _raise_error_routes(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_routes(iface, option, expected)
     log.error(msg)
@@ -334,7 +332,7 @@ def _parse_interfaces():
                     if line[0].isspace():
                         sline = line.split()
 
-                        if sline[0] in ['address', 'netmask', 'gateway', 'broadcast', 'network']:
+                        if sline[0] in ['address', 'netmask', 'gateway', 'broadcast', 'network', 'mtu']:
                             adapters[iface_name]['data'][context][sline[0]] = sline[1]
 
                         if sline[0] == 'vlan-raw-device':
@@ -432,15 +430,8 @@ def _parse_ethtool_opts(opts, iface):
         else:
             _raise_error_iface(iface, 'duplex', valid)
 
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except ValueError:
-            _raise_error_iface(iface, 'mtu', ['integer'])
-
     if 'speed' in opts:
-        valid = ['10', '100', '1000']
+        valid = ['10', '100', '1000', '10000']
         if str(opts['speed']) in valid:
             config.update({'speed': opts['speed']})
         else:
@@ -956,7 +947,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'ipaddr' in opts:
         adapters[iface]['data']['inet']['address'] = opts['ipaddr']
 
-    for opt in ['netmask', 'network', 'gateway', 'addr']:
+    for opt in ['gateway', 'mtu', 'netmask', 'network']:
         if opt in opts:
             adapters[iface]['data']['inet'][opt] = opts[opt]
 

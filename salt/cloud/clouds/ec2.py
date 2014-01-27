@@ -32,6 +32,31 @@ To use the EC2 cloud module, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
+      # SSH Gateways can be used with this provider. Gateways can be used
+      # when a salt-master is not on the same private network as the instance
+      # that is being deployed.
+
+      # Defaults to None
+      # Required
+      ssh_gateway: gateway.example.com
+
+      # Defaults to port 22
+      # Optional
+      ssh_gateway_port: 22
+
+      # Defaults to root
+      # Optional
+      ssh_gateway_username: root
+
+      # One authentication method is required. If both
+      # are specified, Private key wins.
+
+      # Private key defaults to None
+      ssh_gateway_private_key: /path/to/key.pem
+
+      # Password defaults to None
+      ssh_gateway_password: ExamplePasswordHere
+
       provider: ec2
 
 '''
@@ -255,13 +280,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
         )
     except urllib2.URLError as exc:
-        log.error(
-            'EC2 Response Status Code: {0} {1}'.format(
-                exc.code, exc.msg
-            )
-        )
         root = ET.fromstring(exc.read())
         data = _xml_to_dict(root)
+        log.error(
+            'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                exc.code, exc.msg, data
+            )
+        )
         if return_url is True:
             return {'error': data}, requesturl
         return {'error': data}
@@ -298,8 +323,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
 def _wait_for_spot_instance(update_callback,
                             update_args=None,
                             update_kwargs=None,
-                            timeout=5 * 60,
-                            interval=5,
+                            timeout=10 * 60,
+                            interval=30,
+                            interval_multiplier=1,
                             max_failures=10):
     '''
     Helper function that waits for a spot instance request to become active
@@ -315,6 +341,8 @@ def _wait_for_spot_instance(update_callback,
                     address.
     :param interval: The looping interval, ie, the amount of time to sleep
                      before the next iteration.
+    :param interval_multiplier: Increase the interval by this multiplier after
+                                each request; helps with throttling
     :param max_failures: If update_callback returns ``False`` it's considered
                          query failure. This value is the amount of failures
                          accepted before giving up.
@@ -361,6 +389,13 @@ def _wait_for_spot_instance(update_callback,
             )
         time.sleep(interval)
         timeout -= interval
+
+        if interval_multiplier > 1:
+            interval *= interval_multiplier
+            if interval > timeout:
+                interval = timeout + 1
+            log.info('Interval multiplier in effect; interval is '
+                     'now {0}s'.format(interval))
 
 
 def avail_sizes(call=None):
@@ -636,6 +671,65 @@ def ssh_interface(vm_):
     )
 
 
+def get_ssh_gateway_config(vm_):
+    '''
+    Return the ssh_gateway configuration.
+    '''
+    ssh_gateway = config.get_cloud_config_value(
+        'ssh_gateway', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check to see if a SSH Gateway will be used.
+    if not isinstance(ssh_gateway, str):
+        return None
+
+    # Create dictionary of configuration items
+
+    # ssh_gateway
+    ssh_gateway_config = {'ssh_gateway': ssh_gateway}
+
+    # ssh_gateway_port
+    ssh_gateway_config['ssh_gateway_port'] = config.get_cloud_config_value(
+        'ssh_gateway_port', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_username
+    ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
+        'ssh_gateway_username', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_private_key
+    ssh_gateway_config['ssh_gateway_key'] = config.get_cloud_config_value(
+        'ssh_gateway_private_key', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_password
+    ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
+        'ssh_gateway_password', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check if private key exists
+    key_filename = ssh_gateway_config['ssh_gateway_key']
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+    elif key_filename is None and not ssh_gateway_config['ssh_gateway_password']:
+        raise SaltCloudConfigError(
+            'No authentication method. Please define: '
+            ' ssh_gateway_password or ssh_gateway_private_key'
+        )
+
+    return ssh_gateway_config
+
+
 def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
@@ -713,16 +807,24 @@ def get_availability_zone(vm_):
     return avz
 
 
+def get_tenancy(vm_):
+    '''
+    Returns the Tenancy to use.
+
+    Can be "dedicated" or "default". Cannot be present for spot instances.
+    '''
+    return config.get_cloud_config_value(
+        'tenancy', vm_, __opts__, search_global=False
+    )
+
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
     '''
-    subnetid = config.get_cloud_config_value(
+    return config.get_cloud_config_value(
         'subnetid', vm_, __opts__, search_global=False
     )
-    if subnetid is None:
-        return None
-    return subnetid
 
 
 def securitygroupid(vm_):
@@ -853,6 +955,11 @@ def create(vm_=None, call=None):
             )
         )
 
+    # Get SSH Gateway config early to verify the private_key,
+    # if used, exists or not. We don't want to deploy an instance
+    # and not be able to access it via the gateway.
+    ssh_gateway_config = get_ssh_gateway_config(vm_)
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
@@ -924,9 +1031,18 @@ def create(vm_=None, call=None):
     if az_ is not None:
         params[spot_prefix + 'Placement.AvailabilityZone'] = az_
 
+    tenancy_ = get_tenancy(vm_)
+    if tenancy_ is not None:
+        if spot_config is not None:
+            raise SaltCloudConfigError(
+                'Spot instance config for {0} does not support '
+                'specifying tenancy.'.format(vm_['name'])
+            )
+        params['Placement.Tenancy'] = tenancy_
+
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
-        params['SubnetId'] = subnetid_
+        params[spot_prefix + 'SubnetId'] = subnetid_
 
     ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
@@ -956,7 +1072,7 @@ def create(vm_=None, call=None):
             raise SaltCloudConfigError(
                 '\'ebs_optimized\' should be a boolean value.'
             )
-        params['EbsOptimized'] = set_ebs_optimized
+        params[spot_prefix + 'EbsOptimized'] = set_ebs_optimized
 
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
@@ -1130,7 +1246,12 @@ def create(vm_=None, call=None):
                 update_args=(sir_id, location),
                 timeout=config.get_cloud_config_value(
                     'wait_for_spot_timeout', vm_, __opts__, default=10 * 60),
-                max_failures=5
+                interval=config.get_cloud_config_value(
+                    'wait_for_spot_interval', vm_, __opts__, default=30),
+                interval_multiplier=config.get_cloud_config_value(
+                    'wait_for_spot_interval_multiplier', vm_, __opts__, default=1),
+                max_failures=config.get_cloud_config_value(
+                    'wait_for_spot_max_failures', vm_, __opts__, default=10),
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
 
@@ -1225,6 +1346,8 @@ def create(vm_=None, call=None):
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -1289,8 +1412,8 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address,
-                                        timeout=ssh_connect_timeout):
+    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout,
+                                        gateway=ssh_gateway_config):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
@@ -1298,7 +1421,8 @@ def create(vm_=None, call=None):
                 ssh_timeout=config.get_cloud_config_value(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=key_filename,
-                display_ssh_output=display_ssh_output
+                display_ssh_output=display_ssh_output,
+                gateway=ssh_gateway_config
             ):
                 username = user
                 break
@@ -1384,13 +1508,20 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
+        # Copy ssh_gateway_config into deploy scripts
+        if ssh_gateway_config:
+            deploy_kwargs['gateway'] = ssh_gateway_config
+
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
+        if 'gateway' in event_kwargs:
+            if 'ssh_gateway_password' in event_kwargs['gateway']:
+                del event_kwargs['gateway']['ssh_gateway_password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -1903,7 +2034,7 @@ def _extract_name_tag(item):
                 if tag['key'] == 'Name':
                     return tag['value']
             return item['instanceId']
-        return (item['tagSet']['item']['value'])
+        return item['tagSet']['item']['value']
     return item['instanceId']
 
 

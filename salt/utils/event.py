@@ -117,7 +117,7 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
-    return (TAGPARTER.join([part for part in parts if part]))
+    return TAGPARTER.join([part for part in parts if part])
 
 
 class SaltEvent(object):
@@ -218,10 +218,24 @@ class SaltEvent(object):
         self.push.connect(self.pulluri)
         self.cpush = True
 
+    @classmethod
+    def unpack(cls, raw, serial=None):
+        if serial is None:
+            serial = salt.payload.Serial({'serial': 'msgpack'})
+
+        if ord(raw[20]) >= 0x80:  # old style
+            mtag = raw[0:20].rstrip('|')
+            mdata = raw[20:]
+        else:  # new style
+            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+
+        data = serial.loads(mdata)
+        return mtag, data
+
     def get_event(self, wait=5, tag='', full=False):
         '''
         Get a single publication.
-        IF no publication available THEN block for upto wait seconds
+        IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
@@ -242,13 +256,8 @@ class SaltEvent(object):
                 raw = self.sub.recv()
             else:
                 continue
-            if ord(raw[20]) >= 0x80:  # old style
-                mtag = raw[0:20].rstrip('|')
-                mdata = raw[20:]
-            else:  # new style
-                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            mtag, data = self.unpack(raw, self.serial)
 
-            data = self.serial.loads(mdata)
             ret = {'data': data,
                     'tag': mtag}
 
@@ -333,6 +342,14 @@ class SaltEvent(object):
                 self.poller.unregister(socket[0])
         if self.context.closed is False:
             self.context.term()
+
+        # Hardcore destruction
+        if hasattr(self.context, 'destroy'):
+            self.context.destroy(linger=1)
+
+        # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
+        # Assertion failed: get_load () == 0 (poller_base.cpp:32)
+        time.sleep(0.025)
 
     def fire_ret_load(self, load):
         '''
@@ -479,10 +496,13 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         react = {}
         for fn_ in glob.glob(glob_ref):
-            react.update(self.render_template(
+            try:
+                react.update(self.render_template(
                     fn_,
                     tag=tag,
                     data=data))
+            except Exception:
+                log.error('Failed to render "{0}"'.format(fn_))
         return react
 
     def list_reactors(self, tag):
@@ -639,9 +659,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True
@@ -669,9 +689,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send('aes', self.auth.crypticle.dumps(load))
+            sreq.send(load)
         except Exception:
             pass
         return True

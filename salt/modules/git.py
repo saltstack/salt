@@ -121,7 +121,7 @@ def current_branch(cwd, user=None):
 
         salt '*' git.current_branch /path/to/repo
     '''
-    cmd = r'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
+    cmd = r'git branch | grep "^*\ " | cut -d " " -f 2 | ' + \
         'grep -v "(detached"'
 
     return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)

@@ -23,7 +23,10 @@ except ImportError:
 # Import python libs
 import copy
 import logging
-import msgpack
+try:
+    import msgpack
+except ImportError:
+    import msgpack_pure as msgpack
 import os
 import locale
 from distutils.version import LooseVersion  # pylint: disable=E0611
@@ -539,7 +542,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         cached_pkg = cached_pkg.replace('/', '\\')
         msiexec = pkginfo[version_num].get('msiexec')
-        install_flags = '{0} {1}'.format(pkginfo[version_num]['install_flags'], options and options.get('extra_install_flags'))
+        install_flags = '{0} {1}'.format(pkginfo[version_num]['install_flags'], options and options.get('extra_install_flags') or "")
         cmd = '{msiexec}"{cached_pkg}" {install_flags}'.format(
             msiexec='msiexec /i ' if msiexec else '',
             cached_pkg=cached_pkg,
@@ -576,7 +579,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name=None, pkgs=None, version=None, **kwargs):
+def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwargs):
     '''
     Remove packages.
 
@@ -638,7 +641,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 and '(x86)' in cached_pkg:
             cached_pkg = cached_pkg.replace('(x86)', '')
         cmd = '"' + str(os.path.expandvars(
-            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', ''))
+            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', '') + " " + (extra_uninstall_flags or ''))
         if pkginfo[version].get('msiexec'):
             cmd = 'msiexec /x ' + cmd
         __salt__['cmd.run'](cmd, output_loglevel='debug')

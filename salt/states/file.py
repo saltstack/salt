@@ -225,6 +225,7 @@ import re
 import fnmatch
 import json
 import pprint
+import traceback
 
 # Import third party libs
 import yaml
@@ -233,7 +234,7 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
+from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -397,7 +398,9 @@ def _check_directory(name,
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
-                stats = __salt__['file.stats'](path, 'md5')
+                stats = __salt__['file.stats'](
+                    path, 'md5', follow_symlinks=False
+                )
                 if user is not None and user != stats.get('user'):
                     fchange['user'] = user
                 if group is not None and group != stats.get('group'):
@@ -453,7 +456,7 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -476,7 +479,7 @@ def _check_touch(name, atime, mtime):
     '''
     if not os.path.exists(name):
         return None, 'File {0} is set to be created'.format(name)
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     if atime is not None:
         if str(atime) != str(stats['atime']):
             return None, 'Times set to be updated on file {0}'.format(name)
@@ -1002,20 +1005,49 @@ def managed(name,
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
-    source_hash:
-        This can be either a file which contains a source hash string for
-        the source, or a source hash string. The source hash string is the
-        hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+    source_hash
+        This can be one of the following:
+            1. a source hash string
+            2. the URI of a file that contains source hash strings
 
-        The file can contain checksums for several files, in this case every
-        line must consist of full name of the file and checksum separated by
-        space:
+        The function accepts the first encountered long unbroken alphanumeric
+        string of correct length as a valid hash, in order from most secure to
+        least secure::
 
-        Example::
+            Type    Length
+            ======  ======
+            sha512     128
+            sha384      96
+            sha256      64
+            sha224      56
+            sha1        40
+            md5         32
 
-            /etc/rc.conf md5=ef6e82e4006dee563d98ada2a2a80a27
-            /etc/resolv.conf sha256=c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a
+        The file can contain several checksums for several files. Each line must
+        contain both the file name and the hash.  If no file name is matched,
+        the first hash encountered will be used, otherwise the most secure hash
+        with the correct source file name will be used.
+
+        Debian file type ``*.dsc`` is supported.
+
+        Examples::
+
+            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+
+        Known issues:
+            If the remote server URL has the hash file as an apparent
+            sub-directory of the source file, the module will discover that it
+            has already cached a directory where a file should be cached. For
+            example:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
 
     user
@@ -1080,6 +1112,40 @@ def managed(name,
         contains newlines, as referencing a pillar variable using a jinja/mako
         template can result in YAML formatting issues due to the newlines
         causing indentation mismatches.
+
+        For example, the following could be used to deploy an SSH private key:
+
+        .. code-block:: yaml
+
+            /home/deployer/.ssh/id_rsa:
+              file.managed:
+                - user: deployer
+                - group: deployer
+                - mode: 600
+                - contents_pillar: userdata:deployer:id_rsa
+
+        This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
+        ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
+        setup would be like so:
+
+        .. code-block:: yaml
+
+            userdata:
+              deployer:
+                id_rsa: |
+                  -----BEGIN RSA PRIVATE KEY-----
+                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                  -----END RSA PRIVATE KEY-----
+
+        .. note::
+
+            The private key above is shortened to keep the example brief, but
+            shows how to do multiline string in YAML. The key is followed by a
+            pipe character, and the mutliline string is indented two more
+            spaces.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1155,62 +1221,80 @@ def managed(name,
             context = {}
         context['accumulator'] = _ACCUMULATORS[name]
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = __salt__['file.check_managed'](
+    try:
+        if __opts__['test']:
+            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                makedirs,
+                context,
+                defaults,
+                __env__,
+                contents,
+                **kwargs
+            )
+            return ret
+
+        # If the source is a list then find which file exists
+        source, source_hash = __salt__['file.source_list'](
+            source,
+            source_hash,
+            __env__
+        )
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
+        return ret
+
+    # Gather the source file from the server
+    try:
+        sfn, source_sum, comment_ = __salt__['file.get_managed'](
             name,
+            template,
             source,
             source_hash,
             user,
             group,
             mode,
-            template,
-            makedirs,
+            __env__,
             context,
             defaults,
-            __env__,
-            contents,
             **kwargs
         )
-        return ret
+    except Exception as exc:
+        ret['changes'] = {}
+        log.debug(traceback.format_exc())
+        return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
-    # If the source is a list then find which file exists
-    source, source_hash = __salt__['file.source_list'](
-        source,
-        source_hash,
-        __env__
-    )
-
-    # Gather the source file from the server
-    sfn, source_sum, comment_ = __salt__['file.get_managed'](
-        name,
-        template,
-        source,
-        source_hash,
-        user,
-        group,
-        mode,
-        __env__,
-        context,
-        defaults,
-        **kwargs
-    )
     if comment_ and contents is None:
         return _error(ret, comment_)
     else:
-        return __salt__['file.manage_file'](name,
-                                            sfn,
-                                            ret,
-                                            source,
-                                            source_sum,
-                                            user,
-                                            group,
-                                            mode,
-                                            __env__,
-                                            backup,
-                                            template,
-                                            show_diff,
-                                            contents,
-                                            dir_mode)
+        try:
+            return __salt__['file.manage_file'](
+                name,
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                __env__,
+                backup,
+                template,
+                show_diff,
+                contents,
+                dir_mode
+            )
+        except Exception as exc:
+            ret['changes'] = {}
+            log.debug(traceback.format_exc())
+            return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
 
 def directory(name,
@@ -1461,26 +1545,26 @@ def recurse(name,
         Require other resources such as packages or files
 
     user
-        The user to own the directory, this defaults to the user salt is
+        The user to own the directory. This defaults to the user salt is
         running as on the minion
 
     group
-        The group ownership set for the directory, this defaults to the group
+        The group ownership set for the directory. This defaults to the group
         salt is running as on the minion
 
     dir_mode
-        The permissions mode to set any directories created
+        The permissions mode to set on any directories created
 
     file_mode
-        The permissions mode to set any files created
+        The permissions mode to set on any files created
 
     sym_mode
         The permissions mode to set on any symlink created
 
     template
         If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        used to render the downloaded file. Supported templates are:
+        `jinja`, `mako` and `wempy`.
 
     .. note::
 
@@ -1507,8 +1591,8 @@ def recurse(name,
                                          'hello01' ...
 
     exclude_pat
-        When copying, exclude this pattern from the source. If both
-        include_pat and exclude_pat are supplied, then it will apply
+        Exclude this pattern from the source when copying. If both
+        `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -1522,8 +1606,8 @@ def recurse(name,
                                                    or TEMPDATA for exclusion
 
     maxdepth
-        When copying, only copy paths which are depth maxdepth from the source
-        path.
+        When copying, only copy paths which are of depth `maxdepth` from the
+        source path.
         Example::
 
           - maxdepth: 0      :: Only include files located in the source
@@ -1533,8 +1617,8 @@ def recurse(name,
 
     keep_symlinks
         Keep symlinks when copying from the source. This option will cause
-        the copy operation to terminate at the symlink. If you are after
-        rsync-ish behavior, then set this to True.
+        the copy operation to terminate at the symlink. If desire behavior
+        similar to rsync, then set this to True.
 
     force_symlinks
         Force symlink creation. This option will force the symlink creation.
@@ -1543,11 +1627,12 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': {}  # { path: [comment, ...] }
-           }
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': {}  # { path: [comment, ...] }
+    }
 
     if 'mode' in kwargs:
         ret['result'] = False
@@ -1580,17 +1665,50 @@ def recurse(name,
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    # Verify the source exists.
-    _src_proto, _src_path = source.split('://', 1)
+    # Handle corner case where someone uses a numeric source
+    if isinstance(source, (integer_types, float)):
+        ret['result'] = False
+        ret['comment'] = ('Invalid source {0} (cannot be numeric)'
+                          .format(source))
+        return ret
 
-    if not _src_path:
-        pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](__env__):
+    # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
+    if isinstance(source, string_types):
+        source_precheck = [source]
+    else:
+        source_precheck = source
+    for precheck in source_precheck:
+        if not precheck.startswith('salt://'):
+            ret['result'] = False
+            ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
+                              .format(precheck))
+            return ret
+
+    # If source is a list, find which in the list actually exists
+    try:
+        source, source_hash = __salt__['file.source_list'](source, '', __env__)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Recurse failed: {0}'.format(exc)
+        return ret
+
+    # Check source path relative to fileserver root, make sure it is a
+    # directory
+    source_rel = source.partition('://')[2]
+    if source_rel not in __salt__['cp.list_master_dirs'](__env__):
         ret['result'] = False
         ret['comment'] = (
-            'The source: {0} does not exist on the master'.format(source)
+            'The directory {0!r} does not exist on the salt fileserver'
+            .format(source)
         )
         return ret
+
+    if type(dir_mode) == int:
+        dir_mode = oct(dir_mode)
+    elif type(dir_mode) == str:
+        dir_mode = oct(int(dir_mode, 8))
+    else:
+        dir_mode = None
 
     # Verify the target directory
     if not os.path.isdir(name):
@@ -1600,7 +1718,7 @@ def recurse(name,
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
             __salt__['file.makedirs_perms'](
-                name, user, group, int(str(dir_mode), 8) if dir_mode else None)
+                name, user, group, dir_mode)
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
@@ -1725,8 +1843,6 @@ def recurse(name,
             # Add the path to the keep set in case clean is set to True
             keep.add(os.path.join(name, srelpath))
         return filenames
-    # If source is a list, find which in the list actually exists
-    source, source_hash = __salt__['file.source_list'](source, '', __env__)
 
     keep = set()
     vdir = set()
@@ -1885,7 +2001,7 @@ def blockreplace(name,
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining
-    an unmanaged file containing manual edits.
+    an un-managed file containing manual edits.
     Note: this function will store two copies of the file in-memory
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
@@ -1900,7 +2016,7 @@ def blockreplace(name,
         be considered, so whitespaces or extra content before or after the
         marker is included in final output.
         Note: you can use file.accumulated and target this state. All accumulated
-        datas dictionnaries content will be added as new lines in the content.
+        data dictionaries content will be added as new lines in the content.
     :param content: The content to be used between the two lines identified by
         marker_start and marker_stop.
     :param append_if_not_found: False by default, if markers are not found and
@@ -1915,7 +2031,7 @@ def blockreplace(name,
 
     :rtype: bool or str
 
-     Exemple of usage with an accumulator and with a variable::
+     Example of usage with an accumulator and with a variable::
 
         {% set myvar = 42 %}
         hosts-config-block-{{ myvar }}:
@@ -2798,6 +2914,36 @@ def accumulated(name, filename, text, **kwargs):
     require_in / watch_in
         One of them required for sure we fill up accumulator before we manage
         the file. Probably the same as filename
+
+    Example:
+
+    Given the following:
+
+        animals_doing_things:
+          file.accumulated:
+            - filename: /tmp/animal_file.txt
+            - text: ' jumps over the lazy dog.'
+            - require_in:
+              - file: animal_file
+
+        animal_file:
+          file.managed:
+            - name: /tmp/animal_file.txt
+            - source: salt://animal_file.txt
+            - template: jinja
+
+    One might write a template for animal_file.txt like the following:
+
+        The quick brown fox{% for animal in accumulator['animals_doing_things'] %}{{ animal }}{% endfor %}
+
+    Collectively, the above states and template file will produce:
+        The quick brown fox jumps over the lazy dog.
+
+    Multiple accumulators can be "chained" together.
+
+    .. note::
+        The 'accumulator' data structure is a Python dictionary.
+        Do not expect any loop over the keys in a deterministic order!
     '''
     ret = {
         'name': name,
@@ -2851,7 +2997,7 @@ def serialize(name,
     simple configuration files.
 
     name
-        The location of the symlink to create
+        The location of the file to create
 
     dataset
         the dataset that will be serialized
@@ -2945,7 +3091,14 @@ def serialize(name,
                               separators=(',', ': '),
                               sort_keys=True)
     elif formatter == 'python':
-        contents = pprint.pformat(dataset)
+        # round-trip this through JSON to avoid OrderedDict types
+        # there's probably a more performant way to do this...
+        contents = pprint.pformat(
+                json.loads(
+                    json.dumps(dataset),
+                    object_hook=salt.utils.decode_dict
+                    )
+                )
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
@@ -2962,7 +3115,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
-                                        env=__env__,
+                                        saltenv=__env__,
                                         backup=backup,
                                         template=None,
                                         show_diff=show_diff,

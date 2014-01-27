@@ -58,6 +58,7 @@ Full list of builtin state modules
     npm
     ntp
     openstack_config
+    pagerduty
     pecl
     pip_state
     pkg
@@ -68,6 +69,7 @@ Full list of builtin state modules
     postgres_database
     postgres_group
     postgres_user
+    postgres_extension
     powerpath
     process
     quota
@@ -100,4 +102,5 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    xmpp
     zcbuildout

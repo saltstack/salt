@@ -414,11 +414,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -443,13 +443,14 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
-    ret.update(data)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -517,7 +518,7 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    script = salt.utils.cloud.os_script(
+    deploy_script = salt.utils.cloud.os_script(
         config.get_cloud_config_value('script', vm_, __opts__),
         vm_,
         __opts__,
@@ -525,7 +526,7 @@ def script(vm_):
             salt.utils.cloud.minion_config(__opts__, vm_)
         )
     )
-    return script
+    return deploy_script
 
 
 def show_instance(name, call=None):
@@ -540,7 +541,7 @@ def show_instance(name, call=None):
     return _get_node(name)
 
 
-def _get_node(name, location=None):
+def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
@@ -639,8 +640,12 @@ def destroy(name, call=None):
         {'name': name},
     )
 
+    scrub_data = config.get_cloud_config_value(
+        'scrub_data', get_configured_provider(), __opts__, search_global=False, default=True
+    )
+
     data = show_instance(name, call='action')
-    node = query(method='droplets', command='{0}/destroy'.format(data['id']))
+    node = query(method='droplets', command='{0}/destroy'.format(data['id']), args={'scrub_data': scrub_data})
 
     salt.utils.cloud.fire_event(
         'event',

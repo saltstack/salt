@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-This module provides the point of entry for client applications to interface to salt.
-The purpose is to have a simplified consistent interface for various client applications
+This module provides the point of entry for client applications to interface to
+salt. The purpose is to have a simplified consistent interface for various
+client applications.
+
+.. warning:: This API is not yet public or stable!
+
+    This API exists in its current form as an entry point for Halite only. This
+    interface is likely to change without warning. Long-term plans are to make
+    this public as a unified interface to Salt's *Client() APIs. Until that
+    time please use Salt's *Client() interfaces individually:
+
+    http://docs.saltstack.com/ref/clients/index.html
 
 '''
 # Import Python libs
@@ -297,7 +307,7 @@ class APIClient(object):
 
         If wait is 0 then block forever or until next event becomes available.
         '''
-        return (self.event.get_event(wait=wait, tag=tag, full=full))
+        return self.event.get_event(wait=wait, tag=tag, full=full)
 
     def fire_event(self, data, tag):
         '''
@@ -306,4 +316,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return (self.event.fire_event(data, tagify(tag, 'wui')))
+        return self.event.fire_event(data, tagify(tag, 'wui'))

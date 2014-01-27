@@ -277,7 +277,7 @@ def check_site_enabled(site):
     '''
     if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
         return True
-    elif (site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site))):
+    elif site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site)):
         return True
     else:
         return False

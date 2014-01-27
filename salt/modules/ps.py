@@ -56,14 +56,17 @@ def top(num_processes=5, interval=3):
     for pid in psutil.get_pid_list():
         try:
             process = psutil.Process(pid)
+            user, system = process.get_cpu_times()
         except psutil.NoSuchProcess:
             continue
-        user, system = process.get_cpu_times()
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
     for process, start in start_usage.items():
-        user, system = process.get_cpu_times()
+        try:
+            user, system = process.get_cpu_times()
+        except psutil.NoSuchProcess:
+            continue
         now = user + system
         diff = now - start
         usage.add((diff, process))
@@ -104,7 +107,7 @@ def get_pid_list():
 
 def kill_pid(pid, signal=15):
     '''
-    Kill a proccess by PID.
+    Kill a process by PID.
 
     .. code-block:: bash
 

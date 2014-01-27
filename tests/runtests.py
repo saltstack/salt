@@ -209,9 +209,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
                 self.exit()
             finally:
-                print('~' * PNUM)
+                print('~' * getattr(self.options, 'output_columns', PNUM))
 
-        print_header('Setting up Salt daemons to execute tests', top=False)
+        try:
+            print_header(
+                'Setting up Salt daemons to execute tests',
+                top=False, width=getattr(self.options, 'output_columns', PNUM)
+            )
+        except TypeError:
+            print_header('Setting up Salt daemons to execute tests', top=False)
+
         status = []
         if not any([self.options.client, self.options.module,
                     self.options.runner, self.options.shell,

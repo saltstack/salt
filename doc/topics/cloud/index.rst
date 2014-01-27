@@ -29,9 +29,8 @@ Getting Started
 
 * :doc:`Installing salt cloud <install/index>`
 
-Some quick guides covering getting started with Amazon EC2, Digital Ocean,
-GoGrid, Google Compute Engine, Linode, Joyent, Parallels, Rackspace, and
-SoftLayer.
+Some quick guides covering getting started with each of the various cloud
+providers.
 
 * :doc:`Getting Started With Azure <azure>`
 * :doc:`Getting Started With Digital Ocean <digitalocean>`
@@ -96,12 +95,20 @@ Troubleshooting Steps
 Extending Salt Cloud
 ====================
 
-Salt cloud extensions work in a way similar to Salt modules. Therefore
+Salt Cloud extensions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
 * :doc:`Adding Cloud Providers <cloud>`
 * :doc:`Adding OS Support <deploy>`
+
+Using Salt Cloud from Salt
+==========================
+
+Several Salt Cloud modules exist within Salt itself in order to manage cloud
+instances using Salt's own powerful feature set.
+
+* :doc:`Using Salt Cloud from Salt <salt>`
 
 Feature Comparison
 ==================
@@ -114,9 +121,9 @@ supported cloud providers.
 Legacy Releases
 ===============
 
-.. versionchanged:: Hydrogen
+.. versionchanged:: 2014.1.0 (Hydrogen)
     Release notes will be part of Salt's main release notes starting with
-    Salt's Hydrogen release.
+    Salt's 2014.1.0 (Hydrogen) release.
 
 * :doc:`Legacy Release Notes <releases/index>`
 

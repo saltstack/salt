@@ -30,7 +30,6 @@ import errno
 import signal
 import select
 import logging
-import resource
 import subprocess
 
 if subprocess.mswindows:
@@ -45,6 +44,7 @@ else:
     import fcntl
     import struct
     import termios
+    import resource
 
 # Import salt libs
 from salt._compat import string_types
@@ -156,35 +156,57 @@ class Terminal(object):
         # ----- Direct Streaming Setup -------------------------------------->
         if stream_stdout is True:
             self.stream_stdout = sys.stdout
+        elif stream_stdout is False:
+            self.stream_stdout = None
         elif stream_stdout is not None:
             if not hasattr(stream_stdout, 'write') or \
                     not hasattr(stream_stdout, 'flush') or \
                     not hasattr(stream_stdout, 'close'):
-                raise RuntimeError(
+                raise TerminalException(
                     '\'stream_stdout\' needs to have at least 3 methods, '
                     '\'write()\', \'flush()\' and \'close()\'.'
                 )
             self.stream_stdout = stream_stdout
         else:
-            self.stream_stdout = None
+            raise TerminalException(
+                'Don\'t know how to handle {0!r} as the VT\'s '
+                '\'stream_stdout\' parameter.'.format(stream_stdout)
+            )
 
         if stream_stderr is True:
             self.stream_stderr = sys.stderr
+        elif stream_stderr is False:
+            self.stream_stderr = None
         elif stream_stderr is not None:
             if not hasattr(stream_stderr, 'write') or \
                     not hasattr(stream_stderr, 'flush') or \
                     not hasattr(stream_stderr, 'close'):
-                raise RuntimeError(
+                raise TerminalException(
                     '\'stream_stderr\' needs to have at least 3 methods, '
                     '\'write()\', \'flush()\' and \'close()\'.'
                 )
             self.stream_stderr = stream_stderr
         else:
-            self.stream_stderr = None
+            raise TerminalException(
+                'Don\'t know how to handle {0!r} as the VT\'s '
+                '\'stream_stderr\' parameter.'.format(stream_stderr)
+            )
         # <---- Direct Streaming Setup ---------------------------------------
 
         # ----- Spawn our terminal ------------------------------------------>
-        self._spawn()
+        try:
+            self._spawn()
+        except Exception as err:  # pylint: disable=W0703
+            # A lot can go wrong, so that's why we're catching the most general
+            # exception type
+            log.warning(
+                'Failed to spawn the VT: {0}'.format(err),
+                 exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            raise TerminalException(
+                'Failed to spawn the VT. Error: {0}'.format(err)
+            )
+
         log.debug(
             'Child Forked! PID: {0}  STDOUT_FD: {1}  STDERR_FD: '
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
@@ -382,7 +404,18 @@ class Terminal(object):
 
                 # Set the terminal size
                 self.child_fd = self.stdin
-                self.setwinsize(self.rows, self.cols)
+
+                if os.isatty(self.child_fd):
+                    # Only try to set the window size if the parent IS a tty
+                    try:
+                        self.setwinsize(self.rows, self.cols)
+                    except IOError as err:
+                        log.warning(
+                            'Failed to set the VT terminal size: {0}'.format(
+                                err
+                            ),
+                            exc_info=log.isEnabledFor(logging.DEBUG)
+                        )
 
                 # Do not allow child to inherit open file descriptors from
                 # parent

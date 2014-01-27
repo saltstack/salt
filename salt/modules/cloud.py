@@ -8,7 +8,12 @@ import os
 import logging
 
 # Import salt libs
-import salt.cloud
+try:
+    import salt.cloud
+    HAS_SALTCLOUD = True
+except ImportError:
+    HAS_SALTCLOUD = False
+
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -22,9 +27,9 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if HAS_SALTCLOUD:
+        return True
+    return False
 
 
 def _get_client():
@@ -163,7 +168,7 @@ def action(
         instance=None,
         **kwargs):
     '''
-    Execute a single action on the given map/provider/instance
+    Execute a single action on the given provider/instance
 
     CLI Example:
 
@@ -171,6 +176,8 @@ def action(
 
         salt '*' cloud.action start instance=myinstance
         salt '*' cloud.action stop instance=myinstance
+        salt '*' cloud.action show_image provider=my-ec2-config \
+            image=ami-1624987f
     '''
     client = _get_client()
     info = client.action(fun, cloudmap, names, provider, instance, kwargs)

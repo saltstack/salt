@@ -2,6 +2,8 @@
 Salt 0.9.4 Release Notes
 ========================
 
+:release: 2011-11-27
+
 Salt 0.9.4 has arrived. This is a critical update that repairs a number of
 key bugs found in 0.9.3. But this update is not without feature additions
 as well! 0.9.4 adds support for Gentoo portage to the pkg module and state
@@ -138,10 +140,9 @@ from the state system has also been refined to be extremely clear and concise.
 Error reporting has also been introduced, issues found in sls files will now
 be clearly reported when executing Salt States.
 
-                      
+
 Gentoo Support
 --------------
 
 Additional experimental support has been added for Gentoo. This is found in
 the contribution from Doug Renn, aka nestegg.
-

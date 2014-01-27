@@ -10,6 +10,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -280,11 +281,12 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 
-    pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name,
-                                               kwargs.get('pkgs'),
-                                               sources,
-                                               **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, kwargs.get('pkgs'), sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -375,7 +377,11 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:

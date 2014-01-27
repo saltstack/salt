@@ -178,12 +178,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
-    def test_exsel(self):
-        data = self.run_salt('-X test.ping test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
-
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
@@ -247,11 +241,19 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} minion test.ping'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=15,
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
-            self.assertIn('minion', '\n'.join(ret))
+            self.assertIn('minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            # We now fail when we're unable to properly set the syslog logger
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):

@@ -272,9 +272,9 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -File ' + cmd
+            cmd = 'Powershell -executionpolicy bypass -File ' + cmd
         else:
-            cmd = 'Powershell ' + cmd
+            cmd = 'Powershell "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv)
@@ -917,7 +917,7 @@ def script(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
     Arguments for the script can be specified as well.
 
     CLI Example:
@@ -952,17 +952,7 @@ def script(source,
         # Backwards compatibility
         saltenv = __env__
 
-    if not salt.utils.is_windows():
-        path = salt.utils.mkstemp(dir=cwd)
-    else:
-        path = __salt__['cp.cache_file'](source, saltenv)
-        if not path:
-            _cleanup_tempfile(path)
-            return {'pid': 0,
-                    'retcode': 1,
-                    'stdout': '',
-                    'stderr': '',
-                    'cache_error': True}
+    path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
         fn_ = __salt__['cp.get_template'](source,
@@ -978,16 +968,15 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
     else:
-        if not salt.utils.is_windows():
-            fn_ = __salt__['cp.cache_file'](source, saltenv)
-            if not fn_:
-                _cleanup_tempfile(path)
-                return {'pid': 0,
-                        'retcode': 1,
-                        'stdout': '',
-                        'stderr': '',
-                        'cache_error': True}
-            shutil.copyfile(fn_, path)
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        if not fn_:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
+        shutil.copyfile(fn_, path)
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
@@ -1030,7 +1019,7 @@ def script_retcode(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
 
     Only evaluate the script return code and do not block for terminal output
 

@@ -45,7 +45,21 @@ Example Usage
 The Salt Bootstrap script has a wide variety of options that can be passed as
 well as several ways of obtaining the bootstrap script itself.
 
-For example, using ``curl`` to install latest git:
+For example, using ``curl`` to install your distribution's stable packages:
+
+.. code-block:: bash
+
+    curl -L http://bootstrap.saltstack.org | sudo sh
+
+
+Using ``wget`` to install your distribution's stable packages:
+
+.. code-block:: bash
+
+    wget -O - http://bootstrap.saltstack.org | sudo sh
+
+
+Installing the latest version available from git with ``curl``:
 
 .. code-block:: bash
 
@@ -57,13 +71,6 @@ If you have certificate issues using ``curl``, try the following:
 .. code-block:: bash 
 
     curl --insecure -L http://bootstrap.saltstack.org | sudo sh -s -- git develop
-
-
-Using ``wget`` to install your distribution's stable packages:
-
-.. code-block:: bash
-
-    wget -O - http://bootstrap.saltstack.org | sudo sh
 
 
 If you have certificate issues using ``wget`` try the following:
@@ -95,8 +102,8 @@ All python versions should support the following one liner:
     sudo  sh -s -- git develop
 
 
-On a FreeBSD base system you usually don't have either of the above binaries available. You **do** 
-have ``fetch`` available though:
+On a FreeBSD base system you usually don't have either of the above binaries
+available. You **do** have ``fetch`` available though:
 
 .. code-block:: bash
 

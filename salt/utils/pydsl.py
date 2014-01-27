@@ -161,7 +161,8 @@ class Sls(object):
         highstate = self.included_highstate
         slsmods = []  # a list of pydsl sls modules rendered.
         for sls in sls_names:
-            if sls not in self.rendered_sls:
+            r_env = '{0}:{1}'.format(saltenv, sls)
+            if r_env not in self.rendered_sls:
                 self.rendered_sls.add(sls)  # needed in case the starting sls
                                             # uses the pydsl renderer.
                 histates, errors = HIGHSTATE.render_state(

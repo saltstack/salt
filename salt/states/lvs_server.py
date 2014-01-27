@@ -127,7 +127,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
         The service protocol(only support ``tcp``, ``udp`` and ``fwmark`` service).
 
     service_address
-        The LVS service adress.
+        The LVS service address.
 
     server_address
         The LVS real server address.

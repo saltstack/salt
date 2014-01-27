@@ -4,7 +4,7 @@ Support for ``pkgng``, the new package manager for FreeBSD
 
 .. warning::
 
-    This module has been completely rewritten. Up to and includng version
+    This module has been completely rewritten. Up to and including version
     0.17.x, it was available as the ``pkgng`` module, (``pkgng.install``,
     ``pkgng.delete``, etc.), but moving forward this module will no longer be
     available as ``pkgng``, as it will behave like a normal Salt ``pkg``
@@ -38,6 +38,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
@@ -648,10 +649,12 @@ def install(name=None,
 
             salt '*' pkg.install <extended regular expression> pcre=True
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources,
-                                                                  **kwargs)
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -814,7 +817,11 @@ def remove(name=None,
 
             salt '*' pkg.remove <extended regular expression> pcre=True
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    try:
+        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
     old = list_pkgs(jail=jail, chroot=chroot)
     targets = [x for x in pkg_params if x in old]
     if not targets:

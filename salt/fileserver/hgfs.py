@@ -12,6 +12,7 @@ the desired branch method. Possible values are: ``branches``, ``bookmarks``, or
 mapped to ``base``.
 
 :depends:   - mercurial
+            - python bindings for mercurial (``python-hglib``)
 '''
 
 # Import python libs

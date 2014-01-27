@@ -100,6 +100,7 @@ for path in addtl_paths:
 import salt.version
 
 
+formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
@@ -144,8 +145,7 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
-.. |latest| replace:: https://github.com/saltstack/salt/archive/v%s.tar.gz
-""" % salt.version.__version__
+"""
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
@@ -192,6 +192,8 @@ html_sidebars = {
         'relations.html',
         'sourcelink.html',
         'searchbox.html',
+    ],
+    'ref/formula/all/*': [
     ],
 }
 
