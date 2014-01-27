@@ -1022,13 +1022,13 @@ class Events(object):
         browser may instead pass the :mailheader:`X-Auth-Token` value as an URL
         parameter::
 
-            % curl -sS localhost:8000/events/6d1b722e
+            % curl -NsS localhost:8000/events/6d1b722e
 
         .. http:get:: /events
 
             **Example request**::
 
-                % curl -sS localhost:8000/events
+                % curl -NsS localhost:8000/events
 
             .. code-block:: http
 
