@@ -24,3 +24,4 @@ Version 0.17.5 is another bugfix release for :doc:`0.17.0
 - Fix ``ZMQError: Operation cannot be accomplished in current state`` errors (:issue:`6306`)
 - Multiple optimization in minion auth routines
 - Clarify logs for minion ID caching
+- Improve shadow password handling on SmartOS (:issue:`9874`)
