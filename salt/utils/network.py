@@ -46,7 +46,7 @@ def isportopen(host, port):
         salt '*' network.isportopen 127.0.0.1 22
     '''
 
-    if not (1 <= int(port) <= 65535):
+    if not 1 <= int(port) <= 65535:
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
