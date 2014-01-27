@@ -90,9 +90,9 @@ def start():
         cherrypy.server.ssl_certificate = apiopts['ssl_crt']
         cherrypy.server.ssl_private_key = apiopts['ssl_key']
 
-    def signal_handler(signal, frame):
-            cherrypy.engine.exit()
-            sys.exit(0)
+    def signal_handler(*args):
+        cherrypy.engine.exit()
+        sys.exit(0)
     signal.signal(signal.SIGINT, signal_handler)
 
     cherrypy.quickstart(root, apiopts.get('root_prefix', '/'), conf)
