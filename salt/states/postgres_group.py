@@ -192,7 +192,7 @@ def present(name,
             and group_attr['inherits privileges'] != inherit
         ):
             update['inherit'] = inherit
-        if (login is not None and group_attr['can login'] != login):
+        if login is not None and group_attr['can login'] != login:
             update['login'] = login
         if (
             createroles is not None
@@ -206,7 +206,7 @@ def present(name,
             update['replication'] = replication
         if superuser is not None and group_attr['superuser'] != superuser:
             update['superuser'] = superuser
-        if (password is not None and group_attr['password'] != password):
+        if password is not None and group_attr['password'] != password:
             update['password'] = True
     if mode == 'create' or (mode == 'update' and update):
         cret = __salt__['postgres.group_{0}'.format(mode)](
