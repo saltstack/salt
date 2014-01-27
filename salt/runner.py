@@ -4,6 +4,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
+from __future__ import print_function
 import multiprocessing
 import datetime
 
@@ -153,5 +154,5 @@ class Runner(RunnerClient):
                         self.opts['fun'], self.opts['arg'], self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
-                print ret
+                print(ret)
                 return ret

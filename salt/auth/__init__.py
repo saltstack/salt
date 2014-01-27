@@ -14,6 +14,7 @@ so that any external authentication system can be used inside of Salt
 # 6. Interface to verify tokens
 
 # Import python libs
+from __future__ import print_function
 import os
 import hashlib
 import time

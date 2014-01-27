@@ -5,6 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 
 # Import salt libs
