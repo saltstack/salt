@@ -57,7 +57,7 @@ def __virtual__():
 
     return False
 
-def verify_certs(self, *args):
+def verify_certs(*args):
     '''
     Sanity checking for the specified SSL certificates
     '''
