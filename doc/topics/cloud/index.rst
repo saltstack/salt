@@ -11,7 +11,7 @@ Salt Cloud Documentation
 
 Salt cloud is a public cloud provisioning tool. Salt cloud is made to integrate
 Salt into cloud providers in a clean way so that minions on public cloud
-systems can be quickly and easily modelled and provisioned.
+systems can be quickly and easily modeled and provisioned.
 
 Salt cloud allows for cloud based minions to be managed via virtual machine
 maps and profiles. This means that individual cloud VMs can be created, or
