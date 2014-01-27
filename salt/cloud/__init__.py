@@ -5,6 +5,7 @@ correct cloud modules
 '''
 
 # Import python libs
+from __future__ import print_function
 import copy
 import os
 import glob
@@ -363,7 +364,7 @@ class Cloud(object):
                 iterable=multiprocessing_data
             )
         except KeyboardInterrupt:
-            print 'Caught KeyboardInterrupt, terminating workers'
+            print('Caught KeyboardInterrupt, terminating workers')
             pool.terminate()
             pool.join()
             raise SaltCloudSystemExit('Keyboard Interrupt caught')

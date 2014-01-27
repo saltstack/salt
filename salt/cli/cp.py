@@ -7,6 +7,7 @@ Salt-cp can be used to distribute configuration files
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import pprint
