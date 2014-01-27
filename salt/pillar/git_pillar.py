@@ -87,7 +87,7 @@ class GitPillar(object):
 
     def __init__(self, branch, repo_location, opts):
         '''
-        Try to initilize the Git repo object
+        Try to initialize the Git repo object
         '''
         self.branch = branch
         self.rp_location = repo_location
