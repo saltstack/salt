@@ -12,6 +12,7 @@ Primary interfaces for the salt-cloud system
 # the VM data will be in opts['profiles']
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import getpass
