@@ -15,8 +15,6 @@ import sys
 # message in the __virtual__ function
 try:
     import cherrypy
-    import cherrypy.wsgiserver as wsgiserver
-    import cherrypy.wsgiserver.ssl_builtin
 
     cpy_error = None
 except ImportError as exc:
