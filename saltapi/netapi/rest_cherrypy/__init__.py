@@ -79,8 +79,8 @@ def start():
     if not apiopts.get('disable_ssl', False):
         if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
             logger.error("Not starting '%s'. Options 'ssl_crt' and "
-                    "'ssl_key' are required if SSL is not disabled."
-                    % __name__)
+                    "'ssl_key' are required if SSL is not disabled.",
+                    __name__)
 
             return None
 
