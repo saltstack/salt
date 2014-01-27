@@ -33,6 +33,16 @@ A REST API for Salt
         will be sent in the clear!
 
         .. versionadded:: 0.8.3
+    thread_pool : ``100``
+        The number of worker threads to start up in the pool.
+
+        .. versionchanged:: 0.8.4
+            Previous versions defaulted to a pool of ``10``
+    socket_queue_size : ``30``
+        Specify the maximum number of HTTP connections to queue.
+
+        .. versionchanged:: 0.8.4
+            Previous versions defaulted to ``5`` connections.
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
