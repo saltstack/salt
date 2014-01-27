@@ -79,5 +79,3 @@ easy:
       salt.state:
         - tgt: 'web*'
         - highstate: True
-    
-
