@@ -23,9 +23,14 @@ def _construct_path(bucket, path, isdir):
     '''
     Construct a path acceptable to S3.
     '''
+    if path == '/':
+        path = ''
+
     rtn = '/'.join(('s3:/', bucket, path))
+
     if isdir and rtn[-1] != '/':
         rtn = u'{0}/'.format(rtn)
+
     elif not isdir and rtn[-1] == '/':
         rtn = rtn[:-1]
 
@@ -33,14 +38,17 @@ def _construct_path(bucket, path, isdir):
 
 
 def _construct_cmd(cmd, *args):
-    cmd = ['aws', 's3', 'ls']
-    cmd.extend(args)
-    return ' '.join(cmd)
+    full_cmd = ['aws', 's3', cmd]
+    full_cmd.extend(args)
+    return ' '.join(full_cmd)
 
 
-def ls(bucket, region, path='', isdir=True, opts=None, user=None):
+def list_directory(path, bucket, region, opts=None, user=None):
     '''
-    Run the ls command against a bucket. To list buckets, use aws_bucket.list_buckets
+    List the files and directories in a bucket with a path.
+
+    path
+        Full directory path to list. To list the root, use /
 
     bucket
         Bucket to list files against.
@@ -48,39 +56,138 @@ def ls(bucket, region, path='', isdir=True, opts=None, user=None):
     region
         Region containing the bucket to search
 
-    path : ''
-        File path to run ls against.
-
-    isdir : True
-        Treat path is if it's a directory. This is to handle a peculiarity in
-            the way S3 takes its path argument.
-
     opts : None
         Any additional options to add to the command line
 
     user : None
-        Run aws_bucket as a user other than what the minion runs as
+        Run aws_file as a user other than what the minion runs as
 
     CLI Example:
 
     .. code-block:: bash
-        salt '*' aws_file.ls testbucket eu-west-1
+        salt '*' aws_file.list_directory testbucket eu-west-1 directory
     '''
-    ls_path = _construct_path(bucket, path, isdir)
+    ls_path = _construct_path(bucket, path, True)
 
     cmd = _construct_cmd('ls', ls_path)
     
-    out = __salt__['cmd.run'](cmd, runas=user)
+    out = out = __salt__['cmd.run'](cmd, runas=user)
 
     out = '\n'.join([o.strip() for o in out.split('\n')])
 
     retcode = 0
     if not out.strip():
         retcode = 1
-        out = u'No such {0}'.format('directory' if isdir else 'file')
+        out = u'Directory {0} is not in bucket {1}'.format(path, bucket)
 
     ret = {
         'retcode': retcode,
         'stdout': out,
     }
     return ret
+
+
+def file_exists(path, bucket, region, opts=None, user=None):
+    '''
+    Return whether a file exists in the given bucket.
+
+    path
+        File to search for
+
+    bucket
+        Bucket to search for the file in
+
+    region
+        Region containing the bucket to search
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run aws_file as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_file.file_exists test/file.txt testbucket eu-west-1
+    '''
+    find = _construct_path(bucket, path, False)
+
+    cmd = _construct_cmd('ls', find)
+
+    out = __salt__['cmd.run'](cmd, runas=user)
+
+    return len(out.strip()) > 0
+
+
+def directory_exists(path, bucket, region, opts=None, user=None):
+    '''
+    Return whether a directory exists in the given bucket.
+
+    path
+        Directory to search for
+
+    bucket
+        Bucket to search in
+
+    region
+        Region containing the bucket to search
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run aws_file as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_file.directory_exists test testbucket eu-west-1
+    '''
+    find = _construct_path(bucket, path, True)
+
+    cmd = _construct_cmd('ls', find)
+
+    out = __salt__['cmd.run'](cmd, runas=user)
+
+    return len(out.strip()) > 0
+
+
+def copy(src, dst, bucket, region, force=False, opts=None, user=None):
+    '''
+    Copy a file to an S3 bucket.
+
+    src
+        File to copy
+
+    dst
+        Path of the file to copy to
+
+    bucket
+        Bucket to copy the file into
+
+    force : False
+        Forcibly overwrite the file if it already exists
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run aws_file as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_file.copy source_file.txt test/destination_file.txt testbucket eu-west-1
+    '''
+    exists = file_exists(dst, bucket, region, opts, user)
+    if exists and not force:
+        retcode = 1
+        ret = u'File {0} exists in bucket {1} and force is not set'.format(
+            dst, bucket)
+    else:
+        destination_path = _construct_path(bucket, dst, False)
+
+        cmd = _construct_cmd('cp', src, destination_path)
+
+        out = __salt__['cmd.run'](cmd, runas=user)
