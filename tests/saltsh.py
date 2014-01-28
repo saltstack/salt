@@ -80,7 +80,7 @@ def get_salt_vars():
     __pillar__ = salt.pillar.get_pillar(
         __opts__,
         __grains__,
-        __opts__['id'],
+        __opts__.get('id'),
         __opts__.get('environment'),
     ).compile_pillar()
 
