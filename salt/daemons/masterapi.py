@@ -721,7 +721,7 @@ class LocalFuncs(object):
 
         try:
             name = self.loadauth.load_name(load)
-            if not ((name in self.opts['external_auth'][load['eauth']]) | ('*' in self.opts['external_auth'][load['eauth']])):
+            if not (name in self.opts['external_auth'][load['eauth']]) | ('*' in self.opts['external_auth'][load['eauth']]):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(load.get('username', 'UNKNOWN'))
                 log.warning(msg)
@@ -824,7 +824,7 @@ class LocalFuncs(object):
                 log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,
@@ -893,7 +893,7 @@ class LocalFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,

@@ -191,7 +191,7 @@ PATH using a \fBfile.symlink\fP state.
 .sp
 As of release 0.17.1 backwards compatibility was broken (specifically for
 0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatiblity
+security purposes. The Salt team continues to emphasize backwards compatibility
 as an important feature and plans to support it to the best of our ability to
 do so.
 .SS Does Salt support backing up managed files?
@@ -12067,7 +12067,7 @@ Keys in the us\-west\-1 region can be configured at
 \fI\%https://console.aws.amazon.com/ec2/home?region=us\-west\-1#s=KeyPairs\fP
 .sp
 \&...and so on. When creating a key pair, the browser will prompt to download a
-pem file. This file must be placed in a directory accessable by Salt Cloud,
+pem file. This file must be placed in a directory accessible by Salt Cloud,
 with permissions set to either 0400 or 0600.
 .SS Security Groups
 .sp
@@ -18197,7 +18197,7 @@ salt myminion cloud.action show_image provider=my\-ec2\-config \e
 .UNINDENT
 .UNINDENT
 .sp
-The actions available are largely dependant upon the module for the specific
+The actions available are largely dependent upon the module for the specific
 cloud provider. The following actions are available for all cloud providers:
 .INDENT 0.0
 .TP
@@ -19416,7 +19416,7 @@ pip install git+https://github.com/saltstack/salt\-cloud.git#egg=salt_cloud
 .sp
 Salt cloud is a public cloud provisioning tool. Salt cloud is made to integrate
 Salt into cloud providers in a clean way so that minions on public cloud
-systems can be quickly and easily modeled and provisioned.
+systems can be quickly and easily modelled and provisioned.
 .sp
 Salt cloud allows for cloud based minions to be managed via virtual machine
 maps and profiles. This means that individual cloud VMs can be created, or
@@ -19932,7 +19932,7 @@ available and should be attached to by \fBsalt\-ssh\fP\&. By default the roster
 file is located at /etc/salt/roster.
 .SS How Rosters Work
 .sp
-The roster system compiles a data structure internally refered to as
+The roster system compiles a data structure internally referred to as
 \fItargets\fP\&. The \fItargets\fP is a list of target systems and attributes about how
 to connect to said systems. The only requirement for a roster module in Salt
 is to return the \fItargets\fP data structure.
@@ -20598,7 +20598,7 @@ reactor:                           # Master config section "reactor"
 Reactor sls files are similar to state and pillar sls files.  They are
 by default yaml + Jinja templates and are passed familar context variables.
 .sp
-They differ because of the addtion of the \fBtag\fP and \fBdata\fP variables.
+They differ because of the addition of the \fBtag\fP and \fBdata\fP variables.
 .INDENT 0.0
 .IP \(bu 2
 The \fBtag\fP variable is just the tag in the fired event.
@@ -28798,7 +28798,7 @@ salt \(aq*\(aq pkg.install php54 taps=\(aq["josegonzalez/php", "homebrew/dupes"]
 .UNINDENT
 .TP
 .B options
-Options to pass to brew. Only applies to inital install. Due to how brew
+Options to pass to brew. Only applies to initial install. Due to how brew
 works, modifying chosen options requires a full uninstall followed by a
 fresh install. Note that if "pkgs" is used, all options will be passed
 to all packages. Unreconized options for a package will be silently
@@ -30313,7 +30313,7 @@ server.
 The script will be executed directly, so it can be written in any available
 programming language.
 .sp
-The script can also be formated as a template, the default is jinja.
+The script can also be formatted as a template, the default is jinja.
 Arguments for the script can be specified as well.
 .sp
 CLI Example:
@@ -30354,7 +30354,7 @@ server.
 The script will be executed directly, so it can be written in any available
 programming language.
 .sp
-The script can also be formated as a template, the default is jinja.
+The script can also be formatted as a template, the default is jinja.
 .sp
 Only evaluate the script return code and do not block for terminal output
 .sp
@@ -30426,7 +30426,7 @@ Use composer to install PHP dependencies for a directory
 .B salt.modules.composer.install(dir, composer=None, php=None, runas=None, prefer_source=None, prefer_dist=None, no_scripts=None, no_plugins=None, optimize=None, no_dev=None, quiet=False, composer_home=\(aq/root\(aq)
 Install composer dependencies for a directory.
 .sp
-If composer has not been installed globally making it avaliable in the
+If composer has not been installed globally making it available in the
 system PATH & making it executible, the \fBcomposer\fP and \fBphp\fP parameters
 will need to be set to the location of the executables.
 .INDENT 7.0
@@ -36647,7 +36647,7 @@ salt \(aq*\(aq file.rename /path/to/src /path/to/dst
 .INDENT 0.0
 .TP
 .B salt.modules.file.replace(path, pattern, repl, count=0, flags=0, bufsize=1, backup=\(aq.bak\(aq, dry_run=False, search_only=False, show_changes=True)
-Replace occurances of a pattern in a file
+Replace occurrences of a pattern in a file
 .sp
 New in version 0.17.0.
 
@@ -36779,7 +36779,7 @@ salt \(aq*\(aq file.rmdir /tmp/foo/
 .INDENT 0.0
 .TP
 .B salt.modules.file.search(path, pattern, flags=0, bufsize=1)
-Search for occurances of a pattern in a file
+Search for occurrences of a pattern in a file
 .sp
 New in version 0.17.0.
 
@@ -40125,7 +40125,7 @@ salt \(aq*\(aq gnome.setClockFormat <12h|24h> user=<username>
 .INDENT 0.0
 .TP
 .B salt.modules.gnomedesktop.setClockShowDate(kvalue, **kwargs)
-Set whether the date is visable in the clock
+Set whether the date is visible in the clock
 .sp
 CLI Example:
 .INDENT 7.0
@@ -41278,7 +41278,7 @@ salt \(aq*\(aq iptables.build_rule filter INPUT command=I position=3 \e
 .INDENT 0.0
 .TP
 .B salt.modules.iptables.check(table=\(aqfilter\(aq, chain=None, rule=None)
-Check for the existance of a rule in the table and chain
+Check for the existence of a rule in the table and chain
 .INDENT 7.0
 .TP
 .B This function accepts a rule in a standard iptables command format,
@@ -41306,7 +41306,7 @@ salt \(aq*\(aq iptables.check filter INPUT \e
 New in version Hydrogen.
 
 .sp
-Check for the existance of a chain in the table
+Check for the existence of a chain in the table
 .sp
 CLI Example:
 .INDENT 7.0
@@ -51462,7 +51462,7 @@ Support for \fBpkgng\fP, the new package manager for FreeBSD
 \fBWARNING:\fP
 .INDENT 0.0
 .INDENT 3.5
-This module has been completely rewritten. Up to and includng version
+This module has been completely rewritten. Up to and including version
 0.17.x, it was available as the \fBpkgng\fP module, (\fBpkgng.install\fP,
 \fBpkgng.delete\fP, etc.), but moving forward this module will no longer be
 available as \fBpkgng\fP, as it will behave like a normal Salt \fBpkg\fP
@@ -54207,7 +54207,7 @@ salt \(aq*\(aq ps.get_users
 .INDENT 0.0
 .TP
 .B salt.modules.ps.kill_pid(pid, signal=15)
-Kill a proccess by PID.
+Kill a process by PID.
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -73082,7 +73082,7 @@ httpd:
 .UNINDENT
 .UNINDENT
 .sp
-In this example, the httpd sevice running state will not be applied
+In this example, the httpd service running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
 installed AND the network state is satisfied.
 .sp
@@ -75736,7 +75736,7 @@ Archive states.
 .TP
 .B salt.states.archive.extracted(name, source, archive_format, tar_options=None, source_hash=None, if_missing=None)
 State that make sure an archive is extracted in a directory.
-The downloaded archive is erased if succesfully extracted.
+The downloaded archive is erased if successfully extracted.
 The archive is downloaded only if necessary.
 .INDENT 7.0
 .INDENT 3.5
@@ -76613,7 +76613,7 @@ date > /tmp/crontest:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user\(aqs crontab.
 .sp
-Salt also supports running a cron every \fBx minutes\fP very similarily to the Unix
+Salt also supports running a cron every \fBx minutes\fP very similarly to the Unix
 convention of using \fB*/5\fP to have a job run every five minutes. In Salt, this
 looks like:
 .INDENT 0.0
@@ -76792,7 +76792,7 @@ The host portion of the DNS record, e.g., \(aqwebserver\(aq
 The zone to check
 .TP
 .B data
-Data for the DNS record. E.g., the IP addres for an A record. If omitted,
+Data for the DNS record. E.g., the IP address for an A record. If omitted,
 all records matching name (and rdtype, if provided) will be purged.
 .TP
 .B rdtype
@@ -76815,7 +76815,7 @@ The zone to check/update
 TTL for the record
 .TP
 .B data
-Data for the DNS record. E.g., the IP addres for an A record.
+Data for the DNS record. E.g., the IP address for an A record.
 .TP
 .B rdtype
 DNS resource type. Default \(aqA\(aq.
@@ -77074,7 +77074,7 @@ the name \(aqdocker\(aq would conflict with the underlying docker\-py library.
 .sp
 We should add magic to all methods to also match containers by name
 now that the \(aqnaming link\(aq stuff has been merged in docker.
-This applies for exemple to:
+This applies for example to:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -77821,7 +77821,7 @@ file. If \fBFalse\fP return a boolean if any changes were made.
 .B Return type
 bool or str
 .sp
-Exemple of usage with an accumulator and with a variable:
+Example of usage with an accumulator and with a variable:
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -79894,7 +79894,7 @@ The name of the LVS server.
 The service protocol(only support \fBtcp\fP, \fBudp\fP and \fBfwmark\fP service).
 .TP
 .B service_address
-The LVS service adress.
+The LVS service address.
 .TP
 .B server_address
 The LVS real server address.
@@ -79958,7 +79958,7 @@ The name of the LVS service
 The service protocol
 .TP
 .B service_address
-The LVS service adress
+The LVS service address
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -96758,7 +96758,7 @@ If so, run the installer command.
 Execute \fBpkg.list_pkgs\fP and compare to the result stored from
 before installation.
 .IP 5. 3
-Sucess/Failure/Changes will be reported based on the differences
+Success/Failure/Changes will be reported based on the differences
 between the original and final \fBpkg.list_pkgs\fP results.
 .UNINDENT
 .sp
@@ -103959,7 +103959,7 @@ system.
 .SS Salt Cloud Merged in Salt
 .sp
 Salt Cloud is a tool for provisioning salted minions across various cloud
-providers. Prior to this release, Salt Cloud was a seperate project but this
+providers. Prior to this release, Salt Cloud was a separate project but this
 marks its full integration with the Salt distribution. A Getting Started guide
 and additional documentation for Salt Cloud can be found \fBhere\fP:
 .SS Salt Virt

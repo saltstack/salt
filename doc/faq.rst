@@ -165,7 +165,7 @@ Can I run different versions of Salt on my Master and Minion?
 
 As of release 0.17.1 backwards compatibility was broken (specifically for
 0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatiblity
+security purposes. The Salt team continues to emphasize backwards compatibility
 as an important feature and plans to support it to the best of our ability to
 do so.
 

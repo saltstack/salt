@@ -90,7 +90,7 @@ def present(name,
 
             'md5{MD5OF({password}{role}}'
 
-        If encrypted is None or True, the password will be automaticly
+        If encrypted is None or True, the password will be automatically
         encrypted to the previous
         format if it is not already done.
 
@@ -135,7 +135,7 @@ def present(name,
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if if not already and neccesary
+    # maybe encrypt if if not already and necessary
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)
@@ -192,7 +192,7 @@ def present(name,
             and user_attr['inherits privileges'] != inherit
         ):
             update['inherit'] = inherit
-        if (login is not None and user_attr['can login'] != login):
+        if login is not None and user_attr['can login'] != login:
             update['login'] = login
         if (
             createroles is not None
@@ -206,7 +206,7 @@ def present(name,
             update['replication'] = replication
         if superuser is not None and user_attr['superuser'] != superuser:
             update['superuser'] = superuser
-        if (password is not None and user_attr['password'] != password):
+        if password is not None and user_attr['password'] != password:
             update['password'] = True
     if mode == 'create' or (mode == 'update' and update):
         cret = __salt__['postgres.user_{0}'.format(mode)](

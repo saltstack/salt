@@ -24,7 +24,7 @@ def extracted(name,
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     State that make sure an archive is extracted in a directory.
-    The downloaded archive is erased if succesfully extracted.
+    The downloaded archive is erased if successfully extracted.
     The archive is downloaded only if necessary.
 
     .. code-block:: yaml
@@ -68,7 +68,7 @@ def extracted(name,
         Only used for tar format, it need to be the tar argument specific to
         this archive, such as 'J' for LZMA.
         Using this option means that the tar executable on the target will
-        be used, which is less platform independant.
+        be used, which is less platform independent.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
     '''

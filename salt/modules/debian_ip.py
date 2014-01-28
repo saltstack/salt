@@ -173,7 +173,7 @@ def _log_default_network(opt, value):
 
 def _raise_error_iface(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_iface(iface, option, expected)
     log.error(msg)
@@ -182,7 +182,7 @@ def _raise_error_iface(iface, option, expected):
 
 def _raise_error_network(option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_network(option, expected)
     log.error(msg)
@@ -191,7 +191,7 @@ def _raise_error_network(option, expected):
 
 def _raise_error_routes(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_routes(iface, option, expected)
     log.error(msg)

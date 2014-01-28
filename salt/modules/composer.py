@@ -49,7 +49,7 @@ def install(dir,
     '''
     Install composer dependencies for a directory.
 
-    If composer has not been installed globally making it avaliable in the
+    If composer has not been installed globally making it available in the
     system PATH & making it executible, the ``composer`` and ``php`` parameters
     will need to be set to the location of the executables.
 

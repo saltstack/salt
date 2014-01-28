@@ -426,7 +426,7 @@ def refresh_db():
     Returns:
 
     - ``True``: Updates are available
-    - ``False``: An error occured
+    - ``False``: An error occurred
     - ``None``: No updates are available
 
     CLI Example:

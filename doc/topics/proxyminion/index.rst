@@ -8,13 +8,12 @@ network gear that has an API but runs a proprietary OS, devices with limited
 CPU or memory, or devices that could run a minion, but for security reasons,
 will not.
 
-*Proxy minions are not an "out of the box" feature*.  Because
-there are an infinite number of controllable devices,
-you will most likely have to write the
+*Proxy minions are not an "out of the box" feature*.  Because there are an
+infinite number of controllable devices, you will most likely have to write the
 interface yourself. Fortunately, this is only as difficult as the actual
 interface to the proxied device.  Devices that have an existing Python module
-(PyUSB for example) would be relatively simple to interface.  Code to control
-a device that has an HTML REST-based interface should be easy.  Code to control
+(PyUSB for example) would be relatively simple to interface.  Code to control a
+device that has an HTML REST-based interface should be easy.  Code to control
 your typical housecat would be excellent source material for a PhD thesis.
 
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
@@ -42,8 +41,9 @@ To create support for a proxied device one needs to create four things:
 
 1. The `proxytype connection class`_ (located in salt/proxy).
 2. The `grains support code`_ (located in salt/grains).
-3. `Salt modules`_ specific to the controlled device.
-4. _`Salt states` specific to the controlled device.
+3. :ref:`Salt modules <all-salt.modules>` specific to the controlled
+   device.
+4. :ref:`Salt states <all-salt.states>` specific to the controlled device.
 
 
 Configuration parameters on the master
@@ -125,13 +125,16 @@ In the above example
 - dumbdevices 1, 2, and 3 are network switches that have a management
   interface available at a particular IP address.
 
-- dumbdevices 4 and 5 are very low-level devices controlled over an i2c bus.  In this case
-  the devices are physically connected to machine 'minioncontroller2', and are addressable
-  on the i2c bus at their respective i2c addresses.
+- dumbdevices 4 and 5 are very low-level devices controlled over an i2c bus.
+  In this case the devices are physically connected to machine
+  'minioncontroller2', and are addressable on the i2c bus at their respective
+  i2c addresses.
 
-- dumbdevice6 is a 433 MHz wireless transmitter, also physically connected to minioncontroller2
+- dumbdevice6 is a 433 MHz wireless transmitter, also physically connected to
+  minioncontroller2
 
-- dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a serial port.
+- dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a
+  serial port.
 
 Because of the way pillar works, each of the salt-minions that fork off the
 proxy minions will only see the keys specific to the proxies it will be

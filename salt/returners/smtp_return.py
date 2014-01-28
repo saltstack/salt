@@ -23,7 +23,7 @@ There are a few things to keep in mind:
 * The use of encryption, i.e. setting gpgowner in your settings, requires
   python-gnupg to be installed.
 * The field gpgowner specifies a user's ~/.gpg directory. This must contain a
-  gpg public key matching the adress the mail is sent to. If left unset, no
+  gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
 * smtp.fields lets you include the value(s) of various fields in the subject
   line of the email. These are comma-delimited. For instance:

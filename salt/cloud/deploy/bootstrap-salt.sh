@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #===============================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="1.5.10"
+__ScriptVersion="1.5.11"
 __ScriptName="bootstrap-salt.sh"
 
 #===============================================================================
@@ -112,6 +112,56 @@ check_pip_allowed() {
         exit 1
     fi
 }
+
+#===  FUNCTION  ================================================================
+#         NAME:  __check_config_dir
+#  DESCRIPTION:  Checks the config directory, retrieves URLs if provided.
+#===============================================================================
+__check_config_dir() {
+    CC_DIR_NAME="$1"
+    CC_DIR_BASE=$(basename "${CC_DIR_NAME}")
+
+    case "$CC_DIR_NAME" in
+        http://*|https://*)
+            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
+            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            ;;
+        ftp://*)
+            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
+            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            ;;
+        *)
+            if [ ! -e "${CC_DIR_NAME}" ]; then
+                echo "null"
+                return 0
+            fi
+            ;;
+    esac
+
+    case "$CC_DIR_NAME" in
+        *.tgz|*.tar.gz)
+            tar -zxf "${CC_DIR_NAME}" -C /tmp
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tgz")
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.gz")
+            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            ;;
+        *.tbz|*.tar.bz2)
+            tar -xjf "${CC_DIR_NAME}" -C /tmp
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tbz")
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.bz2")
+            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            ;;
+        *.txz|*.tar.xz)
+            tar -xJf "${CC_DIR_NAME}" -C /tmp
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".txz")
+            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.xz")
+            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            ;;
+    esac
+
+    echo "${CC_DIR_NAME}"
+}
+
 
 #===  FUNCTION  ================================================================
 #         NAME:  usage
@@ -429,57 +479,6 @@ __fetch_url() {
         wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1 ||
             fetch -q -o "$1" "$2" >/dev/null 2>&1
 }
-
-
-#===  FUNCTION  ================================================================
-#         NAME:  __check_config_dir
-#  DESCRIPTION:  Checks the config directory, retrieves URLs if provided.
-#===============================================================================
-__check_config_dir() {
-    CC_DIR_NAME="$1"
-    CC_DIR_BASE=$(basename "${CC_DIR_NAME}")
-
-    case "$CC_DIR_NAME" in
-        http://*|https://*)
-            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
-            ;;
-        ftp://*)
-            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
-            ;;
-        *)
-            if [ ! -e "${CC_DIR_NAME}" ]; then
-                echo "null"
-                return 0
-            fi
-            ;;
-    esac
-
-    case "$CC_DIR_NAME" in
-        *.tgz|*.tar.gz)
-            tar -zxf "${CC_DIR_NAME}" -C /tmp
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tgz")
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.gz")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
-            ;;
-        *.tbz|*.tar.bz2)
-            tar -xjf "${CC_DIR_NAME}" -C /tmp
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tbz")
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.bz2")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
-            ;;
-        *.txz|*.tar.xz)
-            tar -xJf "${CC_DIR_NAME}" -C /tmp
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".txz")
-            CC_DIR_BASE=$(basename ${CC_DIR_BASE} ".tar.xz")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
-            ;;
-    esac
-
-    echo "${CC_DIR_NAME}"
-}
-
 
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -2141,7 +2140,7 @@ install_red_hat_enterprise_server_testing_post() {
 #   Amazon Linux AMI Install Functions
 #
 install_amazon_linux_ami_deps() {
-    # Acording to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
+    # According to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
     # enable the EPEL 6 repo
     if [ $CPU_ARCH_L = "i686" ]; then
         EPEL_ARCH="i386"
@@ -2381,7 +2380,7 @@ __freebsd_get_packagesite() {
     set -o nounset
 }
 
-# Using a seperate conf step to head for idempotent install...
+# Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
 
     ## pkg.conf is deprecated.  

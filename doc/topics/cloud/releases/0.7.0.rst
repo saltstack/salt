@@ -54,7 +54,7 @@ GoGrid
 List Available Resources
 ========================
 
-Setting up Salt Cloud requires knowlege of the available sizes and images on
+Setting up Salt Cloud requires knowledge of the available sizes and images on
 cloud providers. Listing the available images and sizes can now be done with
 the salt-cloud command:
 

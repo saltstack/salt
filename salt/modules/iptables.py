@@ -329,7 +329,7 @@ def save(filename=None, family='ipv4'):
 
 def check(table='filter', chain=None, rule=None, family='ipv4'):
     '''
-    Check for the existance of a rule in the table and chain
+    Check for the existence of a rule in the table and chain
 
     This function accepts a rule in a standard iptables command format,
         starting with the chain. Trying to force users to adapt to a new
@@ -377,7 +377,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
-    Check for the existance of a chain in the table
+    Check for the existence of a chain in the table
 
     CLI Example:
 

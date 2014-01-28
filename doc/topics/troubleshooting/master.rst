@@ -158,7 +158,7 @@ with an unresponsive daemon, be sure to include this information if possible.
 Live Salt-Master Profiling
 ==========================
 
-When faced with perfomance problems one can turn on master process profiling by
+When faced with performance problems one can turn on master process profiling by
 sending it SIGUSR2.
 
 .. code-block:: bash

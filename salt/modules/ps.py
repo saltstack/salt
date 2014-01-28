@@ -107,7 +107,7 @@ def get_pid_list():
 
 def kill_pid(pid, signal=15):
     '''
-    Kill a proccess by PID.
+    Kill a process by PID.
 
     .. code-block:: bash
 
