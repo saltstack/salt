@@ -217,10 +217,12 @@ def ext_pillar(minion_id, pillar, repo_string):
     if __opts__['pillar_roots'].get(branch, []) == [gitpil.working_dir]:
         return {}
 
+    gitpil.update()
+
     opts = deepcopy(__opts__)
 
     opts['pillar_roots'][branch] = [gitpil.working_dir]
 
-    pil = Pillar(opts, __grains__, minion_id, 'base')
+    pil = Pillar(opts, __grains__, minion_id, branch)
 
     return pil.compile_pillar()
