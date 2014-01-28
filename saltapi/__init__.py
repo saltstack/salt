@@ -87,6 +87,16 @@ class APIClient(object):
     local = local_sync  # backwards compatible alias
     sync = local_sync # default sync client
 
+    def local_batch(self, *args, **kwargs):
+        '''
+        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+        in batches of minions at a time.
+
+        .. seealso:: :py:meth:`salt.client.LocalClient.cmd_batch`
+        '''
+        local = salt.client.LocalClient(self.opts['conf_file'])
+        return local.cmd_batch(*args, **kwargs)
+
     def runner_sync(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
