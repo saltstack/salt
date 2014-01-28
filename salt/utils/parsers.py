@@ -2002,7 +2002,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help=('Display documentation for runners, pass a runner or '
-                  'runner.method to see documentation on only that runner '
+                  'runner.function to see documentation on only that runner '
                   'or function.')
         )
 
