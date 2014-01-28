@@ -63,8 +63,8 @@ LocalClient
 -----------
 
 .. autoclass:: salt.client.LocalClient
-    :members: cmd, run_job, cmd_async, cmd_subset, cmd_iter, cmd_iter_no_block,
-        get_cli_returns, get_event_iter_returns
+    :members: cmd, run_job, cmd_async, cmd_subset, cmd_batch, cmd_iter,
+        cmd_iter_no_block, get_cli_returns, get_event_iter_returns
 
 Salt Caller
 -----------
