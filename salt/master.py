@@ -272,9 +272,9 @@ class Master(SMaster):
                     # Fire new minions present event
                     data = {'new': list(new),
                             'lost': list(lost)}
-                    event.fire_event(data, tagify('change', 'presense'))
+                    event.fire_event(data, tagify('change', 'presence'))
                 data = {'present': list(present)}
-                event.fire_event(data, tagify('present', 'presense'))
+                event.fire_event(data, tagify('present', 'presence'))
                 old_present = present
             try:
                 time.sleep(loop_interval)
@@ -2133,7 +2133,7 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            if not (name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']]):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)

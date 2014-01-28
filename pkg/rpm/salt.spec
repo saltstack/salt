@@ -318,6 +318,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Jan 27 2014 Erik Johnson <erik@saltstack.com> - 0.17.5-1
+- Update to bugfix release 0.17.5
+
 * Thu Dec 19 2013 Erik Johnson <erik@saltstack.com> - 0.17.4-1
 - Update to bugfix release 0.17.4
 

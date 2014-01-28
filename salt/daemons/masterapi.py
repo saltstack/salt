@@ -721,7 +721,7 @@ class LocalFuncs(object):
 
         try:
             name = self.loadauth.load_name(load)
-            if not ((name in self.opts['external_auth'][load['eauth']]) | ('*' in self.opts['external_auth'][load['eauth']])):
+            if not (name in self.opts['external_auth'][load['eauth']]) | ('*' in self.opts['external_auth'][load['eauth']]):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(load.get('username', 'UNKNOWN'))
                 log.warning(msg)

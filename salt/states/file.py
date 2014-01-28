@@ -501,7 +501,7 @@ def _check_symlink_ownership(path, user, group):
     Check if the symlink ownership matches the specified user and group
     '''
     cur_user, cur_group = _get_symlink_ownership(path)
-    return ((cur_user == user) and (cur_group == group))
+    return (cur_user == user) and (cur_group == group)
 
 
 def _set_symlink_ownership(path, uid, gid):
@@ -2917,7 +2917,7 @@ def accumulated(name, filename, text, **kwargs):
 
     Example:
 
-    Given the following:
+    Given the following::
 
         animals_doing_things:
           file.accumulated:
@@ -2932,11 +2932,12 @@ def accumulated(name, filename, text, **kwargs):
             - source: salt://animal_file.txt
             - template: jinja
 
-    One might write a template for animal_file.txt like the following:
+    One might write a template for animal_file.txt like the following::
 
         The quick brown fox{% for animal in accumulator['animals_doing_things'] %}{{ animal }}{% endfor %}
 
-    Collectively, the above states and template file will produce:
+    Collectively, the above states and template file will produce::
+
         The quick brown fox jumps over the lazy dog.
 
     Multiple accumulators can be "chained" together.

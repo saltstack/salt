@@ -6,7 +6,8 @@ The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
-Requisites come in two types. Direct requisites, and requisite_ins. The
+Requisites come in two types. ``Direct requisites`` (such as require and
+watch), and ``requisite_ins`` (require_in, watch_in, and prereq_in). The
 relationships are directional, so a requisite statement makes the requiring
 state declaration depend on the required state declaration:
 
@@ -23,7 +24,7 @@ state declaration depend on the required state declaration:
 
 So in this example, the file ``/etc/vimrc`` depends on the vim package.
 
-Requisite_in statements are the opposite, instead of saying "I depend on
+``Requisite_in`` statements are the opposite, instead of saying "I depend on
 something", requisite_ins say "Someone depends on me":
 
 .. code-block:: yaml
@@ -37,8 +38,9 @@ something", requisite_ins say "Someone depends on me":
       file.managed:
         - source: salt://edit/vimrc
 
-So here, with a requisite_in, the same thing is accomplished, but just from
-the other way around. The vim package is saying "/etc/vimrc depends on me".
+So here, with a ``requisite_in``, the same thing is accomplished, but just
+from the other way around. The vim package is saying "/etc/vimrc depends on
+me".
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
