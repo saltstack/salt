@@ -174,6 +174,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
         del kwargs['to-ports']
 
+    if 'to-destination' in kwargs:
+        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
+        del kwargs['to-destination']
+
     for item in kwargs:
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
