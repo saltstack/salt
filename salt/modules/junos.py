@@ -52,7 +52,7 @@ def facts_refresh():
     return __opts__['proxyconn'].refresh
 
 
-def set_hostname(hostname=None, commit=True):
+def set_hostname(hostname=None, commit_change=True):
 
     ret = dict()
     conn = __opts__['proxyconn']
@@ -65,7 +65,7 @@ def set_hostname(hostname=None, commit=True):
     set_string = 'set system host-name {0}'.format(hostname)
 
     conn.cu.load(set_string, format='set')
-    if commit:
+    if commit_change:
         return commit()
     else:
         ret['out'] = True
