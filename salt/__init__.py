@@ -70,6 +70,7 @@ class Master(parsers.MasterOptionParser):
                         self.config['pki_dir'],
                         os.path.join(self.config['pki_dir'], 'minions'),
                         os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'], 'minions_denied'),
                         os.path.join(self.config['pki_dir'],
                                      'minions_rejected'),
                         self.config['cachedir'],
