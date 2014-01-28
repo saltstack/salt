@@ -230,7 +230,7 @@ def vgcreate(vgname, devices, **kwargs):
     return vgdata
 
 
-def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
+def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=''):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
@@ -240,9 +240,13 @@ def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
         salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+        salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
     '''
     if size and extents:
         return 'Error: Please specify only size or extents'
+
+    if snapshot:
+        vgname = '-s ' + vgname + '/' + snapshot
 
     if size:
         cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
