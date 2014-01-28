@@ -19,6 +19,10 @@ def __virtual__():
     return aws.installed()
 
 
+def _get_region(region):
+    return u'--region {0}'.format(region)
+
+
 def _construct_path(bucket, path, isdir):
     '''
     Construct a path acceptable to S3.
@@ -69,7 +73,7 @@ def list_directory(path, bucket, region, opts=None, user=None):
     '''
     ls_path = _construct_path(bucket, path, True)
 
-    cmd = _construct_cmd('ls', ls_path)
+    cmd = _construct_cmd('ls', ls_path, _get_region(region))
     
     out = out = __salt__['cmd.run'](cmd, runas=user)
 
@@ -113,7 +117,7 @@ def file_exists(path, bucket, region, opts=None, user=None):
     '''
     find = _construct_path(bucket, path, False)
 
-    cmd = _construct_cmd('ls', find)
+    cmd = _construct_cmd('ls', find, _get_region(region))
 
     out = __salt__['cmd.run'](cmd, runas=user)
 
@@ -146,7 +150,7 @@ def directory_exists(path, bucket, region, opts=None, user=None):
     '''
     find = _construct_path(bucket, path, True)
 
-    cmd = _construct_cmd('ls', find)
+    cmd = _construct_cmd('ls', find, _get_region(region))
 
     out = __salt__['cmd.run'](cmd, runas=user)
 
@@ -188,6 +192,15 @@ def copy(src, dst, bucket, region, force=False, opts=None, user=None):
     else:
         destination_path = _construct_path(bucket, dst, False)
 
-        cmd = _construct_cmd('cp', src, destination_path)
+        cmd = _construct_cmd('cp', src, destination_path, _get_region(region))
 
-        out = __salt__['cmd.run'](cmd, runas=user)
+        ret = __salt__['cmd.run'](cmd, runas=user)
+        retcode = 0
+
+        if 'Invalid choice' in ret:
+            retcode = 1
+
+    return {
+        'retcode': retcode,
+        'stdout': ret,
+    }
