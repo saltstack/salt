@@ -64,11 +64,11 @@ class APIClient(object):
 
     def local_async(self, *args, **kwargs):
         '''
-        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
-        and immediately return the job ID. The results of the job can then be
-        retrieved at a later time.
+        Run :ref:`execution modules <all-salt.modules>` asyncronously
 
-        .. seealso:: :ref:`python-api`
+        Wraps :py:meth:`salt.client.LocalClient.run_job`.
+
+        :return: job ID
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.run_job(*args, **kwargs)
@@ -77,9 +77,11 @@ class APIClient(object):
 
     def local_sync(self, *args, **kwargs):
         '''
-        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+        Run :ref:`execution modules <all-salt.modules>` syncronously
 
-        .. seealso:: :ref:`python-api`
+        Wraps :py:meth:`salt.client.LocalClient.cmd`.
+
+        :return: Returns the result from the execution module
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.cmd(*args, **kwargs)
@@ -89,17 +91,23 @@ class APIClient(object):
 
     def local_batch(self, *args, **kwargs):
         '''
-        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
-        in batches of minions at a time.
+        Run :ref:`execution modules <all-salt.modules>` against batches of minions
 
-        .. seealso:: :py:meth:`salt.client.LocalClient.cmd_batch`
+        Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
+
+        :return: Returns the result from the exeuction module for each batch of
+            returns
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.cmd_batch(*args, **kwargs)
 
     def runner_sync(self, fun, **kwargs):
         '''
-        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        Run `runner modules <all-salt.runners>`
+
+        Wraps :py:meth:`salt.runner.RunnerClient.low`.
+
+        :return: Returns the result from the runner module
         '''
         runner = salt.runner.RunnerClient(self.opts)
         return runner.low(fun, kwargs)
@@ -109,7 +117,11 @@ class APIClient(object):
 
     def wheel_sync(self, fun, **kwargs):
         '''
-        Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
+        Run :ref:`wheel modules <all-salt.wheel>`
+
+        Wraps :py:meth:`salt.wheel.WheelClient.master_call`.
+
+        :return: Returns the result from the wheel module
         '''
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
