@@ -19,6 +19,22 @@ def __virtual__():
     return aws.installed()
 
 
+def _error_occurred(ret):
+    '''
+    Return whether an error occurred in the return value.
+    '''
+    error_strings = (
+        u'Invalid choice',
+        u'A client error (NoSuchKey) occurred when calling the HeadObject operation',
+    )
+
+    for error in error_strings:
+        if error in ret:
+            return True
+    else:
+        return False
+
+
 def _get_region(region):
     return u'--region {0}'.format(region)
 
@@ -197,8 +213,48 @@ def copy(src, dst, bucket, region, force=False, opts=None, user=None):
         ret = __salt__['cmd.run'](cmd, runas=user)
         retcode = 0
 
-        if 'Invalid choice' in ret:
+        if _error_occurred(ret):
             retcode = 1
+
+    return {
+        'retcode': retcode,
+        'stdout': ret,
+    }
+
+
+def remove(path, bucket, region, opts=None, user=None):
+    '''
+    Remove a file from S3.
+
+    path
+        Path to the file to remove
+
+    bucket
+        Bucket to remove the file from
+
+    region
+        Region to get the bucket from
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run aws_file as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_file.remove test_file.txt testbucket eu-west-1
+    '''
+    remove_path = _construct_path(bucket, path, False)
+
+    cmd = _construct_cmd('rm', remove_path, _get_region(region))
+
+    ret = __salt__['cmd.run'](cmd, runas=user)
+    retcode = 0
+
+    if _error_occurred(ret):
+        retcode = 1
 
     return {
         'retcode': retcode,
