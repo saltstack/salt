@@ -204,7 +204,7 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
     if options:
         cmd = 'unzip -{0} {1} -d {2}'.format(options, zipfile, dest)
     else:
-        cmd = 'unzip {1} -d {2}'.format(zipfile, dest)
+        cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
 
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
