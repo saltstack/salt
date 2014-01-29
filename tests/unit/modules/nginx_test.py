@@ -10,18 +10,20 @@ from salt.modules import nginx
 
 ensure_in_syspath('../../')
 
-MOCK_STATUS_OUTPUT ="""Active connections: 7 
+MOCK_STATUS_OUTPUT = """Active connections: 7 
 server accepts handled requests
  46756 46756 89318 
 Reading: 0 Writing: 7 Waiting: 0"""
+
 
 class MockUrllibStatus(object):
     """Mock of urllib2 call for Nginx status"""
     def read(self):
         return MOCK_STATUS_OUTPUT
-    
+
     def close(self):
         pass
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/nginx'))
@@ -46,7 +48,7 @@ class NginxTestCase(TestCase):
         other_path = 'http://localhost/path'
         result = nginx.status(other_path)
         urllib2.urlopen.assert_called_once_with(other_path)
-        
+
 
 if __name__ == '__main__':
     from integration import run_tests
