@@ -2,9 +2,9 @@
 
 import urllib2
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import Mock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 from salt.modules import nginx
 
@@ -23,7 +23,7 @@ class MockUrllibStatus(object):
     def close(self):
         pass
 
-
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/nginx'))
 class NginxTestCase(TestCase):
 
