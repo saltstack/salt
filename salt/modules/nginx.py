@@ -98,6 +98,7 @@ def signal(signal=None):
 def status(url="http://127.0.0.1/status"):
     """
     Return the data from an Nginx status page as a dictionary.
+    http://wiki.nginx.org/HttpStubStatusModule
 
     url
         The URL of the status page. Defaults to 'http://127.0.0.1/status'
