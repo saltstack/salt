@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 uWSGI stats server http://uwsgi-docs.readthedocs.org/en/latest/StatsServer.html
 
@@ -36,6 +37,6 @@ def stats(socket):
         salt '*' uwsgi.stats 127.0.0.1:5050
     """
 
-    cmd = 'uwsgi --connect-and-read {}'.format(socket)
+    cmd = 'uwsgi --connect-and-read {0}'.format(socket)
     out = __salt__['cmd.run'](cmd)
     return json.loads(out)

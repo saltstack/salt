@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import urllib2
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -11,14 +10,6 @@ from salt.modules import uwsgi
 ensure_in_syspath('../../')
 
 uwsgi.__salt__ = {}
-
-class MockUrllibStatus(object):
-    """Mock of urllib2 call for Nginx status"""
-    def read(self):
-        return MOCK_STATUS_OUTPUT
-    
-    def close(self):
-        pass
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
