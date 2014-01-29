@@ -1875,7 +1875,7 @@ class ClearFuncs(object):
                     'the Salt cluster.'.format(**load)
                 )
                 # put denied minion key into minions_denied
-                with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
                     fp_.write(load['pub'])
                 eload = {'result': False,
                          'id': load['id'],
@@ -1962,7 +1962,7 @@ class ClearFuncs(object):
                         .format(**load)
                     )
                     # put denied minion key into minions_denied
-                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
                         fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
@@ -1996,7 +1996,7 @@ class ClearFuncs(object):
                         .format(**load)
                     )
                     # put denied minion key into minions_denied
-                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
                         fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
