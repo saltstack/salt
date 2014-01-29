@@ -30,7 +30,7 @@ class NginxTestCase(TestCase):
     @patch('urllib2.urlopen', Mock(return_value=MockUrllibStatus()))
     def test_nginx_status(self):
         result = nginx.status()
-        urllib2.urlopen.assertCalledWith('http://127.0.0.1/status')
+        urllib2.urlopen.assert_called_once_with('http://127.0.0.1/status')
         self.assertEqual(result, {
             'active connections': 7,
             'accepted': 46756,
@@ -45,7 +45,7 @@ class NginxTestCase(TestCase):
     def test_nginx_status_with_arg(self):
         other_path = 'http://localhost/path'
         result = nginx.status(other_path)
-        urllib2.urlopen.assertCalledWith(other_path)
+        urllib2.urlopen.assert_called_once_with(other_path)
         
 
 if __name__ == '__main__':
