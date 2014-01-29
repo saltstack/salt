@@ -3,6 +3,9 @@
 Control virtual machines via Salt
 '''
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt libs
 import salt.client
 import salt.output
@@ -372,6 +375,6 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    print client.cmd_async(origin_hyper,
+    print(client.cmd_async(origin_hyper,
                            'virt.migrate_non_shared',
-                           [name, target])
+                           [name, target]))
