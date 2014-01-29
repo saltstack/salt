@@ -2030,18 +2030,24 @@ class BaseHighState(object):
                 if saltenv != self.opts['environment']:
                     continue
             for match, data in body.items():
-                if isinstance(data, string_types):
-                    data = [data]
-                if self.matcher.confirm_top(
-                        match,
-                        data,
-                        self.opts['nodegroups']
-                        ):
-                    if saltenv not in matches:
-                        matches[saltenv] = []
-                    for item in data:
-                        if isinstance(item, string_types):
-                            matches[saltenv].append(item)
+                def _filter_matches(_match, _data, _opts):
+                    if isinstance(_data, string_types):
+                        _data = [_data]
+                    if self.matcher.confirm_top(
+                            _match,
+                            _data,
+                            _opts
+                            ):
+                        if saltenv not in matches:
+                            matches[saltenv] = []
+                        for item in _data:
+                            if 'subfilter' in item:
+                                _tmpdata = item.pop('subfilter')
+                                for match, data in _tmpdata.items():
+                                    _filter_matches(match, data, _opts)
+                            if isinstance(item, string_types):
+                                matches[saltenv].append(item)
+                _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self.client.ext_nodes()
         for saltenv in ext_matches:
             if saltenv in matches:
