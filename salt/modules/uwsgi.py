@@ -20,7 +20,6 @@ def __virtual__():
         return cmd
     return False
 
-
 def stats(socket):
     """
     Return the data from `uwsgi --connect-and-read` as a dictionary.

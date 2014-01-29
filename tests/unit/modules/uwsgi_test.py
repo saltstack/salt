@@ -11,6 +11,7 @@ ensure_in_syspath('../../')
 
 uwsgi.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
 class UwsgiTestCase(TestCase):
