@@ -13,8 +13,8 @@ modules.
 
   ext_pillar:
   - cobbler:
-    - key: cobbler # Nest results within this key. By default, values are not nested.
-    - only: [parameters] # Add only these keys to pillar.
+      key: cobbler # Nest results within this key. By default, values are not nested.
+      only: [parameters] # Add only these keys to pillar.
 
   cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
   cobbler.user: username # default is no username
