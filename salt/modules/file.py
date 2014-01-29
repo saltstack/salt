@@ -2800,7 +2800,7 @@ def makedirs_perms(name,
                 None,
                 user,
                 group,
-                oct(int(str(mode), 8)) if mode else None)
+                int('{0}'.format(mode)) if mode else None)
 
 
 def get_devmm(name):
