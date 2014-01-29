@@ -393,6 +393,21 @@ A list of extra directories to search for Salt states
       - /var/lib/salt/states
 
 
+.. conf_minion:: grains_dirs
+
+``grains_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for Salt grains
+
+.. code-block:: yaml
+
+    grains_dirs:
+      - /var/lib/salt/grains
+
+
 .. conf_minion:: render_dirs
 
 ``render_dirs``
