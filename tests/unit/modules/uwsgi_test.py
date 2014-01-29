@@ -20,7 +20,8 @@ class UwsgiTestCase(TestCase):
         mock = MagicMock(return_value='{"a": 1, "b": 2}')
         with patch.dict(uwsgi.__salt__, {'cmd.run': mock}):
             result = uwsgi.stats(socket)
-            mock.assertCalledWith(socket)
+            mock.assert_called_once_with(
+                'uwsgi --connect-and-read {0}'.format(socket))
             self.assertEqual(result, {'a': 1, 'b': 2})
         
 
