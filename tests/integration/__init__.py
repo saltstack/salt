@@ -427,16 +427,18 @@ class TestDaemon(object):
 
         if sync_needed:
             # Wait for minions to "sync_all"
-            sync_minions = multiprocessing.Process(
-                target=self.sync_minion_modules,
-                args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-            )
-            sync_minions.start()
-            sync_minions.join()
-            if sync_minions.exitcode > 0:
-                return False
-            sync_minions.terminate()
-            del sync_minions
+            for target in [self.sync_minion_modules,
+                           self.sync_minion_states]:
+                sync_minions = multiprocessing.Process(
+                    target=target,
+                    args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
+                )
+                sync_minions.start()
+                sync_minions.join()
+                if sync_minions.exitcode > 0:
+                    return False
+                sync_minions.terminate()
+                del sync_minions
 
         return True
 
@@ -596,26 +598,30 @@ class TestDaemon(object):
                 print_header('=', sep='=', inline=True)
             raise SystemExit()
 
-    def sync_minion_modules(self, targets, timeout=120):
+    def sync_minion_modules_(self, modules_kind, targets, timeout=None):
+        if not timeout:
+            timeout = 120
         # Let's sync all connected minions
         print(
-            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s modules '
-            '(saltutil.sync_modules)'.format(
+            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s {1} '
+            '(saltutil.sync_{1})'.format(
                 ', '.join(targets),
+                modules_kind,
                 **self.colors
             )
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            list(targets), 'saltutil.sync_modules',
+            list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
             timeout=9999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync modules. '
-                'Tests requiring these modules WILL fail'.format(**self.colors)
+                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                'Tests requiring these {0} WILL fail'.format(
+                    modules_kind, **self.colors)
             )
             raise SystemExit()
 
@@ -631,15 +637,20 @@ class TestDaemon(object):
                     if isinstance(output['ret'], salt._compat.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed so sync modules: '
-                            '{1}'.format(name, output['ret'], **self.colors)
+                            ' {RED_BOLD}*{ENDC} {0} Failed so sync {2}: '
+                            '{1}'.format(
+                                name, output['ret'],
+                                modules_kind,
+                                **self.colors)
                         )
                         return False
 
                     print(
-                        '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
+                        '   {LIGHT_GREEN}*{ENDC} Synced {0} {2}: '
                         '{1}'.format(
-                            name, ', '.join(output['ret']), **self.colors
+                            name,
+                            ', '.join(output['ret']),
+                            modules_kind, **self.colors
                         )
                     )
                     # Synced!
@@ -651,6 +662,12 @@ class TestDaemon(object):
                             '{1}'.format(name, output, **self.colors)
                         )
         return True
+
+    def sync_minion_states(self, targets, timeout=None):
+        self.sync_minion_modules_('states', targets, timeout=timeout)
+
+    def sync_minion_modules(self, targets, timeout=None):
+        self.sync_minion_modules_('modules', targets, timeout=timeout)
 
 
 class AdaptedConfigurationTestCaseMixIn(object):
