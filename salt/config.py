@@ -1135,7 +1135,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
     vms = {}
 
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
             raise salt.cloud.exceptions.SaltCloudConfigError(
@@ -1292,7 +1292,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     providers = {}
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
         if not isinstance(val, (list, tuple)):
