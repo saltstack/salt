@@ -666,7 +666,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
             return integration_config_dir
 
         for triplet in os.walk(integration_config_dir):
-            partial = triplet[0].replace(integration_config_dir,"")[1:]
+            partial = triplet[0].replace(integration_config_dir, "")[1:]
             for fname in triplet[2]:
                 if fname.startswith(('.', '_')):
                     continue
