@@ -1849,6 +1849,9 @@ class ClearFuncs(object):
         pubfn_rejected = os.path.join(self.opts['pki_dir'],
                 'minions_rejected',
                 load['id'])
+        pubfn_denied = os.path.join(self.opts['pki_dir'],
+                'minions_denied',
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -1871,6 +1874,9 @@ class ClearFuncs(object):
                     'keys did not match. This may be an attempt to compromise '
                     'the Salt cluster.'.format(**load)
                 )
+                # put denied minion key into minions_denied
+                with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                    fp_.write(load['pub'])
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
@@ -1955,6 +1961,9 @@ class ClearFuncs(object):
                         'attempt to compromise the Salt cluster.'
                         .format(**load)
                     )
+                    # put denied minion key into minions_denied
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                        fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
                              'pub': load['pub']}
@@ -1986,6 +1995,9 @@ class ClearFuncs(object):
                         'attempt to compromise the Salt cluster.'
                         .format(**load)
                     )
+                    # put denied minion key into minions_denied
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_: 
+                        fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
                              'pub': load['pub']}
