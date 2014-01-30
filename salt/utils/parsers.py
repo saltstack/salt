@@ -19,6 +19,7 @@ import getpass
 import logging
 import optparse
 import traceback
+import yaml
 from functools import partial
 
 # Import salt libs
@@ -30,8 +31,8 @@ import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
 
-if not utils.is_windows():
-    import salt.cloud.exceptions
+#if not utils.is_windows():
+#    import salt.cloud.exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -270,6 +271,76 @@ class MergeConfigMixIn(object):
                     setattr(self.options,
                             option.dest,
                             self.config[option.dest])
+
+
+class SaltfileMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = -20
+
+    def _mixin_setup(self):
+        saltfile = os.environ.get('SALT_SALTFILE', None)
+
+        self.add_option(
+            '--saltfile', default=saltfile,
+            help=('Pass in an alternative configuration directory. Default: '
+                  '%default')
+        )
+
+    def process_saltfile(self):
+        if self.options.saltfile is None:
+            return
+
+        if not os.path.isfile(self.options.saltfile):
+            # No logging is configured yet
+            self.error(
+                '{0!r} file does not exist.\n'.format(
+                    self.options.saltfile
+                )
+            )
+
+        # Make sure we have an absolute path
+        self.options.saltfile = os.path.abspath(self.options.saltfile)
+
+    def _mixin_after_parsed(self):        
+        saltfile = self.options.saltfile or os.path.join(os.getcwd(), 'Saltfile')
+
+        if not os.path.isfile(saltfile):
+            return
+
+        saltfile_config = config._read_conf_file(saltfile)
+
+        if not saltfile_config:
+            return
+
+        if self.get_prog_name() not in saltfile_config:
+            return
+
+        cli_config = saltfile_config[self.get_prog_name()]
+        print(self.options.ssh_max_procs)
+        # Merge parser options
+        for option in self.option_list:
+            if option.dest is None:
+                # --version does not have dest attribute set for example.
+                # All options defined by us, even if not explicitly(by kwarg),
+                # will have the dest attribute set
+                continue
+
+            if option.dest in cli_config:
+                setattr(self.options, option.dest, cli_config[option.dest])
+
+        # Merge parser group options if any
+        for group in self.option_groups:
+            for option in group.option_list:
+                if option.dest is None:
+                    continue
+                
+                if option.dest in cli_config:
+                    setattr(self.options,
+                            option.dest,
+                            cli_config[option.dest])
+
+        print(self.options.ssh_max_procs)
+        exit(1)
 
 
 class ConfigDirMixIn(object):
@@ -2023,7 +2094,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, TargetOptionsMixIn,
-                          OutputOptionsMixIn):
+                          OutputOptionsMixIn, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     usage = '%prog [options]'
@@ -2081,7 +2152,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is 25')
+                 'faster communication should be, default is %default')
         self.add_option(
             '-i',
             '--ignore-host-keys',
@@ -2112,6 +2183,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'initial deployment of keys very fast and easy')
 
     def _mixin_after_parsed(self):
+        print(self.options.ssh_max_procs)
         if not self.args:
             self.print_help()
             self.exit(1)
