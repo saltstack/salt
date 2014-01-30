@@ -86,9 +86,9 @@ def _get_serv():
         conn.close()
 
 
-def ext_pillar(minion_id, pillar, mysql_query, *args, **kwargs):
+def ext_pillar(minion_id, pillar, *args, **kwargs):
     '''
-    Execute the query and return its data as a set
+    Execute queries, merge and return as a dict
     '''
     log.info('Querying MySQL for information for {0}'.format(minion_id, ))
 #
