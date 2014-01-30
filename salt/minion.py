@@ -19,6 +19,7 @@ import time
 import traceback
 import sys
 import signal
+import errno
 from random import randint
 
 # Import third party libs
@@ -1159,7 +1160,6 @@ class Minion(object):
             )
 
         self.poller = zmq.Poller()
-        #self.epoller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
@@ -1286,7 +1286,7 @@ class Minion(object):
                 # Check the event system
                 if socks.get(self.epull_sock) == zmq.POLLIN:
                     package = self.epull_sock.recv(zmq.NOBLOCK)
-                    log.debug("Handling event %s" % package)
+                    log.debug("Handling event %s", package)
                     try:
                         if package.startswith('module_refresh'):
                             self.module_refresh()
