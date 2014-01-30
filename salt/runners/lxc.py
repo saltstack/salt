@@ -129,8 +129,8 @@ def init(name,
         return 'fail'
 
     if host not in data:
-            print('Host "{0}" was not found'.format(host))
-            return 'fail'
+        print('Host "{0}" was not found'.format(host))
+        return 'fail'
 
     seed = kwargs.get('seed', True)
     if seed:
@@ -264,7 +264,7 @@ def stop(name, quiet=False):
 def freeze(name, quiet=False):
     '''
     Freeze the named container
-    
+
     .. code-block:: bash
 
         salt-run lxc.freeze name
@@ -278,7 +278,7 @@ def freeze(name, quiet=False):
 def unfreeze(name, quiet=False):
     '''
     Unfreeze the named container
-    
+
     .. code-block:: bash
 
         salt-run lxc.unfreeze name
