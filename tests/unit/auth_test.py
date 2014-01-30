@@ -34,8 +34,13 @@ class LoadAuthTestCase(TestCase):
 
         # Test a case with valid params
         with patch('salt.utils.format_call') as format_call_mock:
-            expected_ret = call('fake_func_str', {'username': 'test_user', 'test_password': '', 'show_timeout': False, 'eauth': 'pam'})
-            self.lauth.load_name(valid_eauth_load)
+            expected_ret = call('fake_func_str', {
+                'username': 'test_user',
+                'test_password': '',
+                'show_timeout': False,
+                'eauth': 'pam'
+            })
+            ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
 
