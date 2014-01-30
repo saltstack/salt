@@ -115,6 +115,6 @@ def summary(svc_name=''):
                     parts[0].strip(), parts[1], parts[2].strip()
                 )
                 if resource not in ret:
-                   ret[resource] = {}
+                    ret[resource] = {}
                 ret[resource][name] = status
     return ret
