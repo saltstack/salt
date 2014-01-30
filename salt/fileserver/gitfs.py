@@ -239,9 +239,9 @@ def _get_tree_gitpython(repo, short):
     return False
 
 
-def _get_ref_pygit2(repo, short):
+def _get_tree_pygit2(repo, short):
     '''
-    Return the ref if found, otherwise return False
+    Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise False
     '''
     for ref in repo.listall_references():
         _, rtype, rspec = ref.split('/', 2)
@@ -249,7 +249,15 @@ def _get_ref_pygit2(repo, short):
             parted = rspec.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
-                return repo.lookup_reference(ref)
+                return repo.lookup_reference(ref).get_object().tree
+    # branch or tag not matched, check if 'short' is a commit
+    try:
+        commit = repo.revparse_single(short)
+    except (KeyError, TypeError):
+        # Not a valid commit, likely not a commit SHA
+        pass
+    else:
+        return commit.tree
     return False
 
 
@@ -616,11 +624,10 @@ def find_file(path, short='base', **kwargs):
                 continue
             blob_hexsha = blob.hexsha
         elif provider == 'pygit2':
-            ref = _get_ref_pygit2(repo, short)
-            if not ref:
+            tree = _get_tree_pygit2(repo, short)
+            if not tree:
                 # Branch or tag not found in repo, try the next
                 continue
-            tree = ref.get_object().tree
             try:
                 blob = repo[tree[path].oid]
             except KeyError:
@@ -853,10 +860,9 @@ def _file_list_pygit2(repo, ref_tgt, gitfs_root):
             elif isinstance(blob, pygit2.Tree):
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
@@ -961,10 +967,9 @@ def _file_list_emptydirs_pygit2(repo, ref_tgt, gitfs_root):
             else:
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
@@ -1059,10 +1064,9 @@ def _dir_list_pygit2(repo, ref_tgt, gitfs_root):
             if len(blob):
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
