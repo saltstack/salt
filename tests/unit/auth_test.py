@@ -38,3 +38,8 @@ class LoadAuthTestCase(TestCase):
             expected_ret = call('fake_func_str', {'username': 'test_user', 'test_password': '', 'show_timeout': False, 'eauth': 'pam'})
             self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(LoadAuthTestCase, needs_daemon=False)
