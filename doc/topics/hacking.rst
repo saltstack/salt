@@ -70,9 +70,9 @@ discussion section of the pull request.
     changes will be tested on a variety of operating systems and
     configurations. On average these tests take 30 minutes to run and once
     they are complete a PASS/FAIL message will be added to your pull
-    request. This message contains a link to Jenkins.saltstack.com where you
-    can review the test results. This message will also generate an email
-    which will be sent to the email address associated with your GitHub
+    request. This message contains a link to http://jenkins.saltstack.com
+    where you can review the test results. This message will also generate an
+    email which will be sent to the email address associated with your GitHub
     account informing you of these results. It should be noted that a test
     failure does not necessarily mean there is an issue in the associated pull
     request as the entire development branch is tested.
