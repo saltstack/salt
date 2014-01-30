@@ -531,6 +531,14 @@ elif sys.platform.startswith('linux'):
         FREEZER_INCLUDES.append('yum')
     except ImportError:
         pass
+elif sys.platform.startswith('sunos'):
+    try:
+        # SmartOS should eventually have the spwd module
+        # and when it does, we should pull it in.
+        import spwd
+        FREEZER_INCLUDES.append('spwd')
+    except ImportError:
+        pass
 
 if HAS_ESKY:
     # if the user has the esky / bbfreeze libraries installed, add the
