@@ -1149,6 +1149,38 @@ class Events(object):
 
 class Webhook(object):
     '''
+    A generic web hook entry point that fires an event on Salt's event bus
+
+    External services can POST data to this URL to trigger an event in Salt.
+    For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
+
+    The event data is taken from the ``POST`` data.
+
+    The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
+    appended to the end. For example, a ``POST`` request sent to
+    ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
+    ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
+    <reactor>` documentation for how to react to events with various tags.
+
+    .. note:: Be mindful of security
+
+        Salt's Reactor can run any code. If you write a Reactor SLS that
+        responds to a hook event be sure to validate that the event came from a
+        trusted source and contains valid data! Pass a secret key, use SSL,
+        etc.
+
+        This is a generic interface and securing it is up to you!
+
+    The following is an example ``.travis.yml`` file to send notifications to
+    Salt of successful test runs:
+
+    .. code-block:: yaml
+
+        language: python
+        script: python -m unittest tests
+        after_success:
+            - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+
     '''
     exposed = True
     tag_base = ['salt', 'netapi', 'hook']
@@ -1165,29 +1197,9 @@ class Webhook(object):
 
     def POST(self, *args, **kwargs):
         '''
-        A generic web hook entry point that fires an event on Salt's event bus
+        Fire an event in Salt with a custom event tag and data
 
         .. versionadded:: 0.8.4
-
-        External services can POST data to this URL to trigger an event in
-        Salt. For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
-
-        The event data is taken from the ``POST`` data.
-
-        The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
-        appended to the end. For example, a ``POST`` request sent to
-        ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
-        ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
-        <reactor>` documentation for how to react to events with various tags.
-
-        .. note:: Be mindful of security
-
-            Salt's Reactor can run any code. If you write a Reactor SLS that
-            responds to a hook event be sure to validate that the event came
-            from a trusted source and contains valid data! Pass a secret key,
-            use SSL, etc.
-
-            This is a generic interface and securing it is up to you!
 
         .. http:post:: /hook
 
@@ -1213,16 +1225,6 @@ class Webhook(object):
                 Content-Type: application/json
 
                 {"success": true}
-
-        The following is an example ``.travis.yml`` file to send notifications
-        to Salt of successful test runs:
-
-        .. code-block:: yaml
-
-            language: python
-            script: python -m unittest tests
-            after_success:
-              - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
 
         :status 200: success
         :status 406: requested Content-Type not available

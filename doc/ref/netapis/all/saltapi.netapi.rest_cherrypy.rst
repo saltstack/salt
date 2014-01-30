@@ -35,4 +35,4 @@ REST URI Reference
     :members: GET
 
 .. autoclass:: Webhook
-    :members: GET
+    :members: POST
