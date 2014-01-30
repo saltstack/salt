@@ -22,6 +22,7 @@ import distutils.version  # pylint: disable=E0611
 HAS_GIT = False
 try:
     import git
+    import gitdb
     HAS_GIT = True
 except ImportError:
     pass
@@ -61,16 +62,23 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_ref(repo, short):
+def _get_tree(repo, short):
     '''
-    Return bool if the short ref is in the repo
+    Return a git.Tree object if the branch/tag/SHA is found, otherwise False
     '''
     for ref in repo.refs:
         if isinstance(ref, git.RemoteReference):
             parted = ref.name.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
-                return ref
+                return ref.commit.tree
+    # branch or tag not matched, check if 'short' is a commit
+    try:
+        commit = repo.rev_parse(short)
+    except gitdb.exc.BadObject:
+        pass
+    else:
+        return commit.tree
     return False
 
 
@@ -312,11 +320,10 @@ def find_file(path, short='base', **kwargs):
             # Invalid index option
             return fnd
     for repo in repos:
-        ref = _get_ref(repo, short)
-        if not ref:
+        tree = _get_tree(repo, short)
+        if not tree:
             # Branch or tag not found in repo, try the next
             continue
-        tree = ref.commit.tree
         try:
             blob = tree / path
         except KeyError:
@@ -493,10 +500,9 @@ def _get_file_list(load):
         load['saltenv'] = base_branch
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
+        tree = _get_tree(repo, load['saltenv'])
+        if not tree:
             continue
-        tree = ref.commit.tree
         if __opts__['gitfs_root']:
             try:
                 tree = tree / __opts__['gitfs_root']
@@ -539,11 +545,9 @@ def _get_file_list_emptydirs(load):
         load['saltenv'] = base_branch
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
+        tree = _get_tree(repo, load['saltenv'])
+        if not tree:
             continue
-
-        tree = ref.commit.tree
         if __opts__['gitfs_root']:
             try:
                 tree = tree / __opts__['gitfs_root']
@@ -589,11 +593,9 @@ def _get_dir_list(load):
         load['saltenv'] = base_branch
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load['saltenv'])
-        if not ref:
+        tree = _get_tree(repo, load['saltenv'])
+        if not tree:
             continue
-
-        tree = ref.commit.tree
         if __opts__['gitfs_root']:
             try:
                 tree = tree / __opts__['gitfs_root']
