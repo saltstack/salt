@@ -10,9 +10,9 @@ from salt.modules import nginx
 
 ensure_in_syspath('../../')
 
-MOCK_STATUS_OUTPUT = """Active connections: 7 
+MOCK_STATUS_OUTPUT = """Active connections: 7
 server accepts handled requests
- 46756 46756 89318 
+ 46756 46756 89318
 Reading: 0 Writing: 7 Waiting: 0"""
 
 
