@@ -114,10 +114,6 @@ You can use it doing the following::
     ./fedora_setup.sh build
     ./fedora_setup.sh install
 
-.. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
-.. _`CentOS`: http://centos.org/
-.. _`Fedora Linux`: http://fedoraproject.org/
-.. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
 
 Installing dependencies on OS X
 ```````````````````````````````
