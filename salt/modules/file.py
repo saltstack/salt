@@ -2199,12 +2199,12 @@ def check_perms(name, ret, user, group, mode):
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
-    perms['lmode'] = cur['mode']
+    perms['lmode'] = __salt__['config.manage_mode'](cur['mode'])
 
     # Mode changes if needed
     if mode is not None:
         mode = __salt__['config.manage_mode'](mode)
-        if int(mode, base=8) != int(perms['lmode'], base=8):
+        if mode != perms['lmode']:
             if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
             else:
@@ -2795,20 +2795,12 @@ def makedirs_perms(name,
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
-
-    if type(mode) == int:
-        mode = oct(mode)
-    elif type(mode) == str:
-        mode = oct(int(mode, 8))
-    else:
-        mode = None
-
     os.mkdir(name)
     check_perms(name,
                 None,
                 user,
                 group,
-                mode)
+                int('{0}'.format(mode)) if mode else None)
 
 
 def get_devmm(name):

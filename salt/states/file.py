@@ -1704,13 +1704,6 @@ def recurse(name,
         )
         return ret
 
-    if type(dir_mode) == int:
-        dir_mode = oct(dir_mode)
-    elif type(dir_mode) == str:
-        dir_mode = oct(int(dir_mode, 8))
-    else:
-        dir_mode = None
-
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
@@ -1719,7 +1712,7 @@ def recurse(name,
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
             __salt__['file.makedirs_perms'](
-                name, user, group, dir_mode)
+                name, user, group, int(str(dir_mode), 8) if dir_mode else None)
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
