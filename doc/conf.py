@@ -61,6 +61,7 @@ MOCK_MODULES = [
     'salt.output',
     'salt.runner',
     'salt.utils',
+    'salt.utils.event',
     'salt.wheel',
 ]
 
