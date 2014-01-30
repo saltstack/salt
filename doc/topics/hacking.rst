@@ -64,16 +64,18 @@ reviewed. If a reviewer asks for changes, just make the changes locally in the
 same local feature branch, push them to GitHub, then add a comment to the
 discussion section of the pull request.
 
+.. note:: Jenkins
 
-.. _enable-travis-ci:
-
-.. note:: Travis-CI
-
-    To make reviewing pull requests easier for the maintainers, please enable
-    Travis-CI on your fork. Salt is already configured, so simply follow the
-    first 2 steps on the Travis-CI `Getting Started Doc`_.
-
-.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
+    Whenever you make a pull request against the main Salt repository your
+    changes will be tested on a variety of operating systems and
+    configurations. On average these tests take 30 minutes to run and once
+    they are complete a PASS/FAIL message will be added to your pull
+    request. This message contains a link to http://jenkins.saltstack.com
+    where you can review the test results. This message will also generate an
+    email which will be sent to the email address associated with your GitHub
+    account informing you of these results. It should be noted that a test
+    failure does not necessarily mean there is an issue in the associated pull
+    request as the entire development branch is tested.
 
 Keeping Salt Forks in Sync
 --------------------------
