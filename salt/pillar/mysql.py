@@ -25,9 +25,6 @@ mysql.pass, mysql.port, mysql.host)
 Required python modules: MySQLdb
 '''
 
-# Don't "fix" the above docstring to put it on two lines, as the sphinx
-# autosummary pulls only the first line for its description.
-
 # Import python libs
 from contextlib import contextmanager
 import logging
@@ -95,16 +92,36 @@ def ext_pillar(minion_id, pillar, mysql_query, *args, **kwargs):
     '''
     log.info('Querying MySQL for information for {0}'.format(minion_id, ))
 #
-# this is pretty much WIP still, not sure whether this is a parameter that is being filled in at some point.
 #    log.debug('ext_pillar MySQL args: {0}'.format(args))
 #    log.debug('ext_pillar MySQL kwargs: {0}'.format(kwargs))
 #
-#    if len(pillar) == 1:
-#        log.debug('Pillar set, updating query to include it.')
-#        mysql_query += ' AND pillar={0}'.format(pillar)
-#        # @todo handle multiple pillars in case its requested, instead of returning everything we have for the minion
+# Ok, here's the plan for how this works...
+# - If there's a keyword arg of mysql_query, that'll go first.
+# - Then any non-keyworded args are processed in order.
+# - Finally, remaining keywords are processed.
+# We do this so that it's backward compatible with older configs.
 #
-
+# For each of those items we process, it depends on what the object passed in:
+# - Strings are executed as is and the pillar depth is determined by the number of fields returned.
+# - A list has the first entry used as the query, the second as the pillar depth.
+# - A mapping uses the keys "query" and "depth" as the tuple
+#
+# The depth defines how the dicts are constructed.
+# Essentially if you query for fields a,b,c,d for each row you'll get:
+# - With depth 1: {a: {"b": b, "c": c, "d": d}}
+# - With depth 2: {a: {b: {"c": c, "d": d}}}
+# - With depth 3: {a: {b: {c: d}}}
+# Then they are merged the same way normal pillar data is, in the order returned by MySQL.
+# Thus subsequent results overwrite previous ones when they collide.
+# If you specify `list: True` in the mapping expression it will convert collisions to lists.
+#
+# Finally, if you use pass the queries in via a mapping, the key will be the first level name
+# where as passing them in as a list will place them in the root.  This isolates the query results, including in how the lists are built.
+# This may be a help or hindrance to your aims and can be used as such.
+#
+# I want to have it able to generate lists as well as mappings but I've not quite figured how to express that cleanly in the config.
+# Might be something to have it convert a particular field in to a list (for k,v in map: list.append(v))
+# The right most value is easy enough, since it's just a matter of having it make a list instead of overwriting, but inner values are trickier.
     with _get_serv() as cur:
         cur.execute(mysql_query, (minion_id,))
 
