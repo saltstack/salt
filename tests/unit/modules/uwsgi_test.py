@@ -24,7 +24,7 @@ class UwsgiTestCase(TestCase):
             mock.assert_called_once_with(
                 'uwsgi --connect-and-read {0}'.format(socket))
             self.assertEqual(result, {'a': 1, 'b': 2})
-        
+
 
 if __name__ == '__main__':
     from integration import run_tests
