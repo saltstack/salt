@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Work with linux containers
+Control Linux Containers via Salt
 
 :depends: lxc package for distribution
 '''
