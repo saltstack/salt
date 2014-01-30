@@ -33,3 +33,6 @@ REST URI Reference
 
 .. autoclass:: Events
     :members: GET
+
+.. autoclass:: Webhook
+    :members: GET
