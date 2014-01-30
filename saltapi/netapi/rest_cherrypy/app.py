@@ -174,6 +174,7 @@ functionality.
 
 # Import Python libs
 import collections
+import itertools
 import functools
 import logging
 import os
@@ -187,6 +188,7 @@ import yaml
 # Import Salt libs
 import salt
 import salt.auth
+import salt.utils.event
 
 # Import salt-api libs
 import saltapi
@@ -1145,6 +1147,93 @@ class Events(object):
         return listen()
 
 
+class Webhook(object):
+    '''
+    '''
+    exposed = True
+    tag_base = ['salt', 'netapi', 'hook']
+
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': False,
+        'tools.salt_auth.on': False,
+    })
+
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+        self.event = salt.utils.event.SaltEvent('master',
+                self.opts.get('sock_dir', ''))
+
+    def POST(self, *args, **kwargs):
+        '''
+        A generic web hook entry point that fires an event on Salt's event bus
+
+        .. versionadded:: 0.8.4
+
+        External services can POST data to this URL to trigger an event in
+        Salt. For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
+
+        The event data is taken from the ``POST`` data.
+
+        The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
+        appended to the end. For example, a ``POST`` request sent to
+        ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
+        ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
+        <reactor>` documentation for how to react to events with various tags.
+
+        .. note:: Be mindful of security
+
+            Salt's Reactor can run any code. If you write a Reactor SLS that
+            responds to a hook event be sure to validate that the event came
+            from a trusted source and contains valid data! Pass a secret key,
+            use SSL, etc.
+
+            This is a generic interface and securing it is up to you!
+
+        .. http:post:: /hook
+
+            **Example request**::
+
+                % curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+
+            .. code-block:: http
+
+                POST /hook HTTP/1.1
+                Host: localhost:8000
+                Content-Length: 16
+                Content-Type: application/x-www-form-urlencoded
+
+                foo=Foo&bar=Bar!
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 14
+                Content-Type: application/json
+
+                {"success": true}
+
+        The following is an example ``.travis.yml`` file to send notifications
+        to Salt of successful test runs:
+
+        .. code-block:: yaml
+
+            language: python
+            script: python -m unittest tests
+            after_success:
+              - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+
+        :status 200: success
+        :status 406: requested Content-Type not available
+        '''
+        tag = '/'.join(itertools.chain(self.tag_base, args))
+        data = cherrypy.request.lowstate
+
+        ret = self.event.fire_event(data, tag)
+        return {'success': ret}
+
+
 class App(object):
     exposed = True
     def GET(self, *args):
@@ -1164,6 +1253,7 @@ class API(object):
         'run': Run,
         'jobs': Jobs,
         'events': Events,
+        'hook': Webhook,
     }
 
     def __init__(self):
