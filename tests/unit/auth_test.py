@@ -26,14 +26,13 @@ class LoadAuthTestCase(TestCase):
                             'test_password': '',
                             'eauth': 'pam'}
 
-        # To to see if we bail if the eauth key isn't there
-        ret = self.lauth.load_name({})
-        self.assertEqual(ret, '', "Did not bail when eauth key was missing")
-
         # Test a case where the loader auth doesn't have the auth type
-        # ret = self.lauth.load_name(valid_eauth_load)
-        # self.assertEqual(ret, '', "Did not bail when the auth loader didn't have the auth type.")
+        without_auth_type = dict(valid_eauth_load)
+        without_auth_type.pop('eauth')
+        ret = self.lauth.load_name(without_auth_type)
+        self.assertEqual(ret, '', "Did not bail when the auth loader didn't have the auth type.")
 
+        # Test a case with valid params
         with patch('salt.utils.format_call') as format_call_mock:
             expected_ret = call('fake_func_str', {'username': 'test_user', 'test_password': '', 'show_timeout': False, 'eauth': 'pam'})
             self.lauth.load_name(valid_eauth_load)
