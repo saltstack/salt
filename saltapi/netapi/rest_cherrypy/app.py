@@ -173,6 +173,7 @@ functionality.
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
 # Import Python libs
+import collections
 import functools
 import logging
 import os
@@ -449,7 +450,14 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
-            yield self.api.run(chunk)
+
+            ret = self.api.run(chunk)
+
+            if isinstance(ret, collections.Iterator):
+                for i in ret:
+                    yield i
+            else:
+                yield ret
 
     def GET(self):
         '''
