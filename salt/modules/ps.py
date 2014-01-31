@@ -84,7 +84,8 @@ def top(num_processes=5, interval=3):
                 'pid': process.pid,
                 'create_time': process.create_time,
                 'cpu': {},
-                'mem': {},}
+                'mem': {}, 
+                }
         for key, value in process.get_cpu_times()._asdict().items():
             info['cpu'][key] = value
         for key, value in process.get_memory_info()._asdict().items():
