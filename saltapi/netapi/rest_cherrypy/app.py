@@ -428,7 +428,7 @@ class LowDataAdapter(object):
         self.opts = cherrypy.config['saltopts']
         self.api = saltapi.APIClient(self.opts)
 
-    def exec_lowstate(self):
+    def exec_lowstate(self, client=None):
         '''
         Pull a Low State data structure from request and execute the low-data
         chunks through Salt. The low-data chunks will be updated to include the
@@ -444,9 +444,14 @@ class LowDataAdapter(object):
         if type(lowstate) != list:
             raise cherrypy.HTTPError(400, 'Lowstates must be a list')
 
+        # Make any requested additions or modifications to each lowstate, then
+        # execute each one and yield the result.
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
+
+            if client:
+                chunk['client'] = client
 
             # Make any 'arg' params a list if not already.
             # This is largely to fix a deficiency in the urlencoded format.
@@ -455,6 +460,7 @@ class LowDataAdapter(object):
 
             ret = self.api.run(chunk)
 
+            # Sometimes Salt gives us a return and sometimes an iterator
             if isinstance(ret, collections.Iterator):
                 for i in ret:
                     yield i
@@ -664,9 +670,7 @@ class Minions(LowDataAdapter):
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
         '''
-        for chunk in cherrypy.request.lowstate:
-            chunk['client'] = 'local_async'
-        job_data = list(self.exec_lowstate())
+        job_data = list(self.exec_lowstate(client='local_async'))
 
         cherrypy.response.status = 202
         return {
