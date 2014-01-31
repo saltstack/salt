@@ -1594,24 +1594,20 @@ def pull(repo, tag=None, *args, **kwargs):
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    complete
                 - status:
-                    Download
+                    Download complete
                 ----------
                 - id:
                     2c80228370c9
                 - progress:
-                    image (latest) from NAME, endpoint: URL
+                    [=========================\u003e                         ]
                 - status:
-                    Pulling
+                    Downloading
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    image (latest) from foo/ubuntubox
-                - status:
-                    Pulling
+                - status
+                    Pulling image (latest) from foo/ubuntubox
                 ----------
                 - status:
                     Pulling repository foo/ubuntubox
