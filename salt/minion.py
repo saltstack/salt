@@ -936,12 +936,12 @@ class Minion(object):
             for key, value in ret.items():
                 load[key] = value
         try:
-            if hasattr(self.functions[ret['fun']], '__outputter__'):
-                oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, string_types):
-                    load['out'] = oput
-        except KeyError:
+            oput = self.functions[fun].__outputter__
+        except (KeyError, AttributeError):
             pass
+        else:
+            if isinstance(oput, string_types):
+                load['out'] = oput
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
