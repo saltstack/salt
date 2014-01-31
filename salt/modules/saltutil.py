@@ -445,6 +445,9 @@ def signal_job(jid, sig):
         if data['jid'] == jid:
             try:
                 os.kill(int(data['pid']), sig)
+                if 'child_pids' in data:
+                    for pid in data['child_pids']:
+                        os.kill(int(pid), sig)
                 return 'Signal {0} sent to job {1} at pid {2}'.format(
                         int(sig),
                         jid,
