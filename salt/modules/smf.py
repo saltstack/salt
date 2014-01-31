@@ -132,8 +132,18 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = '/usr/sbin/svcadm enable -t {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = '/usr/sbin/svcadm enable -s -t {0}'.format(name)
+    retcode = __salt__['cmd.retcode'](cmd)
+    if not retcode:
+        return True
+    if retcode == 3:
+        # Return code 3 means there was a problem with the service
+        # A common case is being in the 'maintenance' state
+        # Attempt a clear and try one more time
+        clear_cmd = '/usr/sbin/svcadm clear {0}'.format(name)
+        __salt__['cmd.retcode'](clear_cmd)
+        return not __salt__['cmd.retcode'](cmd)
+    return False
 
 
 def stop(name):
@@ -146,7 +156,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = '/usr/sbin/svcadm disable -t {0}'.format(name)
+    cmd = '/usr/sbin/svcadm disable -s -t {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -161,7 +171,11 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/usr/sbin/svcadm restart {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    if not __salt__['cmd.retcode'](cmd):
+        # calling restart doesn't clear maintenance
+        # or tell us that the service is in the 'online' state
+        return start(name)
+    return False
 
 
 def reload_(name):
@@ -175,7 +189,11 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/usr/sbin/svcadm refresh {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    if not __salt__['cmd.retcode'](cmd):
+        # calling reload doesn't clear maintenance
+        # or tell us that the service is in the 'online' state
+        return start(name)
+    return False
 
 
 def status(name, sig=None):
