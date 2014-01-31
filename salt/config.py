@@ -181,6 +181,7 @@ VALID_OPTS = {
     'sign_pub_messages': bool,
     'keysize': int,
     'salt_transport': str,
+    'gather_job_timeout': int,
 }
 
 # default configurations
@@ -385,6 +386,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
+    'gather_job_timeout': 2,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
