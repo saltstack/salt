@@ -714,7 +714,7 @@ class Jobs(LowDataAdapter):
                     - '3'
                     Function: test.fib
                     Start Time: 2012, Nov 30 10:46:33.606931
-                    Target: ms-3
+                    Target: jerry
                     Target-type: glob
 
             **Example request**::
@@ -735,27 +735,55 @@ class Jobs(LowDataAdapter):
                 Content-Length: 73
                 Content-Type: application/x-yaml
 
+                info:
+                - Arguments:
+                  - '3'
+                  Function: test.fib
+                  Minions:
+                  - jerry
+                  Start Time: 2012, Nov 30 10:46:33.606931
+                  Target: '*'
+                  Target-type: glob
+                  User: saltdev
+                  jid: '20121130104633606931'
                 return:
-                - ms-3:
+                - jerry:
                   - - 0
                     - 1
                     - 1
                     - 2
-                  - 9.059906005859375e-06
+                  - 6.9141387939453125e-06
 
         :param mid: (optional) a minion id
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
         '''
-        cherrypy.request.lowstate = [{
+        lowstate = [{
             'client': 'runner',
             'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-        return {
-            'return': list(self.exec_lowstate()),
-        }
+
+        if jid:
+            lowstate.append({
+                'client': 'runner',
+                'fun': 'jobs.list_job',
+                'jid': jid,
+            })
+
+        cherrypy.request.lowstate = lowstate
+        job_ret_info = list(self.exec_lowstate())
+
+        ret = {}
+        if jid:
+            job_ret, job_info = job_ret_info
+            ret['info'] = [job_info]
+        else:
+            job_ret = job_ret_info[0]
+
+        ret['return'] = [job_ret]
+        return ret
 
 
 class Login(LowDataAdapter):
