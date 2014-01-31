@@ -8,7 +8,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.utils.doc import strip_rst
+from salt.utils.doc import strip_rst as _strip_rst
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def doc(*args):
     if not args:
         for fun in __salt__:
             docs[fun] = __salt__[fun].__doc__
-        return strip_rst(docs)
+        return _strip_rst(docs)
 
     for module in args:
         if module:
@@ -58,7 +58,7 @@ def doc(*args):
         for fun in __salt__:
             if fun == module or fun.startswith(target_mod):
                 docs[fun] = __salt__[fun].__doc__
-    return strip_rst(docs)
+    return _strip_rst(docs)
 
 
 def list_functions(*args, **kwargs):

@@ -17,7 +17,7 @@ import salt.exceptions
 import salt.utils
 import salt.minion
 import salt.utils.event
-from salt.utils.doc import strip_rst
+from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.event import tagify
 from salt.utils.error import raise_error
 from salt.output import display_output
@@ -81,7 +81,7 @@ class RunnerClient(object):
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
 
-    def get_docs(self, arg):
+    def get_docs(self, arg=None):
         '''
         Return a dictionary of functions and the inline documentation for each
         '''
@@ -94,7 +94,7 @@ class RunnerClient(object):
             docs = [(fun, self.functions[fun].__doc__)
                     for fun in sorted(self.functions)]
         docs = dict(docs)
-        return strip_rst(docs)
+        return _strip_rst(docs)
 
     def cmd(self, fun, arg, kwarg=None):
         '''
@@ -203,7 +203,7 @@ class Runner(RunnerClient):
         arg = self.opts.get('fun', None)
         docs = super(Runner, self).get_docs(arg)
         for fun in sorted(docs):
-            display_output(fun, 'text', self.opts)
+            display_output('{0}:'.format(fun), 'text', self.opts)
             print(docs[fun])
 
     def run(self):

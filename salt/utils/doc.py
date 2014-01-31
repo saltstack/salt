@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 
 
@@ -9,7 +10,7 @@ def strip_rst(docs):
         if not docstring:
             continue
         docstring_new = re.sub(r' *.. code-block:: \S+\n{1,2}',
-                                   '', docstring)
+                               '', docstring)
         docstring_new = re.sub('.. note::',
                                'Note:', docstring_new)
         docstring_new = re.sub('.. warning::',
