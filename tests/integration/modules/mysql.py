@@ -3,7 +3,7 @@
 # Import python libs
 import logging
 
-from mock import patch
+from salttesting.mock import patch
 
 # Import Salt Testing libs
 from salttesting import skipIf

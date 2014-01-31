@@ -8,7 +8,7 @@ import os
 import shutil
 import sys
 
-from mock import patch, MagicMock
+from salttesting.mock import patch, MagicMock
 
 # Import Salt Testing libs
 from salttesting import skipIf
