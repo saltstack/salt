@@ -19,6 +19,7 @@ import time
 import traceback
 import sys
 import signal
+import errno
 from random import randint
 import salt
 
@@ -1176,7 +1177,6 @@ class Minion(object):
             )
 
         self.poller = zmq.Poller()
-        self.epoller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
@@ -1225,7 +1225,7 @@ class Minion(object):
             )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
-        self.epoller.register(self.epull_sock, zmq.POLLIN)
+        self.poller.register(self.epull_sock, zmq.POLLIN)
         # Send an event to the master that the minion is live
         self._fire_master(
             'Minion {0} started at {1}'.format(
@@ -1291,38 +1291,46 @@ class Minion(object):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             try:
+                log.trace("Check main poller timeout %s" % loop_interval)
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
+                if socks.get(self.socket) == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+                    log.trace("Handling payload")
                     self._handle_payload(payload)
+
                 # Check the event system
-                if self.epoller.poll(1):
+                if socks.get(self.epull_sock) == zmq.POLLIN:
+                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                    log.debug("Handling event %r", package)
                     try:
-                        while True:
-                            package = self.epull_sock.recv(zmq.NOBLOCK)
-                            if package.startswith('module_refresh'):
-                                self.module_refresh()
-                            elif package.startswith('pillar_refresh'):
+                        if package.startswith('module_refresh'):
+                            self.module_refresh()
+                        elif package.startswith('pillar_refresh'):
+                            self.pillar_refresh()
+                        elif package.startswith('grains_refresh'):
+                            if self.grains_cache != self.opts['grains']:
                                 self.pillar_refresh()
-                            elif package.startswith('grains_refresh'):
-                                if self.grains_cache != self.opts['grains']:
-                                    self.pillar_refresh()
-                                    self.grains_cache = self.opts['grains']
-                            elif package.startswith('fire_master'):
-                                tag, data = salt.utils.event.MinionEvent.unpack(package)
-                                log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
-                                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+                                self.grains_cache = self.opts['grains']
+                        elif package.startswith('fire_master'):
+                            tag, data = salt.utils.event.MinionEvent.unpack(package)
+                            log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
 
-                            self.epub_sock.send(package)
-
+                        self.epub_sock.send(package)
                     except Exception:
-                        pass
-            except zmq.ZMQError:
-                # This is thrown by the interrupt caused by python handling the
-                # SIGCHLD. This is a safe error and we just start the poll
-                # again
+                        log.debug("Exception while handling events", exc_info=True)
+
+            except zmq.ZMQError as e:
+                # The interrupt caused by python handling the
+                # SIGCHLD. Throws this error with errno == EINTR.
+                # Nothing to recieve on the zmq socket throws this error
+                # with EAGAIN.
+                # Both are sage to ignore
+                if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+                    log.critical('Unexpected ZMQError while polling minion',
+                                 exc_info=True)
                 continue
             except Exception:
                 log.critical(
@@ -1415,17 +1423,6 @@ class Minion(object):
                         socket[0].close()
                     self.poller.unregister(socket[0])
 
-        if hasattr(self, 'epoller'):
-            if isinstance(self.epoller.sockets, dict):
-                for socket in self.epoller.sockets.keys():
-                    if socket.closed is False:
-                        socket.close()
-                    self.epoller.unregister(socket)
-            else:
-                for socket in self.epoller.sockets:
-                    if socket[0].closed is False:
-                        socket[0].close()
-                    self.epoller.unregister(socket[0])
         if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:

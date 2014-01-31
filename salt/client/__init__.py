@@ -37,6 +37,7 @@ import time
 import copy
 import getpass
 import logging
+from datetime import datetime
 
 # Import salt libs
 import salt.config
@@ -182,10 +183,11 @@ class LocalClient(object):
         '''
         Return the information about a given job
         '''
+        log.debug('Checking whether jid %s is still running', jid)
         jinfo = self.cmd(tgt,
                          'saltutil.find_job',
                          [jid],
-                         2,
+                         self.opts['gather_job_timeout'],
                          tgt_type,
                          **kwargs)
         return jinfo
@@ -838,6 +840,8 @@ class LocalClient(object):
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
+        log.debug("get_iter_returns for jid %s sent to %s will timeout at %s",
+                  jid, minions, datetime.fromtimestamp(timeout_at).time())
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
@@ -866,7 +870,10 @@ class LocalClient(object):
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
                             timeout_at = int(time.time()) + 1
+                            log.debug('jid %s syndic_wait %s will now timeout at %s',
+                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                             continue
+                    log.debug('jid %s found all minions', jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
@@ -876,27 +883,35 @@ class LocalClient(object):
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
                         timeout_at = int(time.time()) + 1
+                        log.debug('jid %s syndic_wait %s will now timeout at %s',
+                                  jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                         continue
+                log.debug('jid %s found all minions', jid)
                 break
             if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
             if last_time:
+                if len(found) < len(minions):
+                    log.info('jid %s minions %s did not return in time',
+                             jid, minions)
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
                 jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
-                more_time = False
-                for id_ in jinfo:
-                    if jinfo[id_]:
-                        more_time = True
-                if more_time:
+                still_running = [id_ for id_, jdat in jinfo.iteritems()
+                                 if jdat
+                                 ]
+                if still_running:
                     timeout_at = int(time.time()) + timeout
+                    log.debug('jid %s still running on %s will now timeout at %s',
+                              jid, still_running, datetime.fromtimestamp(timeout_at).time())
                     continue
                 else:
                     last_time = True
+                    log.debug('jid %s not running on any minions last time', jid)
                     continue
             time.sleep(0.01)
 
@@ -916,11 +931,15 @@ class LocalClient(object):
                                      self.opts['hash_type'])
         start = int(time.time())
         timeout_at = start + timeout
+        log.debug("get_returns for jid %s sent to %s will timeout at %s",
+                  jid, minions, datetime.fromtimestamp(timeout_at).time())
+
         found = set()
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
+            log.warning("jid_dir (%s) does not exist", jid_dir)
             return ret
         # Wait for the hosts to check in
         while True:
@@ -932,17 +951,21 @@ class LocalClient(object):
                 ret[raw['id']] = raw['return']
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    log.debug("jid %s found all minions", jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                log.debug("jid %s found all minions", jid)
                 break
             if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
             if int(time.time()) > timeout_at:
+                log.info('jid %s minions %s did not return in time',
+                         jid, minions)
                 break
             time.sleep(0.01)
         return ret
