@@ -1600,7 +1600,7 @@ def pull(repo, tag=None, *args, **kwargs):
                 - id:
                     2c80228370c9
                 - progress:
-                    [=========================\u003e                         ]
+                    [=========================>                         ]
                 - status:
                     Downloading
                 ----------
