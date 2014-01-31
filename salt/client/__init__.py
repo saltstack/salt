@@ -844,12 +844,14 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
-            if raw is not None and 'id' in raw:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
+                    continue
+                if 'return' not in raw:
                     continue
                 if kwargs.get('raw', False):
                     found.add(raw['id'])
