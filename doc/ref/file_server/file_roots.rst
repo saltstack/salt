@@ -66,7 +66,7 @@ environments:
         - /srv/salt/prod
         - /srv/salt/base
 
-This example ensures that each environmentt will check the associated
+This example ensures that each environment will check the associated
 environment directory for files first. If a file is not found in the
 appropriate directory, the system will default to using the base directory.
 
