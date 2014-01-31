@@ -920,7 +920,7 @@ class Minion(object):
                 load[key] = value
         try:
             oput = self.functions[fun].__outputter__
-        except KeyError, AttributeError:
+        except (KeyError, AttributeError):
             pass
         else:
             if isinstance(oput, string_types):
