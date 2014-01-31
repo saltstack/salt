@@ -44,7 +44,7 @@ class PsTestCase(TestCase):
 
     def test__get_cron_cmdstr_solaris(self):
         cron.__grains__ = __grains__
-        with patch.dict(cron.__grains__, {'os': 'Solaris'}):
+        with patch.dict(cron.__grains__, {'os_family': 'Solaris'}):
             self.assertEqual('su - root -c "crontab /tmp"',
                              cron._get_cron_cmdstr(STUB_USER, STUB_PATH))
 
