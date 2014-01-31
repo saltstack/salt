@@ -12,6 +12,7 @@ import jnpr.junos.utils
 import jnpr.junos.cfg
 HAS_JUNOS = True
 
+__proxyenabled__ = ['junos']
 
 class Proxyconn(object):
 
