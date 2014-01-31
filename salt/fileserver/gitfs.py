@@ -65,6 +65,7 @@ HAS_GITPYTHON = False
 HAS_PYGIT2 = False
 try:
     import git
+    import gitdb
     HAS_GITPYTHON = True
 except ImportError:
     pass
@@ -218,22 +219,29 @@ def __virtual__():
     return __virtualname__ if provider else False
 
 
-def _get_ref_gitpython(repo, short):
+def _get_tree_gitpython(repo, short):
     '''
-    Return the ref if found, otherwise return False
+    Return a git.Tree object if the branch/tag/SHA is found, otherwise False
     '''
     for ref in repo.refs:
         if isinstance(ref, (git.RemoteReference, git.TagReference)):
             parted = ref.name.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
-                return ref
+                return ref.commit.tree
+    # branch or tag not matched, check if 'short' is a commit
+    try:
+        commit = repo.rev_parse(short)
+    except gitdb.exc.BadObject:
+        pass
+    else:
+        return commit.tree
     return False
 
 
-def _get_ref_pygit2(repo, short):
+def _get_tree_pygit2(repo, short):
     '''
-    Return the ref if found, otherwise return False
+    Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise False
     '''
     for ref in repo.listall_references():
         _, rtype, rspec = ref.split('/', 2)
@@ -241,7 +249,15 @@ def _get_ref_pygit2(repo, short):
             parted = rspec.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
-                return repo.lookup_reference(ref)
+                return repo.lookup_reference(ref).get_object().tree
+    # branch or tag not matched, check if 'short' is a commit
+    try:
+        commit = repo.revparse_single(short)
+    except (KeyError, TypeError):
+        # Not a valid commit, likely not a commit SHA
+        pass
+    else:
+        return commit.tree
     return False
 
 
@@ -598,22 +614,20 @@ def find_file(path, short='base', **kwargs):
             return fnd
     for repo in repos:
         if provider == 'gitpython':
-            ref = _get_ref_gitpython(repo, short)
-            if not ref:
+            tree = _get_tree_gitpython(repo, short)
+            if not tree:
                 # Branch or tag not found in repo, try the next
                 continue
-            tree = ref.commit.tree
             try:
                 blob = tree / path
             except KeyError:
                 continue
             blob_hexsha = blob.hexsha
         elif provider == 'pygit2':
-            ref = _get_ref_pygit2(repo, short)
-            if not ref:
+            tree = _get_tree_pygit2(repo, short)
+            if not tree:
                 # Branch or tag not found in repo, try the next
                 continue
-            tree = ref.get_object().tree
             try:
                 blob = repo[tree[path].oid]
             except KeyError:
@@ -807,15 +821,14 @@ def _get_file_list(load):
     return sorted(ret)
 
 
-def _file_list_gitpython(repo, ref_tgt, gitfs_root):
+def _file_list_gitpython(repo, tgt, gitfs_root):
     '''
     Get file list using GitPython
     '''
     ret = set()
-    ref = _get_ref_gitpython(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_gitpython(repo, tgt)
+    if not tree:
         return ret
-    tree = ref.commit.tree
     if gitfs_root:
         try:
             tree = tree / gitfs_root
@@ -847,10 +860,9 @@ def _file_list_pygit2(repo, ref_tgt, gitfs_root):
             elif isinstance(blob, pygit2.Tree):
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
@@ -913,15 +925,14 @@ def _get_file_list_emptydirs(load):
     return sorted(ret)
 
 
-def _file_list_emptydirs_gitpython(repo, ref_tgt, gitfs_root):
+def _file_list_emptydirs_gitpython(repo, tgt, gitfs_root):
     '''
     Get empty directories using GitPython
     '''
     ret = set()
-    ref = _get_ref_gitpython(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_gitpython(repo, tgt)
+    if not tree:
         return ret
-    tree = ref.commit.tree
     if gitfs_root:
         try:
             tree = tree / gitfs_root
@@ -956,10 +967,9 @@ def _file_list_emptydirs_pygit2(repo, ref_tgt, gitfs_root):
             else:
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
@@ -1014,15 +1024,14 @@ def _get_dir_list(load):
     return sorted(ret)
 
 
-def _dir_list_gitpython(repo, ref_tgt, gitfs_root):
+def _dir_list_gitpython(repo, tgt, gitfs_root):
     '''
     Get list of directories using GitPython
     '''
     ret = set()
-    ref = _get_ref_gitpython(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_gitpython(repo, tgt)
+    if not tree:
         return ret
-    tree = ref.commit.tree
     if gitfs_root:
         try:
             tree = tree / gitfs_root
@@ -1055,10 +1064,9 @@ def _dir_list_pygit2(repo, ref_tgt, gitfs_root):
             if len(blob):
                 _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
     ret = set()
-    ref = _get_ref_pygit2(repo, ref_tgt)
-    if not ref:
+    tree = _get_tree_pygit2(repo, ref_tgt)
+    if not tree:
         return ret
-    tree = ref.get_object().tree
     if gitfs_root:
         try:
             tree = repo[tree[gitfs_root].oid]
