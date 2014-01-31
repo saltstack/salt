@@ -389,7 +389,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
-    'enumerate_proxy_minions': False
+    'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
 }
 
