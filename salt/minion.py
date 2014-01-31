@@ -1305,7 +1305,7 @@ class Minion(object):
                 # Check the event system
                 if socks.get(self.epull_sock) == zmq.POLLIN:
                     package = self.epull_sock.recv(zmq.NOBLOCK)
-                    log.debug("Handling event %s", package)
+                    log.debug("Handling event %r", package)
                     try:
                         if package.startswith('module_refresh'):
                             self.module_refresh()
