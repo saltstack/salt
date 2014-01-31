@@ -176,7 +176,7 @@ def set_password(name, password, use_usermod=False):
     else:
         # Use usermod -p (less secure, but more feature-complete)
         cmd = 'usermod -p {0} {1}'.format(name, password)
-        __salt__['cmd.run'](cmd)
+        __salt__['cmd.run'](cmd, output_loglevel='quiet')
         uinfo = info(name)
         return uinfo['passwd'] == password
 
