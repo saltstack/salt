@@ -187,7 +187,7 @@ class LocalClient(object):
         jinfo = self.cmd(tgt,
                          'saltutil.find_job',
                          [jid],
-                         2,
+                         self.opts['gather_job_timeout'],
                          tgt_type,
                          **kwargs)
         return jinfo
