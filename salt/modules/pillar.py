@@ -10,6 +10,7 @@ import yaml
 import salt.pillar
 import salt.utils
 
+__proxyenabled__ = ['*']
 
 def get(key, default=''):
     '''

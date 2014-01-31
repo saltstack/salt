@@ -10,6 +10,7 @@ import salt.utils.event
 import salt.payload
 import salt.transport
 
+__proxyenabled__ = ['*']
 
 def fire_master(data, tag, preload=None):
     '''
