@@ -12,7 +12,7 @@ import logging
 
 try:
     import fcntl
-    HAS_FCNTL = True
+    HAS_FCNTL = os.uname()[0] != "SunOS"
 except ImportError:
     # fcntl is not available on windows
     HAS_FCNTL = False
