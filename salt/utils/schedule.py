@@ -155,7 +155,7 @@ class Schedule(object):
             ret['return'] = self.functions[func]()
 
         data_returner = data.get('returner', None)
-        if data_returner or schedule_returner:
+        if data_returner or self.schedule_returner:
             rets = []
             for returner in [data_returner, self.schedule_returner]:
                 if isinstance(returner, str):
