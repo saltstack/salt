@@ -649,9 +649,6 @@ class Minions(LowDataAdapter):
                 Content-Length: 86
                 Content-Type: application/x-yaml
 
-                - return:
-                    jid: '20130118105423694155'
-
                 return:
                 - jid: '20130603122505459265'
                   minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
