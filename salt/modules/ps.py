@@ -284,6 +284,36 @@ def cpu_times(per_cpu=False):
     return result
 
 
+def virtual_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes statistics about system memory usage.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.virtual_memory
+    '''
+    return dict(psutil.virtual_memory()._asdict())
+
+
+def swap_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes swap memory statistics.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.swap_memory
+    '''
+    return dict(psutil.swap_memory()._asdict())
+
+
 def physical_memory_usage():
     '''
     Return a dict that describes free and available physical memory.
