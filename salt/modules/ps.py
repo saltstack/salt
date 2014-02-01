@@ -10,6 +10,9 @@ See http://code.google.com/p/psutil.
 # Import python libs
 import time
 
+# Import salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import psutil
@@ -317,7 +320,7 @@ def swap_memory():
 def physical_memory_usage():
     '''
     .. deprecated:: Helium
-        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return a dict that describes free and available physical memory.
 
@@ -339,7 +342,7 @@ def physical_memory_usage():
 def virtual_memory_usage():
     '''
     .. deprecated:: Helium
-        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return a dict that describes free and available memory, both physical
     and virtual.
@@ -362,7 +365,7 @@ def virtual_memory_usage():
 def cached_physical_memory():
     '''
     .. deprecated:: Helium
-        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return the amount cached memory.
 
@@ -384,7 +387,7 @@ def cached_physical_memory():
 def physical_memory_buffers():
     '''
     .. deprecated:: Helium
-        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return the amount of physical memory buffers.
 
