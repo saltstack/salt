@@ -6,8 +6,8 @@ The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
-Requisites come in two types. ``Direct requisites`` (such as require and
-watch), and ``requisite_ins`` (require_in, watch_in, and prereq_in). The
+Requisites come in two types: Direct requisites (such as ``require`` and
+``watch``), and requisite_ins (``require_in``, ``watch_in``, and ``prereq_in``). The
 relationships are directional, so a requisite statement makes the requiring
 state declaration depend on the required state declaration:
 
@@ -62,7 +62,7 @@ finite and predictable order.
 Requisite and Requisite in types
 ================================
 
-There are three requisite statements that can be used in Salt. the ``require``,
+There are three requisite statements that can be used in Salt: the ``require``,
 ``watch`` and ``use`` requisites. Each requisite also has a corresponding
 requisite_in: ``require_in``, ``watch_in`` and ``use_in``. All of the
 requisites define specific relationships and always work with the dependency
