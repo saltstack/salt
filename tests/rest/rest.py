@@ -1,4 +1,5 @@
-# -*- coding: utf-8
+#! env python
+#  -*- coding: utf-8
 #
 # rest.py
 #
@@ -6,7 +7,7 @@
 #
 # Requires that the bottle and requests Python packages are available
 
-
+import argparse
 from bottle import route, run, template, static_file
 
 PACKAGES = {'coreutils': '1.05'}
@@ -158,4 +159,21 @@ def send_static(filename):
     return static_file(filename, root='./')
 
 
-run(host='localhost', port=8080)
+def main():
+    # parse command line options
+    parser = argparse.ArgumentParser(description=
+                                     'Start a simple REST web service on '
+                                     'localhost:8080 to respond to the rest_sample '
+                                     'proxy minion')
+    parser.add_argument('--address', default='127.0.0.1',
+                        help='Start the REST server on this address')
+    parser.add_argument('--port', default=8080, type=int,
+                        help='Start the REST server on this port')
+    args = parser.parse_args()
+
+    # Start the Bottle server
+    run(host=args.address, port=args.port)
+
+
+if __name__ == '__main__':
+    main()
