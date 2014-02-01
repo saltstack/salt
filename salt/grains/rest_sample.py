@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
+Grains adapter for the rest_sample proxy minion
 '''
 __proxyenabled__ = ['rest_sample']
 
@@ -12,7 +13,6 @@ def __virtual__():
     else:
         return __virtualname__
 
-
 def location():
     return {'location': 'In this darn virtual machine.  Let me out!'}
 
@@ -23,3 +23,4 @@ def os_family():
 
 def os_data():
     return __opts__['proxyobject'].grains()
+
