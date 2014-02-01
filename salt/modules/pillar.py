@@ -12,6 +12,7 @@ import salt.utils
 
 __proxyenabled__ = ['*']
 
+
 def get(key, default=''):
     '''
     .. versionadded:: 0.14
