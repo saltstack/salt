@@ -92,7 +92,25 @@ PagerDuty Support
 vt.Terminal System
 ------------------
 
-Sometimes the subprocess module is nto good enough
+Sometimes the subprocess module is not good enough
 
 MinionFS
 --------
+
+
+Proxy Minions
+-------------
+
+Initial basic support for Proxy Minions is in this release.  Documentation can
+be found :doc:`here </topics/proxyminion>`.  
+
+Proxy minions are a developing feature in Salt that enables control of
+devices that cannot run a minion.  Examples include network gear like switches
+and routers that run a proprietary OS but offer an API, or "dumb"
+devices that just don't have the horsepower or ability to handle a Python VM.
+
+Proxy minions can be difficult to write, so a simple REST-based example proxy
+is included.  A Python bottle-based webserver is included in the tests
+directory as an endpoint for this proxy.
+
+
