@@ -29,9 +29,14 @@ def __virtual__():
 
 
 def _format_response(response, msg):
-    if 'Error' in response:
-        msg = 'Error'
-
+    if isinstance(response, dict):
+        if response['retcode'] != 0:
+            msg = 'Error'
+        else:
+            msg = response['stdout']
+    else:
+        if 'Error' in response:
+            msg = 'Error'
     return {
         msg: response
     }
