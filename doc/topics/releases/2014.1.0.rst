@@ -20,7 +20,7 @@ Salt Cloud Merged into Salt
 ---------------------------
 
 Salt Cloud is a tool for provisioning salted minions across various cloud
-providers. Prior to this release, Salt Cloud was a seperate project but this
+providers. Prior to this release, Salt Cloud was a separate project but this
 marks its full integration with the Salt distribution. A Getting Started guide
 and additional documentation for Salt Cloud can be found :doc:`here
 </topics/cloud/index>`:
