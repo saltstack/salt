@@ -135,7 +135,7 @@ from the salt fileserver. The path for these files takes the following format::
 ``minion-id`` is the id of the "source" minion, the one from which the files
 were pushed to the master. ``/path/to/file`` is the full path of the file.
 
-The :doc:`MinionFS Walkthrough <topics/tutorials/minionfs>` contains a more
+The :doc:`MinionFS Walkthrough </topics/tutorials/minionfs>` contains a more
 thorough example of how to use this backend.
 
 
@@ -155,7 +155,7 @@ A caching layer has been added to the Grains system, which can help speed up
 minion startup. Disabled by default, it can be enabled by setting the minion
 config option ``grains_cache``:
 
-.. code-block::
+.. code-block:: yaml
 
     grains_cache: True
 
