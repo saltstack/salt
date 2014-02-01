@@ -582,6 +582,7 @@ def run(cmd,
             serial = salt.payload.Serial(__opts__)
             with salt.utils.fopen(jid_file) as fn_:
                 jid_dict = serial.load(fn_)
+
             if 'child_pids' in jid_dict:
                 jid_dict['child_pids'].append(ret['pid'])
             else:
