@@ -310,6 +310,11 @@ class SaltfileMixIn(object):
         # Make sure we have an absolute path
         self.options.saltfile = os.path.abspath(self.options.saltfile)
 
+        # Make sure we let the user know that we will be loading a Saltfile
+        logging.getLogger(__name__).info(
+            'Loading Saltfile from {0!r}'.format(self.options.saltfile)
+        )
+
         saltfile_config = config._read_conf_file(saltfile)
 
         if not saltfile_config:
