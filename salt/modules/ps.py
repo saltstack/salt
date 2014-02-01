@@ -316,6 +316,9 @@ def swap_memory():
 
 def physical_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+
     Return a dict that describes free and available physical memory.
 
     CLI Examples:
@@ -324,11 +327,20 @@ def physical_memory_usage():
 
         salt '*' ps.physical_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.phymem_usage()._asdict())
 
 
 def virtual_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+
     Return a dict that describes free and available memory, both physical
     and virtual.
 
@@ -338,11 +350,20 @@ def virtual_memory_usage():
 
         salt '*' ps.virtual_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.virtual_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.virtmem_usage()._asdict())
 
 
 def cached_physical_memory():
     '''
+    .. deprecated:: Helium
+        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+
     Return the amount cached memory.
 
     CLI Example:
@@ -351,11 +372,20 @@ def cached_physical_memory():
 
         salt '*' ps.cached_physical_memory
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.cached_physical_memory\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.cached_phymem()
 
 
 def physical_memory_buffers():
     '''
+    .. deprecated:: Helium
+        Use :py:func:`~salt.modules.ps.virtual_memory` instead.
+
     Return the amount of physical memory buffers.
 
     CLI Example:
@@ -364,6 +394,12 @@ def physical_memory_buffers():
 
         salt '*' ps.physical_memory_buffers
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_buffers\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.phymem_buffers()
 
 
