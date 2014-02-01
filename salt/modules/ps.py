@@ -454,7 +454,7 @@ def boot_time():
 
         salt '*' ps.boot_time
     '''
-    return psutil.BOOT_TIME
+    return psutil.get_boot_time()
 
 
 def network_io_counters():
