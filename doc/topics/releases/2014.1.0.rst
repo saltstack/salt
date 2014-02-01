@@ -2,7 +2,7 @@
 Salt 2014.1.0 Release Notes - Codename Hydrogen
 ===============================================
 
-:release: 2013-12-30
+:release: 2014-02-03
 
 The 2014.1.0 release of Salt is a major release which not only increases
 stability but also brings new capabilities in virtualization, cloud
@@ -26,24 +26,6 @@ and additional documentation for Salt Cloud can be found :doc:`here
 </topics/cloud/index>`:
 
 
-Salt Virt
----------
-
-Salt Virt is a cloud controller that supports virtual machine deployment,
-inspection, migration and integration with many aspects of Salt.
-
-Salt Virt has undergone a major overhaul with this release and now supports
-many more features and includes a number of critical improvements.
-
-Docker Integration
-------------------
-
-Salt now ships with modules and states for tight integration with Docker
-containers.
-
-Substantial Testing Expansion
------------------------------
-
 Google Compute Engine
 ---------------------
 
@@ -58,11 +40,28 @@ Documentation for Salt and GCE can be found :doc:`here </topics/cloud/gce>`.
 .. _this blog post: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
 
 
-GitFS Optimizations
--------------------
+Salt Virt
+---------
 
-Several performance improvements have been made to the :mod:`Git fileserver
-backend <salt.fileserver.gitfs>`.
+Salt Virt is a cloud controller that supports virtual machine deployment,
+inspection, migration and integration with many aspects of Salt.
+
+Salt Virt has undergone a major overhaul with this release and now supports
+many more features and includes a number of critical improvements.
+
+
+Docker Integration
+------------------
+
+Salt now ships with :mod:`states <salt.states.dockerio>` and an :mod:`execution
+module <salt.states.dockerio>` to manage Docker containers.
+
+
+Substantial Testing Expansion
+-----------------------------
+
+Salt continues to increase its unit/regression test coverage. This release
+includes over 300 new tests.
 
 
 BSD Package Management
@@ -86,13 +85,134 @@ added. See the documentation for the ports :mod:`state <salt.states.ports>` and
 Network Management for Debian/Ubuntu
 ------------------------------------
 
-PagerDuty Support
------------------
+Initial support for management of network interfaces on Debian-based distros
+has been added. See the documentation for the :mod:`network state
+<salt.states.network>` and the :mod:`debian_ip <salt.modules.debian_ip>` for
+more information.
 
-vt.Terminal System
+
+IPv6 Support for iptables State/Module
+--------------------------------------
+
+The iptables :mod:`state <salt.states.iptables>` and :mod:`module
+<salt.modules.iptables>` now have IPv6 support. A new parameter ``family`` has
+been added to the states and execution functions, to distinguish between IPv4
+and IPv6. The default value for this parameter is ``ipv4``, specifying ``ipv6``
+will use ip6tables to manage firewall rules.
+
+
+GitFS Improvements
 ------------------
 
-Sometimes the subprocess module is nto good enough
+Several performance improvements have been made to the :mod:`Git fileserver
+backend <salt.fileserver.gitfs>`. Additionally, file states can now use any
+any SHA1 commit hash as a fileserver environment:
+
+.. code-block:: yaml
+
+    /etc/httpd/httpd.conf:
+      file.managed:
+        - source: salt://webserver/files/httpd.conf
+        - saltenv: 45af879
+
+This applies to the functions in the :mod:`cp module <salt.modules.cp>` as
+well:
+
+.. code-block:: yaml
+
+    salt '*' cp.get_file salt://readme.txt /tmp/readme.txt saltenv=45af879
+
 
 MinionFS
 --------
+
+This new fileserver backend allows files which have been pushed from the minion
+to the master (using :mod:`cp.push <salt.modules.cp.push>`) to be served up
+from the salt fileserver. The path for these files takes the following format::
+
+    salt://minion-id/path/to/file
+
+``minion-id`` is the id of the "source" minion, the one from which the files
+were pushed to the master. ``/path/to/file`` is the full path of the file.
+
+The :doc:`MinionFS Walkthrough </topics/tutorials/minionfs>` contains a more
+thorough example of how to use this backend.
+
+
+saltenv
+-------
+
+To distinguish between fileserver environments and execution functions which
+deal with environment variables, fileserver environments are now specified
+using the ``saltenv`` parameter. ``env`` will continue to work, but is
+deprecated and will be removed in a future release.
+
+
+Grains Caching
+--------------
+
+A caching layer has been added to the Grains system, which can help speed up
+minion startup. Disabled by default, it can be enabled by setting the minion
+config option ``grains_cache``:
+
+.. code-block:: yaml
+
+    grains_cache: True
+
+    # Seconds before grains cache is considered to be stale.
+    grains_cache_expiration: 300
+
+If set to ``True``, the grains loader will read from/write to a
+msgpack-serialized file containing the grains data.
+
+Additional command-line parameters have been added to salt-call, mainly for
+testing purposes:
+
+* ``--skip-grains`` will completely bypass the grains loader when salt-call is
+  invoked.
+* ``--refresh-grains-cache`` will force the grains loader to bypass the grains
+  cache and refresh the grains, writing a new grains cache file.
+
+
+Improved Command Logging Control
+--------------------------------
+
+When using the :mod:`cmd module <salt.modules.cmdmod>`, either on the CLI or
+when developing Salt execution modules, a new keyword argument
+``output_loglevel`` allows for greater control over how (or even if) the
+command and its output are logged. For example:
+
+.. code-block:: bash
+
+    salt '*' cmd.run 'tail /var/log/messages' output_loglevel=debug
+
+The package management modules (``apt``, ``yumpkg``, etc.) have been updated to
+log the copious output generated from these commands at loglevel ``debug``.
+
+
+.. note::
+
+    To keep a command from being logged, ``output_loglevel=quiet`` can be used.
+
+    Prior to this release, this could be done using ``quiet=True``. This
+    argument is still supported, but will be removed in a future Salt release.
+
+
+PagerDuty Support
+-----------------
+
+Initial support for firing events via PagerDuty_ has been added. See the
+documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
+
+.. _PagerDuty: http://pagerduty.com
+
+
+Virtual Terminal
+----------------
+
+Sometimes the subprocess module is not good enough, and, in fact, not even 
+``askpass`` is. This virtual terminal is still in it's infant childhood, needs 
+quite some love, and was originally created to replace ``askpass``, but, while 
+developing it, it immediately proved that it could do so much more. It's 
+currently used by salt-cloud when bootstrapping salt on clouds which require 
+the use of a password.

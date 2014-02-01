@@ -29,9 +29,14 @@ def __virtual__():
 
 
 def _format_response(response, msg):
-    if 'Error' in response:
-        msg = 'Error'
-
+    if isinstance(response, dict):
+        if response['retcode'] != 0:
+            msg = 'Error'
+        else:
+            msg = response['stdout']
+    else:
+        if 'Error' in response:
+            msg = 'Error'
     return {
         msg: response
     }
@@ -569,7 +574,7 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-    ret = __salt__['cmd.run'](
+    ret = __salt__['cmd.run_all'](
             'rabbitmq-plugins enable {0}'.format(name),
             runas=runas)
     return _format_response(ret, 'Enabled')
@@ -586,7 +591,7 @@ def disable_plugin(name, runas=None):
         salt '*' rabbitmq.disable_plugin foo
     '''
 
-    ret = __salt__['cmd.run'](
+    ret = __salt__['cmd.run_all'](
             'rabbitmq-plugins disable {0}'.format(name),
             runas=runas)
     return _format_response(ret, 'Disabled')
