@@ -11,8 +11,8 @@ Setting a Github pull request
 
 This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
-If you want to make our life really easier, please also enable Travis-CI on 
-your fork. Salt is already configured, all you need to do is follow the first 
+If you want to make our life really easier, please also enable Travis-CI on
+your fork. Salt is already configured, all you need to do is follow the first
 two(2) steps on their `Getting Started Doc`_.
 
 .. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
@@ -170,7 +170,7 @@ Install Salt (and dependencies) into the virtualenv::
 
 .. note:: Installing M2Crypto
 
-    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you 
+    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you
     encounter the error ``command 'swig' failed with exit status 1``
     while installing M2Crypto, try installing it with the following command::
 
@@ -268,9 +268,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``dev_requirements.txt``::
+For running tests, you'll also need to install ``dev_requirements_python2x.txt``::
 
-    pip install -r dev_requirements.txt
+    pip install -r dev_requirements_python2x.txt
 
 Finally you use setup.py to run the tests with the following command::
 
