@@ -132,7 +132,11 @@ def _format_host(host, data):
                     '\n' + ' ' * 14),
                 'colors': colors
             }
-            hstrs.extend([sline.format(**svars) for sline in state_lines])
+            try:
+                hstrs.extend([sline.format(**svars) for sline in state_lines])
+            except:
+                import pdb;pdb.set_trace()  ## Breakpoint ##
+
             changes = '     Changes:   ' + ctext
             hstrs.append(('{0}{1}{2[ENDC]}'
                           .format(tcolor, changes, colors)))
