@@ -123,9 +123,11 @@ class merger(object):
         # Filter out values that don't have queries.
         qbuffer = filter(
             lambda x: (
-                (type(x) is str and len(x)) or
-                ((type(x) in (list, dict)) and (len(x) > 0) and x[0]) or
-                (type(x) is dict and 'query' in x)
+                (type(x[1]) is str and len(x[1]))
+                or
+                ((type(x[1]) in (list, tuple)) and (len(x[1]) > 0) and x[1][0])
+                or
+                (type(x[1]) is dict and 'query' in x[1] and len(x[1]['query']))
             ),
             qbuffer)
 
@@ -139,7 +141,7 @@ class merger(object):
                 defaults['query'] = qb[1]
             elif type(qb[1]) in (list, tuple):
                 defaults['query'] = qb[1][0]
-                if len(qb[1]) == 1:
+                if len(qb[1]) > 1:
                     defaults['depth'] = qb[1][1]
                 # May set 'as_list' from qb[1][2].
             else:
@@ -175,6 +177,7 @@ class merger(object):
                 if (ret[i] not in crd):
                     # Key missing
                     crd[ret[i]] = {}
+                    crd = crd[ret[i]]
                 else:
                     # Check type of collision
                     ty = type(crd[ret[i]])
@@ -192,7 +195,8 @@ class merger(object):
                             crd = temp
                         else:
                             # Overwrite
-                            crd = crd[ret[i]] = {}
+                            crd[ret[i]] = {}
+                            crd = crd[ret[i]]
                     else:
                         # dict, descend.
                         crd = crd[ret[i]]
@@ -304,4 +308,4 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                           return_data))
             except:
                 pass
-    return return_data
+    return return_data.result
