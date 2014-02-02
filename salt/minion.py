@@ -160,6 +160,12 @@ def parse_args_and_kwargs(func, args, data=None):
     for arg in args:
         # support old yamlify syntax
         if isinstance(arg, string_types):
+            salt.utils.warn_until(
+                'Boron',
+                'This minion recieved a job where kwargs were passed as'
+                'string\'d args, which has been deprecated. This functionality will'
+                'be removed in Salt Boron.'
+            )
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
                 if argspec.keywords or arg_name in argspec.args:
