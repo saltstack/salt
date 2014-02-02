@@ -820,24 +820,39 @@ def _merge_statuses(statuses):
         outlog = st['outlog']
         if out:
             if not status['out']:
-                status['out'] = ''
-            status['out'] += '\n'
+                status['out'] = u''
+            status['out'] += u'\n'
             status['out'] += HR
-            status['out'] += '{0}\n'.format(out)
+            if (
+                isinstance(out, basestring)
+                and not isinstance(out, unicode)
+            ):
+                out = out.decode('utf-8')
+            status['out'] += u'{0}\n'.format(out)
             status['out'] += HR
         if comment:
             if not status['comment']:
-                status['comment'] = ''
+                status['comment'] = u''
             status['comment'] += '\n{0}\n'.format(comment)
         if outlog:
             if not status['outlog']:
-                status['outlog'] = ''
-            status['outlog'] += '\n{0}'.format(HR)
+                status['outlog'] = u''
+            if (
+                isinstance(outlog, basestring)
+                and not isinstance(outlog, unicode)
+            ):
+                outlog = outlog.decode('utf-8')
+            status['outlog'] += u'\n{0}'.format(HR)
             status['outlog'] += outlog
         if outlog_by_level:
             if not status['outlog_by_level']:
-                status['outlog_by_level'] = ''
-            status['outlog_by_level'] += '\n{0}'.format(HR)
+                status['outlog_by_level'] = u''
+            if (
+                isinstance(outlog_by_level, basestring)
+                and not isinstance(outlog_by_level, unicode)
+            ):
+                outlog = outlog.decode('utf-8')
+            status['outlog_by_level'] += u'\n{0}'.format(HR)
             status['outlog_by_level'] += outlog_by_level
         status['logs'].extend(logs)
         for log in logs_by_level:
