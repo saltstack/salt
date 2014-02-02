@@ -156,6 +156,18 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
+    if 'dports' in kwargs:
+        if not '-m multiport' in rule:
+            rule += '-m multiport '
+        rule += '--dports {0} '.format(kwargs['dports'])
+        del kwargs['dports']
+
+    if 'sports' in kwargs:
+        if not '-m multiport' in rule:
+            rule += '-m multiport '
+        rule += '--sports {0} '.format(kwargs['sports'])
+        del kwargs['sports']
+
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
