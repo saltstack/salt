@@ -503,7 +503,7 @@ def network_io_counters():
 
         salt '*' ps.network_io_counters
     '''
-    return dict(psutil.net_io_counters()._asdict())
+    return dict(psutil.network_io_counters()._asdict())
 
 
 def disk_io_counters():
