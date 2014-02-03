@@ -17,8 +17,10 @@ import salt.exceptions
 import salt.utils
 import salt.minion
 import salt.utils.event
+from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.event import tagify
 from salt.utils.error import raise_error
+from salt.output import display_output
 
 logger = logging.getLogger(__name__)
 
@@ -79,14 +81,20 @@ class RunnerClient(object):
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
 
-    def get_docs(self):
+    def get_docs(self, arg=None):
         '''
         Return a dictionary of functions and the inline documentation for each
         '''
-        ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)]
-
-        return dict(ret)
+        if arg:
+            target_mod = arg + '.' if not arg.endswith('.') else arg
+            docs = [(fun, self.functions[fun].__doc__)
+                    for fun in sorted(self.functions)
+                    if fun == arg or fun.startswith(target_mod)]
+        else:
+            docs = [(fun, self.functions[fun].__doc__)
+                    for fun in sorted(self.functions)]
+        docs = dict(docs)
+        return _strip_rst(docs)
 
     def cmd(self, fun, arg, kwarg=None):
         '''
@@ -192,20 +200,11 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
-        fun = None
-        run = None
         arg = self.opts.get('fun', None)
-
-        if arg:
-            if '.' in arg:
-                fun = arg
-            else:
-                run = arg
-
-        ret = super(Runner, self).get_docs()
-        for f in sorted(ret):
-            if not arg or f == fun or f.split('.')[0] == run:
-                print('{0}:\n{1}\n'.format(f, ret[f]))
+        docs = super(Runner, self).get_docs(arg)
+        for fun in sorted(docs):
+            display_output('{0}:'.format(fun), 'text', self.opts)
+            print(docs[fun])
 
     def run(self):
         '''
