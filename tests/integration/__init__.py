@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+from __future__ import print_function
 import os
 import sys
 import time
