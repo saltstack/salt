@@ -6,6 +6,7 @@ Control Linux Containers via Salt
 '''
 
 # Import python libs
+from __future__ import print_function
 import logging
 import tempfile
 import os
