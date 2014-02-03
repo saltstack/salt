@@ -19,7 +19,12 @@ import getpass
 import ConfigParser
 
 HOST = 'https://www.transifex.com'
-RCFILE = os.path.abspath(os.path.expanduser('~/.transifexrc'))
+RCFILE = os.path.abspath(
+    os.environ.get(
+        'TRANSIFEX_RC',
+        os.path.expanduser('~/.transifexrc')
+    )
+)
 
 
 def main():
