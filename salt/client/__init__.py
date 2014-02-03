@@ -865,9 +865,11 @@ class LocalClient(object):
                     ret = {raw['id']: {'ret': raw['return']}}
                     if 'out' in raw:
                         ret[raw['id']]['out'] = raw['out']
+                    log.debug('jid %s return from %s', jid, raw['id'])
                     yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    log.debug('jid %s found all minions %s', jid, found)
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
@@ -875,12 +877,12 @@ class LocalClient(object):
                             log.debug('jid %s syndic_wait %s will now timeout at %s',
                                       jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                             continue
-                    log.debug('jid %s found all minions', jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                log.debug('jid %s found all minions %s', jid, found)
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
@@ -888,7 +890,6 @@ class LocalClient(object):
                         log.debug('jid %s syndic_wait %s will now timeout at %s',
                                   jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                         continue
-                log.debug('jid %s found all minions', jid)
                 break
             if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
                 # The timeout +1 has not been reached and there is still a
@@ -897,7 +898,7 @@ class LocalClient(object):
             if last_time:
                 if len(found) < len(minions):
                     log.info('jid %s minions %s did not return in time',
-                             jid, minions)
+                             jid, (minions -found))
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
@@ -967,7 +968,7 @@ class LocalClient(object):
                 continue
             if int(time.time()) > timeout_at:
                 log.info('jid %s minions %s did not return in time',
-                         jid, minions)
+                         jid, (minions - found))
                 break
             time.sleep(0.01)
         return ret
