@@ -183,23 +183,23 @@ def list_(host=None, quiet=False):
     tgt = host or '*'
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
-    for info in client.cmd_iter(tgt,
+    for container_info in client.cmd_iter(tgt,
                                 'lxc.list'):
-        if not info:
+        if not container_info:
             continue
-        if not isinstance(info, dict):
+        if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = info.keys()[0]
+        id_ = container_info.keys()[0]
         if host and host != id_:
             continue
-        if not isinstance(info[id_], dict):
+        if not isinstance(container_info[id_], dict):
             continue
-        if 'ret' not in info[id_]:
+        if 'ret' not in container_info[id_]:
             continue
-        if not isinstance(info[id_]['ret'], dict):
+        if not isinstance(container_info[id_]['ret'], dict):
             continue
-        chunk[id_] = info[id_]['ret']
+        chunk[id_] = container_info[id_]['ret']
         ret.update(chunk)
         if not quiet:
             salt.output.display_output(chunk, 'lxc_list', __opts__)
