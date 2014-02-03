@@ -8,6 +8,7 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
+from __future__ import print_function
 import optparse
 import pprint
 import time
@@ -65,7 +66,7 @@ def listen(sock_dir, node, id=None):
             sock_dir,
             id=id
             )
-    print event.puburi
+    print(event.puburi)
     while True:
         ret = event.get_event(full=True)
         if ret is None:

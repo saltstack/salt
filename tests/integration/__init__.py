@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+from __future__ import print_function
 import os
 import sys
 import time
@@ -126,7 +127,7 @@ def run_tests(*test_cases, **kwargs):
 
         def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
-                print('Setting up Salt daemons to execute tests')
+                print(' * Setting up Salt daemons to execute tests')
                 with TestDaemon(self):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
