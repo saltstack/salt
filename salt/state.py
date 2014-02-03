@@ -547,7 +547,8 @@ class State(object):
         pillar = salt.pillar.get_pillar(
                 self.opts,
                 self.opts['grains'],
-                self.opts['id']
+                self.opts['id'],
+                self.opts['environment'],
                 )
         ret = pillar.compile_pillar()
         if self._pillar_override and isinstance(self._pillar_override, dict):
