@@ -12,6 +12,7 @@
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import getpass
@@ -191,7 +192,7 @@ class OptionParser(optparse.OptionParser):
         )
 
     def print_versions_report(self, file=sys.stdout):
-        print >> file, '\n'.join(version.versions_report())
+        print('\n'.join(version.versions_report()), file=file)
         self.exit()
 
 
@@ -2150,8 +2151,8 @@ class SaltCloudParser(OptionParser,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
 
     def print_versions_report(self, file=sys.stdout):
-        print >> file, '\n'.join(
-            version.versions_report(include_salt_cloud=True))
+        print('\n'.join(version.versions_report(include_salt_cloud=True)),
+              file=file)
         self.exit()
 
     def _mixin_after_parsed(self):

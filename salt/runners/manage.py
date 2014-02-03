@@ -5,6 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import operator
 import re
@@ -189,14 +190,14 @@ def safe_accept(target, expr_form='glob'):
             del ret[minion]
 
     if failures:
-        print "safe_accept failed on the following minions:"
+        print('safe_accept failed on the following minions:')
         for minion, message in failures.iteritems():
-            print minion
-            print '-' * len(minion)
-            print message
-            print
+            print(minion)
+            print('-' * len(minion))
+            print(message)
+            print('')
 
-    print "Accepted {0:d} keys".format(len(ret))
+    print('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
