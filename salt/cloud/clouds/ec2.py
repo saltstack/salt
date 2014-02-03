@@ -1287,7 +1287,9 @@ def create(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = query(params, location=location, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, location=location, return_url=True
+        )
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -2240,7 +2242,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data, requesturl = query(params, return_url=True)
+    data = query(params)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -2327,7 +2329,8 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = query(params, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, return_url=True)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
