@@ -33,6 +33,9 @@ def main():
     )
     if not os.path.exists(RCFILE):
         while True:
+            username = os.environ.get('TRANSIFEX_USER', None)
+            if username is not None:
+                break
             try:
                 username = raw_input(
                     'What is your username on Transifex.com? '
@@ -43,6 +46,9 @@ def main():
                 print
                 sys.exit(1)
         while True:
+            password = os.environ.get('TRANSIFEX_PASS', None)
+            if password is not None:
+                break
             try:
                 password = getpass.getpass(
                     'What is your password on Transifex.com? '
