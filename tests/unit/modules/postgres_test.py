@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -197,7 +200,7 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
-            host='testhost',  user='testuser',
+            host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',

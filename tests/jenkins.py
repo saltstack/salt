@@ -9,6 +9,7 @@ This script is intended to be shell-centric!!
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import re
 import sys
