@@ -38,7 +38,7 @@ except ImportError as e:
     ppa_format_support = False
 
 try:
-    import apt.debfile
+    from ... import apt
     resolve_dep_support = True
 except ImportError as e:
     resolve_dep_support = False
@@ -1561,7 +1561,7 @@ def _resolve_deps(name, pkgs, **kwargs):
 
     ret = __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
             output_loglevel='debug')
-    
+
     if ret['retcode'] != 0:
         raise CommandExecutionError(
                 'Error: unable to resolve dependencies for: {0}'.format(name)
