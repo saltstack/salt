@@ -5,28 +5,13 @@ OS X
 Dependency Installation
 -----------------------
 
-ZeroMQ and swig need to be installed first.
-
-For installs using `python installed via homebrew`_, sudo should be unnecessary:
-
-.. _`python installed via homebrew`: https://github.com/mxcl/homebrew/wiki/Homebrew-and-Python
-
-Using homebrew with
-  `XCode Command Line Tool (XCode: Preferences: Downloads: Command Line Tools: Install)`_ pre-installed:
-
-.. _`XCode Command Line Tool (XCode: Preferences: Downloads: Command Line Tools: Install)`: https://developer.apple.com/xcode/
+When installing via Homebrew, dependency resolution is handled for you.
 
 .. code-block:: bash
 
-    brew install python
-    brew install swig
-    brew install zmq
-    pip install salt
+    brew install saltstack
 
-This should pip install salt and its dependencies, such as:
-  Jinja2 M2Crypto msgpack-python pycrypto PyYAML pyzmq markupsafe
-
-Whereas when using macports, zmq, swig, and pip may need to be installed this way:
+When using macports, zmq, swig, and pip may need to be installed this way:
 
 .. code-block:: bash
 
