@@ -7,6 +7,7 @@ on a single system to test scale capabilities
 '''
 
 # Import Python Libs
+from __future__ import print_function
 import os
 import pwd
 import time

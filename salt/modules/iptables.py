@@ -132,7 +132,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        rule += '-m {0} '.format(kwargs['match'])
+        kwargs['match'].replace(' ', '')
+        for match in kwargs['match'].split(','):
+            rule += '-m {0} '.format(match)
         del kwargs['match']
 
     if 'state' in kwargs:

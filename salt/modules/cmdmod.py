@@ -408,7 +408,10 @@ def _run(cmd,
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
     except (OSError, IOError) as exc:
-        raise CommandExecutionError('Unable to run command "{0}" with the context "{1}", reason: {2}'.format(cmd, kwargs, exc))
+        raise CommandExecutionError(
+            'Unable to run command {0!r} with the context {1!r}, reason: {2}'
+            .format(cmd, kwargs, exc)
+        )
 
     try:
         proc.wait(timeout)
@@ -579,10 +582,11 @@ def run(cmd,
             serial = salt.payload.Serial(__opts__)
             with salt.utils.fopen(jid_file) as fn_:
                 jid_dict = serial.load(fn_)
+
             if 'child_pids' in jid_dict:
                 jid_dict['child_pids'].append(ret['pid'])
             else:
-                jid_dict['child_pids'] = list(ret['pid'])
+                jid_dict['child_pids'] = [ret['pid']]
             # Rewrite file
             with salt.utils.fopen(jid_file, 'w+') as fn_:
                 fn_.write(serial.dumps(jid_dict))

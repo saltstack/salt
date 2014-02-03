@@ -42,7 +42,7 @@ else:
      STUB_DISK_USAGE,
      STUB_NETWORK_IO,
      STUB_DISK_IO,
-     STUB_USER) = [None for val in range(7)]
+     STUB_USER) = [None for val in range(9)]
 
 STUB_PID_LIST = [0, 1, 2, 3]
 MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
