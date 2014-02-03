@@ -1549,7 +1549,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     :depends:   - python-apt module
     '''
     missing_deps = []
-    for pkg_file in pkg_params:
+    for pkg_file in pkgs:
         deb = apt.debfile.DebPackage(filename=pkg_file)
         if deb.check():
             missing_deps.extend(deb.missing_deps)
