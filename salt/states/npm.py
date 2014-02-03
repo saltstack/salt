@@ -35,8 +35,7 @@ def installed(name,
               dir=None,
               runas=None,
               user=None,
-              force_reinstall=False,
-              **kwargs):
+              force_reinstall=False):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -145,8 +144,7 @@ def installed(name,
 def removed(name,
             dir=None,
             runas=None,
-            user=None,
-            **kwargs):
+            user=None):
     '''
     Verify that the given package is not installed.
 
