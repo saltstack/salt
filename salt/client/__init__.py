@@ -179,7 +179,7 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
+    def gather_job_info(self, jid, tgt, tgt_type, minions, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -189,6 +189,7 @@ class LocalClient(object):
                          [jid],
                          self.opts['gather_job_timeout'],
                          tgt_type,
+                         known_minions = minions,
                          **kwargs)
         return jinfo
 
@@ -394,6 +395,7 @@ class LocalClient(object):
             expr_form='glob',
             ret='',
             kwarg=None,
+            known_minions=None,
             **kwargs):
         '''
         Synchronously execute a command on targeted minions
@@ -506,6 +508,9 @@ class LocalClient(object):
 
         if not pub_data:
             return pub_data
+
+        if known_minions:
+            pub_data['minions'] += known_minions
 
         return self.get_returns(pub_data['jid'],
                                 pub_data['minions'],
@@ -789,7 +794,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -903,7 +908,7 @@ class LocalClient(object):
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 still_running = [id_ for id_, jdat in jinfo.iteritems()
                                  if jdat
                                  ]
@@ -1223,7 +1228,7 @@ class LocalClient(object):
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
