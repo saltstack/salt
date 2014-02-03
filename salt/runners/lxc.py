@@ -5,6 +5,9 @@ Control Linux Containers via Salt
 :depends: lxc execution module
 '''
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt libs
 import salt.client
 import salt.utils.virt
