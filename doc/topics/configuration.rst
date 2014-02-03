@@ -93,9 +93,19 @@ Running Salt
 
 .. admonition:: Run as an unprivileged (non-root) user
 
-    To run Salt as another user, specify ``--user`` in the command
-    line or assign ``user`` in the
-    :doc:`configuration file</ref/configuration/master>`.
+    To run Salt as another user, set the :conf_master:`user` parameter in the
+    master config file.
+
+    Additionally, ownership and permissions need to be set such that the
+    desired user can read from and write to the following directories (and
+    their subdirectories, where applicable):
+
+    * /etc/salt
+    * /var/cache/salt
+    * /var/log/salt
+
+    More information about running salt as a non-privileged user can be found
+    :doc:`here </topics/nonroot>`.
 
 
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
