@@ -108,6 +108,15 @@ DEFAULT_EC2_API_VERSION = '2013-10-01'
 if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
+EC2_RETRY_CODES = [
+    'RequestLimitExceeded',
+    'InsufficientInstanceCapacity',
+    'InternalError',
+    'Unavailable',
+    'InsufficientAddressCapacity',
+    'InsufficientReservedInstanceCapacity',
+]
+
 
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
@@ -208,55 +217,82 @@ def query(params=None, setname=None, requesturl=None, location=None,
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
-    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    attempts = 5
+    while attempts > 0:
+        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    if not location:
-        location = get_location()
+        if not location:
+            location = get_location()
 
-    if not requesturl:
-        method = 'GET'
+        if not requesturl:
+            method = 'GET'
 
-        endpoint = provider.get(
-            'endpoint',
-            'ec2.{0}.{1}'.format(location, service_url)
-        )
-
-        ec2_api_version = provider.get(
-            'ec2_api_version',
-            DEFAULT_EC2_API_VERSION
-        )
-
-        params['AWSAccessKeyId'] = provider['id']
-        params['SignatureVersion'] = '2'
-        params['SignatureMethod'] = 'HmacSHA256'
-        params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = ec2_api_version
-        keys = sorted(params.keys())
-        values = map(params.get, keys)
-        querystring = urllib.urlencode(list(zip(keys, values)))
-
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
-
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-        sig = binascii.b2a_base64(hashed.digest())
-        params['Signature'] = sig.strip()
-
-        querystring = urllib.urlencode(params)
-        requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
-
-    log.debug('EC2 Request: {0}'.format(requesturl))
-    try:
-        result = urllib2.urlopen(requesturl)
-        log.debug(
-            'EC2 Response Status Code: {0}'.format(
-                result.getcode()
+            endpoint = provider.get(
+                'endpoint',
+                'ec2.{0}.{1}'.format(location, service_url)
             )
-        )
-    except urllib2.URLError as exc:
-        root = ET.fromstring(exc.read())
-        data = _xml_to_dict(root)
+
+            ec2_api_version = provider.get(
+                'ec2_api_version',
+                DEFAULT_EC2_API_VERSION
+            )
+
+            params['AWSAccessKeyId'] = provider['id']
+            params['SignatureVersion'] = '2'
+            params['SignatureMethod'] = 'HmacSHA256'
+            params['Timestamp'] = '{0}'.format(timestamp)
+            params['Version'] = ec2_api_version
+            keys = sorted(params.keys())
+            values = map(params.get, keys)
+            querystring = urllib.urlencode(list(zip(keys, values)))
+
+            uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                            endpoint.encode('utf-8'),
+                                            querystring.encode('utf-8'))
+
+            hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+            sig = binascii.b2a_base64(hashed.digest())
+            params['Signature'] = sig.strip()
+
+            querystring = urllib.urlencode(params)
+            requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
+
+        log.debug('EC2 Request: {0}'.format(requesturl))
+        try:
+            result = urllib2.urlopen(requesturl)
+            log.debug(
+                'EC2 Response Status Code: {0}'.format(
+                    result.getcode()
+                )
+            )
+            break
+        except urllib2.URLError as exc:
+            root = ET.fromstring(exc.read())
+            data = _xml_to_dict(root)
+
+            # check to see if we should retry the query
+            err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
+            if attempts > 0 and err_code and err_code in EC2_RETRY_CODES:
+                attempts -= 1
+                log.error(
+                    'EC2 Response Status Code and Error: [{0} {1}] {2}; '
+                    'Attempts remaining: {3}'.format(
+                        exc.code, exc.msg, data, attempts
+                    )
+                )
+                # Wait a bit before continuing to prevent throttling
+                time.sleep(2)
+                continue
+
+            log.error(
+                'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                    exc.code, exc.msg, data
+                )
+            )
+            if return_url is True:
+                return {'error': data}, requesturl
+            return {'error': data}
+    else:
         log.error(
             'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
                 exc.code, exc.msg, data
