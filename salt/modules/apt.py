@@ -405,7 +405,7 @@ def install(name=None,
         if skip_verify:
             cmd.append('--force-bad-verify')
         if resolve_dep_support:
-            _resolve_deps(pkg_params)
+            _resolve_deps(name, pkg_params, **kwargs)
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -1539,9 +1539,10 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
     return ret
 
 
-def _resolve_deps(pkgs, **kwargs):
+def _resolve_deps(name, pkgs, **kwargs):
     '''
-    Installs missing dependencies
+    Installs missing dependencies and marks them as auto installed so they
+    are removed when no more manually installed packages depend on them.
 
     .. versionadded:: Helium
 
@@ -1558,10 +1559,19 @@ def _resolve_deps(pkgs, **kwargs):
     cmd.append('install')
     cmd.extend(missing_deps)
 
-    try:
-        __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                output_loglevel='debug')
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
+    ret = __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+            output_loglevel='debug')
+    
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+                'Error: unable to resolve dependencies for: {0}'.format(name)
+        )
+    else:
+        try:
+            cmd = ['apt-mark', 'auto'] + missing_deps
+            __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+                    output_loglevel='debug')
+        except MinionError as exc:
+            raise CommandExecutionError(exc)
 
     return
