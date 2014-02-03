@@ -37,6 +37,12 @@ try:
 except ImportError as e:
     ppa_format_support = False
 
+try:
+    from ... import apt
+    resolve_dep_support = True
+except ImportError as e:
+    resolve_dep_support = False
+
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
@@ -398,6 +404,8 @@ def install(name=None,
         cmd = ['dpkg', '-i', '--force-confold']
         if skip_verify:
             cmd.append('--force-bad-verify')
+        if resolve_dep_support:
+            _resolve_deps(name, pkg_params, **kwargs)
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -1529,3 +1537,41 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                         ret[_pkg] = {'old': sel_revmap.get(_pkg),
                                      'new': _state}
     return ret
+
+
+def _resolve_deps(name, pkgs, **kwargs):
+    '''
+    Installs missing dependencies and marks them as auto installed so they
+    are removed when no more manually installed packages depend on them.
+
+    .. versionadded:: Helium
+
+    :depends:   - python-apt module
+    '''
+    missing_deps = []
+    for pkg_file in pkgs:
+        deb = apt.debfile.DebPackage(filename=pkg_file)
+        if deb.check():
+            missing_deps.extend(deb.missing_deps)
+    cmd = ['apt-get', '-q', '-y']
+    cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
+    cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+    cmd.append('install')
+    cmd.extend(missing_deps)
+
+    ret = __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+            output_loglevel='debug')
+
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+                'Error: unable to resolve dependencies for: {0}'.format(name)
+        )
+    else:
+        try:
+            cmd = ['apt-mark', 'auto'] + missing_deps
+            __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+                    output_loglevel='debug')
+        except MinionError as exc:
+            raise CommandExecutionError(exc)
+
+    return
