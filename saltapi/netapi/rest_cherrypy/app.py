@@ -1220,8 +1220,12 @@ class Webhook(object):
     tag_base = ['salt', 'netapi', 'hook']
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
+        # No auth needed; we're just passing dictionaries
         'tools.salt_token.on': False,
         'tools.salt_auth.on': False,
+
+        # Don't do any lowdata processing on the POST data
+        'tools.hypermedia_in.on': False,
     })
 
     def __init__(self):
