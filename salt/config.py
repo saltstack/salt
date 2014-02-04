@@ -184,6 +184,8 @@ VALID_OPTS = {
     'salt_transport': str,
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
+    'syndic_event_forward_timeout': float,
+    'syndic_max_event_process_time': float,
 }
 
 # default configurations
@@ -391,6 +393,8 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
+    'syndic_event_forward_timeout': 0.5,
+    'syndic_max_event_process_time': 0.5,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
