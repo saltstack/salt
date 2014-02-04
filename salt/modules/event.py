@@ -12,6 +12,7 @@ import salt.transport
 
 __proxyenabled__ = ['*']
 
+
 def fire_master(data, tag, preload=None):
     '''
     Fire an event off up to the master server
