@@ -252,14 +252,15 @@ class SaltEvent(object):
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
-            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
+            # convert to milliseconds
+            socks = dict(self.poller.poll(wait * 1000))
             if socks.get(self.sub) != zmq.POLLIN:
                 continue
-            
+
             try:
                 ret = self.get_event_noblock()
-            except zmq.ZMQError as e:
-                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
+            except zmq.ZMQError as ex:
+                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
                 else:
                     raise
@@ -275,6 +276,8 @@ class SaltEvent(object):
         return None
 
     def get_event_noblock(self):
+        '''Get the raw event without blocking or any other niceties
+        '''
         raw = self.sub.recv(zmq.NOBLOCK)
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
