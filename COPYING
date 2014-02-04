@@ -4,7 +4,7 @@ Upstream-Contact: salt-users@googlegroups.com
 Source: https://github.com/saltstack/salt
 
 Files: *
-Copyright: 2013 SaltStack Team
+Copyright: 2014 SaltStack Team
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
