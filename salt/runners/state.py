@@ -3,6 +3,9 @@
 Execute overstate functions
 '''
 
+# Import pytohn libs
+from __future__ import print_function
+
 # Import salt libs
 import salt.overstate
 import salt.output

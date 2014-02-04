@@ -113,7 +113,7 @@ def _service_is_chkconfig(name):
     Return True if the service is managed by chkconfig.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
-    return (__salt__['cmd.retcode'](cmdline) == 0)
+    return __salt__['cmd.retcode'](cmdline) == 0
 
 
 def _sysv_is_enabled(name, runlevel=None):

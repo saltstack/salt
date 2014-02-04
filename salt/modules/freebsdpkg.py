@@ -89,7 +89,7 @@ def latest_version(*names, **kwargs):
             if _words[0] in ('Installing', 'Upgrading', 'Downgrading'):
                 pkg = _words[1].rstrip(':')
                 ver = _words[2] if _words[0] == 'Installing' else _words[4]
-            elif _words[0] in ('Reinstalling'):
+            elif _words[0] == 'Reinstalling':
                 # Because of packages like 'xen-tools-4.1.3_3', let's use regex
                 pkg, ver = PKG_NAME_VERSION_RE.match(_words[1]).groups()
             else:

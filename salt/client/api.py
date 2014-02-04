@@ -287,7 +287,7 @@ class APIClient(object):
 
         If wait is 0 then block forever or until next event becomes available.
         '''
-        return (self.event.get_event(wait=wait, tag=tag, full=full))
+        return self.event.get_event(wait=wait, tag=tag, full=full)
 
     def fire_event(self, data, tag):
         '''
@@ -296,4 +296,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return (self.event.fire_event(data, tagify(tag, 'wui')))
+        return self.event.fire_event(data, tagify(tag, 'wui'))

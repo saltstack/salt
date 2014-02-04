@@ -159,12 +159,12 @@ def _install(mpt):
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
-    return (not _chroot_exec(mpt, cmd))
+    return not _chroot_exec(mpt, cmd)
 
 
 def _check_install(root):
     cmd = 'if ! type salt-minion; then exit 1; fi'
-    return (not _chroot_exec(root, cmd))
+    return not _chroot_exec(root, cmd)
 
 
 def _chroot_exec(root, cmd):

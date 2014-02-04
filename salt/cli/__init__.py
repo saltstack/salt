@@ -4,6 +4,7 @@ The management of salt command line utilities are stored in here
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 

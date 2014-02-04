@@ -130,7 +130,7 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if ('Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1])):
+        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:

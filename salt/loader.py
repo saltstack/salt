@@ -56,12 +56,12 @@ def _create_loader(
     for _dir in opts.get('module_dirs', []):
         # Prepend to the list to match cli argument ordering
         maybe_dir = os.path.join(_dir, ext_type)
-        if (os.path.isdir(maybe_dir)):
+        if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
             continue
 
         maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
-        if (os.path.isdir(maybe_dir)):
+        if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
     if loaded_base_name is None:

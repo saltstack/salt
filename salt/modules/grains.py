@@ -4,6 +4,7 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
+from __future__ import print_function
 import math
 import os
 import yaml
@@ -169,7 +170,7 @@ def setval(key, val, destructive=False):
     if val is None and destructive is True:
         print('SETVAL DESTRUCTIVE ')
         if key in grains:
-            del(grains[key])
+            del grains[key]
     else:
         grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)

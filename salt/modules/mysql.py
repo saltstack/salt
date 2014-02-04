@@ -1397,7 +1397,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
@@ -1465,7 +1465,7 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))

@@ -4,6 +4,7 @@ Routines to set up a minion
 '''
 
 # Import python libs
+from __future__ import print_function
 import logging
 import getpass
 import multiprocessing
@@ -1595,7 +1596,7 @@ class Matcher(object):
         '''
         if tgt not in self.functions:
             return False
-        return(self.functions[tgt]())
+        return self.functions[tgt]()
 
     def pillar_match(self, tgt, delim=':'):
         '''

@@ -419,7 +419,7 @@ def absent(name, purge=False, force=False):
                 [g['name'] for g in __salt__['group.getent'](refresh=True)])
         if ret['result']:
             ret['changes'] = {}
-            for g in (beforegroups - aftergroups):
+            for g in beforegroups - aftergroups:
                 ret['changes']['{0} group'.format(g)] = 'removed'
             ret['changes'][name] = 'removed'
             ret['comment'] = 'Removed user {0}'.format(name)
