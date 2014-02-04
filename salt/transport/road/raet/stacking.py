@@ -1,11 +1,11 @@
-""" packeting.py raet protocol stacking behaviors
+'''
+packeting.py raet protocol stacking behaviors
+'''
 
-"""
-
-#print "module %s" % __name__
-
+# Import python libs
 from collections import deque
 
+# Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base.globaling import *
 
@@ -15,4 +15,3 @@ from ioflo.base import deeding
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
-

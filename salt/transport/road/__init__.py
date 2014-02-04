@@ -1,7 +1,8 @@
-""" shrub modules"""
-#print "\nPackage at%s" % __path__[0]
+'''
+The road package contains the raet backend libs
+'''
 
 __all__ = ['raet',] 
 
 for m in __all__:
-    exec "from . import %s" % m  #relative import
+    exec 'from . import {0}'.format(m)  #relative import
