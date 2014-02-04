@@ -1865,6 +1865,7 @@ def get_slave_status(**connection_args):
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]
 
+
 def showvariables(**connection_args):
     '''
     Retrieves the show variables from the minion.
@@ -1884,11 +1885,12 @@ def showvariables(**connection_args):
     conn = _connect(**connection_args)
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv
+
 
 def showglobal(**connection_args):
     '''
@@ -1909,7 +1911,7 @@ def showglobal(**connection_args):
     conn = _connect(**connection_args)
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
