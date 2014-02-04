@@ -20,7 +20,6 @@ def _bulk_state(saltfunc, lbn, workers, profile):
     '''
     Generic function for bulk worker operation
     '''
-
     ret = {'name': lbn,
            'result': True,
            'changes': {},
@@ -62,7 +61,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
     return ret
 
 
-def worker_stopped(name, workers=[], profile='default'):
+def worker_stopped(name, workers=None, profile='default'):
     '''
     Stop all the workers in the modjk load balancer
 
@@ -74,13 +73,14 @@ def worker_stopped(name, workers=[], profile='default'):
               - app1
               - app2
     '''
-
+    if workers is None:
+        workers = []
     return _bulk_state(
         'modjk.bulk_stop', name, workers, profile
     )
 
 
-def worker_activated(name, workers=[], profile='default'):
+def worker_activated(name, workers=None, profile='default'):
     '''
     Activate all the workers in the modjk load balancer
 
@@ -92,13 +92,14 @@ def worker_activated(name, workers=[], profile='default'):
               - app1
               - app2
     '''
-
+    if workers is None:
+        workers = []
     return _bulk_state(
         'modjk.bulk_activate', name, workers, profile
     )
 
 
-def worker_disabled(name, workers=[], profile='default'):
+def worker_disabled(name, workers=None, profile='default'):
     '''
     Disable all the workers in the modjk load balancer
 
@@ -110,13 +111,14 @@ def worker_disabled(name, workers=[], profile='default'):
               - app1
               - app2
     '''
-
+    if workers is None:
+        workers = []
     return _bulk_state(
         'modjk.bulk_disable', name, workers, profile
     )
 
 
-def worker_recover(name, workers=[], profile='default'):
+def worker_recover(name, workers=None, profile='default'):
     '''
     Recover all the workers in the modjk load balancer
 
@@ -128,7 +130,8 @@ def worker_recover(name, workers=[], profile='default'):
               - app1
               - app2
     '''
-
+    if workers is None:
+        workers = []
     return _bulk_state(
         'modjk.bulk_recover', name, workers, profile
     )
