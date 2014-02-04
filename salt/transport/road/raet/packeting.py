@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
 packeting.py raet packet behaviors
-    
+
 See raeting.py for data format and packet field details.
 
 Data format. The data from which a packet is created is a nested dict of dicts.
@@ -12,26 +13,26 @@ data =
 {
     meta: dict of meta data about packet
     {
-    
+
     }
     head: dict of header fields
     {
-        
-        
+
+
         pack: packed version of header
     }
     neck: dict of authentication fields
     {
-      
+
         pack: packed version of neck
     }
     body: dict of body fields
     {
-        
+
         pack: packed version of body
     }
     pack: packed version of whole packet on tx and raw packet on rx
-   
+
 }
 '''
 
@@ -44,7 +45,7 @@ from ioflo.base.odicting import odict
 from ioflo.base.globaling import *
 
 from ioflo.base import aiding
-from ioflo.base import storing 
+from ioflo.base import storing
 from ioflo.base import deeding
 
 from ioflo.base.consoling import getConsole
@@ -59,28 +60,28 @@ def CreateInstances(store):
     '''
     ComposerRaet(name='raetComposer', store=store).ioinits.update(
         data=odict(ipath='data', ival=odict(), iown='True'),
-        meta='meta', 
+        meta='meta',
         head='head',
         neck='neck',
         body='body',
         tail='tail')
-    
+
     PackerRaet(name='raetPacker', store=store).ioinits.update(
         data=odict(ipath='data', ival=odict(), iown=True),
         outlog=odict(ipath='outlog', ival=odict(), iown=True),)
-    
+
     ParserRaet(name='raetParser', store=store).ioinits.update(
         data=odict(ipath='data', ival=odict(), iown=True),
         inlog=odict(ipath='inlog', ival=odict(), iown=True),)
-    
+
     TransmitterRaet(name='raetTransmitter', store=store).ioinits.update(
         data='data',
         txes=odict(ipath='.raet.media.txes', ival=deque()),)
-    
+
     ReceiverRaet(name='raetReceiver', store=store).ioinits.update(
         data='data',
-        rxes=odict(ipath='.raet.media.rxes', ival=deque()), )     
-    
+        rxes=odict(ipath='.raet.media.rxes', ival=deque()), )
+
     ServerRaet(name='raetServer', store=store).ioinits.update(
         txes=odict(ipath='txes', ival=deque(), iown=True),
         rxes=odict(ipath='rxes', ival=deque(), iown=True),
@@ -88,16 +89,16 @@ def CreateInstances(store):
         address=odict(ipath='address', ival=odict(host='', port=7530, ha=None)),
         txlog=odict(ipath='txlog', ival=odict(), iown=True),
         rxlog=odict(ipath='rxlog', ival=odict(), iown=True), )
-    
+
     CloserServerRaet(name='raetServerCloser', store=store).ioinits.update(
-        connection=odict(ipath='connection', ival=None))     
-    
-    
+        connection=odict(ipath='connection', ival=None))
+
+
 class ComposerRaet(deeding.ParamDeed):
     '''
     ComposerRaet creates packet data as nested dicts from fields in
     share parms meta, head, neck, body, tail
-        
+
     inherited attributes
         .name is actor name string
         .store is data store ref
@@ -106,15 +107,15 @@ class ComposerRaet(deeding.ParamDeed):
     '''
     Ioinits = odict(
         data=odict(ipath='data', ival=odict(), iown='True'),
-        meta='meta', 
+        meta='meta',
         head='head',
         neck='neck',
         body='body',
         tail='tail')
-    
+
     def action(self, data, meta, head, neck, body, tail, **kwa):
         '''
-        Build packet data from data section shares 
+        Build packet data from data section shares
         '''
         dat = raeting.defaultData()
         dat['meta'].update(raeting.META_DEFAULTS)
@@ -179,7 +180,7 @@ class TransmitterRaet(deeding.ParamDeed):
     '''
     TransmitterRaet pushes packed packet in onto txes transmit deque and assigns
     destination ha from meta data
-    
+
     inherited attributes
         .name is actor name string
         .store is data store ref
@@ -202,7 +203,7 @@ class ReceiverRaet(deeding.ParamDeed):
     '''
     ReceiverRaet pulls packet from rxes deque and puts into new data
     and assigns meta data source ha using recieved ha
-        
+
     inherited attributes
         .name is actor name string
         .store is data store ref
@@ -211,8 +212,8 @@ class ReceiverRaet(deeding.ParamDeed):
     '''
     Ioinits = odict(
             data='data',
-            rxes=odict(ipath='.raet.media.rxes', ival=deque()), ) 
-    
+            rxes=odict(ipath='.raet.media.rxes', ival=deque()), )
+
     def action(self, data, rxes, **kwa):
         '''
         Handle recived packet
@@ -222,7 +223,7 @@ class ReceiverRaet(deeding.ParamDeed):
             data.value = raeting.defaultData()
             data.value['pack'] = rx
             data.value['meta']['sh'], data.value['meta']['sp'] = sa
-            data.value['meta']['dh'], data.value['meta']['dp'] = da         
+            data.value['meta']['dh'], data.value['meta']['dp'] = da
         return None
 
 
@@ -231,7 +232,7 @@ class ServerRaet(deeding.ParamDeed):
     ServerRaet transmits and recieves udp packets from txes and rxes deques
     using sh, sp fields in sa server address (server host, server port) to receive on.
     Server is nonblocking socket connection
-    
+
     inherited attributes
         .name is actor name string
         .store is data store ref
@@ -254,7 +255,7 @@ class ServerRaet(deeding.ParamDeed):
         connection.value.reopen() # create socket connection
         host, port = connection.value.ha
         address.update(host=host, port=port, ha=(host, port))
-        return None      
+        return None
 
     def action(self, txes, rxes, connection, address, txlog, rxlog, **kwa):
         '''
@@ -273,7 +274,7 @@ class ServerRaet(deeding.ParamDeed):
                     break
                 rxds.append((rx, ra, address.data.ha))
                 rxl[ra] = rx
-            
+
             txds = txes.value
             while txds:
                 tx, ta = txds.popleft()
@@ -285,7 +286,7 @@ class ServerRaet(deeding.ParamDeed):
 class CloserServerRaet(deeding.ParamDeed):
     '''
     CloserServerRaet closes server socket connection
-        
+
     inherited attributes
         .name is actor name string
         .store is data store ref
@@ -302,4 +303,4 @@ class CloserServerRaet(deeding.ParamDeed):
         '''
         if connection.value:
             connection.value.close()
-        return None       
+        return None
