@@ -7,6 +7,11 @@ Add the following configuration to your minion configuration files::
     carbon.host: <server ip address>
     carbon.port: 2003
 
+If you wish to ignore errors when trying to convert data to numbers, you may
+optionally specify in your minion configuration or the pillar::
+
+    carbon.skip_on_error: True
+
 '''
 
 # Import python libs
@@ -27,14 +32,12 @@ def __virtual__():
     return __virtualname__
 
 
-def _formatHostname(hostname, separator='_'):
-    ''' carbon uses . as separator, so replace this in the hostname '''
-    return hostname.replace('.', separator)
-
-
 def _send_picklemetrics(metrics, carbon_sock):
     ''' Uses pickle protocol to send data '''
-    metrics = [(metric_name, (timestamp, value)) for (metric_name, timestamp, value) in metrics]
+
+    metrics = [(metric_name, (timestamp, value))
+               for (metric_name, timestamp, value) in metrics]
+
     data = pickle.dumps(metrics, protocol=-1)
     struct_format = '!I'
     data = struct.pack(struct_format, len(data)) + data
@@ -48,28 +51,57 @@ def _send_picklemetrics(metrics, carbon_sock):
         logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
 
 
-def _walk(path, value, metrics, timestamp):
+def _walk(path, value, metrics, timestamp, skip):
+    """
+    Recursively include metrics from *value*.
+
+    *path*
+        The dot-separated path of the metric.
+    *value*
+        A dictionary or value from a dictionary. If a dictionary, ``_walk``
+        will be called again with the each key/value pair as a new set of
+        metrics.
+    *metrics*
+        The list of metrics that will be sent to carbon, formatted as::
+
+            (path, value, timestamp)
+    *skip*
+        Whether or not to skip metrics when there's an error casting the value
+        to a float. Defaults to `False`.
+
+    """
+
     if isinstance(value, collections.Mapping):
         for key, val in value.items():
-            _walk('{0}.{1}'.format(path, key), val, metrics, timestamp)
+            _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
             val = float(value)
             metrics.append((path, val, timestamp))
-        except TypeError:
-            log.info('Error in carbon returner, when trying to'
-                     'convert metric:{0}, with val:{1}'.format(path, val))
-            raise
+        except (TypeError, ValueError):
+            log.error('Error in carbon returner, when trying to'
+                      'convert metric:{0}, with val:{1}'.format(path, value))
+
+            if not skip:
+                raise
 
 
 def returner(ret):
     '''
     Return data to a remote carbon server using the text metric protocol
+
+    Each metric will look like::
+
+        [module].[function].[minion_id].[metric path [...]].[metric name]
+
     '''
+
     host = __salt__['config.option']('carbon.host')
     port = __salt__['config.option']('carbon.port')
+    skip = __salt__['config.option']('carbon.skip_on_error', False)
+
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
-    if not host or not port:
+    if not (host and port):
         log.error('Host or port not defined')
         return
 
@@ -87,14 +119,15 @@ def returner(ret):
 
     saltdata = ret['return']
     metric_base = ret['fun']
+
     # Strip the hostname from the carbon base if we are returning from virt
     # module since then we will get stable metric bases even if the VM is
     # migrate from host to host
     if not metric_base.startswith('virt.'):
-        metric_base += '.' + _formatHostname(ret['id'])
+        metric_base += '.' + ret['id'].replace('.', '_')
     metrics = []
 
-    _walk(metric_base, saltdata, metrics, timestamp)
+    _walk(metric_base, saltdata, metrics, timestamp, skip)
 
     def _send_textmetrics(metrics):
         ''' Use text protorocol to send metric over socket '''
