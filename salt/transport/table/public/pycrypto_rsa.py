@@ -13,7 +13,7 @@ SEC_BACKEND = 'pycrypto_aes'
 # Import pycrypto libs
 import Crypto.Cipher
 import Crypto.PublicKey
-import Crypto.Signature
+import Crypto.Signature  # pylint: disable=E0611
 import Crypto.Hash
 import Crypto.Util.number
 
