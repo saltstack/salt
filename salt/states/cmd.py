@@ -141,7 +141,7 @@ one must convert it to a list. Example:
 .. code-block:: yaml
 
     printenv:
-    cmd.run:
+      cmd.run:
         - env:
             {% for key, value in pillar['keys'].iteritems() %}
              - '{{ key }}': '{{ value }}'
@@ -499,13 +499,14 @@ def run(name,
 
         .. code-block:: yaml
 
-            cmd.run:
-              - name: /usr/bin/python /usr/local/sbin/get-pip.py
-              - unless: which pip
-              - require:
-                - pkg: python
-                - file: /usr/local/sbin/get-pip.py
-              - reload_modules: True
+            getpip:
+              cmd.run:
+                - name: /usr/bin/python /usr/local/sbin/get-pip.py
+                - unless: which pip
+                - require:
+                  - pkg: python
+                  - file: /usr/local/sbin/get-pip.py
+                - reload_modules: True
 
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but

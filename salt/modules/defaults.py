@@ -92,7 +92,8 @@ def get(key, default=''):
         frame_args = inspect.getargvalues(frame[0]).locals
 
         for _sls in (
-            frame_args.get('context', {}).get('__sls__'),
+            None if not type(frame_args.get('context')) is dict else frame_args.get('context').get('__sls__'),
+            frame_args.get('mods', [None])[0],
             frame_args.get('sls')
         ):
             if sls is not None:

@@ -11,7 +11,7 @@ Interaction with the Supervisor daemon
         - require:
           - pkg: supervisor
         - watch:
-          - file.managed: /etc/nginx/sites-enabled/wsgi_server.conf
+          - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
 
 # Import python libs

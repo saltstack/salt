@@ -4,7 +4,6 @@ Windows Service module.
 '''
 
 # Import python libs
-import time
 import salt.utils
 
 # Define the module's virtual name

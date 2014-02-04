@@ -181,6 +181,7 @@ VALID_OPTS = {
     'sign_pub_messages': bool,
     'keysize': int,
     'salt_transport': str,
+    'gather_job_timeout': int,
 }
 
 # default configurations
@@ -385,6 +386,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
+    'gather_job_timeout': 2,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1639,7 +1641,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
-                            config_dir.lstrip('\\'),
+                            config_dir.lstrip(os.path.sep),
                             'minion_id')
 
     if cache:

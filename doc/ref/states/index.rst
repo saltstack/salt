@@ -33,7 +33,10 @@ The Salt state system is comprised of a number of components. As a user, an
 understanding of the SLS and renderer systems are needed. But as a developer,
 an understanding of Salt states and how to write the states is needed as well.
 
+.. note::
 
+    States are compiled and executed only on minions that have been targeted.
+    To execute things on masters, see `runners`_.
 
 Salt SLS System
 ---------------
@@ -320,3 +323,4 @@ And it's output now is:
 .. _`pip`: http://pypi.python.org/pypi/pip
 .. _`pep8`: https://pypi.python.org/pypi/pep8
 .. _`setuptools`: https://pypi.python.org/pypi/setuptools
+.. _`runners`: /ref/runners

@@ -249,8 +249,8 @@ class SaltEvent(object):
             else:
                 return evt['data']
 
-        start = int(time.time())
-        while not wait or int(time.time()) <= start + wait:
+        start = time.time()
+        while not wait or time.time() <= start + wait:
             socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()

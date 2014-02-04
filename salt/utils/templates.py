@@ -278,13 +278,17 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             line,
             tmplstr)
     except Exception, exc:
+        tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=unicode_context)
         if not line:
             tmplstr = ''
+        else:
+            tmplstr += '\n{0}'.format(tracestr)
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
-                              tmplstr)
+                              tmplstr,
+                              trace=tracestr)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)

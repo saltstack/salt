@@ -195,12 +195,11 @@ class Master(SMaster):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
-        pillargitfs = None
+        pillargitfs = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
                 br, loc = opts_dict['git'].strip().split()
-                pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
-                break
+                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
 
         old_present = set()
         while True:
@@ -248,8 +247,8 @@ class Master(SMaster):
             salt.utils.verify.check_max_open_files(self.opts)
 
             try:
-                if pillargitfs is not None:
-                    pillargitfs.update()
+                for pillargit in pillargitfs:
+                    pillargit.update()
             except Exception as exc:
                 log.error('Exception {0} occurred in file server update '
                           'for git_pillar module.'.format(exc))

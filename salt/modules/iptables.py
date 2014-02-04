@@ -132,7 +132,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        rule += '-m {0} '.format(kwargs['match'])
+        kwargs['match'].replace(' ', '')
+        for match in kwargs['match'].split(','):
+            rule += '-m {0} '.format(match)
         del kwargs['match']
 
     if 'state' in kwargs:
@@ -154,6 +156,18 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
+    if 'dports' in kwargs:
+        if not '-m multiport' in rule:
+            rule += '-m multiport '
+        rule += '--dports {0} '.format(kwargs['dports'])
+        del kwargs['dports']
+
+    if 'sports' in kwargs:
+        if not '-m multiport' in rule:
+            rule += '-m multiport '
+        rule += '--sports {0} '.format(kwargs['sports'])
+        del kwargs['sports']
+
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
@@ -173,6 +187,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'to-ports' in kwargs:
         after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
         del kwargs['to-ports']
+
+    if 'to-destination' in kwargs:
+        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
+        del kwargs['to-destination']
 
     for item in kwargs:
         if len(item) == 1:

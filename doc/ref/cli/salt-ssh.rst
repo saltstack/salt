@@ -41,7 +41,7 @@ Options
 
 .. option:: --passwd
 
-    Set te default password to attempt to use when authenticating.
+    Set the default password to attempt to use when authenticating.
 
 .. option:: --key-deploy
 

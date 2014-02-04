@@ -76,7 +76,11 @@ class Caller(object):
                 # Don't require msgpack with local
                 pass
             func = self.minion.functions[fun]
-            ret['return'] = func(*args, **kwargs)
+            try:
+                ret['return'] = func(*args, **kwargs)
+            except TypeError as exc:
+                sys.stderr.write(('Passed invalid arguments: {0}\n').format(exc))
+                sys.exit(1)
             ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode', 0)
         except (CommandExecutionError) as exc:

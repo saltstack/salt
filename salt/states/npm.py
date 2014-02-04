@@ -118,7 +118,7 @@ def installed(name,
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if call or isinstance(call, list) or isinstance(call, dict):
+    if call and (isinstance(call, list) or isinstance(call, dict)):
         ret['result'] = True
         version = call[0]['version']
         pkg_name = call[0]['name']

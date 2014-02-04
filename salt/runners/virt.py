@@ -10,6 +10,7 @@ from __future__ import print_function
 import salt.client
 import salt.output
 import salt.utils.virt
+import salt.key
 
 
 def _determine_hyper(data, omit=''):
@@ -280,7 +281,7 @@ def force_off(name):
     return 'good'
 
 
-def purge(name):
+def purge(name, delete_key=True):
     '''
     Destroy the named vm
     '''
@@ -298,6 +299,10 @@ def purge(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
+
+    if delete_key:
+        skey = salt.key.Key(__opts__)
+        skey.delete_key(name)
     print('Purged VM {0}'.format(name))
     return 'good'
 

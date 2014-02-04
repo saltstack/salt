@@ -192,10 +192,20 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
-        ret = super(Runner, self).get_docs()
+        fun = None
+        run = None
+        arg = self.opts.get('fun', None)
 
-        for fun in sorted(ret):
-            print('{0}:\n{1}\n'.format(fun, ret[fun]))
+        if arg:
+            if '.' in arg:
+                fun = arg
+            else:
+                run = arg
+
+        ret = super(Runner, self).get_docs()
+        for f in sorted(ret):
+            if not arg or f == fun or f.split('.')[0] == run:
+                print('{0}:\n{1}\n'.format(f, ret[f]))
 
     def run(self):
         '''

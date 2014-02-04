@@ -286,6 +286,35 @@ result to a variable that can be used throughout the formula.
     {% set mysql = salt['grains.filter_by'](mysql_lookup_table,
         merge=salt['pillar.get']('mysql:lookup')) 
 
+The above example is used to help explain how the mapping works. In most
+map files you will see the following structure: 
+
+.. code-block:: jinja
+
+    {% set mysql = salt['grains.filter_by']({
+        'Debian': {
+            'server': 'mysql-server',
+            'client': 'mysql-client',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+            'python': 'python-mysqldb',
+        },
+        'RedHat': {
+            'server': 'mysql-server',
+            'client': 'mysql',
+            'service': 'mysqld',
+            'config': '/etc/my.cnf',
+            'python': 'MySQL-python',
+        },
+        'Gentoo': {
+            'server': 'dev-db/mysql',
+            'mysql-client': 'dev-db/mysql',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+            'python': 'dev-python/mysql-python',
+        },
+    }, merge=salt['pillar.get']('mysql:lookup')) %}
+
 The ``merge`` keyword specifies the location of a dictionary in Pillar that can
 be used to override values returned from the lookup table. If the value exists
 in Pillar it will take precedence, otherwise ``merge`` will be ignored. This is
