@@ -392,13 +392,15 @@ def check_db(*names, **kwargs):
         avail = __context__['avail']
     else:
         # get list of available packages
-        pkg_data = (
-            x.split('_|-') for x in _repoquery(
-                '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
-            )
-        )
         avail = []
-        for name, arch in pkg_data:
+        lines = _repoquery(
+            '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
+        )
+        for line in lines:
+            try:
+                name, arch = line.split('_|-')
+            except ValueError:
+                continue
             if arch in __ARCHES and arch != __grains__['osarch']:
                 avail.append('.'.join((name, arch)))
             else:
