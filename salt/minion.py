@@ -260,7 +260,6 @@ class SMinion(object):
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
-                self.opts['_auth_timeout'] = 3
                 self.opts['_safe_auth'] = False
                 for master in masters:
                     self.opts['master'] = master

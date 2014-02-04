@@ -184,6 +184,7 @@ VALID_OPTS = {
     'salt_transport': str,
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
+    'auth_timeout': int,
 }
 
 # default configurations
@@ -280,6 +281,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'salt_transport': 'zeromq',
+    'auth_timeout': 3,
 }
 
 DEFAULT_MASTER_OPTS = {
