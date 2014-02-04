@@ -31,15 +31,19 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 def list_pkgs(versions_as_list=False, **kwargs):
     return __opts__['proxyobject'].package_list()
+
 
 def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
     return __opts__['proxyobject'].package_install(name, **kwargs)
 
+
 def remove(name=None, pkgs=None, **kwargs):
     return __opts__['proxyobject'].package_remove(name)
+
 
 def version(*names, **kwargs):
     '''
