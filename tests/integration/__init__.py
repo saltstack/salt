@@ -772,10 +772,11 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                     function, minion_tgt, orig
                 )
             )
-        elif 'state.' in function:
-            orig[minion_tgt] = self._check_state_return(
-                orig[minion_tgt], func=function
-            )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(
+            orig[minion_tgt], func=function
+        )
 
         return orig[minion_tgt]
 
