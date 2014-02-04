@@ -960,6 +960,10 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 'event',
                 '{0} has been deployed at {1}'.format(name, host),
                 'salt/cloud/{0}/deploy_script'.format(name),
+                {
+                    'name': name,
+                    'host': host
+                }
             )
             return True
     return False

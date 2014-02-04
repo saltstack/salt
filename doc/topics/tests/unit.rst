@@ -5,8 +5,9 @@ Writing Unit Tests
 Introduction
 ============
 
-Like many software projects, Salt has two broad-based testing approaches -- integration testing and unit testing.
-While integration testing focuses on the interaction between components in a sandboxed environment, unit testing focuses
+Like many software projects, Salt has two broad-based testing approaches --
+integration testing and unit testing. While integration testing focuses on the
+interaction between components in a sandboxed environment, unit testing focuses
 on the singular implementation of individual functions.
 
 Preparing to Write a Unit Test
@@ -35,17 +36,20 @@ If you need mock support to your tests, please also import:
 A Simple Example
 ================
 
-Let's assume that we're testing a very basic function in an imaginary Salt execution module. Given a module called
-``fib.py`` that has a function called 'calculate(num_of_results)', which given a 'num_of_results', produces a list of 
+Let's assume that we're testing a very basic function in an imaginary Salt
+execution module. Given a module called ``fib.py`` that has a function called
+'calculate(num_of_results)', which given a 'num_of_results', produces a list of
 sequential Fibonacci numbers of that length.
 
-A unit test to test this function might be commonly placed in a file called ``tests/unit/modules/fib_test.py``. The 
-convention is to place unit tests for Salt execution modules in ``test/unit/modules/`` and to name the tests module 
+A unit test to test this function might be commonly placed in a file called
+``tests/unit/modules/fib_test.py``. The convention is to place unit tests for
+Salt execution modules in ``test/unit/modules/`` and to name the tests module
 suffixed with ``_test.py``.
 
-Tests are grouped around test cases, which are logically grouped sets of tests against a piece of functionality in the 
-tested software. Test cases are created as Python classes in the unit test module. To return to our example, here's
-how we might write the skeleton for testing ``fib.py``:
+Tests are grouped around test cases, which are logically grouped sets of tests
+against a piece of functionality in the tested software. Test cases are created
+as Python classes in the unit test module. To return to our example, here's how
+we might write the skeleton for testing ``fib.py``:
 
 .. code-block:: python
 
@@ -74,46 +78,54 @@ how we might write the skeleton for testing ``fib.py``:
             self.assertEqual(fib.calculate(5), self.fib_five)
 
 
-At this point, the test can now be run, either individually or as a part of a full run of the test runner. To ease 
-development, a single test can be executed:
+At this point, the test can now be run, either individually or as a part of a
+full run of the test runner. To ease development, a single test can be
+executed:
 
 .. code-block:: bash
 
     tests/runtests.py -n unit.modules.fib_test
 
-This will produce output indicating the success or failure of the tests in given test case. For more detailed results,
-one can also include a flag to increase verbosity:
+This will produce output indicating the success or failure of the tests in
+given test case. For more detailed results, one can also include a flag to
+increase verbosity:
 
 .. code-block:: bash
 
     tests/runtests.py -n unit.modules.fib_test -v
 
-To review the results of a particular run, take a note of the log location given in the output for each test:
+To review the results of a particular run, take a note of the log location
+given in the output for each test:
 
     **Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log**
 
 Evaluating Truth
 ================
 
-A longer discussion on the types of assertions one can make can be found by reading `Python's documentation on unit
-testing`__.
+A longer discussion on the types of assertions one can make can be found by
+reading `Python's documentation on unit testing`__.
 
 .. __: http://docs.python.org/2/library/unittest.html#unittest.TestCase
 
 Tests Using Mock Objects
 ========================
 
-In many cases, the very purpose of a Salt module is to interact with some external system, whether it be to control a
-database, manipulate files on a filesystem or many other examples. In these varied cases, it's necessary to design a
-unit test which can test the function whilst replacing functions which might actually call out to external systems. One
-might think of this as "blocking the exits" for code under tests and redirecting the calls to external systems with our
-own code which produces known results during the duration of the test.
+In many cases, the very purpose of a Salt module is to interact with some
+external system, whether it be to control a database, manipulate files on a
+filesystem or many other examples. In these varied cases, it's necessary to
+design a unit test which can test the function whilst replacing functions which
+might actually call out to external systems. One might think of this as
+"blocking the exits" for code under tests and redirecting the calls to external
+systems with our own code which produces known results during the duration of
+the test.
 
 To achieve this behavior, Salt makes heavy use of the `MagicMock package`__.
 
-To understand how one might integrate Mock into writing a unit test for Salt, let's imagine a scenario in which we're
-testing an execution module that's designed to operate on a database. Furthermore, let's imagine two separate methods,
-here presented in pseduo-code in an imaginary execution module called 'db.py.
+To understand how one might integrate Mock into writing a unit test for Salt,
+let's imagine a scenario in which we're testing an execution module that's
+designed to operate on a database. Furthermore, let's imagine two separate
+methods, here presented in pseduo-code in an imaginary execution module called
+'db.py.
 
 .. code-block:: python
 
@@ -124,13 +136,16 @@ here presented in pseduo-code in an imaginary execution module called 'db.py.
     def execute_query(qry):
         # Connect to a database and actually do the query...
 
-Here, let's imagine that we want to create a unit test for the `create_user` function. In doing so, we want to avoid any
-calls out to an external system and so while we are running our unit tests, we want to replace the actual interaction
-with a database with a function that can capture the parameters sent to it and return pre-defined values. Therefore, our
-task is clear -- to write a unit test which tests the functionality of `create_user` while also replacing
-'execute_query' with a mocked function.
+Here, let's imagine that we want to create a unit test for the `create_user`
+function. In doing so, we want to avoid any calls out to an external system and
+so while we are running our unit tests, we want to replace the actual
+interaction with a database with a function that can capture the parameters
+sent to it and return pre-defined values. Therefore, our task is clear -- to
+write a unit test which tests the functionality of `create_user` while also
+replacing 'execute_query' with a mocked function.
 
-To begin, we set up the skeleton of our class much like we did before, but with additional imports for MagicMock:
+To begin, we set up the skeleton of our class much like we did before, but with
+additional imports for MagicMock:
 
 .. code-block:: python
 
@@ -183,11 +198,12 @@ To begin, we set up the skeleton of our class much like we did before, but with 
 Modifying ``__salt__`` In Place
 ===============================
 
-At times, it becomes necessary to make modifications to a module's view of functions in its own ``__salt__`` dictionary.
-Luckily, this process is quite easy.
+At times, it becomes necessary to make modifications to a module's view of
+functions in its own ``__salt__`` dictionary.  Luckily, this process is quite
+easy.
 
-Below is an example that uses MagicMock's ``patch`` functionality to insert a function into ``__salt__`` that's actually 
-a MagicMock instance.
+Below is an example that uses MagicMock's ``patch`` functionality to insert a
+function into ``__salt__`` that's actually a MagicMock instance.
 
 .. code-block:: python
 

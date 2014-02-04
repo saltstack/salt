@@ -316,7 +316,7 @@ def grains(opts):
     else:
         opts['grains'] = {}
 
-    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
+    load = _create_loader(opts, 'grains', 'grain')
     grains_info = load.gen_grains()
     grains_info.update(opts['grains'])
     return grains_info

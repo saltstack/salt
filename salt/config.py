@@ -1645,7 +1645,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
-                            config_dir.lstrip('\\'),
+                            config_dir.lstrip(os.path.sep),
                             'minion_id')
 
     if cache:

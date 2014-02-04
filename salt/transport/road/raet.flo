@@ -1,0 +1,137 @@
+# Shrub dev FloScript
+
+house shrub
+
+init .raet.media.address to host "" port 7532
+
+init raet.packet.tx.meta to hk 0 hl 0 nk 0 nl 0 bk 1 bl 0 tk 0 tl 0 \
+   dh "127.0.0.1" dp 7533
+
+init raet.packet.tx.head to hk 0 hl 0 vn 0 \
+   sd 10 dd 20 cf 0 mf 0 si 1 ti 1 \
+   sk 0 pk 0 bf 0 oi 0 dt 0 sn 0 sc 1 pf 0 af 0 \
+   nk 0 nl 0 bk 0 bl 0 tk 0 tl 0 
+
+init raet.packet.tx.neck to pack ""
+init raet.packet.tx.body to mid "shrubbery" fun "dumb" foo "bar"
+init raet.packet.tx.tail to pack ""
+init raet.packet.tx.pack to value ""
+init raet.packet.rx.pack to value ""
+
+framer raeter be active first start
+   frame start
+      do raet server per inode ".raet.media."
+      exit
+         do raet server closer per inode ".raet.media."
+   
+framer shrubber be active first start
+   frame start
+      go next 
+   
+   frame compose
+      enter
+         do raet composer per inode ".raet.packet.tx."
+      go next
+   
+   frame pack
+      enter
+         do raet packer per inode ".raet.packet.tx."
+      go next
+   
+   frame transmit
+      #copy .raet.packet.tx.pack into .raet.packet.rx.pack
+      enter
+         do raet transmitter per inode ".raet.packet.tx."
+      go next
+      
+   frame receive
+      do raet receiver per inode ".raet.packet.rx."
+      go next if update .raet.packet.rx.data
+   
+   frame parse
+      enter
+         do raet parser per inode ".raet.packet.rx"
+      go next
+
+   frame abort
+      bid stop all
+
+logger logger to log/ flush 1   
+   log outbody to outbody on fifo
+      loggee outlog .raet.packet.tx.outlog
+   log txraw to txraw on fifo
+      loggee txlog .raet.media.txlog
+   log rxraw to rxraw on fifo
+      loggee rxlog .raet.media.rxlog
+   log inbody to inbody on fifo
+      loggee inlog .raet.packet.rx.inlog
+
+
+house bush
+
+init .raet.media.address to host "" port 7533
+
+init raet.packet.tx.meta to hk 0 hl 0 nk 0 nl 0 bk 1 bl 0 tk 0 tl 0 \
+   dh "127.0.0.1" dp 7532
+
+init raet.packet.tx.head to hk 0 hl 0 vn 0 \
+   sd 10 dd 20 cf 0 mf 0 si 1 ti 1 \
+   sk 0 pk 0 bf 0 oi 0 dt 0 sn 0 sc 1 pf 0 af 0 \
+   nk 0 nl 0 bk 0 bl 0 tk 0 tl 0 
+
+init raet.packet.tx.neck to pack ""
+init raet.packet.tx.body to mid "bushery" fun "doh" foo "baz"
+init raet.packet.tx.tail to pack ""
+init raet.packet.tx.pack to value ""
+init raet.packet.rx.pack to value ""
+
+   
+framer ratter be active first start
+   frame start
+      do raet server per inode ".raet.media."
+      exit
+         do raet server closer per inode ".raet.media."
+   
+framer busher be active first start
+   frame start
+      go next 
+   
+   frame compose
+      enter
+         do raet composer per inode ".raet.packet.tx."
+      go next
+   
+   frame pack
+      enter
+         do raet packer per inode ".raet.packet.tx."
+      go next
+   
+   frame transmit
+      #copy .raet.packet.tx.pack into .raet.packet.rx.pack
+      enter
+         do raet transmitter per inode ".raet.packet.tx."
+      go next
+      
+   frame receive
+      do raet receiver per inode ".raet.packet.rx."
+      go next if update .raet.packet.rx.data
+   
+   frame parse
+      enter
+         do raet parser per inode ".raet.packet.rx"
+      go next
+
+   frame abort
+      bid stop all
+
+logger logger to log/ flush 1   
+   log outbody to outbody on fifo
+      loggee outlog .raet.packet.tx.outlog
+   log txraw to txraw on fifo
+      loggee txlog .raet.media.txlog
+   log rxraw to rxraw on fifo
+      loggee rxlog .raet.media.rxlog
+   log inbody to inbody on fifo
+      loggee inlog .raet.packet.rx.inlog
+
+      
