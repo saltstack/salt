@@ -1165,7 +1165,7 @@ class LocalClient(object):
         last_time = False
         while True:
             # Process events until timeout is reached or all minions have returned
-            time_left = timeout_at - time.time()  # Splay of up to 1s
+            time_left = timeout_at - time.time()
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
