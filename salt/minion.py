@@ -1571,7 +1571,7 @@ class Syndic(Minion):
         self._reset_event_aggregation()
         while True:
             try:
-                # Do all the maths in seconds 
+                # Do all the maths in seconds
                 timeout = loop_interval
                 if self.event_forward_timeout is not None:
                     timeout = min(timeout,
@@ -1588,7 +1588,7 @@ class Syndic(Minion):
                     self._process_cmd_socket()
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
-                if (self.event_forward_timeout is not None and 
+                if (self.event_forward_timeout is not None and
                     self.event_forward_timeout < time.time()):
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
@@ -1607,7 +1607,7 @@ class Syndic(Minion):
             payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
         except zmq.ZMQError as e:
             # Swallow errors for bad wakeups or signals needing processing
-            if (e.errno != errno.EAGAIN and e.errno != errno.EINTR):
+            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
                 raise
         log.trace('Handling payload')
         self._handle_payload(payload)
@@ -1624,7 +1624,7 @@ class Syndic(Minion):
                 event = self.local.event.get_event_noblock()
             except zmq.ZMQError as e:
                 # EAGAIN indicates no more events at the moment
-                # EINTR some kind of signal maybe someone trying 
+                # EINTR some kind of signal maybe someone trying
                 # to get us to quit so escape our timeout
                 if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
                     break
@@ -1655,7 +1655,9 @@ class Syndic(Minion):
     def _forward_events(self):
         log.trace('Forwarding events')
         if self.raw_events:
-            self._fire_master(events=self.raw_events, pretag=tagify(self.opts['id'], base='syndic'))
+            self._fire_master(events=self.raw_events,
+                              pretag=tagify(self.opts['id'], base='syndic'),
+                              )
         for jid in self.jids:
             self._return_pub(self.jids[jid], '_syndic_return')
         self._reset_event_aggregation()
