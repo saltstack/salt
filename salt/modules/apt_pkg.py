@@ -1564,10 +1564,10 @@ def _resolve_deps(name, pkgs, **kwargs):
         cmd.append('install')
         cmd.extend(missing_deps)
 
-        ret = __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+        ret = __salt__['cmd.retcode'](cmd, env=kwargs.get('env'), python_shell=False,
                 output_loglevel='debug')
 
-        if ret['retcode'] != 0:
+        if ret != 0:
             raise CommandExecutionError(
                     'Error: unable to resolve dependencies for: {0}'.format(name)
             )
