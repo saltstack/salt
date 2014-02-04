@@ -764,12 +764,6 @@ source_file = _build/locale/ref/modules/all/salt.modules.npm.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.npm.rst
 
-[salt.ref--modules--all--salt_modules_nzbget]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.nzbget.po
-source_file = _build/locale/ref/modules/all/salt.modules.nzbget.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.nzbget.rst
-
 [salt.ref--modules--all--salt_modules_openbsdpkg]
 file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.openbsdpkg.po
 source_file = _build/locale/ref/modules/all/salt.modules.openbsdpkg.pot
@@ -1088,12 +1082,6 @@ source_file = _build/locale/ref/modules/all/salt.modules.svn.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.svn.rst
 
-[salt.ref--modules--all--salt_modules_sys]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.sys.po
-source_file = _build/locale/ref/modules/all/salt.modules.sys.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.sys.rst
-
 [salt.ref--modules--all--salt_modules_sysbench]
 file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.sysbench.po
 source_file = _build/locale/ref/modules/all/salt.modules.sysbench.pot
@@ -1243,12 +1231,6 @@ file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.yumpkg.po
 source_file = _build/locale/ref/modules/all/salt.modules.yumpkg.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.yumpkg.rst
-
-[salt.ref--modules--all--salt_modules_yumpkg5]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.yumpkg5.po
-source_file = _build/locale/ref/modules/all/salt.modules.yumpkg5.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.yumpkg5.rst
 
 [salt.ref--modules--all--salt_modules_zfs]
 file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.zfs.po
