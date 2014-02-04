@@ -253,24 +253,31 @@ class SaltEvent(object):
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
             socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-            else:
+            if socks.get(self.sub) != zmq.POLLIN:
                 continue
-            mtag, data = self.unpack(raw, self.serial)
+            
+            try:
+                ret = self.get_event_noblock()
+            except zmq.ZMQError as e:
+                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
+                    continue
+                else:
+                    raise
 
-            ret = {'data': data,
-                    'tag': mtag}
-
-            if not mtag.startswith(tag):  # tag not match
+            if not ret['tag'].startswith(tag):  # tag not match
                 self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 
             if full:
                 return ret
-            return data
+            return ret['data']
         return None
+
+    def get_event_noblock(self):
+        raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
 
     def iter_events(self, tag='', full=False):
         '''

@@ -1495,7 +1495,8 @@ class Syndic(Minion):
         self.context = zmq.Context()
 
         # Start with the publish socket
-        self.poller = zmq.Poller()
+        # Share the poller with the event object
+        self.poller = self.local.event.poller
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
@@ -1538,64 +1539,106 @@ class Syndic(Minion):
         enable_sigusr1_handler()
 
         loop_interval = int(self.opts['loop_interval'])
+        self._reset_event_aggregation()
         while True:
             try:
-                log.trace('Polling')
-                socks = dict(self.poller.poll(
-                    loop_interval * 1000)
-                )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
-                    log.trace('Handling payload')
-                    self._handle_payload(payload)
-                time.sleep(0.05)
-                jids = {}
-                raw_events = []
-                log.trace('Checking events')
-                while True:
-                    event = self.local.event.get_event(0.5, full=True)
-                    if event is None:
-                        # Timeout reached
-                        break
-                    log.trace('Got event %s', event['tag'])
-                    if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
-                        if not event['tag'] in jids:
-                            if not 'jid' in event['data']:
-                                # Not a job return
-                                continue
-                            jids[event['tag']] = {}
-                            jids[event['tag']]['__fun__'] = event['data'].get('fun')
-                            jids[event['tag']]['__jid__'] = event['data']['jid']
-                            jids[event['tag']]['__load__'] = salt.utils.jid_load(
-                                event['data']['jid'],
-                                self.local.opts['cachedir'],
-                                self.opts['hash_type'])
-                        jids[event['tag']][event['data']['id']] = event['data']['return']
-                    else:
-                        # Add generic event aggregation here
-                        if not 'retcode' in event['data']:
-                            raw_events.append(event)
-                if raw_events:
-                    log.trace('Forwarding events')
-                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
-                for jid in jids:
-                    log.trace('Forwarding job returns')
-                    self._return_pub(jids[jid], '_syndic_return')
-            except zmq.ZMQError:
-                # This is thrown by the interrupt caused by python handling the
-                # SIGCHLD. This is a safe error and we just start the poll
-                # again
-                continue
+                # Do all the maths in seconds 
+                timeout = loop_interval
+                if self.event_forward_timeout is not None:
+                    timeout = min(timeout,
+                                  self.event_forward_timeout - time.time())
+                if timeout >= 0:
+                    log.trace('Polling timeout: %f', timeout)
+                    socks = dict(self.poller.poll(timeout * 1000))
+                else:
+                    # This shouldn't really happen.
+                    # But there's no harm being defensive
+                    log.warning('Negative timeout in syndic main loop')
+                    socks = {}
+                if socks.get(self.socket) == zmq.POLLIN:
+                    self._process_cmd_socket()
+                if socks.get(self.local.event.sub) == zmq.POLLIN:
+                    self._process_event_socket()
+                if (self.event_forward_timeout is not None and 
+                    self.event_forward_timeout < time.time()):
+                    self._forward_events()
+            # We don't handle ZMQErrors like the other minions
+            # I've put explicit handling around the recieve calls
+            # in the process_*_socket methods. If we see any other
+            # errors they may need some kind of handling so log them
+            # for now.
             except Exception:
                 log.critical(
                     'An exception occurred while polling the syndic',
                     exc_info=True
                 )
 
+    def _process_cmd_socket(self):
+        try:
+            payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+        except zmq.ZMQError as e:
+            # Swallow errors for bad wakeups or signals needing processing
+            if (e.errno != errno.EAGAIN and e.errno != errno.EINTR):
+                raise
+        log.trace('Handling payload')
+        self._handle_payload(payload)
+
+    def _reset_event_aggregation(self):
+        self.jids = {}
+        self.raw_events = []
+        self.event_forward_timeout = None
+
+    def _process_event_socket(self):
+        tout = time.time() + self.opts['syndic_max_event_process_time']
+        while tout > time.time():
+            try:
+                event = self.local.event.get_event_noblock()
+            except zmq.ZMQError as e:
+                # EAGAIN indicates no more events at the moment
+                # EINTR some kind of signal maybe someone trying 
+                # to get us to quit so escape our timeout
+                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
+                    break
+                raise
+            log.trace('Got event %s', event['tag'])
+            if self.event_forward_timeout is None:
+                self.event_forward_timeout = (
+                        time.time() + self.opts['syndic_event_forward_timeout']
+                        )
+            if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
+                if not 'jid' in event['data']:
+                    # Not a job return
+                    continue
+                jdict = self.jids.setdefault(event['tag'], {})
+                if not jdict:
+                    jdict['__fun__'] = event['data'].get('fun')
+                    jdict['__jid__'] = event['data']['jid']
+                    jdict['__load__'] = salt.utils.jid_load(
+                        event['data']['jid'],
+                        self.local.opts['cachedir'],
+                        self.opts['hash_type'])
+                jdict[event['data']['id']] = event['data']['return']
+            else:
+                # Add generic event aggregation here
+                if not 'retcode' in event['data']:
+                    self.raw_events.append(event)
+
+    def _forward_events(self):
+        log.trace('Forwarding events')
+        if self.raw_events:
+            self._fire_master(events=self.raw_events, pretag=tagify(self.opts['id'], base='syndic'))
+        for jid in self.jids:
+            self._return_pub(self.jids[jid], '_syndic_return')
+        self._reset_event_aggregation()
+
     def destroy(self):
         '''
         Tear down the syndic minion
         '''
+        # We borrowed the local clients poller so give it back before
+        # it's destroyed.
+        # This does not delete the poller just our reference to it.
+        del self.poller
         super(Syndic, self).destroy()
         if hasattr(self, 'local'):
             del self.local
