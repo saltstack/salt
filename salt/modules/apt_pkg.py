@@ -354,11 +354,14 @@ def install(name=None,
     sources
         A list of DEB packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
-        or local path to the package.
+        or local path to the package.  Dependencies are automatically resolved
+        and marked as auto-installed.
 
         32-bit packages can be installed on 64-bit systems by appending the
         architecture designation (``:i386``, etc.) to the end of the package
         name.
+
+        .. versionchanged:: Helium
 
         CLI Example:
 
