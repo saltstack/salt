@@ -15,14 +15,14 @@ the lines below, depending on the relevant Python version:
 
     In Salt 0.17, testing libraries were migrated into their own repo. To install them:
 
-     .. code-block:: bash
+    .. code-block:: bash
 
-         pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
+        pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 
     Failure to install SaltTesting will result in import errors similar to the following:
 
-     .. code-block:: bash
+    .. code-block:: bash
 
         ImportError: No module named salttesting
 

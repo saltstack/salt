@@ -3,11 +3,11 @@
 Management of zc.buildout
 =========================
 
-This module is inspired from `minitage's buildout maker`__
+.. versionadded:: 2014.1.0 (Hydrogen)
 
-.. __: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
+.. _`minitage's buildout maker`: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
 
-.. versionadded:: Boron
+This module is inspired by `minitage's buildout maker`_
 
 .. note::
 
