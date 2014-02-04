@@ -184,14 +184,26 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid %s is still running', jid)
-        jinfo = self.cmd(tgt,
-                         'saltutil.find_job',
-                         [jid],
-                         self.opts['gather_job_timeout'],
-                         tgt_type,
-                         known_minions = minions,
-                         **kwargs)
-        return jinfo
+        
+        timeout = self.opts['gather_job_timeout']
+
+        arg = [jid]
+        arg = condition_kwarg(arg, kwargs)
+        pub_data = self.run_job(tgt,
+                                'saltutil.find_job',
+                                arg=arg,
+                                expr_form=tgt_type,
+                                timeout=timeout,
+                                **kwargs)
+
+        if not pub_data:
+            return pub_data
+
+        minions.update(pub_data['minions'])
+
+        return self.get_returns(pub_data['jid'],
+                                minions,
+                                self._get_timeout(timeout))
 
     def _check_pub_data(self, pub_data):
         '''
@@ -395,7 +407,6 @@ class LocalClient(object):
             expr_form='glob',
             ret='',
             kwarg=None,
-            known_minions=None,
             **kwargs):
         '''
         Synchronously execute a command on targeted minions
@@ -508,9 +519,6 @@ class LocalClient(object):
 
         if not pub_data:
             return pub_data
-
-        if known_minions:
-            pub_data['minions'] += known_minions
 
         return self.get_returns(pub_data['jid'],
                                 pub_data['minions'],
