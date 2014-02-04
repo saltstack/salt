@@ -2,3 +2,5 @@
 -e git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 mock
+requests
+bottle

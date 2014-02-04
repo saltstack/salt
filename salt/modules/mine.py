@@ -11,7 +11,7 @@ import logging
 import salt.crypt
 import salt.payload
 
-__proxyenabled__ = ['junos']
+__proxyenabled__ = ['*']
 
 log = logging.getLogger(__name__)
 

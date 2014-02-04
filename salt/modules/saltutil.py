@@ -25,6 +25,8 @@ import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
+__proxyenabled__ = ['*']
+
 # Import third party libs
 try:
     import esky

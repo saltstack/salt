@@ -21,6 +21,8 @@ import salt.payload
 from salt._compat import string_types
 
 
+__proxyenabled__ = ['*']
+
 __outputter__ = {
     'sls': 'highstate',
     'top': 'highstate',
