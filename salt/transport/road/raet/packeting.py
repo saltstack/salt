@@ -17,18 +17,14 @@ data =
     }
     head: dict of header fields
     {
-
-
         pack: packed version of header
     }
     neck: dict of authentication fields
     {
-
         pack: packed version of neck
     }
     body: dict of body fields
     {
-
         pack: packed version of body
     }
     pack: packed version of whole packet on tx and raw packet on rx
@@ -52,47 +48,6 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from . import raeting
-
-
-def CreateInstances(store):
-    '''
-    Create action instances. Recreate with each new house after clear registry
-    '''
-    ComposerRaet(name='raetComposer', store=store).ioinits.update(
-        data=odict(ipath='data', ival=odict(), iown='True'),
-        meta='meta',
-        head='head',
-        neck='neck',
-        body='body',
-        tail='tail')
-
-    PackerRaet(name='raetPacker', store=store).ioinits.update(
-        data=odict(ipath='data', ival=odict(), iown=True),
-        outlog=odict(ipath='outlog', ival=odict(), iown=True),)
-
-    ParserRaet(name='raetParser', store=store).ioinits.update(
-        data=odict(ipath='data', ival=odict(), iown=True),
-        inlog=odict(ipath='inlog', ival=odict(), iown=True),)
-
-    TransmitterRaet(name='raetTransmitter', store=store).ioinits.update(
-        data='data',
-        txes=odict(ipath='.raet.media.txes', ival=deque()),)
-
-    ReceiverRaet(name='raetReceiver', store=store).ioinits.update(
-        data='data',
-        rxes=odict(ipath='.raet.media.rxes', ival=deque()), )
-
-    ServerRaet(name='raetServer', store=store).ioinits.update(
-        txes=odict(ipath='txes', ival=deque(), iown=True),
-        rxes=odict(ipath='rxes', ival=deque(), iown=True),
-        connection=odict(ipath='connection', ival=None, iown=True),
-        address=odict(ipath='address', ival=odict(host='', port=7530, ha=None)),
-        txlog=odict(ipath='txlog', ival=odict(), iown=True),
-        rxlog=odict(ipath='rxlog', ival=odict(), iown=True), )
-
-    CloserServerRaet(name='raetServerCloser', store=store).ioinits.update(
-        connection=odict(ipath='connection', ival=None))
-
 
 class ComposerRaet(deeding.ParamDeed):
     '''
