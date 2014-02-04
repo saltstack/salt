@@ -11,10 +11,10 @@ The keydata consists of the following:
 SEC_BACKEND = 'pycrypto_aes'
 
 # Import pycrypto libs
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_PSS
-from Crypto.Hash import SHA
+import Crypto.Cipher
+import Crypto.PublicKey
+import Crypto.Signature
+import Crypto.Hash
 import Crypto.Util.number
 
 # Import table libs
@@ -36,25 +36,25 @@ class Key(object):
         if keydata:
             if 'components' not in keydata:
                 raise ValueError('Invalid keydata, no components')
-            key = RSA.construct(keydata['components'])
+            key = Crypto.PublicKey.RSA.construct(keydata['components'])
             if key.has_private():
                 self.priv = key
                 self.pub = key.publickey()
-                self.sign_key = PKCS1_PSS.new(self.priv)
-                self.verify_key = PKCS1_PSS.new(self.pub)
-                self.decrypter = PKCS1_OAEP.new(self.priv)
+                self.sign_key = Crypto.Signature.PKCS1_PSS.new(self.priv)
+                self.verify_key = Crypto.Signature.PKCS1_PSS.new(self.pub)
+                self.decrypter = Crypto.Cipher.PKCS1_OAEP.new(self.priv)
             else:
                 self.pub = key
-                self.verify_key = PKCS1_PSS.new(self.pub)
+                self.verify_key = Crypto.Signature.PKCS1_PSS.new(self.pub)
             self.keydata = keydata
         else:
             self.priv = self._gen_key()
             self.pub = self.priv.publickey()
-            self.sign_key = PKCS1_PSS.new(self.priv)
-            self.verify_key = PKCS1_PSS.new(self.pub)
+            self.sign_key = Crypto.Signature.PKCS1_PSS.new(self.priv)
+            self.verify_key = Crypto.Signature.PKCS1_PSS.new(self.pub)
             self.keydata = self._gen_keydata(self.priv)
-            self.decrypter = PKCS1_OAEP.new(self.priv)
-        self.encrypter = PKCS1_OAEP.new(self.pub)
+            self.decrypter = Crypto.Cipher.PKCS1_OAEP.new(self.priv)
+        self.encrypter = Crypto.Cipher.PKCS1_OAEP.new(self.pub)
         self.max_msg_size = self.get_max_msg_size()
         self.enc_chunk_size = self.get_enc_chunk_size()
 
@@ -75,7 +75,7 @@ class Key(object):
         size = self.kwargs.get('size', 2048)
         if size < 2048:
             raise ValueError('Key size too small')
-        return RSA.generate(size)
+        return Crypto.PublicKey.RSA.generate(size)
 
     def _string_chunks(self, msg, size, i=None):
         '''
@@ -95,7 +95,7 @@ class Key(object):
         '''
         Return the max size of a message chunk
         '''
-        return (Crypto.Util.number.size(self.pub.n) / 8) - 2 - (SHA.digest_size * 2)
+        return (Crypto.Util.number.size(self.pub.n) / 8) - 2 - (Crypto.Hash.SHA.digest_size * 2)
 
     def get_enc_chunk_size(self):
         '''
@@ -108,7 +108,7 @@ class Key(object):
         Sign and encrypt a message
         '''
         ret = ''
-        hash_ = SHA.new()
+        hash_ = Crypto.Hash.SHA.new()
         hash_.update(msg)
         ret += self.sign_key.sign(hash_)
         for chunk in self._string_chunks(msg, pub._key.max_msg_size):
@@ -130,7 +130,7 @@ class Key(object):
         '''
         Sign a message
         '''
-        hash_ = SHA.new()
+        hash_ = Crypto.Hash.SHA.new()
         hash_.update(msg)
         sig = self.sign_key.sign(hash_)
         return sig + msg
@@ -141,7 +141,7 @@ class Key(object):
         '''
         sig = msg[0:self.enc_chunk_size]
         msg = msg[self.enc_chunk_size:]
-        hash_ = SHA.new()
+        hash_ = Crypto.Hash.SHA.new()
         hash_.update(msg)
         if self.verify_key.verify(hash_, sig):
             return msg

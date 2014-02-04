@@ -49,7 +49,8 @@ console = getConsole()
 
 from . import raeting
 
-class ComposerRaet(deeding.ParamDeed):
+
+class ComposerRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     ComposerRaet creates packet data as nested dicts from fields in
     share parms meta, head, neck, body, tail
@@ -84,7 +85,7 @@ class ComposerRaet(deeding.ParamDeed):
         return None
 
 
-class PackerRaet(deeding.ParamDeed):
+class PackerRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     PackerRaet creates a new packed RAET packet from data and fills in pack field
 
@@ -107,7 +108,7 @@ class PackerRaet(deeding.ParamDeed):
         return None
 
 
-class ParserRaet(deeding.ParamDeed):
+class ParserRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     ParserRaet parses a packed RAET packet from pack and fills in data
 
@@ -131,7 +132,7 @@ class ParserRaet(deeding.ParamDeed):
         return None
 
 
-class TransmitterRaet(deeding.ParamDeed):
+class TransmitterRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     TransmitterRaet pushes packed packet in onto txes transmit deque and assigns
     destination ha from meta data
@@ -156,7 +157,7 @@ class TransmitterRaet(deeding.ParamDeed):
         return None
 
 
-class ReceiverRaet(deeding.ParamDeed):
+class ReceiverRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     ReceiverRaet pulls packet from rxes deque and puts into new data
     and assigns meta data source ha using recieved ha
@@ -184,7 +185,7 @@ class ReceiverRaet(deeding.ParamDeed):
         return None
 
 
-class ServerRaet(deeding.ParamDeed):
+class ServerRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     ServerRaet transmits and recieves udp packets from txes and rxes deques
     using sh, sp fields in sa server address (server host, server port) to receive on.
@@ -240,7 +241,7 @@ class ServerRaet(deeding.ParamDeed):
         return None
 
 
-class CloserServerRaet(deeding.ParamDeed):
+class CloserServerRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     CloserServerRaet closes server socket connection
 
