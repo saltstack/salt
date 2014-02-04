@@ -824,8 +824,9 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             'Returned: {1}'.format(func, ret)
         )
         if isinstance(ret, list):
+            jids = []
             # These are usually errors
-            for idx, item in enumerate(ret[:]):
+            for item in ret[:]:
                 if not isinstance(item, salt._compat.string_types):
                     # We don't know how to handle this
                     continue
@@ -833,19 +834,23 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 if not match:
                     # We don't know how to handle this
                     continue
+                jid = match.group('jib')
+                if jid in jids:
+                    continue
+
+                jids.append(jid)
+
                 job_data = self.run_function(
-                    '--out yaml saltutil.find_job', [match.group('jid')]
+                    '--out yaml saltutil.find_job', [jid]
                 )
-                log.info(
+                job_kill = self.run_function('saltutil.kill_job', [jid])
+                msg = (
                     'A running state.single was found causing a state lock. '
-                    'This stalled job will be killed. '
-                    'Job details:\n{0}'.format(job_data)
+                    'Job details:\n{0}\n'
+                    'Killing Job Returned: {1}'.format(job_data, job_kill)
                 )
-                self.run_function('saltutil.kill_job', [match.group('jid')])
-                ret[idx] = (
-                    '{0} [STALLED JOB KILLED BY TEST SUITE. '
-                    'CHECK LOGS]'.format(item)
-                )
+                ret.append('[TEST SUITE ENFORCED]\n{1}\n'
+                           '[/TEST SUITE ENFORCED]'.format(msg))
         return ret
 
 
