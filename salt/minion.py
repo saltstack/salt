@@ -1540,20 +1540,24 @@ class Syndic(Minion):
         loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
+                log.trace('Polling')
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
+                    log.trace('Handling payload')
                     self._handle_payload(payload)
                 time.sleep(0.05)
                 jids = {}
                 raw_events = []
+                log.trace('Checking events')
                 while True:
                     event = self.local.event.get_event(0.5, full=True)
                     if event is None:
                         # Timeout reached
                         break
+                    log.trace('Got event %s', event['tag'])
                     if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
                         if not event['tag'] in jids:
                             if not 'jid' in event['data']:
@@ -1572,8 +1576,10 @@ class Syndic(Minion):
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
+                    log.trace('Forwarding events')
                     self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
                 for jid in jids:
+                    log.trace('Forwarding job returns')
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
                 # This is thrown by the interrupt caused by python handling the
