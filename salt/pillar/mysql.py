@@ -118,7 +118,9 @@ class merger(object):
 
         # And then the keywords...
         # They aren't in definition order, but they can't conflict each other.
-        qbuffer.extend([[k, v] for k, v in kwargs.items()])
+        klist = kwargs.keys()
+        klist.sort()
+        qbuffer.extend([[k, kwargs[k]] for k in klist])
 
         # Filter out values that don't have queries.
         qbuffer = filter(
@@ -251,6 +253,8 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # - Then any non-keyworded args are processed in order.
     # - Finally, remaining keywords are processed.
     # We do this so that it's backward compatible with older configs.
+    # Keyword arguments are sorted before being appended, so that they're
+    # predictable, but they will always be applied last so overall it's moot.
     #
     # For each of those items we process, it depends on the object type:
     # - Strings are executed as is and the pillar depth is determined by the
