@@ -38,7 +38,7 @@ except ImportError as e:
     ppa_format_support = False
 
 try:
-    from ... import apt
+    import apt.debfile
     resolve_dep_support = True
 except ImportError as e:
     resolve_dep_support = False
