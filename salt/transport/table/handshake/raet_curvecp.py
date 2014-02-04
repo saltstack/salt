@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This handshake is based on the curvecp handshake, btu it modified to function
 with the UDP/TCP RAET. This modification revolves primarily around the fact

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage encryption with the pynacl bindings to libsodium
 

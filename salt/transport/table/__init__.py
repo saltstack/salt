@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Bring the cryptography to the table. This package aims to make a single very
 high level cryptographic interface which abstracts many underlying algorithms.
