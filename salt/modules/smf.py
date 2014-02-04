@@ -16,13 +16,9 @@ def __virtual__():
     '''
     Only work on systems which default to SMF
     '''
-    # Don't let this work on Solaris 9 since SMF doesn't exist on it.
-    enable = set((
-        'Solaris',
-        'SmartOS',
-    ))
-    if __grains__['os'] in enable:
-        if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == "5.9":
+    if 'Solaris' in __grains__['os_family']:
+        # Don't let this work on Solaris 9 since SMF doesn't exist on it.
+        if __grains__['kernelrelease'] == "5.9":
             return False
         return __virtualname__
     return False
