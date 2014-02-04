@@ -1,0 +1,3 @@
+'''
+Sync encryption normalization
+'''
