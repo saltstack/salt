@@ -86,7 +86,7 @@ class Serial(object):
         '''
         return {'msgpack': self.dumps_msgpack,
                 'json': self.dumps_json}[self.serial](data)
-        
+
     def loads_msgpack(self, data):
         '''
         Load msgpack serialized string

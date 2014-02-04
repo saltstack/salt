@@ -2,4 +2,3 @@
 '''
 Package containing network handshakes
 '''
-

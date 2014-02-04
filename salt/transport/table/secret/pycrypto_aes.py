@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import os
 
+
 class Key(object):
     '''
     Authenticated encryption class

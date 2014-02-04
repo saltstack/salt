@@ -110,16 +110,16 @@ JSON_END = '\r\n\r\n'
 DATA_PARTS = ['meta', 'head', 'neck', 'body', 'tail']
 
 HEAD_KINDS = odict([('json', 0), ('binary', 1), ('unknown', 255)])
-HEAD_KIND_NAMES = odict((v,k) for k, v in HEAD_KINDS.iteritems()) # inverse map
+HEAD_KIND_NAMES = odict((v, k) for k, v in HEAD_KINDS.iteritems())  # inverse map
 HeadKind = namedtuple('HeadKind', HEAD_KINDS.keys())
-headKinds = HeadKind(**HEAD_KINDS) # headKinds.json is '00'
+headKinds = HeadKind(**HEAD_KINDS)  # headKinds.json is '00'
 
 VERSIONS = odict([('0.1', 0)])
-VERSION_NAMES = odict((v,k) for k, v in VERSIONS.iteritems())
+VERSION_NAMES = odict((v, k) for k, v in VERSIONS.iteritems())
 
 NECK_KINDS = odict([('nada', 0), ('sodium', 1), ('sha2', 2),
                      ('crc64', 2), ('unknown', 255)])
-NECK_KIND_NAMES = odict((v,k) for k, v in NECK_KINDS.iteritems()) # inverse map
+NECK_KIND_NAMES = odict((v, k) for k, v in NECK_KINDS.iteritems())  # inverse map
 NeckKind = namedtuple('NeckKind', NECK_KINDS.keys())
 neckKinds = NeckKind(**NECK_KINDS)
 
@@ -127,38 +127,38 @@ neckKinds = NeckKind(**NECK_KINDS)
 NECK_SIZES = odict([('nada', 0), ('sodium', 0), ('sha2', 0),
                      ('crc64', 8), ('unknown', 0)])
 NeckSize = namedtuple('NeckSize', NECK_SIZES.keys())
-neckSizes= NeckSize(**NECK_SIZES)
+neckSizes = NeckSize(**NECK_SIZES)
 
 BODY_KINDS = odict([('nada', 0), ('json', 1), ('binary', 1), ('unknown', 255)])
-BODY_KIND_NAMES = odict((v,k) for k, v in BODY_KINDS.iteritems()) # inverse map
+BODY_KIND_NAMES = odict((v, k) for k, v in BODY_KINDS.iteritems())  # inverse map
 BodyKind = namedtuple('BodyKind', BODY_KINDS.keys())
 bodyKinds = BodyKind(**BODY_KINDS)
 
-TAIL_KINDS = odict([('nada', 0), ('crc16', 1), ('crc64', 2),('unknown', 255)])
-TAIL_KIND_NAMES = odict((v,k) for k, v in TAIL_KINDS.iteritems()) # inverse map
+TAIL_KINDS = odict([('nada', 0), ('crc16', 1), ('crc64', 2), ('unknown', 255)])
+TAIL_KIND_NAMES = odict((v, k) for k, v in TAIL_KINDS.iteritems())  # inverse map
 TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('crc16', 2), ('crc64', 8),('unknown', 0)])
+TAIL_SIZES = odict([('nada', 0), ('crc16', 2), ('crc64', 8), ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
-tailSizes= TailSize(**TAIL_SIZES)
+tailSizes = TailSize(**TAIL_SIZES)
 
 SERVICE_KINDS = odict([('fireforget', 0), ('ackretry', 1), (
     'unknown', 255)])
-SERVICE_KIND_NAMES = odict((v,k) for k, v in SERVICE_KINDS.iteritems()) # inverse map
+SERVICE_KIND_NAMES = odict((v, k) for k, v in SERVICE_KINDS.iteritems())  # inverse map
 ServiceKind = namedtuple('ServiceKind', SERVICE_KINDS.keys())
 serviceKinds = ServiceKind(**SERVICE_KINDS)
 
 PACKET_KINDS = odict([('data', 0), ('req', 1), ('ack', 8),
                       ('nack', 9), ('unknown', 255)])
-PACKET_KIND_NAMES = odict((v,k) for k, v in PACKET_KINDS.iteritems()) # inverse map
+PACKET_KIND_NAMES = odict((v, k) for k, v in PACKET_KINDS.iteritems())  # inverse map
 PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
 packetKinds = PacketKind(**PACKET_KINDS)
 
 
 # default values of meta data, if given, lengths are integers
-META_DEFAULTS = odict( [
+META_DEFAULTS = odict([
                          ('sh', ''),
                          ('sp', 7530),
                          ('dh', '127.0.0.1'),
@@ -175,7 +175,7 @@ META_DEFAULTS = odict( [
                       ])
 
 # head fields that may be included in json header if not default value
-HEAD_DEFAULTS = odict( [
+HEAD_DEFAULTS = odict([
                          ('hk', None),
                          ('hl', None),
                          ('vn', 0),
@@ -202,8 +202,8 @@ HEAD_DEFAULTS = odict( [
                          ('tl', 0),
                       ])
 
-META_LEN_FIELDS = ['nl', 'bl', 'tl'] # note 'hl' is special so not here
-META_KIND_FIELDS = ['nk', 'bk', 'tk'] # note 'hk' is special so not here
+META_LEN_FIELDS = ['nl', 'bl', 'tl']  # note 'hl' is special so not here
+META_KIND_FIELDS = ['nk', 'bk', 'tk']  # note 'hk' is special so not here
 
 
 def defaultData(data=None):
@@ -212,8 +212,8 @@ def defaultData(data=None):
     '''
     if data is None:
         data = odict()
-    for part in DATA_PARTS: # make sure all parts in data
-        if part not  in data:
+    for part in DATA_PARTS:  # make sure all parts in data
+        if part not in data:
             data[part] = odict()
     if 'pack' not in data:
         data['pack'] = ''
@@ -245,7 +245,7 @@ def packPacket(data):
     packHead(meta, head)
     packNeck(meta, head, neck)
     data['pack'] = '{0}{1}{2}{3}'.format(head['pack'], neck['pack'], body['pack'], tail['pack'])
-    return (data['pack'])
+    return data['pack']
 
 
 def packBody(meta, body):
@@ -289,7 +289,7 @@ def packHead(meta, head):
                 if head[k] != v:
                     kit[k] = head[k]
 
-        kit['hl'] = '00' #need hex string so fixed length and jsonable
+        kit['hl'] = '00'  # need hex string so fixed length and jsonable
         packed = json.dumps(kit, separators=(',', ':'), encoding='ascii',)
         packed = '{0}{1}'.format(packed, JSON_END)
         hl = len(packed)
@@ -347,7 +347,7 @@ def parseHead(pack, meta, head):
     '''
     meta['error'] = ''
     #need to test for Header type and version
-    if pack.startswith('{"hk":0,') and JSON_END in pack: #json header
+    if pack.startswith('{"hk":0,') and JSON_END in pack:  # json header
         meta['hk'] = headKinds.json
         front, sep, back = pack.partition(JSON_END)
         pack = back
@@ -355,9 +355,9 @@ def parseHead(pack, meta, head):
         meta['hl'] = len(head['pack'])
 
         head.update(HEAD_DEFAULTS)
-        kit = json.loads(  front,
-                           encoding='ascii',
-                           object_pairs_hook=odict)
+        kit = json.loads(front,
+                         encoding='ascii',
+                         object_pairs_hook=odict)
         head.update(kit)
 
         hl = int(head['hl'], 16)
@@ -372,7 +372,7 @@ def parseHead(pack, meta, head):
         for field in META_KIND_FIELDS:
             meta[field] = head[field]
 
-    else: #notify unrecognizible packet
+    else:  # notify unrecognizible packet
         meta['hl'] = 0
         meta['hk'] = headKinds.unknown
         meta['error'] = "Unrecognizible packet head."
@@ -393,7 +393,7 @@ def parseNeck(pack, meta, neck):
     if meta.get('nk') == neckKinds.nada:
         pass
 
-    else: #notify unrecognizible packet
+    else:  # notify unrecognizible packet
         meta['nl'] = 0
         meta['nk'] = neckKinds.unknown
         meta['error'] = "Unrecognizible packet neck."
@@ -407,7 +407,7 @@ def parseBody(pack, meta, body):
     updates meta and body dicts:
     '''
     meta['error'] = ''
-    body['raw']= ''
+    body['raw'] = ''
     bl = meta.get('bl', 0)
     body['pack'] = pack[:bl]
     pack = pack[bl:]
@@ -420,7 +420,7 @@ def parseBody(pack, meta, body):
             else:
                 body['raw'] = kit
 
-    else: #notify unrecognizible packet
+    else:  # notify unrecognizible packet
         meta['bl'] = 0
         meta['bk'] = bodyKinds.unknown
         meta['error'] = 'Unrecognizible packet body.'
@@ -441,7 +441,7 @@ def parseTail(pack, meta, tail):
     if meta.get('tk') == tailKinds.nada:
         pass
 
-    else: #notify unrecognizible packet
+    else:  # notify unrecognizible packet
         meta['tl'] = 0
         meta['tk'] = tailKinds.unknown
         meta['error'] = 'Unrecognizible packet tail.'
@@ -482,4 +482,4 @@ def sendPacket(data):
     packNeck(meta, head, neck)
     data['pack'] = '{0}{1}{2}{3}'.format(head['pack'], neck['pack'], body['pack'], tail['pack'])
 
-    return (data['pack'])
+    return data['pack']

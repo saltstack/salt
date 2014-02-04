@@ -19,7 +19,7 @@ class Curve(object):
     '''
     def __init__(self, local, remote):
         '''
-        Pass in a public key 
+        Pass in a public key
         '''
         self.local = local
         self.remote = remote

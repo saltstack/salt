@@ -42,7 +42,6 @@ class Key(object):
         nonce = self._safe_nonce()
         return self.box.encrypt(msg, nonce)
 
-
     def decrypt(self, msg):
         '''
         Using the given key, decrypt a message

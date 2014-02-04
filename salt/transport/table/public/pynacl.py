@@ -56,7 +56,7 @@ class Key(object):
                         nacl.encoding.HexEncoder)
                 self.verify_key = self.sign_key.verify_key
             elif 'verify' in keydata:
-                self.verify = nacl.signing.VerifyKey(
+                self.verify_key = nacl.signing.VerifyKey(
                         keydata['verify'],
                         nacl.encoding.HexEncoder)
             self.keydata = keydata

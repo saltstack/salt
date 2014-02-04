@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 The road package contains the raet backend libs
 '''
 
-__all__ = ['raet',] 
+# Import raet libs
+from . import raet
 
-for m in __all__:
-    exec 'from . import {0}'.format(m)  #relative import
+__all__ = ['raet'] 

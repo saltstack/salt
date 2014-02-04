@@ -192,7 +192,9 @@ class TransmitterRaet(deeding.ParamDeed):
         txes=odict(ipath='.raet.media.txes', ival=deque()),)
 
     def action(self, data, txes, **kwa):
-        """ """
+        '''
+        Transmission action
+        '''
         if data.value:
             da = (data.value['meta']['dh'], data.value['meta']['dp'])
             txes.value.append((data.value['pack'], da))
@@ -252,7 +254,7 @@ class ServerRaet(deeding.ParamDeed):
         Set up server to transmit and recive on address
         '''
         connection.value = aiding.SocketNB(host=address.data.host, port=address.data.port)
-        connection.value.reopen() # create socket connection
+        connection.value.reopen()  # create socket connection
         host, port = connection.value.ha
         address.update(host=host, port=port, ha=(host, port))
         return None
@@ -268,9 +270,9 @@ class ServerRaet(deeding.ParamDeed):
 
         if server:
             rxds = rxes.value
-            while (True):
-                rx, ra = server.receive() #if no data the tuple is ('',None)
-                if not rx: # no received data so break
+            while True:
+                rx, ra = server.receive()  # if no data the tuple is ('',None)
+                if not rx:  # no received data so break
                     break
                 rxds.append((rx, ra, address.data.ha))
                 rxl[ra] = rx

@@ -95,7 +95,7 @@ class Key(object):
         '''
         Return the max size of a message chunk
         '''
-        return (Crypto.Util.number.size(self.pub.n) / 8) -2 - (SHA.digest_size * 2)
+        return (Crypto.Util.number.size(self.pub.n) / 8) - 2 - (SHA.digest_size * 2)
 
     def get_enc_chunk_size(self):
         '''

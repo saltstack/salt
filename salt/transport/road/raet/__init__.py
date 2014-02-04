@@ -5,7 +5,9 @@ raet modules
 __init__.py file for raet package
 '''
 
-__all__ = ['packeting', 'stacking', 'raeting'] 
+# Import raet modules
+from . import packeting
+from . import stacking
+from . import raeting
 
-for m in __all__:
-    exec 'from . import {0}'.format(m)  #relative import
+__all__ = ['packeting', 'stacking', 'raeting'] 
