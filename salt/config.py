@@ -185,6 +185,7 @@ VALID_OPTS = {
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
     'auth_timeout': int,
+    'random_master': bool,
 }
 
 # default configurations
@@ -282,6 +283,7 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'salt_transport': 'zeromq',
     'auth_timeout': 3,
+    'random_master': False,
 }
 
 DEFAULT_MASTER_OPTS = {
