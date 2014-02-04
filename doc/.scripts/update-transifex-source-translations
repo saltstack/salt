@@ -13,8 +13,10 @@
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
+import time
 import logging
 import subprocess
 import ConfigParser
@@ -65,7 +67,7 @@ def main():
         for filename in filenames:
             pot_file = os.path.join(dirpath, filename)
             base, ext = os.path.splitext(pot_file)
-            if ext != ".pot":
+            if ext != '.pot':
                 continue
             resource_path = os.path.relpath(base, pot_dir)
             try:
@@ -122,12 +124,15 @@ def main():
                 ).split(),
                 tx_root
             )
-            print
+            print('')
             if 'salt.{0}'.format(resource_name) in handled_resources:
                 handled_resources.remove('salt.{0}'.format(resource_name))
+        except Exception as err:
+            print('An error occurred: {0}'.format(err))
         except KeyboardInterrupt:
-            print
+            print('')
             sys.exit(1)
+        time.sleep(0.025)
 
     if handled_resources:
         non_handled_resources = len(handled_resources)
@@ -149,19 +154,21 @@ def main():
                     ['-r', resource_name],
                     tx_root
                 )
-            except Exception, err:
-                print err
+            except Exception as err:
+                print('An error occurred: {0}'.format(err))
             finally:
                 if cfg.has_section(resource_name):
                     cfg.remove_section(resource_name)
-            print
+            print('')
+            time.sleep(0.025)
         cfg.write(open(tx_config, 'w'))
-        print
+        print('')
 
     # Set the translations file type we're using
     txclib.utils.exec_command('set', ['-t', 'PO'], tx_root)
+    time.sleep(0.025)
 
-    print
+    print('')
     print('Pushing translation template files...')
     for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
         print(
@@ -189,10 +196,13 @@ def main():
                 ).split(),
                 tx_root
             )
-            print
+            print('')
+        except Exception as err:
+            print('An error occurred: {0}'.format(err))
         except KeyboardInterrupt:
-            print
+            print('')
             sys.exit(1)
+        time.sleep(0.025)
 
     if handled_resources:
         print('=' * 80)
@@ -201,7 +211,7 @@ def main():
             print('    {0}'.format(resource_name))
         print('=' * 80)
 
-    print 'DONE'
+    print('DONE')
 
 
 if __name__ == '__main__':
