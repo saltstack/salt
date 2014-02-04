@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 raeting module provides constants and values for the RAET protocol
 
@@ -23,11 +24,11 @@ data =
         sp: source ip port                Default: 7532
         dh: destination host ip address (ipv4) Default: '127.0.0.1'
         dp: destination host ip port           Default 7532
-        hk: header kind   (HeadKind) Default 0 
+        hk: header kind   (HeadKind) Default 0
         hl: header length (HeadLen) Default 0
         nk: Neck header kind   (NeckKind) Default '00' hs
         nl: Neck header length (NeckLen) Default 0
-        bk: body kind   (BodyKind) Default 0 
+        bk: body kind   (BodyKind) Default 0
         bl: body length (BodyLen)  Default 0
         tk: tail kind   (TailKind) Default 0
         tl: tail length (TailLen)  Default 0
@@ -36,17 +37,17 @@ data =
     {
         hk: header kind   (HeadKind) Default 0
         hl: header length (HeadLen) Default 0
-        
+
         vn: version (Version) Default 0
 
         sd: Source Device ID (SDID)
         dd: Destination Device ID (DDID)
         cf: Corresponder Flag (CrdrFlag) Default 0
         mf: Multicast Flag (MultFlag)  Default 0
-        
+
         si: Session ID (SID) Default 0
         ti: Transaction ID (TID) Default 0
-        
+
         sk: Service Kind (SrvcKind)
         pk: Packet Kind (PcktKind)
         bf: Burst Flag    (BrstFlag) Default 0
@@ -57,25 +58,25 @@ data =
 
         sn: Segment Number (SegNum) Default 0
         sc: Segment Count  (SegCnt) Default 1
-        
+
         pf: Pending Segment Flag  (PendFlag) Default 0
-            Not the last segment more pending 
+            Not the last segment more pending
         af: All Flag (AllFlag) Default 0
             Resend all segments not just one
-            
+
         nk: Neck header kind   (NeckKind) Default '00' hs
         nl: Neck header length (NeckLen) Default 0
-        
+
         bk: body kind   (BodyKind) Default '00' hs
         bl: body length (BodyLen)  Default 0
-        
+
         tk: tail kind   (TailKind) Default '00' hs
         tl: tail length (TailLen)  Default 0
-        
+
         fg: flags  packed (Flags) Default '00' hs
              2 byte Hex string with bits (0, 0, af, pf, 0, bf, mf, cf)
              Zeros are TBD flags
-        
+
         pack: packed version of header
     }
     neck: dict of authentication fields
@@ -147,34 +148,34 @@ SERVICE_KINDS = odict([('fireforget', 0), ('ackretry', 1), (
     'unknown', 255)])
 SERVICE_KIND_NAMES = odict((v,k) for k, v in SERVICE_KINDS.iteritems()) # inverse map
 ServiceKind = namedtuple('ServiceKind', SERVICE_KINDS.keys())
-serviceKinds = ServiceKind(**SERVICE_KINDS) 
+serviceKinds = ServiceKind(**SERVICE_KINDS)
 
 PACKET_KINDS = odict([('data', 0), ('req', 1), ('ack', 8),
                       ('nack', 9), ('unknown', 255)])
 PACKET_KIND_NAMES = odict((v,k) for k, v in PACKET_KINDS.iteritems()) # inverse map
 PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
-packetKinds = PacketKind(**PACKET_KINDS) 
+packetKinds = PacketKind(**PACKET_KINDS)
 
 
 # default values of meta data, if given, lengths are integers
-META_DEFAULTS = odict( [  
+META_DEFAULTS = odict( [
                          ('sh', ''),
-                         ('sp', 7530), 
+                         ('sp', 7530),
                          ('dh', '127.0.0.1'),
                          ('dp', 7530),
-                         ('vn', 0), 
+                         ('vn', 0),
                          ('hk', None),
                          ('hl', None),
                          ('nk', 0),
                          ('nl', 0),
                          ('bk', 0),
                          ('bl', 0),
-                         ('tk', 0), 
+                         ('tk', 0),
                          ('tl', 0),
                       ])
 
 # head fields that may be included in json header if not default value
-HEAD_DEFAULTS = odict( [  
+HEAD_DEFAULTS = odict( [
                          ('hk', None),
                          ('hl', None),
                          ('vn', 0),
@@ -197,7 +198,7 @@ HEAD_DEFAULTS = odict( [
                          ('nl', 0),
                          ('bk', 0),
                          ('bl', 0),
-                         ('tk', 0), 
+                         ('tk', 0),
                          ('tl', 0),
                       ])
 
@@ -213,7 +214,7 @@ def defaultData(data=None):
         data = odict()
     for part in DATA_PARTS: # make sure all parts in data
         if part not  in data:
-            data[part] = odict() 
+            data[part] = odict()
     if 'pack' not in data:
         data['pack'] = ''
     return data
@@ -277,7 +278,7 @@ def packHead(meta, head):
     head['pack'] = ''
     if head.get('hk') == headKinds.json:
         kit = odict()
-        for field in META_LEN_FIELDS: 
+        for field in META_LEN_FIELDS:
             head[field] = meta[field]
         for field in META_KIND_FIELDS:
             head[field] = meta[field]
@@ -370,12 +371,12 @@ def parseHead(pack, meta, head):
             meta[field] = head[field]
         for field in META_KIND_FIELDS:
             meta[field] = head[field]
-                     
+
     else: #notify unrecognizible packet
-        meta['hl'] = 0 
+        meta['hl'] = 0
         meta['hk'] = headKinds.unknown
         meta['error'] = "Unrecognizible packet head."
-        
+
     return pack
 
 
@@ -387,13 +388,13 @@ def parseNeck(pack, meta, neck):
     meta['error'] = ''
     nl = meta.get('nl', 0)
     neck['pack'] = pack[:nl]
-    pack = pack[nl:]    
+    pack = pack[nl:]
 
     if meta.get('nk') == neckKinds.nada:
         pass
 
     else: #notify unrecognizible packet
-        meta['nl'] = 0 
+        meta['nl'] = 0
         meta['nk'] = neckKinds.unknown
         meta['error'] = "Unrecognizible packet neck."
 
@@ -435,7 +436,7 @@ def parseTail(pack, meta, tail):
     meta['error'] = ''
     tl = meta.get('tl', 0)
     tail['pack'] = pack[:tl]
-    pack = pack[tl:]    
+    pack = pack[tl:]
 
     if meta.get('tk') == tailKinds.nada:
         pass
@@ -460,7 +461,7 @@ def verifyBody(meta, body, tail):
     '''
     Uses tail to verify body does not have errors
     '''
-    #meta['error'] = "Body failed verification."   
+    #meta['error'] = "Body failed verification."
     return True
 
 

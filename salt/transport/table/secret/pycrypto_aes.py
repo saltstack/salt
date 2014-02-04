@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 table backend for aes using pycrypto
 '''

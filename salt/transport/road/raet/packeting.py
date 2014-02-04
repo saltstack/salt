@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 packeting.py raet packet behaviors
 
@@ -16,18 +17,14 @@ data =
     }
     head: dict of header fields
     {
-
-
         pack: packed version of header
     }
     neck: dict of authentication fields
     {
-
         pack: packed version of neck
     }
     body: dict of body fields
     {
-
         pack: packed version of body
     }
     pack: packed version of whole packet on tx and raw packet on rx
