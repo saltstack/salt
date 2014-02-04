@@ -216,3 +216,19 @@ quite some love, and was originally created to replace ``askpass``, but, while
 developing it, it immediately proved that it could do so much more. It's 
 currently used by salt-cloud when bootstrapping salt on clouds which require 
 the use of a password.
+
+Proxy Minions
+-------------
+
+Proxy minions are a developing feature in Salt that makes it possible to
+control devices that cannot run a real salt-minion.  Examples include
+proprietary devices, network gear, "dumb" devices without enough CPU or RAM to
+handle a Python VM, and anything with a well-defined API.  Even remote services
+exposed over REST, for example, could be controlled with a proxy minion.
+
+This is an ALPHA-quality feature.  There are a number of issues with it
+currently, mostly centering around process control, logging, and inability to
+work in a masterless configuration.
+
+Documentation is available :doc:`here </topics/proxyminion>`.
+
