@@ -77,7 +77,7 @@ def _get_cron_info():
     elif __grains__['os'] == 'OpenBSD':
         group = 'crontab'
         crontab_dir = '/var/spool/incron'
-    elif __grains__['os_family'] == 'Solaris':
+    elif __grains__.get('os_family') == 'Solaris':
         group = 'root'
         crontab_dir = '/var/spool/incron'
     else:
