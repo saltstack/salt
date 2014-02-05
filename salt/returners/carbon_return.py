@@ -7,15 +7,36 @@ Add the following configuration to your minion configuration files::
     carbon.host: <server ip address>
     carbon.port: 2003
 
+If you wish to ignore errors when trying to convert data to numbers, you may
+optionally specify in your minion configuration or the pillar::
+
+    carbon.skip_on_error: True
+
+By default, data will be sent to carbon using the plaintext protocol. You may
+choose to send data using the pickle protocol by including ``carbon.mode`` in
+your configuration::
+
+    carbon.mode: pickle
+
+Alternatively, you may configure your carbon settings as::
+
+    carbon:
+        host: <server IP or hostname>
+        port: <carbon port>
+        skip_on_error: True
+        mode: (pickle|text)
+
 '''
 
+
 # Import python libs
-import pickle
-import socket
-import logging
-import time
-import struct
+from contextlib import contextmanager
 import collections
+import logging
+import cPickle as pickle
+import socket
+import struct
+import time
 
 log = logging.getLogger(__name__)
 
@@ -27,57 +48,119 @@ def __virtual__():
     return __virtualname__
 
 
-def _formatHostname(hostname, separator='_'):
-    ''' carbon uses . as separator, so replace this in the hostname '''
-    return hostname.replace('.', separator)
+@contextmanager
+def _carbon(host, port):
+    """
+    Context manager to ensure the clean creation and destruction of a socket.
+
+    host
+        The IP or hostname of the carbon server
+    port
+        The port that carbon is listening on
+
+    """
+
+    carbon_sock = None
+
+    try:
+        carbon_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM,
+                                    socket.IPPROTO_TCP)
+
+        carbon_sock.connect((host, port))
+    except socket.error as e:
+        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+        raise
+    else:
+        log.debug('Connected to carbon')
+        yield carbon_sock
+    finally:
+        if carbon_sock is not None:
+            # Shut down and close socket
+            log.debug('Destroying carbon socket')
+
+            carbon_sock.shutdown(socket.SHUT_RDWR)
+            carbon_sock.close()
 
 
-def _send_picklemetrics(metrics, carbon_sock):
-    ''' Uses pickle protocol to send data '''
-    metrics = [(metric_name, (timestamp, value)) for (metric_name, timestamp, value) in metrics]
-    data = pickle.dumps(metrics, protocol=-1)
-    struct_format = '!I'
-    data = struct.pack(struct_format, len(data)) + data
-    total_sent_bytes = 0
-    while total_sent_bytes < len(data):
-        sent_bytes = carbon_sock.send(data[total_sent_bytes:])
-        if sent_bytes == 0:
-            log.error('Bytes sent 0, Connection reset?')
-            return
-        total_sent_bytes += sent_bytes
-        logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
+def _send_picklemetrics(metrics):
+    """Format metrics for the carbon pickle protocol"""
+
+    metrics = [(metric_name, (timestamp, value))
+               for (metric_name, value, timestamp) in metrics]
+
+    data = pickle.dumps(metrics, -1)
+    payload = struct.pack('!L', len(data)) + data
+
+    return payload
 
 
-def _walk(path, value, metrics, timestamp):
+def _send_textmetrics(metrics):
+    """Format metrics for the carbon plaintext protocol"""
+
+    data = [' '.join(map(str, metric)) for metric in metrics] + ['']
+
+    return '\n'.join(data)
+
+
+def _walk(path, value, metrics, timestamp, skip):
+    """
+    Recursively include metrics from *value*.
+
+    path
+        The dot-separated path of the metric.
+    value
+        A dictionary or value from a dictionary. If a dictionary, ``_walk``
+        will be called again with the each key/value pair as a new set of
+        metrics.
+    metrics
+        The list of metrics that will be sent to carbon, formatted as::
+
+            (path, value, timestamp)
+    skip
+        Whether or not to skip metrics when there's an error casting the value
+        to a float. Defaults to `False`.
+
+    """
+
     if isinstance(value, collections.Mapping):
         for key, val in value.items():
-            _walk('{0}.{1}'.format(path, key), val, metrics, timestamp)
+            _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
             val = float(value)
             metrics.append((path, val, timestamp))
-        except TypeError:
-            log.info('Error in carbon returner, when trying to'
-                     'convert metric:{0}, with val:{1}'.format(path, val))
-            raise
+        except (TypeError, ValueError):
+            msg = 'Error in carbon returner, when trying to convert metric: ' \
+                  '{0}, with val: {1}'.format(path, value)
+            if skip:
+                log.debug(msg)
+            else:
+                log.info(msg)
+                raise
 
 
 def returner(ret):
     '''
     Return data to a remote carbon server using the text metric protocol
-    '''
-    host = __salt__['config.option']('carbon.host')
-    port = __salt__['config.option']('carbon.port')
-    log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
-    if not host or not port:
-        log.error('Host or port not defined')
-        return
 
-    try:
-        carbon_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        carbon_sock.connect((host, port))
-    except socket.error as e:
-        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+    Each metric will look like::
+
+        [module].[function].[minion_id].[metric path [...]].[metric name]
+
+    '''
+
+    c_cfg = __opts__.get('carbon', {})
+
+    host = c_cfg.get('host', __opts__.get('carbon.host', None))
+    port = c_cfg.get('port', __opts__.get('carbon.port', None))
+    skip = c_cfg.get('skip_on_error', __opts__.get('carbon.skip_on_error', False))
+    mode = c_cfg.get('mode', __opts__.get('carbon.mode', 'text')).lower()
+
+    log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
+    log.debug('Using carbon protocol: {}'.format(mode))
+
+    if not (host and port):
+        log.error('Host or port not defined')
         return
 
     # TODO: possible to use time return from salt job to be slightly more precise?
@@ -87,35 +170,25 @@ def returner(ret):
 
     saltdata = ret['return']
     metric_base = ret['fun']
+    handler = _send_picklemetrics if mode == 'pickle' else _send_textmetrics
+
     # Strip the hostname from the carbon base if we are returning from virt
     # module since then we will get stable metric bases even if the VM is
     # migrate from host to host
     if not metric_base.startswith('virt.'):
-        metric_base += '.' + _formatHostname(ret['id'])
+        metric_base += '.' + ret['id'].replace('.', '_')
+
     metrics = []
+    _walk(metric_base, saltdata, metrics, timestamp, skip)
+    data = handler(metrics)
 
-    _walk(metric_base, saltdata, metrics, timestamp)
-
-    def _send_textmetrics(metrics):
-        ''' Use text protorocol to send metric over socket '''
-        data = []
-        for metric in metrics:
-            metric = '{0} {1} {2}'.format(metric[0], metric[1], metric[2])
-            data.append(metric)
-        data = '\n'.join(data) + '\n'
+    with _carbon(host, port) as sock:
         total_sent_bytes = 0
         while total_sent_bytes < len(data):
-            sent_bytes = carbon_sock.send(data[total_sent_bytes:])
+            sent_bytes = sock.send(data[total_sent_bytes:])
             if sent_bytes == 0:
                 log.error('Bytes sent 0, Connection reset?')
                 return
+
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
-
             total_sent_bytes += sent_bytes
-
-    # Send metrics
-    _send_textmetrics(metrics)
-
-    # Shut down and close socket
-    carbon_sock.shutdown(socket.SHUT_RDWR)
-    carbon_sock.close()
