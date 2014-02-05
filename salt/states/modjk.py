@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 State to control Apache modjk
 '''
