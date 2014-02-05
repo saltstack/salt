@@ -130,12 +130,12 @@ def destroy(device):
         for number in details['members']:
             __salt__['cmd.retcode'](zero_cmd.format(number['device']))
 
+    # Remove entry from config file:
     if os == 'Ubuntu' or os == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    # Remove entry from config file:
     __salt__['file.replace'](cfg_file, 'ARRAY {} .*'.format(device), '')
 
     if __salt__['raid.list']().get(device) is None:
@@ -227,8 +227,20 @@ def create(*args):
 
 def save_config():
     """
-    Issue with mdadm and ubuntu
+    Save RAID configuration to config file.
+
+    Same as:
+    mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+
+    Fixes this issue with Ubuntu
     REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.save_config
+
     """
     os = __salt__['grains.items']()['os']
     scan = __salt__['cmd.run']('mdadm --detail --scan').split()
