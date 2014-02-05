@@ -144,7 +144,6 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = int(time.time())
         rotate = int(time.time())
@@ -164,25 +163,8 @@ class Master(SMaster):
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
-            if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
-                cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
-
-                if os.path.exists(jid_root):
-                    for top in os.listdir(jid_root):
-                        t_path = os.path.join(jid_root, top)
-                        for final in os.listdir(t_path):
-                            f_path = os.path.join(t_path, final)
-                            jid_file = os.path.join(f_path, 'jid')
-                            if not os.path.isfile(jid_file):
-                                continue
-                            with salt.utils.fopen(jid_file, 'r') as fn_:
-                                jid = fn_.read()
-                            if len(jid) < 18:
-                                # Invalid jid, scrub the dir
-                                shutil.rmtree(f_path)
-                            elif int(cur) - int(jid[:10]) > \
-                                    self.opts['keep_jobs']:
-                                shutil.rmtree(f_path)
+            if (now - last) >= loop_interval:
+                salt.daemons.masterapi.clean_old_jobs(self.opts)
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
@@ -191,16 +173,7 @@ class Master(SMaster):
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
-            try:
-                if not fileserver.servers:
-                    log.error('No fileservers loaded, the master will not be'
-                              'able to serve files to minions')
-                    raise SaltMasterError('No fileserver backends available')
-                fileserver.update()
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in file server update'.format(exc)
-                )
+            salt.daemons.masterapi.fileserver_update(fileserver)
 
             # check how close to FD limits you are
             salt.utils.verify.check_max_open_files(self.opts)

@@ -9,6 +9,8 @@ import os
 import re
 import logging
 import getpass
+import shutil
+import datetime
 try:
     import pwd
 except ImportError:
@@ -36,11 +38,38 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.event import tagify
+from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+
+def clean_old_jobs(opts):
+    '''
+    Clean out the old jobs from the job cache
+    '''
+    if opts['keep_jobs'] != 0:
+        jid_root = os.path.join(opts['cachedir'], 'jobs')
+        cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
+
+        if os.path.exists(jid_root):
+            for top in os.listdir(jid_root):
+                t_path = os.path.join(jid_root, top)
+                for final in os.listdir(t_path):
+                    f_path = os.path.join(t_path, final)
+                    jid_file = os.path.join(f_path, 'jid')
+                    if not os.path.isfile(jid_file):
+                        continue
+                    with salt.utils.fopen(jid_file, 'r') as fn_:
+                        jid = fn_.read()
+                    if len(jid) < 18:
+                        # Invalid jid, scrub the dir
+                        shutil.rmtree(f_path)
+                    elif int(cur) - int(jid[:10]) > \
+                            opts['keep_jobs']:
+                        shutil.rmtree(f_path)
 
 
 def access_keys(opts):
@@ -91,6 +120,24 @@ def access_keys(opts):
             pass
         keys[user] = key
     return keys
+
+
+def fileserver_update(fileserver):
+    '''
+    Update the fileserver backends, requires that a built fileserver object
+    be passed in
+    '''
+    try:
+        if not fileserver.servers:
+            log.error('No fileservers loaded, the master will not be'
+                      'able to serve files to minions')
+            raise SaltMasterError('No fileserver backends available')
+        fileserver.update()
+    except Exception as exc:
+        log.error(
+            'Exception {0} occurred in file server update'.format(exc)
+        )
+
 
 class RemoteFuncs(object):
     '''
