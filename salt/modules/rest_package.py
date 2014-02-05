@@ -4,13 +4,8 @@ Service support for the REST example
 '''
 
 # Import python libs
-import glob
 import logging
-import os
-import stat
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +68,7 @@ def installed(
         **kwargs):
 
     p = __opts__['proxyobject'].package_status(name)
-    if version == None:
+    if version is None:
         if 'ret' in p:
             return str(p['ret'])
         else:

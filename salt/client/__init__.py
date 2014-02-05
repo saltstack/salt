@@ -184,7 +184,6 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid %s is still running', jid)
-
         timeout = self.opts['gather_job_timeout']
 
         arg = [jid]

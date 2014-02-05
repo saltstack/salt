@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
+Generate baseline proxy minion grains
 '''
 __proxyenabled__ = ['rest_sample']
 
