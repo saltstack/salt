@@ -1575,6 +1575,17 @@ class Caller(object):
 
         # Or call objects directly
         caller.sminion.functions['cmd.run']('ls -l')
+
+    Note, a running master or minion daemon is not required to use this class.
+    Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
+    ``'local'``. The same can be achived at the Python level by including that
+    setting in a minion config file.
+
+    .. code-block:: python
+
+        caller = salt.client.Caller('/path/to/custom/minion_config')
+        caller.sminion.functions['grains.items']()
+
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion')):
         self.opts = salt.config.minion_config(c_path)
