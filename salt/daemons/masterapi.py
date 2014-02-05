@@ -32,6 +32,7 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.transport.table
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -44,6 +45,26 @@ log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+
+def master_keys(opts):
+    '''
+    Generate and return the master long term key data
+    '''
+    keyfile = os.path.join(
+            opts['pki_dir'],
+            'priv.{0}'.format(opts['crypt_backend'])
+            )
+    if not os.path.isfile(keyfile):
+        public = salt.transport.table.Public(
+                backend=opts['crypt_backend'],
+                serial='msgpack')
+        public.save(keyfile)
+        return public
+    return salt.transport.table.Public(
+            backend=opts['crypt_backend'],
+            keyfile=keyfile,
+            serial='msgpack')
 
 
 def clean_old_jobs(opts):
