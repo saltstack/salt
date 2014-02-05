@@ -319,8 +319,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -330,8 +330,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -423,8 +423,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, fname)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -432,8 +432,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, name_)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -550,56 +550,6 @@ def _symlink_check(name, target, force, user, group):
                           .format(name, target))
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
-
-
-def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
-    '''
-     Check for glob or regexp patterns for include_pat and exclude_pat in the
-     'path_str' string and return True/False conditions as follows.
-      - Default: return 'True' if no include_pat or exclude_pat patterns are
-        supplied
-      - If only include_pat or exclude_pat is supplied: return 'True' if string
-        passes the include_pat test or fails exclude_pat test respectively
-      - If both include_pat and exclude_pat are supplied: return 'True' if
-        include_pat matches AND exclude_pat does not match
-    '''
-    ret = True  # -- default true
-    # Before pattern match, check if it is regexp (E@'') or glob(default)
-    if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
-        else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
-
-    if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
-        else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
-
-    # Now apply include/exclude conditions
-    if include_pat and not exclude_pat:
-        ret = retchk_include
-    elif exclude_pat and not include_pat:
-        ret = retchk_exclude
-    elif include_pat and exclude_pat:
-        ret = retchk_include and retchk_exclude
-    else:
-        ret = True
-
-    return ret
 
 
 def _test_owner(kwargs, user=None):
@@ -1801,9 +1751,8 @@ def recurse(name,
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in symlinks.items():
-            if not _check_include_exclude(os.path.relpath(lname, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
             srelpath = os.path.relpath(lname, srcpath)
             # Check for max depth
@@ -1876,7 +1825,8 @@ def recurse(name,
 
         #- Check if it is to be excluded. Match only part of the path
         # relative to the target directory
-        if not _check_include_exclude(relname, include_pat, exclude_pat):
+        if not salt.utils.check_include_exclude(
+                relname, include_pat, exclude_pat):
             continue
         dest = os.path.join(name, relname)
         dirname = os.path.dirname(dest)
@@ -1893,9 +1843,8 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
         for mdir in mdirs:
-            if not _check_include_exclude(os.path.relpath(mdir, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
