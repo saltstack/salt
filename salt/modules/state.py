@@ -13,6 +13,7 @@ import logging
 import tarfile
 import datetime
 import tempfile
+import sys
 
 # Import salt libs
 import salt.utils
@@ -396,19 +397,26 @@ def sls(mods,
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
-        msg = 'Unable to write to "state.sls" cache file {0}'
+        msg = 'Unable to write to SLS cache file {0}. Check permission. This is a fatal error. Exiting.'
         log.error(msg.format(cache_file))
+        # This is actually a fatal error because the state system is badly broken if continue.
+        sys.exit(1)
+
     os.umask(cumask)
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
-    with salt.utils.fopen(cfn, 'w+') as fp_:
-        try:
-            serial.dump(high_, fp_)
-        except TypeError:
-            # Can't serialize pydsl
-            pass
+    try:
+        with salt.utils.fopen(cfn, 'w+') as fp_:
+            try:
+                serial.dump(high_, fp_)
+            except TypeError:
+                # Can't serialize pydsl
+                pass
+    except (IOError, OSError):
+        msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
+        log.error(msg.format(fp_))
     return ret
 
 
