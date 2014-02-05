@@ -509,7 +509,6 @@ class SAuth(Auth):
         revolving master aes key.
         '''
         while True:
-            log.debug('LMAO AUTH TIMEOUT IS: {0}'.format(self.opts['auth_timeout']))
             creds = self.sign_in(
                 self.opts['auth_timeout'],
                 self.opts.get('_safe_auth', True)
