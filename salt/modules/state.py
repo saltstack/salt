@@ -13,7 +13,6 @@ import logging
 import tarfile
 import datetime
 import tempfile
-import sys
 
 # Import salt libs
 import salt.utils
@@ -397,10 +396,8 @@ def sls(mods,
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
-        msg = 'Unable to write to SLS cache file {0}. Check permission. This is a fatal error. Exiting.'
+        msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-        # This is actually a fatal error because the state system is badly broken if continue.
-        sys.exit(1)
 
     os.umask(cumask)
     _set_retcode(ret)
