@@ -31,6 +31,7 @@ Required python modules: MySQLdb
 # Import python libs
 from contextlib import contextmanager
 import logging
+import collections
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -96,6 +97,7 @@ class merger(object):
     num_fields = 0
     depth = 0
     as_list = False
+    with_lists = None
 
     def __init__(self):
         self.result = self.focus = {}
@@ -137,7 +139,8 @@ class merger(object):
         for qb in qbuffer:
             defaults = {'query': '',
                         'depth': 0,
-                        'as_list': False
+                        'as_list': False,
+                        'with_lists': None
                         }
             if type(qb[1]) is str:
                 defaults['query'] = qb[1]
@@ -148,6 +151,10 @@ class merger(object):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
+                if (defaults['with_lists']):
+                    defaults['with_lists'] = [
+                        int(i) for i in defaults['with_lists'].split(',')
+                    ]
             qb[1] = defaults
 
         return qbuffer
@@ -171,11 +178,20 @@ class merger(object):
             self.depth = depth
 
     def process_results(self, rows):
+        listify = collections.OrderedDict()
+        listify_dicts = collections.OrderedDict()
         for ret in rows:
             # crd is the Current Return Data level, to make this non-recursive.
             crd = self.focus
             # Walk and create dicts above the final layer
             for i in range(0, self.depth-1):
+                # At the end we'll use listify to find values to make a list of
+                if i+1 in self.with_lists:
+                    if id(crd) not in listify:
+                        listify[id(crd)] = []
+                        listify_dicts[id(crd)] = crd
+                    if ret[i] not in listify[id(crd)]:
+                        listify[id(crd)].append(ret[i])
                 if (ret[i] not in crd):
                     # Key missing
                     crd[ret[i]] = {}
@@ -205,29 +221,44 @@ class merger(object):
 
             # If this test is true, the penultimate field is the key
             if self.depth == self.num_fields - 1:
-                nk = self.num_fields-2
+                nk = self.num_fields-2  # Aka, self.depth-1
                 # Should we and will we have a list at the end?
-                if self.as_list and (ret[nk] in crd):
-                    temp = crd[ret[nk]]
-                    if (type(temp) is list):
-                        # Already list, append
-                        temp.append(ret[self.num_fields-1])
+                if ((self.as_list and (ret[nk] in crd)) or
+                     nk+1 in self.with_lists):
+                    if ret[nk] in crd:
+                        if type(crd[ret[nk]]) is not list:
+                            crd[ret[nk]] = [crd[ret[nk]]]
+                        # if it's already a list, do nothing
                     else:
-                        # Convert to list
-                        crd[ret[nk]] = [temp, ret[self.num_fields-1]]
+                        crd[ret[nk]] = []
+                    crd[ret[nk]].append(ret[self.num_fields-1])
                 else:
                     # No clobber checks then
                     crd[ret[nk]] = ret[self.num_fields-1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
-                # The spare results because of {c: d} vs {"c": c, "d": d }
+                # The spare results because of {c: d} vs {c: {"d": d, "e": e }}
                 # So, make that last dict
                 if ret[self.depth-1] not in crd:
                     crd[ret[self.depth-1]] = {}
+                # This bit doesn't escape listify
+                if self.depth in self.with_lists:
+                    if id(crd) not in listify:
+                        listify[id(crd)] = []
+                        listify_dicts[id(crd)] = crd
+                    if ret[self.depth-1] not in listify[id(crd)]:
+                        listify[id(crd)].append(ret[self.depth-1])
                 crd = crd[ret[self.depth-1]]
                 # Now for the remaining keys, we put them in to the dict
                 for i in range(self.depth, self.num_fields):
                     nk = self.field_names[i]
+                    # Listify
+                    if i+1 in self.with_lists:
+                        if id(crd) not in listify:
+                            listify[id(crd)] = []
+                            listify_dicts[id(crd)] = crd
+                        if nk not in listify[id(crd)]:
+                            listify[id(crd)].append(nk)
                     # Collision detection
                     if self.as_list and (nk in crd):
                         # Same as before...
@@ -237,7 +268,16 @@ class merger(object):
                             crd[nk] = [crd[nk], ret[i]]
                     else:
                         crd[nk] = ret[i]
-
+        # Get key list and work backwards.  This is inner-out processing
+        ks = listify_dicts.keys()
+        ks.reverse()
+        for i in ks:
+            d = listify_dicts[i]
+            for k in listify[i]:
+                if (type(d[k]) is dict):
+                    d[k] = d[k].values()
+                elif (type(d[k]) is not list):
+                    d[k] = [d[k]]
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     '''
@@ -275,20 +315,40 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # Then they are merged the in a similar way to plain pillar data, in the
     # order returned by MySQL.
     # Thus subsequent results overwrite previous ones when they collide.
+    #
     # If you specify `as_list: True` in the mapping expression it will convert
     # collisions to lists.
+    #
+    # If you specify `with_lists: '...'` in the mapping expression it will
+    # convert the specified depths to list.  The string provided is a sequence
+    # numbers that are comma separated.  The string '1,3' will result in:
+    #
+    # a,b,c,d,e,1  # field 1 same, field 3 differs
+    # a,b,c,f,g,2  # ^^^^
+    # a,z,h,y,j,3  # field 1 same, field 3 same
+    # a,z,h,y,k,4  # ^^^^
+    #   ^   ^
+    # These columns define list grouping
+    #
+    # {a: [
+    #       {c: [
+    #           {e: 1},
+    #           {g: 2}
+    #           ]
+    #       },
+    #       {h: [
+    #           {j: 3, k: 4 }
+    #           ]
+    #       }
+    # ]}
+    #
+    # The range for with_lists is 1 to number_of_fiels, inclusive.
+    # Numbers outside this range are ignored.
     #
     # Finally, if you use pass the queries in via a mapping, the key will be the
     # first level name where as passing them in as a list will place them in the
     # root.  This isolates the query results in to their own subtrees.
     # This may be a help or hindrance to your aims and can be used as such.
-    #
-    # I want to have it able to generate lists as well as mappings but I've not
-    # quite figured how to express that cleanly in the config.
-    # Might be something to have it convert a particular field in to a list
-    # (for k,v in map: list.append(v))
-    # The right most value is easy enough, since it's just a matter of having it
-    # make a list instead of overwriting, but inner values are trickier
 
     # Most of the heavy lifting is in this class for ease of testing.
     return_data = merger()
@@ -306,6 +366,10 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                                            details['depth'])
                 return_data.enter_root(root)
                 return_data.as_list = details['as_list']
+                if details['as_list']:
+                    return_data.as_list = details['with_list']
+                else:
+                    return_data.as_list = []
                 return_data.process_results(cur.fetchall())
 
                 log.debug('ext_pillar MySQL: Return data: {0}'.format(
