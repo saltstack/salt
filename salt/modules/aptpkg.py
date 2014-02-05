@@ -1556,25 +1556,26 @@ def _resolve_deps(name, pkgs, **kwargs):
         deb = apt.debfile.DebPackage(filename=pkg_file)
         if deb.check():
             missing_deps.extend(deb.missing_deps)
-    cmd = ['apt-get', '-q', '-y']
-    cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
-    cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
-    cmd.append('install')
-    cmd.extend(missing_deps)
 
-    ret = __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-            output_loglevel='debug')
+    if missing_deps:
+        cmd = ['apt-get', '-q', '-y']
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+        cmd.append('install')
+        cmd.extend(missing_deps)
 
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(
-                'Error: unable to resolve dependencies for: {0}'.format(name)
-        )
-    else:
-        try:
-            cmd = ['apt-mark', 'auto'] + missing_deps
-            __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                    output_loglevel='debug')
-        except MinionError as exc:
-            raise CommandExecutionError(exc)
+        ret = __salt__['cmd.retcode'](cmd, env=kwargs.get('env'), python_shell=False,
+                output_loglevel='debug')
 
+        if ret != 0:
+            raise CommandExecutionError(
+                    'Error: unable to resolve dependencies for: {0}'.format(name)
+            )
+        else:
+            try:
+                cmd = ['apt-mark', 'auto'] + missing_deps
+                __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+                        output_loglevel='debug')
+            except MinionError as exc:
+                raise CommandExecutionError(exc)
     return
