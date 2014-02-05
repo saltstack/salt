@@ -64,7 +64,7 @@ def _present_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                __env__)
+                saltenv=__env__)
         if keys:
             comment = ''
             for key, status in keys.items():
@@ -175,7 +175,8 @@ def present(
         data = __salt__['ssh.set_auth_key_from_file'](
                 user,
                 source,
-                config)
+                config,
+                saltenv=__env__)
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
