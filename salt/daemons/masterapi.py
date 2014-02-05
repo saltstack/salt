@@ -9,6 +9,11 @@ import os
 import re
 import logging
 import getpass
+try:
+    import pwd
+except ImportError:
+    # In case a non-master needs to import this module
+    pass
 
 
 # Import salt libs
@@ -37,6 +42,55 @@ log = logging.getLogger(__name__)
 # Things to do in lower layers:
 # only accept valid minion ids
 
+
+def access_keys(opts):
+    '''
+    A key needs to be placed in the filesystem with permissions 0400 so
+    clients are required to run as root.
+    '''
+    users = []
+    keys = {}
+    acl_users = set(opts['client_acl'].keys())
+    if opts.get('user'):
+        acl_users.add(opts['user'])
+    acl_users.add(getpass.getuser())
+    for user in pwd.getpwall():
+        users.append(user.pw_name)
+    for user in acl_users:
+        log.info(
+            'Preparing the {0} key for local communication'.format(
+                user
+            )
+        )
+
+        if user not in users:
+            try:
+                user = pwd.getpwnam(user)
+            except KeyError:
+                log.error('ACL user {0} is not available'.format(user))
+                continue
+        keyfile = os.path.join(
+            opts['cachedir'], '.{0}_key'.format(user)
+        )
+
+        if os.path.exists(keyfile):
+            log.debug('Removing stale keyfile: {0}'.format(keyfile))
+            os.unlink(keyfile)
+
+        key = salt.crypt.Crypticle.generate_key_string()
+        cumask = os.umask(191)
+        with salt.utils.fopen(keyfile, 'w+') as fp_:
+            fp_.write(key)
+        os.umask(cumask)
+        os.chmod(keyfile, 256)
+        try:
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+        except OSError:
+            # The master is not being run as root and can therefore not
+            # chown the key file
+            pass
+        keys[user] = key
+    return keys
 
 class RemoteFuncs(object):
     '''
