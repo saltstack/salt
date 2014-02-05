@@ -15,7 +15,6 @@ import shutil
 import stat
 import logging
 import hashlib
-import datetime
 try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
@@ -52,7 +51,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import SaltMasterError, MasterExit
+from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
 
