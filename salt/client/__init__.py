@@ -184,7 +184,6 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid %s is still running', jid)
-        
         timeout = self.opts['gather_job_timeout']
 
         arg = [jid]
@@ -911,7 +910,7 @@ class LocalClient(object):
             if last_time:
                 if len(found) < len(minions):
                     log.info('jid %s minions %s did not return in time',
-                             jid, (minions -found))
+                             jid, (minions - found))
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the

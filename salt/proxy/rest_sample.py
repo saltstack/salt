@@ -3,24 +3,22 @@
 This is a simple proxy-minion designed to connect to and communicate with
 the bottle-based web service contained in salt/tests/rest.py.
 
-Note this example needs the 'requests' library.  
+Note this example needs the 'requests' library.
 Requests is not a hard dependency for Salt
 '''
 
 # Import python libs
-import logging
-import os
 import requests
 HAS_REST_EXAMPLE = True
 
 __proxyenabled__ = ['rest_sample']
+
 
 class Proxyconn(object):
     '''
     Interface with the REST sample web service (rest.py at
     https://github.com/cro/salt-proxy-rest)
     '''
-
     def __init__(self, details):
         self.url = details['url']
         self.grains_cache = {}
@@ -31,10 +29,7 @@ class Proxyconn(object):
         '''
         r = requests.get(self.url+'id')
         return r.text.encode('ascii', 'ignore')
-
-        '''
-        Return the type of proxy
-        '''
+        # Return the type of proxy
         return 'rest_example'
 
     def grains(self):
