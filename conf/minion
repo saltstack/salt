@@ -111,6 +111,13 @@
 # 0 and the defined value.
 #random_reauth_delay: 60
 
+# When waiting for a master to accept the minion's public key, salt will
+# continuously attempt to reconnect until successful. This is the timeout value,
+# in seconds, for each individual attempt. After this timeout expires, the minion
+# will wait for acceptance_wait_time seconds before trying again.
+# Unless your master is under unusually heavy load, this should be left at the default.
+#auth_timeout: 3
+
 
 # If you don't have any problems with syn-floods, dont bother with the
 # three recon_* settings described below, just leave the defaults!
