@@ -7,6 +7,7 @@ Set up the Salt integration test suite
 # Import Python libs
 from __future__ import print_function
 import os
+import re
 import sys
 import time
 import errno
@@ -24,6 +25,10 @@ except ImportError:
     pass
 
 
+STATE_FUNCTION_RUNNING_RE = re.compile(
+    r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
+    r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
+)
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -76,7 +81,7 @@ def skip_if_binaries_missing(binaries, check_all=False):
         return obj
 
     if sys.version_info < (2, 7):
-        from unittest2 import skip
+        from unittest2 import skip  # pylint: disable=F0401
     else:
         from unittest import skip  # pylint: disable=E0611
 
@@ -767,13 +772,20 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                     function, minion_tgt, orig
                 )
             )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(
+            orig[minion_tgt], func=function
+        )
+
         return orig[minion_tgt]
 
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
         '''
-        return self.run_function('state.single', [function], **kwargs)
+        ret = self.run_function('state.single', [function], **kwargs)
+        return self._check_state_return(ret)
 
     @property
     def minion_opts(self):
@@ -801,6 +813,45 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return salt.config.master_config(
             self.get_config_file_path('master')
         )
+
+    def _check_state_return(self, ret, func='state.single'):
+        if isinstance(ret, dict):
+            # This is the supposed return format for state calls
+            return ret
+
+        log.debug(
+            'The {0!r} call did not return a dictionary! '
+            'Returned: {1}'.format(func, ret)
+        )
+        if isinstance(ret, list):
+            jids = []
+            # These are usually errors
+            for item in ret[:]:
+                if not isinstance(item, salt._compat.string_types):
+                    # We don't know how to handle this
+                    continue
+                match = STATE_FUNCTION_RUNNING_RE.match(item)
+                if not match:
+                    # We don't know how to handle this
+                    continue
+                jid = match.group('jib')
+                if jid in jids:
+                    continue
+
+                jids.append(jid)
+
+                job_data = self.run_function(
+                    '--out yaml saltutil.find_job', [jid]
+                )
+                job_kill = self.run_function('saltutil.kill_job', [jid])
+                msg = (
+                    'A running state.single was found causing a state lock. '
+                    'Job details:\n{0}\n'
+                    'Killing Job Returned: {1}'.format(job_data, job_kill)
+                )
+                ret.append('[TEST SUITE ENFORCED]\n{1}\n'
+                           '[/TEST SUITE ENFORCED]'.format(msg))
+        return ret
 
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):
