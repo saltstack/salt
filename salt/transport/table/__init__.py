@@ -56,12 +56,12 @@ def _gather_backend(backend, sec_backend=None):
     '''
     pubname = 'salt.transport.table.public.{0}'.format(backend)
     pubmod = __import__(pubname)
-    pubmod = getattr(pubmod.public, backend)
+    pubmod = getattr(pubmod.transport.table.public, backend)
     if sec_backend is None:
         sec_backend = pubmod.SEC_BACKEND
     secname = 'salt.transport.table.secret.{0}'.format(sec_backend)
     secmod = __import__(secname)
-    secmod = getattr(secmod.secret, sec_backend)
+    secmod = getattr(secmod.transport.table.secret, sec_backend)
     return (pubmod,
             secmod)
 

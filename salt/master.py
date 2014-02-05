@@ -15,7 +15,6 @@ import shutil
 import stat
 import logging
 import hashlib
-import datetime
 try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
@@ -45,13 +44,14 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.daemons.masterapi
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import SaltMasterError, MasterExit
+from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
 
@@ -116,49 +116,7 @@ class SMaster(object):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        users = []
-        keys = {}
-        acl_users = set(self.opts['client_acl'].keys())
-        if self.opts.get('user'):
-            acl_users.add(self.opts['user'])
-        acl_users.add(getpass.getuser())
-        for user in pwd.getpwall():
-            users.append(user.pw_name)
-        for user in acl_users:
-            log.info(
-                'Preparing the {0} key for local communication'.format(
-                    user
-                )
-            )
-
-            if user not in users:
-                try:
-                    user = pwd.getpwnam(user)
-                except KeyError:
-                    log.error('ACL user {0} is not available'.format(user))
-                    continue
-            keyfile = os.path.join(
-                self.opts['cachedir'], '.{0}_key'.format(user)
-            )
-
-            if os.path.exists(keyfile):
-                log.debug('Removing stale keyfile: {0}'.format(keyfile))
-                os.unlink(keyfile)
-
-            key = salt.crypt.Crypticle.generate_key_string()
-            cumask = os.umask(191)
-            with salt.utils.fopen(keyfile, 'w+') as fp_:
-                fp_.write(key)
-            os.umask(cumask)
-            os.chmod(keyfile, 256)
-            try:
-                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-            except OSError:
-                # The master is not being run as root and can therefore not
-                # chown the key file
-                pass
-            keys[user] = key
-        return keys
+        return salt.daemons.masterapi.access_keys(self.opts)
 
 
 class Master(SMaster):
@@ -185,7 +143,6 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = int(time.time())
         rotate = int(time.time())
@@ -205,25 +162,8 @@ class Master(SMaster):
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
-            if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
-                cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
-
-                if os.path.exists(jid_root):
-                    for top in os.listdir(jid_root):
-                        t_path = os.path.join(jid_root, top)
-                        for final in os.listdir(t_path):
-                            f_path = os.path.join(t_path, final)
-                            jid_file = os.path.join(f_path, 'jid')
-                            if not os.path.isfile(jid_file):
-                                continue
-                            with salt.utils.fopen(jid_file, 'r') as fn_:
-                                jid = fn_.read()
-                            if len(jid) < 18:
-                                # Invalid jid, scrub the dir
-                                shutil.rmtree(f_path)
-                            elif int(cur) - int(jid[:10]) > \
-                                    self.opts['keep_jobs']:
-                                shutil.rmtree(f_path)
+            if (now - last) >= loop_interval:
+                salt.daemons.masterapi.clean_old_jobs(self.opts)
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
@@ -232,16 +172,7 @@ class Master(SMaster):
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
-            try:
-                if not fileserver.servers:
-                    log.error('No fileservers loaded, the master will not be'
-                              'able to serve files to minions')
-                    raise SaltMasterError('No fileserver backends available')
-                fileserver.update()
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in file server update'.format(exc)
-                )
+            salt.daemons.masterapi.fileserver_update(fileserver)
 
             # check how close to FD limits you are
             salt.utils.verify.check_max_open_files(self.opts)
