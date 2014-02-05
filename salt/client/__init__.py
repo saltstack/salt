@@ -1586,9 +1586,26 @@ class Caller(object):
         caller = salt.client.Caller('/path/to/custom/minion_config')
         caller.sminion.functions['grains.items']()
 
+    .. versionadded:: Helium
+        Pass the minion config as a dictionary.
+
+    .. code-block:: python
+
+        import salt.client
+        import salt.config
+
+        opts = salt.config.minion_config('/etc/salt/minion')
+        opts['file_client'] = 'local'
+        caller = salt.client.Caller(opts)
+        caller.sminion.functions['grains.items']()
+
     '''
-    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion')):
-        self.opts = salt.config.minion_config(c_path)
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
+            mopts=None):
+        if mopts:
+            self.opts = mopts
+        else:
+            self.opts = salt.config.minion_config(c_path)
         self.sminion = salt.minion.SMinion(self.opts)
 
     def function(self, fun, *args, **kwargs):
