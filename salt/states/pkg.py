@@ -328,7 +328,7 @@ def installed(
     version
         Install a specific version of a package. This option is ignored if
         either "pkgs" or "sources" is used. Currently, this option is supported
-        for the following pkg providers: :mod:`apt <salt.modules.apt_pkg>`,
+        for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
@@ -361,7 +361,7 @@ def installed(
               - bar
               - baz
 
-    ``NOTE:`` For :mod:`apt <salt.modules.apt_pkg>`,
+    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
     :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
     and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
