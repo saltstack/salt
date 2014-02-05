@@ -834,7 +834,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 if not match:
                     # We don't know how to handle this
                     continue
-                jid = match.group('jib')
+                jid = match.group('jid')
                 if jid in jids:
                     continue
 
