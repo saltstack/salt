@@ -2,9 +2,6 @@
 
 .. _contents:
 
-.. image:: _static/saltconf.jpg
-    :target: http://saltconf.com/
-
 What is SaltStack?
 ==================
 

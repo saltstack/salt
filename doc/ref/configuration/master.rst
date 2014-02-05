@@ -154,11 +154,18 @@ Specify the location of the master pidfile
 Default: :file:`/`
 
 The system root directory to operate from, change this to make Salt run from
-an alternative root
+an alternative root.
 
 .. code-block:: yaml
 
     root_dir: /
+
+.. note::
+
+    This directory is prepended to the following options:
+    :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
+    :conf_master:`log_file`, :conf_master:`autosign_file`,
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
 
 .. conf_master:: pki_dir
 
@@ -386,6 +393,8 @@ If the ``autosign_file`` is specified incoming keys specified in the autosign_fi
 will be automatically accepted. Matches will be searched for first by string
 comparison, then by globbing, then by full-string regex matching. This is
 insecure!
+
+.. conf_master:: autoreject_file
 
 ``autoreject_file``
 -------------------

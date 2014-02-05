@@ -15,6 +15,7 @@
 # Import python libs
 import os
 import sys
+import time
 import logging
 import subprocess
 import ConfigParser
@@ -22,10 +23,10 @@ import ConfigParser
 try:
     import txclib.utils
 except ImportError:
-    print(
+    sys.stdout.write(
         'The \'transifex-client\' library needs to be installed. '
         'Please execute one of \'pip install transifex-client\' or '
-        '\'easy_install transifex-client\''
+        '\'easy_install transifex-client\'\n'
     )
     sys.exit(1)
 
@@ -38,12 +39,12 @@ def main():
     '''
     os.chdir(DOC_DIR)
 
-    print('Extracting translatable strings....')
+    sys.stdout.write('Extracting translatable strings....\n')
     try:
         subprocess.check_call(['make', 'gettext'])
     except subprocess.CalledProcessError as exc:
-        print('An error occurred while extracting the translation '
-              'strings: {0}'.format(exc))
+        sys.stdout.write('An error occurred while extracting the translation '
+                         'strings: {0}\n'.format(exc))
         sys.exit(1)
 
     locale_dir = os.path.join(DOC_DIR, 'locale')
@@ -52,20 +53,22 @@ def main():
     tx_config = os.path.join(tx_root, '.tx', 'config')
 
     if not tx_root:
-        print('Unable to find the \'.tx/\' directory. Unable to continue')
+        sys.stdout.write(
+            'Unable to find the \'.tx/\' directory. Unable to continue\n'
+        )
         sys.exit(1)
 
     # We do not want the txclib INFO or WARNING logging
     logging.getLogger('txclib').setLevel(logging.ERROR)
 
-    print('Gathering the translation template files...'),
+    sys.stdout.write('Gathering the translation template files...')
     sys.stdout.flush()
     entries = []
     for dirpath, dirnames, filenames in os.walk(pot_dir):
         for filename in filenames:
             pot_file = os.path.join(dirpath, filename)
             base, ext = os.path.splitext(pot_file)
-            if ext != ".pot":
+            if ext != '.pot':
                 continue
             resource_path = os.path.relpath(base, pot_dir)
             try:
@@ -80,7 +83,7 @@ def main():
             resource_name = resource_path.replace(
                 '\\', '/').replace('/', '--').replace('.', '_')
             entries.append((resource_path, resource_name))
-    print('Done')
+    sys.stdout.write('Done\n')
 
     # Let's load the resources already present in the configuration file
     cfg = ConfigParser.SafeConfigParser()
@@ -90,11 +93,11 @@ def main():
         cfg.sections() if section.startswith('salt.')
     )
 
-    print('Updating the entries in \'.tx/config\'...')
+    sys.stdout.write('Updating the entries in \'.tx/config\'...\n')
     sys.stdout.flush()
     total_entries = len(entries)
     for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
-        print(
+        sys.stdout.write(
             '[{0:>{pad}}/{1}] Updating resource for '
             '{resource_path}.pot ({resource_name})'.format(
                 idx + 1,
@@ -104,7 +107,7 @@ def main():
                 resource_name=resource_name,
                 resource_path=resource_path
             )
-        ),
+        )
         sys.stdout.flush()
         try:
             txclib.utils.exec_command(
@@ -122,26 +125,31 @@ def main():
                 ).split(),
                 tx_root
             )
-            print
+            sys.stdout.write('\n')
             if 'salt.{0}'.format(resource_name) in handled_resources:
                 handled_resources.remove('salt.{0}'.format(resource_name))
+        except Exception as err:
+            sys.stdout.write('An error occurred: {0}\n'.format(err))
         except KeyboardInterrupt:
-            print
+            sys.stdout.write('\n')
             sys.exit(1)
+        time.sleep(0.025)
 
     if handled_resources:
         non_handled_resources = len(handled_resources)
-        print('Removing old resources from configuration and upstream'
-              '(if possible)')
+        sys.stdout.write(
+            'Removing old resources from configuration and upstream'
+            '(if possible)\n'
+        )
         for idx, resource_name in enumerate(sorted(handled_resources)):
-            print(
+            sys.stdout.write(
                 '[{0:>{pad}}/{1}] Removing resource {resource_name!r}'.format(
                     idx + 1,
                     non_handled_resources,
                     pad=len(str(non_handled_resources)),
                     resource_name=resource_name,
                 )
-            ),
+            )
             sys.stdout.flush()
             try:
                 txclib.utils.exec_command(
@@ -149,59 +157,67 @@ def main():
                     ['-r', resource_name],
                     tx_root
                 )
-            except Exception, err:
-                print err
+            except Exception as err:
+                sys.stdout.write('An error occurred: {0}\n'.format(err))
             finally:
                 if cfg.has_section(resource_name):
                     cfg.remove_section(resource_name)
-            print
+            sys.stdout.write('\n')
+            time.sleep(0.025)
         cfg.write(open(tx_config, 'w'))
-        print
+        sys.stdout.write('\n')
 
     # Set the translations file type we're using
     txclib.utils.exec_command('set', ['-t', 'PO'], tx_root)
+    time.sleep(0.025)
 
-    print
-    print('Pushing translation template files...')
-    for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
-        print(
-            '[{0:>{pad}}/{1}] Pushing resource for '
-            '{resource_path}.pot ({resource_name})'.format(
-                idx + 1,
-                total_entries,
-                pad=len(str(total_entries)),
-                locale_dir=locale_dir,
-                resource_name=resource_name,
-                resource_path=resource_path
-            )
-        ),
-        sys.stdout.flush()
-        try:
-            txclib.utils.exec_command(
-                'push',
-                '--resource salt.{resource_name} '
-                '--source '
-                '--skip '
-                '--no-interactive'.format(
+    if 'TRANSIFEX_NO_PUSH' not in os.environ:
+
+        sys.stdout.write('\n')
+        sys.stdout.write('Pushing translation template files...\n')
+        for idx, (resource_path, resource_name) in enumerate(sorted(entries)):
+            sys.stdout.write(
+                '[{0:>{pad}}/{1}] Pushing resource for '
+                '{resource_path}.pot ({resource_name})'.format(
+                    idx + 1,
+                    total_entries,
+                    pad=len(str(total_entries)),
+                    locale_dir=locale_dir,
                     resource_name=resource_name,
-                    resource_path=resource_path,
-                    locale_dir=locale_dir
-                ).split(),
-                tx_root
+                    resource_path=resource_path
+                )
             )
-            print
-        except KeyboardInterrupt:
-            print
-            sys.exit(1)
+            sys.stdout.flush()
+            try:
+                txclib.utils.exec_command(
+                    'push',
+                    '--resource salt.{resource_name} '
+                    '--source '
+                    '--skip '
+                    '--no-interactive'.format(
+                        resource_name=resource_name,
+                        resource_path=resource_path,
+                        locale_dir=locale_dir
+                    ).split(),
+                    tx_root
+                )
+                sys.stdout.write('\n')
+            except Exception as err:
+                sys.stdout.write('An error occurred: {0}\n'.format(err))
+            except KeyboardInterrupt:
+                sys.stdout.write('\n')
+                sys.exit(1)
+            time.sleep(0.025)
 
     if handled_resources:
-        print('=' * 80)
-        print('Don\'t forget to delete the following remote resources:')
+        sys.stdout.write('=' * 80)
+        sys.stdout.write(
+            '\nDon\'t forget to delete the following remote resources:\n')
         for resource_name in sorted(handled_resources):
-            print('    {0}'.format(resource_name))
-        print('=' * 80)
+            sys.stdout.write('    {0}\n'.format(resource_name))
+        sys.stdout.write('=' * 80)
 
-    print 'DONE'
+    sys.stdout.write('\nDONE\n')
 
 
 if __name__ == '__main__':

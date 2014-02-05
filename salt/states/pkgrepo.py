@@ -58,7 +58,7 @@ Package repositories can be managed with the pkgrepo state:
 '''
 
 # Import salt libs
-from salt.modules.apt import _strip_uri
+from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 

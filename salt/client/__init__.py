@@ -179,18 +179,30 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
+    def gather_job_info(self, jid, tgt, tgt_type, minions, **kwargs):
         '''
         Return the information about a given job
         '''
         log.debug('Checking whether jid %s is still running', jid)
-        jinfo = self.cmd(tgt,
-                         'saltutil.find_job',
-                         [jid],
-                         self.opts['gather_job_timeout'],
-                         tgt_type,
-                         **kwargs)
-        return jinfo
+        timeout = self.opts['gather_job_timeout']
+
+        arg = [jid]
+        arg = condition_kwarg(arg, kwargs)
+        pub_data = self.run_job(tgt,
+                                'saltutil.find_job',
+                                arg=arg,
+                                expr_form=tgt_type,
+                                timeout=timeout,
+                                **kwargs)
+
+        if not pub_data:
+            return pub_data
+
+        minions.update(pub_data['minions'])
+
+        return self.get_returns(pub_data['jid'],
+                                minions,
+                                self._get_timeout(timeout))
 
     def _check_pub_data(self, pub_data):
         '''
@@ -789,7 +801,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -865,9 +877,11 @@ class LocalClient(object):
                     ret = {raw['id']: {'ret': raw['return']}}
                     if 'out' in raw:
                         ret[raw['id']]['out'] = raw['out']
+                    log.debug('jid %s return from %s', jid, raw['id'])
                     yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    log.debug('jid %s found all minions %s', jid, found)
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
@@ -875,12 +889,12 @@ class LocalClient(object):
                             log.debug('jid %s syndic_wait %s will now timeout at %s',
                                       jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                             continue
-                    log.debug('jid %s found all minions', jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                log.debug('jid %s found all minions %s', jid, found)
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
@@ -888,7 +902,6 @@ class LocalClient(object):
                         log.debug('jid %s syndic_wait %s will now timeout at %s',
                                   jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                         continue
-                log.debug('jid %s found all minions', jid)
                 break
             if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
                 # The timeout +1 has not been reached and there is still a
@@ -897,12 +910,12 @@ class LocalClient(object):
             if last_time:
                 if len(found) < len(minions):
                     log.info('jid %s minions %s did not return in time',
-                             jid, minions)
+                             jid, (minions - found))
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 still_running = [id_ for id_, jdat in jinfo.iteritems()
                                  if jdat
                                  ]
@@ -967,7 +980,7 @@ class LocalClient(object):
                 continue
             if int(time.time()) > timeout_at:
                 log.info('jid %s minions %s did not return in time',
-                         jid, minions)
+                         jid, (minions - found))
                 break
             time.sleep(0.01)
         return ret
@@ -1153,7 +1166,7 @@ class LocalClient(object):
         jid_dir = salt.utils.jid_dir(jid,
                                      self.opts['cachedir'],
                                      self.opts['hash_type'])
-        start = int(time.time())
+        start = time.time()
         timeout_at = start + timeout
         found = set()
         wtag = os.path.join(jid_dir, 'wtag*')
@@ -1165,7 +1178,7 @@ class LocalClient(object):
         last_time = False
         while True:
             # Process events until timeout is reached or all minions have returned
-            time_left = timeout_at - int(time.time())
+            time_left = timeout_at - time.time()
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
@@ -1188,7 +1201,7 @@ class LocalClient(object):
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
-                            timeout_at = int(time.time()) + 1
+                            timeout_at = time.time() + 1
                             continue
                     break
                 continue
@@ -1198,10 +1211,10 @@ class LocalClient(object):
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
-                        timeout_at = int(time.time()) + 1
+                        timeout_at = time.time() + 1
                         continue
                 break
-            if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
+            if glob.glob(wtag) and time.time() <= timeout_at + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
@@ -1219,10 +1232,10 @@ class LocalClient(object):
                                     }
                                 })
                 break
-            if int(time.time()) > timeout_at:
+            if time.time() > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -1232,7 +1245,7 @@ class LocalClient(object):
                             )
                         more_time = True
                 if more_time:
-                    timeout_at = int(time.time()) + timeout
+                    timeout_at = time.time() + timeout
                     continue
                 else:
                     last_time = True
