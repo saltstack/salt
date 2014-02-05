@@ -29,8 +29,6 @@ class Proxyconn(object):
         '''
         r = requests.get(self.url+'id')
         return r.text.encode('ascii', 'ignore')
-        # Return the type of proxy
-        return 'rest_example'
 
     def grains(self):
         '''
