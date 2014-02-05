@@ -24,13 +24,14 @@ except ImportError:
 
 # Import salt libs
 import integration
+import salt.utils
 
 KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 GITHUB_IP = '192.30.252.129'
 
 
-@skip_if_binaries_missing(['ssh', 'ssh-rsa', 'ssh-keygen'], check_all=True)
+@skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
 class SSHKnownHostsStateTest(integration.ModuleCase,
                              integration.SaltReturnAssertsMixIn):
     '''
@@ -187,6 +188,59 @@ class SSHAuthStateTests(integration.ModuleCase,
         self.assertEqual(
             open(authorized_keys_file, 'r').read(),
             'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
+            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+        )
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_account('issue_10198', on_existing='delete', delete=True)
+    def test_issue_10198_keyfile_from_another_env(self, username=None):
+        userdetails = self.run_function('user.info', [username])
+        user_ssh_dir = os.path.join(userdetails['home'], '.ssh')
+        authorized_keys_file = os.path.join(user_ssh_dir, 'authorized_keys')
+
+        key_fname = 'issue_10198.id_rsa.pub'
+
+        # Create the keyfile that we expect to get back on the state call
+        with salt.utils.fopen(os.path.join(integration.TMP_PRODENV_STATE_TREE, key_fname), 'w') as kfh:
+            kfh.write(
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
+
+        # Create a bogus key file on base environment
+        with salt.utils.fopen(os.path.join(integration.TMP_STATE_TREE, key_fname), 'w') as kfh:
+            kfh.write(
+                'ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
+
+        ret = self.run_state(
+            'ssh_auth.present',
+            name='Setup Keys',
+            source='salt://{0}?saltenv=prod'.format(key_fname),
+            enc='ssh-rsa',
+            user=username,
+            comment=username
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(
+            open(authorized_keys_file, 'r').read(),
+            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+        )
+
+        os.unlink(authorized_keys_file)
+
+        ret = self.run_state(
+            'ssh_auth.present',
+            name='Setup Keys',
+            source='salt://{0}'.format(key_fname),
+            enc='ssh-rsa',
+            user=username,
+            comment=username,
+            saltenv='prod'
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(
+            open(authorized_keys_file, 'r').read(),
             'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
         )
 
