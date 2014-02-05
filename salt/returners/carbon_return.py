@@ -25,7 +25,6 @@ Alternatively, you may configure your carbon settings as::
         port: <carbon port>
         skip_on_error: True
         mode: (pickle|text)
-
 '''
 
 
@@ -50,16 +49,14 @@ def __virtual__():
 
 @contextmanager
 def _carbon(host, port):
-    """
+    '''
     Context manager to ensure the clean creation and destruction of a socket.
 
     host
         The IP or hostname of the carbon server
     port
         The port that carbon is listening on
-
-    """
-
+    '''
     carbon_sock = None
 
     try:
@@ -83,7 +80,9 @@ def _carbon(host, port):
 
 
 def _send_picklemetrics(metrics):
-    """Format metrics for the carbon pickle protocol"""
+    '''
+    Format metrics for the carbon pickle protocol
+    '''
 
     metrics = [(metric_name, (timestamp, value))
                for (metric_name, value, timestamp) in metrics]
@@ -95,7 +94,9 @@ def _send_picklemetrics(metrics):
 
 
 def _send_textmetrics(metrics):
-    """Format metrics for the carbon plaintext protocol"""
+    '''
+    Format metrics for the carbon plaintext protocol
+    '''
 
     data = [' '.join(map(str, metric)) for metric in metrics] + ['']
 
@@ -103,7 +104,7 @@ def _send_textmetrics(metrics):
 
 
 def _walk(path, value, metrics, timestamp, skip):
-    """
+    '''
     Recursively include metrics from *value*.
 
     path
@@ -119,8 +120,7 @@ def _walk(path, value, metrics, timestamp, skip):
     skip
         Whether or not to skip metrics when there's an error casting the value
         to a float. Defaults to `False`.
-
-    """
+    '''
 
     if isinstance(value, collections.Mapping):
         for key, val in value.items():
@@ -157,7 +157,7 @@ def returner(ret):
     mode = c_cfg.get('mode', __opts__.get('carbon.mode', 'text')).lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
-    log.debug('Using carbon protocol: {}'.format(mode))
+    log.debug('Using carbon protocol: {0}'.format(mode))
 
     if not (host and port):
         log.error('Host or port not defined')
