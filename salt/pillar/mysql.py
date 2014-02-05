@@ -60,14 +60,13 @@ def _get_options():
                 'db': 'salt',
                 'port': 3306}
     _options = {}
+    _opts = __opts__.get('mysql', {})
     for attr in defaults:
-        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
-        if not _attr:
+        if attr not in _opts:
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]
             continue
-        _options[attr] = _attr
-
+        _options[attr] = _opts[attr]
     return _options
 
 
@@ -224,7 +223,7 @@ class merger(object):
                 nk = self.num_fields-2  # Aka, self.depth-1
                 # Should we and will we have a list at the end?
                 if ((self.as_list and (ret[nk] in crd)) or
-                     nk+1 in self.with_lists):
+                        (nk+1 in self.with_lists)):
                     if ret[nk] in crd:
                         if type(crd[ret[nk]]) is not list:
                             crd[ret[nk]] = [crd[ret[nk]]]
@@ -354,26 +353,23 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     return_data = merger()
     qbuffer = return_data.extract_queries(args, kwargs)
     with _get_serv() as cur:
-        for root, details in qbuffer.items():
-            try:
-                # Run the query
-                cur.execute(details['query'], (minion_id,))
+        for root, details in qbuffer:
+            # Run the query
+            cur.execute(details['query'], (minion_id,))
 
-                # Extract the field names MySQL has returned and process them
-                # All heavy lifting is done in the merger class to decouple the
-                # logic from MySQL.  Makes it easier to test.
-                return_data.process_fields([row[0] for row in cur.description],
-                                           details['depth'])
-                return_data.enter_root(root)
-                return_data.as_list = details['as_list']
-                if details['as_list']:
-                    return_data.as_list = details['with_list']
-                else:
-                    return_data.as_list = []
-                return_data.process_results(cur.fetchall())
+            # Extract the field names MySQL has returned and process them
+            # All heavy lifting is done in the merger class to decouple the
+            # logic from MySQL.  Makes it easier to test.
+            return_data.process_fields([row[0] for row in cur.description],
+                                       details['depth'])
+            return_data.enter_root(root)
+            return_data.as_list = details['as_list']
+            if details['with_lists']:
+                return_data.with_lists = details['with_lists']
+            else:
+                return_data.with_lists = []
+            return_data.process_results(cur.fetchall())
 
-                log.debug('ext_pillar MySQL: Return data: {0}'.format(
-                          return_data))
-            except:
-                pass
+            log.debug('ext_pillar MySQL: Return data: {0}'.format(
+                      return_data))
     return return_data.result
