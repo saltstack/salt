@@ -149,19 +149,10 @@ def init(name,
     print('Creating container {0} on host {1}.'.format(name, host))
     args = [name]
 
-    _tf = lambda x: 'true' if x else 'false'
-    args.append('seed={0}'.format(_tf(seed)))
-    args.append('install={0}'.format(_tf(kwargs.get('install', True))))
-    args.append('start={0}'.format(_tf(kwargs.get('start', True))))
-    for x in ('cpuset', 'cpushare', 'memory', 'nic', 'profile',
-              'nic_opts', 'config'):
-        if x in kwargs:
-            args.append('{0}={1}'.format(x, kwargs.get(x)))
-
     cmd_ret = client.cmd_iter(host,
-
                               'lxc.init',
                               args,
+                              kwarg=kwargs,
                               timeout=600)
 
     ret = next(cmd_ret)
@@ -186,8 +177,7 @@ def list_(host=None, quiet=False):
     tgt = host or '*'
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
-    for container_info in client.cmd_iter(tgt,
-                                'lxc.list'):
+    for container_info in client.cmd_iter(tgt, 'lxc.list'):
         if not container_info:
             continue
         if not isinstance(container_info, dict):
