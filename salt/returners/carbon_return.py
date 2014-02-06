@@ -2,23 +2,22 @@
 '''
 Take data from salt and "return" it into a carbon receiver
 
-Add the following configuration to your minion configuration files::
+Add the following configuration to the minion configuration files::
 
     carbon.host: <server ip address>
     carbon.port: 2003
 
-If you wish to ignore errors when trying to convert data to numbers, you may
-optionally specify in your minion configuration or the pillar::
+Errors when trying to convert data to numbers may be ignored by setting
+``carbon.skip_on_error`` to `True`::
 
     carbon.skip_on_error: True
 
-By default, data will be sent to carbon using the plaintext protocol. You may
-choose to send data using the pickle protocol by including ``carbon.mode`` in
-your configuration::
+By default, data will be sent to carbon using the plaintext protocol. To use
+the pickle protocol, set ``carbon.mode`` to ``pickle``::
 
     carbon.mode: pickle
 
-Alternatively, you may configure your carbon settings as::
+Carbon settings may also be configured as::
 
     carbon:
         host: <server IP or hostname>
@@ -149,12 +148,13 @@ def returner(ret):
 
     '''
 
-    c_cfg = __opts__.get('carbon', {})
+    cfg = __salt__['config.option']
+    c_cfg = cfg('carbon', {})
 
-    host = c_cfg.get('host', __opts__.get('carbon.host', None))
-    port = c_cfg.get('port', __opts__.get('carbon.port', None))
-    skip = c_cfg.get('skip_on_error', __opts__.get('carbon.skip_on_error', False))
-    mode = c_cfg.get('mode', __opts__.get('carbon.mode', 'text')).lower()
+    host = c_cfg.get('host', cfg('carbon.host', None))
+    port = c_cfg.get('port', cfg('carbon.port', None))
+    skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
+    mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
