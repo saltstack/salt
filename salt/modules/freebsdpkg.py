@@ -265,7 +265,6 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
             ])
         return ret
 
-
     ret = {}
     origins = {}
     out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='debug')
