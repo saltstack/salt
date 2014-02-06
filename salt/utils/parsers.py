@@ -19,7 +19,6 @@ import getpass
 import logging
 import optparse
 import traceback
-import yaml
 from functools import partial
 
 # Import salt libs
