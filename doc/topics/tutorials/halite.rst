@@ -2,10 +2,9 @@
 Installing and Configuring Halite
 =================================
 
-In this tutorial, we'll walk through installing and setting up Halite. As of
-2013-10-12, a packaged version of Halite is not available. In addition, the
-current version of Halite is considered pre-alpha and is supported only in
-Salt 0.17 or greater. Additional information is available on GitHub:
+In this tutorial, we'll walk through installing and setting up Halite.  The
+current version of Halite is considered pre-alpha and is supported only in Salt
+0.17 or greater. Additional information is available on GitHub:
 https://github.com/saltstack/halite
 
 Before beginning this tutorial, ensure that the salt-master is installed. To
@@ -24,6 +23,7 @@ On CentOS, RHEL, or Fedora:
 .. code-block:: bash
 
     $ yum install python-halite
+
 
 .. note::
 
@@ -103,7 +103,7 @@ Configuring Halite Permissions
 ==============================
 
 Configuring Halite access permissions is easy. By default, you only need to
-ensure that the @runner group is configured. In the ``/etc/salt/master file``,
+ensure that the @runner group is configured. In the ``/etc/salt/master`` file,
 uncomment and modify the following lines:
 
 .. code-block:: yaml
@@ -211,6 +211,7 @@ module:
     salt '*' tls.create_self_signed_cert test 
 
 You can also use ``salt-call`` to create a self-signed cert.
+
 .. code-block:: bash
 
     salt-call tls.create_self_signed_cert tls
@@ -236,14 +237,3 @@ http://123.456.789.012:8080/app .
 
 
 All logs relating to halite are logged to the default /var/log/salt/master file.
-
-
-Running Your Halite Instance Through Nginx
-==========================================
-
-
-
-Running Your Halite Instance Through Apache
-===========================================
-
-
