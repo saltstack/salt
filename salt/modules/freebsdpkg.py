@@ -70,6 +70,7 @@ variables, if set, but these values can also be overridden in several ways:
 # Import python libs
 import copy
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -211,11 +212,17 @@ def refresh_db():
     return True
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
+
+    with_origin : False
+        Return a nested dictionary containing both the origin name and version
+        for each installed package.
+
+        .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -229,28 +236,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+        ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+        if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-            return ret
+        if salt.utils.is_true(with_origin):
+            origins = __context__.get('pkg.origin', {})
+            return dict([
+                (x, {'origin': origins.get(x, ''), 'version': y})
+                for x, y in ret.iteritems()
+            ])
+        return ret
+
 
     ret = {}
-    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='debug')
-    for line in out.splitlines():
-        if not line:
+    origins = {}
+    out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='debug')
+    pkgs_re = re.compile(r'Information for ([^:]+):\s*Origin:\n([^\n]+)')
+    for pkg, origin in pkgs_re.findall(out):
+        if not pkg:
             continue
         try:
-            pkg, ver = line.split()[0].rsplit('-', 1)
-        except (IndexError, ValueError):
+            pkgname, pkgver = pkg.rsplit('-', 1)
+        except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
+        __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
+        origins[pkgname] = origin
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    __context__['pkg.origin'] = origins
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+    if salt.utils.is_true(with_origin):
+        return dict([
+            (x, {'origin': origins.get(x, ''), 'version': y})
+            for x, y in ret.iteritems()
+        ])
     return ret
 
 
