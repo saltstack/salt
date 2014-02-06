@@ -373,7 +373,7 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
     .. code-block:: bash
 
         salt '*' cp.cache_dir salt://path/to/dir
-        salt '*' cp.cache_dir salt://path/to/dir include_pat='E@\.py$'
+        salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     '''
     if env is not None:
         salt.utils.warn_until(
