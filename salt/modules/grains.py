@@ -35,6 +35,7 @@ _infinitedict = lambda: collections.defaultdict(_infinitedict)
 
 log = logging.getLogger(__name__)
 
+
 def _serial_sanitizer(instr):
     '''Replaces the last 1/4 of a string with X's'''
     length = len(instr)
