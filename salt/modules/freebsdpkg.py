@@ -188,6 +188,13 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
+    with_origin : False
+        Return a nested dictionary containing both the origin name and version
+        for each specified package.
+
+        .. versionadded:: 2014.1.0 (Hydrogen)
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -195,7 +202,18 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    with_origin = kwargs.pop('with_origin', False)
+    ret = __salt__['pkg_resource.version'](*names, **kwargs)
+    if not salt.utils.is_true(with_origin):
+        return ret
+    # Put the return value back into a dict since we're adding a subdict
+    if len(names) == 1:
+        ret = {names[0]: ret}
+    origins = __context__.get('pkg.origin', {})
+    return dict([
+        (x, {'origin': origins.get(x, ''), 'version': y})
+        for x, y in ret.iteritems()
+    ])
 
 
 def refresh_db():
