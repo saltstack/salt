@@ -1422,7 +1422,7 @@ class Syndic(Minion):
         self._syndic_interface = opts.get('interface')
         self._syndic = True
         opts['loop_interval'] = 1
-        Minion.__init__(self, opts)
+        super(Syndic, self).__init__(opts)
 
     def _handle_aes(self, load, sig=None):
         '''
