@@ -115,10 +115,12 @@ def installed(name, options=None):
     options = _repack_options(options) if options is not None else {}
     desired_options = copy.deepcopy(default_options)
     desired_options.update(options)
-    shortname = name.rsplit('/')[-1]
+    ports_pre = [
+        x['origin'] for x in
+        __salt__['pkg.list_pkgs'](with_origin=True).values()
+    ]
 
-    if current_options == desired_options \
-            and __salt__['pkg.version'](shortname):
+    if current_options == desired_options and name in ports_pre:
         # Port is installed as desired
         if options:
             ret['comment'] += ' ' + _build_option_string(options)
@@ -162,11 +164,14 @@ def installed(name, options=None):
                 return ret
 
     ret['changes'] = __salt__['ports.install'](name)
-    installed_version = __salt__['pkg.version'](shortname)
+    ports_post = [
+        x['origin'] for x in
+        __salt__['pkg.list_pkgs'](with_origin=True).values()
+    ]
     err = sys.modules[
         __salt__['test.ping'].__module__
     ].__context__.pop('ports.install_error', None)
-    if err or not installed_version:
+    if err or name not in ports_post:
         ret['result'] = False
     if ret['result']:
         ret['comment'] = 'Successfully installed {0}'.format(name)
