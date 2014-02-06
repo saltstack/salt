@@ -261,7 +261,7 @@ def preferred_ip(vm_, ips):
         except Exception:
             continue
 
-        return False
+    return False
 
 
 def ignore_cidr(vm_, ip):
