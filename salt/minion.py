@@ -1068,6 +1068,23 @@ class Minion(MinionBase):
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
 
+    def _set_reconnect_ivl(self):
+        recon_delay = self.opts['recon_default']
+
+        if self.opts['recon_randomize']:
+            recon_delay = randint(self.opts['recon_default'],
+                                  self.opts['recon_default'] + self.opts['recon_max']
+                          )
+
+            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
+                self.opts['recon_default'],
+                self.opts['recon_default'] + self.opts['recon_max'],
+                recon_delay)
+            )
+
+        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
+        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+
     def _set_reconnect_ivl_max(self):
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
@@ -1224,22 +1241,7 @@ class Minion(MinionBase):
 
         self.socket = self.context.socket(zmq.SUB)
 
-        recon_delay = self.opts['recon_default']
-
-        if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'],
-                                  self.opts['recon_default'] + self.opts['recon_max']
-                          )
-
-            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
-                self.opts['recon_default'],
-                self.opts['recon_default'] + self.opts['recon_max'],
-                recon_delay)
-            )
-
-        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
-        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
-
+        self._set_reconnect_ivl()
         self._setsockopts()
 
         self.socket.connect(self.master_pub)
