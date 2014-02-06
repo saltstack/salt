@@ -6,27 +6,149 @@ Retrieve Pillar data by doing a MySQL query
 :depends: python-mysqldb
 :platform: all
 
+Theory of mysql ext_pillar
+=====================================
+Ok, here's the theory for how this works...
+- If there's a keyword arg of mysql_query, that'll go first.
+- Then any non-keyworded args are processed in order.
+- Finally, remaining keywords are processed.
+We do this so that it's backward compatible with older configs.
+Keyword arguments are sorted before being appended, so that they're predictable,
+but they will always be applied last so overall it's moot.
+
+For each of those items we process, it depends on the object type:
+- Strings are executed as is and the pillar depth is determined by the number of
+  fields returned.
+- A list has the first entry used as the query, the second as the pillar depth.
+- A mapping uses the keys "query" and "depth" as the tuple
+
+You can retrieve as many fields as you like, how the get used depends on the
+exact settings.
+
 Configuring the mysql ext_pillar
 =====================================
+First an example of how legacy queries were specified.
 .. code-block:: yaml
 
   ext_pillar:
     - mysql:
         mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
 
-You can basically use any SELECT query here that gets you the information, you
+Alternatively, a list of queries can be passed in
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        - "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+        - "SELECT pillar,value FROM more_pillars WHERE minion_id = %s"
+
+Or you can pass in a mapping
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        main: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+        extras: "SELECT pillar,value FROM more_pillars WHERE minion_id = %s"
+
+The query can be provided as a string as we have just shown, but they can be
+provided as lists
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        - "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+          2
+
+Or as a mapping
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        - query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+          depth: 2
+
+The depth defines how the dicts are constructed.
+Essentially if you query for fields a,b,c,d for each row you'll get:
+- With depth 1: {a: {"b": b, "c": c, "d": d}}
+- With depth 2: {a: {b: {"c": c, "d": d}}}
+- With depth 3: {a: {b: {c: d}}}
+Depth greater than 3 wouldn't be different from 3 itself.
+Depth of 0 translates to the largest depth needed, so 3 in this case.
+(max depth == key count - 1)
+The legacy compatibility translates to depth 1.
+Then they are merged the in a similar way to plain pillar data, in the order
+returned by MySQL.
+Thus subsequent results overwrite previous ones when they collide.
+
+If you specify `as_list: True` in the mapping expression it will convert
+collisions to lists.
+
+If you specify `with_lists: '...'` in the mapping expression it will
+convert the specified depths to list.  The string provided is a sequence
+numbers that are comma separated.  The string '1,3' will result in:
+
+a,b,c,d,e,1  # field 1 same, field 3 differs
+a,b,c,f,g,2  # ^^^^
+a,z,h,y,j,3  # field 1 same, field 3 same
+a,z,h,y,k,4  # ^^^^
+  ^   ^
+These columns define list grouping
+
+.. code-block:: python
+
+{a: [
+      {c: [
+          {e: 1},
+          {g: 2}
+          ]
+      },
+      {h: [
+          {j: 3, k: 4 }
+          ]
+      }
+]}
+
+The range for with_lists is 1 to number_of_fiels, inclusive.
+Numbers outside this range are ignored.
+
+Finally, if you use pass the queries in via a mapping, the key will be the
+first level name where as passing them in as a list will place them in the
+root.  This isolates the query results in to their own subtrees.
+This may be a help or hindrance to your aims and can be used as such.
+
+You can basically use any SELECT query that gets you the information, you
 could even do joins or subqueries in case your minion_id is stored elsewhere.
-The query should always return two pieces of information in the correct order(
-key, value). It is capable of handling single rows or multiple rows per minion.
+It is capable of handling single rows or multiple rows per minion.
 
 MySQL configuration of the MySQL returner is being used (mysql.db, mysql.user,
 mysql.pass, mysql.port, mysql.host)
 
 Required python modules: MySQLdb
+
+More complete example
+=====================================
+.. code-block:: yaml
+
+    mysql:
+      user: 'salt'
+      pass: 'super_secret_password'
+      db: 'salt_db'
+
+    ext_pillar:
+      - mysql:
+          fromdb:
+            query: 'SELECT col1,col2,col3,col4,col5,col6,col7
+                      FROM some_random_table
+                     WHERE minion_pattern LIKE %s'
+            depth: 5
+            as_list: True
+            with_lists: [1,3]
 '''
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
+
+# tests/unit/pillar/mysql_test.py may help understand this code.
 
 # Import python libs
 from contextlib import contextmanager
@@ -90,6 +212,10 @@ def _get_serv():
 
 
 class merger(object):
+    '''
+        This class receives and processes the database rows in a database
+        agnostic way.
+    '''
     result = None
     focus = None
     field_names = None
@@ -102,6 +228,10 @@ class merger(object):
         self.result = self.focus = {}
 
     def extract_queries(self, args, kwargs):
+        '''
+            This function normalises the config block in to a set of queries we
+            can use.  The return is a list of consistently laid out dicts.
+        '''
         # Please note the function signature is NOT an error.  Neither args, nor
         # kwargs should have asterisks.  We are passing in a list and dict,
         # rather than receiving variable args.  Adding asterisks WILL BREAK the
@@ -159,6 +289,9 @@ class merger(object):
         return qbuffer
 
     def enter_root(self, root):
+        '''
+            Set self.focus for kwarg queries
+        '''
         # There is no collision protection on root name isolation
         if (root):
             self.result[root] = self.focus = {}
@@ -166,6 +299,10 @@ class merger(object):
             self.focus = self.result
 
     def process_fields(self, field_names, depth):
+        '''
+            The primary purpose of this function is to store the sql field list
+            and the depth to which we process.
+        '''
         # List of field names in correct order.
         self.field_names = field_names
         # number of fields.
@@ -177,6 +314,10 @@ class merger(object):
             self.depth = depth
 
     def process_results(self, rows):
+        '''
+            This function takes a list of database results and iterates over,
+            merging them in to a dict form.
+        '''
         listify = collections.OrderedDict()
         listify_dicts = collections.OrderedDict()
         for ret in rows:
@@ -287,68 +428,6 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     #    log.debug('ext_pillar MySQL args: {0}'.format(args))
     #    log.debug('ext_pillar MySQL kwargs: {0}'.format(kwargs))
     #
-    # Ok, here's the plan for how this works...
-    # - If there's a keyword arg of mysql_query, that'll go first.
-    # - Then any non-keyworded args are processed in order.
-    # - Finally, remaining keywords are processed.
-    # We do this so that it's backward compatible with older configs.
-    # Keyword arguments are sorted before being appended, so that they're
-    # predictable, but they will always be applied last so overall it's moot.
-    #
-    # For each of those items we process, it depends on the object type:
-    # - Strings are executed as is and the pillar depth is determined by the
-    #   number of fields returned.
-    # - A list has the first entry used as the query, the second as the pillar
-    #   depth.
-    # - A mapping uses the keys "query" and "depth" as the tuple
-    #
-    # The depth defines how the dicts are constructed.
-    # Essentially if you query for fields a,b,c,d for each row you'll get:
-    # - With depth 1: {a: {"b": b, "c": c, "d": d}}
-    # - With depth 2: {a: {b: {"c": c, "d": d}}}
-    # - With depth 3: {a: {b: {c: d}}}
-    # Depth greater than 3 wouldn't be different from 3 itself.
-    # Depth of 0 translates to the largest depth needed, so 3 in this case.
-    # (max depth == key count - 1)
-    # The legacy compatibility translates to depth 1.
-    # Then they are merged the in a similar way to plain pillar data, in the
-    # order returned by MySQL.
-    # Thus subsequent results overwrite previous ones when they collide.
-    #
-    # If you specify `as_list: True` in the mapping expression it will convert
-    # collisions to lists.
-    #
-    # If you specify `with_lists: '...'` in the mapping expression it will
-    # convert the specified depths to list.  The string provided is a sequence
-    # numbers that are comma separated.  The string '1,3' will result in:
-    #
-    # a,b,c,d,e,1  # field 1 same, field 3 differs
-    # a,b,c,f,g,2  # ^^^^
-    # a,z,h,y,j,3  # field 1 same, field 3 same
-    # a,z,h,y,k,4  # ^^^^
-    #   ^   ^
-    # These columns define list grouping
-    #
-    # {a: [
-    #       {c: [
-    #           {e: 1},
-    #           {g: 2}
-    #           ]
-    #       },
-    #       {h: [
-    #           {j: 3, k: 4 }
-    #           ]
-    #       }
-    # ]}
-    #
-    # The range for with_lists is 1 to number_of_fiels, inclusive.
-    # Numbers outside this range are ignored.
-    #
-    # Finally, if you use pass the queries in via a mapping, the key will be the
-    # first level name where as passing them in as a list will place them in the
-    # root.  This isolates the query results in to their own subtrees.
-    # This may be a help or hindrance to your aims and can be used as such.
-
     # Most of the heavy lifting is in this class for ease of testing.
     return_data = merger()
     qbuffer = return_data.extract_queries(args, kwargs)
