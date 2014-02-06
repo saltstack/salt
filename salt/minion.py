@@ -300,11 +300,15 @@ class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
 
+    def _init_context_and_poller(self):
+        self.context = zmq.Context()
+        self.poller = zmq.Poller()
+
     def _prepare_minion_event_system(self):
         # Prepare the minion event system
         #
         # Start with the publish socket
-        self.context = zmq.Context()
+        self._init_context_and_poller()
 
         id_hash = hashlib.md5(self.opts['id']).hexdigest()
 
@@ -386,8 +390,6 @@ class MinionBase(object):
                 epull_sock_path,
                 448
             )
-
-        self.poller = zmq.Poller()
 
 
 class MasterMinion(object):
@@ -1348,8 +1350,8 @@ class Minion(MinionBase):
         management of the event bus assuming that these are handled outside
         the tune_in sequence
         '''
-        self.context = zmq.Context()
-        self.poller = zmq.Poller()
+        self._init_context_and_poller()
+
         self.socket = self.context.socket(zmq.SUB)
 
         self._setsockopts()
