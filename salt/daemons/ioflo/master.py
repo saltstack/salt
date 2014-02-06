@@ -13,7 +13,7 @@ import salt.daemons.masterapi
 import ioflo.base.deeding
 
 
-@ioflo.base.deeding.deedify('master_keys', ioinits={'opts':'.salt.etc.opts', 'keys': '.salt.etc.keys.master'})
+@ioflo.base.deeding.deedify('master_keys', ioinits={'opts': '.salt.etc.opts', 'keys': '.salt.etc.keys.master'})
 def master_keys(self):
     '''
     Return the master keys
@@ -21,7 +21,7 @@ def master_keys(self):
     self.keys.value = salt.daemons.masterapi.master_keys(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('clean_old_jobs', ioinits={'opts':'.salt.etc.opts'})
+@ioflo.base.deeding.deedify('clean_old_jobs', ioinits={'opts': '.salt.etc.opts'})
 def clean_old_jobs(self):
     '''
     Call the clan old jobs routine
@@ -29,7 +29,7 @@ def clean_old_jobs(self):
     salt.daemons.masterapi.clean_old_jobs(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('access_keys', ioinits={'opts':'.salt.etc.opts'})
+@ioflo.base.deeding.deedify('access_keys', ioinits={'opts': '.salt.etc.opts'})
 def access_keys(self):
     '''
     Build the access keys
@@ -37,7 +37,7 @@ def access_keys(self):
     salt.daemons.masterapi.access_keys(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('fileserver_update', ioinits={'opts':'.salt.etc.opts'})
+@ioflo.base.deeding.deedify('fileserver_update', ioinits={'opts': '.salt.etc.opts'})
 def fileserver_update(self):
     '''
     Update the fileserver backends
@@ -49,9 +49,10 @@ class RemoteMaster(ioflo.base.deeding.Deed):
     '''
     Abstract access to the core salt master api
     '''
-    Ioinits = {'opts':'.salt.etc.opts',
+    Ioinits = {'opts': '.salt.etc.opts',
                'ret_in': '.salt.net.ret_in',
                'ret_out': '.salt.net.ret_out'}
+
     def __init__(self):
         ioflo.base.deeding.deeding.Deed.__init__(self)
 
@@ -81,9 +82,10 @@ class LocalMaster(ioflo.base.deeding.Deed):
     '''
     Abstract access to the core salt master api
     '''
-    Ioinits = {'opts':'.salt.etc.opts',
+    Ioinits = {'opts': '.salt.etc.opts',
                'local_in': '.salt.net.local_in',
                'local_out': '.salt.net.local_out'}
+
     def __init__(self):
         ioflo.base.deeding.Deed.__init__(self)
 
