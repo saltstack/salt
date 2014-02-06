@@ -1099,6 +1099,11 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         if isinstance(match, list):
             # We are matching a single component to a single list member
             for member in match:
+                if isinstance(member, dict):
+                    if matchstr.startswith('*:'):
+                        matchstr = matchstr.lstrip('*:')
+                    if subdict_match(member, matchstr, regex_match=regex_match):
+                        return True
                 if _match(member, matchstr, regex_match=regex_match):
                     return True
             continue
