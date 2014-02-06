@@ -198,7 +198,6 @@ def setval(key, val, destructive=False):
         if not isinstance(grains, dict):
             grains = {}
     if val is None and destructive is True:
-        print('SETVAL DESTRUCTIVE ')
         if key in grains:
             del grains[key]
     else:
@@ -212,6 +211,7 @@ def setval(key, val, destructive=False):
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     with salt.utils.fopen(fn_, 'w+') as fp_:
         fp_.write('')
+    __grains__[key] = val
     # Sync the grains
     __salt__['saltutil.sync_grains']()
     # Return the grain we just set to confirm everything was OK
