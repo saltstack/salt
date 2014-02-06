@@ -347,7 +347,7 @@ def destroy(name, conn=None, call=None):
         conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
-    profiles = get_configured_provider()['profiles']
+    profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
     profile = None
