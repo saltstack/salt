@@ -7,7 +7,14 @@ Tests to try out table. Potentially ephemeral
 from salt.transport import table
 
 def test_table():
-    public =  table.Public()
+    bob_pub =  table.Public()
+    print bob_pub.backend
+    print bob_pub.sec_backend
+    print bob_pub.keydata
+    print bob_pub.public
+    print bob_pub.secret
+
+
 
 
 
