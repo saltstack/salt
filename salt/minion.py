@@ -1081,6 +1081,24 @@ class Minion(MinionBase):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.socket.setsockopt(zmq.IPV4ONLY, 0)
 
+    def _fire_master_minion_start(self):
+        # Send an event to the master that the minion is live
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'minion_start'
+        )
+        # dup name spaced event
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
+
     @property
     def master_pub(self):
         '''
@@ -1223,21 +1241,8 @@ class Minion(MinionBase):
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.poller.register(self.epull_sock, zmq.POLLIN)
-        # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            tagify([self.opts['id'], 'start'], 'minion'),
-        )
+
+        self._fire_master_minion_start()
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1353,22 +1358,9 @@ class Minion(MinionBase):
         self._set_tcp_keepalive()
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
-        # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        # dup name spaced event
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            tagify([self.opts['id'], 'start'], 'minion'),
-        )
+
+        self._fire_master_minion_start()
+
         loop_interval = int(self.opts['loop_interval'])
         while self._running is True:
             try:
