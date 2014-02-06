@@ -71,7 +71,7 @@ def parse():
             help=('Pass in an alternative configuration directory. Default: '
                   '%default')
         )
-    parser.add_option('-u', '--user', default='root')
+    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
 
     options, args = parser.parse_args()
 
@@ -142,7 +142,7 @@ class Swarm(object):
 
         data = {
             'id': minion_id,
-            'user': pwd.getpwuid(os.getuid()).pw_name,
+            'user': self.opts['user'],
             'pki_dir': minion_pkidir,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
