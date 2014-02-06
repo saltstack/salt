@@ -347,11 +347,33 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
     '''
     Download and cache everything under a directory from the master
 
-    CLI Example:
+
+    include_pat : None
+        Glob or regex to narrow down the files cached from the given path. If
+        matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Helium
+
+    exclude_pat : None
+        Glob or regex to exclude certain files from being cached from the given
+        path. If matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. note::
+
+            If used with ``include_pat``, files matching this pattern will be
+            excluded from the subset of files defined by ``include_pat``.
+
+        .. versionadded:: Helium
+
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' cp.cache_dir salt://path/to/dir
+        salt '*' cp.cache_dir salt://path/to/dir include_pat='E@\.py$'
     '''
     if env is not None:
         salt.utils.warn_until(
