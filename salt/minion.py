@@ -1099,6 +1099,13 @@ class Minion(MinionBase):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
 
+    def _setsockopts(self):
+        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._set_ipv4only()
+        self._set_reconnect_ivl_max()
+        self._set_tcp_keepalive()
+
     @property
     def master_pub(self):
         '''
@@ -1214,8 +1221,6 @@ class Minion(MinionBase):
         self._prepare_minion_event_system()
 
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt(zmq.SUBSCRIBE, '')
-        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
 
         recon_delay = self.opts['recon_default']
 
@@ -1233,11 +1238,8 @@ class Minion(MinionBase):
         log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
         self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
-        self._set_reconnect_ivl_max()
+        self._setsockopts()
 
-        self._set_ipv4only()
-
-        self._set_tcp_keepalive()
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.poller.register(self.epull_sock, zmq.POLLIN)
@@ -1349,13 +1351,9 @@ class Minion(MinionBase):
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt(zmq.SUBSCRIBE, '')
-        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        self._set_ipv4only()
 
-        self._set_reconnect_ivl_max()
+        self._setsockopts()
 
-        self._set_tcp_keepalive()
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
 
