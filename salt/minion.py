@@ -296,6 +296,100 @@ class SMinion(object):
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
+class MinionBase(object):
+    def __init__(self, opts):
+        self.opts = opts
+
+    def _prepare_minion_event_system(self):
+        # Prepare the minion event system
+        #
+        # Start with the publish socket
+        self.context = zmq.Context()
+
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
+
+        epub_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pub.ipc'.format(id_hash)
+        )
+        epull_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pull.ipc'.format(id_hash)
+        )
+
+        self.epub_sock = self.context.socket(zmq.PUB)
+
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pub_port']
+            )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pull_port']
+            )
+        else:
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            salt.utils.check_ipc_path_max_len(epub_uri)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+            salt.utils.check_ipc_path_max_len(epull_uri)
+
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
+        # Check to make sure the sock_dir is available, create if not
+        default_minion_sock_dir = os.path.join(
+            salt.syspaths.SOCK_DIR,
+            'minion'
+        )
+        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
+
+        if not os.path.isdir(minion_sock_dir):
+            # Let's try to create the directory defined on the configuration
+            # file
+            try:
+                os.makedirs(minion_sock_dir, 0755)
+            except OSError as exc:
+                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                # Let's not fail yet and try using the default path
+                if minion_sock_dir == default_minion_sock_dir:
+                    # We're already trying the default system path, stop now!
+                    raise
+
+            if not os.path.isdir(default_minion_sock_dir):
+                try:
+                    os.makedirs(default_minion_sock_dir, 0755)
+                except OSError as exc:
+                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                    # Let's stop at this stage
+                    raise
+
+        # Create the pull socket
+        self.epull_sock = self.context.socket(zmq.PULL)
+        # Bind the event sockets
+        self.epub_sock.bind(epub_uri)
+        self.epull_sock.bind(epull_uri)
+
+        # Restrict access to the sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            os.chmod(
+                epub_sock_path,
+                448
+            )
+            os.chmod(
+                epull_sock_path,
+                448
+            )
+
+        self.poller = zmq.Poller()
+
+
 class MasterMinion(object):
     '''
     Create a fully loaded minion function object for generic use on the
@@ -339,14 +433,14 @@ class MasterMinion(object):
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
-class MultiMinion(object):
+class MultiMinion(MinionBase):
     '''
     Create a multi minion interface, this creates as many minions as are
     defined in the master option and binds each minion object to a respective
     master.
     '''
     def __init__(self, opts):
-        self.opts = opts
+        super(MultiMinion, self).__init__(opts)
 
     def _gen_minions(self):
         '''
@@ -386,60 +480,8 @@ class MultiMinion(object):
         '''
         Bind to the masters
         '''
-        # Prepare the minion event system
-        #
-        # Start with the publish socket
-        self.context = zmq.Context()
-        id_hash = hashlib.md5(self.opts['id']).hexdigest()
-        epub_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pub.ipc'.format(id_hash)
-        )
-        epull_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pull.ipc'.format(id_hash)
-        )
-        self.epub_sock = self.context.socket(zmq.PUB)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            epub_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pub_port']
-            )
-            epull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pull_port']
-            )
-        else:
-            epub_uri = 'ipc://{0}'.format(epub_sock_path)
-            salt.utils.check_ipc_path_max_len(epub_uri)
-            epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            salt.utils.check_ipc_path_max_len(epull_uri)
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        self._prepare_minion_event_system()
 
-        # Create the pull socket
-        self.epull_sock = self.context.socket(zmq.PULL)
-        # Bind the event sockets
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        if self.opts.get('ipc_mode', '') != 'tcp':
-            os.chmod(
-                epub_sock_path,
-                448
-            )
-            os.chmod(
-                epull_sock_path,
-                448
-            )
-
-        self.epoller = zmq.Poller()
         module_refresh = False
         pillar_refresh = False
 
@@ -470,7 +512,7 @@ class MultiMinion(object):
                         'Exception {0} occurred in scheduled job'.format(exc)
                     )
                 break
-            if self.epoller.poll(1):
+            if self.poller.poll(1):
                 try:
                     while True:
                         package = self.epull_sock.recv(zmq.NOBLOCK)
@@ -511,7 +553,7 @@ class MultiMinion(object):
                 minion['generator'].next()
 
 
-class Minion(object):
+class Minion(MinionBase):
     '''
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
@@ -534,7 +576,7 @@ class Minion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         opts.update(resolve_dns(opts))
-        self.opts = opts
+        super(Minion, self).__init__(opts)
         self.authenticate(timeout, safe)
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
@@ -1120,88 +1162,9 @@ class Minion(object):
         signal.signal(signal.SIGTERM, self.clean_die)
 
         log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
-        self.context = zmq.Context()
 
-        # Prepare the minion event system
-        #
-        # Start with the publish socket
-        id_hash = hashlib.md5(self.opts['id']).hexdigest()
-        epub_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pub.ipc'.format(id_hash)
-        )
-        epull_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pull.ipc'.format(id_hash)
-        )
-        self.epub_sock = self.context.socket(zmq.PUB)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            epub_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pub_port']
-            )
-            epull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pull_port']
-            )
-        else:
-            epub_uri = 'ipc://{0}'.format(epub_sock_path)
-            salt.utils.check_ipc_path_max_len(epub_uri)
-            epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            salt.utils.check_ipc_path_max_len(epull_uri)
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        self._prepare_minion_event_system()
 
-        # Check to make sure the sock_dir is available, create if not
-        default_minion_sock_dir = os.path.join(
-            salt.syspaths.SOCK_DIR,
-            'minion'
-        )
-        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
-
-        if not os.path.isdir(minion_sock_dir):
-            # Let's try to create the directory defined on the configuration
-            # file
-            try:
-                os.makedirs(minion_sock_dir, 0755)
-            except OSError as exc:
-                log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                # Let's not fail yet and try using the default path
-                if minion_sock_dir == default_minion_sock_dir:
-                    # We're already trying the default system path, stop now!
-                    raise
-
-            if not os.path.isdir(default_minion_sock_dir):
-                try:
-                    os.makedirs(default_minion_sock_dir, 0755)
-                except OSError as exc:
-                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                    # Let's stop at this stage
-                    raise
-
-        # Create the pull socket
-        self.epull_sock = self.context.socket(zmq.PULL)
-        # Bind the event sockets
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        if self.opts.get('ipc_mode', '') != 'tcp':
-            os.chmod(
-                epub_sock_path,
-                448
-            )
-            os.chmod(
-                epull_sock_path,
-                448
-            )
-
-        self.poller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
