@@ -1101,7 +1101,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
             for member in match:
                 if isinstance(member, dict):
                     if matchstr.startswith('*:'):
-                        matchstr = matchstr.lstrip('*:')
+                        matchstr = matchstr[2:]
                     if subdict_match(member, matchstr, regex_match=regex_match):
                         return True
                 if _match(member, matchstr, regex_match=regex_match):
