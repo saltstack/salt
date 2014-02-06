@@ -460,11 +460,12 @@ def create(vm_):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+                    'size': kwargs['size'].name,
+                    'profile': vm_['profile']}}
     )
 
     kwargs['ex_metadata'] = config.get_cloud_config_value(
-        'metadata', vm_, __opts__, default={}, search_global=False
+        'metadata', vm_, __opts__, default={'profile': vm_['profile']}, search_global=False
     )
     if not isinstance(kwargs['ex_metadata'], dict):
         raise SaltCloudConfigError(
