@@ -114,8 +114,8 @@ class Swarm(object):
         print('Creating shared pki keys for the swarm on: {0}'.format(path))
         subprocess.call(
             'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
-            '--log-file {1}'.format(
-                path, os.path.join(path, 'keys.log')
+            '--log-file {1} --user {2}'.format(
+                path, os.path.join(path, 'keys.log'), self.opts['user'],
             ), shell=True
         )
         print('Keys generated')
