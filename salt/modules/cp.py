@@ -342,7 +342,8 @@ def cache_files(paths, saltenv='base', env=None):
     return __context__['cp.fileclient'].cache_files(paths, saltenv)
 
 
-def cache_dir(path, saltenv='base', include_empty=False, env=None):
+def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
+              exclude_pat=None, env=None):
     '''
     Download and cache everything under a directory from the master
 
@@ -362,7 +363,9 @@ def cache_dir(path, saltenv='base', include_empty=False, env=None):
         saltenv = env
 
     _mk_client()
-    return __context__['cp.fileclient'].cache_dir(path, saltenv, include_empty)
+    return __context__['cp.fileclient'].cache_dir(
+        path, saltenv, include_empty, include_pat, exclude_pat
+    )
 
 
 def cache_master(saltenv='base', env=None):
