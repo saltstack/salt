@@ -342,15 +342,38 @@ def cache_files(paths, saltenv='base', env=None):
     return __context__['cp.fileclient'].cache_files(paths, saltenv)
 
 
-def cache_dir(path, saltenv='base', include_empty=False, env=None):
+def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
+              exclude_pat=None, env=None):
     '''
     Download and cache everything under a directory from the master
 
-    CLI Example:
+
+    include_pat : None
+        Glob or regex to narrow down the files cached from the given path. If
+        matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Helium
+
+    exclude_pat : None
+        Glob or regex to exclude certain files from being cached from the given
+        path. If matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. note::
+
+            If used with ``include_pat``, files matching this pattern will be
+            excluded from the subset of files defined by ``include_pat``.
+
+        .. versionadded:: Helium
+
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' cp.cache_dir salt://path/to/dir
+        salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -362,7 +385,9 @@ def cache_dir(path, saltenv='base', include_empty=False, env=None):
         saltenv = env
 
     _mk_client()
-    return __context__['cp.fileclient'].cache_dir(path, saltenv, include_empty)
+    return __context__['cp.fileclient'].cache_dir(
+        path, saltenv, include_empty, include_pat, exclude_pat
+    )
 
 
 def cache_master(saltenv='base', env=None):

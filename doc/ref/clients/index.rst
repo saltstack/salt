@@ -53,7 +53,7 @@ default location.
     master_opts = salt.config.master_config(
         os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
-    minion_opts = salt.config.client_config(
+    minion_opts = salt.config.minion_config(
         os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
 
 Salt's Python interface

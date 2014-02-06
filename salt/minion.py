@@ -163,7 +163,7 @@ def parse_args_and_kwargs(func, args, data=None):
         if isinstance(arg, string_types):
             salt.utils.warn_until(
                 'Boron',
-                'This minion recieved a job where kwargs were passed as'
+                'This minion recieved a job where kwargs were passed as '
                 'string\'d args, which has been deprecated. This functionality will'
                 'be removed in Salt Boron.'
             )
@@ -260,7 +260,6 @@ class SMinion(object):
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
-                self.opts['_auth_timeout'] = 3
                 self.opts['_safe_auth'] = False
                 for master in masters:
                     self.opts['master'] = master

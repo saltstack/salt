@@ -24,6 +24,7 @@ from libcloud.compute.deployment import (
 # Import salt libs
 import salt._compat
 import salt.utils.event
+import salt.client
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -346,8 +347,22 @@ def destroy(name, conn=None, call=None):
         conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
+    profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
+    profile = None
+    if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
+        profile = node.extra['metadata']['profile']
+    flush_mine_on_destroy = False
+    if profile is not None and profile in profiles:
+        if 'flush_mine_on_destroy' in profiles[profile]:
+            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if flush_mine_on_destroy:
+        log.info('Clearing Salt Mine: {0}'.format(name))
+        client = salt.client.LocalClient(__opts__['conf_file'])
+        minions = client.cmd(name, 'mine.flush')
+
+    log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:

@@ -58,12 +58,21 @@ def _sync(form, saltenv=None):
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))
-        os.makedirs(mod_dir)
+        try:
+            os.makedirs(mod_dir)
+        except (IOError, OSError):
+            msg = 'Cannot create cache module directory {0}. Check permissions.'
+            log.error(msg.format(mod_dir))
     for sub_env in saltenv:
         log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
-        cache.extend(__salt__['cp.cache_dir'](source, sub_env))
+        # Grab only the desired files (.py, .pyx, .so)
+        cache.extend(
+            __salt__['cp.cache_dir'](
+                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+            )
+        )
         local_cache_dir = os.path.join(
                 __opts__['cachedir'],
                 'files',

@@ -510,7 +510,7 @@ class SAuth(Auth):
         '''
         while True:
             creds = self.sign_in(
-                self.opts.get('_auth_timeout', 60),
+                self.opts['auth_timeout'],
                 self.opts.get('_safe_auth', True)
             )
             if creds == 'retry':
