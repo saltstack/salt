@@ -1076,6 +1076,11 @@ class Minion(MinionBase):
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
 
+    def _set_ipv4only(self):
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
     @property
     def master_pub(self):
         '''
@@ -1212,9 +1217,7 @@ class Minion(MinionBase):
 
         self._set_reconnect_ivl_max()
 
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        self._set_ipv4only()
 
         self._set_tcp_keepalive()
         self.socket.connect(self.master_pub)
@@ -1343,10 +1346,10 @@ class Minion(MinionBase):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        self._set_ipv4only()
+
         self._set_reconnect_ivl_max()
+
         self._set_tcp_keepalive()
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
