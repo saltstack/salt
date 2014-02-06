@@ -11,78 +11,99 @@ import salt.daemons.masterapi
 
 # Import ioflo libs
 import ioflo.base.deeding
-from ioflo.base.odicting import odict
 
 
-@ioflo.base.deeding.deedify('master_keys', parametric=True)
-def master_keys(self, **kwargs):
+@ioflo.base.deeding.deedify('master_keys', ioinits={'opts':'.salt.etc.opts', 'keys': '.salt.etc.keys.master'})
+def master_keys(self):
     '''
     Return the master keys
     '''
-    salt.daemons.masterapi.master_keys(kwargs.get('opts'))
+    self.keys.value = salt.daemons.masterapi.master_keys(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('clean_old_jobs', parametric=True)
-def clean_old_jobs(self, **kwargs):
+@ioflo.base.deeding.deedify('clean_old_jobs', ioinits={'opts':'.salt.etc.opts'})
+def clean_old_jobs(self):
     '''
     Call the clan old jobs routine
     '''
-    salt.daemons.masterapi.clean_old_jobs(kwargs.get('opts'))
+    salt.daemons.masterapi.clean_old_jobs(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('access_keys', parametric=True)
-def access_keys(self, **kwargs):
+@ioflo.base.deeding.deedify('access_keys', ioinits={'opts':'.salt.etc.opts'})
+def access_keys(self):
     '''
     Build the access keys
     '''
-    salt.daemons.masterapi.access_keys(kwargs.get('opts'))
+    salt.daemons.masterapi.access_keys(self.opts.value)
 
 
-@ioflo.base.deeding.deedify('fileserver_update', parametric=True)
-def fileserver_update(self, **kwargs):
+@ioflo.base.deeding.deedify('fileserver_update', ioinits={'opts':'.salt.etc.opts'})
+def fileserver_update(self):
     '''
     Update the fileserver backends
     '''
-    salt.daemons.masterapi.fileserver_update(kwargs.get('opts'))
+    salt.daemons.masterapi.fileserver_update(self.opts.value)
 
 
-class MasterRemoteDeed(ioflo.base.deeding.deeding.Deed):
+class RemoteMaster(ioflo.base.deeding.Deed):
     '''
     Abstract access to the core salt master api
     '''
-    Ioinit = odict(opts='.opts')
+    Ioinits = {'opts':'.salt.etc.opts',
+               'ret_in': '.salt.net.ret_in',
+               'ret_out': '.salt.net.ret_out'}
     def __init__(self):
         ioflo.base.deeding.deeding.Deed.__init__(self)
-        self.remote = salt.masterapi.RemoteFuncs(self.opts)
 
-    def action(self, load):  # Not sure where the load is coming from quite yet
+    def postioinit(self):
+        '''
+        Set up required objects
+        '''
+        self.remote = salt.masterapi.RemoteFuncs(self.opts.value)
+
+    def action(self):
         '''
         Perform an action
         '''
-        if not 'cmd' in load:
-            return False
-        if load['cmd'].startswith('__'):
-            return False
-        ret = getattr(self.remote, load['cmd'])(load)
-        return ret  # Change top insert onto the return queue
+        if self.ret_in.value:
+            exchange = self.ret_in.value.pop()
+            load = exchange.get('load')
+            # If the load is invalid, just ignore the request
+            if not 'cmd' in load:
+                return False
+            if load['cmd'].startswith('__'):
+                return False
+            exchange['ret'] = getattr(self.remote, load['cmd'])(load)
+            self.ret_out.value.append(exchange)
 
 
-class MasterLocalDeed(ioflo.base.deeding.deeding.Deed):
+class LocalMaster(ioflo.base.deeding.Deed):
     '''
     Abstract access to the core salt master api
     '''
-    Ioinit = odict(opts='.opts')
+    Ioinits = {'opts':'.salt.etc.opts',
+               'local_in': '.salt.net.local_in',
+               'local_out': '.salt.net.local_out'}
     def __init__(self):
-        ioflo.base.deeding.deeding.Deed.__init__(self)
-        self.local = salt.masterapi.LocalFuncs(self.opts)
+        ioflo.base.deeding.Deed.__init__(self)
 
-    def action(self, load):  # Not sure where the load is coming from quite yet
+    def postioinit(self):
+        '''
+        Set up required objects
+        '''
+        self.remote = salt.masterapi.LocalFuncs(self.opts.value)
+
+    def action(self):
         '''
         Perform an action
         '''
-        if not 'cmd' in load:
-            return False
-        if load['cmd'].startswith('__'):
-            return False
-        ret = getattr(self.local, load['cmd'])(load)
-        return ret  # Change top insert onto the return queue
+        if self.local_in.value:
+            exchange = self.local_in.value.pop()
+            load = exchange.get('load')
+            # If the load is invalid, just ignore the request
+            if not 'cmd' in load:
+                return False
+            if load['cmd'].startswith('__'):
+                return False
+            exchange['ret'] = getattr(self.local, load['cmd'])(load)
+            self.local_out.value.append(exchange)
