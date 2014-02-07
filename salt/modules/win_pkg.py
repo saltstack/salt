@@ -704,7 +704,7 @@ def get_repo_data(saltenv='base'):
     if not cached_repo:
         __salt__['pkg.refresh_db']()
     try:
-        with salt.utils.fopen(cached_repo, 'r') as repofile:
+        with salt.utils.fopen(cached_repo, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 #__context__['winrepo.data'] = repodata
