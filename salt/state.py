@@ -2495,7 +2495,7 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(191)
+        cumask = os.umask(077)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
