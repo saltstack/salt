@@ -581,7 +581,7 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     if not os.path.isfile(load_fn):
         return {}
     serial = salt.payload.Serial(serial)
-    with fopen(load_fn) as fp_:
+    with fopen(load_fn, 'rb') as fp_:
         return serial.load(fp_)
 
 
