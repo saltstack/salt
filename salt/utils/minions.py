@@ -111,7 +111,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr):
                     minions.remove(id_)
@@ -135,7 +135,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr,
                                                 delim=':', regex_match=True):
@@ -160,7 +160,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 pillar = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
                 if not salt.utils.subdict_match(pillar, expr):
                     minions.remove(id_)
@@ -184,7 +184,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 num_parts = len(expr.split('/'))
@@ -233,7 +233,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 range_ = seco.range.Range(self.opts['range_server'])
