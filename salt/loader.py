@@ -1045,7 +1045,7 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(191)
+            cumask = os.umask(077)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
