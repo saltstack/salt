@@ -22,7 +22,7 @@ def check_env_cache(opts, env_cache):
     if not os.path.isfile(env_cache):
         return None
     try:
-        with salt.utils.fopen(env_cache, 'r') as fp_:
+        with salt.utils.fopen(env_cache, 'rb') as fp_:
             log.trace('Returning env cache data from {0}'.format(env_cache))
             serial = salt.payload.Serial(opts)
             return serial.load(fp_)
