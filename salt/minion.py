@@ -497,6 +497,8 @@ class MultiMinion(MinionBase):
         '''
         self._prepare_minion_event_system()
 
+        self.poller.register(self.epull_sock, zmq.POLLIN)
+
         module_refresh = False
         pillar_refresh = False
 
@@ -515,7 +517,8 @@ class MultiMinion(MinionBase):
                     continue
                 loop_interval = self.process_schedule(minion, loop_interval)
                 break
-            if self.poller.poll(1):
+            socks = dict(self.poller.poll(1))
+            if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
                     while True:
                         package = self.epull_sock.recv(zmq.NOBLOCK)
