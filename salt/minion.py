@@ -747,7 +747,6 @@ class Minion(object):
                 target=target, args=(instance, self.opts, data)
             )
         process.start()
-        process.join()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
