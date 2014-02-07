@@ -391,6 +391,23 @@ class MinionBase(object):
                 448
             )
 
+    @staticmethod
+    def process_schedule(minion, loop_interval):
+        try:
+            minion.schedule.eval()
+            # Check if scheduler requires lower loop interval than
+            # the loop_interval setting
+            if minion.schedule.loop_interval < loop_interval:
+                loop_interval = minion.schedule.loop_interval
+                log.debug(
+                    'Overriding loop_interval because of scheduled jobs.'
+                )
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
+        return loop_interval
+
 
 class MasterMinion(object):
     '''
@@ -500,19 +517,7 @@ class MultiMinion(MinionBase):
                     continue
                 if not hasattr(minion, 'schedule'):
                     continue
-                try:
-                    minion.schedule.eval()
-                    # Check if scheduler requires lower loop interval than
-                    # the loop_interval setting
-                    if minion.schedule.loop_interval < loop_interval:
-                        loop_interval = minion.schedule.loop_interval
-                        log.debug(
-                            'Overriding loop_interval because of scheduled jobs.'
-                        )
-                except Exception as exc:
-                    log.error(
-                        'Exception {0} occurred in scheduled job'.format(exc)
-                    )
+                loop_interval = self.process_schedule(minion, loop_interval)
                 break
             if self.poller.poll(1):
                 try:
@@ -1285,19 +1290,7 @@ class Minion(MinionBase):
             )
 
         while self._running is True:
-            try:
-                self.schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if self.schedule.loop_interval < loop_interval:
-                    loop_interval = self.schedule.loop_interval
-                    log.debug(
-                        'Overriding loop_interval because of scheduled jobs.'
-                    )
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
+            loop_interval = self.process_schedule(self, loop_interval)
             try:
                 socks = self._do_poll(loop_interval)
                 self._do_socket_recv(socks)
