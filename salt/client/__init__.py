@@ -760,7 +760,7 @@ class LocalClient(object):
                         try:
                             check = True
                             ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'r')
+                                salt.utils.fopen(retp, 'rb')
                             )
                             if ret_data is None:
                                 # Sometimes the ret data is read at the wrong
@@ -770,7 +770,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'r')
+                                    salt.utils.fopen(outp, 'rb')
                                 )
                         except Exception:
                             pass
@@ -1015,11 +1015,11 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'r'))
+                                salt.utils.fopen(retp, 'rb'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'r'))
+                                    salt.utils.fopen(outp, 'rb'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -1057,11 +1057,11 @@ class LocalClient(object):
                 while fn_ not in ret:
                     try:
                         ret_data = self.serial.load(
-                            salt.utils.fopen(retp, 'r'))
+                            salt.utils.fopen(retp, 'rb'))
                         ret[fn_] = {'ret': ret_data}
                         if os.path.isfile(outp):
                             ret[fn_]['out'] = self.serial.load(
-                                salt.utils.fopen(outp, 'r'))
+                                salt.utils.fopen(outp, 'rb'))
                     except Exception:
                         pass
         return ret
