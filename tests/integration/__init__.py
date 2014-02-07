@@ -849,7 +849,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                     'Job details:\n{0}\n'
                     'Killing Job Returned: {1}'.format(job_data, job_kill)
                 )
-                ret.append('[TEST SUITE ENFORCED]\n{1}\n'
+                ret.append('[TEST SUITE ENFORCED]\n{0}\n'
                            '[/TEST SUITE ENFORCED]'.format(msg))
         return ret
 
