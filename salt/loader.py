@@ -1006,7 +1006,7 @@ class Loader(object):
                     self.opts.get('refresh_grains_cache', False):
                     log.debug('Retrieving grains from cache')
                     try:
-                        with salt.utils.fopen(cfn, 'r') as fp_:
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
                             cached_grains = self.serial.load(fp_)
                         return cached_grains
                     except (IOError, OSError):
@@ -1050,7 +1050,7 @@ class Loader(object):
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
                     self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-                with salt.utils.fopen(cfn, 'w+') as fp_:
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)
                     except TypeError:
