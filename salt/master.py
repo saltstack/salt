@@ -983,12 +983,12 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
                 if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         new = self.serial.load(fp_)
                     if isinstance(new, dict):
                         new.update(load['data'])
                         load['data'] = new
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
@@ -1026,11 +1026,11 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         mine_data = self.serial.load(fp_)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+') as fp_:
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError:
                     return False
@@ -1159,7 +1159,7 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
@@ -1265,7 +1265,7 @@ class AESFuncs(object):
             # Use atomic open here to avoid the file being read before it's
             # completely written to. Refs #1935
             salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+'
+                os.path.join(hn_dir, 'return.p'), 'w+b'
             )
         )
         if 'out' in load:
@@ -1274,7 +1274,7 @@ class AESFuncs(object):
                 # Use atomic open here to avoid the file being read before
                 # it's completely written to. Refs #1935
                 salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+'
+                    os.path.join(hn_dir, 'out.p'), 'w+b'
                 )
             )
 
@@ -1297,11 +1297,11 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            with salt.utils.fopen(wtag, 'w+') as fp_:
+            with salt.utils.fopen(wtag, 'w+b') as fp_:
                 fp_.write('')
         except (IOError, OSError):
             log.error(
@@ -2536,12 +2536,12 @@ class ClearFuncs(object):
         # Save the invocation information
         self.serial.dump(
                 clear_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
                 )
         # save the minions to a cache so we can see in the UI
         self.serial.dump(
                 minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
                 )
         if self.opts['ext_job_cache']:
             try:
