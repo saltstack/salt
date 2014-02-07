@@ -1369,7 +1369,7 @@ class Minion(MinionBase):
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                if socks.get(self.socket) == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 # Check the event system
