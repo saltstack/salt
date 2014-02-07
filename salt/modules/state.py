@@ -388,7 +388,7 @@ def sls(mods,
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(191)
+    cumask = os.umask(077)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
