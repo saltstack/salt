@@ -841,13 +841,13 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 jids.append(jid)
 
                 job_data = self.run_function(
-                    '--out yaml saltutil.find_job', [jid]
+                    'saltutil.find_job', [jid]
                 )
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
                     'Job details:\n{0}\n'
-                    'Killing Job Returned: {1}'.format(job_data, job_kill)
+                    'Killing Job Returned: {1!r}'.format(job_data, job_kill)
                 )
                 ret.append('[TEST SUITE ENFORCED]\n{0}\n'
                            '[/TEST SUITE ENFORCED]'.format(msg))
