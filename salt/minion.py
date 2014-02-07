@@ -20,7 +20,7 @@ import traceback
 import sys
 import signal
 import errno
-from random import randint
+from random import randint, shuffle
 import salt
 
 # Import third party libs
@@ -260,6 +260,8 @@ class SMinion(object):
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
+                if self.opts['random_master'] is True:
+                    shuffle(masters)
                 self.opts['_safe_auth'] = False
                 for master in masters:
                     self.opts['master'] = master
@@ -272,6 +274,8 @@ class SMinion(object):
                                      '{0} and failed'.format(master)))
                         continue
             else:
+                if self.opts['random_master'] is True:
+                    log.warning('random_master is True but there is only one master specified. Ignoring.')
                 self.opts.update(resolve_dns(opts))
                 self.gen_modules()
         else:
