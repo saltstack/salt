@@ -24,7 +24,7 @@ __func_alias__ = {
 
 
 def __virtual__():
-    if not salt.utils.which('lxc'):
+    if not salt.utils.which('lxc-version'):
         return False
     return 'lxc'
 
@@ -282,27 +282,33 @@ def list_():
 
         salt '*' lxc.list
     '''
-    ret = __salt__['cmd.run']('lxc-list').splitlines()
+    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
     stopped = []
     frozen = []
     running = []
-    current = None
 
-    for l in ret:
-        l = l.strip()
-        if not len(l):
+    for c in ctnrs:
+        info = __salt__['cmd.run']('lxc-info -n ' + c).splitlines()
+
+	for i in info:
+	    stat = i.split(':')
+            if stat[0] == 'state':
+                s = stat[1].strip()
+                break
+
+        if not len(s):
             continue
-        if l == 'STOPPED':
-            current = stopped
+        if s == 'STOPPED':
+            stopped.append(c)
             continue
-        if l == 'FROZEN':
-            current = frozen
+        if s == 'FROZEN':
+            frozen.append(c)
             continue
-        if l == 'RUNNING':
-            current = running
+        if s == 'RUNNING':
+            running.append(c)
             continue
-        current.append(l)
+
     return {'running': running,
             'stopped': stopped,
             'frozen': frozen}
