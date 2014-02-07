@@ -2047,7 +2047,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if os.path.isfile(opts['token_file']):
         # Make sure token is still valid
         expire = opts.get('token_expire', 43200)
-        if os.stat(opts['token_file']).st_mtime + expire > int(time.strftime("%s")):
+        if os.stat(opts['token_file']).st_mtime + expire > time.mktime(time.localtime()):
             with salt.utils.fopen(opts['token_file']) as fp_:
                 opts['token'] = fp_.read().strip()
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
