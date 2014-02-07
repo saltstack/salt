@@ -3,10 +3,23 @@
 raeting module provides constants and values for the RAET protocol
 
 
-Python Data format.
-The data from which a packet is created is a nested dict of dicts.
-What fields are included in a header is dependent on the meta data and the
-header kind, service kind, packet kind and defaults as well as the neck body and tail.
+Packet Data Format.
+The data used to initialize a packet is an ordered dict with several fields
+most of the fields are shared with the header data format below so only the
+unique fields are shown here.
+
+Unique Packet data fields
+
+    sh: source host ip address (ipv4) Default: ''
+    sp: source ip port                Default: 7532
+    dh: destination host ip address (ipv4) Default: '127.0.0.1'
+    dp: destination host ip port           Default 7532
+
+Header Data Format.
+The .data in the packet header is an ordered dict  which is used to either
+create a packet to transmit
+or holds the field from a received packet.
+What fields are included in a header is dependent on the header kind.
 
 Header encoding.
     When the head kind is json = 0,then certain optimizations are
@@ -16,100 +29,78 @@ Header encoding.
         Lengths are encoded as hex strings
         The flags are encoded as a double char hex string in field 'fg'
 
-data =
+header data =
 {
-    meta: dict of meta data about packet
-    {
-        sh: source host ip address (ipv4) Default: ''
-        sp: source ip port                Default: 7532
-        dh: destination host ip address (ipv4) Default: '127.0.0.1'
-        dp: destination host ip port           Default 7532
-        hk: header kind   (HeadKind) Default 0
-        hl: header length (HeadLen) Default 0
-        nk: Neck header kind   (NeckKind) Default '00' hs
-        nl: Neck header length (NeckLen) Default 0
-        bk: body kind   (BodyKind) Default 0
-        bl: body length (BodyLen)  Default 0
-        tk: tail kind   (TailKind) Default 0
-        tl: tail length (TailLen)  Default 0
-    }
-    head: dict of header fields
-    {
-        hk: header kind   (HeadKind) Default 0
-        hl: header length (HeadLen) Default 0
+    hk: header kind   (HeadKind) Default 0
+    hl: header length (HeadLen) Default 0
 
-        vn: version (Version) Default 0
+    vn: version (Version) Default 0
 
-        sd: Source Device ID (SDID)
-        dd: Destination Device ID (DDID)
-        cf: Corresponder Flag (CrdrFlag) Default 0
-        mf: Multicast Flag (MultFlag)  Default 0
+    sd: Source Device ID (SDID)
+    dd: Destination Device ID (DDID)
+    cf: Corresponder Flag (CrdrFlag) Default 0
+    mf: Multicast Flag (MultFlag)  Default 0
 
-        si: Session ID (SID) Default 0
-        ti: Transaction ID (TID) Default 0
+    si: Session ID (SID) Default 0
+    ti: Transaction ID (TID) Default 0
+    sk: Service Kind (SrvcKind)
+    pk: Packet Kind (PcktKind)
+    bf: Burst Flag    (BrstFlag) Default 0
+        Send segments or ordered packets without waiting for interleaved acks
 
-        sk: Service Kind (SrvcKind)
-        pk: Packet Kind (PcktKind)
-        bf: Burst Flag    (BrstFlag) Default 0
-            Send segments or ordered packets without waiting for interleaved acks
+    oi: order index (OrdrIndx)   Default 0
+    dt: Datetime Stamp  (Datetime) Default 0
 
-        oi: order index (OrdrIndx)   Default 0
-        dt: Datetime Stamp  (Datetime) Default 0
+    sn: Segment Number (SegNum) Default 0
+    sc: Segment Count  (SegCnt) Default 1
 
-        sn: Segment Number (SegNum) Default 0
-        sc: Segment Count  (SegCnt) Default 1
+    pf: Pending Segment Flag  (PendFlag) Default 0
+        Not the last segment more pending
+    af: All Flag (AllFlag) Default 0
+        Resend all segments not just one
 
-        pf: Pending Segment Flag  (PendFlag) Default 0
-            Not the last segment more pending
-        af: All Flag (AllFlag) Default 0
-            Resend all segments not just one
+    nk: Neck header kind   (NeckKind) Default 0
+    nl: Neck header length (NeckLen) Default 0
 
-        nk: Neck header kind   (NeckKind) Default '00' hs
-        nl: Neck header length (NeckLen) Default 0
+    bk: body kind   (BodyKind) Default 0
+    bl: body length (BodyLen)  Default 0
 
-        bk: body kind   (BodyKind) Default '00' hs
-        bl: body length (BodyLen)  Default 0
+    tk: tail kind   (TailKind) Default 0
+    tl: tail length (TailLen)  Default 0
 
-        tk: tail kind   (TailKind) Default '00' hs
-        tl: tail length (TailLen)  Default 0
-
-        fg: flags  packed (Flags) Default '00' hs
-             2 byte Hex string with bits (0, 0, af, pf, 0, bf, mf, cf)
-             Zeros are TBD flags
-
-        pack: packed version of header
-    }
-    neck: dict of authentication fields
-    {
-        pack: packed version of neck
-    }
-    body: dict of body fields
-    {
-        pack: packed version of body
-    }
-    tail: dict of tail fields
-    {
-        pack: packed version of tail
-    }
-    pack: packed version of whole packet on tx and raw packet on rx
+    fg: flags  packed (Flags) Default '00' hs
+         2 char Hex string with bits (0, 0, af, pf, 0, bf, mf, cf)
+         Zeros are TBD flags
 }
+
+Body Data Format
+The Body .data is a Mapping
+
+Body Encoding
+    When the body kind is json = 0, then the .data is json encoded
+
+Body Decoding
+
 
 '''
 
 # Import python libs
 from collections import namedtuple, Mapping
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
 
+RAET_PORT = 7530
 
 MAX_HEAD_LEN = 255
 JSON_END = '\r\n\r\n'
 
-DATA_PARTS = ['meta', 'head', 'neck', 'body', 'tail']
-
-HEAD_KINDS = odict([('json', 0), ('binary', 1), ('unknown', 255)])
+HEAD_KINDS = odict([('raet', 0), ('json', 1), ('binary', 2),
+                    ('unknown', 255)])
 HEAD_KIND_NAMES = odict((v, k) for k, v in HEAD_KINDS.iteritems())  # inverse map
 HeadKind = namedtuple('HeadKind', HEAD_KINDS.keys())
 headKinds = HeadKind(**HEAD_KINDS)  # headKinds.json is '00'
@@ -157,36 +148,19 @@ PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
 packetKinds = PacketKind(**PACKET_KINDS)
 
 
-# default values of meta data, if given, lengths are integers
-META_DEFAULTS = odict([
-                         ('sh', ''),
-                         ('sp', 7530),
-                         ('dh', '127.0.0.1'),
-                         ('dp', 7530),
-                         ('vn', 0),
-                         ('hk', None),
-                         ('hl', None),
-                         ('nk', 0),
-                         ('nl', 0),
-                         ('bk', 0),
-                         ('bl', 0),
-                         ('tk', 0),
-                         ('tl', 0),
-                      ])
-
 # head fields that may be included in json header if not default value
 HEAD_DEFAULTS = odict([
-                         ('hk', None),
-                         ('hl', None),
+                         ('hk', 0),
+                         ('hl', 0),
                          ('vn', 0),
-                         ('sd', None),
-                         ('dd', None),
+                         ('sd', 0),
+                         ('dd', 0),
                          ('cf', 0),
                          ('mf', 0),
                          ('si', 0),
                          ('ti', 0),
-                         ('sk', None),
-                         ('pk', None),
+                         ('sk', 0),
+                         ('pk', 0),
                          ('bf', 0),
                          ('oi', 0),
                          ('dt', 0),
@@ -200,10 +174,19 @@ HEAD_DEFAULTS = odict([
                          ('bl', 0),
                          ('tk', 0),
                          ('tl', 0),
+                         ('fg', '00'),
                       ])
 
-META_LEN_FIELDS = ['nl', 'bl', 'tl']  # note 'hl' is special so not here
-META_KIND_FIELDS = ['nk', 'bk', 'tk']  # note 'hk' is special so not here
+PACKET_DEFAULTS = odict([
+                            ('sh', ''),
+                            ('sp', 7530),
+                            ('dh', '127.0.0.1'),
+                            ('dp', 7530),
+                        ])
+PACKET_DEFAULTS.update(HEAD_DEFAULTS)
+
+PACKET_FLAGS = ['af', 'pf', 'bf', 'mf', 'cf']
+PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'bf', 'mf', 'cf']
 
 
 def defaultData(data=None):
@@ -464,22 +447,3 @@ def verifyBody(meta, body, tail):
     #meta['error'] = "Body failed verification."
     return True
 
-
-def sendPacket(data):
-    '''
-    Uses data to create packed version and assigns to pack field in data
-    Also returns packed packet
-    '''
-    meta = data['meta']
-    head = data['head']
-    neck = data['neck']
-    body = data['body']
-    tail = data['tail']
-
-    packBody(meta, body)
-    packTail(meta, body, tail)
-    packHead(meta, head)
-    packNeck(meta, head, neck)
-    data['pack'] = '{0}{1}{2}{3}'.format(head['pack'], neck['pack'], body['pack'], tail['pack'])
-
-    return data['pack']
