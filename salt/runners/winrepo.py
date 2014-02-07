@@ -66,7 +66,7 @@ def genrepo():
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
+    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo:
         repo.write(msgpack.dumps(ret))
     salt.output.display_output(ret, 'pprint', __opts__)
     return ret
