@@ -18,6 +18,11 @@ __proxyenabled__ = ['rest_sample']
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 
 def __virtual__():
     '''
@@ -86,7 +91,7 @@ def status(name):
     return __opts__['proxyobject'].service_status(name)
 
 
-def list():
+def list_():
     '''
     List services.
 
