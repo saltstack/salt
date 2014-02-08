@@ -18,14 +18,13 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 from salt.modules import mysql as mysqlmod
 
 log = logging.getLogger(__name__)
 
 NO_MYSQL = False
 try:
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except ImportError:
     NO_MYSQL = True
 
