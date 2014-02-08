@@ -26,7 +26,7 @@ import ioflo.base.deeding
 # Import Third Party Libs
 HAS_RANGE = False
 try:
-    import seco.range
+    import seco.range  # pylint: disable=W0611
     HAS_RANGE = True
 except ImportError:
     pass
@@ -123,7 +123,7 @@ class Schedule(ioflo.deeding.Deed):
 
     def __init__(self):
         ioflo.base.deeding.Deed.__init__(self)
-        
+
     def postinitio(self):
         '''
         Map opts and make the scedule object
@@ -231,7 +231,7 @@ class FunctionNix(ioflo.deeding.Deed):
                                 iret = []
                             iret.append(single)
                         tag = salt.utils.event.tagify(
-                                [data['jid'],'prog', self.opts['id'], str(ind)],
+                                [data['jid'], 'prog', self.opts['id'], str(ind)],
                                 'job')
                         event_data = {'return': single}
                         self._fire_master(event_data, tag)  # Need to look into this
