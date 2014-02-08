@@ -116,6 +116,8 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest with numeric revision
         '''
+        # We should actually clone a smaller repository, salt's repo is getting
+        # pretty big
         name = os.path.join(integration.TMP, 'salt_repo')
         try:
             ret = self.run_state(
@@ -123,7 +125,8 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 name='https://{0}/saltstack/salt.git'.format(self.__domain),
                 rev=0.11,
                 target=name,
-                submodules=True
+                submodules=True,
+                timeout=120
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
