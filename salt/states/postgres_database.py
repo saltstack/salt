@@ -204,13 +204,13 @@ def absent(name,
     db_user
         database username if different from config or defaul
 
-    password
+    db_password
         user password if any password for a specified user
 
-    host
+    db_host
         Database host if different from config or default
 
-    port
+    db_port
         Database port if different from config or default
 
     runas
