@@ -268,9 +268,7 @@ class Master(SMaster):
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
-                'are:\n{0}'.format(
-                    ' '.join(self.opts['fileserver_backend'])
-                )
+                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
             )
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
