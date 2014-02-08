@@ -24,7 +24,6 @@ try:
     import win32security
     import win32file
     from pywintypes import error as pywinerror
-    import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
