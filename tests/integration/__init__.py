@@ -842,10 +842,11 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
-                    'Job details:\n{0}\n'
-                    'Killing Job Returned: {1!r}'.format(job_data, job_kill)
+                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                        job_data, job_kill
+                    )
                 )
-                ret.append('[TEST SUITE ENFORCED]\n{0}\n'
+                ret.append('[TEST SUITE ENFORCED]{0}'
                            '[/TEST SUITE ENFORCED]'.format(msg))
         return ret
 
