@@ -2,8 +2,7 @@
 '''
 A module to manage software on Windows
 
-:depends:   - pythoncom
-            - win32com
+:depends:   - win32com
             - win32con
             - win32api
             - pywintypes
@@ -11,7 +10,6 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import pythoncom
     import win32com.client
     import win32api
     import win32con
