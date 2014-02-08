@@ -27,7 +27,7 @@ KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 
 
-#@skip_if_binaries_missing(['ssh', 'ssh-rsa', 'ssh-keygen'], check_all=True)
+@skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
 class SSHModuleTest(integration.ModuleCase):
     '''
     Test the ssh module
