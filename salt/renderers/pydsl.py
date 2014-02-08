@@ -308,6 +308,24 @@ high state data rendered by `pydsl` to `stateconf`. This example shows that by
 it's possible to ensure that the included sls files can be made to execute before
 or after a state in the including sls file.
 
+Importing custom Python modules
+-------------------------------
+To use a custom Python module inside a PyDSL state, place the module somewhere that
+it can be loaded by the Salt loader, such as `_modules` in the `/srv/salt` directory.
+
+Then, copy it to any minions as necessary by using `saltutil.sync_modules`.
+
+To import into a PyDSL SLS, one must bypass the Python importer and insert it manually
+by getting a reference from Python's `sys.modules` dictionary.
+
+For example:
+
+.. code-block:: python
+    #!pydsl|stateconf -ps
+
+    def main():
+        my_mod = sys.modules['salt.loaded.ext.module.my_mod']
+        
 
 '''
 
