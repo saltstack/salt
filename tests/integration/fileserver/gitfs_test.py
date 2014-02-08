@@ -5,8 +5,8 @@
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import (ensure_in_syspath, destructiveTest)
-from salttesting.mock import patch, MagicMock, call, NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../')
 
@@ -40,6 +40,7 @@ if not gitfs.__virtual__():
 
 
 # @skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitFSTest(integration.ModuleCase):
     def setUp(self):
         '''
