@@ -183,6 +183,9 @@ VALID_OPTS = {
     'keysize': int,
     'salt_transport': str,
     'enumerate_proxy_minions': bool,
+    'gather_job_timeout': int,
+    'auth_timeout': int,
+    'random_master': bool,
 }
 
 # default configurations
@@ -279,6 +282,8 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'salt_transport': 'zeromq',
+    'auth_timeout': 3,
+    'random_master': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -388,7 +393,8 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
-    'enumerate_proxy_minions': False
+    'enumerate_proxy_minions': False,
+    'gather_job_timeout': 2,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1137,7 +1143,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
     vms = {}
 
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
             raise salt.cloud.exceptions.SaltCloudConfigError(
@@ -1294,7 +1300,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     providers = {}
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
         if not isinstance(val, (list, tuple)):
@@ -1643,7 +1649,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
-                            config_dir.lstrip('\\'),
+                            config_dir.lstrip(os.path.sep),
                             'minion_id')
 
     if cache:

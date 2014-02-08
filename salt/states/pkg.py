@@ -302,7 +302,7 @@ def _preflight_check(desired, fromrepo, **kwargs):
 def installed(
         name,
         version=None,
-        refresh=False,
+        refresh=None,
         fromrepo=None,
         skip_verify=False,
         pkgs=None,
@@ -328,7 +328,7 @@ def installed(
     version
         Install a specific version of a package. This option is ignored if
         either "pkgs" or "sources" is used. Currently, this option is supported
-        for the following pkg providers: :mod:`apt <salt.modules.apt>`,
+        for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
@@ -361,7 +361,7 @@ def installed(
               - bar
               - baz
 
-    ``NOTE:`` For :mod:`apt <salt.modules.apt>`,
+    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
     :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
     and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
@@ -420,7 +420,10 @@ def installed(
               - qux: /minion/path/to/qux.rpm
     '''
     rtag = __gen_rtag()
-    refresh = bool(salt.utils.is_true(refresh) or os.path.isfile(rtag))
+    refresh = bool(
+        salt.utils.is_true(refresh)
+        or (os.path.isfile(rtag) and refresh is not False)
+    )
 
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
@@ -466,7 +469,7 @@ def installed(
                                           sources=sources,
                                           **kwargs)
 
-        if os.path.isfile(rtag):
+        if os.path.isfile(rtag) and refresh:
             os.remove(rtag)
     except CommandExecutionError as exc:
         return {'name': name,
@@ -554,7 +557,7 @@ def installed(
 
 def latest(
         name,
-        refresh=False,
+        refresh=None,
         fromrepo=None,
         skip_verify=False,
         pkgs=None,
@@ -596,6 +599,10 @@ def latest(
               - baz
     '''
     rtag = __gen_rtag()
+    refresh = bool(
+        salt.utils.is_true(refresh)
+        or (os.path.isfile(rtag) and refresh is not False)
+    )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -614,11 +621,6 @@ def latest(
     else:
         desired_pkgs = [name]
 
-    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
-        refresh = True
-    else:
-        refresh = False
-
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                            fromrepo=fromrepo,
@@ -626,7 +628,7 @@ def latest(
                                            **kwargs)
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
-    if os.path.isfile(rtag):
+    if os.path.isfile(rtag) and refresh:
         os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked

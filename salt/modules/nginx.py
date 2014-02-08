@@ -110,10 +110,10 @@ def status(url="http://127.0.0.1/status"):
         salt '*' nginx.status
     """
     resp = urllib2.urlopen(url)
-    status = resp.read()
+    status_data = resp.read()
     resp.close()
 
-    lines = status.splitlines()
+    lines = status_data.splitlines()
     if not len(lines) == 4:
         return
     # "Active connections: 1 "

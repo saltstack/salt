@@ -10,6 +10,13 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# If multiple masters are specified in the 'master' setting, the default behavior
+# is to always try to connect to them in the order they are listed. If random_master is
+# set to True, the order will be randomized instead. This can be helpful in distributing
+# the load of many minions executing salt-call requests, for example from a cron job.
+# If only one master is listed, this setting is ignored and a warning will be logged.
+#random_master: False
+
 # Set whether the minion should connect to the master via IPv6
 #ipv6: False
 
@@ -110,6 +117,13 @@
 # The wait-time will be a random number of seconds between
 # 0 and the defined value.
 #random_reauth_delay: 60
+
+# When waiting for a master to accept the minion's public key, salt will
+# continuously attempt to reconnect until successful. This is the timeout value,
+# in seconds, for each individual attempt. After this timeout expires, the minion
+# will wait for acceptance_wait_time seconds before trying again.
+# Unless your master is under unusually heavy load, this should be left at the default.
+#auth_timeout: 3
 
 
 # If you don't have any problems with syn-floods, dont bother with the

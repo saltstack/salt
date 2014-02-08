@@ -408,7 +408,10 @@ def _run(cmd,
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
     except (OSError, IOError) as exc:
-        raise CommandExecutionError('Unable to run command "{0}" with the context "{1}", reason: {2}'.format(cmd, kwargs, exc))
+        raise CommandExecutionError(
+            'Unable to run command {0!r} with the context {1!r}, reason: {2}'
+            .format(cmd, kwargs, exc)
+        )
 
     try:
         proc.wait(timeout)
@@ -570,6 +573,23 @@ def run(cmd,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv)
+
+    if 'pid' in ret and '__pub_jid' in kwargs:
+        # Stuff the child pid in the JID file
+        proc_dir = os.path.join(__opts__['cachedir'], 'proc')
+        jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
+        if os.path.isfile(jid_file):
+            serial = salt.payload.Serial(__opts__)
+            with salt.utils.fopen(jid_file) as fn_:
+                jid_dict = serial.load(fn_)
+
+            if 'child_pids' in jid_dict:
+                jid_dict['child_pids'].append(ret['pid'])
+            else:
+                jid_dict['child_pids'] = [ret['pid']]
+            # Rewrite file
+            with salt.utils.fopen(jid_file, 'w+') as fn_:
+                fn_.write(serial.dumps(jid_dict))
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:

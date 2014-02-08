@@ -19,7 +19,8 @@ import time
 import traceback
 import sys
 import signal
-from random import randint
+import errno
+from random import randint, shuffle
 import salt
 
 # Import third party libs
@@ -160,6 +161,12 @@ def parse_args_and_kwargs(func, args, data=None):
     for arg in args:
         # support old yamlify syntax
         if isinstance(arg, string_types):
+            salt.utils.warn_until(
+                'Boron',
+                'This minion recieved a job where kwargs were passed as '
+                'string\'d args, which has been deprecated. This functionality will'
+                'be removed in Salt Boron.'
+            )
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
                 if argspec.keywords or arg_name in argspec.args:
@@ -186,8 +193,6 @@ def parse_args_and_kwargs(func, args, data=None):
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
 
-    log.debug('Parsed args: {0}'.format(_args))
-    log.debug('Parsed kwargs: {0}'.format(kwargs))
     if invalid_kwargs:
         raise SaltInvocationError(
             'The following keyword arguments are not valid: {0}'
@@ -255,7 +260,8 @@ class SMinion(object):
         if self.opts.get('file_client', 'remote') == 'remote':
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
-                self.opts['_auth_timeout'] = 3
+                if self.opts['random_master'] is True:
+                    shuffle(masters)
                 self.opts['_safe_auth'] = False
                 for master in masters:
                     self.opts['master'] = master
@@ -268,6 +274,8 @@ class SMinion(object):
                                      '{0} and failed'.format(master)))
                         continue
             else:
+                if self.opts['random_master'] is True:
+                    log.warning('random_master is True but there is only one master specified. Ignoring.')
                 self.opts.update(resolve_dns(opts))
                 self.gen_modules()
         else:
@@ -743,7 +751,6 @@ class Minion(object):
                 target=target, args=(instance, self.opts, data)
             )
         process.start()
-        process.join()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -937,12 +944,12 @@ class Minion(object):
             for key, value in ret.items():
                 load[key] = value
         try:
-            if hasattr(self.functions[ret['fun']], '__outputter__'):
-                oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, string_types):
-                    load['out'] = oput
-        except KeyError:
+            oput = self.functions[fun].__outputter__
+        except (KeyError, AttributeError, TypeError):
             pass
+        else:
+            if isinstance(oput, string_types):
+                load['out'] = oput
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
@@ -1178,7 +1185,6 @@ class Minion(object):
             )
 
         self.poller = zmq.Poller()
-        self.epoller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
@@ -1227,7 +1233,7 @@ class Minion(object):
             )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
-        self.epoller.register(self.epull_sock, zmq.POLLIN)
+        self.poller.register(self.epull_sock, zmq.POLLIN)
         # Send an event to the master that the minion is live
         self._fire_master(
             'Minion {0} started at {1}'.format(
@@ -1293,38 +1299,46 @@ class Minion(object):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             try:
+                log.trace("Check main poller timeout %s" % loop_interval)
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
+                if socks.get(self.socket) == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+                    log.trace("Handling payload")
                     self._handle_payload(payload)
+
                 # Check the event system
-                if self.epoller.poll(1):
+                if socks.get(self.epull_sock) == zmq.POLLIN:
+                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                    log.debug("Handling event %r", package)
                     try:
-                        while True:
-                            package = self.epull_sock.recv(zmq.NOBLOCK)
-                            if package.startswith('module_refresh'):
-                                self.module_refresh()
-                            elif package.startswith('pillar_refresh'):
+                        if package.startswith('module_refresh'):
+                            self.module_refresh()
+                        elif package.startswith('pillar_refresh'):
+                            self.pillar_refresh()
+                        elif package.startswith('grains_refresh'):
+                            if self.grains_cache != self.opts['grains']:
                                 self.pillar_refresh()
-                            elif package.startswith('grains_refresh'):
-                                if self.grains_cache != self.opts['grains']:
-                                    self.pillar_refresh()
-                                    self.grains_cache = self.opts['grains']
-                            elif package.startswith('fire_master'):
-                                tag, data = salt.utils.event.MinionEvent.unpack(package)
-                                log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
-                                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+                                self.grains_cache = self.opts['grains']
+                        elif package.startswith('fire_master'):
+                            tag, data = salt.utils.event.MinionEvent.unpack(package)
+                            log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
 
-                            self.epub_sock.send(package)
-
+                        self.epub_sock.send(package)
                     except Exception:
-                        pass
-            except zmq.ZMQError:
-                # This is thrown by the interrupt caused by python handling the
-                # SIGCHLD. This is a safe error and we just start the poll
-                # again
+                        log.debug("Exception while handling events", exc_info=True)
+
+            except zmq.ZMQError as e:
+                # The interrupt caused by python handling the
+                # SIGCHLD. Throws this error with errno == EINTR.
+                # Nothing to recieve on the zmq socket throws this error
+                # with EAGAIN.
+                # Both are sage to ignore
+                if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+                    log.critical('Unexpected ZMQError while polling minion',
+                                 exc_info=True)
                 continue
             except Exception:
                 log.critical(
@@ -1417,17 +1431,6 @@ class Minion(object):
                         socket[0].close()
                     self.poller.unregister(socket[0])
 
-        if hasattr(self, 'epoller'):
-            if isinstance(self.epoller.sockets, dict):
-                for socket in self.epoller.sockets.keys():
-                    if socket.closed is False:
-                        socket.close()
-                    self.epoller.unregister(socket)
-            else:
-                for socket in self.epoller.sockets:
-                    if socket[0].closed is False:
-                        socket[0].close()
-                    self.epoller.unregister(socket[0])
         if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:

@@ -77,7 +77,7 @@ def manage_mode(mode):
     if mode is None:
         return None
     ret = str(mode).lstrip('0').zfill(4)
-    if (ret[0] != '0'):
+    if ret[0] != '0':
         return '0{0}'.format(ret)
     return ret
 

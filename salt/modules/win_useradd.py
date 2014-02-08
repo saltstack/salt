@@ -96,7 +96,9 @@ def setpassword(name, password):
 
         salt '*' user.setpassword name password
     '''
-    ret = __salt__['cmd.run_all']('net user {0} {1}'.format(name, password))
+    ret = __salt__['cmd.run_all'](
+        'net user {0} {1}'.format(name, password), output_loglevel='quiet'
+    )
     return ret['retcode'] == 0
 
 

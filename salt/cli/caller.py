@@ -75,6 +75,8 @@ class Caller(object):
             except NameError:
                 # Don't require msgpack with local
                 pass
+            except IOError:
+                sys.stderr.write('Cannot write to process directory. Do you have permissions to write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
             try:
                 ret['return'] = func(*args, **kwargs)

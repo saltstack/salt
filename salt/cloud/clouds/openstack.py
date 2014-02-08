@@ -261,7 +261,7 @@ def preferred_ip(vm_, ips):
         except Exception:
             continue
 
-        return False
+    return False
 
 
 def ignore_cidr(vm_, ip):
@@ -460,11 +460,12 @@ def create(vm_):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+                    'size': kwargs['size'].name,
+                    'profile': vm_['profile']}}
     )
 
     kwargs['ex_metadata'] = config.get_cloud_config_value(
-        'metadata', vm_, __opts__, default={}, search_global=False
+        'metadata', vm_, __opts__, default={'profile': vm_['profile']}, search_global=False
     )
     if not isinstance(kwargs['ex_metadata'], dict):
         raise SaltCloudConfigError(
@@ -487,7 +488,7 @@ def create(vm_):
 
     def __query_node_data(vm_, data, floating):
         try:
-            nodelist = list_nodes()
+            nodelist = list_nodes_full()
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
@@ -507,17 +508,17 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == node_state(
-            NodeState.RUNNING
-        )
+        running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
+            check_libcloud_version("0.14.0", 'rackconnect: True')
             extra = nodelist[vm_['name']].get('extra')
-            rc_status = extra.get('metadata').get('rackconnect_automation_status')
-            access_ip = extra.get('access_ip')
+            rc_status = extra.get('metadata', {}).get(
+                'rackconnect_automation_status', '')
+            access_ip = extra.get('access_ip', '')
 
             if rc_status != 'DEPLOYED':
                 log.debug('Waiting for Rackconnect automation to complete')
@@ -525,7 +526,8 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = nodelist[vm_['name']].get('extra')
-            mc_status = extra.get('metadata').get('rax_service_level_automation')
+            mc_status = extra.get('metadata', {}).get(
+                'rax_service_level_automation', '')
 
             if mc_status != 'Complete':
                 log.debug('Waiting for managed cloud automation to complete')

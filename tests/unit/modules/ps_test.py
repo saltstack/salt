@@ -18,6 +18,8 @@ if HAS_PSUTIL:
     import psutil
 
     STUB_CPU_TIMES = psutil._compat.namedtuple('cputimes', 'user nice system idle')(1, 2, 3, 4)
+    STUB_VIRT_MEM = psutil._compat.namedtuple('vmem', 'total available percent used free')(1000, 500, 50, 500, 500)
+    STUB_SWAP_MEM = psutil._compat.namedtuple('swap', 'total used free percent sin sout')(1000, 500, 500, 50, 0, 0)
     STUB_PHY_MEM_USAGE = psutil._compat.namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
     STUB_DISK_PARTITION = psutil._compat.namedtuple('partition', 'device mountpoint fstype, opts')('/dev/disk0s2', '/',
                                                                                                    'hfs',
@@ -33,12 +35,14 @@ if HAS_PSUTIL:
                                                                                    0.0)
 else:
     (STUB_CPU_TIMES,
+     STUB_VIRT_MEM,
+     STUB_SWAP_MEM,
      STUB_PHY_MEM_USAGE,
      STUB_DISK_PARTITION,
      STUB_DISK_USAGE,
      STUB_NETWORK_IO,
      STUB_DISK_IO,
-     STUB_USER) = [None for val in range(7)]
+     STUB_USER) = [None for val in range(9)]
 
 STUB_PID_LIST = [0, 1, 2, 3]
 MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
@@ -85,6 +89,14 @@ class PsTestCase(TestCase):
     @patch('psutil.cpu_times', new=MagicMock(return_value=STUB_CPU_TIMES))
     def test_cpu_times(self):
         self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
+
+    @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
+    def test_virtual_memory(self):
+        self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500}, ps.virtual_memory())
+
+    @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
+    def test_swap_memory(self):
+        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0}, ps.swap_memory())
 
     @patch('psutil.phymem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
     def test_physical_memory_usage(self):

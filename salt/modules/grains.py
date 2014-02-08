@@ -11,6 +11,7 @@ import operator
 import os
 import random
 import yaml
+import logging
 
 # Import salt libs
 import salt.utils
@@ -31,6 +32,8 @@ __outputter__ = {
 
 # http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
+
+log = logging.getLogger(__name__)
 
 
 def _serial_sanitizer(instr):
@@ -198,7 +201,6 @@ def setval(key, val, destructive=False):
         if not isinstance(grains, dict):
             grains = {}
     if val is None and destructive is True:
-        print('SETVAL DESTRUCTIVE ')
         if key in grains:
             del grains[key]
     else:
@@ -207,11 +209,20 @@ def setval(key, val, destructive=False):
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
-    with salt.utils.fopen(gfn, 'w+') as fp_:
-        fp_.write(cstr)
+    try:
+        with salt.utils.fopen(gfn, 'w+') as fp_:
+            fp_.write(cstr)
+    except (IOError, OSError):
+        msg = 'Unable to write to grains file at {0}. Check permissions.'
+        log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
-    with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write('')
+    try:
+        with salt.utils.fopen(fn_, 'w+') as fp_:
+            fp_.write('')
+    except (IOError, OSError):
+        msg = 'Unable to write to cache file {0}. Check permissions.'
+        log.error(msg.format(fn_))
+    __grains__[key] = val
     # Sync the grains
     __salt__['saltutil.sync_grains']()
     # Return the grain we just set to confirm everything was OK

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -197,7 +200,7 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
-            host='testhost',  user='testuser',
+            host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
@@ -378,10 +381,10 @@ class PostgresTestCase(TestCase):
             re.match(
                 '/usr/bin/pgsql --no-align --no-readline --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
-                'UNENCRYPTED PASSWORD \'"\'"\'test_role_pass\'"\'"\';'
-                ' GRANT test_groups TO test_username\'',
+                'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
+                ' GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
         )
 
@@ -474,11 +477,11 @@ class PostgresTestCase(TestCase):
             re.match(
                 '/usr/bin/pgsql --no-align --no-readline --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
-                '\'"\'"\'md531c27e68d3771c392b52102c01be1da1\'"\'"\''
-                '; GRANT test_groups TO test_username\'',
+                '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
+                '; GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
         )
 

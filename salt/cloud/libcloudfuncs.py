@@ -24,6 +24,7 @@ from libcloud.compute.deployment import (
 # Import salt libs
 import salt._compat
 import salt.utils.event
+import salt.client
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -43,6 +44,36 @@ def node_state(id_):
     return states[id_]
 
 
+def check_libcloud_version(reqver='0.13.2', why=None):
+    '''
+    Compare different libcloud versions
+    '''
+    try:
+        import libcloud
+    except ImportError:
+        raise ImportError('salt-cloud requires >= libcloud {0}'.format(reqver))
+
+    reqver = reqver.replace('-', '.')
+    comps = reqver.split('.')
+    required_version = []
+    for number in comps[:3]:
+        required_version.append(int(number))
+    ver = libcloud.__version__
+    ver = ver.replace('-', '.')
+    comps = ver.split('.')
+    version = []
+    for number in comps[:3]:
+        version.append(int(number))
+    errormsg = 'Your version of libcloud is {0}. '.format(libcloud.__version__)
+    errormsg += 'salt-cloud requires >= libcloud {0}'.format(required_version)
+    if why:
+        errormsg += ' for {0}'.format(why)
+    errormsg += '. Please upgrade.'
+    if version < required_version:
+        raise ImportError(errormsg)
+    return libcloud.__version__
+
+
 def libcloud_version():
     '''
     Require the minimal libcloud version
@@ -50,7 +81,7 @@ def libcloud_version():
     try:
         import libcloud
     except ImportError:
-        raise ImportError('salt-cloud requires >= libcloud 0.11.4')
+        raise ImportError('salt-cloud requires >= libcloud 0.13.2')
 
     ver = libcloud.__version__
     ver = ver.replace('-', '.')
@@ -58,10 +89,10 @@ def libcloud_version():
     version = []
     for number in comps[:3]:
         version.append(int(number))
-    if version < [0, 11, 4]:
+    if version < [0, 13, 2]:
         raise ImportError(
             'Your version of libcloud is {0}. salt-cloud requires >= '
-            'libcloud 0.11.4. Please upgrade.'.format(libcloud.__version__)
+            'libcloud 0.13.2. Please upgrade.'.format(libcloud.__version__)
         )
     return libcloud.__version__
 
@@ -316,8 +347,22 @@ def destroy(name, conn=None, call=None):
         conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
+    profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
+    profile = None
+    if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
+        profile = node.extra['metadata']['profile']
+    flush_mine_on_destroy = False
+    if profile is not None and profile in profiles:
+        if 'flush_mine_on_destroy' in profiles[profile]:
+            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if flush_mine_on_destroy:
+        log.info('Clearing Salt Mine: {0}'.format(name))
+        client = salt.client.LocalClient(__opts__['conf_file'])
+        minions = client.cmd(name, 'mine.flush')
+
+    log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:

@@ -316,7 +316,7 @@ def grains(opts):
     else:
         opts['grains'] = {}
 
-    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
+    load = _create_loader(opts, 'grains', 'grain')
     grains_info = load.gen_grains()
     grains_info.update(opts['grains'])
     return grains_info
@@ -747,14 +747,15 @@ class Loader(object):
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
             # containing the names of the proxy types that the module supports.
-            if 'proxytype' in self.opts:
+            if not hasattr(mod, 'render') and 'proxy' in self.opts:
                 if not hasattr(mod, '__proxyenabled__'):
                     # This is a proxy minion but this module doesn't support proxy
                     # minions at all
                     continue
-                if not (self.opts['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
                     # This is a proxy minion, this module supports proxy
                     # minions, but not this particular minion
+                    log.debug(mod)
                     continue
 
             if hasattr(mod, '__opts__'):

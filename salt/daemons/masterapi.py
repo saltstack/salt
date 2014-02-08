@@ -9,6 +9,13 @@ import os
 import re
 import logging
 import getpass
+import shutil
+import datetime
+try:
+    import pwd
+except ImportError:
+    # In case a non-master needs to import this module
+    pass
 
 
 # Import salt libs
@@ -25,17 +32,132 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.transport.table
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.event import tagify
+from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+
+def master_keys(opts):
+    '''
+    Generate and return the master long term key data
+    '''
+    keyfile = os.path.join(
+            opts['pki_dir'],
+            'priv.{0}'.format(opts['crypt_backend'])
+            )
+    if not os.path.isfile(keyfile):
+        public = salt.transport.table.Public(
+                backend=opts['crypt_backend'],
+                serial='msgpack')
+        public.save(keyfile)
+        return public
+    return salt.transport.table.Public(
+            backend=opts['crypt_backend'],
+            keyfile=keyfile,
+            serial='msgpack')
+
+
+def clean_old_jobs(opts):
+    '''
+    Clean out the old jobs from the job cache
+    '''
+    if opts['keep_jobs'] != 0:
+        jid_root = os.path.join(opts['cachedir'], 'jobs')
+        cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
+
+        if os.path.exists(jid_root):
+            for top in os.listdir(jid_root):
+                t_path = os.path.join(jid_root, top)
+                for final in os.listdir(t_path):
+                    f_path = os.path.join(t_path, final)
+                    jid_file = os.path.join(f_path, 'jid')
+                    if not os.path.isfile(jid_file):
+                        continue
+                    with salt.utils.fopen(jid_file, 'r') as fn_:
+                        jid = fn_.read()
+                    if len(jid) < 18:
+                        # Invalid jid, scrub the dir
+                        shutil.rmtree(f_path)
+                    elif int(cur) - int(jid[:10]) > \
+                            opts['keep_jobs']:
+                        shutil.rmtree(f_path)
+
+
+def access_keys(opts):
+    '''
+    A key needs to be placed in the filesystem with permissions 0400 so
+    clients are required to run as root.
+    '''
+    users = []
+    keys = {}
+    acl_users = set(opts['client_acl'].keys())
+    if opts.get('user'):
+        acl_users.add(opts['user'])
+    acl_users.add(getpass.getuser())
+    for user in pwd.getpwall():
+        users.append(user.pw_name)
+    for user in acl_users:
+        log.info(
+            'Preparing the {0} key for local communication'.format(
+                user
+            )
+        )
+
+        if user not in users:
+            try:
+                user = pwd.getpwnam(user)
+            except KeyError:
+                log.error('ACL user {0} is not available'.format(user))
+                continue
+        keyfile = os.path.join(
+            opts['cachedir'], '.{0}_key'.format(user)
+        )
+
+        if os.path.exists(keyfile):
+            log.debug('Removing stale keyfile: {0}'.format(keyfile))
+            os.unlink(keyfile)
+
+        key = salt.crypt.Crypticle.generate_key_string()
+        cumask = os.umask(191)
+        with salt.utils.fopen(keyfile, 'w+') as fp_:
+            fp_.write(key)
+        os.umask(cumask)
+        os.chmod(keyfile, 256)
+        try:
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+        except OSError:
+            # The master is not being run as root and can therefore not
+            # chown the key file
+            pass
+        keys[user] = key
+    return keys
+
+
+def fileserver_update(fileserver):
+    '''
+    Update the fileserver backends, requires that a built fileserver object
+    be passed in
+    '''
+    try:
+        if not fileserver.servers:
+            log.error('No fileservers loaded, the master will not be'
+                      'able to serve files to minions')
+            raise SaltMasterError('No fileserver backends available')
+        fileserver.update()
+    except Exception as exc:
+        log.error(
+            'Exception {0} occurred in file server update'.format(exc)
+        )
 
 
 class RemoteFuncs(object):

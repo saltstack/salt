@@ -1219,6 +1219,10 @@ def _dmidecode_data(regex_dict):
     elif salt.utils.which('smbios'):
         out = __salt__['cmd.run']('smbios')
     else:
+        log.info(
+            'The `dmidecode` binary is not available on the system. GPU grains '
+            'will not be available.'
+        )
         return ret
 
     for section in regex_dict:

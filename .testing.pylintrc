@@ -51,7 +51,6 @@ disable=R,
   W0404,
   W0511,
   W0603,
-  W0611,
   W0612,
   W0613,
   W0621,
@@ -90,7 +89,6 @@ disable=R,
 # W0404 (reimported) [done intentionally for legit reasons]
 # W0511 (fixme) [several outstanding instances currently in the codebase]
 # W0603 (global-statement)
-# W0611 (unused-import) [used to check for module availability]
 # W0612 (unused-variable) [unused return values]
 # W0613 (unused-argument)
 # W0621 (redefined-outer-name)

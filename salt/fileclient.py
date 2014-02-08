@@ -183,7 +183,8 @@ class Client(object):
             ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
         return ret
 
-    def cache_dir(self, path, saltenv='base', include_empty=False, env=None):
+    def cache_dir(self, path, saltenv='base', include_empty=False,
+                  include_pat=None, exclude_pat=None, env=None):
         '''
         Download all of the files in a subdir of the master
         '''
@@ -212,9 +213,11 @@ class Client(object):
         )
         #go through the list of all files finding ones that are in
         #the target directory and caching them
-        ret.extend([self.cache_file('salt://' + fn_, saltenv)
-                    for fn_ in self.file_list(saltenv)
-                    if fn_.strip() and fn_.startswith(path)])
+        for fn_ in self.file_list(saltenv):
+            if fn_.strip() and fn_.startswith(path):
+                if salt.utils.check_include_exclude(
+                        fn_, include_pat, exclude_pat):
+                    ret.append(self.cache_file('salt://' + fn_, saltenv))
 
         if include_empty:
             # Break up the path into a list containing the bottom-level

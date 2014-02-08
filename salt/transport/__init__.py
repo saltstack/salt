@@ -8,10 +8,8 @@ import salt.auth
 
 
 class Channel(object):
-
     @staticmethod
     def factory(opts, **kwargs):
-
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
@@ -28,13 +26,11 @@ class Channel(object):
 
 
 class ZeroMQChannel(Channel):
-
     '''
     Encapsulate sending routines to ZeroMQ.
 
     ZMQ Channels default to 'crypt=aes'
     '''
-
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
