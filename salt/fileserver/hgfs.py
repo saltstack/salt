@@ -4,7 +4,8 @@ The backed for the mercurial based file server system.
 
 After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
-feature is managed by the fileserver_backend option in the salt master config.
+feature is managed by the :conf_master:`fileserver_backend` option in the salt
+master config file.
 
 This fileserver has an additional option :conf_master:`hgfs_branch_method` that
 will set the desired branch method. Possible values are: ``branches``,
@@ -13,11 +14,10 @@ will set the desired branch method. Possible values are: ``branches``,
 
 
 .. versionchanged:: 2014.1.0 (Hydrogen)
-
     The :conf_master:`hgfs_base` master config parameter was added, allowing
     for a branch other than ``default`` to be used for the ``base``
-    environment. Note that this parameter is ignored when
-    :conf_master:`hgfs_branch_method` is set to ``bookmarks``.
+    environment, and allowing for a ``base`` environment to be specified when
+    using an :conf_master:`hgfs_branch_method` of ``bookmarks``.
 
 
 :depends:   - mercurial
@@ -72,16 +72,80 @@ def __virtual__():
     return __virtualname__
 
 
+def _all_branches(repo):
+    '''
+    Returns all branches for the specified repo
+    '''
+    # repo.branches() returns a list of 3-tuples consisting of
+    # (branch name, rev #, nodeid)
+    # Example: [('default', 4, '7c96229269fa')]
+    return repo.branches()
+
+
+def _get_branch(repo, name):
+    '''
+    Find the requested branch in the specified repo
+    '''
+    try:
+        return [x for x in _all_branches(repo) if x[0] == name][0]
+    except IndexError:
+        return False
+
+
+def _all_bookmarks(repo):
+    '''
+    Returns all bookmarks for the specified repo
+    '''
+    # repo.bookmarks() returns a tuple containing the following:
+    #   1. A list of 3-tuples consisting of (bookmark name, rev #, nodeid)
+    #   2. The index of the current bookmark (-1 if no current one)
+    # Example: ([('mymark', 4, '7c96229269fa')], -1)
+    return repo.bookmarks()[0]
+
+
+def _get_bookmark(repo, name):
+    '''
+    Find the requested bookmark in the specified repo
+    '''
+    try:
+        return [x for x in _all_bookmarks(repo) if x[0] == name][0]
+    except IndexError:
+        return False
+
+
+def _all_tags(repo):
+    '''
+    Returns all tags for the specified repo
+    '''
+    # repo.tags() returns a list of 4-tuples consisting of
+    # (tag name, rev #, nodeid, islocal)
+    # Example: [('1.0', 3, '3be15e71b31a', False),
+    #           ('tip', 4, '7c96229269fa', False)]
+    # Avoid returning the special 'tip' tag.
+    return [x for x in repo.tags() if x[0] != 'tip']
+
+
+def _get_tag(repo, name):
+    '''
+    Find the requested tag in the specified repo
+    '''
+    try:
+        return [x for x in _all_tags(repo) if x[0] == name][0]
+    except IndexError:
+        return False
+
+
 def _get_ref(repo, name):
     '''
-    Return ref tuple if ref is in the repo
+    Return ref tuple if ref is in the repo.
     '''
-    for ref in repo.branches():
-        if name == ref[0]:
-            return ref
-    for ref in [x for x in repo.tags() if x[0] != 'tip']:
-        if name == ref[0]:
-            return ref
+    if __opts__['hgfs_branch_method'] == 'branches':
+        return _get_branch(repo, name) or _get_tag(repo, name)
+    elif __opts__['hgfs_branch_method'] == 'bookmarks':
+        return _get_bookmark(repo, name) or _get_tag(repo, name)
+    elif __opts__['hgfs_branch_method'] == 'mixed':
+        return _get_branch(repo, name) or _get_bookmark(repo, name) \
+            or _get_tag(repo, name)
     return False
 
 
@@ -202,13 +266,16 @@ def update():
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         curtip = repo.tip()
-        if repo.pull():
+        try:
+            success = repo.pull()
+        except Exception as exc:
+            log.error(
+                'Exception caught while updating hgfs: {0}'.format(exc)
+            )
+        else:
             newtip = repo.tip()
             if curtip[1] != newtip[1]:
                 data['changed'] = True
-        else:
-            log.warning('Failed to pull changes to repo: '
-                        '{0}'.format(repo.root()))
         repo.close()
         try:
             os.remove(lk_fn)
@@ -246,33 +313,23 @@ def envs(ignore_cache=False):
         cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
         if cache_match is not None:
             return cache_match
-    base_branch = __opts__['hgfs_base']
     ret = set()
     repos = init()
     for repo in repos:
         repo.open()
         if __opts__['hgfs_branch_method'] in ('branches', 'mixed'):
-            # repo.branches() returns a list of 3-tuples consisting of
-            # (branch name, revision #, nodeid).
-            # Example: [('default', 4, '7c96229269fa')]
-            for branch_name in [x[0] for x in repo.branches()]:
-                if branch_name == base_branch:
+            for branch in _all_branches(repo):
+                branch_name = branch[0]
+                if branch_name == __opts__['hgfs_base']:
                     branch_name = 'base'
                 ret.add(branch_name)
         if __opts__['hgfs_branch_method'] in ('bookmarks', 'mixed'):
-            # repo.bookmarks() returns a tuple containing the following:
-            #   1. A list of 3-tuples consisting of
-            #      (bookmark name, revision #, nodeid).
-            #   2. The index of the current bookmark (-1 if no current one)
-            # Example: ([('mymark', 4, '7c96229269fa')], -1)
-            ret.update([x[0] for x in repo.bookmarks()[0]])
-        # repo.tags() returns a list of 4-tuples consisting of
-        # (tag name, revision #, nodeid, islocal)
-        # Avoid adding the special 'tip' tag as an env.
-        # Example: [('1.0', 3, '3be15e71b31a', False),
-        #           ('tip', 4, '7c96229269fa', False)]
-        ret.update([x[0] for x in repo.tags() if x != 'tip'])
-
+            for bookmark in _all_bookmarks(repo):
+                bookmark_name = bookmark[0]
+                if bookmark_name == __opts__['hgfs_base']:
+                    bookmark_name = 'base'
+                ret.add(bookmark_name)
+        ret.update([x[0] for x in _all_tags(repo)])
         repo.close()
     return sorted(ret)
 
@@ -284,15 +341,14 @@ def find_file(path, short='base', **kwargs):
     '''
     fnd = {'path': '',
            'rel': ''}
-    base_branch = __opts__['hgfs_base']
     if os.path.isabs(path):
         return fnd
 
     local_path = path
     path = os.path.join(__opts__['hgfs_root'], local_path)
 
-    if __opts__['hgfs_branch_method'] != 'bookmarks' and short == 'base':
-        short = base_branch
+    if short == 'base':
+        short = __opts__['hgfs_base']
     dest = os.path.join(__opts__['cachedir'], 'hgfs/refs', short, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
                                'hgfs/hash',
@@ -409,9 +465,8 @@ def file_hash(load, fnd):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
     short = load['saltenv']
-    base_branch = __opts__['hgfs_base']
-    if __opts__['hgfs_branch_method'] != 'bookmarks' and short == 'base':
-        short = base_branch
+    if short == 'base':
+        short = __opts__['hgfs_base']
     relpath = fnd['rel']
     path = fnd['path']
     hashdest = os.path.join(__opts__['cachedir'],
@@ -491,17 +546,16 @@ def _get_file_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    base_branch = __opts__['hgfs_base']
     if 'saltenv' not in load:
         return []
-    if __opts__['hgfs_branch_method'] != 'bookmarks' and \
-            load['saltenv'] == 'base':
-        load['saltenv'] = base_branch
+    short = load['saltenv']
+    if short == 'base':
+        short = __opts__['hgfs_base']
     repos = init()
     ret = set()
     for repo in repos:
         repo.open()
-        ref = _get_ref(repo, load['saltenv'])
+        ref = _get_ref(repo, short)
         if ref:
             manifest = repo.manifest(rev=ref[1])
             for tup in manifest:
@@ -540,17 +594,16 @@ def _get_dir_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    base_branch = __opts__['hgfs_base']
     if 'saltenv' not in load:
         return []
-    if __opts__['hgfs_branch_method'] == 'branches' and \
-            load['saltenv'] == 'base':
-        load['saltenv'] = base_branch
+    short = load['saltenv']
+    if short == 'base':
+        short = __opts__['hgfs_base']
     repos = init()
     ret = set()
     for repo in repos:
         repo.open()
-        ref = _get_ref(repo, load['saltenv'])
+        ref = _get_ref(repo, short)
         if ref:
             manifest = repo.manifest(rev=ref[1])
             for tup in manifest:
