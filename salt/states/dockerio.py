@@ -102,14 +102,6 @@ Available Functions
 # Import salt libs
 from salt._compat import string_types
 
-# Import 3rd-party libs
-try:
-    import docker
-    HAS_DOCKER = True
-except ImportError:
-    HAS_DOCKER = False
-
-
 # Define the module's virtual name
 __virtualname__ = 'docker'
 
@@ -118,7 +110,7 @@ def __virtual__():
     '''
     Only load if the docker libs are available.
     '''
-    if HAS_DOCKER:
+    if 'docker.version' in __salt__:
         return __virtualname__
     return False
 
