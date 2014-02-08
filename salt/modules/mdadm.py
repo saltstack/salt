@@ -122,12 +122,21 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
+    os = __salt__['grains.items']()['os']
     stop_cmd = 'mdadm --stop {0}'.format(device)
     zero_cmd = 'mdadm --zero-superblock {0}'
 
     if __salt__['cmd.retcode'](stop_cmd):
         for number in details['members']:
             __salt__['cmd.retcode'](zero_cmd.format(number['device']))
+
+    # Remove entry from config file:
+    if os == 'Ubuntu' or os == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    __salt__['file.replace'](cfg_file, 'ARRAY {} .*'.format(device), '')
 
     if __salt__['raid.list']().get(device) is None:
         return True
@@ -214,3 +223,43 @@ def create(*args):
         return cmd
     elif test_mode is False:
         return __salt__['cmd.run'](cmd)
+
+
+def save_config():
+    """
+    Save RAID configuration to config file.
+
+    Same as:
+    mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+
+    Fixes this issue with Ubuntu
+    REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.save_config
+
+    """
+    os = __salt__['grains.items']()['os']
+    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
+    # Issue with mdadm and ubuntu
+    # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+    if os == 'Ubuntu':
+        buggy_ubuntu_tags = ['name', 'metadata']
+        for bad_tag in buggy_ubuntu_tags:
+            for i, elem in enumerate(scan):
+                if not elem.find(bad_tag):
+                    del scan[i]
+
+    scan = ' '.join(scan)
+    if os == 'Ubuntu' or os == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    if not __salt__['file.search'](cfg_file, scan):
+        __salt__['file.append'](cfg_file, scan)
+
+    return __salt__['cmd.run']('update-initramfs -u')
