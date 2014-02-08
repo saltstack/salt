@@ -1662,12 +1662,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.')
+                else:
+                    self.config['fun'] = self.args[1]
+                    self.config['arg'] = self.args[2:]
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
-            else:
-                self.config['fun'] = self.args[1]
-                self.config['arg'] = self.args[2:]
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
