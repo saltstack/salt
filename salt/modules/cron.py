@@ -103,7 +103,7 @@ def _write_cron_lines(user, lines):
     path = salt.utils.mkstemp()
     with salt.utils.fopen(path, 'w+') as fp_:
         fp_.writelines(lines)
-    if __grains__['os_family'] == 'Solaris' and user != "root":
+    if __grains__.get('os_family') in ('Solaris', 'AIX') and user != "root":
         __salt__['cmd.run']('chown {0} {1}'.format(user, path))
     ret = __salt__['cmd.run_all'](_get_cron_cmdstr(user, path))
     os.remove(path)
@@ -130,7 +130,7 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
-    if __grains__['os_family'] == 'Solaris':
+    if __grains__.get('os_family') in ('Solaris', 'AIX'):
         cmd = 'crontab -l {0}'.format(user)
     else:
         cmd = 'crontab -l -u {0}'.format(user)
