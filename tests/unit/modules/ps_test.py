@@ -48,7 +48,7 @@ STUB_PID_LIST = [0, 1, 2, 3]
 MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
 
 try:
-    import utmp
+    import utmp  # pylint: disable=W0611
 
     HAS_UTMP = True
 except ImportError:
