@@ -913,9 +913,9 @@ Default: ``branches``
 
 Defines the objects that will be used as fileserver environments.
 
-* ``branches`` - Only branches will be used
-* ``bookmarks`` - Only bookmarks will be used
-* ``mixed`` - Both branches and bookmarks will be used
+* ``branches`` - Only branches and tags will be used
+* ``bookmarks`` - Only bookmarks and tags will be used
+* ``mixed`` - Branches, bookmarks, and tags will be used
 
 .. code-block:: yaml
 
@@ -923,9 +923,13 @@ Defines the objects that will be used as fileserver environments.
 
 .. note::
 
-    If set to ``branches`` or ``mixed``, then the ``default`` branch will be
-    used as the ``base`` environment, unless overridden by the
-    :conf_master:`hgfs_base` parameter.
+    Starting in version 2014.1.0 (Hydrogen), the value of the
+    :conf_master:`hgfs_base` parameter defines which branch is used as the
+    ``base`` environment, allowing for a ``base`` environment to be used with
+    an :conf_master:`hgfs_branch_method` of ``bookmarks``.
+
+    Prior to this release, the ``default`` branch will be used as the ``base``
+    environment.
 
 .. conf_master:: hgfs_root
 
@@ -953,8 +957,9 @@ available to the Salt fileserver.
 
 Default: ``default``
 
-Defines which branch should be used as the ``base`` environment. Ignored if
-:conf_master:`hgfs_branch_method` is set to ``bookmarks``.
+Defines which branch should be used as the ``base`` environment. Change this if
+:conf_master:`hgfs_branch_method` is set to ``bookmarks`` to specify which
+bookmark should be used as the ``base`` environment.
 
 .. code-block:: yaml
 
