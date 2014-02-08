@@ -42,11 +42,7 @@ def __virtual__():
     '''
     Only load if gitpython is available
     '''
-    if not isinstance(__opts__['gitfs_remotes'], list):
-        return False
-    if not isinstance(__opts__['gitfs_root'], str):
-        return False
-    if not 'git' in __opts__['fileserver_backend']:
+    if not __virtualname__ in __opts__['fileserver_backend']:
         return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
