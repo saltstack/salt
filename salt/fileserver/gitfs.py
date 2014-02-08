@@ -195,7 +195,7 @@ def _get_provider():
         if provider not in VALID_PROVIDERS:
             raise SaltException(
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
-                .format(provider, VALID_PROVIDERS)
+                .format(provider, ', '.join(VALID_PROVIDERS))
             )
         elif provider == 'pygit2' and _verify_pygit2():
             return 'pygit2'
@@ -209,14 +209,13 @@ def __virtual__():
     Only load if the desired provider module is present and gitfs is enabled
     properly in the master config file.
     '''
-    if not isinstance(__opts__['gitfs_remotes'], list):
-        return False
-    if not isinstance(__opts__['gitfs_root'], str):
-        return False
     if not __virtualname__ in __opts__['fileserver_backend']:
         return False
-    provider = _get_provider()
-    return __virtualname__ if provider else False
+    try:
+        return __virtualname__ if _get_provider() else False
+    except SaltException as exc:
+        log.error(exc)
+        return False
 
 
 def _get_tree_gitpython(repo, short):
@@ -382,10 +381,13 @@ def init():
                         )
                         continue
             else:
-                raise SaltException(
-                    'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
-                    .format(provider, VALID_PROVIDERS)
+                # Should never get here because the provider has been verified
+                # in __virtual__(). Log an error and return an empty list.
+                log.error(
+                    'Unexpected gitfs_provider {0!r}. This is probably a bug.'
+                    .format(provider)
                 )
+                return []
         except Exception as exc:
             msg = ('Exception caught while initializing the repo for gitfs: '
                    '{0}.'.format(exc))
@@ -515,10 +517,13 @@ def envs(ignore_cache=False):
         elif provider == 'pygit2':
             ret.update(_envs_pygit2(repo, base_branch))
         else:
-            raise SaltException(
-                'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
-                .format(provider, VALID_PROVIDERS)
+            # Should never get here because the provider has been verified
+            # in __virtual__(). Log an error and return an empty list.
+            log.error(
+                'Unexpected gitfs_provider {0!r}. This is probably a bug.'
+                .format(provider)
             )
+            return []
     return sorted(ret)
 
 
