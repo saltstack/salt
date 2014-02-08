@@ -464,10 +464,8 @@ def create(vm_):
                     'profile': vm_['profile']}}
     )
 
-    # If there is no profile (ex. cloud.create), then we don't want the word
-    # "profile" in there at all, so a vm_.get() won't work here
     default_profile = {}
-    if 'profile' in vm_:
+    if 'profile' in vm_ and vm_['profile'] is not None:
         default_profile = {'profile': vm_['profile']}
 
     kwargs['ex_metadata'] = config.get_cloud_config_value(
