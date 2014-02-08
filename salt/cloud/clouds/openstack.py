@@ -464,8 +464,14 @@ def create(vm_):
                     'profile': vm_['profile']}}
     )
 
+    # If there is no profile (ex. cloud.create), then we don't want the word
+    # "profile" in there at all, so a vm_.get() won't work here
+    default_profile = {}
+    if 'profile' in vm_:
+        default_profile = {'profile': vm_['profile']}
+
     kwargs['ex_metadata'] = config.get_cloud_config_value(
-        'metadata', vm_, __opts__, default={'profile': vm_['profile']}, search_global=False
+        'metadata', vm_, __opts__, default=default_profile, search_global=False
     )
     if not isinstance(kwargs['ex_metadata'], dict):
         raise SaltCloudConfigError(
