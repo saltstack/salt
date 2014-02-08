@@ -7,7 +7,7 @@ packeting module provides classes for Raet packets
 
 # Import python libs
 import socket
-from collections import namedtuple, Mapping
+from collections import Mapping
 try:
     import simplejson as json
 except ImportError:
@@ -19,18 +19,20 @@ from ioflo.base.aiding import packByte, unpackByte
 
 from . import raeting
 
+
 class Stack(object):
     ''' RAET protocol stack object'''
     def __init__(self):
         ''' Setup Stack instance'''
-        self.devices = odict() #devices managed by this stack
+        self.devices = odict()  # devices managed by this stack
+
 
 class Device(object):
     ''' RAET protocol endpoint device object'''
     def __init__(self, did=0, stack=None, host='', port=raeting.RAET_PORT):
         ''' Setup Device instance'''
-        self.did = did # device id
-        self.stack = stack # Stack object that manages this device
+        self.did = did  # device id
+        self.stack = stack  # Stack object that manages this device
         self.host = socket.gethostbyname(host)
         self.port = port
 
@@ -39,6 +41,7 @@ class Device(object):
         '''ha property that returns ip address (host, port) tuple'''
         return (self.host, self.port)
 
+
 class Part(object):
     '''
     Base class for parts of a RAET packet
@@ -46,9 +49,9 @@ class Part(object):
     '''
     def __init__(self, packet=None, kind=None, length=None, **kwa):
         ''' Setup Part instance '''
-        self.packet = packet # Packet this Part belongs too
-        self.kind = kind # part kind
-        self.length = length # specified length of part not computed length
+        self.packet = packet  # Packet this Part belongs too
+        self.kind = kind   # part kind
+        self.length = length  # specified length of part not computed length
         self.packed = ''
 
     def __len__(self):
@@ -57,8 +60,9 @@ class Part(object):
 
     @property
     def size(self):
-       ''' size property returns the length of the .packed of this Part'''
-       return len(self.packed)
+        ''' size property returns the length of the .packed of this Part'''
+        return len(self.packed)
+
 
 class Head(Part):
     '''
@@ -68,12 +72,12 @@ class Head(Part):
     def __init__(self, **kwa):
         ''' Setup Head instance'''
         super(Head, self).__init__(**kwa)
-        self.data = odict(raeting.HEAD_DEFAULTS) #ensures correct order
+        self.data = odict(raeting.HEAD_DEFAULTS)  # ensures correct order
 
     def pack(self):
         ''' Composes and returns .packed, which is the packed form of this part '''
         self.packed = ''
-        self.data = odict(raeting.HEAD_DEFAULTS) # refresh
+        self.data = odict(raeting.HEAD_DEFAULTS)  # refresh
         self.data['vn'] = self.packet.version
         self.data['pk'] = self.packet.kind
 
@@ -94,8 +98,8 @@ class Head(Part):
 
         # kit always includes header kind and length fields
         kit = odict([('hk', self.kind), ('hl', 0)])
-        for k, v in raeting.HEAD_DEFAULTS.items():# include if not equal to default
-            if (self.data[k] != v) and (k not in raeting.PACKET_FLAGS ):
+        for k, v in raeting.HEAD_DEFAULTS.items():  # include if not equal to default
+            if (self.data[k] != v) and (k not in raeting.PACKET_FLAGS):
                 kit[k] = self.data[k]
 
         if self.kind == raeting.headKinds.json:
@@ -106,7 +110,7 @@ class Head(Part):
             if self.length > raeting.MAX_HEAD_LEN:
                 self.packet.error = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_LEN)
                 return self.packed
-            #subsitute true length converted to 2 byte hex string
+            # subsitute true length converted to 2 byte hex string
             self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(self.length)[-2:]), 1)
 
         return self.packed
@@ -116,7 +120,7 @@ class Head(Part):
         Parses and removes head from packed rest and returns remainder
         '''
         self.packed = ''
-        self.data = odict(raeting.HEAD_DEFAULTS) # refresh
+        self.data = odict(raeting.HEAD_DEFAULTS)  # refresh
         if rest.startswith('{"hk":1,') and raeting.JSON_END in rest:  # json header
             self.kind = raeting.headKinds.json
             front, sep, back = rest.partition(raeting.JSON_END)
@@ -158,8 +162,6 @@ class Head(Part):
                 self.data[field] = values[i]
 
 
-
-
 class Neck(Part):
     '''
     RAET protocol packet neck object
@@ -193,6 +195,7 @@ class Neck(Part):
         if self.kind == raeting.neckKinds.nada:
             pass
         return rest
+
 
 class Body(Part):
     '''
@@ -239,6 +242,7 @@ class Body(Part):
 
         return rest
 
+
 class Tail(Part):
     '''
     RAET protocol packet tail object
@@ -276,6 +280,7 @@ class Tail(Part):
 
         return rest
 
+
 class Packet(object):
     ''' RAET protocol packet object '''
     def __init__(self, stack=None, version=None, kind=None,
@@ -283,16 +288,16 @@ class Packet(object):
                      dh='127.0.0.1', dp=raeting.RAET_PORT,
                      body=None, data=None, raw=None):
         ''' Setup Packet instance. Meta data for a packet. '''
-        self.stack = stack # stack that handles this packet
+        self.stack = stack  # stack that handles this packet
         self.version = version or raeting.HEAD_DEFAULTS['vn']
         self.kind = kind or raeting.HEAD_DEFAULTS['pk']
-        self.src = Device(host=sh, port=sp) # source device
-        self.dst = Device(host=dh, port=dp) # destination device
+        self.src = Device(host=sh, port=sp)  # source device
+        self.dst = Device(host=dh, port=dp)  # destination device
         self.head = Head(packet=self)
         self.neck = Neck(packet=self)
         self.body = Body(packet=self, data=body)
         self.tail = Tail(packet=self)
-        self.packed = '' #packed string
+        self.packed = ''  # packed string
         self.error = ''
         if data:
             self.load(data)
@@ -321,11 +326,10 @@ class Packet(object):
         self.dst.did = data['dd']
         self.dst.host = data['dh']
         self.dst.port = data['dp']
-        self.head.kind=data['hk']
-        self.neck.kind=data['nk']
-        self.body.kind=data['bk']
-        self.tail.kind=data['tk']
-
+        self.head.kind = data['hk']
+        self.neck.kind = data['nk']
+        self.body.kind = data['bk']
+        self.tail.kind = data['tk']
 
     def pack(self):
         ''' pack the parts of the packet and then the full packet'''
@@ -356,9 +360,7 @@ class Packet(object):
 
         return True
 
-
     def verify(self):
         ''' Uses tail to verify body does not have errors '''
 
         return True
-
