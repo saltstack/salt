@@ -14,7 +14,7 @@ except ImportError:
 
 # Import 3rd party libraries
 try:
-    import wmi
+    import wmi  # pylint: disable=W0611
 except ImportError:
     HAS_DEPENDENCIES = False
 
