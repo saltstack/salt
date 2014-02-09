@@ -112,6 +112,8 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
+        if isinstance(expr, str):
+            expr = [m for m in expr.split(',') if m]
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
             if fn_ in expr:
