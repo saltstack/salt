@@ -43,7 +43,7 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
           - floating:
               - Ext-Net
       files:
-          /path/to/dest.txt
+          /path/to/dest.txt:
               /local/path/to/src.txt
 
       provider: openstack
@@ -88,7 +88,7 @@ restrictions.
 
     my-openstack-config:
       files:
-          /path/to/dest.txt
+          /path/to/dest.txt:
               /local/path/to/src.txt
 '''
 
