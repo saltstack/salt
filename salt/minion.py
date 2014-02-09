@@ -164,7 +164,7 @@ def parse_args_and_kwargs(func, args, data=None):
             salt.utils.warn_until(
                 'Boron',
                 'This minion recieved a job where kwargs were passed as '
-                'string\'d args, which has been deprecated. This functionality will'
+                'string\'d args, which has been deprecated. This functionality will '
                 'be removed in Salt Boron.'
             )
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
