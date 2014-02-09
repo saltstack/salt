@@ -284,7 +284,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user \'{0}\''.format(getpass.getuser())
+            'salt-master is starting as user {0!r}'.format(getpass.getuser())
         )
 
         enable_sigusr1_handler()
