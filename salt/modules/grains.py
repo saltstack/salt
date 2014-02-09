@@ -35,6 +35,7 @@ _infinitedict = lambda: collections.defaultdict(_infinitedict)
 
 log = logging.getLogger(__name__)
 
+
 def _serial_sanitizer(instr):
     '''Replaces the last 1/4 of a string with X's'''
     length = len(instr)
@@ -200,7 +201,6 @@ def setval(key, val, destructive=False):
         if not isinstance(grains, dict):
             grains = {}
     if val is None and destructive is True:
-        print('SETVAL DESTRUCTIVE ')
         if key in grains:
             del grains[key]
     else:
@@ -222,6 +222,7 @@ def setval(key, val, destructive=False):
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
+    __grains__[key] = val
     # Sync the grains
     __salt__['saltutil.sync_grains']()
     # Return the grain we just set to confirm everything was OK

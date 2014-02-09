@@ -221,8 +221,6 @@ import os
 import shutil
 import difflib
 import logging
-import re
-import fnmatch
 import json
 import pprint
 import traceback

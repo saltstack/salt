@@ -5,8 +5,9 @@ Salt Runners
 .. seealso:: :ref:`The full list of runners <all-salt.runners>`
 
 Salt runners are convenience applications executed with the salt-run command.
-Where as salt modules are sent out to minions for execution, salt runners are
-executed on the salt master.
+
+Salt runners work similar to salt modules however they execute on the
+Salt master itself instead of each individual Salt minion.
 
 A Salt runner can be a simple client call, or a complex application.
 
@@ -16,14 +17,13 @@ commands via Salt or creating special formatted output.
 Writing Salt Runners
 --------------------
 
-Salt runners can be easily written, the work in a similar way to Salt modules
-except they run on the server side.
+A Salt runner is written very similar to a Salt module.  Both are Python
+modules which contain functions and each public function is a runner
+which may be executed via the *salt-run* command.
 
-A runner is a Python module that contains functions, each public function is
-a runner that can be executed via the *salt-run* command.
-
-If a Python module named test.py is created in the runners directory and
-contains a function called ``foo`` then the function could be called with:
+For example, if a Python module named test.py is created in the runners
+directory and contains a function called ``foo``, the runner could be
+invoked with the following command:
 
 .. code-block:: bash
 

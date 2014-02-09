@@ -71,7 +71,7 @@ def parse():
             help=('Pass in an alternative configuration directory. Default: '
                   '%default')
         )
-    parser.add_option('-u', '--user', default='root')
+    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
 
     options, args = parser.parse_args()
 
@@ -114,8 +114,8 @@ class Swarm(object):
         print('Creating shared pki keys for the swarm on: {0}'.format(path))
         subprocess.call(
             'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
-            '--log-file {1}'.format(
-                path, os.path.join(path, 'keys.log')
+            '--log-file {1} --user {2}'.format(
+                path, os.path.join(path, 'keys.log'), self.opts['user'],
             ), shell=True
         )
         print('Keys generated')
@@ -142,7 +142,7 @@ class Swarm(object):
 
         data = {
             'id': minion_id,
-            'user': pwd.getpwuid(os.getuid()).pw_name,
+            'user': self.opts['user'],
             'pki_dir': minion_pkidir,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
