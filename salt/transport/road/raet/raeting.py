@@ -39,14 +39,14 @@ header data =
     sd: Source Device ID (SDID)
     dd: Destination Device ID (DDID)
     cf: Corresponder Flag (CrdrFlag) Default 0
-    mf: Multicast Flag (MultFlag)  Default 0
+    bf: BroadCast Flag (BcstFlag)  Default 0
 
     si: Session ID (SID) Default 0
     ti: Transaction ID (TID) Default 0
     sk: Service Kind (SrvcKind)
     pk: Packet Kind (PcktKind)
-    bf: Burst Flag    (BrstFlag) Default 0
-        Send segments or ordered packets without waiting for interleaved acks
+    sf: Succedent Flag    (ScdtFlag) Default 0
+        Send segments or ordered packets without waiting for interleafed acks
 
     oi: order index (OrdrIndx)   Default 0
     dt: Datetime Stamp  (Datetime) Default 0
@@ -69,7 +69,7 @@ header data =
     tl: tail length (TailLen)  Default 0
 
     fg: flags  packed (Flags) Default '00' hs
-         2 char Hex string with bits (0, 0, af, pf, 0, bf, mf, cf)
+         2 char Hex string with bits (0, 0, af, pf, 0, sf, bf, cf)
          Zeros are TBD flags
 }
 
@@ -108,14 +108,16 @@ headKinds = HeadKind(**HEAD_KINDS)  # headKinds.json is '00'
 VERSIONS = odict([('0.1', 0)])
 VERSION_NAMES = odict((v, k) for k, v in VERSIONS.iteritems())
 
-NECK_KINDS = odict([('nada', 0), ('sodium', 1), ('sha2', 2),
+VERSION = VERSIONS.values()[0]
+
+NECK_KINDS = odict([('nada', 0), ('nacl', 1), ('sha2', 2),
                      ('crc64', 2), ('unknown', 255)])
 NECK_KIND_NAMES = odict((v, k) for k, v in NECK_KINDS.iteritems())  # inverse map
 NeckKind = namedtuple('NeckKind', NECK_KINDS.keys())
 neckKinds = NeckKind(**NECK_KINDS)
 
 # bytes
-NECK_SIZES = odict([('nada', 0), ('sodium', 0), ('sha2', 0),
+NECK_SIZES = odict([('nada', 0), ('nacl', 64), ('sha2', 0),
                      ('crc64', 8), ('unknown', 0)])
 NeckSize = namedtuple('NeckSize', NECK_SIZES.keys())
 neckSizes = NeckSize(**NECK_SIZES)
@@ -131,7 +133,8 @@ TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('crc16', 2), ('crc64', 8), ('unknown', 0)])
+TAIL_SIZES = odict([('nada', 0), ('nacl', 16),  ('crc16', 2), ('crc64', 8),
+                    ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
 
@@ -149,44 +152,49 @@ packetKinds = PacketKind(**PACKET_KINDS)
 
 
 # head fields that may be included in json header if not default value
-HEAD_DEFAULTS = odict([
-                         ('hk', 0),
-                         ('hl', 0),
-                         ('vn', 0),
-                         ('sd', 0),
-                         ('dd', 0),
-                         ('cf', 0),
-                         ('mf', 0),
-                         ('si', 0),
-                         ('ti', 0),
-                         ('sk', 0),
-                         ('pk', 0),
-                         ('bf', 0),
-                         ('oi', 0),
-                         ('dt', 0),
-                         ('sn', 0),
-                         ('sc', 1),
-                         ('pf', 0),
-                         ('af', 0),
-                         ('nk', 0),
-                         ('nl', 0),
-                         ('bk', 0),
-                         ('bl', 0),
-                         ('tk', 0),
-                         ('tl', 0),
-                         ('fg', '00'),
-                      ])
-
 PACKET_DEFAULTS = odict([
                             ('sh', ''),
                             ('sp', 7530),
                             ('dh', '127.0.0.1'),
                             ('dp', 7530),
-                        ])
-PACKET_DEFAULTS.update(HEAD_DEFAULTS)
+                            ('hk', 0),
+                            ('hl', 0),
+                            ('vn', 0),
+                            ('sd', 0),
+                            ('dd', 0),
+                            ('cf', 0),
+                            ('bf', 0),
+                            ('si', 0),
+                            ('ti', 0),
+                            ('sk', 0),
+                            ('pk', 0),
+                            ('sf', 0),
+                            ('oi', 0),
+                            ('dt', 0),
+                            ('sn', 0),
+                            ('sc', 1),
+                            ('pf', 0),
+                            ('af', 0),
+                            ('nk', 0),
+                            ('nl', 0),
+                            ('bk', 0),
+                            ('bl', 0),
+                            ('tk', 0),
+                            ('tl', 0),
+                            ('fg', '00'),
+                      ])
 
-PACKET_FLAGS = ['af', 'pf', 'bf', 'mf', 'cf']
-PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'bf', 'mf', 'cf']
+PACKET_FIELDS = [   'sh', 'sp', 'dh', 'dp',
+                    'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+                    'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                    'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
+
+HEAD_FIELDS = [ 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+                'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                'nk', 'nl', 'bk', 'bl','tk', 'tl', 'fg']
+
+PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
+PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
 
 
 def defaultData(data=None):

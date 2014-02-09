@@ -185,6 +185,12 @@ class Public(object):
         '''
         return self._key.sign(msg)
 
+    def signature(self, msg):
+        '''
+        Return only the signature string resulting from signing the message
+        '''
+        return self._key.signature(msg)
+
     def verify(self, signed):
         '''
         Verify that the signed message is valid

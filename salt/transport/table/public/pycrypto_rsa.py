@@ -135,6 +135,15 @@ class Key(object):
         sig = self.sign_key.sign(hash_)
         return sig + msg
 
+    def signature(self, msg):
+        '''
+        Return only signature string resulting from signing the msg
+        '''
+        hash_ = Crypto.Hash.SHA.new()
+        hash_.update(msg)
+        sig = self.sign_key.sign(hash_)
+        return sig
+
     def verify(self, msg):
         '''
         Verify a message
