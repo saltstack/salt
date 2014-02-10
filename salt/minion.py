@@ -1351,13 +1351,13 @@ class Minion(object):
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)
 
-            except zmq.ZMQError as e:
+            except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
                 # SIGCHLD. Throws this error with errno == EINTR.
                 # Nothing to recieve on the zmq socket throws this error
                 # with EAGAIN.
                 # Both are safe to ignore
-                if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+                if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
                     log.critical('Unexpected ZMQError while polling minion',
                                  exc_info=True)
                 continue
