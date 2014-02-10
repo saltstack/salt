@@ -126,7 +126,7 @@ def _main():
     tpath = "/tmp/starting_states.rst"
 
     for fmultiplier in (1, 10, 50, 100, 800, 3200):
-        ffile = salt.utils.fopen(tpath, "w")
+        ffile = salt.utils.fopen(tpath, 'w')
         while fmultiplier > 0:
             ffile.write(salt.utils.fopen(fpath).read())
             fmultiplier -= 1

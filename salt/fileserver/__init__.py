@@ -49,7 +49,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 age = time.time() - cache_stat.st_mtime
                 if age < opts.get('fileserver_list_cache_time', 30):
                     # Young enough! Load this sucker up!
-                    with salt.utils.fopen(list_cache, 'r') as fp_:
+                    with salt.utils.fopen(list_cache, 'rb') as fp_:
                         log.trace('Returning file_lists cache data from '
                                   '{0}'.format(list_cache))
                         return serial.load(fp_).get(form, []), False, False
@@ -74,7 +74,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     backend to determine if the cache needs to be refreshed/written).
     '''
     serial = salt.payload.Serial(opts)
-    with salt.utils.fopen(list_cache, 'w+') as fp_:
+    with salt.utils.fopen(list_cache, 'w+b') as fp_:
         fp_.write(serial.dumps(data))
         try:
             os.rmdir(w_lock)
@@ -90,7 +90,7 @@ def check_env_cache(opts, env_cache):
     if not os.path.isfile(env_cache):
         return None
     try:
-        with salt.utils.fopen(env_cache, 'r') as fp_:
+        with salt.utils.fopen(env_cache, 'rb') as fp_:
             log.trace('Returning env cache data from {0}'.format(env_cache))
             serial = salt.payload.Serial(opts)
             return serial.load(fp_)
