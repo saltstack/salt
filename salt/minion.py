@@ -483,7 +483,7 @@ class MultiMinion(object):
                             pillar_refresh = True
                         elif package.startswith('fire_master'):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
-                            log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
                             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
 
                         self.epub_sock.send(package)
@@ -569,7 +569,7 @@ class Minion(object):
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
-            log.debug("I am {0} and I am not supposed to start any proxies.".format(self.opts['id']))
+            log.debug('I am {0} and I am not supposed to start any proxies.'.format(self.opts['id']))
 
     def _prep_mod_opts(self):
         '''
@@ -664,7 +664,7 @@ class Minion(object):
             # random seconds if set in config with random_reauth_delay
             if 'random_reauth_delay' in self.opts:
                 reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
-                log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
+                log.debug('Waiting {0} seconds to re-authenticate'.format(reauth_delay))
                 time.sleep(reauth_delay)
 
             self.authenticate()
@@ -1006,7 +1006,7 @@ class Minion(object):
                 '__update_grains':
                     {
                         'function': 'event.fire',
-                        'args': [{}, "grains_refresh"],
+                        'args': [{}, 'grains_refresh'],
                         'minutes': refresh_interval_in_minutes
                     }
             })
@@ -1102,7 +1102,7 @@ class Minion(object):
                 exc_info=err
             )
         signal.signal(signal.SIGTERM, self.clean_die)
-        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
+        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
         # Prepare the minion event system
@@ -1299,19 +1299,19 @@ class Minion(object):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             try:
-                log.trace("Check main poller timeout %s" % loop_interval)
+                log.trace('Check main poller timeout {0}'.format(loop_interval))
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )
                 if socks.get(self.socket) == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
-                    log.trace("Handling payload")
+                    log.trace('Handling payload')
                     self._handle_payload(payload)
 
                 # Check the event system
                 if socks.get(self.epull_sock) == zmq.POLLIN:
                     package = self.epull_sock.recv(zmq.NOBLOCK)
-                    log.debug("Handling event %r", package)
+                    log.debug('Handling event {0!r}'.format(package))
                     try:
                         if package.startswith('module_refresh'):
                             self.module_refresh()
@@ -1323,12 +1323,12 @@ class Minion(object):
                                 self.grains_cache = self.opts['grains']
                         elif package.startswith('fire_master'):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
-                            log.debug("Forwarding master event tag={tag}".format(tag=data['tag']))
+                            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
                             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
 
                         self.epub_sock.send(package)
                     except Exception:
-                        log.debug("Exception while handling events", exc_info=True)
+                        log.debug('Exception while handling events', exc_info=True)
 
             except zmq.ZMQError as e:
                 # The interrupt caused by python handling the
@@ -1521,7 +1521,7 @@ class Syndic(Minion):
         self.local.opts['interface'] = self._syndic_interface
 
         signal.signal(signal.SIGTERM, self.clean_die)
-        log.debug('Syndic "{0}" trying to tune in'.format(self.opts['id']))
+        log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
 
         self.context = zmq.Context()
 
