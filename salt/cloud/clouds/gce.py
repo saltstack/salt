@@ -503,7 +503,6 @@ def create(vm_=None, call=None):
         'ex_network': __get_network(conn, vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
-        'ex_persistent_disk': __get_pd(vm_),
     }
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
