@@ -8,8 +8,8 @@ import salt.auth
 import os
 
 class Channel(object):
-    # store a cache of the channels so a single pid can re-use a connection.
-    # This needs to be per pid as when you fork you keep the original memory
+    # store a cache of the channels so a single pid can re-use a connection
+    # this needs to be per pid as when you fork you keep the original memory
     # space and we can't control currency across pids
     channel_cache = {}
 
