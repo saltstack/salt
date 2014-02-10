@@ -234,7 +234,6 @@ def yamlify_arg(arg):
         return original_arg
 
 
-
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
