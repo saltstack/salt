@@ -9,9 +9,16 @@ To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
 As of the :strong:`Helium` release, the Git fileserver backend will support
-both `GitPython`_ and `pygit2`_, with GitPython being preferred if both are
-present. An optional master config parameter (:conf_master:`gitfs_provider`)
-can be used to specify which provider should be used.
+`GitPython`_, `pygit2`_, and `dulwich`_ to provide the Python interface to git.
+If more than one of these are present, the order of preference for which one
+will be chosen is the same as the order in which they were listed: GitPython,
+pygit2, dulwich (keep in mind, this order is subject to change).
+
+**pygit2 and dulwich support presently exist only in the develop branch and are
+not yet available in an official release**
+
+An optional master config parameter (:conf_master:`gitfs_provider`) can be used
+to specify which provider should be used.
 
 .. note:: Minimum requirements
 
@@ -37,6 +44,7 @@ can be used to specify which provider should be used.
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
