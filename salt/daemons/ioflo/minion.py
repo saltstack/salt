@@ -47,6 +47,43 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+class Router(ioflo.deeding.Deed):
+    '''
+    Route packaets from raet into minion proessing bins
+    '''
+    Ioinits = {'opts_store': '.salt.etc.opts',
+               'raet_udp_in': '.raet.udp.in',
+               'raet_sock_out': '.raet.sock.out',
+               'fun_in': '.salt.net.fun_in',
+               }
+
+    def __init__(self):
+        ioflo.base.deeding.Deed.__init__(self)
+
+    def postinitio(self):
+        '''
+        Map opts for convenience
+        '''
+        self.opts = self.opts_store.value
+
+    def action(self):
+        '''
+        Empty the queues into process management queues
+        '''
+        # Start on the udp_in:
+        while True:
+            try:
+                data = self.raet_udp_in.value.pop()
+                # Check if the PID is not the default of 0 and pass directly to
+                # the raet socket handler
+                if data['dest'][1]:
+                    self.raet_sock_out.value.append(data)
+                if data['dest'][3] == 'fun':
+                    self.fun_in.value.append(data)
+            except IndexError:
+                break
+
+
 class PillarLoad(ioflo.deeding.Deed):
     '''
     Load up the pillar in the data store
