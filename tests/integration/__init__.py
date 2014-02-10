@@ -361,17 +361,15 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        import integration
-        integration.SYNDIC = None
-        self.sub_minion_process.terminate()
+        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        self.minion_process.terminate()
+        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        self.master_process.terminate()
+        salt.master.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
-        self.syndic_process.terminate()
+        salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
         self.syndic_process.join()
-        self.smaster_process.terminate()
+        salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
         self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
