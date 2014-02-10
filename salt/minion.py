@@ -234,6 +234,7 @@ def yamlify_arg(arg):
         return original_arg
 
 
+
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
@@ -509,6 +510,7 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+        self._running = None
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
@@ -1046,6 +1048,7 @@ class Minion(object):
         Python does not handle the SIGTERM cleanly, if it is signaled exit
         the minion process cleanly
         '''
+        self._running = False
         exit(0)
 
     # Main Minion Tune In
@@ -1054,6 +1057,21 @@ class Minion(object):
         Lock onto the publisher. This is the main event loop for the minion
         :rtype : None
         '''
+        if self._running is None:
+            self._running = True
+        elif self._running is False:
+            log.error(
+                'This {0} was scheduled to stop. Not running '
+                '{0}.tune_in()'.format(self.__class__.__name__)
+            )
+            return
+        elif self._running is True:
+            log.error(
+                'This {0} is already running. Not running '
+                '{0}.tune_in()'.format(self.__class__.__name__)
+            )
+            return
+
         try:
             log.info(
                 '{0} is starting as user \'{1}\''.format(
@@ -1071,8 +1089,11 @@ class Minion(object):
                 ),
                 exc_info=err
             )
+
+        # Properly exit if a SIGTERM is signalled
         signal.signal(signal.SIGTERM, self.clean_die)
-        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
+
+        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
         # Prepare the minion event system
@@ -1254,7 +1275,7 @@ class Minion(object):
                     exc)
             )
 
-        while True:
+        while self._running is True:
             try:
                 self.schedule.eval()
                 # Check if scheduler requires lower loop interval than
@@ -1366,7 +1387,7 @@ class Minion(object):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
         loop_interval = int(self.opts['loop_interval'])
-        while True:
+        while self._running is True:
             try:
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
@@ -1389,6 +1410,7 @@ class Minion(object):
         '''
         Tear down the minion
         '''
+        self._running = False
         if hasattr(self, 'poller'):
             if isinstance(self.poller.sockets, dict):
                 for socket in self.poller.sockets.keys():
