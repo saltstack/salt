@@ -673,14 +673,14 @@ def symlink(
         The location that the symlink points to
 
     force
-        If the target of the symlink exists and is not a symlink and
+        If the name of the symlink exists and is not a symlink and
         force is set to False, the state will fail. If force is set to
         True, the file or directory in the way of the symlink file
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
     backupname
-        If the target of the symlink exists and is not a symlink, it will be
+        If the name of the symlink exists and is not a symlink, it will be
         renamed to the backupname. If the backupname already
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
