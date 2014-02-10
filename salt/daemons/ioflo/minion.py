@@ -24,13 +24,6 @@ from salt.exceptions import (
 import ioflo.base.deeding
 
 # Import Third Party Libs
-HAS_RANGE = False
-try:
-    import seco.range  # pylint: disable=W0611
-    HAS_RANGE = True
-except ImportError:
-    pass
-
 HAS_PSUTIL = False
 try:
     import psutil
@@ -210,7 +203,7 @@ class FunctionNix(ioflo.deeding.Deed):
         if not self.fun_in.value:
             return
         exchange = self.fun_in.value.pop()
-        data = exchange['data']
+        data = exchange['load']
         match = getattr(
                 self.matcher,
                 '{0}_match'.format(
@@ -240,9 +233,7 @@ class FunctionNix(ioflo.deeding.Deed):
         '''
         Execute the run in a dedicated process
         '''
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        data = exchange['data']
+        data = exchange['load']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         salt.utils.daemonize_if(self.opts)
         sdata = {'pid': os.getpid()}
