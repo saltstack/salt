@@ -74,7 +74,7 @@ RECOMMEND_PYGIT2 = (
     'support.'
 )
 
-RECOMMEND_GITPYTHON = (
+RECOMMEND_DULWICH = (
     'Dulwich is installed, you may wish to set gitfs_provider to '
     '\'dulwich\' in the master config file to use Dulwich for gitfs '
     'support.'
