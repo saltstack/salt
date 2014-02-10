@@ -480,7 +480,7 @@ def update():
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'w+') as fp_:
+        with salt.utils.fopen(env_cache, 'w+b') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
