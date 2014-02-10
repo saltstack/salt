@@ -249,10 +249,7 @@ class SMinion(object):
     functions for general use.
     '''
     def __init__(self, opts):
-        # Generate all of the minion side components
-        self.opts = opts
-        # Late setup the of the opts grains, so we can log from the grains
-        # module
+        # Late setup of the opts grains, so we can log from the grains module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
 
