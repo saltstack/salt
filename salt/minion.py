@@ -1356,7 +1356,7 @@ class Minion(object):
                 # SIGCHLD. Throws this error with errno == EINTR.
                 # Nothing to recieve on the zmq socket throws this error
                 # with EAGAIN.
-                # Both are sage to ignore
+                # Both are safe to ignore
                 if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
                     log.critical('Unexpected ZMQError while polling minion',
                                  exc_info=True)
