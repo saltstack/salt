@@ -9,7 +9,7 @@ To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
 As of the :strong:`Helium` release, the Git fileserver backend will support
-both `GitPython`_ and `pygit2`_, with pygit2 being preferred if both are
+both `GitPython`_ and `pygit2`_, with GitPython being preferred if both are
 present. An optional master config parameter (:conf_master:`gitfs_provider`)
 can be used to specify which provider should be used.
 
@@ -181,14 +181,14 @@ def _get_provider():
         return __opts__['verified_gitfs_provider']
     provider = __opts__.get('gitfs_provider', '').lower()
     if not provider:
-        # Prefer pygit2 if it's available and verified
-        if _verify_pygit2(quiet=True):
-            return 'pygit2'
-        elif _verify_gitpython(quiet=True):
+        # Prefer GitPython if it's available and verified
+        if _verify_gitpython(quiet=True):
             return 'gitpython'
+        elif _verify_pygit2(quiet=True):
+            return 'pygit2'
         else:
             log.error(
-                'No suitable versions of pygit2/libgit2 or GitPython is '
+                'No suitable version of GitPython or pygit2/libgit2 is '
                 'installed.'
             )
     else:
