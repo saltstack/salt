@@ -2,8 +2,8 @@
 
 .. _contents:
 
-What is SaltStack?
-==================
+SaltStack
+=========
 
 Salt is a new approach to infrastructure management. Easy enough to get
 running in minutes, scalable enough to manage tens of thousands of servers,
