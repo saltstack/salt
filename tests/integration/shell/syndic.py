@@ -21,7 +21,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.config
 
 
 class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):

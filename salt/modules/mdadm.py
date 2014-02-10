@@ -135,7 +135,7 @@ def destroy(device):
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    __salt__['file.replace'](cfg_file, 'ARRAY {} .*'.format(device), '')
+    __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
 
     if __salt__['raid.list']().get(device) is None:
         return True

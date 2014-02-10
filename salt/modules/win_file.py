@@ -14,17 +14,16 @@ import os
 import stat
 import os.path
 import logging
-import contextlib
-import difflib
+# pylint: disable=W0611
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
+# pylint: enable=W0611
 
 # Import third party libs
 try:
     import win32security
     import win32file
     from pywintypes import error as pywinerror
-    import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False

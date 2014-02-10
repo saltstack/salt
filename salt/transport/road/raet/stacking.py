@@ -2,6 +2,7 @@
 '''
 stacking.py raet protocol stacking classes
 '''
+# pylint: disable=W0611
 
 # Import python libs
 from collections import deque

@@ -325,7 +325,6 @@ For example:
 
     def main():
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
-        
 
 '''
 

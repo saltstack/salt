@@ -26,7 +26,7 @@ from collections import namedtuple
 
 # Import 3rd-party libs
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
