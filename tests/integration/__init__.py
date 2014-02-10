@@ -361,8 +361,6 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        import integration
-        integration.SYNDIC = None
         salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
         salt.master.clean_proc(self.minion_process, wait_for_kill=50)
