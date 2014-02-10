@@ -5,9 +5,14 @@ Encapsulate the different transports available to Salt.  Currently this is only 
 
 import salt.payload
 import salt.auth
-
+import os
 
 class Channel(object):
+    # store a cache of the channels so a single pid can re-use a connection.
+    # This needs to be per pid as when you fork you keep the original memory
+    # space and we can't control currency across pids
+    channel_cache = {}
+
     @staticmethod
     def factory(opts, **kwargs):
         # Default to ZeroMQ for now
@@ -19,7 +24,10 @@ class Channel(object):
             ttype = opts['pillar']['master']['transport_type']
 
         if ttype == 'zeromq':
-            return ZeroMQChannel(opts, **kwargs)
+            pid = os.getpid()
+            if pid not in Channel.channel_cache:
+                Channel.channel_cache[pid] = ZeroMQChannel(opts, **kwargs)
+            return Channel.channel_cache[pid]
         else:
             raise Exception("Channels are only defined for ZeroMQ")
             # return NewKindOfChannel(opts, **kwargs)
