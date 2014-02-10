@@ -28,10 +28,3 @@ class DigTestCase(TestCase):
         dig.__salt__ = {}
         with patch.dict(dig.__salt__, {'cmd.run_all': MagicMock(return_value={'pid': 3656, 'retcode': 0, 'stderr': '', 'stdout': '74.125.193.104\n74.125.193.105\n74.125.193.99\n74.125.193.106\n74.125.193.103\n74.125.193.147'})}):
             self.assertEqual(dig.A('www.google.com'), ['74.125.193.104', '74.125.193.105', '74.125.193.99', '74.125.193.106', '74.125.193.103', '74.125.193.147'])
-
-
-
-
-
-
-
