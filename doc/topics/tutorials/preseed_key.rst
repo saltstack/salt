@@ -30,16 +30,15 @@ master config file.
 
 3. Distribute the minion keys.
 
-There is no single method to get the keypair to your minion. If you are
-spooling up minions on EC2, you could pass them in using user_data or a
-cloud-init script. If you are handing them off to a team of developers for
-provisioning dev machines, you will need a secure file transfer.
+There is no single method to get the keypair to your minion.  The difficulty is
+finding a distribution method which is secure.
 
 .. admonition:: Security Warning
 
-	Since the minion key is already accepted on the master, distributing 
-	the private key poses a potential security risk. A malicious party 
-	will have access to your entire state tree and other sensitive data.
+    Since the minion key is already accepted on the master, distributing 
+    the private key poses a potential security risk. A malicious party 
+    will have access to your entire state tree and other sensitive data if they
+    gain access to a preseeded minion key.
 
 4. Preseed the Minion with the keys
 
