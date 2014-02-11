@@ -496,7 +496,7 @@ class MultiMinion(object):
                         try:
                             if not isinstance(minion, dict):
                                 minions[master] = {'minion': minion}
-                            t_minion = Minion(minion, 1, False)
+                            t_minion = Minion(minion, 5, False)
                             minions[master]['minion'] = t_minion
                             minions[master]['generator'] = t_minion.tune_in_no_block()
                             auth_wait = self.opts['acceptance_wait_time']
