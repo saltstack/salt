@@ -258,7 +258,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         unicode_context[key] = unicode(value, 'utf-8')
 
     try:
-        output = jinja_env.from_string(tmplstr).render(**unicode_context)
+        template = jinja_env.from_string(tmplstr)
+        template.globals.update(unicode_context)
+        output = template.render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=unicode_context)
