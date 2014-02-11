@@ -4,11 +4,13 @@ Tests to try out table. Potentially ephemeral
 
 '''
 
-import json
 
+import json
 from salt.transport import table
 
+
 def test_table():
+
     bob_pub =  table.Public()
     print json.dumps(bob_pub.keydata,  indent=2)
 
@@ -29,6 +31,7 @@ def test_table():
     signature = bob_pub.signature("What have we here.")
     print signature
     print signature ==  signed.signature
+
 
 
 if __name__ == "__main__":

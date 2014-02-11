@@ -6,7 +6,7 @@
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (ensure_in_syspath, destructiveTest)
-from salttesting.mock import patch, MagicMock, call, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../')
 
 # Import salt libs
@@ -18,9 +18,9 @@ roots.__opts__ = {}
 
 # Import Python libs
 import os
-import shutil
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class RootsTest(integration.ModuleCase):
     def setUp(self):
         self.master_opts['file_roots']['base'] = [os.path.join(integration.FILES, 'file', 'base')]
@@ -61,9 +61,22 @@ class RootsTest(integration.ModuleCase):
             fnd = {'path': os.path.join(integration.FILES, 'file', 'base', 'testfile'),
                    'rel': 'testfile'}
             ret = roots.serve_file(load, fnd)
-            self.assertDictEqual(ret,
-                                 {'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ARTHUR:  And this enchanter of whom you speak, he has seen the grail?\n  OLD MAN:  Ha ha he he he he!\n  ARTHUR:  Where does he live?  Old man, where does he live?\n  OLD MAN:  He knows of a cave, a cave which no man has entered.\n  ARTHUR:  And the Grail... The Grail is there?\n  OLD MAN:  Very much danger, for beyond the cave lies the Gorge\n      of Eternal Peril, which no man has ever crossed.\n  ARTHUR:  But the Grail!  Where is the Grail!?\n  OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  The Bridge of Death, which leads to the Grail?\n  OLD MAN:  Hee hee ha ha!\n\n',
- 'dest': 'testfile'})
+            self.assertDictEqual(
+                ret,
+                {'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
+                         'ARTHUR:  And this enchanter of whom you speak, he '
+                         'has seen the grail?\n  OLD MAN:  Ha ha he he he '
+                         'he!\n  ARTHUR:  Where does he live?  Old man, where '
+                         'does he live?\n  OLD MAN:  He knows of a cave, a '
+                         'cave which no man has entered.\n  ARTHUR:  And the '
+                         'Grail... The Grail is there?\n  OLD MAN:  Very much '
+                         'danger, for beyond the cave lies the Gorge\n      '
+                         'of Eternal Peril, which no man has ever crossed.\n  '
+                         'ARTHUR:  But the Grail!  Where is the Grail!?\n  '
+                         'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  '
+                         'The Bridge of Death, which leads to the Grail?\n  '
+                         'OLD MAN:  Hee hee ha ha!\n\n',
+                 'dest': 'testfile'})
 
     @skipIf(True, "Update test not yet implemented")
     def test_update(self):
@@ -136,6 +149,7 @@ class RootsLimitTraversalTest(integration.ModuleCase):
         self.assertIn('test_deep.test', ret)
         self.assertIn('test_deep.a.test', ret)
         self.assertNotIn('test_deep.b.2.test', ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -4,13 +4,7 @@ Service support for the REST example
 '''
 
 # Import python libs
-import glob
 import logging
-import os
-import stat
-
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ packeting module provides classes for Raet packets
 
 # Import python libs
 import socket
-from collections import namedtuple, Mapping
+from collections import Mapping
 try:
     import simplejson as json
 except ImportError:
@@ -24,6 +24,7 @@ class Part(object):
     Base class for parts of a RAET packet
     Should be subclassed
     '''
+
     def __init__(self, packet=None, kind=None, **kwa):
         '''
         Setup Part instance
@@ -60,7 +61,6 @@ class TxHead(Head):
     '''
     RAET protocl transmit packet header class
     '''
-
     def pack(self):
         '''
         Composes and returns .packed, which is the packed form of this part
@@ -159,6 +159,7 @@ class RxHead(Head):
             if field in self.packet.data:
                 self.packet.data[field] = values[i]
 
+
 class Neck(Part):
     '''
     RAET protocol packet neck class
@@ -221,6 +222,7 @@ class RxNeck(Neck):
 
         return True
 
+
 class Body(Part):
     '''
     RAET protocol packet body class
@@ -279,6 +281,7 @@ class RxBody(Body):
 
         return True
 
+
 class Tail(Part):
     '''
     RAET protocol packet tail class
@@ -333,6 +336,7 @@ class RxTail(Tail):
             pass
 
         return True
+
 
 class Packet(object):
     '''
@@ -499,7 +503,6 @@ class RxPacket(Packet):
         Uses signature in neck to verify (authenticate) packet signature
         '''
         return True
-
 
     def validate(self):
         '''

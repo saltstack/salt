@@ -21,7 +21,7 @@ import integration
 
 # Import 3rd-party libs
 try:
-    import libcloud
+    import libcloud  # pylint: disable=W0611
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False

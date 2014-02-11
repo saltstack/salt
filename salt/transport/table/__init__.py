@@ -145,7 +145,7 @@ class Public(object):
         if keyfile:
             if os.path.isfile(keyfile):
                 # Keyfiles are small, read it all in
-                with open(keyfile, 'r') as fp_:
+                with open(keyfile, 'rb') as fp_:
                     keydata = fp_.read()
                 if keyfile_secret:
                     file_key = self.secret.Key(keyfile_secret)
@@ -161,7 +161,7 @@ class Public(object):
         Save the serialized keydata to the given path
         '''
         current = os.umask(191)
-        with open(path, 'w+') as fp_:
+        with open(path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(self._key.keydata))
         os.umask(current)
 

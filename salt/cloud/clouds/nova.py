@@ -97,7 +97,7 @@ from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 # Import nova libs
 HASNOVA = False
 try:
-    from novaclient.v1_1 import client
+    from novaclient.v1_1 import client  # pylint: disable=W0611
     HASNOVA = True
 except ImportError:
     pass

@@ -11,7 +11,6 @@
 
 # Import python libraries
 import warnings
-import os
 import sys
 
 # Import Salt Testing libs

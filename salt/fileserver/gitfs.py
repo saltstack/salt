@@ -9,9 +9,16 @@ To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
 As of the :strong:`Helium` release, the Git fileserver backend will support
-both `GitPython`_ and `pygit2`_, with pygit2 being preferred if both are
-present. An optional master config parameter (:conf_master:`gitfs_provider`)
-can be used to specify which provider should be used.
+`GitPython`_, `pygit2`_, and `dulwich`_ to provide the Python interface to git.
+If more than one of these are present, the order of preference for which one
+will be chosen is the same as the order in which they were listed: GitPython,
+pygit2, dulwich (keep in mind, this order is subject to change).
+
+**pygit2 and dulwich support presently exist only in the develop branch and are
+not yet available in an official release**
+
+An optional master config parameter (:conf_master:`gitfs_provider`) can be used
+to specify which provider should be used.
 
 .. note:: Minimum requirements
 
@@ -37,6 +44,7 @@ can be used to specify which provider should be used.
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
@@ -51,8 +59,26 @@ import shutil
 import subprocess
 import time
 
-VALID_PROVIDERS = ('gitpython', 'pygit2')
+VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PYGIT2_TRANSPORTS = ('http', 'https', 'file')
+
+RECOMMEND_GITPYTHON = (
+    'GitPython is installed, you may wish to set gitfs_provider to '
+    '\'gitpython\' in the master config file to use GitPython for gitfs '
+    'support.'
+)
+
+RECOMMEND_PYGIT2 = (
+    'pygit2 is installed, you may wish to set gitfs_provider to '
+    '\'pygit2\' in the master config file to use pygit2 for for gitfs '
+    'support.'
+)
+
+RECOMMEND_DULWICH = (
+    'Dulwich is installed, you may wish to set gitfs_provider to '
+    '\'dulwich\' in the master config file to use Dulwich for gitfs '
+    'support.'
+)
 
 # Import salt libs
 import salt.utils
@@ -63,6 +89,7 @@ from salt.utils.event import tagify
 # Import third party libs
 HAS_GITPYTHON = False
 HAS_PYGIT2 = False
+HAS_DULWICH = False
 try:
     import git
     import gitdb
@@ -76,6 +103,15 @@ try:
 except ImportError:
     pass
 
+try:
+    import dulwich.repo
+    import dulwich.client
+    import dulwich.config
+    import dulwich.objects
+    HAS_DULWICH = True
+except ImportError:
+    pass
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -86,18 +122,15 @@ def _verify_gitpython(quiet=False):
     '''
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
-    recommend_pygit2 = (
-        'pygit2 is installed, you may wish to set gitfs_provider to '
-        '\'pygit2\' in the master config file to use pygit2 for '
-        'gitfs support.'
-    )
     if not HAS_GITPYTHON:
         log.error(
             'Git fileserver backend is enabled in master config file, but '
             'could not be loaded, is GitPython installed?'
         )
         if HAS_PYGIT2 and not quiet:
-            log.error(recommend_pygit2)
+            log.error(RECOMMEND_PYGIT2)
+        if HAS_DULWICH and not quiet:
+            log.error(RECOMMEND_DULWICH)
         return False
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
@@ -111,7 +144,9 @@ def _verify_gitpython(quiet=False):
         )
     if errors:
         if HAS_PYGIT2 and not quiet:
-            errors.append(recommend_pygit2)
+            errors.append(RECOMMEND_PYGIT2)
+        if HAS_DULWICH and not quiet:
+            errors.append(RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
         return False
@@ -125,18 +160,15 @@ def _verify_pygit2(quiet=False):
     Check if pygit2/libgit2 are available and at a compatible version. Both
     must be at least 0.19.0.
     '''
-    recommend_gitpython = (
-        'GitPython is installed, you may wish to set gitfs_provider to '
-        '\'gitpython\' in the master config file to use GitPython for '
-        'gitfs support.'
-    )
     if not HAS_PYGIT2:
         log.error(
             'Git fileserver backend is enabled in master config file, but '
             'could not be loaded, are pygit2 and libgit2 installed?'
         )
         if HAS_GITPYTHON and not quiet:
-            log.error(recommend_gitpython)
+            log.error(RECOMMEND_GITPYTHON)
+        if HAS_DULWICH and not quiet:
+            log.error(RECOMMEND_DULWICH)
         return False
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
@@ -162,12 +194,33 @@ def _verify_pygit2(quiet=False):
         )
     if errors:
         if HAS_GITPYTHON and not quiet:
-            errors.append(recommend_gitpython)
+            errors.append(RECOMMEND_GITPYTHON)
+        if HAS_DULWICH and not quiet:
+            errors.append(RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
         return False
     log.info('pygit2 gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'pygit2'
+    return True
+
+
+def _verify_dulwich(quiet=False):
+    '''
+    Check if dulwich is available.
+    '''
+    if not HAS_DULWICH:
+        log.error(
+            'Git fileserver backend is enabled in master config file, but '
+            'could not be loaded, is Dulwich installed?'
+        )
+        if HAS_GITPYTHON and not quiet:
+            log.error(RECOMMEND_GITPYTHON)
+        if HAS_PYGIT2 and not quiet:
+            log.error(RECOMMEND_PYGIT2)
+        return False
+    log.info('dulwich gitfs_provider enabled')
+    __opts__['verified_gitfs_provider'] = 'dulwich'
     return True
 
 
@@ -181,15 +234,17 @@ def _get_provider():
         return __opts__['verified_gitfs_provider']
     provider = __opts__.get('gitfs_provider', '').lower()
     if not provider:
-        # Prefer pygit2 if it's available and verified
-        if _verify_pygit2(quiet=True):
-            return 'pygit2'
-        elif _verify_gitpython(quiet=True):
+        # Prefer GitPython if it's available and verified
+        if _verify_gitpython(quiet=True):
             return 'gitpython'
+        elif _verify_pygit2(quiet=True):
+            return 'pygit2'
+        elif _verify_dulwich(quiet=True):
+            return 'dulwich'
         else:
             log.error(
-                'No suitable versions of pygit2/libgit2 or GitPython is '
-                'installed.'
+                'No suitable version of GitPython, pygit2/libgit2, or Dulwich '
+                'is installed.'
             )
     else:
         if provider not in VALID_PROVIDERS:
@@ -197,10 +252,12 @@ def _get_provider():
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
                 .format(provider, ', '.join(VALID_PROVIDERS))
             )
-        elif provider == 'pygit2' and _verify_pygit2():
-            return 'pygit2'
         elif provider == 'gitpython' and _verify_gitpython():
             return 'gitpython'
+        elif provider == 'pygit2' and _verify_pygit2():
+            return 'pygit2'
+        elif provider == 'dulwich' and _verify_dulwich():
+            return 'dulwich'
     return ''
 
 
@@ -218,6 +275,27 @@ def __virtual__():
         return False
 
 
+def _dulwich_conf(repo):
+    '''
+    Returns a dulwich.config.ConfigFile object for the specified repo
+    '''
+    return dulwich.config.ConfigFile().from_path(
+        os.path.join(repo.controldir(), 'config')
+    )
+
+
+def _dulwich_remote(repo):
+    '''
+    Returns the remote url for the specified repo
+    '''
+    return _dulwich_conf(repo).get(('remote', 'origin'), 'url')
+
+
+_dulwich_env_refs = lambda refs: [x for x in refs
+                                  if re.match('refs/(heads|tags)', x)
+                                  and not x.endswith('^{}')]
+
+
 def _get_tree_gitpython(repo, short):
     '''
     Return a git.Tree object if the branch/tag/SHA is found, otherwise False
@@ -228,7 +306,7 @@ def _get_tree_gitpython(repo, short):
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
                 return ref.commit.tree
-    # branch or tag not matched, check if 'short' is a commit
+    # Branch or tag not matched, check if 'short' is a commit
     try:
         commit = repo.rev_parse(short)
     except gitdb.exc.BadObject:
@@ -249,7 +327,7 @@ def _get_tree_pygit2(repo, short):
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
                 return repo.lookup_reference(ref).get_object().tree
-    # branch or tag not matched, check if 'short' is a commit
+    # Branch or tag not matched, check if 'short' is a commit
     try:
         commit = repo.revparse_single(short)
     except (KeyError, TypeError):
@@ -257,6 +335,63 @@ def _get_tree_pygit2(repo, short):
         pass
     else:
         return commit.tree
+    return False
+
+
+def _get_tree_dulwich(repo, short):
+    '''
+    Return a dulwich.objects.Tree object if the branch/tag/SHA is found,
+    otherwise False
+    '''
+    refs = repo.get_refs()
+    # Sorting ensures we check heads (branches) before tags
+    for ref in sorted(_dulwich_env_refs(refs)):
+        # ref will be something like 'refs/heads/master'
+        rtype, rspec = ref[5:].split('/')
+        if rspec == short:
+            if rtype == 'heads':
+                commit = repo.get_object(refs[ref])
+            elif rtype == 'tags':
+                tag = repo.get_object(refs[ref])
+                # Tag.get_object() returns a 2-tuple, the 2nd element of which
+                # is the commit SHA to which the tag refers
+                commit = repo.get_object(tag.object[1])
+            return repo.get_object(commit.tree)
+
+    # Branch or tag not matched, check if 'short' is a commit. This is more
+    # difficult with Dulwich because of its inability to deal with shortened
+    # SHA-1 hashes.
+    try:
+        int(short, 16)
+    except ValueError:
+        # Not hexidecimal, likely just a non-matching environment
+        return False
+
+    try:
+        if len(short) == 40:
+            sha_obj = repo.get_object(short)
+            if isinstance(sha_obj, dulwich.objects.Commit):
+                sha_commit = sha_obj
+        else:
+            matches = [x for x in repo.object_store if x.startswith(short)]
+            # The object_store holds all objects, narrow down to just commits
+            matches = [x for x in matches
+                       if isinstance(x, dulwich.objects.Commit)]
+            if matches:
+                if len(matches) > 1:
+                    log.warning('Ambiguous commit ID {0!r}'.format(short))
+                    return False
+                sha_commit = repo.get_object(matches[0])
+    except TypeError as exc:
+        log.warning('Invalid environment {0}: {1}'.format(short, exc))
+    except KeyError:
+        # No matching SHA
+        return False
+
+    try:
+        return repo.get_object(sha_commit.tree)
+    except NameError:
+        pass
     return False
 
 
@@ -305,13 +440,12 @@ def _wait_lock(lk_fn, dest):
 def _stale_refs_pygit2(repo):
     '''
     Return a list of stale refs by running git remote prune --dry-run <remote>,
-    since libgit2 can't do this.
+    since pygit2 can't do this.
     '''
-    remote = repo.remotes[0].name
     key = ' * [would prune] '
     ret = []
     for line in subprocess.Popen(
-            'git remote prune --dry-run {0!r}'.format(remote),
+            'git remote prune --dry-run origin'.format(remote),
             shell=True,
             close_fds=True,
             cwd=repo.workdir,
@@ -329,6 +463,13 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     provider = _get_provider()
+    invalid_repo = (
+        'Cache path {0} (corresponding remote: {1}) exists but is not a valid '
+        'git repository. You will need to manually delete this directory on '
+        'the master to continue to use this gitfs remote.'
+    )
+    # ignore git ssl verification if requested
+    ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
     repos = []
     for _, opt in enumerate(__opts__['gitfs_remotes']):
         if provider == 'pygit2':
@@ -357,14 +498,21 @@ def init():
                     try:
                         repo = git.Repo(rp_)
                     except git.exc.InvalidGitRepositoryError:
-                        log.error(
-                            'Cache path {0} (corresponding remote: {1}) '
-                            'exists but is not a valid git repository. You '
-                            'will need to manually delete this directory on '
-                            'the master to continue to use this gitfs remote.'
-                            .format(rp_, opt)
-                        )
+                        log.error(invalid_repo.format(rp_, opt))
                         continue
+                if not repo.remotes:
+                    try:
+                        repo.create_remote('origin', opt)
+                        repo.git.config('http.sslVerify', ssl_verify)
+                    except os.error:
+                        # This exception occurs when two processes are trying
+                        # to write to the git config at once, go ahead and pass
+                        # over it since this is the only write. This should
+                        # place a lock down
+                        pass
+                if repo.remotes:
+                    repos.append(repo)
+
             elif provider == 'pygit2':
                 if not os.listdir(rp_):
                     repo = pygit2.init_repository(rp_)
@@ -372,14 +520,46 @@ def init():
                     try:
                         repo = pygit2.Repository(rp_)
                     except KeyError:
-                        log.error(
-                            'Cache path {0} (corresponding remote: {1}) '
-                            'exists but is not a valid git repository. You '
-                            'will need to manually delete this directory on '
-                            'the master to continue to use this gitfs remote.'
-                            .format(rp_, opt)
-                        )
+                        log.error(invalid_repo.format(rp_, opt))
                         continue
+                if not repo.remotes:
+                    try:
+                        repo.create_remote('origin', opt)
+                        repo.config.set_multivar(
+                            'http.sslVerify', '', ssl_verify
+                        )
+                    except os.error:
+                        pass
+                if repo.remotes:
+                    repos.append(repo)
+
+            elif provider == 'dulwich':
+                if not os.listdir(rp_):
+                    try:
+                        repo = dulwich.repo.Repo.init(rp_)
+                        conf = _dulwich_conf(repo)
+                        conf.set('http', 'sslVerify', ssl_verify)
+                        # Add the remote manually since there is no
+                        # function/object to do so.
+                        conf.set(
+                            'remote "origin"',
+                            'fetch',
+                            '+refs/heads/*:refs/remotes/origin/*'
+                        )
+                        conf.set('remote "origin"', 'url', opt)
+                        conf.set('remote "origin"', 'pushurl', opt)
+                        conf.write_to_path()
+                    except os.error:
+                        pass
+                else:
+                    try:
+                        repo = dulwich.repo.Repo(rp_)
+                    except dulwich.repo.NotGitRepository:
+                        log.error(invalid_repo.format(rp_, opt))
+                        continue
+                # No way to interact with remotes, so just assume success
+                repos.append(repo)
+
             else:
                 # Should never get here because the provider has been verified
                 # in __virtual__(). Log an error and return an empty list.
@@ -388,32 +568,15 @@ def init():
                     .format(provider)
                 )
                 return []
+
         except Exception as exc:
             msg = ('Exception caught while initializing the repo for gitfs: '
                    '{0}.'.format(exc))
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
             log.error(msg)
-            return repos
+            continue
 
-        if not repo.remotes:
-            try:
-                repo.create_remote('origin', opt)
-                # ignore git ssl verification if requested
-                ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) \
-                    else 'false'
-                if provider == 'gitpython':
-                    repo.git.config('http.sslVerify', ssl_verify)
-                elif provider == 'pygit2':
-                    repo.config.set_multivar('http.sslVerify', '', ssl_verify)
-            except os.error:
-                # This exception occurs when two processes are trying to write
-                # to the git config at once, go ahead and pass over it since
-                # this is the only write
-                # This should place a lock down
-                pass
-        if repo.remotes:
-            repos.append(repo)
     return repos
 
 
@@ -450,11 +613,16 @@ def update():
     data['changed'] = purge_cache()
     repos = init()
     for repo in repos:
-        origin = repo.remotes[0]
         if provider == 'gitpython':
+            origin = repo.remotes[0]
             working_dir = repo.working_dir
         elif provider == 'pygit2':
+            origin = repo.remotes[0]
             working_dir = repo.workdir
+        elif provider == 'dulwich':
+            # origin is just a uri here, there is no origin object
+            origin = _dulwich_remote(repo)
+            working_dir = repo.path
         lk_fn = os.path.join(working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
@@ -467,6 +635,29 @@ def update():
                 fetch = origin.fetch()
                 if fetch.get('received_objects', 0):
                     data['changed'] = True
+            elif provider == 'dulwich':
+                client, path = \
+                    dulwich.client.get_transport_and_path_from_url(
+                        origin, thin_packs=True
+                    )
+                refs_pre = repo.get_refs()
+                refs_post = client.fetch(path, repo)
+                if refs_post is None:
+                    # Empty repository
+                    log.warning(
+                        'gitfs remote {0!r} is an empty repository and will '
+                        'be skipped.'.format(origin)
+                    )
+                    continue
+                if refs_pre != refs_post:
+                    data['changed'] = True
+                    # Update local refs
+                    for ref in _dulwich_env_refs(refs_post):
+                        repo[ref] = refs_post[ref]
+                    # Prune stale refs
+                    for ref in repo.get_refs():
+                        if ref not in refs_post:
+                            del(repo[ref])
         except Exception as exc:
             log.warning(
                 'Exception caught while fetching: {0}'.format(exc)
@@ -480,7 +671,7 @@ def update():
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'w+') as fp_:
+        with salt.utils.fopen(env_cache, 'w+b') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
@@ -516,6 +707,8 @@ def envs(ignore_cache=False):
             ret.update(_envs_gitpython(repo, base_branch))
         elif provider == 'pygit2':
             ret.update(_envs_pygit2(repo, base_branch))
+        elif provider == 'dulwich':
+            ret.update(_envs_dulwich(repo, base_branch))
         else:
             # Should never get here because the provider has been verified
             # in __virtual__(). Log an error and return an empty list.
@@ -570,6 +763,24 @@ def _envs_pygit2(repo, base_branch):
     return ret
 
 
+def _envs_dulwich(repo, base_branch):
+    '''
+    Check the refs and return a list of the ones which can be used as salt
+    environments.
+    '''
+    ret = set()
+    for ref in _dulwich_env_refs(repo.get_refs()):
+        # ref will be something like 'refs/heads/master'
+        rtype, rspec = ref[5:].split('/', 1)
+        if rtype == 'tags':
+            ret.add(rspec)
+        elif rtype == 'heads':
+            if rspec == base_branch:
+                rspec = 'base'
+            ret.add(rspec)
+    return ret
+
+
 def find_file(path, short='base', **kwargs):
     '''
     Find the first file to match the path and ref, read the file out of git
@@ -621,23 +832,48 @@ def find_file(path, short='base', **kwargs):
         if provider == 'gitpython':
             tree = _get_tree_gitpython(repo, short)
             if not tree:
-                # Branch or tag not found in repo, try the next
+                # Branch/tag/SHA not found in repo, try the next
                 continue
             try:
                 blob = tree / path
             except KeyError:
                 continue
             blob_hexsha = blob.hexsha
+
         elif provider == 'pygit2':
             tree = _get_tree_pygit2(repo, short)
             if not tree:
-                # Branch or tag not found in repo, try the next
+                # Branch/tag/SHA not found in repo, try the next
                 continue
             try:
                 blob = repo[tree[path].oid]
             except KeyError:
                 continue
             blob_hexsha = blob.hex
+
+        elif provider == 'dulwich':
+            tree = _get_tree_dulwich(repo, short)
+            dirs, _, filename = path.rpartition(os.path.sep)
+            if dirs:
+                # Walk down the tree to get to the file
+                for parent in dirs.split(os.path.sep):
+                    try:
+                        tree = repo.get_object(tree[parent][1])
+                    except KeyError:
+                        # Directory not found. Desired path does not exist in
+                        # this tree, so move on.
+                        continue
+            if not tree:
+                # Branch/tag/SHA not found in repo, try the next
+                continue
+            try:
+                # Referencing the path in the tree returns a tuple, the
+                # second element of which is the object ID of the blob
+                blob = repo.get_object(tree[filename][1])
+            except KeyError:
+                continue
+            blob_hexsha = blob.sha().hexdigest()
+
         _wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
@@ -658,6 +894,8 @@ def find_file(path, short='base', **kwargs):
                 blob.stream_data(fp_)
             elif provider == 'pygit2':
                 fp_.write(blob.data)
+            elif provider == 'dulwich':
+                fp_.write(blob.as_raw_string())
         with salt.utils.fopen(blobshadest, 'w+') as fp_:
             fp_.write(blob_hexsha)
         try:
@@ -745,7 +983,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, and emptydirs
     '''
     if 'env' in load:
         salt.utils.warn_until(
@@ -771,7 +1009,7 @@ def _file_lists(load, form):
     if cache_match is not None:
         return cache_match
     if refresh_cache:
-        ret = {'links': []}
+        ret = {}
         ret['files'] = _get_file_list(load)
         ret['dirs'] = _get_dir_list(load)
         ret['empty_dirs'] = _get_file_list_emptydirs(load)
@@ -822,6 +1060,10 @@ def _get_file_list(load):
         elif provider == 'pygit2':
             ret.update(
                 _file_list_pygit2(repo, load['saltenv'], gitfs_root)
+            )
+        elif provider == 'dulwich':
+            ret.update(
+                _file_list_dulwich(repo, load['saltenv'], gitfs_root)
             )
     return sorted(ret)
 
@@ -886,6 +1128,43 @@ def _file_list_pygit2(repo, ref_tgt, gitfs_root):
     return ret
 
 
+def _file_list_dulwich(repo, ref_tgt, gitfs_root):
+    '''
+    Get file list using dulwich
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a dulwich Tree object recursively, accumulating all the
+        blob paths within it in the "blobs" list
+        '''
+        for item in tree.items():
+            obj = repo.get_object(item.sha)
+            if isinstance(obj, dulwich.objects.Blob):
+                blobs.append(os.path.join(prefix, item.path))
+            elif isinstance(obj, dulwich.objects.Tree):
+                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
+    ret = set()
+    tree = _get_tree_dulwich(repo, ref_tgt)
+    if not tree:
+        return ret
+    if gitfs_root:
+        try:
+            tree = repo.get_object(tree[gitfs_root][1])
+        except KeyError:
+            return ret
+        if not isinstance(tree, dulwich.objects.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
+    return ret
+
+
 def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
@@ -924,6 +1203,12 @@ def _get_file_list_emptydirs(load):
         elif provider == 'pygit2':
             ret.update(
                 _file_list_emptydirs_pygit2(
+                    repo, load['saltenv'], gitfs_root
+                )
+            )
+        elif provider == 'dulwich':
+            ret.update(
+                _file_list_emptydirs_dulwich(
                     repo, load['saltenv'], gitfs_root
                 )
             )
@@ -993,6 +1278,45 @@ def _file_list_emptydirs_pygit2(repo, ref_tgt, gitfs_root):
     return sorted(ret)
 
 
+def _file_list_emptydirs_dulwich(repo, ref_tgt, gitfs_root):
+    '''
+    Get empty directories using dulwich
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a dulwich Tree object recursively, accumulating all the
+        empty directories within it in the "blobs" list
+        '''
+        for item in tree.items():
+            obj = repo.get_object(item.sha)
+            if not isinstance(obj, dulwich.objects.Tree):
+                continue
+            if not len(repo.get_object(item.sha)):
+                blobs.append(os.path.join(prefix, item.path))
+            else:
+                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
+    ret = set()
+    tree = _get_tree_dulwich(repo, ref_tgt)
+    if not tree:
+        return ret
+    if gitfs_root:
+        try:
+            tree = repo.get_object(tree[gitfs_root][1])
+        except KeyError:
+            return ret
+        if not isinstance(tree, dulwich.objects.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
+    return sorted(ret)
+
+
 def dir_list(load):
     '''
     Return a list of all directories on the master
@@ -1026,6 +1350,8 @@ def _get_dir_list(load):
             ret.update(_dir_list_gitpython(repo, load['saltenv'], gitfs_root))
         elif provider == 'pygit2':
             ret.update(_dir_list_pygit2(repo, load['saltenv'], gitfs_root))
+        elif provider == 'dulwich':
+            ret.update(_dir_list_dulwich(repo, load['saltenv'], gitfs_root))
     return sorted(ret)
 
 
@@ -1078,6 +1404,44 @@ def _dir_list_pygit2(repo, ref_tgt, gitfs_root):
         except KeyError:
             return ret
         if not isinstance(tree, pygit2.Tree):
+            return ret
+    blobs = []
+    if len(tree):
+        _traverse(tree, repo, blobs, gitfs_root)
+    for blob in blobs:
+        if gitfs_root:
+            ret.add(os.path.relpath(blob, gitfs_root))
+            continue
+        ret.add(blob)
+    return ret
+
+
+def _dir_list_dulwich(repo, ref_tgt, gitfs_root):
+    '''
+    Get a list of directories using pygit2
+    '''
+    def _traverse(tree, repo, blobs, prefix):
+        '''
+        Traverse through a dulwich Tree object recursively, accumulating all
+        the empty directories within it in the "blobs" list
+        '''
+        for item in tree.items():
+            obj = repo.get_object(item.sha)
+            if not isinstance(obj, dulwich.objects.Tree):
+                continue
+            blobs.append(os.path.join(prefix, item.path))
+            if len(repo.get_object(item.sha)):
+                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
+    ret = set()
+    tree = _get_tree_dulwich(repo, ref_tgt)
+    if not tree:
+        return ret
+    if gitfs_root:
+        try:
+            tree = repo.get_object(tree[gitfs_root][1])
+        except KeyError:
+            return ret
+        if not isinstance(tree, dulwich.objects.Tree):
             return ret
     blobs = []
     if len(tree):

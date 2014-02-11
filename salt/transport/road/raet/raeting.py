@@ -84,6 +84,8 @@ Body Decoding
 
 '''
 
+# pylint: disable=C0103
+
 # Import python libs
 from collections import namedtuple, Mapping
 try:
@@ -471,4 +473,3 @@ def verifyBody(meta, body, tail):
     '''
     #meta['error'] = "Body failed verification."
     return True
-

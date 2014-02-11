@@ -31,6 +31,7 @@ data =
 
 }
 '''
+# pylint: disable=W0611
 
 # Import Python libs
 from collections import deque

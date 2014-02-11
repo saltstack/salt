@@ -17,7 +17,7 @@ configuration at:
       # SoftLayer account api key
       user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      provider: softlayer-hw
+      provider: softlayer_hw
 
 '''
 # pylint: disable=E0102
@@ -79,7 +79,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'softlayer-hw',
+        __active_provider_name__ or 'softlayer_hw',
         ('apikey',)
     )
 
