@@ -312,8 +312,16 @@ class Key(object):
     '''
     The object that encapsulates saltkey actions
     '''
+
     def __init__(self, opts):
         self.opts = opts
+        self._prepare()
+
+    def _prepare(self):
+        '''
+        Simple method called when this class is initialized used for additional
+        setup
+        '''
         self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
 
     def _check_minions_directories(self):
@@ -678,8 +686,12 @@ class RaetKey(Key):
     '''
     Manage keys from the raet backend
     '''
-    def __init__(self, opts):
-        self.opts = opts
+
+    def _prepare(self):
+        '''
+        Simple method called when this class is initialized used for additional
+        setup
+        '''
         self.serial = salt.payload.Serial(self.opts)
 
     def _check_minions_directories(self):
@@ -766,7 +778,7 @@ class RaetKey(Key):
     def _get_key_str(self, minion_id, status):
         '''
         Return the key string in the form of:
-        
+
         pub: <pub>
         verify: <verify>
         '''
