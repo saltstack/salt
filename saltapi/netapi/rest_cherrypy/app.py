@@ -327,6 +327,7 @@ def process_request_body(fn):
 def urlencoded_processor(entity):
     '''
     Accept x-www-form-urlencoded data (run through CherryPy's formatter)
+    and reformat it into a Low State data structure.
 
     Since we can't easily represent complicated data structures with
     key-value pairs, any more complicated requirements (e.g. compound
@@ -339,9 +340,16 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
-    # Use CherryPy's default processor and put the value in the expected place
+    # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy.request.lowstate = entity.params
+    lowdata = entity.params
+
+    # Make the 'arg' param a list if not already
+    if 'arg' in lowdata and not isinstance(lowdata['arg'], list):
+        lowdata['arg'] = [lowdata['arg']]
+
+    # Finally, make a Low State and put it in request
+    cherrypy.request.lowstate = [lowdata]
 
 
 @process_request_body
@@ -434,10 +442,7 @@ class LowDataAdapter(object):
         chunks through Salt. The low-data chunks will be updated to include the
         authorization token for the current session.
         '''
-        # If we're given a dictionary, wrap it in a list so we can iterate
-        data = cherrypy.request.lowstate
-        lowstate = [data] if isinstance(data, collections.Mapping) else data
-
+        lowstate = cherrypy.request.lowstate
         token = cherrypy.session.get('token', None)
 
         # if the lowstate loaded isn't a list, lets notify the client
