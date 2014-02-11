@@ -289,10 +289,10 @@ def list_():
     running = []
 
     for c in ctnrs:
-        info = __salt__['cmd.run']('lxc-info -n ' + c).splitlines()
+        lines = __salt__['cmd.run']('lxc-info -n ' + c).splitlines()
 
-	for i in info:
-	    stat = i.split(':')
+	for line in lines:
+	    stat = line.split(':')
             if stat[0] == 'state':
                 s = stat[1].strip()
                 break
