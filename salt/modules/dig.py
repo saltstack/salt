@@ -108,6 +108,8 @@ def AAAA(host, nameserver=None):
         return []
 
     # make sure all entries are IPs
+    print cmd['stdout']
+    print check_ip(cmd['stdout'])
     return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
 
 
