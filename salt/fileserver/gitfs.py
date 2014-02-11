@@ -445,7 +445,7 @@ def _stale_refs_pygit2(repo):
     key = ' * [would prune] '
     ret = []
     for line in subprocess.Popen(
-            'git remote prune --dry-run origin'.format(remote),
+            'git remote prune --dry-run origin',
             shell=True,
             close_fds=True,
             cwd=repo.workdir,
@@ -657,7 +657,7 @@ def update():
                     # Prune stale refs
                     for ref in repo.get_refs():
                         if ref not in refs_post:
-                            del(repo[ref])
+                            del repo[ref]
         except Exception as exc:
             log.warning(
                 'Exception caught while fetching: {0}'.format(exc)
