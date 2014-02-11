@@ -23,11 +23,15 @@ class Channel(object):
         elif 'transport_type' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport_type']
 
+        if ttype not in Channel.channel_cache:
+            Channel.channel_cache[ttype] = {}
+
+        pid = os.getpid()
+
         if ttype == 'zeromq':
-            pid = os.getpid()
-            if pid not in Channel.channel_cache:
-                Channel.channel_cache[pid] = ZeroMQChannel(opts, **kwargs)
-            return Channel.channel_cache[pid]
+            if pid not in Channel.channel_cache[ttype]:
+                Channel.channel_cache[ttype][pid] = ZeroMQChannel(opts, **kwargs)
+            return Channel.channel_cache[ttype][pid]
         else:
             raise Exception("Channels are only defined for ZeroMQ")
             # return NewKindOfChannel(opts, **kwargs)
