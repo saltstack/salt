@@ -37,7 +37,7 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'CentOS': 'java-1.6.0-openjdk'
+    'CentOS': 'python-migrate0.5'
 }
 
 
