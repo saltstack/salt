@@ -37,7 +37,7 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'CentOS': 'java-1.6.0-openjdk'
+    'CentOS': 'python-migrate0.5'
 }
 
 
@@ -257,7 +257,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def no_test_pkg_with_dot_in_pkgname(self, grains=None):
+    def test_pkg_with_dot_in_pkgname(self, grains=None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
