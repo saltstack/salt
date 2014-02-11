@@ -18,7 +18,8 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'blockdev'
+    return True
+
 
 def tune(device, **kwargs):
     '''
@@ -28,7 +29,7 @@ def tune(device, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' blockdev.tune /dev/sda1 read-ahead=1024 read-write=True 
+        salt '*' blockdev.tune /dev/sda1 read-ahead=1024 read-write=True
 
     Valid options are::
 
@@ -43,19 +44,19 @@ def tune(device, **kwargs):
                  'read-only': 'setro',
                  'read-write': 'setrw'}
     opts = ''
-    args=[]
+    args = []
     for key in kwargs:
         if key in kwarg_map:
             switch = kwarg_map[key]
             if key != 'read-write':
-              args.append(switch.replace('set','get'))
+                args.append(switch.replace('set', 'get'))
             if kwargs[key] == 'True':
-                opts += '--{0} '.format(opt)
+                opts += '--{0} '.format(key)
             else:
                 opts += '--{0} {1} '.format(switch, kwargs[key])
     cmd = 'blockdev {0}{1}'.format(opts, device)
     out = __salt__['cmd.run'](cmd).splitlines()
-    return dump(device,args)
+    return dump(device, args)
 
 
 def wipe(device):
@@ -71,11 +72,11 @@ def wipe(device):
 
     cmd = 'wipefs {0}'.format(device)
     try:
-      out = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_all'](cmd)
     except CalledProcessError as err:
-      return False
+        return False
     if out['retcode'] == 0:
-      return True
+        return True
 
 
 def dump(device, args=None):
