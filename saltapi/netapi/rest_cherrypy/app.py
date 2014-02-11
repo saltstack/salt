@@ -971,15 +971,6 @@ class Run(LowDataAdapter):
         'tools.salt_auth.on': False,
     })
 
-    def exec_lowstate(self):
-        '''
-        Override exec_lowstate to avoid pulling token from the session
-        '''
-        lowstate = cherrypy.request.lowstate
-
-        for chunk in lowstate:
-            yield self.api.run(chunk)
-
     def POST(self, **kwargs):
         '''
         Run commands bypassing the normal session handling
