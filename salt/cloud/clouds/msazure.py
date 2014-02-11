@@ -77,7 +77,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'certificate_path', 'management_host')
+        ('subscription_id', 'certificate_path')
     )
 
 
@@ -95,7 +95,10 @@ def get_conn():
     )
     management_host = config.get_cloud_config_value(
         'management_host',
-        get_configured_provider(), __opts__, search_global=False
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='management.core.windows.net'
     )
     return azure.servicemanagement.ServiceManagementService(
         subscription_id, certificate_path, management_host
