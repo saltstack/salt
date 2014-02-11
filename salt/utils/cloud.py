@@ -15,6 +15,7 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
+import json
 import re
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -1482,6 +1483,111 @@ def list_nodes_select(nodes, selection, call=None):
         ret[node] = pairs
 
     return ret
+
+
+def init_cachedir(base='/var/cache/salt/cloud'):
+    '''
+    Initialize the cachedir needed for Salt Cloud to keep track of minions
+    '''
+    needed_dirs = (base,
+                   os.path.join(base, 'requested'),
+                   os.path.join(base, 'active'))
+    for dir_ in needed_dirs:
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+        os.chmod(base, 0755)
+
+
+def request_minion_cachedir(
+        minion_id,
+        fingerprint='',
+        pubkey=None,
+        provider=None,
+        base='/var/cache/salt/cloud',
+    ):
+    '''
+    Creates an entry in the requested/ cachedir. This means that Salt Cloud has
+    made a request to a cloud provider to create an instance, but it has not
+    yet verified that the instance properly exists.
+
+    If the fingerprint is unknown, a raw pubkey can be passed in, and a
+    fingerprint will be calculated. If both are empty, then the fingerprint
+    will be set to None.
+    '''
+    if not fingerprint:
+        if pubkey is not None:
+            fingerprint = salt.utils.pem_finger(key=pubkey)
+
+    init_cachedir(base)
+
+    data = {
+        'minion_id': minion_id,
+        'fingerprint': fingerprint,
+        'provider': provider,
+    }
+
+    fname = minion_id + '.json'
+    path = os.path.join(base, 'requested', fname)
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(data, fh_)
+
+
+def change_minion_cachedir(
+        minion_id,
+        cachedir,
+        data=None,
+        base='/var/cache/salt/cloud',
+    ):
+    '''
+    Changes the info inside a minion's cachedir entry. The type of cachedir
+    must be specified (i.e., 'requested' or 'active'). A dict is also passed in
+    which contains the data to be changed.
+
+    Example:
+
+        change_minion_cachedir(
+            'myminion',
+            'requested',
+            {'fingerprint': '26:5c:8c:de:be:fe:89:c0:02:ed:27:65:0e:bb:be:60'},
+        )
+    '''
+    if not isinstance(data, dict):
+        return False
+
+    fname = minion_id + '.json'
+    path = os.path.join(base, cachedir, fname)
+
+    with salt.utils.fopen(path, 'r') as fh_:
+        cache_data = json.load(fh_)
+
+    cache_data.update(data)
+
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(cache_data, fh_)
+
+
+def activate_minion_cachedir(minion_id, base='/var/cache/salt/cloud'):
+    '''
+    Moves a minion from the requested/ cachedir into the active/ cachedir. This
+    means that Salt Cloud has verified that a requested instance properly
+    exists, and should be expected to exist from here on out.
+    '''
+    fname = minion_id + '.json'
+    src = os.path.join(base, 'requested', fname)
+    dst = os.path.join(base, 'active')
+    shutil.move(src, dst)
+
+
+def delete_minion_cachedir(minion_id, base='/var/cache/salt/cloud'):
+    '''
+    Deletes a minion's entry from the cloud cachedir. It will search through
+    all cachedirs to find the minion's cache file.
+    '''
+    fname = minion_id + '.json'
+    for cachedir in ('requested', 'active'):
+        path = os.path.join(base, cachedir, fname)
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def salt_cloud_force_ascii(exc):
