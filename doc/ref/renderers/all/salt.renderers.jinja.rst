@@ -253,28 +253,6 @@ Filters
 
 Saltstack extends `builtin filters`_ with his custom filters:
 
-
-sequence
-  Ensure that a variable is a sequence. For example:
-
-  .. code-block:: yaml
-
-      {% set my_string = "foo" %}
-      {% set my_list = ["bar", ] %}
-      {% set my_dict = {"baz": "qux"} %}
-
-      {{ my_string|sequence|first }}
-      {{ my_list|sequence|first }}
-      {{ my_dict|sequence|first }}
-
-  will be rendered as:
-
-  .. code-block:: yaml
-
-      foo
-      bar
-      baz
-
 strftime
   Converts any time related object into a time based string. It requires a
   valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
