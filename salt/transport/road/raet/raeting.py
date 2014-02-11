@@ -95,6 +95,7 @@ except ImportError:
 from ioflo.base.odicting import odict
 
 RAET_PORT = 7530
+RAET_TEST_PORT = 7531
 
 MAX_HEAD_LEN = 255
 JSON_END = '\r\n\r\n'
@@ -122,18 +123,19 @@ NECK_SIZES = odict([('nada', 0), ('nacl', 64), ('sha2', 0),
 NeckSize = namedtuple('NeckSize', NECK_SIZES.keys())
 neckSizes = NeckSize(**NECK_SIZES)
 
-BODY_KINDS = odict([('nada', 0), ('json', 1), ('binary', 1), ('unknown', 255)])
+BODY_KINDS = odict([('nada', 0), ('json', 1), ('msgpck', 1), ('unknown', 255)])
 BODY_KIND_NAMES = odict((v, k) for k, v in BODY_KINDS.iteritems())  # inverse map
 BodyKind = namedtuple('BodyKind', BODY_KINDS.keys())
 bodyKinds = BodyKind(**BODY_KINDS)
 
-TAIL_KINDS = odict([('nada', 0), ('crc16', 1), ('crc64', 2), ('unknown', 255)])
+TAIL_KINDS = odict([('nada', 0), ('nacl', 1), ('crc16', 2), ('crc64', 3),
+                    ('unknown', 255)])
 TAIL_KIND_NAMES = odict((v, k) for k, v in TAIL_KINDS.iteritems())  # inverse map
 TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('nacl', 16),  ('crc16', 2), ('crc64', 8),
+TAIL_SIZES = odict([('nada', 0), ('nacl', 8),  ('crc16', 2), ('crc64', 8),
                     ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
@@ -195,6 +197,21 @@ HEAD_FIELDS = [ 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk'
 
 PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
 PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
+
+
+class RaetError(Exception):
+    """Used to indicate error in RAET Protocol
+
+       usage:
+       msg = "Invalid device id '{0}'".format(did)
+       raise raeting.RaetError(msg)
+    """
+    def __init__(self, message = None):
+        self.message = message #description of error
+        self.args = (message)
+
+    def __str__(self):
+        return ("{0}: {1}.\n".format(self.__class__.__name__, self.message))
 
 
 def defaultData(data=None):

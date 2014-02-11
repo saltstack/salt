@@ -17,9 +17,7 @@ except ImportError:
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import packByte, unpackByte
 
-from salt.transport import table
 from . import raeting
-from . import stacking
 
 class Part(object):
     '''
@@ -45,7 +43,7 @@ class Part(object):
        '''
        Property is the length of this Part
        '''
-       return self.__len__()
+       return (self.__len__())
 
 class Head(Part):
     '''
@@ -108,7 +106,7 @@ class TxHead(Head):
         '''
         values = []
         for field in raeting.PACKET_FLAG_FIELDS:
-            values.append(1 if self.data.get(field, 0) else 0)
+            values.append(1 if self.packet.data.get(field, 0) else 0)
         return packByte(format='11111111', fields=values)
 
 class RxHead(Head):
@@ -116,36 +114,41 @@ class RxHead(Head):
     RAET protocl receive packet header class
     '''
 
-    def parse(self, rest):
+    def parse(self):
         '''
-        Parses and removes head from packed rest and returns remainder
+        From .packed.packed, Detects head kind. Unpacks head. Parses head and updates
+        .packet.data
+        Returns False and updates .packet.error if failure occurs
         '''
         self.packed = ''
-        if rest.startswith('{"hk":1,') and raeting.JSON_END in rest:  # json header
+        data = self.packet.data #for speed
+        packed = self.packet.packed #for speed
+        if packed.startswith('{"hk":1,') and raeting.JSON_END in packed:  # json header
             self.kind = raeting.headKinds.json
-            front, sep, back = rest.partition(raeting.JSON_END)
-            rest = back
+            front, sep, back = packed.partition(raeting.JSON_END)
             self.packed = "{0}{1}".format(front, sep)
             kit = json.loads(front,
                              encoding='ascii',
                              object_pairs_hook=odict)
-            self.data.update(kit)
-            if 'fg' in self.data:
-                self.unpackFlags(self.data['fg'])
+            data.update(kit)
+            if 'fg' in data:
+                self.unpackFlags(data['fg'])
 
-            if self.data['hk'] != self.kind:
+            if data['hk'] != self.kind:
                 self.packet.error = 'Recognized head kind does not match head field value.'
-                return rest
+                return False
 
-            hl = int(self.data['hl'], 16)
+            hl = int(data['hl'], 16)
             if hl != self.size:
                 self.packet.error = 'Actual head length does not match head field value.'
+            data['hl'] = hl
 
         else:  # notify unrecognizible packet head
             self.kind = raeting.headKinds.unknown
             self.packet.error = "Unrecognizible packet head."
+            return False
 
-        return rest
+        return True
 
     def unpackFlags(self, flags):
         '''
@@ -153,8 +156,8 @@ class RxHead(Head):
         '''
         values = unpackByte(format='11111111', byte=int(flags, 16), boolean=False)
         for i, field in enumerate(raeting.PACKET_FLAG_FIELDS):
-            if field in self.data:
-                self.data[field] = values[i]
+            if field in self.packet.data:
+                self.packet.data[field] = values[i]
 
 class Neck(Part):
     '''
@@ -196,25 +199,27 @@ class RxNeck(Neck):
     '''
     RAET protocol receive packet neck class
     '''
-    def parse(self, rest):
+    def parse(self):
         '''
-        Parses and removes neck from rest and returns rest
+        Parses neck. Assumes neck already unpacked
         '''
-        self.packed = ''
-        self.kind = self.packet.head.data['nk']
+        self.kind = self.packet.data['nk']
 
         if self.kind not in raeting.NECK_KIND_NAMES:
             self.kind = raeting.neckKinds.unknown
             self.packet.error = "Unrecognizible packet neck."
-            return rest
+            return False
 
-        nl = self.packet.head.data['nl']
-        self.packed = rest[:nl]
-        rest = rest[nl:]
+        if self.kind == raeting.neckKinds.nacl:
+            if self.size != raeting.neckSizes.nacl:
+                self.packet.error = ("Actual neck size '{0}' does not match "
+                    "kind size '{1}'".format(self.size, raeting.neckSizes.nacl))
+                return False
 
         if self.kind == raeting.neckKinds.nada:
             pass
-        return rest
+
+        return True
 
 class Body(Part):
     '''
@@ -247,35 +252,32 @@ class RxBody(Body):
     RAET protocol rx packet body class
     '''
 
-    def parse(self, rest):
+    def parse(self):
         '''
-        Parses and removes head from rest and returns rest
+        Parses body. Assumes already unpacked.
+        Results in updated .data
         '''
-        self.packed = ''
-        self.kind = self.packet.head.data['bk']
+        self.kind = self.packet.data['bk']
 
         if self.kind not in raeting.BODY_KIND_NAMES:
             self.kind = raeting.bodyKinds.unknown
             self.packet.error = "Unrecognizible packet body."
-            return rest
+            return False
 
-        bl = self.packet.head.data['bl']
-        self.packed = rest[:bl]
-        rest = rest[bl:]
         self.data = odict()
 
         if self.kind == raeting.bodyKinds.json:
-            if bl:
+            if self.packed:
                 kit = json.loads(self.packed, object_pairs_hook=odict)
                 if not isinstance(kit, Mapping):
                     self.packet.error = "Packet body not a mapping."
-                    return rest
+                    return False
                 self.data = kit
 
         elif self.kind == raeting.bodyKinds.nada:
             pass
 
-        return rest
+        return True
 
 class Tail(Part):
     '''
@@ -297,6 +299,10 @@ class TxTail(Tail):
         '''
         self.packed = ''
         self.kind= self.packet.data['tk']
+
+        if self.kind == raeting.tailKinds.nacl:
+            self.packed = "".rjust(raeting.tailSizes.nacl, '\x00')
+
         if self.kind == raeting.tailKinds.nada:
             pass
         return self.packed
@@ -306,39 +312,35 @@ class RxTail(Tail):
     RAET protocol rx packet tail class
     '''
 
-    def parse(self, rest):
+    def parse(self):
         '''
-        Parses and removes tail from rest and returns rest
+        Parses tail. Assumes already unpacked.
         '''
-        self.packed = ''
-        self.kind = self.packet.head.data['tk']
+        self.kind = self.packet.data['tk']
 
         if self.kind not in raeting.TAIL_KIND_NAMES:
             self.kind = raeting.tailKinds.unknown
             self.packet.error = "Unrecognizible packet tail."
-            return rest
+            return False
 
-        tl = self.packet.head.data['tl']
-        self.packed = rest[:tl]
-        rest = rest[tl:]
+        if self.kind == raeting.tailKinds.nacl:
+            if self.size != raeting.tailSizes.nacl:
+                self.packet.error = ("Actual tail size '{0}' does not match "
+                    "kind size '{1}'".format(self.size, raeting.tailSizes.nacl))
+                return False
 
         if self.kind == raeting.tailKinds.nada:
             pass
 
-        return rest
+        return True
 
 class Packet(object):
     '''
     RAET protocol packet object
     '''
-    def __init__(self, stack=None, kind=None, local=None, remote=None):
+    def __init__(self, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
-        self.stack = stack # stack that handles this packet
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
-        if not local and self.stack:
-            local = self.stack.device
-        self.local = local or stacking.LocalDevice(stack=self.stack) # source device
-        self.remote = remote or stacking.RemoteDevice(stack=self.stack) # destination device
         self.packed = '' #packed string
         self.error = ''
         self.data = odict(raeting.PACKET_DEFAULTS)
@@ -401,7 +403,7 @@ class RxPacket(Packet):
     '''
     RAET Protocol Receive Packet object
     '''
-    def __init__(self, raw=None, **kwa):
+    def __init__(self, packed=None, **kwa):
         '''
         Setup RxPacket instance
         '''
@@ -410,46 +412,97 @@ class RxPacket(Packet):
         self.neck = RxNeck(packet=self)
         self.body = RxBody(packet=self)
         self.tail = RxTail(packet=self)
-        if raw:
-            self.parse(raw)
+        self.packed = packed or ''
 
-    def parse(self, raw):
+    def unpack(self, packed=None):
         '''
-        Parses raw packet
+        Unpacks the neck, body, and tail parts of .packed
+        Assumes that the lengths of the parts are valid in .data as would be
+        the case after successfully parsing the head section
+        '''
+        hl = self.data['hl']
+        nl = self.data['nl']
+        bl = self.data['bl']
+        tl = self.data['tl']
+        if self.size != (hl + nl + bl + tl):
+            self.error = ("Whole size {0} does not equal sum of the parts"
+                          " '{1}'".format(self.size, hl + nl + bl + tl))
+            return False
+
+        self.neck.packed = self.packed[hl:hl+nl]
+        self.body.packed = self.packed[hl+nl:hl+nl+bl]
+        self.tail.packed = self.packed[hl+nl+bl:hl+nl+bl+tl]
+        return True
+
+    def parse(self, packed=None):
+        '''
+        Parses raw packet completely
+        Result is .data and .body.data
+        '''
+        if not self.parseFore(packed=packed):
+            return False
+
+        if not self.parseBack():
+            return False
+
+        return True
+
+    def parseFore(self, packed=None):
+        '''
+        Parses raw packet head and neck from packed if provided or .packed otherwise
+        Returns True if verified Otherwise False
+        Result is .data
         '''
         self.error = ''
-        rest = self.head.parse(raw)
+        if packed:
+            self.packed = packed
+        if not self.packed:
+            self.error = "Packed empty, nothing to parse."
+            return False
 
-        if self.head.data['vn'] not  in raeting.VERSIONS.values():
+        if not self.head.parse():
+            return False
+
+        if not self.unpack():
+            return False
+
+        if self.data['vn'] not  in raeting.VERSIONS.values():
             self.error = ("Received incompatible version '{0}'"
-            "version '{1}'".format(self.head.data['vn']))
-            return
-        #self.version = self.head.data['vn']
-        self.crdrFlag = self.head.data['cf']
-        self.bcstFlag = self.head.data['bf']
-        self.scdtFlag = self.head.data['sf']
-        self.pendFlag = self.head.data['pf']
-        self.allFlag = self.head.data['af']
+            "version '{1}'".format(self.data['vn']))
+            return False
 
-        rest = self.neck.parse(rest)
-        if not self.vouch():
-            return
-        rest = self.body.parse(rest)
-        rest = self.tail.parse(rest)
+        if not self.neck.parse():
+            return False
+
         if not self.verify():
-            return
+            return False
 
-        return rest
+        return True
+
+    def parseBack(self):
+        '''
+        Parses raw packet body and tail and validates
+        Assumes the head and neck have already been parsed so self.data is valid
+        Returns True if verified Otherwise False
+        Result is .body.data and .data
+        '''
+        if not self.tail.parse():
+            return False
+        if not self.validate():
+            return False
+        if not self.body.parse():
+            return False
+        return True
 
     def verify(self):
         '''
-        Uses signature in neck to verify (authenticate) packet
+        Uses signature in neck to verify (authenticate) packet signature
         '''
         return True
 
 
     def validate(self):
         '''
-        Uses tail to validate body
+        Uses tail to validate body such as decrypt
         '''
         return True
