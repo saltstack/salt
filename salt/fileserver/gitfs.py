@@ -657,7 +657,7 @@ def update():
                     # Prune stale refs
                     for ref in repo.get_refs():
                         if ref not in refs_post:
-                            del(repo[ref])
+                            del repo[ref]
         except Exception as exc:
             log.warning(
                 'Exception caught while fetching: {0}'.format(exc)
