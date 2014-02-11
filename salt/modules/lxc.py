@@ -288,25 +288,25 @@ def list_():
     frozen = []
     running = []
 
-    for c in ctnrs:
-        lines = __salt__['cmd.run']('lxc-info -n ' + c).splitlines()
+    for container in ctnrs:
+        c_infos = __salt__['cmd.run']('lxc-info -n {0}'.format(container))
 
-        for line in lines:
-            stat = line.split(':')
+        for info in c_infos:
+            stat = info.split(':')
             if stat[0] == 'state':
-                s = stat[1].strip()
+                state = stat[1].strip()
                 break
 
-        if not len(s):
+        if not len(state):
             continue
-        if s == 'STOPPED':
-            stopped.append(c)
+        if state == 'STOPPED':
+            stopped.append(container)
             continue
-        if s == 'FROZEN':
-            frozen.append(c)
+        if state == 'FROZEN':
+            frozen.append(container)
             continue
-        if s == 'RUNNING':
-            running.append(c)
+        if state == 'RUNNING':
+            running.append(container)
             continue
 
     return {'running': running,
