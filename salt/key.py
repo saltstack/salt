@@ -671,3 +671,336 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], status, key)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret
+
+
+class RaetKey(Key):
+    '''
+    Manage keys from the raet backend
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
+
+    def _check_minions_directories(self):
+        '''
+        Return the minion keys directory paths
+        '''
+        accepted = os.path.join(self.opts['pki_dir'], 'accepted')
+        pre = os.path.join(self.opts['pki_dir'], 'pending')
+        rejected = os.path.join(self.opts['pki_dir'], 'rejected')
+        return accepted, pre, rejected
+
+    def check_master(self):
+        '''
+        Log if the master is not running
+        NOT YET IMPLIMENTED
+        '''
+        return True
+
+    def local_keys(self):
+        '''
+        Return a dict of local keys
+        '''
+        ret = {'local': []}
+        fn_ = os.path.join(self.opts['pki_dir'], 'master.key')
+        if os.path.isfile(fn_):
+            ret['local'].append(fn_)
+        return ret
+
+    def status(self, minion_id, device_id, pub, verify):
+        '''
+        Accepts the minion id, device id, curve public and verify keys.
+        If the key is not present, put it in pending and return "pending",
+        If the key has been accepted return "accepted"
+        if the key should be rejected, return "rejected"
+        '''
+        acc, pre, rej = self._check_minions_directories()
+        acc_path = os.path.join(acc, minion_id)
+        pre_path = os.path.join(pre, minion_id)
+        rej_path = os.path.join(rej, minion_id)
+        # open mode is turned on, force accept the key
+        keydata = {
+                'minion_id': minion_id,
+                'device_id': device_id,
+                'pub': pub,
+                'verify': verify}
+        if self.opts['open_mode']:
+            if os.path.isfile(acc_path):
+                # The minion id has been accepted, verify the key strings
+                with salt.utils.fopen(acc_path, 'rb') as fp_:
+                    keydata = self.serial.loads(fp_.read())
+                if keydata['pub'] == pub and keydata['verify'] == verify:
+                    return 'accepted'
+            with salt.utils.fopen(acc_path, 'w+b') as fp_:
+                fp_.write(self.serial.dumps(keydata))
+                return 'accepted'
+        if os.path.isfile(rej_path):
+            return 'rejected'
+        elif os.path.isfile(acc_path):
+            # The minion id has been accepted, verify the key strings
+            with salt.utils.fopen(acc_path, 'rb') as fp_:
+                keydata = self.serial.loads(fp_.read())
+            if keydata['pub'] == pub and keydata['verify'] == verify:
+                return 'accepted'
+            else:
+                return 'rejected'
+        elif os.path.isfile(pre_path):
+            with salt.utils.fopen(pre_path, 'rb') as fp_:
+                keydata = self.serial.loads(fp_.read())
+            if keydata['pub'] == pub and keydata['verify'] == verify:
+                return 'pending'
+            else:
+                return 'rejected'
+        # This is a new key, place it in pending
+        if self.opts['auto_accept']:
+            w_path = acc_path
+            ret = 'accepted'
+        else:
+            w_path = pre_path
+            ret = 'pending'
+        with salt.utils.fopen(w_path, 'w+b') as fp_:
+            fp_.write(self.serial.dumps(keydata))
+            return ret
+
+    def _get_key_str(self, minion_id, status):
+        '''
+        Return the key string in the form of:
+        
+        pub: <pub>
+        verify: <verify>
+        '''
+        path = os.path.join(self.opts['pki_dir'], status, minion_id)
+        with salt.utils.fopen(path, 'r') as fp_:
+            keydata = self.serial.loads(fp_.read())
+            return 'pub: {0}\nverify: {1}'.format(
+                    keydata['pub'],
+                    keydata['verify'])
+
+    def key_str(self, match):
+        '''
+        Return the specified public key or keys based on a glob
+        '''
+        ret = {}
+        for status, keys in self.name_match(match).items():
+            ret[status] = {}
+            for key in salt.utils.isorted(keys):
+                ret[status][key] = self._get_key_str(key, status)
+        return ret
+
+    def key_str_all(self):
+        '''
+        Return all managed key strings
+        '''
+        ret = {}
+        for status, keys in self.list_keys().items():
+            ret[status] = {}
+            for key in salt.utils.isorted(keys):
+                ret[status][key] = self._get_key_str(key, status)
+        return ret
+
+    def accept(self, match=None, match_dict=None, include_rejected=False):
+        '''
+        Accept public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        if match is not None:
+            matches = self.name_match(match)
+        elif match_dict is not None and isinstance(match_dict, dict):
+            matches = match_dict
+        else:
+            matches = {}
+        keydirs = ['minions_pre']
+        if include_rejected:
+            keydirs.append('minions_rejected')
+        for keydir in keydirs:
+            for key in matches.get(keydir, []):
+                try:
+                    shutil.move(
+                            os.path.join(
+                                self.opts['pki_dir'],
+                                keydir,
+                                key),
+                            os.path.join(
+                                self.opts['pki_dir'],
+                                'minions',
+                                key)
+                            )
+                    eload = {'result': True,
+                             'act': 'accept',
+                             'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (IOError, OSError):
+                    pass
+        return (
+            self.name_match(match) if match is not None
+            else self.dict_match(matches)
+        )
+
+    def accept_all(self):
+        '''
+        Accept all keys in pre
+        '''
+        keys = self.list_keys()
+        for key in keys['minions_pre']:
+            try:
+                shutil.move(
+                        os.path.join(
+                            self.opts['pki_dir'],
+                            'minions_pre',
+                            key),
+                        os.path.join(
+                            self.opts['pki_dir'],
+                            'minions',
+                            key)
+                        )
+                eload = {'result': True,
+                         'act': 'accept',
+                         'id': key}
+                self.event.fire_event(eload, tagify(prefix='key'))
+            except (IOError, OSError):
+                pass
+        return self.list_keys()
+
+    def delete_key(self, match=None, match_dict=None):
+        '''
+        Delete public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        if match is not None:
+            matches = self.name_match(match)
+        elif match_dict is not None and isinstance(match_dict, dict):
+            matches = match_dict
+        else:
+            matches = {}
+        for status, keys in matches.items():
+            for key in keys:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        return (
+            self.name_match(match) if match is not None
+            else self.dict_match(matches)
+        )
+
+    def delete_all(self):
+        '''
+        Delete all keys
+        '''
+        for status, keys in self.list_keys().items():
+            for key in keys:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        return self.list_keys()
+
+    def reject(self, match=None, match_dict=None, include_accepted=False):
+        '''
+        Reject public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        if match is not None:
+            matches = self.name_match(match)
+        elif match_dict is not None and isinstance(match_dict, dict):
+            matches = match_dict
+        else:
+            matches = {}
+        keydirs = ['minions_pre']
+        if include_accepted:
+            keydirs.append('minions')
+        for keydir in keydirs:
+            for key in matches.get(keydir, []):
+                try:
+                    shutil.move(
+                            os.path.join(
+                                self.opts['pki_dir'],
+                                keydir,
+                                key),
+                            os.path.join(
+                                self.opts['pki_dir'],
+                                'minions_rejected',
+                                key)
+                            )
+                    eload = {'result': True,
+                            'act': 'reject',
+                            'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (IOError, OSError):
+                    pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        return (
+            self.name_match(match) if match is not None
+            else self.dict_match(matches)
+        )
+
+    def reject_all(self):
+        '''
+        Reject all keys in pre
+        '''
+        keys = self.list_keys()
+        for key in keys['minions_pre']:
+            try:
+                shutil.move(
+                        os.path.join(
+                            self.opts['pki_dir'],
+                            'minions_pre',
+                            key),
+                        os.path.join(
+                            self.opts['pki_dir'],
+                            'minions_rejected',
+                            key)
+                        )
+                eload = {'result': True,
+                         'act': 'reject',
+                         'id': key}
+                self.event.fire_event(eload, tagify(prefix='key'))
+            except (IOError, OSError):
+                pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        return self.list_keys()
+
+    def finger(self, match):
+        '''
+        Return the fingerprint for a specified key
+        '''
+        matches = self.name_match(match, True)
+        ret = {}
+        for status, keys in matches.items():
+            ret[status] = {}
+            for key in keys:
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
+                ret[status][key] = salt.utils.pem_finger(path)
+        return ret
+
+    def finger_all(self):
+        '''
+        Return fingerprins for all keys
+        '''
+        ret = {}
+        for status, keys in self.list_keys().items():
+            ret[status] = {}
+            for key in keys:
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
+                ret[status][key] = salt.utils.pem_finger(path)
+        return ret
