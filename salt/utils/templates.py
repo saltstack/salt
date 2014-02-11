@@ -23,6 +23,7 @@ import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+from salt.utils.jinja import SequenceExtension as JinjaSequenceExtension
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -226,6 +227,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
+    env_args['extensions'].append(JinjaSequenceExtension)
     env_args['extensions'].append(JinjaSerializerExtension)
 
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
