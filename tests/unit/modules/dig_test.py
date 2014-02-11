@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
 # Import Salt Testing Libs
@@ -24,7 +24,7 @@ class DigTestCase(TestCase):
     def test_check_ip_empty(self):
         self.assertFalse(dig.check_ip(''), msg="Did not detect empty value as invalid")
 
-    def test_A(self):
+    def test_a(self):
         dig.__salt__ = {}
         with patch.dict(dig.__salt__, {'cmd.run_all': MagicMock(return_value={'pid': 3656, 'retcode': 0, 'stderr': '', 'stdout': '74.125.193.104\n74.125.193.105\n74.125.193.99\n74.125.193.106\n74.125.193.103\n74.125.193.147'})}):
             self.assertEqual(dig.A('www.google.com'), ['74.125.193.104', '74.125.193.105', '74.125.193.99', '74.125.193.106', '74.125.193.103', '74.125.193.147'])
