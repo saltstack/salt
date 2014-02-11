@@ -9,6 +9,7 @@ from __future__ import print_function
 import os
 import shutil
 import fnmatch
+import hashlib
 
 # Import salt libs
 import salt.crypt
@@ -776,6 +777,17 @@ class RaetKey(Key):
                     keydata['pub'],
                     keydata['verify'])
 
+    def _get_key_finger(self, path):
+        '''
+        Return a sha256 kingerprint for the key
+        '''
+        with salt.utils.fopen(path, 'r') as fp_:
+            keydata = self.serial.loads(fp_.read())
+            key = 'pub: {0}\nverify: {1}'.format(
+                    keydata['pub'],
+                    keydata['verify'])
+        return hashlib.sha256(key).hexdigest()
+
     def key_str(self, match):
         '''
         Return the specified public key or keys based on a glob
@@ -809,9 +821,9 @@ class RaetKey(Key):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['minions_pre']
+        keydirs = ['pending']
         if include_rejected:
-            keydirs.append('minions_rejected')
+            keydirs.append('rejected')
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -822,13 +834,9 @@ class RaetKey(Key):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions',
+                                'accepted',
                                 key)
                             )
-                    eload = {'result': True,
-                             'act': 'accept',
-                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         return (
@@ -841,22 +849,18 @@ class RaetKey(Key):
         Accept all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['minions_pre']:
+        for key in keys['pending']:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_pre',
+                            'pending',
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions',
+                            'accepted',
                             key)
                         )
-                eload = {'result': True,
-                         'act': 'accept',
-                         'id': key}
-                self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         return self.list_keys()
@@ -876,14 +880,9 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                    eload = {'result': True,
-                             'act': 'delete',
-                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -897,14 +896,9 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                    eload = {'result': True,
-                             'act': 'delete',
-                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def reject(self, match=None, match_dict=None, include_accepted=False):
@@ -918,9 +912,9 @@ class RaetKey(Key):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['minions_pre']
+        keydirs = ['pending']
         if include_accepted:
-            keydirs.append('minions')
+            keydirs.append('accepted')
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -931,17 +925,12 @@ class RaetKey(Key):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions_rejected',
+                                'rejected',
                                 key)
                             )
-                    eload = {'result': True,
-                            'act': 'reject',
-                            'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -952,26 +941,21 @@ class RaetKey(Key):
         Reject all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['minions_pre']:
+        for key in keys['pending']:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_pre',
+                            'pending',
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_rejected',
+                            'rejected',
                             key)
                         )
-                eload = {'result': True,
-                         'act': 'reject',
-                         'id': key}
-                self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def finger(self, match):
@@ -987,7 +971,7 @@ class RaetKey(Key):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path)
+                ret[status][key] = self._get_key_finger(path)
         return ret
 
     def finger_all(self):
@@ -1002,5 +986,5 @@ class RaetKey(Key):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path)
+                ret[status][key] = self._get_key_finger(path)
         return ret
