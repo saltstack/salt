@@ -156,6 +156,28 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+class SequenceExtension(Extension, object):
+    '''
+    Ensure sequenced data.
+
+    **sequence**
+        ensure that parsed data is a sequence
+
+    '''
+
+    def __init__(self, environment):
+        super(SerializerExtension, self).__init__(environment)
+        self.environment.filters.update({
+            'sequence': self.ensure_sequence,
+        })
+
+    def ensure_sequence(data):
+        """Ensures that data is a sequence"""
+        if not isinstance(data, (list, tuple, set, dict)):
+            return [data]
+        return data
+
+
 class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.
