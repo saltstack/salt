@@ -104,6 +104,12 @@ class Key(object):
         '''
         return self.sign_key.sign(msg)
 
+    def signature(self, msg):
+        '''
+        Return only the signature string resulting from signing the message
+        '''
+        return self.sign(msg).signature
+
     def verify(self, msg):
         '''
         Verify the message

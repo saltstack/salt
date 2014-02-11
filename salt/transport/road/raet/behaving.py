@@ -213,7 +213,7 @@ class ServerRaet(deeding.ParamDeed):  # pylint: disable=W0232
         '''
         Set up server to transmit and recive on address
         '''
-        connection.value = aiding.SocketNB(host=address.data.host, port=address.data.port)
+        connection.value = aiding.SocketUdpNb(host=address.data.host, port=address.data.port)
         connection.value.reopen()  # create socket connection
         host, port = connection.value.ha
         address.update(host=host, port=port, ha=(host, port))
