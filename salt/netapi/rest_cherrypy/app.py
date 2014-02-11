@@ -258,7 +258,11 @@ def salt_ip_verify_tool():
                         'status': cherrypy.response.status,
                         'return': "Bad IP",
                     }
+
+    # Add simple CORS support
     cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+    cherrypy.response.headers['Access-Control-Allow-Credentials'] = 'true'
+    cherrypy.response.headers['Access-Control-Expose-Headers'] = 'X-Auth-Token'
 
 
 def salt_auth_tool():
@@ -660,6 +664,30 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate(
                 token=cherrypy.session.get('token')))
         }
+
+    def OPTIONS(self):
+        '''
+        Handle a CORS preflight request
+        '''
+        req_head = cherrypy.request.headers
+        resp_head = cherrypy.response.headers
+
+        method = req_head.get('Access-Control-Request-Method', None)
+        headers = req_head.get('Access-Control-Request-Headers', None)
+
+        allowed_methods = ['GET', 'POST', 'OPTIONS']
+        allowed_headers = ['X-Auth-Token']
+
+        if method and method in allowed_methods:
+            resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+
+            if req_head.get('Access-Control-Allow-Headers') in allowed_headers:
+                resp_head['Access-Control-Allow-Headers'] = 'X-Auth-Token'
+
+                resp_head['Connection'] = 'keep-alive'
+                resp_head['Access-Control-Max-Age '] = '1400'
+
+        return {}
 
 
 class Minions(LowDataAdapter):
