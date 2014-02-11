@@ -22,10 +22,9 @@ A state module to manage blockdevices
 
 '''
 
-
-
 # Import salt libs
 import salt.utils
+
 
 def __virtual__():
     '''
@@ -33,9 +32,10 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'blockdev'
+    return True
 
-def tuned(name,**kwargs):
+
+def tuned(name, **kwargs):
     '''
     Manage options of block device
 
@@ -68,7 +68,7 @@ def tuned(name,**kwargs):
         ret['result'] = None
         return ret
     else:
-        changes = __salt__['blockdev.tune'](name,**kwargs)
+        changes = __salt__['blockdev.tune'](name, **kwargs)
         if changes:
             ret['comment'] = 'Block device {0} successfully modified '.format(name)
             ret['changes'] = changes
