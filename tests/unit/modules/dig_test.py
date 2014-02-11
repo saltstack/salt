@@ -39,7 +39,12 @@ class DigTestCase(TestCase):
                                                                    '74.125.193.147'
         })
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(dig.A('www.google.com'), ['74.125.193.104', '74.125.193.105', '74.125.193.99', '74.125.193.106', '74.125.193.103', '74.125.193.147'])
+            self.assertEqual(dig.A('www.google.com'), ['74.125.193.104',
+                                                       '74.125.193.105',
+                                                       '74.125.193.99',
+                                                       '74.125.193.106',
+                                                       '74.125.193.103',
+                                                       '74.125.193.147'])
 
     @skipIf(True, 'Waiting for 2014.1 release')
     def test_aaaa(self):
@@ -61,9 +66,16 @@ class DigTestCase(TestCase):
 
     def test_spf(self):
         dig.__salt__ = {}
-        dig_mock = MagicMock(return_value={'pid': 26795, 'retcode': 0, 'stderr': '', 'stdout': 'v=spf1 include:_spf.google.com ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all'})
+        dig_mock = MagicMock(return_value={'pid': 26795,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': 'v=spf1'
+                                                     ' include:_spf.google.com '
+                                                     'ip4:216.73.93.70/31 '
+                                                     'ip4:216.73.93.72/31 ~all'})
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(dig.SPF('google.com'), ['216.73.93.70/31', '216.73.93.72/31'])
+            self.assertEqual(dig.SPF('google.com'),
+                             ['216.73.93.70/31', '216.73.93.72/31'])
 
     @skipIf(True, 'Waiting for 2014.1 release')
     def test_spf_redir(self):
@@ -71,6 +83,10 @@ class DigTestCase(TestCase):
         Test was written after a bug was found when a domain is redirecting the SPF ipv4 range
         '''
         dig.__salt__ = {}
-        dig_mock = MagicMock(return_value={'pid': 27282, 'retcode': 0, 'stderr': '', 'stdout': 'v=spf1 a mx include:_spf.xmission.com ?all'})
+        dig_mock = MagicMock(return_value={'pid': 27282,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': 'v=spf1 a mx '
+                                                     'include:_spf.xmission.com ?all'})
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(dig.SPF('xmission.com'), ['198.60.22.0/24', '166.70.13.0/24'])
