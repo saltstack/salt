@@ -90,3 +90,20 @@ class DigTestCase(TestCase):
                                                      'include:_spf.xmission.com ?all'})
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(dig.SPF('xmission.com'), ['198.60.22.0/24', '166.70.13.0/24'])
+
+    def test_mx(self):
+        dig.__salt__ = {}
+        dig_mock = MagicMock(return_value={'pid': 27780,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': '10 aspmx.l.google.com.\n'
+                                                     '20 alt1.aspmx.l.google.com.\n'
+                                                     '40 alt3.aspmx.l.google.com.\n'
+                                                     '50 alt4.aspmx.l.google.com.\n'
+                                                     '30 alt2.aspmx.l.google.com.'})
+        with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
+            self.assertEqual(dig.MX('google.com'), [['10', 'aspmx.l.google.com.'],
+                                                     ['20', 'alt1.aspmx.l.google.com.'],
+                                                     ['40', 'alt3.aspmx.l.google.com.'],
+                                                     ['50', 'alt4.aspmx.l.google.com.'],
+                                                     ['30', 'alt2.aspmx.l.google.com.']])
