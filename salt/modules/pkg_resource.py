@@ -56,7 +56,7 @@ def _parse_pkg_meta(path):
                 path
             )
         ).strip()
-        name, version, rel
+        name, version, rel = path.split('_|-')
         if rel:
             version = '-'.join((version, rel))
         return name, version
