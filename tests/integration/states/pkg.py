@@ -257,7 +257,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_with_dot_in_pkgname(self, grains=None):
+    def no_test_pkg_with_dot_in_pkgname(self, grains=None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
