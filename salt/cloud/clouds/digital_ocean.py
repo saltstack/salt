@@ -328,7 +328,8 @@ def create(vm_):
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
-        if data.get('ip_address', None) is not None:
+        if (data.get('ip_address') and data.get('status') == 'active' and
+                data.get('locked', 'False') == 'False'):
             return data
 
     try:
