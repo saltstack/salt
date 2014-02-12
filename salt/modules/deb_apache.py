@@ -142,7 +142,8 @@ def check_mod_enabled(mod):
 
     .. code-block:: bash
 
-        salt '*' apache.check_mod_enabled example.com
+        salt '*' apache.check_mod_enabled status.conf
+        salt '*' apache.check_mod_enabled status.load
     '''
     if os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod)):
         return True
@@ -163,7 +164,7 @@ def a2enmod(mod):
 
     .. code-block:: bash
 
-        salt '*' apache.a2enmod example.com
+        salt '*' apache.a2enmod vhost_alias
     '''
     ret = {}
     command = ['a2enmod', mod]
@@ -197,7 +198,7 @@ def a2dismod(mod):
 
     .. code-block:: bash
 
-        salt '*' apache.a2dismod example.com
+        salt '*' apache.a2dismod vhost_alias
     '''
     ret = {}
     command = ['a2dismod', mod]
