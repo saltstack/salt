@@ -89,21 +89,21 @@ def dump(device, args=None):
         salt '*' extfs.dump /dev/sda1
     '''
     cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
-    ret={}
+    ret = {}
     opts = [c[2:] for c in cmd.split() if c.startswith('--')]
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] == 0:
-      lines = [line for line in out['stdout'].splitlines() if line]
-      count=0
-      for line in lines:
-        ret[opts[count]] = line
-        count=count+1
-      if args:
-        temp_ret={}
-        for arg in args:
-          temp_ret[arg]=ret[arg]
-        return temp_ret
-      else:
-        return ret
+        lines = [line for line in out['stdout'].splitlines() if line]
+        count = 0
+        for line in lines:
+            ret[opts[count]] = line
+            count = count+1
+        if args:
+            temp_ret = {}
+            for arg in args:
+                temp_ret[arg] = ret[arg]
+            return temp_ret
+        else:
+            return ret
     else:
-      return False
+        return False
