@@ -41,13 +41,13 @@ class Stack(object):
         self.device = device or Device(stack=self, did=did, ha=ha)
         # remote devices attached to this stack
         self.devices = odict()
-        self.transactions = odict() #transactions
+        self.transactions = odict()  # transactions
 
         self.rxdsUdp = deque()
         self.txdsUdp = deque()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
-        self.device.ha = self.serverUdp.ha # update device host address after open
+        self.device.ha = self.serverUdp.ha  # update device host address after open
 
     def addRemoteDevice(self, device, did=None):
         '''
@@ -128,23 +128,23 @@ class Device(object):
     '''
     RAET protocol endpoint device object
     '''
-    Did = 1 # class attribute
+    Did = 1  # class attribute
 
     def __init__(self, stack=None, did=None, sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
         '''
         Setup Device instance
         '''
-        self.stack = stack # Stack object that manages this device
+        self.stack = stack  # Stack object that manages this device
         if did is None:
             did = Device.Did
             Device.Did += 1
-        self.did = did # device ID
+        self.did = did  # device ID
 
-        self.sid = sid # current session ID
-        self.tid = tid # current transaction ID
+        self.sid = sid  # current session ID
+        self.tid = tid  # current transaction ID
 
-        if ha: #takes precendence
+        if ha:  # takes precendence
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port
@@ -166,7 +166,7 @@ class Device(object):
         '''
         self.sid += 1
         if (self.sid > 0xffffffffL):
-            self.sid = 1 # rollover to 1
+            self.sid = 1  # rollover to 1
         return self.sid
 
     def nextTid(self):
@@ -175,7 +175,7 @@ class Device(object):
         '''
         self.tid += 1
         if (self.tid > 0xffffffffL):
-            self.tid = 1 # rollover to 1
+            self.tid = 1  # rollover to 1
         return self.tid
 
 
@@ -229,7 +229,7 @@ class Transaction(object):
         self.kind = kind or raeting.PACKET_DEFAULTS['sk']
 
         # local device is the .stack.device
-        self.rdid = rdid # remote device did
+        self.rdid = rdid  # remote device did
 
         self.crdr = crdr
         self.bcst = bcst
@@ -239,8 +239,8 @@ class Transaction(object):
 
         self.rxData = rxData or odict()
         self.txData = txData or odict()
-        self.rxPacket = None # last rx packet
-        self.txPacket = None # last tx packet
+        self.rxPacket = None  # last rx packet
+        self.txPacket = None  # last tx packet
 
     def transmit(self, packet):
         '''
@@ -264,11 +264,11 @@ class Initiator(Transaction):
         '''
         Setup Transaction instance
         '''
-        crdr = False # force crdr to False
+        crdr = False  # force crdr to False
         super(Initiator, self).__init__(crdr=crdr, **kwa)
-        if self.sid is None: # use current session id of local device
+        if self.sid is None:  # use current session id of local device
             self.sid = self.stack.device.sid
-        if self.tid is None: # use next tid
+        if self.tid is None:  # use next tid
             self.tid = self.stack.device.nextTid()
 
 
@@ -280,7 +280,7 @@ class Corresponder(Transaction):
         '''
         Setup Transaction instance
         '''
-        crdr = True # force crdr to True
+        crdr = True  # force crdr to True
         super(Corresponder, self).__init__(crdr=crdr, **kwa)
 
 
@@ -293,7 +293,7 @@ class Joiner(Initiator):
         Setup Transaction instance
         '''
         if rdid is None:
-            rdid = self.stack.devices.values()[0].did # zeroth is channel master
+            rdid = self.stack.devices.values()[0].did  # zeroth is channel master
         super(Joiner, self).__init__(rdid=rdid, **kwa)
 
     def start(self, body=None):
