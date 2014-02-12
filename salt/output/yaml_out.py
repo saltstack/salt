@@ -31,7 +31,7 @@ def output(data):
         # custom indent
         params.update(default_flow_style=False,
                       indent=__opts__['output_indent'])
-    else: # no indentation
+    else:  # no indentation
         params.update(default_flow_style=True,
                       indent=0)
     return yaml.dump(data, **params)
