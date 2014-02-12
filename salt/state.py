@@ -1351,7 +1351,9 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
-            if cdata['kwargs'].get('env', None) is not None:
+            if 'saltenv' in low:
+                inject_globals['__env__'] = low['saltenv']
+            elif cdata['kwargs'].get('env', None) is not None:
                 # User is using a deprecated env setting which was parsed by
                 # format_call
                 inject_globals['__env__'] = cdata['kwargs']['env']
@@ -1359,8 +1361,6 @@ class State(object):
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
                 inject_globals['__env__'] = low['__env__']
-            elif 'saltenv' in low:
-                inject_globals['__env__'] = low['saltenv']
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
