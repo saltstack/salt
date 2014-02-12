@@ -658,6 +658,12 @@ def mmodule(saltenv, fun, *args, **kwargs):
     '''
     Loads minion modules from an environment so that they can be used in pillars
     for that environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.mmodule base test.ping
     '''
     mminion = _MMinion(saltenv)
     return mminion.functions[fun](*args, **kwargs)
