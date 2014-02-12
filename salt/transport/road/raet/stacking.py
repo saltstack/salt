@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 stacking.py raet protocol stacking classes
 '''

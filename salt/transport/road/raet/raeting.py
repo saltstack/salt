@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 raeting module provides constants and values for the RAET protocol
 

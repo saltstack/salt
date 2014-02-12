@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 packeting module provides classes for Raet packets
-
 
 '''
 
