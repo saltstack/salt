@@ -167,28 +167,28 @@ def _find_install_targets(name=None,
         # Check for alternate package names if strict processing is not enforced
         # Takes extra time. Disable for improved performance
         if not skip_suggestions:
-          # Perform platform-specific pre-flight checks
-          problems = _preflight_check(desired, **kwargs)
-          comments = []
-          if problems.get('no_suggest'):
-              comments.append(
-                  'The following package(s) were not found, and no possible '
-                  'matches were found in the package db: '
-                  '{0}'.format(', '.join(sorted(problems['no_suggest'])))
-              )
-          if problems.get('suggest'):
-              for pkgname, suggestions in problems['suggest'].iteritems():
-                  comments.append(
-                      'Package {0!r} not found (possible matches: {1})'
-                      .format(pkgname, ', '.join(suggestions))
-                  )
-          if comments:
-              if len(comments) > 1:
-                  comments.append('')
-              return {'name': name,
-                      'changes': {},
-                      'result': False,
-                      'comment': '. '.join(comments).rstrip()}
+            # Perform platform-specific pre-flight checks
+            problems = _preflight_check(desired, **kwargs)
+            comments = []
+            if problems.get('no_suggest'):
+                comments.append(
+                    'The following package(s) were not found, and no possible '
+                    'matches were found in the package db: '
+                    '{0}'.format(', '.join(sorted(problems['no_suggest'])))
+                )
+            if problems.get('suggest'):
+                for pkgname, suggestions in problems['suggest'].iteritems():
+                    comments.append(
+                        'Package {0!r} not found (possible matches: {1})'
+                        .format(pkgname, ', '.join(suggestions))
+                    )
+            if comments:
+                if len(comments) > 1:
+                    comments.append('')
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': '. '.join(comments).rstrip()}
 
         # Check current versions against desired versions
         targets = {}
@@ -333,7 +333,7 @@ def installed(
         Skip the GPG verification check for the package to be installed
 
     skip_suggestions
-        Force strict package naming. Disable lookup of package alternatives 
+        Force strict package naming. Disable lookup of package alternatives
 
     version
         Install a specific version of a package. This option is ignored if
@@ -354,7 +354,7 @@ def installed(
           pkg.installed:
             - fromrepo: mycustomrepo
             - skip_verify: True
-            - skip_suggestions: True 
+            - skip_suggestions: True
             - version: 2.0.6~ubuntu3
             - refresh: True
 
@@ -440,7 +440,7 @@ def installed(
         version = str(version)
 
     result = _find_install_targets(name, version, pkgs, sources,
-                                   fromrepo=fromrepo, 
+                                   fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    **kwargs)
     try:
