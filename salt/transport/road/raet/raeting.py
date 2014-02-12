@@ -203,12 +203,13 @@ PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
 
 
 class RaetError(Exception):
-    """Used to indicate error in RAET Protocol
+    '''
+    Used to indicate error in RAET Protocol
 
        usage:
        msg = "Invalid device id '{0}'".format(did)
        raise raeting.RaetError(msg)
-    """
+    '''
     def __init__(self, message=None):
         self.message = message  # description of error
         super(RaetError, self).__init__(message)
