@@ -193,16 +193,7 @@ def SPF(domain, record='SPF', nameserver=None):
 
         salt ns1 dig.SPF google.com
     '''
-    def _process(element):
-        '''
-        Parse out valid IP bits of an spf record.
-        '''
-        m = re.match(r'(\+|~)?ip4:([0-9./]+)', element)
-        if m:
-            if check_ip(m.group(2)):
-                return m.group(2)
-        return None
-
+    spf_re = re.compile(r'(?:\+|~)?(ip[46]|include):(.+)')
     cmd = ['dig', '+short', str(domain), record]
 
     if nameserver is not None:
@@ -217,17 +208,29 @@ def SPF(domain, record='SPF', nameserver=None):
         )
         return []
 
-    stdout = result['stdout']
-    if stdout == '' and record == 'SPF':
+    if result['stdout'] == '' and record == 'SPF':
         # empty string is successful query, but nothing to return. So, try TXT
         # record.
         return SPF(domain, 'TXT', nameserver)
 
-    stdout = re.sub('"', '', stdout).split()
-    if len(stdout) == 0 or stdout[0] != 'v=spf1':
+    sections = re.sub('"', '', result['stdout']).split()
+    if len(sections) == 0 or sections[0] != 'v=spf1':
         return []
 
-    return [x for x in map(_process, stdout) if x is not None]
+    if sections[1].startswith('redirect='):
+        return SPF(domain, 'SPF', nameserver)
+    ret = []
+    for section in sections[1:]:
+        try:
+            mechanism, address = spf_re.match(section).groups()
+        except AttributeError:
+            # Regex was not matched
+            continue
+        if mechanism == 'include':
+            ret.extend(SPF(address, 'SPF', nameserver))
+        elif mechanism in ('ip4', 'ip6') and check_ip(address):
+            ret.append(address)
+    return ret
 
 
 def MX(domain, resolve=False, nameserver=None):
