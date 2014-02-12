@@ -213,7 +213,7 @@ class RaetError(Exception):
         self.args = (message)
 
     def __str__(self):
-        return ("{0}: {1}.\n".format(self.__class__.__name__, self.message))
+        return "{0}: {1}.\n".format(self.__class__.__name__, self.message)
 
 
 def defaultData(data=None):
