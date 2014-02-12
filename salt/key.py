@@ -679,7 +679,7 @@ class RaetKey(Key):
     Manage keys from the raet backend
     '''
     def __init__(self, opts):
-        self.opts = opts
+        Key.__init__(self, opts)
         self.serial = salt.payload.Serial(self.opts)
 
     def _check_minions_directories(self):
