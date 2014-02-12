@@ -312,7 +312,6 @@ class Key(object):
     '''
     The object that encapsulates saltkey actions
     '''
-
     def __init__(self, opts):
         self.opts = opts
         self._prepare()
@@ -686,7 +685,6 @@ class RaetKey(Key):
     '''
     Manage keys from the raet backend
     '''
-
     def _prepare(self):
         '''
         Simple method called when this class is initialized used for additional
