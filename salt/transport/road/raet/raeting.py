@@ -148,8 +148,9 @@ SERVICE_KIND_NAMES = odict((v, k) for k, v in SERVICE_KINDS.iteritems())  # inve
 ServiceKind = namedtuple('ServiceKind', SERVICE_KINDS.keys())
 serviceKinds = ServiceKind(**SERVICE_KINDS)
 
-PACKET_KINDS = odict([('data', 0), ('req', 1), ('ack', 8),
-                      ('nack', 9), ('unknown', 255)])
+PACKET_KINDS = odict([('data', 0), ('ack', 1), ('nack', 2),
+                      ('join', 3), ('acceptAck', 4), ('accept', 5),
+                      ('unknown', 255)])
 PACKET_KIND_NAMES = odict((v, k) for k, v in PACKET_KINDS.iteritems())  # inverse map
 PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
 packetKinds = PacketKind(**PACKET_KINDS)
