@@ -37,10 +37,10 @@ class Stack(object):
         Setup Stack instance
         '''
         self.version = version
-        self.devices = odict() # remote devices attached to this stack
-         # local device for this stack
+        self.devices = odict()  # remote devices attached to this stack
+        # local device for this stack
         self.device = device or LocalDevice(stack=self, did=did, ha=ha)
-        self.transactions = odict() #transactions
+        self.transactions = odict()  # transactions
         self.rxdsUdp = deque()
         self.txdsUdp = deque()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
@@ -139,7 +139,7 @@ class Device(object):
     '''
     RAET protocol endpoint device object
     '''
-    Did = 2 # class attribute
+    Did = 2  # class attribute
 
     def __init__(self, stack=None, did=None, sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
@@ -154,13 +154,13 @@ class Device(object):
                 did = Device.Did
             else:
                 did = 0
-        self.did = did # device ID
+        self.did = did  # device ID
 
         self.accepted = None
         self.allowed = None
 
-        self.sid = sid # current session ID
-        self.tid = tid # current transaction ID
+        self.sid = sid  # current session ID
+        self.tid = tid  # current transaction ID
 
         if ha:  # takes precendence
             host, port = ha
@@ -211,7 +211,7 @@ class LocalDevice(Device):
         '''
         super(LocalDevice, self).__init__(**kwa)
         self.signer = nacling.Signer(signkey)
-        self.priver = nacling.Privateer(prikey) # Long term key
+        self.priver = nacling.Privateer(prikey)  # Long term key
 
 
 class RemoteDevice(Device):
@@ -230,9 +230,9 @@ class RemoteDevice(Device):
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
         super(RemoteDevice, self).__init__(**kwa)
         self.verfer = nacling.Verifier(verikey)
-        self.pubber = nacling.Publican(pubkey) #long term key
-        self.publee = nacling.Publican() # short term key
-        self.privee = nacling.Privateer() # short term key
+        self.pubber = nacling.Publican(pubkey)  # long term key
+        self.publee = nacling.Publican()  # short term key
+        self.privee = nacling.Privateer()  # short term key
 
 
 class Transaction(object):
@@ -268,6 +268,7 @@ class Transaction(object):
         '''
         self.stack.txUdp(packet.packed, self.rdid)
         self.txPacket = packet
+
 
 class Initiator(Transaction):
     '''
@@ -305,9 +306,9 @@ class Joiner(Initiator):
         '''
         Setup Transaction instance
         '''
-        super(Joiner, self).__init__( **kwa)
+        super(Joiner, self).__init__(**kwa)
         if self.rdid is None:
-            self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
+            self.rdid = self.stack.devices.values()[0].did  # zeroth is channel master
 
     def join(self, body=None):
         '''
@@ -354,7 +355,7 @@ class Joiner(Initiator):
         device.verfer = nacling.Verifier(key=verhex)
         device.pubber = nacling.Publican(key=pubhex)
 
-        if device.did != data['sd']: #move device to new index
+        if device.did != data['sd']:  # move device to new index
             self.stack.moveRemoteDevice(device.did, data['sd'])
 
         self.stack.device.accepted = True
@@ -374,7 +375,7 @@ class Acceptor(Corresponder):
         '''
         Setup Transaction instance
         '''
-        super(Acceptor, self).__init__( **kwa)
+        super(Acceptor, self).__init__(**kwa)
 
     def pend(self, data, body):
         '''
@@ -383,7 +384,7 @@ class Acceptor(Corresponder):
         # need to add search for existing device with same host,port address
 
         device = RemoteDevice(stack=self.stack, host=data['sh'], port=data['sp'])
-        self.stack.addRemoteDevice(device) #provisionally add .accepted is None
+        self.stack.addRemoteDevice(device)  # provisionally add .accepted is None
         self.rdid = device.did
 
         verhex = body.get('verhex')
@@ -431,20 +432,19 @@ class Acceptor(Corresponder):
         if self.rdid not in self.stack.devices:
             msg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.RaetError(msg)
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
-                            dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port, )
-        self.txData.update( sd=self.stack.device.did, dd=self.rdid, sk=self.kind,
-                            cf=self.crdr, bf=self.bcst,
-                            si=self.sid, ti=self.tid, nk=1, tk=1)
-        body.update(    msg='You are accepted',
-                        extra='We like you',
-                        verhex=self.stack.device.signer.verhex,
-                        pubhex=self.stack.device.priver.pubhex)
+        self.txData.update(sh=self.stack.device.host,
+                           sp=self.stack.device.port,
+                           dh=self.stack.devices[self.rdid].host,
+                           dp=self.stack.devices[self.rdid].port,)
+        self.txData.update(sd=self.stack.device.did, dd=self.rdid, sk=self.kind,
+                           cf=self.crdr, bf=self.bcst,
+                           si=self.sid, ti=self.tid, nk=1, tk=1)
+        body.update(msg='You are accepted',
+                    extra='We like you',
+                    verhex=self.stack.device.signer.verhex,
+                    pubhex=self.stack.device.priver.pubhex)
         packet = packeting.TxPacket(kind=raeting.packetKinds.accept,
                                     embody=body,
                                     data=self.txData)
         packet.pack()
         self.transmit(packet)
-
