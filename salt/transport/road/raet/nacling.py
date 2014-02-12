@@ -29,7 +29,7 @@ class Signer(object):
             key = nacl.signing.SigningKey.generate()
         self.key = key
         self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
-        self.verifyhex = self.key.verify_key.encode(nacl.encoding.HexEncoder)
+        self.verhex = self.key.verify_key.encode(nacl.encoding.HexEncoder)
 
     def sign(self, msg):
         '''
