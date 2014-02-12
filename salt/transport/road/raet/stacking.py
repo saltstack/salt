@@ -165,7 +165,7 @@ class Device(object):
         Generates next session id number.
         '''
         self.sid += 1
-        if (self.sid > 0xffffffffL):
+        if self.sid > 0xffffffffL:
             self.sid = 1  # rollover to 1
         return self.sid
 
@@ -174,7 +174,7 @@ class Device(object):
         Generates next session id number.
         '''
         self.tid += 1
-        if (self.tid > 0xffffffffL):
+        if self.tid > 0xffffffffL:
             self.tid = 1  # rollover to 1
         return self.tid
 
