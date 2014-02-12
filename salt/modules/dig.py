@@ -12,14 +12,14 @@ import re
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'dig'
+
 
 def __virtual__():
     '''
-    DNS functions which are based on dig
+    Only load module if dig binary is present
     '''
-    if not salt.utils.which('dig'):
-        return False
-    return True
+    return __virtualname__ if salt.utils.which('dig') else False
 
 
 def check_ip(x):
