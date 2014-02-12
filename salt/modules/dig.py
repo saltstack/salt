@@ -9,6 +9,7 @@ import salt.utils
 # Import python libs
 import logging
 import re
+import socket
 
 log = logging.getLogger(__name__)
 
@@ -22,9 +23,9 @@ def __virtual__():
     return __virtualname__ if salt.utils.which('dig') else False
 
 
-def check_ip(x):
+def check_ip(addr):
     '''
-    Check that string x is a valid IP
+    Check if address is a valid IP. returns True if valid, otherwise False.
 
     CLI Example:
 
@@ -33,18 +34,47 @@ def check_ip(x):
         salt ns1 dig.check_ip 127.0.0.1
         salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
     '''
-    # This is probably validating. Tacked on the CIDR bit myself.
-    ip_regex = (
-        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
-        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
-    )
-    # This IPv6 regex is from http://home.deds.nl/~aeron/regex/
-    ip6_regex = (
-        r'^(((?=.*(::))(?!.*\3.+\3))\3?|[\dA-F]{1,4}:)([\dA-F]{1,4}(\3|:\b)|\2){5}'
-        r'(([\dA-F]{1,4}(\3|:\b|$)|\2){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\Z'
-    )
-    return bool(re.match(ip_regex, x)) | bool(re.match(ip6_regex, x))
+    try:
+        addr = addr.rsplit('/', 1)
+    except AttributeError:
+        # Non-string passed
+        return False
+
+    # Test IPv4 first
+    try:
+        is_ipv4 = bool(socket.inet_pton(socket.AF_INET, addr[0]))
+    except socket.error:
+        # Not valid
+        is_ipv4 = False
+    if is_ipv4:
+        try:
+            if 1 <= int(addr[1]) <= 32:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    # Test IPv6 next
+    try:
+        is_ipv6 = bool(socket.inet_pton(socket.AF_INET6, addr[0]))
+    except socket.error:
+        # Not valid
+        is_ipv6 = False
+    if is_ipv6:
+        try:
+            if 8 <= int(addr[1]) <= 128:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    return False
 
 
 def A(host, nameserver=None):
