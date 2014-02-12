@@ -9,9 +9,7 @@ loading under the ``apache`` namespace.
 
 # Import python libs
 import os
-import re
 import logging
-import urllib2
 
 # Import salt libs
 import salt.utils
