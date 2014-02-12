@@ -9,7 +9,6 @@ Debian-based system is detected.
 '''
 
 # Import python libs
-import os
 import re
 import logging
 import urllib2
