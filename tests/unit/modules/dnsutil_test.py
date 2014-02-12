@@ -5,7 +5,7 @@
 
 # Import Salt Testing Libs
 from salttesting import TestCase
-from salttesting.mock import MagicMock, patch, mock_open, call
+from salttesting.mock import MagicMock, patch, mock_open
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
