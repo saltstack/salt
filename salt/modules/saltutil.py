@@ -14,8 +14,10 @@ import logging
 import fnmatch
 import time
 import sys
+import copy
 
 # Import salt libs
+import salt
 import salt.payload
 import salt.state
 import salt.client
@@ -617,3 +619,45 @@ def cmd_iter(tgt,
             kwarg,
             **kwargs):
         yield ret
+
+
+# this is the only way I could figure out how to get the REAL file_roots
+# __opt__['file_roots'] is set to  __opt__['pillar_root']
+class _MMinion(object):
+    def __new__(cls, saltenv, reload_env=False):
+        # this is to break out of salt.loaded.int and make this a true singleton
+        # hack until https://github.com/saltstack/salt/pull/10273 is resolved
+        # this is starting to look like PHP
+        global _mminions
+        if '_mminions' not in globals():
+            _mminions = {}
+        if saltenv not in _mminions or reload_env:
+            opts = copy.deepcopy(__opts__)
+            del opts['file_roots']
+            # grains at this point are in the context of the minion
+            global __grains__
+            grains = copy.deepcopy(__grains__)
+            m = salt.minion.MasterMinion(opts)
+
+            # this assignment is so that the rest of fxns called by salt still
+            # have minion context
+            __grains__ = grains
+
+            # this assignment is so that fxns called by mminion have minion
+            # context
+            m.opts['grains'] = grains
+
+            env_roots = m.opts['file_roots'][saltenv]
+            m.opts['module_dirs'] = [fp + '/_modules' for fp in env_roots]
+            m.gen_modules()
+            _mminions[saltenv] = m
+        return _mminions[saltenv]
+
+
+def mmodule(saltenv, fun, *args, **kwargs):
+    '''
+    Loads minion modules from an environment so that they can be used in pillars
+    for that environment
+    '''
+    mminion = _MMinion(saltenv)
+    return mminion.functions[fun](*args, **kwargs)
