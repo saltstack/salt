@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Support for Apache
+
+Please note: The functions in here are generic functions designed to work with
+all implementations of Apache. Debian-specific functions have been moved into
+deb_apache.py, but will still load under the ``apache`` namespace when a
+Debian-based system is detected.
 '''
 
 # Import python libs
@@ -260,95 +265,6 @@ def userdel(pwfile, user):
         salt '*' apache.userdel /etc/httpd/htpasswd larry
     '''
     return __salt__['webutil.userdel'](pwfile, user)
-
-
-def check_site_enabled(site):
-    '''
-    Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled.
-
-    This will only be functional on Debian-based operating systems (Ubuntu,
-    Mint, etc).
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' apache.check_site_enabled example.com
-    '''
-    if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
-        return True
-    elif site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site)):
-        return True
-    else:
-        return False
-
-
-def a2ensite(site):
-    '''
-    Runs a2ensite for the given site.
-
-    This will only be functional on Debian-based operating systems (Ubuntu,
-    Mint, etc).
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' apache.a2ensite example.com
-    '''
-    ret = {}
-    command = ['a2ensite', site]
-
-    try:
-        status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
-        return e
-
-    ret['Name'] = 'Apache2 Enable Site'
-    ret['Site'] = site
-
-    if status == 1:
-        ret['Status'] = 'Site {0} Not found'.format(site)
-    elif status == 0:
-        ret['Status'] = 'Site {0} enabled'.format(site)
-    else:
-        ret['Status'] = status
-
-    return ret
-
-
-def a2dissite(site):
-    '''
-    Runs a2dissite for the given site.
-
-    This will only be functional on Debian-based operating systems (Ubuntu,
-    Mint, etc).
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' apache.a2dissite example.com
-    '''
-    ret = {}
-    command = ['a2dissite', site]
-
-    try:
-        status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
-        return e
-
-    ret['Name'] = 'Apache2 Disable Site'
-    ret['Site'] = site
-
-    if status == 256:
-        ret['Status'] = 'Site {0} Not found'.format(site)
-    elif status == 0:
-        ret['Status'] = 'Site {0} disabled'.format(site)
-    else:
-        ret['Status'] = status
-
-    return ret
 
 
 def server_status(profile='default'):
