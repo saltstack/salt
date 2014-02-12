@@ -209,10 +209,6 @@ Depends
 
 - `Salt Common`
 - `sshpass`
-
-Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~
-
 - `apache libcloud`
 
 Salt Doc
