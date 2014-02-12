@@ -291,21 +291,21 @@ def list_():
     for container in ctnrs:
         c_infos = __salt__['cmd.run']('lxc-info -n {0}'.format(container))
 
-        for info in c_infos:
-            stat = info.split(':')
+        for c_info in c_infos:
+            stat = c_info.split(':')
             if stat[0] == 'state':
-                state = stat[1].strip()
+                c_state = stat[1].strip()
                 break
 
-        if not len(state):
+        if not len(c_state):
             continue
-        if state == 'STOPPED':
+        if c_state == 'STOPPED':
             stopped.append(container)
             continue
-        if state == 'FROZEN':
+        if c_state == 'FROZEN':
             frozen.append(container)
             continue
-        if state == 'RUNNING':
+        if c_state == 'RUNNING':
             running.append(container)
             continue
 
