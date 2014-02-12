@@ -137,7 +137,7 @@ TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('nacl', 8),  ('crc16', 2), ('crc64', 8),
+TAIL_SIZES = odict([('nada', 0), ('nacl', 8), ('crc16', 2), ('crc64', 8),
                     ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
@@ -188,14 +188,14 @@ PACKET_DEFAULTS = odict([
                             ('fg', '00'),
                       ])
 
-PACKET_FIELDS = [   'sh', 'sp', 'dh', 'dp',
-                    'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                    'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                    'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
+PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
+                 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+                 'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                 'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
-HEAD_FIELDS = [ 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                'nk', 'nl', 'bk', 'bl','tk', 'tl', 'fg']
+HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+               'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+               'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
 PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
 PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
@@ -208,12 +208,12 @@ class RaetError(Exception):
        msg = "Invalid device id '{0}'".format(did)
        raise raeting.RaetError(msg)
     """
-    def __init__(self, message = None):
-        self.message = message #description of error
-        self.args = (message)
+    def __init__(self, message=None):
+        self.message = message  # description of error
+        super(RaetError, self).__init__(message)
 
     def __str__(self):
-        return ("{0}: {1}.\n".format(self.__class__.__name__, self.message))
+        return "{0}: {1}.\n".format(self.__class__.__name__, self.message)
 
 
 def defaultData(data=None):

@@ -766,7 +766,7 @@ class RaetKey(Key):
     def _get_key_str(self, minion_id, status):
         '''
         Return the key string in the form of:
-        
+
         pub: <pub>
         verify: <verify>
         '''

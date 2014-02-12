@@ -44,7 +44,7 @@ class Part(object):
         '''
         Property is the length of this Part
         '''
-        return (self.__len__())
+        return self.__len__()
 
 
 class Head(Part):
