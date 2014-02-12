@@ -193,33 +193,31 @@ def SPF(domain, record='SPF', nameserver=None):
 
         salt ns1 dig.SPF google.com
     '''
-    def _process(x):
+    def _process(element):
         '''
         Parse out valid IP bits of an spf record.
         '''
-        m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
+        m = re.match(r'(\+|~)?ip4:([0-9./]+)', element)
         if m:
             if check_ip(m.group(2)):
                 return m.group(2)
         return None
 
-    dig = ['dig', '+short', str(domain), record]
+    cmd = ['dig', '+short', str(domain), record]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        cmd.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    result = __salt__['cmd.run_all'](' '.join(cmd), output_loglevel='debug')
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if result['retcode'] != 0:
         log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code {0!r}. Returning empty list as fallback.'
+            .format(result['retcode'])
         )
         return []
 
-    stdout = cmd['stdout']
+    stdout = result['stdout']
     if stdout == '' and record == 'SPF':
         # empty string is successful query, but nothing to return. So, try TXT
         # record.
