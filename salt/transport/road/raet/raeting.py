@@ -137,7 +137,7 @@ TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('nacl', 8),  ('crc16', 2), ('crc64', 8),
+TAIL_SIZES = odict([('nada', 0), ('nacl', 8), ('crc16', 2), ('crc64', 8),
                     ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
@@ -188,14 +188,14 @@ PACKET_DEFAULTS = odict([
                             ('fg', '00'),
                       ])
 
-PACKET_FIELDS = [   'sh', 'sp', 'dh', 'dp',
-                    'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                    'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                    'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
+PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
+                 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+                 'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                 'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
-HEAD_FIELDS = [ 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                'nk', 'nl', 'bk', 'bl','tk', 'tl', 'fg']
+HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+               'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+               'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
 PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
 PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']

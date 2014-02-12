@@ -28,11 +28,11 @@ class Stack(object):
     '''
     RAET protocol stack object
     '''
-    def __init__(    self,
-                     version=raeting.VERSION,
-                     device=None,
-                     did=None,
-                     ha=("", raeting.RAET_PORT)):
+    def __init__(self,
+                 version=raeting.VERSION,
+                 device=None,
+                 did=None,
+                 ha=("", raeting.RAET_PORT)):
         '''
         Setup Stack instance
         '''
@@ -105,13 +105,12 @@ class Stack(object):
 
         sh, sp = ra
         dh, dp = da
-        packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp )
+        packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
         if not packet.parseBack():
-           return None
+            return None
 
         return packet
-
 
     def txUdp(self, packed, ddid):
         '''
@@ -131,8 +130,8 @@ class Device(object):
     '''
     Did = 1 # class attribute
 
-    def __init__(   self, stack=None, did=None, sid=0, tid=0,
-                    host="", port=raeting.RAET_PORT, ha=None, ):
+    def __init__(self, stack=None, did=None, sid=0, tid=0,
+                 host="", port=raeting.RAET_PORT, ha=None, ):
         '''
         Setup Device instance
         '''
@@ -179,6 +178,7 @@ class Device(object):
             self.tid = 1 # rollover to 1
         return self.tid
 
+
 class LocalDevice(Device):
     '''
     RAET protocol endpoint local device object
@@ -194,6 +194,7 @@ class LocalDevice(Device):
         super(LocalDevice, self).__init__(**kwa)
         self.signer = nacling.Signer(signkey)
         self.privateer = nacling.Privateer(key)
+
 
 class RemoteDevice(Device):
     '''
@@ -212,6 +213,7 @@ class RemoteDevice(Device):
         super(RemoteDevice, self).__init__(**kwa)
         self.verifier = nacling.Verifier(verikey)
         self.publican = nacling.Publican(pubkey)
+
 
 class Transaction(object):
     '''
@@ -253,6 +255,7 @@ class Transaction(object):
         '''
         return None
 
+
 class Initiator(Transaction):
     '''
     RAET protocol initiator transaction class
@@ -268,6 +271,7 @@ class Initiator(Transaction):
         if self.tid is None: # use next tid
             self.tid = self.stack.device.nextTid()
 
+
 class Corresponder(Transaction):
     '''
     RAET protocol corresponder transaction class
@@ -279,11 +283,12 @@ class Corresponder(Transaction):
         crdr = True # force crdr to True
         super(Corresponder, self).__init__(crdr=crdr, **kwa)
 
+
 class Joiner(Initiator):
     '''
     RAET protocol Joiner transaction class
     '''
-    def __init__(self, rdid=None,  **kwa):
+    def __init__(self, rdid=None, **kwa):
         '''
         Setup Transaction instance
         '''
