@@ -208,8 +208,8 @@ class RaetError(Exception):
        msg = "Invalid device id '{0}'".format(did)
        raise raeting.RaetError(msg)
     """
-    def __init__(self, message = None):
-        self.message = message #description of error
+    def __init__(self, message=None):
+        self.message = message  # description of error
         self.args = (message)
 
     def __str__(self):
