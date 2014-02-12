@@ -14,6 +14,7 @@ from salt.modules import dig
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(dig.__virtual__() is False, 'Dig must be installed')
 class DigTestCase(TestCase):
 
     def test_check_ip(self):
