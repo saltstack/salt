@@ -1056,18 +1056,7 @@ def fopen(*args, **kwargs):
 
 
 def flopen(*args, **kwargs):
-    fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
-        try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-    return fhandle
+    return fopen(*args, lock=True, **kwargs)
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
