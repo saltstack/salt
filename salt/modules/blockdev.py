@@ -5,6 +5,7 @@ Module for managing block devices
 
 # Import python libs
 import logging
+import subprocess
 
 # Import salt libs
 import salt.utils
@@ -73,7 +74,7 @@ def wipe(device):
     cmd = 'wipefs {0}'.format(device)
     try:
         out = __salt__['cmd.run_all'](cmd)
-    except CalledProcessError as err:
+    except subprocess.CalledProcessError as err:
         return False
     if out['retcode'] == 0:
         return True
