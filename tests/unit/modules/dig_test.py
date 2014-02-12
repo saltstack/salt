@@ -5,11 +5,16 @@
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath, requires_salt_modules
+ensure_in_syspath('../../')
 
+# Import salt libs
 from salt.modules import dig
 
-@skipIf(not dig.__virtual__(), 'Dig must be installed')
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@requires_salt_modules('dig')
 class DigTestCase(TestCase):
 
     def test_check_ip(self):
