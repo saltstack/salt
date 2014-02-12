@@ -1531,7 +1531,7 @@ def request_minion_cachedir(
         'provider': provider,
     }
 
-    fname = minion_id + '.json'
+    fname = '{0}.json'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
     with salt.utils.fopen(path, 'w') as fh_:
         json.dump(data, fh_)
@@ -1562,7 +1562,7 @@ def change_minion_cachedir(
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = minion_id + '.json'
+    fname = '{0}.json'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
@@ -1583,7 +1583,7 @@ def activate_minion_cachedir(minion_id, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = minion_id + '.json'
+    fname = '{0}.json'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
     dst = os.path.join(base, 'active')
     shutil.move(src, dst)
@@ -1597,7 +1597,7 @@ def delete_minion_cachedir(minion_id, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = minion_id + '.json'
+    fname = '{0}.json'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, fname)
         if os.path.exists(path):
