@@ -322,7 +322,7 @@ class Key(object):
         Simple method called when this class is initialized used for additional
         setup
         '''
-        self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def _check_minions_directories(self):
         '''
