@@ -860,7 +860,19 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
-            if raw is not None:
+            if raw is None:
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    log.debug('jid %s found all minions %s', jid, found)
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            timeout_at = int(time.time()) + 1
+                            log.debug('jid %s syndic_wait %s will now timeout at %s',
+                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
+                            continue
+                    break
+            else:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -879,17 +891,7 @@ class LocalClient(object):
                         ret[raw['id']]['out'] = raw['out']
                     log.debug('jid %s return from %s', jid, raw['id'])
                     yield ret
-                if len(found.intersection(minions)) >= len(minions):
-                    # All minions have returned, break out of the loop
-                    log.debug('jid %s found all minions %s', jid, found)
-                    if self.opts['order_masters']:
-                        if syndic_wait < self.opts.get('syndic_wait', 1):
-                            syndic_wait += 1
-                            timeout_at = int(time.time()) + 1
-                            log.debug('jid %s syndic_wait %s will now timeout at %s',
-                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
-                            continue
-                    break
+
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):

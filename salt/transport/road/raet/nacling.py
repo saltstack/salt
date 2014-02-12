@@ -43,6 +43,7 @@ class Signer(object):
         '''
         return self.key.sign(msg).signature
 
+
 class Verifier(object):
     '''
     Used to verify messages with nacl digital signature
@@ -68,6 +69,7 @@ class Verifier(object):
         except nacl.signing.BadSignatureError:
             return False
         return True
+
 
 class Publican(object):
     '''
@@ -140,6 +142,3 @@ class Privateer(object):
         '''
         box = nacl.public.Box(self.key, pub.key)
         return box.decrypt(cipher, nonce)
-
-
-

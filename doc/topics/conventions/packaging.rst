@@ -27,7 +27,7 @@ Split Package
 Salt Should always be split in a standard way, with standard dependencies, this lowers
 cross distribution confusion about what components are going to be shipped with
 specific packages. These packages can be defined from the Salt Source as of
-Salt 0.17.0:
+Salt 2014.1.0:
 
 Salt Common
 -----------
@@ -177,6 +177,7 @@ Files
 
 - `scripts/salt-ssh`
 - `man/salt-ssh.1`
+- `conf/cloud*`
 
 Depends
 ~~~~~~~
@@ -184,6 +185,31 @@ Depends
 - `Salt Common`
 - `sshpass`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
+
+Salt Cloud
+----------
+
+As of Salt 2014.1.0 Salt Cloud is included in the same repo as Salt. This
+can be split out into a separate package or it can be included in the
+salt-master package.
+
+Name
+~~~~
+
+- `salt-cloud`
+
+Files
+~~~~~
+
+- `scripts/salt-cloud`
+- `man/salt-cloud.1`
+
+Depends
+~~~~~~~
+
+- `Salt Common`
+- `sshpass`
+- `apache libcloud`
 
 Salt Doc
 --------

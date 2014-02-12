@@ -6,7 +6,6 @@ packeting module provides classes for Raet packets
 '''
 
 # Import python libs
-import socket
 from collections import Mapping
 try:
     import simplejson as json
@@ -19,6 +18,7 @@ from ioflo.base.aiding import packByte, unpackByte
 
 from . import raeting
 
+
 class Part(object):
     '''
     Base class for parts of a RAET packet
@@ -29,8 +29,8 @@ class Part(object):
         '''
         Setup Part instance
         '''
-        self.packet = packet # Packet this Part belongs too
-        self.kind = kind # part kind
+        self.packet = packet  # Packet this Part belongs too
+        self.kind = kind  # part kind
         self.packed = ''
 
     def __len__(self):
@@ -41,10 +41,11 @@ class Part(object):
 
     @property
     def size(self):
-       '''
-       Property is the length of this Part
-       '''
-       return (self.__len__())
+        '''
+        Property is the length of this Part
+        '''
+        return self.__len__()
+
 
 class Head(Part):
     '''
@@ -57,6 +58,7 @@ class Head(Part):
         '''
         super(Head, self).__init__(**kwa)
 
+
 class TxHead(Head):
     '''
     RAET protocl transmit packet header class
@@ -66,8 +68,8 @@ class TxHead(Head):
         Composes and returns .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind= self.packet.data['hk']
-        data = self.packet.data # for speed
+        self.kind = self.packet.data['hk']
+        data = self.packet.data  # for speed
 
         data['pk'] = self.packet.kind
         data['nk'] = self.packet.neck.kind
@@ -81,10 +83,10 @@ class TxHead(Head):
 
         # kit always includes header kind and length fields
         kit = odict([('hk', self.kind), ('hl', 0)])
-        for k, v in raeting.PACKET_DEFAULTS.items():# include if not equal to default
-            if (   (k in raeting.HEAD_FIELDS) and
-                   (k not in raeting.PACKET_FLAGS ) and
-                   (data[k] != v)):
+        for k, v in raeting.PACKET_DEFAULTS.items():  # include if not equal to default
+            if ((k in raeting.HEAD_FIELDS) and
+                (k not in raeting.PACKET_FLAGS) and
+                (data[k] != v)):
                 kit[k] = data[k]
 
         if self.kind == raeting.headKinds.json:
@@ -109,6 +111,7 @@ class TxHead(Head):
             values.append(1 if self.packet.data.get(field, 0) else 0)
         return packByte(format='11111111', fields=values)
 
+
 class RxHead(Head):
     '''
     RAET protocl receive packet header class
@@ -121,8 +124,8 @@ class RxHead(Head):
         Returns False and updates .packet.error if failure occurs
         '''
         self.packed = ''
-        data = self.packet.data #for speed
-        packed = self.packet.packed #for speed
+        data = self.packet.data  # for speed
+        packed = self.packet.packed  # for speed
         if packed.startswith('{"hk":1,') and raeting.JSON_END in packed:  # json header
             self.kind = raeting.headKinds.json
             front, sep, back = packed.partition(raeting.JSON_END)
@@ -171,6 +174,7 @@ class Neck(Part):
         '''
         super(Neck, self).__init__(**kwa)
 
+
 class TxNeck(Neck):
     '''
     RAET protocol transmit packet neck class
@@ -181,7 +185,7 @@ class TxNeck(Neck):
         Composes and returns .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind= self.packet.data['nk']
+        self.kind = self.packet.data['nk']
 
         if self.kind not in raeting.NECK_KIND_NAMES:
             self.kind = raeting.neckKinds.unknown
@@ -195,6 +199,7 @@ class TxNeck(Neck):
             pass
 
         return self.packed
+
 
 class RxNeck(Neck):
     '''
@@ -235,6 +240,7 @@ class Body(Part):
         super(Body, self).__init__(**kwa)
         self.data = data or odict()
 
+
 class TxBody(Body):
     '''
     RAET protocol tx packet body class
@@ -244,10 +250,11 @@ class TxBody(Body):
         Composes and returns .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind= self.packet.data['bk']
+        self.kind = self.packet.data['bk']
         if self.kind == raeting.bodyKinds.json:
             self.packed = json.dumps(self.data, separators=(',', ':'))
         return self.packed
+
 
 class RxBody(Body):
     '''
@@ -291,6 +298,7 @@ class Tail(Part):
         ''' Setup Tail instal'''
         super(Tail, self).__init__(**kwa)
 
+
 class TxTail(Tail):
     '''
     RAET protocol tx packet tail class
@@ -301,7 +309,7 @@ class TxTail(Tail):
         Composes and returns .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind= self.packet.data['tk']
+        self.kind = self.packet.data['tk']
 
         if self.kind == raeting.tailKinds.nacl:
             self.packed = "".rjust(raeting.tailSizes.nacl, '\x00')
@@ -309,6 +317,7 @@ class TxTail(Tail):
         if self.kind == raeting.tailKinds.nada:
             pass
         return self.packed
+
 
 class RxTail(Tail):
     '''
@@ -345,7 +354,7 @@ class Packet(object):
     def __init__(self, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
-        self.packed = '' #packed string
+        self.packed = ''  # packed string
         self.error = ''
         self.data = odict(raeting.PACKET_DEFAULTS)
 
@@ -363,7 +372,8 @@ class Packet(object):
         self.data = odict(raeting.PACKET_DEFAULTS)
         if data:
             self.data.update(data)
-        return self # so can method chain
+        return self  # so can method chain
+
 
 class TxPacket(Packet):
     '''
@@ -468,7 +478,7 @@ class RxPacket(Packet):
         if not self.unpack():
             return False
 
-        if self.data['vn'] not  in raeting.VERSIONS.values():
+        if self.data['vn'] not in raeting.VERSIONS.values():
             self.error = ("Received incompatible version '{0}'"
             "version '{1}'".format(self.data['vn']))
             return False

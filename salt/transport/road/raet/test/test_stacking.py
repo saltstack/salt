@@ -14,19 +14,16 @@ def test():
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
 
-
     signer = nacling.Signer()
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
-
 
     # initially
     # master on port 7530 with did of 1
     # minion on port 7531 with did of 0
     # eventually
     # minion did of 2
-
 
     #master stack
     device = stacking.LocalDevice(   did=1,
@@ -48,6 +45,7 @@ def test():
     data = odict(hk=1, bk=1)
     joiner = stacking.Joiner(stack=stack2, sid=0, txData=data)
     joiner.join()
+
     stack2.serviceUdp()
     stack1.serviceUdp()
 
@@ -87,7 +85,6 @@ def test():
 
         if packet.data['pk'] == raeting.packetKinds.acceptAck and packet.data['si'] == 0:
             joiner.pend(packet.data)
-
 
 
 if __name__ == "__main__":
