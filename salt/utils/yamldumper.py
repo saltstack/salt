@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-
-"""
+'''
     salt.utils.yamldumper
     ~~~~~~~~~~~~~~~~~~~~~
 
-"""
+'''
 
 from __future__ import absolute_import
 try:
@@ -16,9 +15,9 @@ from salt.utils.odict import OrderedDict
 
 
 class OrderedDumper(Dumper):
-    """
+    '''
     A YAML dumper that represents python OrderedDict as simple YAML map.
-    """
+    '''
     pass
 
 
