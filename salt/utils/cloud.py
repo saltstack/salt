@@ -1590,7 +1590,16 @@ def delete_minion_cachedir(minion_id, base='/var/cache/salt/cloud'):
             os.remove(path)
 
 
-def salt_cloud_force_ascii(exc):
+def _salt_cloud_force_ascii(exc):
+    '''
+    Helper method to try its best to convert any Unicode text into ASCII
+    without stack tracing since salt internally does not handle Unicode strings
+
+    This method is not supposed to be used directly. Once
+    `py:module: salt.utils.cloud` is imported this method register's with
+    python's codecs module for proper automatic conversion in case of encoding
+    errors.
+    '''
     if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
@@ -1605,4 +1614,4 @@ def salt_cloud_force_ascii(exc):
     # There's nothing else we can do, raise the exception
     raise exc
 
-codecs.register_error('salt-cloud-force-ascii', salt_cloud_force_ascii)
+codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
