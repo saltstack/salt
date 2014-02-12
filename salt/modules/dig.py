@@ -273,3 +273,10 @@ def MX(domain, resolve=False, nameserver=None):
         ]
 
     return stdout
+
+# Let lowercase work, since that is the convention for Salt functions
+a = A
+aaaa = AAAA
+ns = NS
+spf = SPF
+mx = MX
