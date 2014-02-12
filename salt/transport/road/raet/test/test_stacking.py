@@ -4,7 +4,7 @@ Tests to try out stacking. Potentially ephemeral
 
 '''
 from ioflo.base.odicting import odict
-from salt.transport.road.raet import raeting, packeting, stacking
+from salt.transport.road.raet import raeting, stacking
 
 
 def test():

@@ -19,7 +19,6 @@ except ImportError:
 # Import salt libs
 import integration
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 SUBSALT_DIR = os.path.join(integration.TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')

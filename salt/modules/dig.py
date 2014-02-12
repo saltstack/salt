@@ -19,7 +19,7 @@ def __virtual__():
     '''
     if not salt.utils.which('dig'):
         return False
-    return 'dig'
+    return True
 
 
 def check_ip(x):
