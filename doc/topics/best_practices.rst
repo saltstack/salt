@@ -45,12 +45,12 @@ Reviewing another example such as the vim formula (link):
 .. code-block:: bash
 
     /srv/salt/vim/files/
-    /srv/salt/absent.sls
-    /srv/salt/init.sls
-    /srv/salt/map.jinja
-    /srv/salt/nerdtree.sls
-    /srv/salt/pyflakes.sls
-    /srv/salt/salt.sls
+    /srv/salt/vim/absent.sls
+    /srv/salt/vim/init.sls
+    /srv/salt/vim/map.jinja
+    /srv/salt/vim/nerdtree.sls
+    /srv/salt/vim/pyflakes.sls
+    /srv/salt/vim/salt.sls
 
 Once again viewing how this would look in a top file:
 
@@ -272,3 +272,11 @@ to a design which exhibits ease of use and clarity.
 
 Storing Secure Data
 -------------------
+
+Secure data refers to any information that you would not wish to share with
+anyone accessing a server. This could include data such as passwords,
+usernames, keys, or other information.
+
+As all data within a state is accesible by EVERY server within an environment,
+it is important to store secure data within pillar. This will ensure that only
+those servers which require this secure data have access to it.
