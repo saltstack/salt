@@ -19,6 +19,7 @@ import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
 # Import third party libs
@@ -57,8 +58,9 @@ def __virtual__():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs, file_exists
-            global check_managed, check_file_meta
+            global check_managed, check_file_meta, remove
 
+            remove = _namespaced_function(remove, globals())
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
             check_managed = _namespaced_function(check_managed, globals())
