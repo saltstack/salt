@@ -84,12 +84,18 @@ Assuming that the ``gitfs_remotes`` option specifies three remotes:
     gitfs backend. This example should not be read as a recommended way to lay
     out files and git repos.
 
-.. note::
-
     The :strong:`file://` prefix denotes a git repository in a local directory.
     However, it will still use the given :strong:`file://` URL as a remote,
     rather than copying the git repo to the salt cache.  This means that any
     refs you want accessible must exist as *local* refs in the specified repo.
+
+.. warning::
+
+    Salt versions prior to 2014.1.0 (Hydrogen) are not tolerant of changing the
+    order of remotes, or modifying the URI of existing remotes. In those
+    versions, when modifying remotes it is a good idea to remove the gitfs
+    cache directory (``/var/cache/salt/master/gitfs``) before restarting the
+    salt-master service.
 
 Assume that each repository contains some files:
 

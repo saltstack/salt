@@ -26,7 +26,7 @@ def _parse_pkg_meta(path):
     Parse metadata from a binary package and return the package's name and
     version number.
     '''
-    def parse_rpm(path):
+    def parse_rpm_redhat(path):
         try:
             from salt.modules.yumpkg import __QUERYFORMAT, _parse_pkginfo
             from salt.utils import namespaced_function as _namespaced_function
@@ -49,9 +49,21 @@ def _parse_pkg_meta(path):
         else:
             return pkginfo.name, pkginfo.version
 
+    def parse_rpm_suse(path):
+        pkginfo = __salt__['cmd.run_stdout'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(
+                r'%{NAME}_|-%{VERSION}_|-%{RELEASE}\n',
+                path
+            )
+        ).strip()
+        name, pkg_version, rel = path.split('_|-')
+        if rel:
+            pkg_version = '-'.join((pkg_version, rel))
+        return name, pkg_version
+
     def parse_pacman(path):
         name = ''
-        version = ''
+        pkg_version = ''
         result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
@@ -60,16 +72,16 @@ def _parse_pkg_meta(path):
                     if match:
                         name = match.group(1)
                         continue
-                if not version:
+                if not pkg_version:
                     match = re.match(r'^Version\s*:\s*(\S+)', line)
                     if match:
-                        version = match.group(1)
+                        pkg_version = match.group(1)
                         continue
-        return name, version
+        return name, pkg_version
 
     def parse_deb(path):
         name = ''
-        version = ''
+        pkg_version = ''
         arch = ''
         # This is ugly, will have to try to find a better way of accessing the
         # __grains__ global.
@@ -91,9 +103,9 @@ def _parse_pkg_meta(path):
                         ).group(1)
                     except AttributeError:
                         continue
-                if not version:
+                if not pkg_version:
                     try:
-                        version = re.match(
+                        pkg_version = re.match(
                             r'^\s*Version\s*:\s*(\S+)',
                             line
                         ).group(1)
@@ -110,10 +122,12 @@ def _parse_pkg_meta(path):
         if arch and cpuarch == 'x86_64':
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        return name, version
+        return name, pkg_version
 
-    if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):
-        metaparser = parse_rpm
+    if __grains__['os_family'] in ('RedHat', 'Mandriva'):
+        metaparser = parse_rpm_redhat
+    elif __grains__['os_family'] in ('Suse',):
+        metaparser = parse_rpm_suse
     elif __grains__['os_family'] in ('Arch',):
         metaparser = parse_pacman
     elif __grains__['os_family'] in ('Debian',):

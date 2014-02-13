@@ -760,7 +760,7 @@ class LocalClient(object):
                         try:
                             check = True
                             ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'r')
+                                salt.utils.fopen(retp, 'rb')
                             )
                             if ret_data is None:
                                 # Sometimes the ret data is read at the wrong
@@ -770,7 +770,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'r')
+                                    salt.utils.fopen(outp, 'rb')
                                 )
                         except Exception:
                             pass
@@ -860,7 +860,19 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
-            if raw is not None:
+            if raw is None:
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    log.debug('jid %s found all minions %s', jid, found)
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            timeout_at = int(time.time()) + 1
+                            log.debug('jid %s syndic_wait %s will now timeout at %s',
+                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
+                            continue
+                    break
+            else:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -879,17 +891,7 @@ class LocalClient(object):
                         ret[raw['id']]['out'] = raw['out']
                     log.debug('jid %s return from %s', jid, raw['id'])
                     yield ret
-                if len(found.intersection(minions)) >= len(minions):
-                    # All minions have returned, break out of the loop
-                    log.debug('jid %s found all minions %s', jid, found)
-                    if self.opts['order_masters']:
-                        if syndic_wait < self.opts.get('syndic_wait', 1):
-                            syndic_wait += 1
-                            timeout_at = int(time.time()) + 1
-                            log.debug('jid %s syndic_wait %s will now timeout at %s',
-                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
-                            continue
-                    break
+
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
@@ -1015,11 +1017,11 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'r'))
+                                salt.utils.fopen(retp, 'rb'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'r'))
+                                    salt.utils.fopen(outp, 'rb'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -1057,11 +1059,11 @@ class LocalClient(object):
                 while fn_ not in ret:
                     try:
                         ret_data = self.serial.load(
-                            salt.utils.fopen(retp, 'r'))
+                            salt.utils.fopen(retp, 'rb'))
                         ret[fn_] = {'ret': ret_data}
                         if os.path.isfile(outp):
                             ret[fn_]['out'] = self.serial.load(
-                                salt.utils.fopen(outp, 'r'))
+                                salt.utils.fopen(outp, 'rb'))
                     except Exception:
                         pass
         return ret

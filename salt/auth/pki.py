@@ -88,7 +88,7 @@ def auth(pem, **kwargs):
 
     # The signature is a BIT STRING (Type 3)
     # Decode that as well
-    der_sig_in = Crypto.util.asn1.DerObject()
+    der_sig_in = Crypto.Util.asn1.DerObject()
     der_sig_in.decode(der_sig)
 
     # Get the payload

@@ -5,7 +5,6 @@ import os
 import tempfile
 import json
 import datetime
-import textwrap
 import pprint
 
 # Import Salt Testing libs
@@ -28,7 +27,7 @@ from salt.utils.odict import OrderedDict
 import yaml
 from jinja2 import Environment, DictLoader, exceptions
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False

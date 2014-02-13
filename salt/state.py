@@ -1351,7 +1351,9 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
-            if cdata['kwargs'].get('env', None) is not None:
+            if 'saltenv' in low:
+                inject_globals['__env__'] = low['saltenv']
+            elif cdata['kwargs'].get('env', None) is not None:
                 # User is using a deprecated env setting which was parsed by
                 # format_call
                 inject_globals['__env__'] = cdata['kwargs']['env']
@@ -1359,8 +1361,6 @@ class State(object):
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
                 inject_globals['__env__'] = low['__env__']
-            elif 'saltenv' in low:
-                inject_globals['__env__'] = low['saltenv']
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
@@ -2460,7 +2460,7 @@ class BaseHighState(object):
 
         if cache:
             if os.path.isfile(cfn):
-                with salt.utils.fopen(cfn, 'r') as fp_:
+                with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
         #File exists so continue
@@ -2495,12 +2495,12 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(191)
+        cumask = os.umask(077)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
                 self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-            with salt.utils.fopen(cfn, 'w+') as fp_:
+            with salt.utils.fopen(cfn, 'w+b') as fp_:
                 try:
                     self.serial.dump(high, fp_)
                 except TypeError:

@@ -818,13 +818,12 @@ information can be found in the :mod:`gitfs backend documentation
 
 Default: ``[]``
 
-When using the git fileserver backend at least one git remote needs to be
+When using the ``git`` fileserver backend at least one git remote needs to be
 defined. The user running the salt master will need read access to the repo.
 
-The repos will be searched in order to find the file requested by a client
-and the first repo to have the file will return it.
-When using the git backend branches and tags are translated into salt
-environments.
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and tags are
+translated into salt environments.
 
 .. code-block:: yaml
 
@@ -860,13 +859,111 @@ is a security concern, you may want to try using the ssh transport.
 
 Default: ``''``
 
-The ``gitfs_root`` option gives the ability to serve files from a subdirectory
-within the repository. The path is defined relative to the root of the
-repository and defaults to the repository root.
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
 
 .. code-block:: yaml
 
     gitfs_root: somefolder/otherfolder
+
+.. conf_master:: gitfs_base
+
+``gitfs_base``
+--------------
+
+Default: ``master``
+
+Defines which branch/tag should be used as the ``base`` environment.
+
+.. code-block:: yaml
+
+    gitfs_base: salt
+
+.. conf_master:: hgfs_remotes
+
+``hgfs_remotes``
+----------------
+
+.. versionadded:: 0.17.0
+
+Default: ``[]``
+
+When using the ``hg`` fileserver backend at least one mercurial remote needs to
+be defined. The user running the salt master will need read access to the repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and/or bookmarks are
+translated into salt environments, as defined by the
+:conf_master:`hgfs_branch_method` parameter.
+
+.. code-block:: yaml
+
+    hgfs_remotes:
+      - https://username@bitbucket.org/username/reponame
+
+.. conf_master:: hgfs_branch_method
+
+``hgfs_branch_method``
+----------------------
+
+.. versionadded:: 0.17.0
+
+Default: ``branches``
+
+Defines the objects that will be used as fileserver environments.
+
+* ``branches`` - Only branches and tags will be used
+* ``bookmarks`` - Only bookmarks and tags will be used
+* ``mixed`` - Branches, bookmarks, and tags will be used
+
+.. code-block:: yaml
+
+    hgfs_branch_method: mixed
+
+.. note::
+
+    Starting in version 2014.1.0 (Hydrogen), the value of the
+    :conf_master:`hgfs_base` parameter defines which branch is used as the
+    ``base`` environment, allowing for a ``base`` environment to be used with
+    an :conf_master:`hgfs_branch_method` of ``bookmarks``.
+
+    Prior to this release, the ``default`` branch will be used as the ``base``
+    environment.
+
+.. conf_master:: hgfs_root
+
+``hgfs_root``
+-------------
+
+.. versionadded:: 0.17.0
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
+
+.. code-block:: yaml
+
+    hgfs_root: somefolder/otherfolder
+
+.. conf_master:: hgfs_base
+
+``hgfs_base``
+-------------
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+Default: ``default``
+
+Defines which branch should be used as the ``base`` environment. Change this if
+:conf_master:`hgfs_branch_method` is set to ``bookmarks`` to specify which
+bookmark should be used as the ``base`` environment.
+
+.. code-block:: yaml
+
+    hgfs_base: salt
 
 
 .. _pillar-configuration:

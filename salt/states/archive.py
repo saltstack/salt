@@ -109,7 +109,8 @@ def extracted(name,
                     {'name': filename},
                     {'source': source},
                     {'source_hash': source_hash},
-                    {'makedirs': True}
+                    {'makedirs': True},
+                    {'saltenv': __env__}
                 ]
             }
         }

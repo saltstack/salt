@@ -44,7 +44,7 @@ def get_minion_data(minion, opts):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                miniondata = serial.load(salt.utils.fopen(datap))
+                miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
                 grains = miniondata.get('grains')
                 pillar = miniondata.get('pillar')
                 return id_, grains, pillar
@@ -53,7 +53,7 @@ def get_minion_data(minion, opts):
             datap = os.path.join(cdir, minion, 'data.p')
             if not os.path.isfile(datap):
                 return minion, None, None
-            miniondata = serial.load(salt.utils.fopen(datap))
+            miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
             grains = miniondata.get('grains')
             pillar = miniondata.get('pillar')
             return minion, grains, pillar
@@ -112,6 +112,8 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
+        if isinstance(expr, str):
+            expr = [m for m in expr.split(',') if m]
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
             if fn_ in expr:
@@ -148,7 +150,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr):
                     minions.remove(id_)
@@ -172,7 +174,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr,
                                                 delim=':', regex_match=True):
@@ -197,7 +199,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 pillar = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
                 if not salt.utils.subdict_match(pillar, expr):
                     minions.remove(id_)
@@ -221,7 +223,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 num_parts = len(expr.split('/'))
@@ -270,7 +272,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 range_ = seco.range.Range(self.opts['range_server'])
@@ -405,7 +407,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':

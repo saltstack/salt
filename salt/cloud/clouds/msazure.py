@@ -15,6 +15,7 @@ configuration at ``/etc/salt/cloud.providers`` or
       provider: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
+      management_host: management.core.windows.net
 
 Information on creating the pem file to use, and uploading the associated cer
 file can be found at:
@@ -76,7 +77,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'certificate_path',)
+        ('subscription_id', 'certificate_path')
     )
 
 
@@ -92,8 +93,15 @@ def get_conn():
         'subscription_id',
         get_configured_provider(), __opts__, search_global=False
     )
+    management_host = config.get_cloud_config_value(
+        'management_host',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='management.core.windows.net'
+    )
     return azure.servicemanagement.ServiceManagementService(
-        subscription_id, certificate_path
+        subscription_id, certificate_path, management_host
     )
 
 

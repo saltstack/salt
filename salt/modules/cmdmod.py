@@ -580,7 +580,7 @@ def run(cmd,
         jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
         if os.path.isfile(jid_file):
             serial = salt.payload.Serial(__opts__)
-            with salt.utils.fopen(jid_file) as fn_:
+            with salt.utils.fopen(jid_file, 'rb') as fn_:
                 jid_dict = serial.load(fn_)
 
             if 'child_pids' in jid_dict:
@@ -588,7 +588,7 @@ def run(cmd,
             else:
                 jid_dict['child_pids'] = [ret['pid']]
             # Rewrite file
-            with salt.utils.fopen(jid_file, 'w+') as fn_:
+            with salt.utils.fopen(jid_file, 'w+b') as fn_:
                 fn_.write(serial.dumps(jid_dict))
 
     lvl = _check_loglevel(output_loglevel, quiet)

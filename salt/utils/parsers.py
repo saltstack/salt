@@ -1668,7 +1668,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
-
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
 

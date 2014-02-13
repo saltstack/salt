@@ -329,10 +329,10 @@ def install(name=None,
             return {}
 
         if salt.utils.is_true(refresh):
-            cmd = 'pacman -Syu --noprogressbar --noconfirm --needed' \
+            cmd = 'pacman -Syu --noprogressbar --noconfirm --needed ' \
                   '"{0}"'.format('" "'.join(targets))
         else:
-            cmd = 'pacman -S --noprogressbar --noconfirm --needed' \
+            cmd = 'pacman -S --noprogressbar --noconfirm --needed ' \
                   '"{0}"'.format('" "'.join(targets))
 
     old = list_pkgs()

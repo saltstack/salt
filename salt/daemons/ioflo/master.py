@@ -60,7 +60,7 @@ class RemoteMaster(ioflo.base.deeding.Deed):
         '''
         Set up required objects
         '''
-        self.remote = salt.masterapi.RemoteFuncs(self.opts.value)
+        self.remote = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
 
     def action(self):
         '''
@@ -93,7 +93,7 @@ class LocalMaster(ioflo.base.deeding.Deed):
         '''
         Set up required objects
         '''
-        self.remote = salt.masterapi.LocalFuncs(self.opts.value)
+        self.remote = salt.daemons.masterapi.LocalFuncs(self.opts.value)
 
     def action(self):
         '''

@@ -232,6 +232,7 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
+from salt.utils.yamldumper import OrderedDumper
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -673,14 +674,14 @@ def symlink(
         The location that the symlink points to
 
     force
-        If the target of the symlink exists and is not a symlink and
+        If the name of the symlink exists and is not a symlink and
         force is set to False, the state will fail. If force is set to
         True, the file or directory in the way of the symlink file
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
     backupname
-        If the target of the symlink exists and is not a symlink, it will be
+        If the name of the symlink exists and is not a symlink, it will be
         renamed to the backupname. If the backupname already
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
@@ -3026,7 +3027,7 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
     if formatter == 'yaml':
-        contents = yaml.dump(dataset, default_flow_style=False)
+        contents = yaml.dump(dataset, default_flow_style=False, Dumper=OrderedDumper)
     elif formatter == 'json':
         contents = json.dumps(dataset,
                               indent=2,

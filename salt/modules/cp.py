@@ -6,6 +6,7 @@ Minion side functions for salt-cp
 # Import python libs
 import os
 import logging
+import fnmatch
 
 # Import salt libs
 import salt.minion
@@ -646,3 +647,39 @@ def push(path):
             ret = sreq.send(load)
             if not ret:
                 return ret
+
+
+def push_dir(path, glob=None):
+    '''
+    Push a directory from the minion up to the master, the files will be saved
+    to the salt master in the master's minion files cachedir (defaults to
+    ``/var/cache/salt/master/minions/minion-id/files``).  It also has a glob
+    for matching specific files using globbing.
+
+    Since this feature allows a minion to push files up to the master server it
+    is disabled by default for security purposes. To enable, set ``file_recv``
+    to ``True`` in the master configuration file, and restart the master.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.push /usr/lib/mysql
+        salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
+    '''
+    if '../' in path or not os.path.isabs(path):
+        return False
+    path = os.path.realpath(path)
+    if os.path.isfile(path):
+        return push(path)
+    else:
+        filelist = []
+        for root, dirs, files in os.walk(path):
+            filelist += [os.path.join(root, tmpfile) for tmpfile in files]
+        if glob is not None:
+            filelist = filter(lambda fi: fnmatch.fnmatch(fi, glob), filelist)
+        for tmpfile in filelist:
+            ret = push(tmpfile)
+            if not ret:
+                return ret
+    return True
