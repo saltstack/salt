@@ -1171,7 +1171,7 @@ def is_linux():
     # This is a hack.  If a proxy minion is started by other
     # means, e.g. a custom script that creates the minion objects
     # then this will fail.
-    if ('salt-proxy-minion' in main.__file__):
+    if 'salt-proxy-minion' in main.__file__:
         return False
     else:
         return sys.platform.startswith('linux')
