@@ -138,7 +138,7 @@ def gid_to_group(gid):
 
     try:
         return grp.getgrgid(gid).gr_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
@@ -204,7 +204,7 @@ def uid_to_user(uid):
     '''
     try:
         return pwd.getpwuid(uid).pw_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
