@@ -132,16 +132,16 @@ class Corresponder(Transaction):
         super(Corresponder, self).__init__(**kwa)
 
 
-class Joiner(Initiator):
+class Joinee(Initiator):
     '''
-    RAET protocol Joiner transaction class Dual of Acceptor
+    RAET protocol Joinee transaction class Dual of Joiner
     '''
     def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
-        super(Joiner, self).__init__(**kwa)
+        super(Joinee, self).__init__(**kwa)
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
                 master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
@@ -156,7 +156,7 @@ class Joiner(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joiner, self).receive(packet)
+        super(Joinee, self).receive(packet)
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack:
@@ -248,16 +248,16 @@ class Joiner(Initiator):
         pass
 
 
-class Joinee(Corresponder):
+class Joiner(Corresponder):
     '''
-    RAET protocol Joinee transaction class, Corresponder to Joiner
+    RAET protocol Joiner transaction class, Corresponder to Joinee
     '''
     def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
-        super(Joinee, self).__init__(**kwa)
+        super(Joiner, self).__init__(**kwa)
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.stack.transactions[self.rxPacket.index] = self
         print "Added {0} transaction to {1} at '{2}'".format(

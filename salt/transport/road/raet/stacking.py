@@ -181,26 +181,26 @@ class StackUdp(object):
         if (packet.data['tk'] == raeting.trnsKinds.join and
                 packet.data['pk'] == raeting.pcktKinds.request and
                 packet.data['si'] == 0):
-            self.replyJoin(packet) # create new joinee transaction
+            self.replyJoin(packet)
 
     def join(self):
         '''
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self, sid=0, txData=data)
-        joiner.join()
+        joinee = transacting.Joinee(stack=self, sid=0, txData=data)
+        joinee.join()
 
     def replyJoin(self, packet):
         '''
-        Correspond with joinee transaction to received join packet
+        Correspond with joiner transaction to received join packet
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joinee = transacting.Joinee(stack=self,
+        joiner = transacting.Joiner(stack=self,
                         sid=packet.data['si'],
                         tid=packet.data['ti'],
                         txData=data, rxPacket=packet)
-        joinee.pend()
-        self.devices[joinee.rdid].accepted = True
-        joinee.accept()
+        joiner.pend()
+        self.devices[joiner.rdid].accepted = True
+        joiner.accept()
 
