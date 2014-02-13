@@ -418,6 +418,7 @@ def _run(cmd,
     except TimedProcTimeoutError as exc:
         ret['stdout'] = str(exc)
         ret['stderr'] = ''
+        ret['retcode'] = None
         ret['pid'] = proc.process.pid
         # ok return code for timeouts?
         ret['retcode'] = 1
@@ -679,6 +680,8 @@ def run_stdout(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
 
 
@@ -757,6 +760,8 @@ def run_stderr(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
 
 
@@ -835,6 +840,8 @@ def run_all(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
 
 
