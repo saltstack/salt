@@ -395,6 +395,14 @@ class TxPacket(Packet):
         if data:
             self.data.update(data)
 
+    @property
+    def index(self):
+        '''
+        Property is transaction tuple (rf, ld, rd, si, ti, bf,)
+        '''
+        data = self.data
+        return ((data['cf'], data['sd'], data['dd'], data['si'], data['ti'], data['bf']))
+
     def pack(self):
         '''
         Pack the parts of the packet and then the full packet
@@ -414,7 +422,6 @@ class TxPacket(Packet):
         '''
         return True
 
-
 class RxPacket(Packet):
     '''
     RAET Protocol Receive Packet object
@@ -429,6 +436,14 @@ class RxPacket(Packet):
         self.coat = RxCoat(packet=self)
         self.foot = RxFoot(packet=self)
         self.packed = packed or ''
+
+    @property
+    def index(self):
+        '''
+        Property is transaction tuple (rf, ld, rd, si, ti, bf,)
+        '''
+        data = self.data
+        return ((not data['cf'], data['dd'], data['sd'], data['si'], data['ti'], data['bf']))
 
     def unpack(self, packed=None):
         '''
