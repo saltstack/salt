@@ -1,12 +1,16 @@
 The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation
 ========================================================================
 
-This document provides a step by step guide to installing a salt cluster
-(one master, and one minion running on a local VM) on Mac OS X to start
-playing with salt. It is aimed at developers, so it may be a little too slow
-for experienced admins. At the end of it, you will have installed a bare Nginx
-server on a minion using the master. The official (Linux) walkthrough can be
-found `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+This document provides a step-by-step guide to installing a Salt cluster
+consisting of  one master, and one minion running on a local VM hosted on Mac OS X.
+
+
+.. note::
+    This guide is aimed at developers who wish to run Salt in a virtual machine.
+    The official (Linux) walkthrough can be found
+    `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+
+
 
 The 5 Cent Salt Intro
 ---------------------
