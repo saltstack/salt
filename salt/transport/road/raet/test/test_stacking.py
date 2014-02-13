@@ -42,7 +42,8 @@ def test():
     stack2.addRemoteDevice(master)
     # minion doesn't yet know master did
 
-    data = odict(hk=1, bk=1)
+    data = odict(hk=raeting.headKinds.json,
+                 bk=raeting.bodyKinds.json)
     joiner = stacking.Joiner(stack=stack2, sid=0, txData=data)
     joiner.join()
 
@@ -57,9 +58,12 @@ def test():
         print "Join Packet dropped"
         return
 
-    if packet.data['pk'] == raeting.packetKinds.join and packet.data['si'] == 0:
+    if (packet.data['tk'] == raeting.trnsKinds.join and
+        packet.data['pk'] == raeting.pcktKinds.request and
+        packet.data['si'] == 0):
 
-        data = odict(hk=1, bk=1)
+        data = odict(hk=raeting.headKinds.json,
+                     bk=raeting.bodyKinds.json)
         acceptor = stacking.Acceptor(stack=stack1, sid=0, txData=data)
         acceptor.pend(data=packet.data, body=packet.body.data)
 
@@ -77,14 +81,20 @@ def test():
         print packet.data
         print packet.body.data
 
-        if packet.data['pk'] == raeting.packetKinds.accept and packet.data['si'] == 0:
+        if (packet.data['tk'] == raeting.trnsKinds.accept and
+            packet.data['pk'] == raeting.pcktKinds.ack and
+            packet.data['si'] == 0):
+                joiner.pend(packet.data)
+
+        elif (packet.data['tk'] == raeting.trnsKinds.accept and
+            packet.data['pk'] == raeting.pcktKinds.response and
+            packet.data['si'] == 0):
             joiner.accept(packet.data, packet.body.data)
 
             print stack2.device.did
             print stack2.devices
 
-        if packet.data['pk'] == raeting.packetKinds.acceptAck and packet.data['si'] == 0:
-            joiner.pend(packet.data)
+
 
 
 if __name__ == "__main__":

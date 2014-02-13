@@ -11,7 +11,6 @@ import nacl.public
 import nacl.signing
 import nacl.encoding
 import nacl.utils
-import nacl.secret
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -110,35 +109,41 @@ class Privateer(object):
         '''
         now = str(time.time() * 1000000)
         nonce = '{0}{1}'.format(
-                nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE - len(now)),
-                now)
+                        nacl.utils.random(nacl.public.Box.NONCE_SIZE - len(now)),
+                        now)
         return nonce
 
-    def encrypt(self, msg, pub):
+    def encrypt(self, msg, pubkey):
         '''
         Return duple of (cyphertext, nonce) resulting from encrypting the message
-        using shared key generated from the .key and the pub.key
+        using shared key generated from the .key and the pubkey
+        If pubkey is hex encoded it is converted first
 
         Intended for the owner of the passed in public key
 
         msg is string
         pub is Publican instance
         '''
-        box = nacl.public.Box(self.key, pub.key)
+        if not isinstance(pubkey, nacl.public.PublicKey):
+            pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
+        box = nacl.public.Box(self.key, pubkey)
         nonce = self._nonce()
         encrypted = box.encrypt(msg, nonce)
         return (encrypted.ciphertext, encrypted.nonce)
 
-    def decrypt(self, cipher, nonce, pub):
+    def decrypt(self, cipher, nonce, pubkey):
         '''
         Return decripted msg contained in cypher using nonce and shared key
-        generated from .key and pub.key.
+        generated from .key and pubkey.
+        If pubkey is hex encoded it is converted first
 
-        Intented for the owner of .key
+        Intended for the owner of .key
 
         cypher is string
         nonce is string
         pub is Publican instance
         '''
-        box = nacl.public.Box(self.key, pub.key)
+        if not isinstance(pubkey, nacl.public.PublicKey):
+            pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
+        box = nacl.public.Box(self.key, pubkey)
         return box.decrypt(cipher, nonce)
