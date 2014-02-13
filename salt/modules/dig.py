@@ -218,7 +218,8 @@ def SPF(domain, record='SPF', nameserver=None):
         return []
 
     if sections[1].startswith('redirect='):
-        return SPF(domain, 'SPF', nameserver)
+        # Run a lookup on the part after 'redirect=' (9 chars)
+        return SPF(sections[1][9:], 'SPF', nameserver)
     ret = []
     for section in sections[1:]:
         try:
