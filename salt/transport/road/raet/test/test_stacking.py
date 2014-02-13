@@ -45,13 +45,13 @@ def test():
     stack1.serviceUdp()
 
     while stack1.udpRxes:
-        stack1.processRxUdp()
+        stack1.processUdpRx()
 
     stack1.serviceUdp()
     stack2.serviceUdp()
 
     while stack2.udpRxes:
-        stack2.processRxUdp()
+        stack2.processUdpRx()
 
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)

@@ -113,7 +113,7 @@ class StackUdp(object):
             raise raeting.RaetError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
 
-    def fetchParseRxUdp(self):
+    def fetchParseUdpRx(self):
         '''
         Fetch from UDP deque next packet tuple
         Parse packet
@@ -150,12 +150,12 @@ class StackUdp(object):
 
         return packet
 
-    def processRxUdp(self):
+    def processUdpRx(self):
         '''
         Retrieve next packet from stack receive queue if any and parse
         Process associated transaction or reply with new corresponder transaction
         '''
-        packet = self.fetchParseRxUdp()
+        packet = self.fetchParseUdpRx()
         if not packet:
             return
 
