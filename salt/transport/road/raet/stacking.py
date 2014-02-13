@@ -128,7 +128,10 @@ class StackUdp(object):
         print "{0} received\n{1}".format(self.name, raw)
 
         packet = packeting.RxPacket(packed=raw)
-        if not packet.parseOuter():
+        try:
+            packet.parseOuter()
+        except packeting.PacketError as ex:
+            print ex
             return None
 
         ddid = packet.data['dd']
@@ -139,7 +142,10 @@ class StackUdp(object):
         dh, dp = da
         packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
-        if not packet.parseInner():
+        try:
+            packet.parseInner()
+        except packeting.PacketError as ex:
+            print ex
             return None
 
         return packet

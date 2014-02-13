@@ -193,7 +193,11 @@ class Joiner(Initiator):
                                     kind=raeting.pcktKinds.request,
                                     embody=body,
                                     data=self.txData)
-        packet.pack()
+        try:
+            packet.pack()
+        except packeting.PacketError as ex:
+            print ex
+            return
         self.transmit(packet)
 
     def accept(self):
@@ -320,7 +324,12 @@ class Joinee(Corresponder):
                                     kind=raeting.pcktKinds.ack,
                                     embody=body,
                                     data=self.txData)
-        packet.pack()
+        try:
+            packet.pack()
+        except packeting.PacketError as ex:
+            print ex
+            return
+
         self.transmit(packet)
 
     def accept(self, body=None):
@@ -353,7 +362,11 @@ class Joinee(Corresponder):
                                     kind=raeting.pcktKinds.response,
                                     embody=body,
                                     data=self.txData)
-        packet.pack()
+        try:
+            packet.pack()
+        except packeting.PacketError as ex:
+            print ex
+            return
         self.transmit(packet)
         del self.stack.transactions[self.rxPacket.index]
 
