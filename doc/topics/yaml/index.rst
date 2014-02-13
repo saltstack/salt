@@ -52,6 +52,7 @@ Alternatively, a value can be associated with a key through indentation.
     the value for a key is not singular but instead is a *list* of values.
 
 In Python, the above maps to:
+
     {'my_key': 'my_value'}
 
 Dictionaries can be nested:
