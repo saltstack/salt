@@ -152,7 +152,7 @@ class RxHead(Head):
         '''
         Unpacks all the flag fields from a single two char hex string
         '''
-        values = unpackByte(format='11111111', byte=int(flags, 16), boolean=False)
+        values = unpackByte(format='11111111', byte=int(flags, 16), boolean=True)
         for i, field in enumerate(raeting.PACKET_FLAG_FIELDS):
             if field in self.packet.data:
                 self.packet.data[field] = values[i]
@@ -241,7 +241,9 @@ class TxCoat(Coat):
         self.kind = self.packet.data['ck']
 
         if self.kind == raeting.coatKinds.nacl:
-            self.packed = self.packet.body.packed
+            msg = self.packet.body.packed
+            cipher, nonce = self.packet.transaction.encrypt(msg)
+            self.packed = "".join([cipher, nonce])
 
         if self.kind == raeting.coatKinds.nada:
             self.packed = self.packet.body.packed
@@ -266,10 +268,10 @@ class RxCoat(Coat):
         if self.kind == raeting.coatKinds.nacl:
             tl = raeting.tailSizes.nacl # nonce length
 
-            cypher = self.packed[:-tl]
+            cipher = self.packed[:-tl]
             nonce = self.packed[-tl:]
-
-            self.packet.body.packed = self.packed
+            msg = self.packet.transaction.decrypt(cipher, nonce)
+            self.packet.body.packed = msg
 
         if self.kind == raeting.coatKinds.nada:
             self.packet.body.packed = self.packed
@@ -306,7 +308,9 @@ class TxFoot(Foot):
             return self.packed
 
         if self.kind == raeting.footKinds.nacl:
-            self.packed = "".rjust(raeting.footSizes.nacl, '\x00')
+            blank = "".rjust(raeting.footSizes.nacl, '\x00')
+            msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+            self.packed = self.packet.transaction.signature(msg)
 
         elif self.kind == raeting.footKinds.nada:
             pass
@@ -335,6 +339,11 @@ class RxFoot(Foot):
                     "kind size '{1}'".format(self.size, raeting.footSizes.nacl))
                 return False
 
+            signature = self.packed
+            blank = "".rjust(raeting.footSizes.nacl, '\x00')
+            msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+            return self.packet.transaction.verify(signature, msg)
+
         if self.kind == raeting.footKinds.nada:
             pass
 
@@ -345,8 +354,9 @@ class Packet(object):
     '''
     RAET protocol packet object
     '''
-    def __init__(self, kind=None):
+    def __init__(self, transaction=None, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
+        self.transaction = transaction
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
         self.packed = ''  # packed string
         self.error = ''

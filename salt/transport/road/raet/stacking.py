@@ -106,6 +106,8 @@ class Stack(object):
         except IndexError:
             return None
 
+        print raw
+
         packet = packeting.RxPacket(packed=raw)
         if not packet.parseOuter():
             return None
@@ -219,7 +221,7 @@ class RemoteDevice(Device):
     RAET protocol endpoint remote device object
     Maintains verifier for verifying signatures and publican for encrypt/decript
     '''
-    def __init__(self, verikey=None, pubkey=None, **kwa):
+    def __init__(self, verikey=None, pubkey=None, rsid=0, rtid=0, **kwa):
         '''
         Setup Device instance
 
@@ -233,6 +235,9 @@ class RemoteDevice(Device):
         self.pubber = nacling.Publican(pubkey) #long term key
         self.publee = nacling.Publican() # short term key
         self.privee = nacling.Privateer() # short term key
+
+        self.rsid = rsid # last sid received from remote when CrdrFlag is True
+        self.rtid = rtid # last tid received from remote when CrdrFlag is True
 
 
 class Transaction(object):
@@ -269,44 +274,75 @@ class Transaction(object):
         self.stack.txUdp(packet.packed, self.rdid)
         self.txPacket = packet
 
+    def signature(self, msg):
+        '''
+        Return signature resulting from signing msg
+        '''
+        return (self.stack.device.signer.signature(msg))
+
+    def verify(self, signature, msg):
+        '''
+        Return result of verifying msg with signature
+        '''
+        return (self.stack.devices[self.rid].verfer.verify(signature, msg))
+
+    def encrypt(self, msg):
+        '''
+        Return (cipher, nonce) duple resulting from encrypting message
+        with short term keys
+        '''
+        remote = self.stack.devices[self.rid]
+        return (self.stack.device.privee.encrypt(msg, remote.publee.key))
+
+    def decrypt(self, cipher, nonce):
+        '''
+        Return msg resulting from decrypting cipher and nonce
+        with short term keys
+        '''
+        remote = remote = self.stack.devices[self.rid]
+        return (self.stack.device.privee.decrypt(cipher, nonce, remote.publee, key))
+
 class Initiator(Transaction):
     '''
     RAET protocol initiator transaction class
     '''
-    def __init__(self, crdr=False, **kwa):
+    def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
-        crdr = False  # force crdr to False
-        super(Initiator, self).__init__(crdr=crdr, **kwa)
+        kwa['crdr'] = False  # force crdr to False
+        super(Initiator, self).__init__(**kwa)
         if self.sid is None:  # use current session id of local device
             self.sid = self.stack.device.sid
         if self.tid is None:  # use next tid
             self.tid = self.stack.device.nextTid()
 
-
 class Corresponder(Transaction):
     '''
     RAET protocol corresponder transaction class
     '''
-    def __init__(self, crdr=True, **kwa):
+    def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
-        crdr = True  # force crdr to True
-        super(Corresponder, self).__init__(crdr=crdr, **kwa)
+        kwa['crdr'] = True  # force crdr to True
+        if 'sid' not in kwa or 'tid' not in  kwa:
+            msg = "Both 'sid' and 'tid' parameters required"
+            raise TypeError(msg)
+
+        super(Corresponder, self).__init__(**kwa)
 
 
 class Joiner(Initiator):
     '''
     RAET protocol Joiner transaction class Dual of Acceptor
     '''
-    def __init__(self, kind=None, **kwa):
+    def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
-        kind = raeting.trnsKinds.join
-        super(Joiner, self).__init__( kind=kind, **kwa)
+        kwa['kind'] = raeting.trnsKinds.join
+        super(Joiner, self).__init__(**kwa)
         if self.rdid is None:
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
 
@@ -321,8 +357,8 @@ class Joiner(Initiator):
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
                             dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port, )
-        self.txData.update( sd=self.stack.device.did,
+                            dp=self.stack.devices[self.rdid].port,
+                            sd=self.stack.device.did,
                             dd=self.rdid,
                             tk=self.kind,
                             cf=self.crdr,
@@ -331,11 +367,10 @@ class Joiner(Initiator):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada)
-        body.update(msg='Let me join',
-                    extra='Do you like me',
-                    verhex=self.stack.device.signer.verhex,
+        body.update(verhex=self.stack.device.signer.verhex,
                     pubhex=self.stack.device.priver.pubhex)
-        packet = packeting.TxPacket(kind=raeting.pcktKinds.request,
+        packet = packeting.TxPacket(transaction=self,
+                                    kind=raeting.pcktKinds.request,
                                     embody=body,
                                     data=self.txData)
         packet.pack()
@@ -377,20 +412,25 @@ class Acceptor(Corresponder):
     '''
     RAET protocol Accepter transaction class Dual of Joiner
     '''
-    def __init__(self, kind=None, **kwa):
+    def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
-        kind = raeting.trnsKinds.accept
-        super(Acceptor, self).__init__(kind=kind, **kwa)
+        kwa['kind'] = raeting.trnsKinds.accept
+        super(Acceptor, self).__init__(**kwa)
 
     def pend(self, data, body):
         '''
         Perform pend operation of pending device being accepted onto channel
+
+        data and body are from received packet
         '''
         # need to add search for existing device with same host,port address
-
-        device = RemoteDevice(stack=self.stack, host=data['sh'], port=data['sp'])
+        device = RemoteDevice(stack=self.stack,
+                              host=data['sh'],
+                              port=data['sp'],
+                              rsid=self.sid,
+                              rtid=self.tid, )
         self.stack.addRemoteDevice(device) #provisionally add .accepted is None
         self.rdid = device.did
 
@@ -420,8 +460,8 @@ class Acceptor(Corresponder):
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
                             dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port, )
-        self.txData.update( sd=self.stack.device.did,
+                            dp=self.stack.devices[self.rdid].port,
+                            sd=self.stack.device.did,
                             dd=self.rdid,
                             tk=self.kind,
                             cf=self.crdr,
@@ -430,8 +470,9 @@ class Acceptor(Corresponder):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada,)
-        body.update(msg='Pending acceptance', extra='Who are you')
-        packet = packeting.TxPacket(kind=raeting.pcktKinds.ack,
+        body.update()
+        packet = packeting.TxPacket(transaction=self,
+                                    kind=raeting.pcktKinds.ack,
                                     embody=body,
                                     data=self.txData)
         packet.pack()
@@ -448,8 +489,8 @@ class Acceptor(Corresponder):
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
                             dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port, )
-        self.txData.update( sd=self.stack.device.did,
+                            dp=self.stack.devices[self.rdid].port,
+                            sd=self.stack.device.did,
                             dd=self.rdid,
                             tk=self.kind,
                             cf=self.crdr,
@@ -458,11 +499,10 @@ class Acceptor(Corresponder):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada,)
-        body.update(    msg='You are accepted',
-                        extra='We like you',
-                        verhex=self.stack.device.signer.verhex,
-                        pubhex=self.stack.device.priver.pubhex)
-        packet = packeting.TxPacket(kind=raeting.pcktKinds.response,
+        body.update( verhex=self.stack.device.signer.verhex,
+                     pubhex=self.stack.device.priver.pubhex)
+        packet = packeting.TxPacket(transaction=self,
+                                    kind=raeting.pcktKinds.response,
                                     embody=body,
                                     data=self.txData)
         packet.pack()
