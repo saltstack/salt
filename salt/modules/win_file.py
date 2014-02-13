@@ -27,7 +27,7 @@ try:
     import win32security
     import win32file
     from pywintypes import error as pywinerror
-    import ntsecuritycon as con
+    import ntsecuritycon as con  # pylint: disable=W0611
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
