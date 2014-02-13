@@ -18,15 +18,6 @@ from ioflo.base.aiding import packByte, unpackByte
 
 from . import raeting
 
-class PacketError(raeting.RaetError):
-    """Used to indicate error in RAET packet processing
-
-       usage:
-       msg = "Invalid device id '{0}'".format(did)
-       raise raeting.RaetError(msg)
-    """
-    pass
-
 class Part(object):
     '''
     Base class for parts of a RAET packet
@@ -102,7 +93,7 @@ class TxHead(Head):
             hl = len(packed)
             if hl > raeting.MAX_HEAD_LEN:
                 emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_LEN)
-                raise PacketError(emsg)
+                raise raeting.PacketError(emsg)
 
             #subsitute true length converted to 2 byte hex string
             self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
@@ -142,18 +133,18 @@ class RxHead(Head):
 
             if data['hk'] != self.kind:
                 emsg = 'Recognized head kind does not match head field value.'
-                raise PacketError(emsg)
+                raise raeting.PacketError(emsg)
 
             hl = int(data['hl'], 16)
             if hl != self.size:
                 emsg = 'Actual head length does not match head field value.'
-                raise PacketError(emsg)
+                raise raeting.PacketError(emsg)
             data['hl'] = hl
 
         else:  # notify unrecognizible packet head
             self.kind = raeting.headKinds.unknown
             emsg = "Unrecognizible packet head."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
     def unpackFlags(self, flags):
         '''
@@ -203,12 +194,12 @@ class RxBody(Body):
         if self.kind not in raeting.BODY_KIND_NAMES:
             self.kind = raeting.bodyKinds.unknown
             emsg = "Unrecognizible packet body."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         if self.size != self.packet.data['bl']:
             emsg = ("Mismatching body size '{0}' and data length '{1}'"
                    "".format(self.size, self.packet.data['bl']))
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         self.data = odict()
 
@@ -217,7 +208,7 @@ class RxBody(Body):
                 kit = json.loads(self.packed, object_pairs_hook=odict)
                 if not isinstance(kit, Mapping):
                     emsg = "Packet body not a mapping."
-                    raise PacketError(emsg)
+                    raise raeting.PacketError(emsg)
                 self.data = kit
 
         elif self.kind == raeting.bodyKinds.nada:
@@ -264,7 +255,7 @@ class RxCoat(Coat):
         if self.kind not in raeting.COAT_KIND_NAMES:
             self.kind = raeting.coatKinds.unknown
             emsg = "Unrecognizible packet coat."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         if self.kind == raeting.coatKinds.nacl:
             tl = raeting.tailSizes.nacl # nonce length
@@ -304,7 +295,7 @@ class TxFoot(Foot):
         if self.kind not in raeting.FOOT_KIND_NAMES:
             self.kind = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         if self.kind == raeting.footKinds.nacl:
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
@@ -327,20 +318,20 @@ class RxFoot(Foot):
         if self.kind not in raeting.FOOT_KIND_NAMES:
             self.kind = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         if self.kind == raeting.footKinds.nacl:
             if self.size != raeting.footSizes.nacl:
                 emsg = ("Actual foot size '{0}' does not match "
                     "kind size '{1}'".format(self.size, raeting.footSizes.nacl))
-                raise PacketError(emsg)
+                raise raeting.PacketError(emsg)
 
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
             msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
             if not self.packet.transaction.verify(signature, msg):
                 emsg = "Failed verification"
-                raise PacketError(emsg)
+                raise raeting.PacketError(emsg)
 
         if self.kind == raeting.footKinds.nada:
             pass
@@ -355,6 +346,7 @@ class Packet(object):
         self.transaction = transaction
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
         self.packed = ''  # packed string
+        self.segments = [] # subpackets when segmented
         self.data = odict(raeting.PACKET_DEFAULTS)
 
     @property
@@ -453,13 +445,13 @@ class RxPacket(Packet):
         if ck == raeting.coatKinds.nada and cl != bl: #not encrypted so coat and body the same
             emsg = ("Coat kind '{0}' incompatible with coat length '{0}' "
                           "and body length '{2}'".format(cl, cl, bl))
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         pl = hl + cl + fl
         if self.size != pl:
             emsg = ("Packet length '{0}' does not equal sum of the parts"
                           " '{1}'".format(self.size, pl))
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         self.coat.packed = self.packed[hl:hl+cl]
         self.foot.packed = self.packed[hl+cl:]
@@ -487,14 +479,14 @@ class RxPacket(Packet):
             self.packed = packed
         if not self.packed:
             emsg = "Packed empty, nothing to parse."
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         self.head.parse()
 
         if self.data['vn'] not in raeting.VERSIONS.values():
             emsg = ("Received incompatible version '{0}'"
                     "version '{1}'".format(self.data['vn']))
-            raise PacketError(emsg)
+            raise raeting.PacketError(emsg)
 
         self.unpack()
         self.foot.parse()

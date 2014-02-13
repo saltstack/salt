@@ -21,7 +21,6 @@ from . import transacting
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-
 class StackUdp(object):
     '''
     RAET protocol UDP stack object
@@ -63,7 +62,7 @@ class StackUdp(object):
 
         if did in self.devices:
             msg = "Device with id '{0}' alreadys exists".format(did)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
         device.stack = self
         self.devices[did] = device
 
@@ -73,11 +72,11 @@ class StackUdp(object):
         '''
         if ndid in self.devices:
             msg = "Cannot move, '{0}' already exists".format(ndid)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
 
         if odid not in self.devices:
             msg = "Cannot move '{0}' does not exist".format(odid)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
 
         device = self.devices[odid]
         del self.devices[odid]
@@ -110,7 +109,7 @@ class StackUdp(object):
         '''
         if ddid not in self.devices:
             msg = "Invalid destination device id '{0}'".format(ddid)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
 
     def fetchParseUdpRx(self):
