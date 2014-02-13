@@ -13,6 +13,41 @@ ensure_in_syspath('../../')
 from salt.modules import dig
 
 
+_SPF_VALUES = {
+    'dig +short xmission.com TXT': {
+        'pid': 27282,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': '"v=spf1 a mx include:_spf.xmission.com ?all"'
+    },
+    'dig +short _spf.xmission.com TXT': {
+        'pid': 27282,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': '"v=spf1 a mx ip4:198.60.22.0/24 '
+                    'ip4:166.70.13.0/24 ~all"'
+    },
+    'dig +short xmission-redirect.com TXT': {
+        'pid': 27282,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': 'v=spf1 redirect=_spf.xmission.com'
+    },
+    'dig +short foo.com TXT': {
+        'pid': 27282,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': 'v=spf1 ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all'
+    },
+}
+
+def _spf_side_effect(key, output_loglevel='info'):
+    return _SPF_VALUES.get(key, {'pid': 27310,
+                                 'retcode': 0,
+                                 'stderr': '',
+                                 'stdout': ''})
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(dig.__virtual__() is False, 'Dig must be installed')
 class DigTestCase(TestCase):
@@ -26,7 +61,6 @@ class DigTestCase(TestCase):
             msg='Not a valid ip address'
         )
 
-    @skipIf(True, 'Waiting for 2014.1 release')
     def test_check_ip_ipv6_valid(self):
         self.assertTrue(dig.check_ip('2607:fa18:0:3::4'))
 
@@ -68,7 +102,6 @@ class DigTestCase(TestCase):
                  '74.125.193.147']
             )
 
-    @skipIf(True, 'Waiting for 2014.1 release')
     def test_aaaa(self):
         dig.__salt__ = {}
         dig_mock = MagicMock(
@@ -101,56 +134,33 @@ class DigTestCase(TestCase):
 
     def test_spf(self):
         dig.__salt__ = {}
-        dig_mock = MagicMock(
-            return_value={
-                'pid': 26795,
-                'retcode': 0,
-                'stderr': '',
-                'stdout': 'v=spf1 ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all'
-            }
-        )
+        dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
                 dig.SPF('foo.com'),
                 ['216.73.93.70/31', '216.73.93.72/31']
             )
 
-    @skipIf(True, 'Skip until we figure out how to handle recursion')
     def test_spf_redir(self):
         '''
         Test for SPF records which use the 'redirect' SPF mechanism
         https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
         '''
         dig.__salt__ = {}
-        dig_mock = MagicMock(
-            return_value={
-                'pid': 26795,
-                'retcode': 0,
-                'stderr': '',
-                'stdout': 'v=spf1 redirect=_spf.xmission.com'
-            }
-        )
+        dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
-                dig.SPF('xmission.com'),
+                dig.SPF('xmission-redirect.com'),
                 ['198.60.22.0/24', '166.70.13.0/24']
             )
 
-    @skipIf(True, 'Skip until we figure out how to handle recursion')
     def test_spf_include(self):
         '''
         Test for SPF records which use the 'include' SPF mechanism
         https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
         '''
         dig.__salt__ = {}
-        dig_mock = MagicMock(
-            return_value={
-                'pid': 27282,
-                'retcode': 0,
-                'stderr': '',
-                'stdout': 'v=spf1 a mx include:_spf.xmission.com ?all'
-            }
-        )
+        dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
                 dig.SPF('xmission.com'),
