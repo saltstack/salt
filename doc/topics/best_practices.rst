@@ -279,4 +279,43 @@ usernames, keys, or other information.
 
 As all data within a state is accesible by EVERY server within an environment,
 it is important to store secure data within pillar. This will ensure that only
-those servers which require this secure data have access to it.
+those servers which require this secure data have access to it. In this
+example a new user can be instructed in how to go from very insecure data to
+data which is only accessible by the appropriate hosts:
+
+mysql/user.sls:
+
+.. code-block:: yaml
+
+    testdb:
+      mysql_database:
+        - present:
+        - name: testerdb
+
+    testdb_user:
+      mysql_user:
+        - present
+        - name: frank
+        - password: "test3rdb"
+        - host: localhost
+        - require:
+          - mysql_database: testdb
+
+Many users would review this state and see that the password is there in plain
+text, which is quite problematic. It results in several issues which may not be
+immediately visible. 
+
+The first of these issues is clear to most users, the password being visible
+in this state. This  means that any minion will have a copy of this, and
+therefore the password which is a major security concern as minions may not
+be locked downas tightly as the master server.
+
+The other issue that can be encountered is access by users ON the master. If
+everyone has access to the states (or their repository), then they are able to
+review this password. Keeping your password data accessible by only a few
+users is critical for both security, and peace of mind.
+
+There is also the issue of portability. When a state is configured this way,
+it results in multiple changes needing to be made. This was discussed in the
+sections above, but it is a critical idea to drive home. If states are not
+portable it may result in more work later!
