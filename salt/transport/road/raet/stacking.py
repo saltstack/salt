@@ -48,8 +48,8 @@ class StackUdp(object):
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.rxdsUdp = deque()
-        self.txdsUdp = deque()
+        self.udpRxes = deque()
+        self.udpTxes = deque()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
@@ -94,10 +94,10 @@ class StackUdp(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.rxdsUdp.append((rx, ra, self.serverUdp.ha))
+                self.udpRxes.append((rx, ra, self.serverUdp.ha))
 
-            while self.txdsUdp:
-                tx, ta = self.txdsUdp.popleft()  # duple = (packet, destination address)
+            while self.udpTxes:
+                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
                 self.serverUdp.send(tx, ta)
 
         return None
@@ -111,7 +111,7 @@ class StackUdp(object):
         if ddid not in self.devices:
             msg = "Invalid destination device id '{0}'".format(ddid)
             raise raeting.RaetError(msg)
-        self.txdsUdp.append((packed, self.devices[ddid].ha))
+        self.udpTxes.append((packed, self.devices[ddid].ha))
 
     def fetchParseRxUdp(self):
         '''
@@ -121,7 +121,7 @@ class StackUdp(object):
         Otherwise return None
         '''
         try:
-            raw, ra, da = self.rxdsUdp.popleft()
+            raw, ra, da = self.udpRxes.popleft()
         except IndexError:
             return None
 

@@ -44,13 +44,13 @@ def test():
     stack2.serviceUdp()
     stack1.serviceUdp()
 
-    while stack1.rxdsUdp:
+    while stack1.udpRxes:
         stack1.processRxUdp()
 
     stack1.serviceUdp()
     stack2.serviceUdp()
 
-    while stack2.rxdsUdp:
+    while stack2.udpRxes:
         stack2.processRxUdp()
 
 
