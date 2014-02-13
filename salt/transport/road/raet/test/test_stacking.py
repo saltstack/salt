@@ -4,7 +4,8 @@ Tests to try out stacking. Potentially ephemeral
 
 '''
 from ioflo.base.odicting import odict
-from salt.transport.road.raet import raeting, packeting, stacking, nacling
+from salt.transport.road.raet import (raeting, nacling, packeting,
+                                     devicing, transacting, stacking)
 
 
 def test():
@@ -26,13 +27,13 @@ def test():
     # minion did of 2
 
     #master stack
-    device = stacking.LocalDevice(   did=1,
+    device = devicing.LocalDevice(   did=1,
                                      signkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
     stack1 = stacking.StackUdp(device=device)
 
     #minon stack
-    device = stacking.LocalDevice(   did=0,
+    device = devicing.LocalDevice(   did=0,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
                                      prikey=masterPriKeyHex,)
@@ -55,11 +56,11 @@ def test():
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
-    print "{0} transaction=\n{1}".format(stack1.name, stack1.transactions)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
 
     print "{0} did={1}".format(stack2.name, stack2.device.did)
     print "{0} devices=\n{1}".format(stack2.name, stack2.devices)
-    print "{0} transaction=\n{1}".format(stack2.name, stack2.transactions)
+    print "{0} transactions=\n{1}".format(stack2.name, stack2.transactions)
 
 
 
