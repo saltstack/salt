@@ -41,6 +41,7 @@ _SPF_VALUES = {
     },
 }
 
+
 def _spf_side_effect(key, output_loglevel='info'):
     return _SPF_VALUES.get(key, {'pid': 27310,
                                  'retcode': 0,
