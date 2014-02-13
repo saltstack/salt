@@ -22,7 +22,6 @@ import signal
 import errno
 from random import randint
 import salt
-import importlib
 
 # Import third party libs
 try:
