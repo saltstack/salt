@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import contextlib
 import copy
 import collections
 import datetime
@@ -1039,7 +1040,14 @@ def fopen(*args, **kwargs):
     When a file descriptor is allocated (as with open or dup ), this bit is
     initially cleared on the new file descriptor, meaning that descriptor will
     survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
     '''
+    # Remove lock from kwargs if present
+    lock = None
+    if 'lock' in kwargs:
+        lock = kwargs.pop('lock')
+
     fhandle = open(*args, **kwargs)
     if HAS_FCNTL:
         # modify the file descriptor on systems with fcntl
@@ -1049,14 +1057,23 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if 'lock' in kwargs:
+        if lock:
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
+@contextlib.contextmanager
 def flopen(*args, **kwargs):
-    return fopen(*args, lock=True, **kwargs)
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, lock=True, **kwargs) as fp:
+        try:
+            yield fp
+        finally:
+            if HAS_FCNTL:
+                fcntl.flock(fp.fileno(), fcntl.LOCK_UN)
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
