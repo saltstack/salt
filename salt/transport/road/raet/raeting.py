@@ -38,7 +38,7 @@ header data =
 
     sd: Source Device ID (SDID)
     dd: Destination Device ID (DDID)
-    cf: Corresponder Flag (CrdrFlag) Default 0
+    cf: Correspondent Flag (CrdtFlag) Default 0
     bf: BroadCast Flag (BcstFlag)  Default 0
 
     si: Session ID (SID) Default 0

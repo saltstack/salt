@@ -109,9 +109,9 @@ class Initiator(Transaction):
         if self.tid is None:  # use next tid
             self.tid = self.stack.device.nextTid()
 
-class Corresponder(Transaction):
+class Correspondent(Transaction):
     '''
-    RAET protocol corresponder transaction class
+    RAET protocol correspondent transaction class
     '''
     Requireds = ['sid', 'tid', 'rxPacket']
 
@@ -129,19 +129,19 @@ class Corresponder(Transaction):
             msg = "Missing required keyword arguments: '{0}'".format(missing)
             raise TypeError(msg)
 
-        super(Corresponder, self).__init__(**kwa)
+        super(Correspondent, self).__init__(**kwa)
 
 
-class Joinee(Initiator):
+class Joinier(Initiator):
     '''
-    RAET protocol Joinee transaction class Dual of Joiner
+    RAET protocol Joinier Initiator class Dual of Joinient
     '''
     def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
-        super(Joinee, self).__init__(**kwa)
+        super(Joinier, self).__init__(**kwa)
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
                 master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
@@ -156,7 +156,7 @@ class Joinee(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joinee, self).receive(packet)
+        super(Joinier, self).receive(packet)
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack:
@@ -248,16 +248,16 @@ class Joinee(Initiator):
         pass
 
 
-class Joiner(Corresponder):
+class Joinent(Correspondent):
     '''
-    RAET protocol Joiner transaction class, Corresponder to Joinee
+    RAET protocol Joinent transaction class, dual of Joinier
     '''
     def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
-        super(Joiner, self).__init__(**kwa)
+        super(Joinent, self).__init__(**kwa)
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.stack.transactions[self.rxPacket.index] = self
         print "Added {0} transaction to {1} at '{2}'".format(

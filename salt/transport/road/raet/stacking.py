@@ -152,7 +152,7 @@ class StackUdp(object):
     def processUdpRx(self):
         '''
         Retrieve next packet from stack receive queue if any and parse
-        Process associated transaction or reply with new corresponder transaction
+        Process associated transaction or reply with new correspondent transaction
         '''
         packet = self.fetchParseUdpRx()
         if not packet:
@@ -167,7 +167,7 @@ class StackUdp(object):
             trans.receive(packet)
             return
 
-        if packet.data['cf']: #corresponder to stale transaction so drop
+        if packet.data['cf']: #correspondent to stale transaction so drop
             print "{0} Stale Transaction, dropping ...".format(self.name)
             # Should send abort nack to drop transaction on other side
             return
@@ -188,19 +188,19 @@ class StackUdp(object):
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joinee = transacting.Joinee(stack=self, sid=0, txData=data)
-        joinee.join()
+        joinier = transacting.Joinier(stack=self, sid=0, txData=data)
+        joinier.join()
 
     def replyJoin(self, packet):
         '''
-        Correspond with joiner transaction to received join packet
+        Correspond with joinent transaction to received join packet
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self,
+        joinent = transacting.Joinent(stack=self,
                         sid=packet.data['si'],
                         tid=packet.data['ti'],
                         txData=data, rxPacket=packet)
-        joiner.pend()
-        self.devices[joiner.rdid].accepted = True
-        joiner.accept()
+        joinent.pend()
+        self.devices[joinent.rdid].accepted = True
+        joinent.accept()
 

@@ -115,7 +115,7 @@ class RemoteDevice(Device):
         self.publee = nacling.Publican() # short term key
         self.privee = nacling.Privateer() # short term key
 
-        self.rsid = rsid # last sid received from remote when CrdrFlag is True
-        self.rtid = rtid # last tid received from remote when CrdrFlag is True
+        self.rsid = rsid # last sid received from remote when RmtFlag is True
+        self.rtid = rtid # last tid received from remote when RmtFlag is True
 
 
