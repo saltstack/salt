@@ -229,17 +229,17 @@ class StackUdp(object):
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        joinent.pend() #assigns .rdid here
+        joinent.join() #assigns .rdid here
         # need to perform the check for accepted status somewhere
         joinent.accept()
 
-    def Endow(self, rdid):
+    def endow(self, rdid=None):
         '''
         Initiate endow transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
         endower = transacting.Endower(stack=self, rdid=rdid, txData=data)
-        joiner.join()
+        endower.hello()
 
     def replyEndow(self, packet):
         '''
@@ -252,5 +252,5 @@ class StackUdp(object):
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        endowent.accept()
+        endowent.hello()
 

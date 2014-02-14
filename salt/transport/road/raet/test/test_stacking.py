@@ -4,6 +4,8 @@ Tests to try out stacking. Potentially ephemeral
 
 '''
 from ioflo.base.odicting import odict
+from ioflo.base.aiding import Timer
+
 from salt.transport.road.raet import (raeting, nacling, packeting,
                                      devicing, transacting, stacking)
 
@@ -41,14 +43,18 @@ def test():
 
     stack1.join()
 
-    stack1.serviceUdp()
-    stack0.serviceUdp()
+    timer = Timer(duration=0.5)
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
 
     while stack0.udpRxes:
         stack0.processUdpRx()
 
-    stack0.serviceUdp()
-    stack1.serviceUdp()
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
 
     while stack1.udpRxes:
         stack1.processUdpRx()
@@ -61,6 +67,12 @@ def test():
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+
+    stack1.endow()
+
+    timer.restart()
+    stack1.serviceUdp()
+    stack0.serviceUdp()
 
 
 

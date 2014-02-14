@@ -113,14 +113,14 @@ class Transaction(object):
         '''
         Return result of verifying msg with signature
         '''
-        return (self.stack.devices[self.rid].verfer.verify(signature, msg))
+        return (self.stack.devices[self.rdid].verfer.verify(signature, msg))
 
     def encrypt(self, msg):
         '''
         Return (cipher, nonce) duple resulting from encrypting message
         with short term keys
         '''
-        remote = self.stack.devices[self.rid]
+        remote = self.stack.devices[self.rdid]
         return (self.stack.device.privee.encrypt(msg, remote.publee.key))
 
     def decrypt(self, cipher, nonce):
@@ -128,7 +128,7 @@ class Transaction(object):
         Return msg resulting from decrypting cipher and nonce
         with short term keys
         '''
-        remote = remote = self.stack.devices[self.rid]
+        remote = self.stack.devices[self.rdid]
         return (self.stack.device.privee.decrypt(cipher, nonce, remote.publee, key))
 
 class Initiator(Transaction):
@@ -205,11 +205,10 @@ class Joiner(Initiator):
             elif packet.data['pk'] == raeting.pcktKinds.response:
                 self.accept()
 
-    def join(self, body=None):
+    def join(self):
         '''
         Send join request
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
@@ -227,8 +226,9 @@ class Joiner(Initiator):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada)
-        body.update(verhex=self.stack.device.signer.verhex,
-                    pubhex=self.stack.device.priver.pubhex)
+
+        body = odict([('verhex', self.stack.device.signer.verhex),
+                      ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.request,
                                     embody=body,
@@ -287,6 +287,7 @@ class Joiner(Initiator):
             self.stack.moveRemoteDevice(remote.did, rdid)
         #self.stack.device.accepted = True
         remote.accepted = True
+        remote.nextSid()
         self.remove(index)
 
 class Joinent(Correspondent):
@@ -302,8 +303,9 @@ class Joinent(Correspondent):
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
 
-    def pend(self):
+    def join(self):
         '''
+        Process join packet
         Perform pend operation of pending device being accepted onto channel
         '''
         data = self.rxPacket.data
@@ -335,11 +337,10 @@ class Joinent(Correspondent):
 
         self.ackJoin()
 
-    def ackJoin(self, body=None):
+    def ackJoin(self):
         '''
         Send ack to join request
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
@@ -358,7 +359,7 @@ class Joinent(Correspondent):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada,)
-        body.update()
+        body = odict()
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.ack,
                                     embody=body,
@@ -372,11 +373,10 @@ class Joinent(Correspondent):
 
         self.transmit(packet)
 
-    def accept(self, body=None):
+    def accept(self):
         '''
         Send accept response to join request
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
@@ -396,10 +396,10 @@ class Joinent(Correspondent):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada,)
-        body.update( ldid=self.rdid,
-                     rdid=self.stack.device.did,
-                     verhex=self.stack.device.signer.verhex,
-                     pubhex=self.stack.device.priver.pubhex,)
+        body = odict([ ('ldid', self.rdid),
+                       ('rdid', self.stack.device.did),
+                       ('verhex', self.stack.device.signer.verhex),
+                       ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.response,
                                     embody=body,
@@ -454,7 +454,7 @@ class Endower(Initiator):
         '''
         Prepare .txData
         '''
-        remote = self.stack.devices[self.rid]
+        remote = self.stack.devices[self.rdid]
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
                             dh=remote.host,
@@ -469,22 +469,22 @@ class Endower(Initiator):
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nacl)
 
-    def hello(self, body=None):
+    def hello(self):
         '''
         Send hello request
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rid]
-        msg = "".rjust(64, '\x00'),
-        cypher, nonce = remote.privlee.encrypt(msg, remote.pubber.key)
-        body.update(plain=msg,
-                    shorthex=remote.privee.pubhex,
-                    cypher=cypher,
-                    nonce=nonce)
+        remote = self.stack.devices[self.rdid]
+        msg = "".rjust(64, '\x00')
+        cipher, nonce = remote.privee.encrypt(msg, remote.pubber.key)
+        body = odict([('plain', msg),
+                      ('shorthex', remote.privee.pubhex),
+                      ('cipher', cipher),
+                      ('nonce', nonce)])
+
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.hello,
                                     embody=body,
@@ -539,27 +539,27 @@ class Endower(Initiator):
 
         self.initiate()
 
-    def initiate(self, body=None):
+    def initiate(self):
         '''
         Send initiate request to cookie response to hello request
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rid]
+        remote = self.stack.devices[self.rdid]
         vouch = json.dumps(odict(shorthex=remote.privee.pubhex), separators=(',', ':'))
         vcipher, vnonce = self.stack.device.priver.encrypt(vouch, remote.pubber.key)
-        stuff = odict(longhex=self.stack.device.priver.keyhex,
-                      vcipher=vcipher,
-                      vnonce=vnonce,
-                      fqdn=remote.fqdn)
+        stuff = odict([('fqdn', remote.fqdn),
+                       ('longhex', self.stack.device.priver.keyhex),
+                       ('vcipher', vcipher),
+                       ('vnonce', vnonce),])
         cipher, nonce = remote.privee.encrypt(stuff, remote.publee.key)
-        body.update(shorthex=remote.privee.pubhex,
-                    oreo=self.oreo,
-                    cipher=cipher,
-                    nonce=nonce,)
+
+        body = odict([('shorthex', remote.privee.pubhex),
+                      ('oreo', self.oreo),
+                      ('cipher', cipher),
+                      ('nonce', nonce)])
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.initiate,
                                     embody=body,
@@ -674,26 +674,25 @@ class Endowent(Correspondent):
 
         self.cookie()
 
-    def cookie(self, body=None):
+    def cookie(self):
         '''
         Send Cookie Packet
         '''
-        body = body or odict()
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rid]
+        remote = self.stack.devices[self.rdid]
         self.oreo = remote.priver.nonce()
 
-        stuff = odict(  shorthex=remote.privee.pubhex,
-                        sdid=self.stack.devices.did,
-                        ddid=remote.did,
-                        oreo=self.oreo)
+        stuff = odict([('shorthex', remote.privee.pubhex),
+                        ('sdid', self.stack.devices.did),
+                        ('ddid', remote.did),
+                        ('oreo', self.oreo)])
         stuff = json.dumps(stuff, separators=(',', ':'))
 
         cipher, nonce = self.priver.encrypt(stuff, remote.publee.key)
-        body.update(cipher=cipher, nonce=nonce,)
+        body = odict([('cipher', cipher), ('nonce', nonce)])
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.cookie,
                                     embody=body,
@@ -712,11 +711,6 @@ class Endowent(Correspondent):
         '''
         data = self.rxPacket.data
         body = self.rxPacket.body.data
-
-        shorthex
-        oreo
-        cipher
-        nonce
 
         plain = body.get('plain')
         if not plain:
@@ -751,7 +745,7 @@ class Endowent(Correspondent):
 
         self.cookie()
 
-    def ackInitiate(self, body=None):
+    def ackInitiate(self):
         '''
         Send ack to initiate request
         '''
@@ -760,7 +754,7 @@ class Endowent(Correspondent):
             msg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(msg)
 
-        body.update()
+        body = odict()
         packet = packeting.TxPacket(transaction=self,
                                     kind=raeting.pcktKinds.ack,
                                     embody=body,
@@ -778,6 +772,6 @@ class Endowent(Correspondent):
         '''
         Perform endowment
         '''
-        self.stack.devices[self.rid].endowed = True
+        self.stack.devices[self.rdid].endowed = True
         #self.remove()
         # keep around for 2 minutes to save cookie (self.oreo)
