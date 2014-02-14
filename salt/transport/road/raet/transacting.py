@@ -141,10 +141,6 @@ class Initiator(Transaction):
         '''
         kwa['rmt'] = False  # force rmt to False
         super(Initiator, self).__init__(**kwa)
-        if self.sid is None:  # use current session id of local device
-            self.sid = self.stack.device.sid
-        if self.tid is None:  # use next tid
-            self.tid = self.stack.device.nextTid()
 
     def process(self):
         '''
@@ -185,12 +181,15 @@ class Joiner(Initiator):
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joiner, self).__init__(**kwa)
+
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
                 master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
                 self.stack.addRemoteDevice(master)
 
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
+        self.sid = 0
+        self.tid = self.stack.devices[self.rdid].nextTid()
         self.add(self.index)
 
     def receive(self, packet):
@@ -431,6 +430,8 @@ class Endower(Initiator):
             emsg = "Must be accepted first"
             raise raeting.TransactionError(emsg)
         remote.refresh() # refresh short term keys and .endowed
+        self.sid = remote.sid
+        self.tid = remote.nextTid()
         self.prep() # prepare .txData
         self.add(self.index)
 
@@ -607,9 +608,9 @@ class Endowent(Correspondent):
 
         if packet.data['tk'] == raeting.trnsKinds.endow:
             if packet.data['pk'] == raeting.pcktKinds.hello:
-                self.cookie()
+                self.hello()
             elif packet.data['pk'] == raeting.pcktKinds.initiate:
-                self.endow()
+                self.initiate()
 
     def prep(self):
         '''

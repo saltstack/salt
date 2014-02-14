@@ -156,6 +156,8 @@ class StackUdp(object):
 
         ddid = packet.data['dd']
         if ddid != 0 and self.device.did != 0 and ddid != self.device.did:
+            emsg = "Invalid destination did = {0}. Dropping packet.".format(ddid)
+            print emsg
             return None
 
         sh, sp = ra
@@ -204,24 +206,53 @@ class StackUdp(object):
                 packet.data['si'] == 0):
             self.replyJoin(packet)
 
+        if (packet.data['tk'] == raeting.trnsKinds.endow and
+                packet.data['pk'] == raeting.pcktKinds.hello and
+                packet.data['si'] != 0):
+            self.replyEndow(packet)
+
     def join(self):
         '''
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self, sid=0, txData=data)
+        joiner = transacting.Joiner(stack=self, txData=data)
         joiner.join()
 
     def replyJoin(self, packet):
         '''
-        Correspond with joinent transaction to received join packet
+        Correspond to join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
         joinent = transacting.Joinent(stack=self,
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
-                                        txData=data, rxPacket=packet)
+                                        txData=data,
+                                        rxPacket=packet)
         joinent.pend() #assigns .rdid here
         self.devices[joinent.rdid].accepted = True
         joinent.accept()
+
+    def Endow(self, rdid):
+        '''
+        Initiate endow transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk)
+        endower = transacting.Endower(stack=self, rdid=rdid, txData=data)
+        joiner.join()
+
+    def replyEndow(self, packet):
+        '''
+        Correspond to endow transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk)
+        endowent = transacting.Endowent(stack=self,
+                                        rid=packet.data['sd'],
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data,
+                                        rxPacket=packet)
+        endowent.pend() #assigns .rdid here
+        self.devices[endowent.rdid].accepted = True
+        endowent.accept()
 
