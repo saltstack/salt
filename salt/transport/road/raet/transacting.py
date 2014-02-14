@@ -236,9 +236,18 @@ class Joiner(Initiator):
             return
         self.transmit(packet)
 
+    def pend(self):
+        '''
+        Process ack to join packet
+        '''
+        #data = self.rxPacket.data
+        #body = self.rxPacket.body.data
+        #set timer for redo
+        pass
+
     def accept(self):
         '''
-        Perform acceptance
+        Perform acceptance in response to accept packt
         '''
         data = self.rxPacket.data
         body = self.rxPacket.body.data
@@ -274,14 +283,6 @@ class Joiner(Initiator):
         #self.stack.device.accepted = True
         remote.accepted = True
         self.remove(index)
-
-    def pend(self):
-        '''
-        Perform pend as a result of accept ack reception
-        '''
-        #set timer for redo
-        pass
-
 
 class Joinent(Correspondent):
     '''
@@ -508,10 +509,29 @@ class Endower(Initiator):
             raise raeting.TransactionError(emsg)
 
         remote = self.stack.devices[self.rdid]
-        #remote.verfer = nacling.Verifier(key=verhex)
-        #remote.pubber = nacling.Publican(key=pubhex)
 
-        #self.stack.device.accepted = True
+        msg = remote.privee.decrypt(cipher, nonce, remote.pubber.key)
+        stuff = json.loads(msg, object_pairs_hook=odict)
+
+        shorthex= stuff.get('shorthex')
+        if not shorthex:
+            emsg = "Missing short term key in cookie"
+            raise raeting.TransactionError(emsg)
+
+
+        if stuff.get('sdid') != remote.did or self.get('ddid') != self.stack.device.did:
+            emsg = "Invalid cookie  sdid or ddid fields in cookie packet"
+            raeting.TransactionError(emsg)
+
+        oreo = stuff.get('oreo')
+        if not oreo:
+            emsg = "Missing cookie nonce in cookie packet"
+            raeting.TransactionError(emsg)
+
+        self.oreo = oreo
+        remote.publee = nacling.Publican(key=shorthex)
+
+        self.initiate()
 
     def initiate(self, body=None):
         '''
@@ -531,7 +551,7 @@ class Endower(Initiator):
                       fqdn=remote.fqdn)
         cipher, nonce = remote.privee.encrypt(stuff, remote.publee.key)
         body.update(shorthex=remote.privee.pubhex,
-                    cookie=self.oreo,
+                    oreo=self.oreo,
                     cipher=cipher,
                     nonce=nonce,)
         packet = packeting.TxPacket(transaction=self,
@@ -549,7 +569,7 @@ class Endower(Initiator):
 
     def endow(self):
         '''
-        Perform endowment
+        Perform endowment in response to ack to initiate packet
         '''
         self.stack.devices[self.rid].endowed = True
         self.remove()
@@ -660,17 +680,18 @@ class Endowent(Correspondent):
             raise raeting.TransactionError(emsg)
 
         remote = self.stack.devices[self.rid]
-        self.oreo = odict(ldid=self.stack.devices.did,
-                          rdid=remote.did,
-                          nonce=remote.priver.nonce())
-        msg = "".rjust(64, '\x00'),
-        cypher, nonce = remote.privlee.encrypt(msg, remote.pubber.key)
-        body.update(plain=msg,
-                    shorthex=remote.privee.pubhex,
-                    cypher=cypher,
-                    nonce=nonce)
+        self.oreo = remote.priver.nonce()
+
+        stuff = odict(  shorthex=remote.privee.pubhex,
+                        sdid=self.stack.devices.did,
+                        ddid=remote.did,
+                        oreo=self.oreo)
+        stuff = json.dumps(stuff, separators=(',', ':'))
+
+        cipher, nonce = self.priver.encrypt(stuff, remote.publee.key)
+        body.update(cipher=cipher, nonce=nonce,)
         packet = packeting.TxPacket(transaction=self,
-                                    kind=raeting.pcktKinds.hello,
+                                    kind=raeting.pcktKinds.cookie,
                                     embody=body,
                                     data=self.txData)
         try:
@@ -682,29 +703,64 @@ class Endowent(Correspondent):
         self.transmit(packet)
 
 
-    def initiate(self, body=None):
+    def initiate(self):
         '''
-        Send initiate request to cookie response to hello request
+        Process initiate packet
+        '''
+        data = self.rxPacket.data
+        body = self.rxPacket.body.data
+
+        shorthex
+        oreo
+        cipher
+        nonce
+
+        plain = body.get('plain')
+        if not plain:
+            emsg = "Missing plain in hello packet"
+            raise raeting.TransactionError(emsg)
+
+        if len(plain) != 64:
+            emsg = "Invalid plain size = {0}".format(len(plain))
+            raise raeting.TransactionError(emsg)
+
+        shorthex = body.get('shorthex')
+        if not shorthex:
+            emsg = "Missing shorthex in hello packet"
+            raise raeting.TransactionError(emsg)
+
+        cipher = body.get('cipher')
+        if not cipher:
+            emsg = "Missing cipher in hello packet"
+            raise raeting.TransactionError(emsg)
+
+        nonce = body.get('nonce')
+        if not nonce:
+            emsg = "Missing nonce in hello packet"
+            raise raeting.TransactionError(emsg)
+
+        remote = self.stack.devices[self.rdid]
+        remote.publee = nacling.Publican(key=shorthex)
+        msg = remote.publee.decrypt(cipher, nonce, remote.pubber.key)
+        if msg != plain :
+            emsg = "Invalid plain not match decrypted cipher"
+            raise raeting.TransactionError(emsg)
+
+        self.cookie()
+
+
+    def ackInitiate(self, body=None):
+        '''
+        Send ack to initiate request
         '''
         body = body or odict()
         if self.rdid not in self.stack.devices:
             msg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(msg)
 
-        remote = self.stack.devices[self.rid]
-        vouch = json.dumps(odict(shorthex=remote.privee.pubhex), separators=(',', ':'))
-        vcipher, vnonce = self.stack.device.priver.encrypt(vouch, remote.pubber.key)
-        stuff = odict(longhex=self.stack.device.priver.keyhex,
-                      vcipher=vcipher,
-                      vnonce=vnonce,
-                      fqdn=remote.fqdn)
-        cipher, nonce = remote.privee.encrypt(stuff, remote.publee.key)
-        body.update(shorthex=remote.privee.pubhex,
-                    cookie=self.oreo,
-                    cipher=cipher,
-                    nonce=nonce,)
+        body.update()
         packet = packeting.TxPacket(transaction=self,
-                                    kind=raeting.pcktKinds.initiate,
+                                    kind=raeting.pcktKinds.ack,
                                     embody=body,
                                     data=self.txData)
         try:
@@ -714,11 +770,12 @@ class Endowent(Correspondent):
             self.remove()
             return
 
-        self.transmit(packet)
+        self.endow()
 
     def endow(self):
         '''
         Perform endowment
         '''
         self.stack.devices[self.rid].endowed = True
-        self.remove()
+        #self.remove()
+        # keep around for 2 minutes to save cookie (self.oreo)
