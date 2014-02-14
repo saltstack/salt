@@ -342,14 +342,7 @@ def urlencoded_processor(entity):
     '''
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
-    lowdata = entity.params
-
-    # Make the 'arg' param a list if not already
-    if 'arg' in lowdata and not isinstance(lowdata['arg'], list):
-        lowdata['arg'] = [lowdata['arg']]
-
-    # Finally, make a Low State and put it in request
-    cherrypy.request.lowstate = [lowdata]
+    cherrypy.serving.request.serialized_data = entity.params
 
 
 @process_request_body
@@ -361,7 +354,7 @@ def json_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.lowstate = json.loads(body)
+        cherrypy.serving.request.serialized_data = json.loads(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
@@ -375,7 +368,7 @@ def yaml_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.lowstate = yaml.load(body)
+        cherrypy.serving.request.serialized_data = yaml.load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -410,6 +403,30 @@ def hypermedia_in():
     cherrypy.request.body.processors = ct_in_map
 
 
+def lowdata_fmt():
+    '''
+    Validate and format lowdata from incoming unserialized request data
+
+    This tool requires that the hypermedia_in tool has already been run.
+    '''
+    if cherrypy.request.method.upper() != 'POST':
+        return
+
+    # TODO: call lowdata validation routines from here
+
+    data = cherrypy.request.serialized_data
+
+    if cherrypy.request.headers['Content-Type'] == 'application/x-www-form-urlencoded':
+        # Make the 'arg' param a list if not already
+        if 'arg' in data and not isinstance(data['arg'], list):
+            data['arg'] = [data['arg']]
+
+        # Finally, make a Low State and put it in request
+        cherrypy.request.lowstate = [data]
+    else:
+        cherrypy.serving.request.lowstate = data
+
+
 class LowDataAdapter(object):
     '''
     The primary entry point to the REST API. All functionality is available
@@ -429,6 +446,7 @@ class LowDataAdapter(object):
 
         'tools.hypermedia_out.on': True,
         'tools.hypermedia_in.on': True,
+        'tools.lowdata_fmt.on': True,
         'tools.salt_ip_verify.on': True,
     }
 
@@ -1216,7 +1234,8 @@ class Webhook(object):
         'tools.salt_auth.on': False,
 
         # Don't do any lowdata processing on the POST data
-        'tools.hypermedia_in.on': False,
+        'tools.lowdata_fmt.on': True,
+
     })
 
     def __init__(self):
@@ -1259,7 +1278,7 @@ class Webhook(object):
         :status 406: requested Content-Type not available
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
-        data = cherrypy.request.body.params
+        data = cherrypy.serving.request.serialized_data
 
         ret = self.event.fire_event(data, tag)
         return {'success': ret}
@@ -1355,6 +1374,8 @@ def get_app(opts):
             hypermedia_in)
     cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
             salt_auth_tool, priority=60)
+    cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
+            lowdata_fmt, priority=40)
     cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
             hypermedia_out)
     cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
