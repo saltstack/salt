@@ -26,8 +26,12 @@ import StringIO
 import hashlib
 import os
 import tempfile
-import csv
-import pipes
+try:
+    import pipes
+    import csv
+    HAS_ALL_IMPORTS = True
+except ImportError:
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
@@ -52,7 +56,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if salt.utils.which('psql'):
+    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
         return 'postgres'
     return False
 
