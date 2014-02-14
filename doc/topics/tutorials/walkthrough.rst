@@ -584,7 +584,7 @@ and that it results in success.
     Also evaluation ordering is available in Salt as well:
     :doc:`Ordering States</ref/states/ordering>`
 
-This new sls formula has a special name --  ``init.sls``. When an sls formula is
+This new sls formula has a special name --  ``init.sls``. When an SLS formula is
 named ``init.sls`` it inherits the name of the directory path that contains it.
 This formula can be referenced via the following command:
 
