@@ -45,6 +45,7 @@ class Device(object):
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port
+        self.fqdn = socket.getfqdn(self.host)
 
     @property
     def ha(self):

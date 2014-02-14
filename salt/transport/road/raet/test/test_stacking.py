@@ -30,37 +30,37 @@ def test():
     device = devicing.LocalDevice(   did=1,
                                      signkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
-    stack1 = stacking.StackUdp(device=device)
+    stack0 = stacking.StackUdp(device=device)
 
     #minon stack
     device = devicing.LocalDevice(   did=0,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
                                      prikey=masterPriKeyHex,)
-    stack2 = stacking.StackUdp(device=device)
+    stack1 = stacking.StackUdp(device=device)
 
-    stack2.join()
+    stack1.join()
 
-    stack2.serviceUdp()
+    stack1.serviceUdp()
+    stack0.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
+
+    stack0.serviceUdp()
     stack1.serviceUdp()
 
     while stack1.udpRxes:
         stack1.processUdpRx()
 
-    stack1.serviceUdp()
-    stack2.serviceUdp()
 
-    while stack2.udpRxes:
-        stack2.processUdpRx()
-
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-
-    print "{0} did={1}".format(stack2.name, stack2.device.did)
-    print "{0} devices=\n{1}".format(stack2.name, stack2.devices)
-    print "{0} transactions=\n{1}".format(stack2.name, stack2.transactions)
 
 
 

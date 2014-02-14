@@ -201,8 +201,8 @@ class StackUdp(object):
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joinier = transacting.Joinier(stack=self, sid=0, txData=data)
-        joinier.join()
+        joiner = transacting.Joiner(stack=self, sid=0, txData=data)
+        joiner.join()
 
     def replyJoin(self, packet):
         '''

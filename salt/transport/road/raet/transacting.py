@@ -162,16 +162,16 @@ class Correspondent(Transaction):
 
         super(Correspondent, self).__init__(**kwa)
 
-class Joinier(Initiator):
+class Joiner(Initiator):
     '''
-    RAET protocol Joinier Initiator class Dual of Joinient
+    RAET protocol Joiner Initiator class Dual of Joinent
     '''
     def __init__(self, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
-        super(Joinier, self).__init__(**kwa)
+        super(Joiner, self).__init__(**kwa)
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
                 master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
@@ -186,7 +186,7 @@ class Joinier(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joinier, self).receive(packet)
+        super(Joiner, self).receive(packet)
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack:
@@ -280,7 +280,7 @@ class Joinier(Initiator):
 
 class Joinent(Correspondent):
     '''
-    RAET protocol Joinent transaction class, dual of Joinier
+    RAET protocol Joinent transaction class, dual of Joiner
     '''
     def __init__(self, **kwa):
         '''
@@ -402,17 +402,17 @@ class Joinent(Correspondent):
         self.transmit(packet)
         self.remove(self.rxPacket.index)
 
-class Endowier(Initiator):
+class Endower(Initiator):
     '''
-    RAET protocol Endowier Initiator class Dual of Endowent
+    RAET protocol Endower Initiator class Dual of Endowent
     CurveCP handshake
     '''
     def __init__(self, **kwa):
         '''
-        Setup Transaction instance
+        Setup instance
         '''
         kwa['kind'] = raeting.trnsKinds.endow
-        super(Endowier, self).__init__(**kwa)
+        super(Endower, self).__init__(**kwa)
         self.oreo = None # cookie from correspondent needed until handshake completed
         if self.rdid is None:
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
@@ -429,7 +429,7 @@ class Endowier(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Endowier, self).receive(packet)
+        super(Endower, self).receive(packet)
 
         if packet.data['tk'] == raeting.trnsKinds.endow:
             if packet.data['pk'] == raeting.pcktKinds.cookie:
@@ -476,7 +476,7 @@ class Endowier(Initiator):
             packet.pack()
         except packeting.PacketError as ex:
             print ex
-            self.stack.removeTransaction(self.index, transaction=self)
+            self.remove()
             return
         self.transmit(packet)
 
@@ -527,7 +527,7 @@ class Endowier(Initiator):
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nacl,)
 
-        dns = socket.getfqdn(remote.host)
+        fqdn = remote.fqdn
         body.update(shorthex=remote.privee.pubhex,
                     cookie=self.oreo,
                     )
