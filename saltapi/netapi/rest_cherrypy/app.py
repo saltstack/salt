@@ -1259,7 +1259,7 @@ class Webhook(object):
         :status 406: requested Content-Type not available
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
-        data = cherrypy.request.lowstate
+        data = cherrypy.request.body.params
 
         ret = self.event.fire_event(data, tag)
         return {'success': ret}
