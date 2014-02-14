@@ -83,6 +83,14 @@ class StackUdp(object):
         device.did = ndid
         self.devices.insert(0, device.did, device)
 
+    def addTransaction(self, index, transaction):
+        '''
+        Safely add transaction at index If not already there
+        '''
+        self.transactions[index] = transaction
+        print "Added {0} transaction to {1} at '{2}'".format(
+                transaction.__class__.__name__, self.name, index)
+
     def removeTransaction(self, index, transaction=None):
         '''
         Safely remove transaction at index If transaction identity same

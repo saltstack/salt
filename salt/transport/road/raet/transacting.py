@@ -87,6 +87,14 @@ class Transaction(object):
         self.stack.txUdp(packet.packed, self.rdid)
         self.txPacket = packet
 
+    def add(self, index=None):
+        '''
+        Add self to stack transactions
+        '''
+        if not index:
+            index = self.index
+        self.stack.addTransaction(index, self)
+
     def remove(self, index=None):
         '''
         Remove self from stack transactions
@@ -183,9 +191,7 @@ class Joiner(Initiator):
                 self.stack.addRemoteDevice(master)
 
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
-        self.stack.transactions[self.index] = self
-        print "Added {0} transaction to {1} at '{2}'".format(
-                self.__class__.__name__, self.stack.name, self.index)
+        self.add(self.index)
 
     def receive(self, packet):
         """
@@ -295,9 +301,7 @@ class Joinent(Correspondent):
         kwa['kind'] = raeting.trnsKinds.join
         super(Joinent, self).__init__(**kwa)
         # Since corresponding bootstrap transaction use packet.index not self.index
-        self.stack.transactions[self.rxPacket.index] = self
-        print "Added {0} transaction to {1} at '{2}'".format(
-                self.__class__.__name__, self.stack.name, self.rxPacket.index)
+        self.add(self.rxPacket.index)
 
     def pend(self):
         '''
@@ -426,11 +430,9 @@ class Endower(Initiator):
         if not remote.accepted:
             emsg = "Must be accepted first"
             raise raeting.TransactionError(emsg)
-        remote.refresh() # refresh short term keys
+        remote.refresh() # refresh short term keys and .endowed
         self.prep() # prepare .txData
-        self.stack.transactions[self.index] = self
-        print "Added {0} transaction to {1} at '{2}'".format(
-                self.__class__.__name__, self.stack.name, self.index)
+        self.add(self.index)
 
     def receive(self, packet):
         """
@@ -593,11 +595,9 @@ class Endowent(Correspondent):
             emsg = "Must be accepted first"
             raise raeting.TransactionError(emsg)
         self.oreo = None #keep locally generated oreo around for redos
-        remote.refresh() # refresh short term keys
+        remote.refresh() # refresh short term keys and .endowed
         self.prep() # prepare .txData
-        self.stack.transactions[self.index] = self
-        print "Added {0} transaction to {1} at '{2}'".format(
-                self.__class__.__name__, self.stack.name, self.index)
+        self.add(self.index)
 
     def receive(self, packet):
         """
