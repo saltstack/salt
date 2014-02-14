@@ -391,6 +391,23 @@ class MinionBase(object):
                 448
             )
 
+    @staticmethod
+    def process_schedule(minion, loop_interval):
+        try:
+            minion.schedule.eval()
+            # Check if scheduler requires lower loop interval than
+            # the loop_interval setting
+            if minion.schedule.loop_interval < loop_interval:
+                loop_interval = minion.schedule.loop_interval
+                log.debug(
+                    'Overriding loop_interval because of scheduled jobs.'
+                )
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
+        return loop_interval
+
 
 class MasterMinion(object):
     '''
@@ -500,19 +517,7 @@ class MultiMinion(MinionBase):
                     continue
                 if not hasattr(minion, 'schedule'):
                     continue
-                try:
-                    minion.schedule.eval()
-                    # Check if scheduler requires lower loop interval than
-                    # the loop_interval setting
-                    if minion.schedule.loop_interval < loop_interval:
-                        loop_interval = minion.schedule.loop_interval
-                        log.debug(
-                            'Overriding loop_interval because of scheduled jobs.'
-                        )
-                except Exception as exc:
-                    log.error(
-                        'Exception {0} occurred in scheduled job'.format(exc)
-                    )
+                loop_interval = self.process_schedule(minion, loop_interval)
                 break
             if self.poller.poll(1):
                 try:
@@ -1285,28 +1290,10 @@ class Minion(MinionBase):
             )
 
         while self._running is True:
+            loop_interval = self.process_schedule(self, loop_interval)
             try:
-                self.schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if self.schedule.loop_interval < loop_interval:
-                    loop_interval = self.schedule.loop_interval
-                    log.debug(
-                        'Overriding loop_interval because of scheduled jobs.'
-                    )
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
-            try:
-                log.trace('Check main poller timeout {0}'.format(loop_interval))
-                socks = dict(self.poller.poll(
-                    loop_interval * 1000)
-                )
-                if socks.get(self.socket) == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
-                    log.trace('Handling payload')
-                    self._handle_payload(payload)
+                socks = self._do_poll(loop_interval)
+                self._do_socket_recv(socks)
 
                 # Check the event system
                 if socks.get(self.epull_sock) == zmq.POLLIN:
@@ -1366,12 +1353,8 @@ class Minion(MinionBase):
         loop_interval = int(self.opts['loop_interval'])
         while self._running is True:
             try:
-                socks = dict(self.poller.poll(
-                    loop_interval * 1000)
-                )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
-                    self._handle_payload(payload)
+                socks = self._do_poll(loop_interval)
+                self._do_socket_recv(socks)
                 # Check the event system
             except zmq.ZMQError:
                 # If a zeromq error happens recover
@@ -1382,6 +1365,18 @@ class Minion(MinionBase):
                     exc_info=True
                 )
             yield True
+
+    def _do_poll(self, loop_interval):
+        log.trace('Check main poller timeout {0}'.format(loop_interval))
+        return dict(self.poller.poll(
+            loop_interval * 1000)
+        )
+
+    def _do_socket_recv(self, socks):
+        if socks.get(self.socket) == zmq.POLLIN:
+            payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+            log.trace('Handling payload')
+            self._handle_payload(payload)
 
     def destroy(self):
         '''
