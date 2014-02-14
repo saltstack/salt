@@ -1605,12 +1605,20 @@ class Map(Cloud):
             )
             opts['display_ssh_output'] = False
 
+        local_master = master_name is None
+
         for name, profile in create_list:
             if name in (master_name, master_minion_name):
                 # Already deployed, it's the master's minion
                 continue
 
-            if master_finger is not None:
+            if profile['minion'].get('local_master', False) and \
+                    profile['minion'].get('master', None) is not None:
+                # The minion is explicitly defining a master and it's
+                # explicitely saying it's the local one
+                local_master = True
+
+            if master_finger is not None and local_master  is False:
                 profile['master_finger'] = master_finger
 
             if master_host is not None:
@@ -1622,14 +1630,14 @@ class Map(Cloud):
                     'opts': opts,
                     'name': name,
                     'profile': profile,
-                    'local_master': master_name is None
+                    'local_master': local_master
                 })
                 continue
 
             # Not deploying in parallel
             try:
                 output[name] = self.create(
-                    profile, local_master=master_name is None
+                    profile, local_master=local_master
                 )
                 if self.opts.get('show_deploy_args', False) is False:
                     output[name].pop('deploy_kwargs', None)
