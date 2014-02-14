@@ -167,8 +167,9 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
+    cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:
-        fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+        fp_.write(cache_object)
     return ret
 
 
