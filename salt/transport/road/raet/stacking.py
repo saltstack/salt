@@ -230,7 +230,7 @@ class StackUdp(object):
                                         txData=data,
                                         rxPacket=packet)
         joinent.pend() #assigns .rdid here
-        self.devices[joinent.rdid].accepted = True
+        # need to perform the check for accepted status somewhere
         joinent.accept()
 
     def Endow(self, rdid):
@@ -252,7 +252,5 @@ class StackUdp(object):
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        endowent.pend() #assigns .rdid here
-        self.devices[endowent.rdid].accepted = True
         endowent.accept()
 

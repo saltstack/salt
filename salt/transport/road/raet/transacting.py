@@ -380,11 +380,13 @@ class Joinent(Correspondent):
         if self.rdid not in self.stack.devices:
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
+
+        remote = self.stack.devices[self.rdid]
         #since bootstrap transaction use the reversed sdid and ddid from packet
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
-                            dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port,
+                            dh=remote.host,
+                            dp=remote.port,
                             sd=self.rxPacket.data['dd'],
                             dd=self.rxPacket.data['sd'],
                             tk=self.kind,
@@ -408,6 +410,7 @@ class Joinent(Correspondent):
             print ex
             self.remove(self.rxPacket.index)
             return
+        remote.accepted = True
         self.transmit(packet)
         self.remove(self.rxPacket.index)
 
@@ -703,7 +706,6 @@ class Endowent(Correspondent):
             return
         self.transmit(packet)
 
-
     def initiate(self):
         '''
         Process initiate packet
@@ -748,7 +750,6 @@ class Endowent(Correspondent):
             raise raeting.TransactionError(emsg)
 
         self.cookie()
-
 
     def ackInitiate(self, body=None):
         '''
