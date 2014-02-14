@@ -210,10 +210,10 @@ class StackUdp(object):
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
         joinent = transacting.Joinent(stack=self,
-                        sid=packet.data['si'],
-                        tid=packet.data['ti'],
-                        txData=data, rxPacket=packet)
-        joinent.pend()
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data, rxPacket=packet)
+        joinent.pend() #assigns .rdid here
         self.devices[joinent.rdid].accepted = True
         joinent.accept()
 

@@ -110,10 +110,11 @@ class RemoteDevice(Device):
         super(RemoteDevice, self).__init__(**kwa)
         self.accepted = None
         self.endowed = None
-        self.verfer = nacling.Verifier(verikey)
-        self.pubber = nacling.Publican(pubkey) #long term key
-        self.publee = nacling.Publican() # short term key
-        self.privee = nacling.Privateer() # short term key
+        self.privee = nacling.Privateer() # short term key manager
+        self.publee = nacling.Publican() # correspondent short term key  manager
+        self.verfer = nacling.Verifier(verikey) # correspondent verify key manager
+        self.pubber = nacling.Publican(pubkey) # correspondent long term key manager
+
         self.rsid = rsid # last sid received from remote when RmtFlag is True
         self.rtid = rtid # last tid received from remote when RmtFlag is True
 
@@ -122,8 +123,8 @@ class RemoteDevice(Device):
         Refresh short term keys
         '''
         self.endowed = None
-        self.publee = nacling.Publican() # short term key
         self.privee = nacling.Privateer() # short term key
+        self.publee = nacling.Publican() # correspondent short term key  manager
 
 
 
