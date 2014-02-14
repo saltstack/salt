@@ -102,7 +102,7 @@ class Privateer(object):
         self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
         self.pubhex = self.key.public_key.encode(nacl.encoding.HexEncoder)
 
-    def _nonce(self):
+    def nonce(self):
         '''
         Generate a safe nonce value (safe assuming only this method is used to
         create nonce values)
@@ -127,7 +127,7 @@ class Privateer(object):
         if not isinstance(pubkey, nacl.public.PublicKey):
             pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
         box = nacl.public.Box(self.key, pubkey)
-        nonce = self._nonce()
+        nonce = self.nonce()
         encrypted = box.encrypt(msg, nonce)
         return (encrypted.ciphertext, encrypted.nonce)
 
