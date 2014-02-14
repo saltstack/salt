@@ -8,6 +8,7 @@ import salt.auth
 
 
 class Channel(object):
+
     @staticmethod
     def factory(opts, **kwargs):
         # Default to ZeroMQ for now
