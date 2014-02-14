@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 packeting module provides classes for Raet packets
-
 
 '''
 
@@ -390,8 +390,6 @@ class TxPacket(Packet):
         self.tail = TxTail(packet=self)
         if data:
             self.data.update(data)
-        if embody and data:
-            self.pack()
 
     def pack(self):
         '''
@@ -402,7 +400,7 @@ class TxPacket(Packet):
         self.tail.pack()
         self.neck.pack()
         self.head.pack()
-        self.packed = '{0}{1}{2}{3}'.format(self.head.packed, self.neck.packed, self.body.packed, self.tail.packed)
+        self.packed = ''.join([self.head.packed, self.neck.packed, self.body.packed, self.tail.packed])
         self.sign()
         return self.packed
 

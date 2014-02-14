@@ -187,6 +187,8 @@ VALID_OPTS = {
     'gather_job_timeout': int,
     'auth_timeout': int,
     'random_master': bool,
+    'syndic_event_forward_timeout': float,
+    'syndic_max_event_process_time': float,
 }
 
 # default configurations
@@ -397,6 +399,8 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
+    'syndic_event_forward_timeout': 0.5,
+    'syndic_max_event_process_time': 0.5,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

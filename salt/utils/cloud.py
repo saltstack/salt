@@ -1485,10 +1485,12 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
-def init_cachedir(base='/var/cache/salt/cloud'):
+def init_cachedir(base=None):
     '''
     Initialize the cachedir needed for Salt Cloud to keep track of minions
     '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
     needed_dirs = (base,
                    os.path.join(base, 'requested'),
                    os.path.join(base, 'active'))
@@ -1503,7 +1505,7 @@ def request_minion_cachedir(
         fingerprint='',
         pubkey=None,
         provider=None,
-        base='/var/cache/salt/cloud',
+        base=None,
     ):
     '''
     Creates an entry in the requested/ cachedir. This means that Salt Cloud has
@@ -1514,6 +1516,9 @@ def request_minion_cachedir(
     fingerprint will be calculated. If both are empty, then the fingerprint
     will be set to None.
     '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
     if not fingerprint:
         if pubkey is not None:
             fingerprint = salt.utils.pem_finger(key=pubkey)
@@ -1526,7 +1531,7 @@ def request_minion_cachedir(
         'provider': provider,
     }
 
-    fname = minion_id + '.json'
+    fname = '{0}.json'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
     with salt.utils.fopen(path, 'w') as fh_:
         json.dump(data, fh_)
@@ -1536,7 +1541,7 @@ def change_minion_cachedir(
         minion_id,
         cachedir,
         data=None,
-        base='/var/cache/salt/cloud',
+        base=None,
     ):
     '''
     Changes the info inside a minion's cachedir entry. The type of cachedir
@@ -1554,7 +1559,10 @@ def change_minion_cachedir(
     if not isinstance(data, dict):
         return False
 
-    fname = minion_id + '.json'
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
@@ -1566,31 +1574,46 @@ def change_minion_cachedir(
         json.dump(cache_data, fh_)
 
 
-def activate_minion_cachedir(minion_id, base='/var/cache/salt/cloud'):
+def activate_minion_cachedir(minion_id, base=None):
     '''
     Moves a minion from the requested/ cachedir into the active/ cachedir. This
     means that Salt Cloud has verified that a requested instance properly
     exists, and should be expected to exist from here on out.
     '''
-    fname = minion_id + '.json'
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
     dst = os.path.join(base, 'active')
     shutil.move(src, dst)
 
 
-def delete_minion_cachedir(minion_id, base='/var/cache/salt/cloud'):
+def delete_minion_cachedir(minion_id, base=None):
     '''
     Deletes a minion's entry from the cloud cachedir. It will search through
     all cachedirs to find the minion's cache file.
     '''
-    fname = minion_id + '.json'
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, fname)
         if os.path.exists(path):
             os.remove(path)
 
 
-def salt_cloud_force_ascii(exc):
+def _salt_cloud_force_ascii(exc):
+    '''
+    Helper method to try its best to convert any Unicode text into ASCII
+    without stack tracing since salt internally does not handle Unicode strings
+
+    This method is not supposed to be used directly. Once
+    `py:module: salt.utils.cloud` is imported this method register's with
+    python's codecs module for proper automatic conversion in case of encoding
+    errors.
+    '''
     if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
@@ -1605,4 +1628,4 @@ def salt_cloud_force_ascii(exc):
     # There's nothing else we can do, raise the exception
     raise exc
 
-codecs.register_error('salt-cloud-force-ascii', salt_cloud_force_ascii)
+codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)

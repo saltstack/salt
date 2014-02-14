@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 raeting module provides constants and values for the RAET protocol
 
@@ -148,8 +149,9 @@ SERVICE_KIND_NAMES = odict((v, k) for k, v in SERVICE_KINDS.iteritems())  # inve
 ServiceKind = namedtuple('ServiceKind', SERVICE_KINDS.keys())
 serviceKinds = ServiceKind(**SERVICE_KINDS)
 
-PACKET_KINDS = odict([('data', 0), ('req', 1), ('ack', 8),
-                      ('nack', 9), ('unknown', 255)])
+PACKET_KINDS = odict([('data', 0), ('ack', 1), ('nack', 2),
+                      ('join', 3), ('acceptAck', 4), ('accept', 5),
+                      ('unknown', 255)])
 PACKET_KIND_NAMES = odict((v, k) for k, v in PACKET_KINDS.iteritems())  # inverse map
 PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
 packetKinds = PacketKind(**PACKET_KINDS)
@@ -202,12 +204,13 @@ PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
 
 
 class RaetError(Exception):
-    """Used to indicate error in RAET Protocol
+    '''
+    Used to indicate error in RAET Protocol
 
        usage:
        msg = "Invalid device id '{0}'".format(did)
        raise raeting.RaetError(msg)
-    """
+    '''
     def __init__(self, message=None):
         self.message = message  # description of error
         super(RaetError, self).__init__(message)
