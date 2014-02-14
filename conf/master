@@ -20,9 +20,10 @@
 # The tcp port used by the publisher
 #publish_port: 4505
 
-# The user to run the salt-master as. Salt will update all permissions to
-# allow the specified user to run the master. If the modified files cause
-# conflicts set verify_env to False.
+# The user under which the salt master will run. Salt will update all
+# permissions to allow the specified user to run the master. The exception is
+# the job cache, which must be deleted if this user is changed.  If the
+# modified files cause conflicts set verify_env to False.
 #user: root
 
 # Max open files
