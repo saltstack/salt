@@ -4,6 +4,15 @@ Management of Mongodb users
 ===========================
 '''
 
+# Define the module's virtual name
+__virtualname__ = 'mongodb_user'
+
+
+def __virtual__():
+    if 'mongodb.user_exists' in __salt__:
+        return __virtualname__
+    return False
+
 
 def present(name,
             passwd,
