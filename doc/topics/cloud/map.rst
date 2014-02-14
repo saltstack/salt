@@ -97,3 +97,34 @@ A map file may also be used with the various query options:
 
     Proceed? [N/y]
 
+
+Setting up New Salt Masters
+===========================
+
+Bootstrapping a new master in the map is as simple as:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1
+        make_master: True
+      - web2
+      - web3
+
+Notice that **ALL** bootstrapped minions from the map will answer to the newly 
+created salt-master.
+
+If you wish to make the bootstrapped salt-master's minion answer to the 
+bootstrapping salt-master as opposed to the newly bootstrapped salt-master you 
+can do something like:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1
+        make_master: True
+        minion:
+          master: <the local master ip address>
+          local_master: True
+      - web2
+      - web3
