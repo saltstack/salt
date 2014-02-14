@@ -1231,8 +1231,7 @@ class Webhook(object):
 
         Salt's Reactor can run any code. If you write a Reactor SLS that
         responds to a hook event be sure to validate that the event came from a
-        trusted source and contains valid data! Pass a secret key, use SSL,
-        etc.
+        trusted source and contains valid data! Pass a secret key and use SSL.
 
         This is a generic interface and securing it is up to you!
 
