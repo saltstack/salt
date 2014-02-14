@@ -373,6 +373,23 @@ def yaml_processor(entity):
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
 
+@process_request_body
+def text_processor(entity):
+    '''
+    Attempt to unserialize plain text as JSON
+
+    Some large services still send JSON with a text/plain Content-Type. Those
+    services are bad and should feel bad.
+
+    :param entity: raw POST data
+    '''
+    body = entity.fp.read()
+    try:
+        cherrypy.serving.request.serialized_data = json.loads(body)
+    except ValueError:
+        cherrypy.serving.request.serialized_data = body
+
+
 def hypermedia_in():
     '''
     Unserialize POST/PUT data of a specified Content-Type.
@@ -389,6 +406,7 @@ def hypermedia_in():
         'application/json': json_processor,
         'application/x-yaml': yaml_processor,
         'text/yaml': yaml_processor,
+        'text/plain': text_processor,
     }
 
     # Do not process the body for POST requests that have specified no content
