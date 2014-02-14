@@ -1283,8 +1283,12 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.serialized_data
+        headers = dict(cherrypy.request.headers)
 
-        ret = self.event.fire_event(data, tag)
+        ret = self.event.fire_event({
+            'post': data,
+            'headers': headers,
+        }, tag)
         return {'success': ret}
 
 
