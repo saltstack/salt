@@ -146,14 +146,16 @@ TAIL_SIZES = odict([('nada', 0), ('nacl', 24), ('crc16', 2), ('crc64', 8),
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
 
-TRNS_KINDS = odict([('data', 0), ('join', 1), ('accept', 2),
+TRNS_KINDS = odict([('data', 0), ('join', 1), ('accept', 2), ('endow', 3),
                      ('unknown', 255)])
 TRNS_KIND_NAMES = odict((v, k) for k, v in TRNS_KINDS.iteritems())  # inverse map
 TrnsKind = namedtuple('TrnsKind', TRNS_KINDS.keys())
 trnsKinds = TrnsKind(**TRNS_KINDS)
 
 PCKT_KINDS = odict([('data', 0), ('ack', 1), ('nack', 2),
-                      ('request', 3), ('response', 4), ('unknown', 255)])
+                    ('request', 3), ('response', 4),
+                    ('hello', 4), ('cookie', 5), ('initiate', 6),
+                    ('unknown', 255)])
 PCKT_KIND_NAMES = odict((v, k) for k, v in PCKT_KINDS.iteritems())  # inverse map
 PcktKind = namedtuple('PcktKind', PCKT_KINDS.keys())
 pcktKinds = PcktKind(**PCKT_KINDS)

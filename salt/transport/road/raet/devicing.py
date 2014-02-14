@@ -39,7 +39,7 @@ class Device(object):
         self.did = did # device ID
 
         self.accepted = None
-        self.allowed = None
+        self.endowed = None
 
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
@@ -114,8 +114,16 @@ class RemoteDevice(Device):
         self.pubber = nacling.Publican(pubkey) #long term key
         self.publee = nacling.Publican() # short term key
         self.privee = nacling.Privateer() # short term key
-
         self.rsid = rsid # last sid received from remote when RmtFlag is True
         self.rtid = rtid # last tid received from remote when RmtFlag is True
+
+    def refresh(self):
+        '''
+        Refresh short term keys
+        '''
+        self.endowed = None
+        self.publee = nacling.Publican() # short term key
+        self.privee = nacling.Privateer() # short term key
+
 
 
