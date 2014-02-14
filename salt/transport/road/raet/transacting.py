@@ -82,11 +82,13 @@ class Transaction(object):
         self.stack.txUdp(packet.packed, self.rdid)
         self.txPacket = packet
 
-    def remove(self):
+    def remove(self, index=None):
         '''
         Remove self from stack transactions
         '''
-        self.stack.removeTransaction(self.index, transaction=self)
+        if not index:
+            index = self.index
+        self.stack.removeTransaction(index, transaction=self)
 
     def signature(self, msg):
         '''
@@ -259,13 +261,14 @@ class Joinier(Initiator):
         index = self.index # save before we change it
 
         self.stack.device.did = ldid
-        device = self.stack.devices[self.rdid]
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
-        if device.did != rdid: #move device to new index
-            self.stack.moveRemoteDevice(device.did, rdid)
-        self.stack.device.accepted = True
-        self.remove()
+        remote = self.stack.devices[self.rdid]
+        remote.verfer = nacling.Verifier(key=verhex)
+        remote.pubber = nacling.Publican(key=pubhex)
+        if remote.did != rdid: #move remote device to new index
+            self.stack.moveRemoteDevice(remote.did, rdid)
+        #self.stack.device.accepted = True
+        remote.accepted = True
+        self.remove(index)
 
     def pend(self):
         '''
@@ -289,13 +292,6 @@ class Joinent(Correspondent):
         self.stack.transactions[self.rxPacket.index] = self
         print "Added {0} transaction to {1} at '{2}'".format(
                 self.__class__.__name__, self.stack.name, self.rxPacket.index)
-
-    def remove(self):
-        '''
-        Remove self from stack transactions
-        Overridden because bootstrap uses rxPacket.index instead of self.index
-        '''
-        self.stack.removeTransaction(self.rxPacket.index, transaction=self)
 
     def pend(self):
         '''
@@ -362,7 +358,7 @@ class Joinent(Correspondent):
             packet.pack()
         except packeting.PacketError as ex:
             print ex
-            self.remove()
+            self.remove(self.rxPacket.index)
             return
 
         self.transmit(packet)
@@ -401,10 +397,10 @@ class Joinent(Correspondent):
             packet.pack()
         except packeting.PacketError as ex:
             print ex
-            self.remove()
+            self.remove(self.rxPacket.index)
             return
         self.transmit(packet)
-        self.remove()
+        self.remove(self.rxPacket.index)
 
 class Endowier(Initiator):
     '''
@@ -555,5 +551,5 @@ class Endowier(Initiator):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        self.stack.device.endowed = True
+        self.stack.devices[self.rid].endowed = True
         self.remove()

@@ -38,9 +38,6 @@ class Device(object):
                 did = 0
         self.did = did # device ID
 
-        self.accepted = None
-        self.endowed = None
-
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
 
@@ -110,6 +107,8 @@ class RemoteDevice(Device):
         if 'host' not in kwa and 'ha' not in kwa:
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
         super(RemoteDevice, self).__init__(**kwa)
+        self.accepted = None
+        self.endowed = None
         self.verfer = nacling.Verifier(verikey)
         self.pubber = nacling.Publican(pubkey) #long term key
         self.publee = nacling.Publican() # short term key
