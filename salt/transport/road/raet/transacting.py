@@ -24,14 +24,24 @@ class Transaction(object):
     '''
     RAET protocol transaction class
     '''
-    def __init__(self, stack=None, kind=None, rdid=None,
-                 rmt=False, bcst=False, sid=None, tid=None,
+    Timeout =  5.0 # default timeout
+
+    def __init__(self, stack=None, kind=None, timeout=None, start=None,
+                 rdid=None, rmt=False, bcst=False, sid=None, tid=None,
                  txData=None, txPacket=None, rxPacket=None):
         '''
         Setup Transaction instance
+        timeout of 0.0 means no timeout go forever
         '''
         self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['tk']
+
+        if timeout is None:
+            timeout = self.Timeout
+        self.timeout = timeout
+        self.timer = aiding.Timer(duration=self.timeout)
+        if start: #enables synchronized starts not just current time
+            self.timer.restart(start=start)
 
         # local device is the .stack.device
         self.rdid = rdid  # remote device did
@@ -52,6 +62,13 @@ class Transaction(object):
         Property is transaction tuple (rf, ld, rd, si, ti, bf,)
         '''
         return ((self.rmt, self.stack.device.did, self.rdid, self.sid, self.tid, self.bcst,))
+
+    def process(self):
+        '''
+        Process time based handling of transaction like timeout or retries
+        '''
+        pass
+
 
     def receive(self, packet):
         '''
@@ -108,6 +125,13 @@ class Initiator(Transaction):
             self.sid = self.stack.device.sid
         if self.tid is None:  # use next tid
             self.tid = self.stack.device.nextTid()
+
+    def process(self):
+        '''
+        Process time based handling of transaction like timeout or retries
+        '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.stack.removeTransaction(self.index, transaction=self)
 
 class Correspondent(Transaction):
     '''
@@ -236,9 +260,7 @@ class Joinier(Initiator):
         if device.did != rdid: #move device to new index
             self.stack.moveRemoteDevice(device.did, rdid)
         self.stack.device.accepted = True
-
-        del self.stack.transactions[index]
-
+        self.stack.removeTransaction(index, transaction=self)
 
     def pend(self):
         '''
@@ -368,5 +390,5 @@ class Joinent(Correspondent):
             print ex
             return
         self.transmit(packet)
-        del self.stack.transactions[self.rxPacket.index]
+        self.stack.removeTransaction(self.rxPacket.index, transaction=self)
 

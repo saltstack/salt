@@ -83,6 +83,19 @@ class StackUdp(object):
         device.did = ndid
         self.devices.insert(0, device.did, device)
 
+    def removeTransaction(self, index, transaction=None):
+        '''
+        Safely remove transaction at index If transaction identity same
+        If transaction is None then remove without comparing identity
+        '''
+        if index in self.transactions:
+            if transaction:
+                if transaction is self.transactions[index]:
+                    del  self.transactions[index]
+            else:
+                del self.transactions[index]
+
+
     def serviceUdp(self):
         '''
         Service the UDP receive and transmit queues
