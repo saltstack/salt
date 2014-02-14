@@ -461,7 +461,11 @@ class LowDataAdapter(object):
         authorization token for the current session.
         '''
         lowstate = cherrypy.request.lowstate
-        token = cherrypy.session.get('token', None)
+
+        if hasattr(cherrypy, 'session'):
+            token = cherrypy.session.get('token', None)
+        else:
+            token = None
 
         # if the lowstate loaded isn't a list, lets notify the client
         if type(lowstate) != list:
