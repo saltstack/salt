@@ -115,7 +115,7 @@ Notice that **ALL** bootstrapped minions from the map will answer to the newly
 created salt-master.
 
 To make any of the bootstrapped minions answer to the bootstrapping salt-master 
-as opposed to the newly created salt-master you can do something like:
+as opposed to the newly created salt-master, as an example:
 
 .. code-block:: yaml
 
