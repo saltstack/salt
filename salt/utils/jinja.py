@@ -156,26 +156,36 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
-class SequenceExtension(Extension, object):
+def ensure_sequence_filter(data):
     '''
     Ensure sequenced data.
 
     **sequence**
+
         ensure that parsed data is a sequence
 
+    .. code-block:: yaml
+
+        {% set my_string = "foo" %}
+        {% set my_list = ["bar", ] %}
+        {% set my_dict = {"baz": "qux"} %}
+
+        {{ my_string|sequence|first }}
+        {{ my_list|sequence|first }}
+        {{ my_dict|sequence|first }}
+
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        foo
+        bar
+        baz
     '''
-
-    def __init__(self, environment):
-        super(SequenceExtension, self).__init__(environment)
-        self.environment.filters.update({
-            'sequence': self.ensure_sequence,
-        })
-
-    def ensure_sequence(self, data):
-        """Ensures that data is a sequence"""
-        if not isinstance(data, (list, tuple, set, dict)):
-            return [data]
-        return data
+    if not isinstance(data, (list, tuple, set, dict)):
+        return [data]
+    return data
 
 
 class SerializerExtension(Extension, object):
