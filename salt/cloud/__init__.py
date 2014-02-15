@@ -1618,7 +1618,7 @@ class Map(Cloud):
                 # explicitely saying it's the local one
                 local_master = True
 
-            if master_finger is not None and local_master  is False:
+            if master_finger is not None and local_master is False:
                 profile['master_finger'] = master_finger
 
             if master_host is not None:
