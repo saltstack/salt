@@ -852,6 +852,22 @@ is a security concern, you may want to try using the ssh transport.
 
     gitfs_ssl_verify: True
 
+.. conf_master:: gitfs_mountpoint
+
+``gitfs_mountpoint``
+--------------------
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which gitfs remotes are served.
+Can be used in conjunction with :conf_master:`gitfs_root`.
+
+.. code-block:: yaml
+
+    gitfs_mountpoint: salt://foo/bar
+
 .. conf_master:: gitfs_root
 
 ``gitfs_root``
