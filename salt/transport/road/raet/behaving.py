@@ -31,6 +31,7 @@ data =
 
 }
 '''
+# pylint: skip-file
 # pylint: disable=W0611
 
 # Import Python libs
