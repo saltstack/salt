@@ -114,9 +114,8 @@ Bootstrapping a new master in the map is as simple as:
 Notice that **ALL** bootstrapped minions from the map will answer to the newly 
 created salt-master.
 
-If you wish to make the bootstrapped salt-master's minion answer to the 
-bootstrapping salt-master as opposed to the newly bootstrapped salt-master you 
-can do something like:
+To make any of the bootstrapped minions answer to the bootstrapping salt-master 
+as opposed to the newly created salt-master you can do something like:
 
 .. code-block:: yaml
 
@@ -128,3 +127,23 @@ can do something like:
           local_master: True
       - web2
       - web3
+
+
+The above says the minion running on the newly created salt-master responds to 
+the local master, ie, the master used to bootstrap these VMs.
+
+Another example:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1
+        make_master: True
+      - web2
+      - web3
+        minion:
+          master: <the local master ip address>
+          local_master: True
+
+The above example makes the ``web3`` minion answer to the local master, not the 
+newly created master.
