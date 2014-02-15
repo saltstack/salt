@@ -273,7 +273,7 @@ class SSH(object):
                     'retcode': retcode,
                 }
         except Exception:
-            ret['ret'] =  {
+            ret['ret'] = {
                 'stdout': stdout,
                 'stderr': stderr,
                 'retcode': retcode,
@@ -643,6 +643,11 @@ class Single(object):
         return stdout, stderr, retcode
 
     def categorize_shim_errors(self, stdout, stderr, retcode):
+        # Unused stdout and retcode for now but these may be used to
+        # categorize errors
+        _ = stdout
+        _ = retcode
+
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
         if stderr.startswith('Permission denied'):
