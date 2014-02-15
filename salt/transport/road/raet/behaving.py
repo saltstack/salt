@@ -164,7 +164,7 @@ class TransmitterRaet(deeding.ParamDeed):  # pylint: disable=W0232
 class ReceiverRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
     ReceiverRaet pulls packet from rxes deque and puts into new data
-    and assigns meta data source ha using recieved ha
+    and assigns meta data source ha using received ha
 
     inherited attributes
         .name is actor name string
