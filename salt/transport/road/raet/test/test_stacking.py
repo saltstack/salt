@@ -34,7 +34,7 @@ def test():
                                      prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(device=device)
 
-    #minon stack
+    #minion stack
     device = devicing.LocalDevice(   did=0,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
@@ -69,11 +69,37 @@ def test():
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
 
     stack1.endow()
+    timer.restart()
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
 
     timer.restart()
-    stack1.serviceUdp()
-    stack0.serviceUdp()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
 
+    while stack1.udpRxes:
+        stack1.processUdpRx()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack1.udpRxes:
+        stack1.processUdpRx()
 
 
 if __name__ == "__main__":

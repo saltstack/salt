@@ -236,7 +236,7 @@ class TxCoat(Coat):
 
         if self.kind == raeting.coatKinds.nacl:
             msg = self.packet.body.packed
-            cipher, nonce = self.packet.transaction.encrypt(msg)
+            cipher, nonce = self.packet.encrypt(msg)
             self.packed = "".join([cipher, nonce])
 
         if self.kind == raeting.coatKinds.nada:
@@ -262,7 +262,7 @@ class RxCoat(Coat):
 
             cipher = self.packed[:-tl]
             nonce = self.packed[-tl:]
-            msg = self.packet.transaction.decrypt(cipher, nonce)
+            msg = self.packet.decrypt(cipher, nonce)
             self.packet.body.packed = msg
 
         if self.kind == raeting.coatKinds.nada:
@@ -298,9 +298,24 @@ class TxFoot(Foot):
             raise raeting.PacketError(emsg)
 
         if self.kind == raeting.footKinds.nacl:
-            blank = "".rjust(raeting.footSizes.nacl, '\x00')
-            msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
-            self.packed = self.packet.transaction.signature(msg)
+            self.packed = "".rjust(raeting.footSizes.nacl, '\x00')
+
+        elif self.kind == raeting.footKinds.nada:
+            pass
+
+    def sign(self):
+        '''
+        Compute signature on packet.packed and update packet.packet with signature
+        '''
+        if self.kind not in raeting.FOOT_KIND_NAMES:
+            self.kind = raeting.footKinds.unknown
+            emsg = "Unrecognizible packet foot."
+            raise raeting.PacketError(emsg)
+
+        if self.kind == raeting.footKinds.nacl:
+            #blank = "".rjust(raeting.footSizes.nacl, '\x00')
+            #msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+            self.packed = self.packet.signature(self.packet.packed)
 
         elif self.kind == raeting.footKinds.nada:
             pass
@@ -329,21 +344,20 @@ class RxFoot(Foot):
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
             msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
-            if not self.packet.transaction.verify(signature, msg):
+            if not self.packet.verify(signature, msg):
                 emsg = "Failed verification"
                 raise raeting.PacketError(emsg)
 
         if self.kind == raeting.footKinds.nada:
             pass
 
-
 class Packet(object):
     '''
     RAET protocol packet object
     '''
-    def __init__(self, transaction=None, kind=None):
+    def __init__(self, stack=None, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
-        self.transaction = transaction
+        self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
         self.packed = ''  # packed string
         self.segments = [] # subpackets when segmented
@@ -364,7 +378,6 @@ class Packet(object):
         if data:
             self.data.update(data)
         return self  # so can method chain
-
 
 class TxPacket(Packet):
     '''
@@ -390,6 +403,27 @@ class TxPacket(Packet):
         data = self.data
         return ((data['cf'], data['sd'], data['dd'], data['si'], data['ti'], data['bf']))
 
+    def signature(self, msg):
+        '''
+        Return signature resulting from signing msg
+        '''
+        return (self.stack.device.signer.signature(msg))
+
+    def sign(self):
+        '''
+        Sign packet with foot
+        '''
+        self.foot.sign()
+        self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
+
+    def encrypt(self, msg):
+        '''
+        Return (cipher, nonce) duple resulting from encrypting message
+        with short term keys
+        '''
+        remote = self.stack.devices[self.data['dd']]
+        return (remote.privee.encrypt(msg, remote.publee.key))
+
     def pack(self):
         '''
         Pack the parts of the packet and then the full packet into .packed
@@ -400,12 +434,6 @@ class TxPacket(Packet):
         self.head.pack()
         self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
         self.sign()
-
-    def sign(self):
-        '''
-        Sign .packed using foot
-        '''
-        return True
 
 class RxPacket(Packet):
     '''
@@ -429,6 +457,20 @@ class RxPacket(Packet):
         '''
         data = self.data
         return ((not data['cf'], data['dd'], data['sd'], data['si'], data['ti'], data['bf']))
+
+    def verify(self, signature, msg):
+        '''
+        Return result of verifying msg with signature
+        '''
+        return (self.stack.devices[self.data['sd']].verfer.verify(signature, msg))
+
+    def decrypt(self, cipher, nonce):
+        '''
+        Return msg resulting from decrypting cipher and nonce
+        with short term keys
+        '''
+        remote = self.stack.devices[self.data['sd']]
+        return (self.stack.device.privee.decrypt(cipher, nonce, remote.publee, key))
 
     def unpack(self, packed=None):
         '''
@@ -490,7 +532,6 @@ class RxPacket(Packet):
 
         self.unpack()
         self.foot.parse()
-        self.verify()
 
     def parseInner(self):
         '''
@@ -504,17 +545,4 @@ class RxPacket(Packet):
         Raises PacketError exception If failure
         '''
         self.coat.parse()
-        self.decrypt()
         self.body.parse()
-
-    def verify(self):
-        '''
-        Uses signature in foot to verify (authenticate) packet signature
-        '''
-        return True
-
-    def decrypt(self):
-        '''
-        Uses coat to decrypt body
-        '''
-        return True

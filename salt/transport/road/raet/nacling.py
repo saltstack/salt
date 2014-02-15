@@ -65,7 +65,7 @@ class Verifier(object):
             return False
         try:
             self.key.verify(signature + msg)
-        except nacl.signing.BadSignatureError:
+        except nacl.exceptions.BadSignatureError:
             return False
         return True
 
@@ -113,7 +113,7 @@ class Privateer(object):
                         now)
         return nonce
 
-    def encrypt(self, msg, pubkey):
+    def encrypt(self, msg, pubkey, enhex=False):
         '''
         Return duple of (cyphertext, nonce) resulting from encrypting the message
         using shared key generated from the .key and the pubkey
@@ -128,10 +128,11 @@ class Privateer(object):
             pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
         box = nacl.public.Box(self.key, pubkey)
         nonce = self.nonce()
-        encrypted = box.encrypt(msg, nonce)
+        encoder = nacl.encoding.HexEncoder if enhex else nacl.encoding.RawEncoder
+        encrypted = box.encrypt(msg, nonce, encoder)
         return (encrypted.ciphertext, encrypted.nonce)
 
-    def decrypt(self, cipher, nonce, pubkey):
+    def decrypt(self, cipher, nonce, pubkey, dehex=False):
         '''
         Return decripted msg contained in cypher using nonce and shared key
         generated from .key and pubkey.
@@ -146,4 +147,5 @@ class Privateer(object):
         if not isinstance(pubkey, nacl.public.PublicKey):
             pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
         box = nacl.public.Box(self.key, pubkey)
-        return box.decrypt(cipher, nonce)
+        decoder = nacl.encoding.HexEncoder if dehex else nacl.encoding.RawEncoder
+        return box.decrypt(cipher, nonce, decoder)

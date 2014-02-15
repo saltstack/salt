@@ -147,10 +147,10 @@ class StackUdp(object):
 
         print "{0} received\n{1}".format(self.name, raw)
 
-        packet = packeting.RxPacket(packed=raw)
+        packet = packeting.RxPacket(stack=self, packed=raw)
         try:
             packet.parseOuter()
-        except packeting.PacketError as ex:
+        except raeting.PacketError as ex:
             print ex
             return None
 
@@ -166,7 +166,7 @@ class StackUdp(object):
 
         try:
             packet.parseInner()
-        except packeting.PacketError as ex:
+        except raeting.PacketError as ex:
             print ex
             return None
 
@@ -221,7 +221,7 @@ class StackUdp(object):
 
     def replyJoin(self, packet):
         '''
-        Correspond to join transaction
+        Correspond to new join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
         joinent = transacting.Joinent(stack=self,
@@ -243,11 +243,11 @@ class StackUdp(object):
 
     def replyEndow(self, packet):
         '''
-        Correspond to endow transaction
+        Correspond to new endow transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
         endowent = transacting.Endowent(stack=self,
-                                        rid=packet.data['sd'],
+                                        rdid=packet.data['sd'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
