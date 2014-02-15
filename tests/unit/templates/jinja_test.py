@@ -584,6 +584,29 @@ class TestCustomExtensions(TestCase):
                                                         ])
         self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
 
+    def test_sequence(self):
+        env = Environment(extensions=[SequenceExtension])
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data='foo')
+        self.assertEqual(rendered, '1')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=['foo', 'bar'])
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=('foo', 'bar'))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=set(['foo', 'bar']))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data={'foo': 'bar'})
+        self.assertEqual(rendered, '1')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'
