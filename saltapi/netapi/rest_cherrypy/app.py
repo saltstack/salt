@@ -1295,6 +1295,50 @@ class Webhook(object):
 
                 {"success": true}
 
+        As a practical example, an internal continuous-integration build
+        server could send an HTTP POST request to the URL
+        ``http://localhost:8000/hook/mycompany/build/success`` which contains
+        the result of a build and the SHA of the version that was built as
+        JSON. That would then produce the following event in Salt that could be
+        used to kick off a deployment via Salt's Reactor::
+
+            Event fired at Fri Feb 14 17:40:11 2014
+            *************************
+            Tag: salt/netapi/hook/mycompany/build/success
+            Data:
+            {'_stamp': '2014-02-14_17:40:11.440996',
+                'headers': {
+                    'X-My-Secret-Key': 'F0fAgoQjIT@W',
+                    'Content-Length': '37',
+                    'Content-Type': 'application/json',
+                    'Host': 'localhost:8000',
+                    'Remote-Addr': '127.0.0.1'},
+                'post': {'revision': 'aa22a3c4b2e7', 'result': True}}
+
+        Salt's Reactor could listen for the event:
+
+        .. code-block:: yaml
+
+            reactor:
+              - 'salt/netapi/hook/mycompany/build/*':
+                - /srv/reactor/react_ci_builds.sls
+
+        And finally deploy the new build:
+
+        .. code-block:: yaml
+
+            {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
+            {% set build = data.get('post', {}) %}
+
+            {% if secret_key == 'F0fAgoQjIT@W' and build.result == True %}
+            deploy_my_app:
+              cmd.state.sls:
+                - tgt: 'application*'
+                - arg:
+                  - myapp.deploy
+                  - 'pillar={revision: {{ revision }}}'
+            {% endif %}
+
         :status 200: success
         :status 406: requested Content-Type not available
         '''
