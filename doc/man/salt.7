@@ -170,7 +170,7 @@ This is most likely a PATH issue. Did you custom\-compile the software which the
 module requires? RHEL/CentOS/etc. in particular override the root user\(aqs path
 in \fB/etc/init.d/functions\fP, setting it to \fB/sbin:/usr/sbin:/bin:/usr/bin\fP,
 making software installed into \fB/usr/local/bin\fP unavailable to Salt when the
-Minion is started using the initscript. In version 0.18.0, Salt will have a
+Minion is started using the initscript. In version 2014.1.0, Salt will have a
 better solution for these sort of PATH\-related issues, but recompiling the
 software to install it into a location within the PATH should resolve the
 issue in the meantime. Alternatively, you can create a symbolic link within the
@@ -23663,7 +23663,7 @@ and, in these cases, \fIthat\fP specific code should be deprecated.
 Depending on the complexity and usage of a specific piece of code, the
 deprecation time frame should be properly evaluated. As an example, a
 deprecation warning which is shown for 2 major releases, for example \fI0.17.0\fP
-and \fI0.18.0\fP, gives users enough time to stop using the deprecated code and
+and \fI2014.1.0\fP, gives users enough time to stop using the deprecated code and
 adapt to the new one.
 .sp
 For example, if you\(aqre deprecating the usage of a keyword argument to a
@@ -23699,7 +23699,7 @@ def some_function(bar=False, foo=None):
 .sp
 Consider that the current salt release is \fB0.16.0\fP\&. Whenever \fBfoo\fP is
 passed a value different from \fBNone\fP that warning will be shown to the user.
-This will happen in versions \fB0.16.2\fP to \fB0.18.0\fP, after which a
+This will happen in versions \fB0.16.2\fP to \fB2014.1.0\fP, after which a
 \fI\%RuntimeError\fP will be raised making us aware that the deprecated code
 should now be removed.
 .SS Dunder Dictionaries
@@ -79056,7 +79056,7 @@ New in version 0.9.5.
 .B salt.states.file.blockreplace(name, marker_start=\(aq#\-\- start managed zone \-\-\(aq, marker_end=\(aq#\-\- end managed zone \-\-\(aq, content=\(aq\(aq, append_if_not_found=False, prepend_if_not_found=False, backup=\(aq.bak\(aq, show_changes=True)
 Maintain an edit in a file in a zone delimited by two line markers
 .sp
-New in version 0.18.0.
+New in version 2014.1.0.
 
 .sp
 A block of content delimited by comments can help you manage several lines

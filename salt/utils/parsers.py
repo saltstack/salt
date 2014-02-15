@@ -1680,7 +1680,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 0.18.0
+        # XXX: Remove '--key-logfile' support in 2014.1.0
         utils.warn_until(
             'Hydrogen',
             'Remove \'--key-logfile\' support',
@@ -1881,8 +1881,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def process_key_logfile(self):
         if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 0.18.0
-            # In < 0.18.0 error out
+            # XXX: Remove '--key-logfile' support in 2014.1.0
+            # In < 2014.1.0 error out
             utils.warn_until(
                 'Hydrogen',
                 'Remove \'--key-logfile\' support',
