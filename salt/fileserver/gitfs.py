@@ -590,7 +590,10 @@ def init():
 
             if repo is not None:
                 remote_conf.update({
-                    'repo': repo, 'uri': repo_uri, 'hash': repo_hash
+                    'repo': repo,
+                    'uri': repo_uri,
+                    'hash': repo_hash,
+                    'cachedir': rp_
                 })
                 repos.append(remote_conf)
 
@@ -784,7 +787,25 @@ def update():
                         origin, thin_packs=True
                     )
                 refs_pre = repo.get_refs()
-                refs_post = client.fetch(path, repo)
+                try:
+                    refs_post = client.fetch(path, repo)
+                except KeyError:
+                    log.critical(
+                        'Local repository cachedir {0!r} (corresponding '
+                        'remote: {1}) has been corrupted. Salt will now '
+                        'attempt to remove the local checkout to allow it to '
+                        'be re-initialized in the next fileserver cache '
+                        'update.'
+                        .format(repo_conf['cachedir'], repo_conf['uri'])
+                    )
+                    try:
+                        salt.utils.rm_rf(repo_conf['cachedir'])
+                    except OSError as exc:
+                        log.critical(
+                            'Unable to remove {0!r}: {1}'
+                            .format(repo_conf['cachedir'], exc)
+                        )
+                    continue
                 if refs_post is None:
                     # Empty repository
                     log.warning(
