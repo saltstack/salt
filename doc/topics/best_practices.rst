@@ -8,6 +8,7 @@ document attempts to clarify these points through the usage of examples and
 existing code which will empower users to know they are making a decision
 which will ensure extensibility throughout the life cycle of an infrastructure.
 
+
 Structuring States and Formulas
 -------------------------------
 
@@ -70,6 +71,73 @@ reduces the overall complexity, and leads a user to both understand what will be
 included at a glance, and where it is located.
 
 In addition Formulas <link here> should be used as often as possible.
+
+Structuring Pillar Files
+-----------------------
+
+Pillars (link) are used to store both secure, and insecure data pertaining to
+minions. When designing the structure of the ``/srv/pillar`` directory, and
+the pillars contained within there should once again be a focus on clear and
+concise data which users can easily review, modify, and understand. Once again
+examples will be used which highlight a transition from a lack of modularity,
+to a design which exhibits ease of use and clarity.
+
+The /srv/pillar/ directory is primarily controlled by the top.sls. It should
+be noted that the pillar top.sls is not used as a location to declare variables
+and their values. The top.sls is used as a way to include other pillar files
+and organize the way they are matched based on enviroments or grains.
+
+An example top.sls may be as simple as the following:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+
+Or much more complicated, using a variety of matchers:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - apache
+    dev:
+      'os:Debian':
+        - match: grain
+        - vim
+    test:
+      'and not G@os: Debian':
+        - match: compound
+        - emacs
+
+It's simple to see through these examples how the top file provides users with
+power, but when used incorrectly it can lead to confusing configurations. This
+is why it is important to understand that the top file for pillar is not used
+for variable definitions.
+
+Each sls file within the /srv/pillar/ directory should correspond to the
+states which it matches. This would mean that the apache pillar file should
+contain data relevant to apache. Structuring our files in this way once again
+ensures modularity, and creates a consistant understanding throughout our Salt
+environment. Users can expect that pillar variables found in an apache state
+will live inside of an apache pillar:
+
+/srv/salt/pillar/apache.sls
+
+.. code-block:: yaml
+
+    apache:
+      lookup:
+        name: httpd
+        config:
+          tmpl: 
+      
+
 
 Variable Flexibility
 --------------------
@@ -247,28 +315,6 @@ configuration file location, or the configuration file itself. In addition to
 this the data has been broken between multiple files allowing for users to
 identify where they need to change the associated data.
 
-Structuring Pillars
--------------------
-
-Pillars (link) are used to store both secure, and insecure data pertaining to
-minions. When designing the structure of the ``/srv/pillar`` directory, and
-the pillars contained within there should once again be a focus on clear and
-concise data which users can easily review, modify, and understand. Once again
-examples will be used which highlight a transition from a lack of modularity,
-to a design which exhibits ease of use and clarity.
-
-/srv/pillar/:
-
-.. code-block:: bash
-
-    top.sls
-    apache.sls
-
-/srv/pillar/top.sls:
-
-.. code-block:: yaml
-
-    
 
 Storing Secure Data
 -------------------
