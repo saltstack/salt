@@ -39,7 +39,7 @@ def list_peers():
     return __salt__['cmd.run'](get_peer_list).splitlines()
 
 
-def peer(name=None, **kwargs):
+def peer(name=None):
     '''
     Add another node into the peer probe.
 
