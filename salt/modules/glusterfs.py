@@ -8,9 +8,11 @@ from __future__ import generators
 import logging
 import os.path
 import socket
+import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.cloud as suc
 
 log = logging.getLogger(__name__)
 
@@ -19,17 +21,20 @@ def __virtual__():
     '''
     Only load this module if the gluster command exists
     '''
-    if salt.utils.which('gluster'):
+    if salt.utils.which('gluster') and salt.utils.which('dig'):
         return True
-    else:
-        return False
+    return False
 
 
 def list_peers():
     '''
     Return a list of gluster peers
 
-    salt '*' glusterfs.list_peers
+    CLI Example:
+
+    .. clodeblock:: bash
+
+        salt '*' glusterfs.list_peers
     '''
     get_peer_list = 'gluster peer status | awk \'/Hostname/ {print $2}\''
     return __salt__['cmd.run'](get_peer_list).splitlines()
@@ -38,28 +43,29 @@ def list_peers():
 def peer(name=None, **kwargs):
     '''
     Add another node into the peer probe.
-    That node must be referenced in /etc/hosts.
 
     Need to add the ability to add to use ip addresses
 
     name
         The remote host with which to peer.
 
-    names
-        List of hosts with which to peer.
+    CLI Example:
 
-    If names is specified, name will be ignored.
+    .. clodeblock:: bash
 
-    salt 'one.gluster.*' glusterfs.peer two
+        salt 'one.gluster.*' glusterfs.peer two
     '''
+    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+        return 'Invalid characters in peer name'
     hosts_file = __salt__['hosts.list_hosts']()
     hosts_list = []
     for ip, hosts in hosts_file.items():
         hosts_list.extend(hosts)
-    if name in hosts_list:
+    dig_info = __salt__['dig.A'](name)
+    if dig_info or name in hosts_list:
         cmd = 'gluster peer probe {0}'.format(name)
         return __salt__['cmd.run'](cmd)
-    return 'Node not referenced in /etc/hosts.'
+    return 'Node does not resolve to an ip address'
 
 
 def create(name,
@@ -89,11 +95,16 @@ def create(name,
     short
         (optional) use short names for peering
 
-    salt 'one.gluster*' glusterfs.create mymount /srv/ peers='["one", "two"]'
+    CLI Example:
 
-    salt -G 'gluster:master' glusterfs.create mymount /srv/gluster/brick1 \
-        peers='["one", "two", "three", "four"]' replica=True count=2 \
-        short=True start=True
+    .. clodeblock:: bash
+
+        salt 'one.gluster*' glusterfs.create mymount /srv/ \
+            peers='["one", "two"]'
+
+        salt -G 'gluster:master' glusterfs.create mymount /srv/gluster/brick1 \
+            peers='["one", "two", "three", "four"]' replica=True count=2 \
+            short=True start=True
     '''
     check_peers = 'gluster peer status | awk \'/Hostname/ {print $2}\''
     active_peers = __salt__['cmd.run'](check_peers).splitlines()
@@ -105,6 +116,12 @@ def create(name,
 
     if not os.path.exists(brick):
         return 'Brick path doesn\'t exist.'
+
+    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+        return 'Invalid characters in volume name'
+
+    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for peer in peers]):
+        return 'Invalid characters in a peer name.'
 
     cmd = 'gluster volume create {0} '.format(name)
     if replica:
@@ -122,6 +139,16 @@ def create(name,
 
 
 def list_volumes():
+    '''
+    List configured volumes
+
+    CLI Example:
+
+    .. clodeblock:: bash
+
+        salt '*' glusterfs.list_volumes
+    '''
+
     return __salt__['cmd.run']('gluster volume list').splitlines()
 
 
@@ -131,6 +158,12 @@ def status(name):
 
     name
         Volume name
+
+    CLI Example:
+
+    .. clodeblock:: bash
+
+        salt '*' glusterfs.status mycluster
     '''
     volumes = list_volumes()
     if name in volumes:
@@ -145,6 +178,12 @@ def start(name):
 
     name
         Volume name
+
+    CLI Example:
+
+    .. clodeblock:: bash
+
+        salt '*' glusterfs.start mycluster
     '''
     volumes = list_volumes()
     if name in volumes:
