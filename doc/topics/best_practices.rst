@@ -460,7 +460,7 @@ accessible by the appropriate hosts:
         - password: "test3rdb"
         - host: localhost
         - require:
-          - sls: testerdb
+          - sls: mysql.testerdb
 
 Many users would review this state and see that the password is there in plain
 text, which is quite problematic. It results in several issues which may not be
@@ -518,7 +518,7 @@ the associated pillar:
         - password: {{ salt['pillar.get']('mysql:lookup:password') }}
         - host: {{ salt['pillar.get']('mysql:lookup:host') }}
         - require:
-          - sls: testerdb
+          - sls: mysql.testerdb
 
 Now that the database details have been moved to the associated pillar file
 only machines which are targeted via pillar will have access to these details.
