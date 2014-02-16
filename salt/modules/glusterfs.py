@@ -39,7 +39,7 @@ def list_peers():
     return __salt__['cmd.run'](get_peer_list).splitlines()
 
 
-def peer(name=None, **kwargs):
+def peer(name):
     '''
     Add another node into the peer probe.
 
@@ -54,7 +54,7 @@ def peer(name=None, **kwargs):
 
         salt 'one.gluster.*' glusterfs.peer two
     '''
-    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
         return 'Invalid characters in peer name'
     hosts_file = __salt__['hosts.list_hosts']()
     hosts_list = []
@@ -117,17 +117,17 @@ def create(name,
     if not os.path.exists(brick):
         return 'Brick path doesn\'t exist.'
 
-    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
         return 'Invalid characters in volume name'
 
-    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for act_peer in peers]):
+    if any([suc.check_name(act_peer, 'a-zA-Z0-9._-') for act_peer in peers]):
         return 'Invalid characters in a peer name.'
 
     cmd = 'gluster volume create {0} '.format(name)
     if replica:
         cmd += 'replica {0} '.format(count)
     for act_peer in peers:
-        cmd += '{0}:{1} '.format(peer, brick)
+        cmd += '{0}:{1} '.format(act_peer, brick)
 
     log.debug('Clustering command:\n{0}'.format(cmd))
     ret = __salt__['cmd.run'](cmd)
