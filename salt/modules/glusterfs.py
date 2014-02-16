@@ -8,7 +8,6 @@ from __future__ import generators
 import logging
 import os.path
 import socket
-import re
 
 # Import salt libs
 import salt.utils
@@ -111,7 +110,8 @@ def create(name,
     hostname = socket.gethostname()
     if 'short' in kwargs and kwargs['short']:
         hostname = hostname.split('.')[0]
-    if not all([peer in active_peers for peer in peers if peer != hostname]):
+    if not all([act_peer in active_peers for act_peer in peers if
+                act_peer != hostname]):
         return 'Not all peers have been probed.'
 
     if not os.path.exists(brick):
@@ -120,13 +120,13 @@ def create(name,
     if not suc.check_name(name, 'a-zA-Z0-9._-'):
         return 'Invalid characters in volume name'
 
-    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for peer in peers]):
+    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for act_peer in peers]):
         return 'Invalid characters in a peer name.'
 
     cmd = 'gluster volume create {0} '.format(name)
     if replica:
         cmd += 'replica {0} '.format(count)
-    for peer in peers:
+    for act_peer in peers:
         cmd += '{0}:{1} '.format(peer, brick)
 
     log.debug('Clustering command:\n{0}'.format(cmd))
