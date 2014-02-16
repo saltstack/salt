@@ -9,7 +9,6 @@ import logging
 import socket
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud as suc
 
 log = logging.getLogger(__name__)
