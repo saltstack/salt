@@ -35,7 +35,7 @@ from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 log = logging.getLogger(__name__)
 
 
-LIBCLOUD_MINIMAL_VERSION = '0.13.2'
+LIBCLOUD_MINIMAL_VERSION = '0.14.0'
 
 
 def node_state(id_):
