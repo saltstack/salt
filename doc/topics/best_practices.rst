@@ -169,12 +169,12 @@ preferred:
     {% set tmpl = 'salt://apache/files/httpd.conf' %}
 
     include:
-      apache
+      - apache
 
     apache_conf:
-      file
+      file:
         - managed
-        - name {{ name }}
+        - name: {{ name }}
         - source: {{ tmpl }}
         - template: jinja
         - user: root
@@ -203,10 +203,10 @@ locations within a single state:
     {% from "apache/map.jinja" import apache with context %}
 
     include:
-      apache
+      - apache
 
     apache_conf:
-      file
+      file:
         - managed
         - name: {{ salt['pillar.get']('apache:lookup:name') }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
@@ -339,9 +339,9 @@ Starting with the addition of a map.jinja file (as noted in the
         - running
 
     apache_conf:
-      file
+      file:
         - managed
-        - name {{ apache.conf }}
+        - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
         - user: root
@@ -405,12 +405,12 @@ to be broken into two states.
     {% from "apache/map.jinja" import apache with context %}
 
     include:
-      apache
+      - apache
 
     apache_conf:
-      file
+      file:
         - managed
-        - name {{ apache.conf }}
+        - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
         - user: root
@@ -437,7 +437,7 @@ those servers which require this secure data have access to it. In this
 example a use can go from an insecure configuration to one which is only
 accessible by the appropriate hosts:
 
-/srv/salt/mysql/user.sls:
+/srv/salt/mysql/testerdb.sls:
 
 .. code-block:: yaml
 
@@ -446,6 +446,13 @@ accessible by the appropriate hosts:
         - present:
         - name: testerdb
 
+/srv/salt/mysql/user.sls:
+
+.. code-block:: yaml
+
+    include:
+      - mysql.testerdb
+
     testdb_user:
       mysql_user:
         - present
@@ -453,7 +460,7 @@ accessible by the appropriate hosts:
         - password: "test3rdb"
         - host: localhost
         - require:
-          - mysql_database: testdb
+          - sls: testerdb
 
 Many users would review this state and see that the password is there in plain
 text, which is quite problematic. It results in several issues which may not be
@@ -488,7 +495,7 @@ the associated pillar:
         user: frank
         host: localhost
 
-/srv/salt/mysql/user.sls:
+/srv/salt/mysql/testerdb.sls:
 
 .. code-block:: yaml
 
@@ -497,6 +504,13 @@ the associated pillar:
         - present:
         - name: {{ salt['pillar.get']('mysql:lookup:name') }}
 
+/srv/salt/mysql/user.sls:
+
+.. code-block:: yaml
+
+    include:
+      - mysql.testerdb
+
     testdb_user:
       mysql_user:
         - present
@@ -504,7 +518,7 @@ the associated pillar:
         - password: {{ salt['pillar.get']('mysql:lookup:password') }}
         - host: {{ salt['pillar.get']('mysql:lookup:host') }}
         - require:
-          - mysql_database: testdb
+          - sls: testerdb
 
 Now that the database details have been moved to the associated pillar file
 only machines which are targeted via pillar will have access to these details.
