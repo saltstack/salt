@@ -165,9 +165,22 @@ preferred:
 
 .. code-block:: yaml
 
+    {% set name = 'httpd' %}
     {% set tmpl = 'salt://apache/files/httpd.conf' %}
-    ...
-    - source: {{ tmpl }}
+
+    include:
+      apache
+
+    apache_conf:
+      file
+        - managed
+        - name {{ name }}
+        - source: {{ tmpl }}
+        - template: jinja
+        - user: root
+        - watch_in:
+          - service: apache
+
 
 When generating this information it can be easily transitioned to the pillar
 where data can be overwritten, modified, and applied to multiple states, or
@@ -179,6 +192,7 @@ locations within a single state:
 
     apache:
       lookup:
+        name: httpd
         config:
           tmpl: salt://apache/files/httpd.conf
 
@@ -186,8 +200,23 @@ locations within a single state:
 
 .. code-block:: yaml
     
-    ...
-    - source: {{ salt['pillar.get']('apache:lookup:config:tmpl')     
+    {% from "apache/map.jinja" import apache with context %}
+
+    include:
+      apache
+
+    apache_conf:
+      file
+        - managed
+        - name: {{ salt['pillar.get']('apache:lookup:name') }}
+        - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
+        - template: jinja
+        - user: root
+        - watch_in:
+          - service: apache
+
+This flexibility provides users with a centralized location to modify
+variables, which is extremely important as an environment grows. 
  
 Modularity Within States
 ------------------------
@@ -482,4 +511,3 @@ only machines which are targeted via pillar will have access to these details.
 Access to users who should not be able to review these details can also be
 prevented while ensuring that they are still able to write states which take
 advantage of this information.
-
