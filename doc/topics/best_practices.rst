@@ -86,14 +86,12 @@ Structuring Pillar Files
 secure, and insecure data pertaining to minions. When designing the structure
 of the ``/srv/pillar`` directory, and the pillars contained within there
 should once again be a focus on clear and concise data which users can easily
-review, modify, and understand. Once again examples will be used which
-highlight a transition from a lack of modularity, to a design which exhibits
-ease of use and clarity.
+review, modify, and understand.
 
 The /srv/pillar/ directory is primarily controlled by the top.sls. It should
 be noted that the pillar top.sls is not used as a location to declare variables
 and their values. The top.sls is used as a way to include other pillar files
-and organize the way they are matched based on enviroments or grains.
+and organize the way they are matched based on environments or grains.
 
 An example top.sls may be as simple as the following:
 
@@ -123,15 +121,15 @@ Or much more complicated, using a variety of matchers:
         - match: compound
         - emacs
 
-It's simple to see through these examples how the top file provides users with
+It is clear to see through these examples how the top file provides users with
 power, but when used incorrectly it can lead to confusing configurations. This
 is why it is important to understand that the top file for pillar is not used
 for variable definitions.
 
 Each sls file within the /srv/pillar/ directory should correspond to the
 states which it matches. This would mean that the apache pillar file should
-contain data relevant to apache. Structuring our files in this way once again
-ensures modularity, and creates a consistant understanding throughout our Salt
+contain data relevant to apache. Structuring files in this way once again
+ensures modularity, and creates a consistent understanding throughout our Salt
 environment. Users can expect that pillar variables found in an apache state
 will live inside of an apache pillar:
 
@@ -143,37 +141,53 @@ will live inside of an apache pillar:
       lookup:
         name: httpd
         config:
-          tmpl: 
-      
+          tmpl: /etc/httpd/httpd.conf
+
+While this pillar file is simple, it shows how a pillar file explicitly
+relates to the state it is associated with.
 
 
 Variable Flexibility
 --------------------
 
 Salt allows users to define variables in several locations, within the states
-themselves, inside of pillars, as well as map files. When creating a state
-variables should provide users with as much flexibility as possible. This means
-that variables should be clearly defined and easy to manipulate, and that sane
-defaults should exist in the event a variable is not properly defined. Looking
-at several examples shows how these different items can lead to extensive
-flexibility.
+themselves, inside of pillars, as well as map files and other custom files.
+When creating a state variables should provide users with as much flexibility
+as possible. This means that variables should be clearly defined and easy to
+manipulate, and that sane defaults should exist in the event a variable is not
+properly defined. Looking at several examples shows how these different items
+can lead to extensive flexibility.
 
-Transitioning variables from states to pillars: 
+Although it is possible to set variables locally, this is generally not
+preferred: 
+
+/srv/salt/apache/conf.sls
 
 .. code-block:: yaml
 
-    {% set myvar = 'myvalue' %}
-    {% set myothervar = 'myothervalue' %}
+    {% set tmpl = 'salt://apache/files/httpd.conf' %}
+    ...
+    - source: {{ tmpl }}
 
-    
-
-    
 When generating this information it can be easily transitioned to the pillar
-where data can be overwritten, 
+where data can be overwritten, modified, and applied to multiple states, or
+locations within a single state:
+
+/srv/pillar/apache.sls
 
 .. code-block:: yaml
 
-    - source: {{ salt['pillar.get']('apache:lookup:name')     
+    apache:
+      lookup:
+        config:
+          tmpl: salt://apache/files/httpd.conf
+
+/srv/salt/apache/conf.sls
+
+.. code-block:: yaml
+    
+    ...
+    - source: {{ salt['pillar.get']('apache:lookup:config:tmpl')     
  
 Modularity Within States
 ------------------------
@@ -184,7 +198,7 @@ state could be re-used, and what it relies on to operate. Below are several
 examples which will iteratively explain how a user can go from a state which
 is not very modular, to one that is:
 
-apache/init.sls:
+/srv/salt/apache/init.sls:
 
 .. code-block:: yaml
 
@@ -209,9 +223,15 @@ directly as the state ID. This would lead to changing multiple requires within
 this state, as well as others that may depend upon the state. Imagine if a
 require was used for the httpd package in another state, and then suddenly
 it's a custom package. Now changes need to be made in multiple locations which
-increases the complexity, and leads to a more error prone configuration.
+increases the complexity, and leads to a more error prone configuration. There
+is also the issue of having the configuration file located in the init as a
+user would be unable to simply install the service and use the default conf
+file.
 
-apache/init.sls:
+Our second revision begins to address the referencing by using ``- name``, as
+opposed to direct ID references:
+
+/srv/salt/apache/init.sls:
 
 .. code-block:: yaml
 
@@ -233,23 +253,48 @@ apache/init.sls:
         - watch_in:
           - service: apache
 
-The above init file has several issues which lead to a lack of modularity. The
-first of these problems is the usage of static values for items such as the
-name of the service, the name of the managed file, and the source of the
-managed file. When these items are hard coded they become difficult to modify
-and the opportunity to make mistakes arises. It also leads to multiple edits
-that need to occur when changing these items (imagine if there were dozens of
-these occurrences throughout the state!).
+The above init file is better than our original, yet it has several issues
+which lead to a lack of modularity. The first of these problems is the usage
+of static values for items such as the name of the service, the name of the
+managed file, and the source of the managed file. When these items are hard
+coded they become difficult to modify and the opportunity to make mistakes
+arises. It also leads to multiple edits that need to occur when changing
+these items (imagine if there were dozens of these occurrences throughout the
+state!). There is also still the concern of the configuration file data living
+in the same state as the service and package.
 
-In the next example steps will be taken to begin addressing this state file,
-starting with the addition of a map.jinja (as noted in the Formula
-documentationt [link here]), and modification of static values:
+In the next example steps will be taken to begin addressing these issues.
+Starting with the addition of a map.jinja file (as noted in the 
+`Formula documentation <https://docs.saltstack.com/topics/conventions/formulas.html>`_
+), and modification of static values:
 
-apache/map.jinja:
+/srv/salt/apache/map.jinja:
 
 .. code-block:: yaml
 
-apache/init.sls:
+    {% set apache = salt['grains.filter_by']({
+        'Debian': {
+            'server': 'apache2',
+            'service': 'apache2',
+             'conf': '/etc/apache2/apache.conf',
+        },
+        'RedHat': {
+            'server': 'httpd',
+            'service': 'httpd',
+            'conf': '/etc/httpd/httpd.conf',
+        },
+    }, merge=salt['pillar.get']('apache:lookup')) %}
+
+/srv/pillar/apache.sls:
+
+.. code-block:: yaml
+
+    apache:
+      lookup:
+        config:
+          tmpl: salt://apache/files/httpd.conf
+
+/srv/salt/apache/init.sls:
 
 .. code-block:: yaml
 
@@ -275,15 +320,41 @@ apache/init.sls:
           - service: apache
 
 The changes to this state now allow us to easily identify the location of the
-variables, as well as ensuring they are flexible and easy to modify. There are
-also defaults in place should the user choose to not use the modified conf.
+variables, as well as ensuring they are flexible and easy to modify.
 While this takes another step in the right direction, it is not yet complete.
 Supposed the user didn't want to use the provided conf file, or even their own
 configuration file, but the default apache file. With the current state setup
 this is not possible. To attain this level of modularity this state will need
 to be broken into two states.
 
-apache/init.sls:
+/srv/salt/apache/map.jinja:
+
+.. code-block:: yaml
+
+    {% set apache = salt['grains.filter_by']({
+        'Debian': {
+            'server': 'apache2',
+            'service': 'apache2',
+             'conf': '/etc/apache2/apache.conf',
+        },
+        'RedHat': {
+            'server': 'httpd',
+            'service': 'httpd',
+            'conf': '/etc/httpd/httpd.conf',
+        },
+    }, merge=salt['pillar.get']('apache:lookup')) %}
+
+/srv/pillar/apache.sls:
+
+.. code-block:: yaml
+
+    apache:
+      lookup:
+        config:
+          tmpl: salt://apache/files/httpd.conf
+
+
+/srv/salt/apache/init.sls:
 
 .. code-block:: yaml
 
@@ -298,7 +369,7 @@ apache/init.sls:
         - enable: True
         - running
 
-apache/conf.sls:
+/srv/salt/apache/conf.sls:
 
 .. code-block:: yaml
 
@@ -329,15 +400,15 @@ Storing Secure Data
 
 Secure data refers to any information that you would not wish to share with
 anyone accessing a server. This could include data such as passwords,
-usernames, keys, or other information.
+keys, or other information.
 
-As all data within a state is accesible by EVERY server within an environment,
+As all data within a state is accessible by EVERY server that is connected
 it is important to store secure data within pillar. This will ensure that only
 those servers which require this secure data have access to it. In this
-example a use can go from very insecure data to data which is only accessible
-by the appropriate hosts:
+example a use can go from an insecure configuration to one which is only
+accessible by the appropriate hosts:
 
-mysql/user.sls:
+/srv/salt/mysql/user.sls:
 
 .. code-block:: yaml
 
@@ -362,14 +433,53 @@ immediately visible.
 The first of these issues is clear to most users, the password being visible
 in this state. This  means that any minion will have a copy of this, and
 therefore the password which is a major security concern as minions may not
-be locked downas tightly as the master server.
+be locked down as tightly as the master server.
 
 The other issue that can be encountered is access by users ON the master. If
 everyone has access to the states (or their repository), then they are able to
 review this password. Keeping your password data accessible by only a few
 users is critical for both security, and peace of mind.
 
-There is also the issue of portability. When a state is configured this way,
+There is also the issue of portability. When a state is configured this way
 it results in multiple changes needing to be made. This was discussed in the
 sections above, but it is a critical idea to drive home. If states are not
 portable it may result in more work later!
+
+Fixing this issue is relatively simple, the content just needs to be moved to
+the associated pillar:
+
+/srv/pillar/mysql.sls
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        name: testerdb
+        password: test3rdb
+        user: frank
+        host: localhost
+
+/srv/salt/mysql/user.sls:
+
+.. code-block:: yaml
+
+    testdb:
+      mysql_database:
+        - present:
+        - name: {{ salt['pillar.get']('mysql:lookup:name') }}
+
+    testdb_user:
+      mysql_user:
+        - present
+        - name: {{ salt['pillar.get']('mysql:lookup:user') }}
+        - password: {{ salt['pillar.get']('mysql:lookup:password') }}
+        - host: {{ salt['pillar.get']('mysql:lookup:host') }}
+        - require:
+          - mysql_database: testdb
+
+Now that the database details have been moved to the associated pillar file
+only machines which are targeted via pillar will have access to these details.
+Access to users who should not be able to review these details can also be
+prevented while ensuring that they are still able to write states which take
+advantage of this information.
+
