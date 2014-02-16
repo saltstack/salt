@@ -42,7 +42,7 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Reviewing another example such as the `vim formula
+Reviewing another example such as the `vim formula 
 <https://github.com/saltstack-formulas/vim-formula>`_:
 
 .. code-block:: bash
