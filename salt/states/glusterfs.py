@@ -56,7 +56,7 @@ def peered(name):
         ret['result'] = None
         return ret
 
-    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
         ret['comment'] = 'Invalid characters in peer name.'
         ret['result'] = False
         return ret
@@ -110,12 +110,12 @@ def created(name, peers=None, **kwargs):
         ret['result'] = None
         return ret
 
-    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
         ret['comment'] = 'Invalid characters in volume name.'
         ret['result'] = False
         return ret
 
-    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for peer in peers]):
+    if any([suc.check_name(peer, 'a-zA-Z0-9._-') for peer in peers]):
         ret['comment'] = 'Invalid characters in a peer name.'
         ret['result'] = False
         return ret
@@ -149,7 +149,7 @@ def started(name, **kwargs):
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret
 
-    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
         ret['comment'] = 'Invalid characters in volume name.'
         ret['result'] = False
         return ret
