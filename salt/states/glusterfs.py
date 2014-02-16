@@ -78,7 +78,7 @@ def peered(name):
     return ret
 
 
-def created(name, **kwargs):
+def created(name, peers=None, **kwargs):
     '''
     Check if volume already exists
 
@@ -113,7 +113,7 @@ def created(name, **kwargs):
         ret['result'] = True
         return ret
 
-    ret['comment'] = __salt__['glusterfs.create'](name, **kwargs)
+    ret['comment'] = __salt__['glusterfs.create'](name, peers, **kwargs)
 
     if name in __salt__['glusterfs.list_volumes']():
         ret['changes'] = {'new': name, 'old': ''}

@@ -62,7 +62,12 @@ def peer(name=None, **kwargs):
     return 'Node not referenced in /etc/hosts.'
 
 
-def create(name, brick='/srv/gluster/brick1', peers=[], replica=False, count=2, **kwargs):
+def create(name,
+           peers=None,
+           brick='/srv/gluster/brick1',
+           replica=False,
+           count=2,
+           **kwargs):
     '''
     Create a glusterfs volume.
 
@@ -84,8 +89,11 @@ def create(name, brick='/srv/gluster/brick1', peers=[], replica=False, count=2, 
     short
         (optional) use short names for peering
 
-    salt 'one.gluster*' glusterfs.create mymount /srv/gluster/brick1 peers='["one", "two"]' short=True start=True
-    salt -G 'gluster:master' glusterfs.create mymount /srv/gluster/brick1 peers='["one", "two", "three", "four"]' replica=True count=2 short=True start=True
+    salt 'one.gluster*' glusterfs.create mymount /srv/ peers='["one", "two"]'
+
+    salt -G 'gluster:master' glusterfs.create mymount /srv/gluster/brick1 \
+        peers='["one", "two", "three", "four"]' replica=True count=2 \
+        short=True start=True
     '''
     check_peers = 'gluster peer status | awk \'/Hostname/ {print $2}\''
     active_peers = __salt__['cmd.run'](check_peers).splitlines()
@@ -139,7 +147,7 @@ def start(name):
         Volume name
     '''
     volumes = list_volumes()
-    if name in volumes :
+    if name in volumes:
         cmd = 'gluster volume start {0}'.format(name)
         return __salt__['cmd.run'](cmd)
     return False
