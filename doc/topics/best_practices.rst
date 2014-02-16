@@ -75,19 +75,20 @@ reduces the overall complexity, and leads a user to both understand what will be
 included at a glance, and where it is located.
 
 In addition
-`Formulas <http://docs.saltstack.com/topics/conventions/formulas.html>`_ should
+`Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_ should
 be used as often as possible.
 
 
 Structuring Pillar Files
 -----------------------
 
-Pillars (link) are used to store both secure, and insecure data pertaining to
-minions. When designing the structure of the ``/srv/pillar`` directory, and
-the pillars contained within there should once again be a focus on clear and
-concise data which users can easily review, modify, and understand. Once again
-examples will be used which highlight a transition from a lack of modularity,
-to a design which exhibits ease of use and clarity.
+`Pillars <https://docs.saltstack.com/topics/pillar/>`_ are used to store both
+secure, and insecure data pertaining to minions. When designing the structure
+of the ``/srv/pillar`` directory, and the pillars contained within there
+should once again be a focus on clear and concise data which users can easily
+review, modify, and understand. Once again examples will be used which
+highlight a transition from a lack of modularity, to a design which exhibits
+ease of use and clarity.
 
 The /srv/pillar/ directory is primarily controlled by the top.sls. It should
 be noted that the pillar top.sls is not used as a location to declare variables
