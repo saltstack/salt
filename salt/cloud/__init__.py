@@ -1480,6 +1480,7 @@ class Map(Cloud):
         if self.opts['parallel']:
             parallel_data = []
         master_name = None
+        master_minion_name = None
         master_host = None
         master_finger = None
         try:
