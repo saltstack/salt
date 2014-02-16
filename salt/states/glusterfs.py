@@ -6,6 +6,7 @@ Manage glusterfs pool.
 # Import python libs
 from __future__ import generators
 import logging
+import socket
 
 # Import salt libs
 import salt.utils
@@ -30,6 +31,22 @@ def peered(name):
 
     name
         The remote host with which to peer.
+    names
+        List of names to peer with
+
+    name is ignored if names is set.
+
+    peer-cluster:
+      glusterfs.peered:
+        - name: two
+
+    peer-clusters:
+      glusterfs.peered:
+        - names:
+          - one
+          - two
+          - three
+          - four
     '''
     ret = {'name': name,
            'changes': {},
@@ -50,9 +67,12 @@ def peered(name):
     ret['comment'] = __salt__['glusterfs.peer'](name)
 
     newpeers = __salt__['glusterfs.list_peers']()
-    if name in peers:
+    if name in newpeers:
         ret['result'] = True
-        ret['change'] = {'new': newpeers, 'old': peers}
+        ret['changes'] = {'new': newpeers, 'old': peers}
+    elif name == socket.gethostname().split('.')[0]:
+        ret['result'] = True
+        return ret
     else:
         ret['result'] = False
     return ret
@@ -64,6 +84,20 @@ def created(name, **kwargs):
 
     name
         name of the volume
+
+    gluster-cluster:
+      glusterfs.created:
+        - name: mycluster
+        - brick: /srv/gluster/drive1
+        - replica: True
+        - count: 2
+        - short: True
+        - start: True
+        - peers:
+          - one
+          - two
+          - three
+          - four
     '''
     ret = {'name': name,
            'changes': {},
@@ -79,7 +113,7 @@ def created(name, **kwargs):
         ret['result'] = True
         return ret
 
-    ret['comment'] = __salt__['glusterfs.create'](name, kwargs)
+    ret['comment'] = __salt__['glusterfs.create'](name, **kwargs)
 
     if name in __salt__['glusterfs.list_volumes']():
         ret['changes'] = {'new': name, 'old': ''}
@@ -94,6 +128,9 @@ def started(name, **kwargs):
 
     name
         name of the volume
+    gluster-started:
+      glusterfs.started:
+        - name: mycluster
     '''
     ret = {'name': name,
            'changes': {},

@@ -35,23 +35,30 @@ def list_peers():
     return __salt__['cmd.run'](get_peer_list).splitlines()
 
 
-def peer(remote_host):
+def peer(name=None, **kwargs):
     '''
     Add another node into the peer probe.
     That node must be referenced in /etc/hosts.
 
     Need to add the ability to add to use ip addresses
 
-    remote_host
+    name
         The remote host with which to peer.
+
+    names
+        List of hosts with which to peer.
+
+    If names is specified, name will be ignored.
 
     salt 'one.gluster.*' glusterfs.peer two
     '''
     hosts_file = __salt__['hosts.list_hosts']()
+    hosts_list = []
     for ip, hosts in hosts_file.items():
-        if remote_host in hosts:
-            cmd = 'gluster peer probe {0}'.format(remote_host)
-            return __salt__['cmd.run'](cmd)
+        hosts_list.extend(hosts)
+    if name in hosts_list:
+        cmd = 'gluster peer probe {0}'.format(name)
+        return __salt__['cmd.run'](cmd)
     return 'Node not referenced in /etc/hosts.'
 
 
@@ -117,7 +124,7 @@ def status(name):
     name
         Volume name
     '''
-    volumes = list_volume()
+    volumes = list_volumes()
     if name in volumes:
         cmd = 'gluster volume status {0}'.format(name)
         return __salt__['cmd.run'](cmd)
@@ -131,7 +138,7 @@ def start(name):
     name
         Volume name
     '''
-    volumes = list_volume()
+    volumes = list_volumes()
     if name in volumes :
         cmd = 'gluster volume start {0}'.format(name)
         return __salt__['cmd.run'](cmd)
