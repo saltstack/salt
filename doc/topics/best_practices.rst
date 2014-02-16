@@ -75,7 +75,7 @@ reduces the overall complexity, and leads a user to both understand what will be
 included at a glance, and where it is located.
 
 In addition
-`Formulas<http://docs.saltstack.com/topics/conventions/formulas.html>`_ should
+`Formulas <http://docs.saltstack.com/topics/conventions/formulas.html>`_ should
 be used as often as possible.
 
 
