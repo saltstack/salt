@@ -35,6 +35,9 @@ from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 log = logging.getLogger(__name__)
 
 
+LIBCLOUD_MINIMAL_VERSION = '0.14.0'
+
+
 def node_state(id_):
     states = {0: 'RUNNING',
               1: 'REBOOTING',
@@ -44,7 +47,7 @@ def node_state(id_):
     return states[id_]
 
 
-def check_libcloud_version(reqver='0.13.2', why=None):
+def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     '''
     Compare different libcloud versions
     '''
@@ -81,7 +84,11 @@ def libcloud_version():
     try:
         import libcloud
     except ImportError:
-        raise ImportError('salt-cloud requires >= libcloud 0.13.2')
+        raise ImportError(
+            'salt-cloud requires libcloud >= {0}'.format(
+                LIBCLOUD_MINIMAL_VERSION
+            )
+        )
 
     ver = libcloud.__version__
     ver = ver.replace('-', '.')
@@ -91,8 +98,11 @@ def libcloud_version():
         version.append(int(number))
     if version < [0, 13, 2]:
         raise ImportError(
-            'Your version of libcloud is {0}. salt-cloud requires >= '
-            'libcloud 0.13.2. Please upgrade.'.format(libcloud.__version__)
+            'Your version of libcloud is {0}. salt-cloud requires '
+            'libcloud >= {0}. Please upgrade.'.format(
+                libcloud.__version__,
+                LIBCLOUD_MINIMAL_VERSION
+            )
         )
     return libcloud.__version__
 
