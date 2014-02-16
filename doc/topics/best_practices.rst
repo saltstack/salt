@@ -351,8 +351,8 @@ Starting with the addition of a map.jinja file (as noted in the
 The changes to this state now allow us to easily identify the location of the
 variables, as well as ensuring they are flexible and easy to modify.
 While this takes another step in the right direction, it is not yet complete.
-Supposed the user didn't want to use the provided conf file, or even their own
-configuration file, but the default apache file. With the current state setup
+Suppose the user did not want to use the provided conf file, or even their own
+configuration file, but the default apache conf. With the current state setup
 this is not possible. To attain this level of modularity this state will need
 to be broken into two states.
 
