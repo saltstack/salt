@@ -80,7 +80,7 @@ be used as often as possible.
 
 
 Structuring Pillar Files
------------------------
+------------------------
 
 `Pillars <https://docs.saltstack.com/topics/pillar/>`_ are used to store both
 secure, and insecure data pertaining to minions. When designing the structure
@@ -294,8 +294,8 @@ in the same state as the service and package.
 
 In the next example steps will be taken to begin addressing these issues.
 Starting with the addition of a map.jinja file (as noted in the 
-`Formula documentation <https://docs.saltstack.com/topics/conventions/formulas.html>`_
-), and modification of static values:
+`Formula documentation <https://docs.saltstack.com/topics/conventions/formulas.html>`_)
+, and modification of static values:
 
 /srv/salt/apache/map.jinja:
 

@@ -12,6 +12,7 @@ Salt Table of Contents
     topics/installation/index
     topics/configuration
     topics/hacking
+    topics/best_practices
     topics/targeting/index
     topics/tutorials/index
     topics/eauth/*
