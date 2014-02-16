@@ -15,8 +15,9 @@ Structuring States and Formulas
 When structuring Salt States and Formulas it is important to begin with the
 directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
-name. Reviewing the MySQL Salt formula (link) it is clear to see the benefits
-to the end user when reviewing a sample of the available states:
+name. Reviewing the `MySQL Salt formula
+<https://github.com/saltstack-formulas/mysql-formula>`_ it is clear to see
+the benefits to the end user when reviewing a sample of the available states:
 
 .. code-block:: bash
 
@@ -41,7 +42,8 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Reviewing another example such as the vim formula (link):
+Reviewing another example such as the `vim formula
+<https://github.com/saltstack-formulas/vim-formula>`_:
 
 .. code-block:: bash
 
@@ -54,6 +56,8 @@ Reviewing another example such as the vim formula (link):
     /srv/salt/vim/salt.sls
 
 Once again viewing how this would look in a top file:
+
+/srv/salt/top.sls:
 
 .. code-block:: bash
 
@@ -70,7 +74,10 @@ The usage of a clear top level directory, as well as properly named states
 reduces the overall complexity, and leads a user to both understand what will be
 included at a glance, and where it is located.
 
-In addition Formulas <link here> should be used as often as possible.
+In addition
+`Formulas<http://docs.saltstack.com/topics/conventions/formulas.html>`_ should
+be used as often as possible.
+
 
 Structuring Pillar Files
 -----------------------
@@ -326,8 +333,8 @@ usernames, keys, or other information.
 As all data within a state is accesible by EVERY server within an environment,
 it is important to store secure data within pillar. This will ensure that only
 those servers which require this secure data have access to it. In this
-example a new user can be instructed in how to go from very insecure data to
-data which is only accessible by the appropriate hosts:
+example a use can go from very insecure data to data which is only accessible
+by the appropriate hosts:
 
 mysql/user.sls:
 
