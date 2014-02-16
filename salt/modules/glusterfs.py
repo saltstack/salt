@@ -25,6 +25,16 @@ def __virtual__():
         return False
 
 
+def list_peers():
+    '''
+    Return a list of gluster peers
+
+    salt '*' glusterfs.list_peers
+    '''
+    get_peer_list = 'gluster peer status | awk \'/Hostname/ {print $2}\''
+    return __salt__['cmd.run'](get_peer_list).splitlines()
+
+
 def peer(remote_host):
     '''
     Add another node into the peer probe.
@@ -45,7 +55,7 @@ def peer(remote_host):
     return 'Node not referenced in /etc/hosts.'
 
 
-def create(name, brick, peers=[], replica=False, count=2, **kwargs):
+def create(name, brick='/srv/gluster/brick1', peers=[], replica=False, count=2, **kwargs):
     '''
     Create a glusterfs volume.
 
