@@ -10,6 +10,7 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.cloud as suc
 
 log = logging.getLogger(__name__)
 
@@ -18,23 +19,15 @@ def __virtual__():
     '''
     Only load this module if the gluster command exists
     '''
-    if salt.utils.which('gluster'):
-        return True
-    else:
-        return False
+    return 'glusterfs' if 'glusterfs.list_volumes' in __salt__ else False
 
 
 def peered(name):
     '''
     Check if node is peered.
-    Must be a hostname stored in /etc/hosts.
 
     name
         The remote host with which to peer.
-    names
-        List of names to peer with
-
-    name is ignored if names is set.
 
     peer-cluster:
       glusterfs.peered:
@@ -61,7 +54,12 @@ def peered(name):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Peer {0} will be added.'.format(name)
-        ret['result'] = True
+        ret['result'] = None
+        return ret
+
+    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+        ret['comment'] = 'Invalid characters in peer name.'
+        ret['result'] = False
         return ret
 
     ret['comment'] = __salt__['glusterfs.peer'](name)
@@ -110,7 +108,17 @@ def created(name, peers=None, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Volume {0} will be created'.format(name)
-        ret['result'] = True
+        ret['result'] = None
+        return ret
+
+    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+        ret['comment'] = 'Invalid characters in volume name.'
+        ret['result'] = False
+        return ret
+
+    if not all([suc.check_name(peer, 'a-zA-Z0-9._-') for peer in peers]):
+        ret['comment'] = 'Invalid characters in a peer name.'
+        ret['result'] = False
         return ret
 
     ret['comment'] = __salt__['glusterfs.create'](name, peers, **kwargs)
@@ -142,6 +150,10 @@ def started(name, **kwargs):
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret
 
+    if not suc.check_name(name, 'a-zA-Z0-9._-'):
+        ret['comment'] = 'Invalid characters in volume name.'
+        ret['result'] = False
+        return ret
     status = __salt__['glusterfs.status'](name)
 
     if status != 'Volume {0} is not started'.format(name):
@@ -150,7 +162,7 @@ def started(name, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Volume {0} will be created'.format(name)
-        ret['result'] = True
+        ret['result'] = None
         return ret
 
     ret['comment'] = __salt__['glusterfs.start'](name)
