@@ -23,6 +23,41 @@ def __virtual__():
         return False
 
 
+def peered(name):
+    '''
+    Check if node is peered.
+    Must be a hostname stored in /etc/hosts.
+
+    name
+        The remote host with which to peer.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    peers = __salt__['glusterfs.list_peers']()
+
+    if name in peers:
+        ret['result'] = True
+        ret['comment'] = 'Host {0} already peered'.format(name)
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Peer {0} will be added.'.format(name)
+        ret['result'] = True
+        return ret
+
+    ret['comment'] = __salt__['glusterfs.peer'](name)
+
+    newpeers = __salt__['glusterfs.list_peers']()
+    if name in peers:
+        ret['result'] = True
+        ret['change'] = {'new': newpeers, 'old': peers}
+    else:
+        ret['result'] = False
+    return ret
+
+
 def created(name, **kwargs):
     '''
     Check if volume already exists
@@ -44,9 +79,9 @@ def created(name, **kwargs):
         ret['result'] = True
         return ret
 
-    ret['comment'] = __salt__['gluster.create'](name, kwargs)
+    ret['comment'] = __salt__['glusterfs.create'](name, kwargs)
 
-    if name in __salt__['gluster.list_volumes']():
+    if name in __salt__['glusterfs.list_volumes']():
         ret['changes'] = {'new': name, 'old': ''}
         ret['result'] = True
 
