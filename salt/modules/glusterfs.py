@@ -96,12 +96,8 @@ def create(name, brick, peers=[], replica=False, count=2, **kwargs):
     return ret
 
 
-def _list_volumes():
-    return __salt__['cmd.run']('gluster volume list').splitlines()
-
-
 def list_volumes():
-    return dict(_list_volumes())
+    return __salt__['cmd.run']('gluster volume list').splitlines()
 
 
 def status(name):
@@ -111,7 +107,22 @@ def status(name):
     name
         Volume name
     '''
-    volumes = __salt__['cmd.run']('gluster volume list').splitlines()
+    volumes = list_volume()
     if name in volumes:
         cmd = 'gluster volume status {0}'.format(name)
         return __salt__['cmd.run'](cmd)
+    return 'Volume {0} doesn\'t exist'.format(name)
+
+
+def start(name):
+    '''
+    Start a gluster volume.
+
+    name
+        Volume name
+    '''
+    volumes = list_volume()
+    if name in volumes :
+        cmd = 'gluster volume start {0}'.format(name)
+        return __salt__['cmd.run'](cmd)
+    return False
