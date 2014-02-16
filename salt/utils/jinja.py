@@ -156,6 +156,38 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+def ensure_sequence_filter(data):
+    '''
+    Ensure sequenced data.
+
+    **sequence**
+
+        ensure that parsed data is a sequence
+
+    .. code-block:: yaml
+
+        {% set my_string = "foo" %}
+        {% set my_list = ["bar", ] %}
+        {% set my_dict = {"baz": "qux"} %}
+
+        {{ my_string|sequence|first }}
+        {{ my_list|sequence|first }}
+        {{ my_dict|sequence|first }}
+
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        foo
+        bar
+        baz
+    '''
+    if not isinstance(data, (list, tuple, set, dict)):
+        return [data]
+    return data
+
+
 class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.

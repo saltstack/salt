@@ -3,7 +3,7 @@
 Manage SVN repositories
 =======================
 
-Manage repositiry checkouts via the svn vcs system:
+Manage repository checkouts via the svn vcs system:
 
 .. code-block:: yaml
 

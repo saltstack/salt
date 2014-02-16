@@ -187,6 +187,8 @@ VALID_OPTS = {
     'gather_job_timeout': int,
     'auth_timeout': int,
     'random_master': bool,
+    'syndic_event_forward_timeout': float,
+    'syndic_max_event_process_time': float,
 }
 
 # default configurations
@@ -380,7 +382,7 @@ DEFAULT_MASTER_OPTS = {
     'nodegroups': {},
     'cython_enable': False,
     'enable_gpu_grains': False,
-    # XXX: Remove 'key_logfile' support in 0.18.0
+    # XXX: Remove 'key_logfile' support in 2014.1.0
     'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
@@ -397,6 +399,8 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
+    'syndic_event_forward_timeout': 0.5,
+    'syndic_max_event_process_time': 0.5,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -655,7 +659,7 @@ def minion_config(path,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',
@@ -1763,7 +1767,7 @@ def apply_minion_config(overrides=None,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',

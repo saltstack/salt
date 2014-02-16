@@ -1939,7 +1939,7 @@ def blockreplace(name,
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
-    .. versionadded:: 0.18.0
+    .. versionadded:: 2014.1.0
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining

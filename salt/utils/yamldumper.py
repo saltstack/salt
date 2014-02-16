@@ -9,7 +9,7 @@ from __future__ import absolute_import
 try:
     from yaml import CDumper as Dumper
 except ImportError:
-    from yaml import CDumper as Dumper
+    from yaml import Dumper
 
 from salt.utils.odict import OrderedDict
 
