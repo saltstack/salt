@@ -232,6 +232,7 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
+from salt.utils.yamldumper import OrderedDumper
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -1938,7 +1939,7 @@ def blockreplace(name,
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
-    .. versionadded:: 0.18.0
+    .. versionadded:: 2014.1.0
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining
@@ -3026,7 +3027,7 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
     if formatter == 'yaml':
-        contents = yaml.dump(dataset, default_flow_style=False)
+        contents = yaml.dump(dataset, default_flow_style=False, Dumper=OrderedDumper)
     elif formatter == 'json':
         contents = json.dumps(dataset,
                               indent=2,

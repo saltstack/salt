@@ -29,7 +29,7 @@ class Signer(object):
             key = nacl.signing.SigningKey.generate()
         self.key = key
         self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
-        self.verifyhex = self.key.verify_key.encode(nacl.encoding.HexEncoder)
+        self.verhex = self.key.verify_key.encode(nacl.encoding.HexEncoder)
 
     def sign(self, msg):
         '''
@@ -42,6 +42,7 @@ class Signer(object):
         Return only the signature string resulting from signing the message
         '''
         return self.key.sign(msg).signature
+
 
 class Verifier(object):
     '''
@@ -68,6 +69,7 @@ class Verifier(object):
         except nacl.signing.BadSignatureError:
             return False
         return True
+
 
 class Publican(object):
     '''
@@ -140,6 +142,3 @@ class Privateer(object):
         '''
         box = nacl.public.Box(self.key, pub.key)
         return box.decrypt(cipher, nonce)
-
-
-

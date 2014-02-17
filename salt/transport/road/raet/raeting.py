@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: skip-file
 '''
 raeting module provides constants and values for the RAET protocol
 
@@ -137,7 +138,7 @@ TailKind = namedtuple('TailKind', TAIL_KINDS.keys())
 tailKinds = TailKind(**TAIL_KINDS)
 
 # bytes
-TAIL_SIZES = odict([('nada', 0), ('nacl', 8),  ('crc16', 2), ('crc64', 8),
+TAIL_SIZES = odict([('nada', 0), ('nacl', 8), ('crc16', 2), ('crc64', 8),
                     ('unknown', 0)])
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
@@ -148,8 +149,9 @@ SERVICE_KIND_NAMES = odict((v, k) for k, v in SERVICE_KINDS.iteritems())  # inve
 ServiceKind = namedtuple('ServiceKind', SERVICE_KINDS.keys())
 serviceKinds = ServiceKind(**SERVICE_KINDS)
 
-PACKET_KINDS = odict([('data', 0), ('req', 1), ('ack', 8),
-                      ('nack', 9), ('unknown', 255)])
+PACKET_KINDS = odict([('data', 0), ('ack', 1), ('nack', 2),
+                      ('join', 3), ('acceptAck', 4), ('accept', 5),
+                      ('unknown', 255)])
 PACKET_KIND_NAMES = odict((v, k) for k, v in PACKET_KINDS.iteritems())  # inverse map
 PacketKind = namedtuple('PacketKind', PACKET_KINDS.keys())
 packetKinds = PacketKind(**PACKET_KINDS)
@@ -188,32 +190,33 @@ PACKET_DEFAULTS = odict([
                             ('fg', '00'),
                       ])
 
-PACKET_FIELDS = [   'sh', 'sp', 'dh', 'dp',
-                    'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                    'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                    'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
+PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
+                 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+                 'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                 'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
-HEAD_FIELDS = [ 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
-                'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                'nk', 'nl', 'bk', 'bl','tk', 'tl', 'fg']
+HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'sk', 'pk',
+               'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+               'nk', 'nl', 'bk', 'bl', 'tk', 'tl', 'fg']
 
 PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
 PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
 
 
 class RaetError(Exception):
-    """Used to indicate error in RAET Protocol
+    '''
+    Used to indicate error in RAET Protocol
 
        usage:
        msg = "Invalid device id '{0}'".format(did)
        raise raeting.RaetError(msg)
-    """
-    def __init__(self, message = None):
-        self.message = message #description of error
-        self.args = (message)
+    '''
+    def __init__(self, message=None):
+        self.message = message  # description of error
+        super(RaetError, self).__init__(message)
 
     def __str__(self):
-        return ("{0}: {1}.\n".format(self.__class__.__name__, self.message))
+        return "{0}: {1}.\n".format(self.__class__.__name__, self.message)
 
 
 def defaultData(data=None):

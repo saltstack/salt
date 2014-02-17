@@ -62,6 +62,13 @@ try:
 except ImportError:
     HAS_HALITE = False
 
+try:
+    import systemd.daemon
+    HAS_PYTHON_SYSTEMD = True
+except ImportError:
+    HAS_PYTHON_SYSTEMD = False
+
+
 log = logging.getLogger(__name__)
 
 
@@ -381,18 +388,19 @@ class Publisher(multiprocessing.Process):
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-        )
+        pull_path = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        pull_mode = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        pull_uri = 'ipc://{0}'.format(pull_path)
+        salt.utils.check_ipc_path_max_len(pull_uri)
+
+        # Securely create pull socket file
+        log.debug('Creating pull socket {0}'.format(pull_path))
+        os.close(os.open(pull_path, pull_mode, 0600))
+
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
-        # Restrict access to the socket
-        os.chmod(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'),
-            448
-        )
 
         try:
             while True:
@@ -465,6 +473,13 @@ class ReqServer(object):
             proc.start()
 
         self.workers.bind(self.w_uri)
+
+        try:
+            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
+                systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon wasn't started by systemd
+            pass
 
         while True:
             try:
