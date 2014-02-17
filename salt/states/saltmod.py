@@ -92,10 +92,13 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
+    cmd_kw = {'arg': [], 'ret': ret}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+
     if env is not None:
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -129,8 +132,6 @@ def state(
         cmd_kw['arg'].append('test={0}'.format(test))
     if __env__ != 'base':
         cmd_kw['arg'].append('saltenv={0}'.format(__env__))
-    if ret:
-        cmd_kw['ret'] = ret
     if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
@@ -218,11 +219,13 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
+    cmd_kw = {'arg': [], 'ret': ret}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
+
     if 'expr_form' in kwargs and not tgt_type:
         tgt_type = kwargs['expr_form']
     if not tgt_type:
@@ -230,8 +233,6 @@ def function(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     fun = name
-    if ret:
-        cmd_kw['ret'] = ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     ret['changes'] = cmd_ret
     ret['comment'] = 'Function {0} ran successfully on {0}'.format(
