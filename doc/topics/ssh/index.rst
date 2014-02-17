@@ -38,8 +38,7 @@ standard ``salt`` commands.
     The state module is an exception, which compiles the state run on the 
     master, and in the process finds all the references to ``salt://`` paths and 
     copies those files down in the same tarball as the state run. 
-    However, we have not done similar wrapping with the cp module and similar at
-    this point.
+    However, needed fileserver wrappers are still under development.
 
 Salt SSH Roster
 ===============
