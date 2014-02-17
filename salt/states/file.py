@@ -1645,7 +1645,10 @@ def recurse(name,
     # Check source path relative to fileserver root, make sure it is a
     # directory
     source_rel = source.partition('://')[2]
-    if source_rel not in __salt__['cp.list_master_dirs'](__env__):
+    master_dirs = __salt__['cp.list_master_dirs'](__env__)
+    if source_rel not in master_dirs \
+            and not any((x for x in master_dirs
+                         if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
             'The directory {0!r} does not exist on the salt fileserver'
