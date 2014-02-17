@@ -23,6 +23,15 @@ no disk space:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
 
+Only run if the file specified by ``creates`` does not exist, in this case touch
+/tmp/foo if it does not exist.
+
+.. code-block:: yaml
+
+    touch /tmp/foo:
+      cmd.run:
+        - creates: /tmp/foo
+
 Note that when executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
@@ -246,7 +255,7 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, group):
+def _run_check(cmd_kwargs, onlyif, unless, group, creates):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:
@@ -284,6 +293,10 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
                 return {'comment': 'unless execution succeeded',
                         'result': True}
 
+    if isinstance(creates, string_types) and os.path.exists(creates):
+        return {'comment': '{0} exists'.format(creates),
+                'result': True}
+
     # No reason to stop, return True
     return True
 
@@ -291,6 +304,7 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
 def wait(name,
          onlyif=None,
          unless=None,
+         creates=None,
          cwd=None,
          user=None,
          group=None,
@@ -423,6 +437,7 @@ def wait_script(name,
 def run(name,
         onlyif=None,
         unless=None,
+        creates=None,
         cwd=None,
         user=None,
         group=None,
@@ -577,7 +592,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, group)
+        cret = _run_check(cmd_kwargs, onlyif, unless, group, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -610,6 +625,7 @@ def script(name,
            template=None,
            onlyif=None,
            unless=None,
+           creates=None,
            cwd=None,
            user=None,
            group=None,
@@ -732,7 +748,7 @@ def script(name,
 
     try:
         cret = _run_check(
-            run_check_cmd_kwargs, onlyif, unless, group
+            run_check_cmd_kwargs, onlyif, unless, group, creates
         )
         if isinstance(cret, dict):
             ret.update(cret)
@@ -774,6 +790,7 @@ def call(name,
          kws=None,
          onlyif=None,
          unless=None,
+         creates=None,
          **kwargs):
     '''
     Invoke a pre-defined Python function with arguments specified in the state
@@ -820,7 +837,7 @@ def call(name,
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None)
+        cret = _run_check(cmd_kwargs, onlyif, unless, None, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -848,6 +865,7 @@ def wait_call(name,
               kws=None,
               onlyif=None,
               unless=None,
+              creates=None,
               stateful=False,
               **kwargs):
     # Ignoring our arguments is intentional.
