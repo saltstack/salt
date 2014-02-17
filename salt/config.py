@@ -187,6 +187,7 @@ VALID_OPTS = {
     'gather_job_timeout': int,
     'auth_timeout': int,
     'random_master': bool,
+    'salt_fails_if_highstate_fails': bool,
 }
 
 # default configurations
@@ -397,6 +398,7 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
+    'salt_fails_if_highstate_fails': False
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
