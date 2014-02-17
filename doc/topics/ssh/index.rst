@@ -28,6 +28,19 @@ Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
+.. note::
+
+    The Salt SSH eventually is supposed to support the same set of commands and 
+    functionality as standard ``salt`` command. 
+    
+    At the moment fileserver operations must be wrapped to ensure that the 
+    relevant files are delivered with the ``salt-ssh`` commands. 
+    The state module is an exception, which compiles the state run on the 
+    master, and in the process finds all the references to ``salt://`` paths and 
+    copies those files down in the same tarball as the state run. 
+    However, we have not done similar wrapping with the cp module and similar at
+    this point.
+
 Salt SSH Roster
 ===============
 
