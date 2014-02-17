@@ -55,7 +55,8 @@ def state(
         env=None,
         test=False,
         fail_minions='',
-        allow_fail=0):
+        allow_fail=0,
+        timeout=None):
     '''
     Invoke a state run on a given target
 
@@ -92,7 +93,7 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
-    cmd_kw = {'arg': [], 'ret': ret}
+    cmd_kw = {'arg': [], 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
            'changes': {},
@@ -110,7 +111,6 @@ def state(
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    cmd_kw = {'arg': []}
 
     if expr_form and tgt_type:
         ret.setdefault('warnings', []).append(
@@ -205,7 +205,8 @@ def function(
         tgt_type=None,
         expr_form=None,
         ret='',
-        arg=None):
+        arg=None,
+        timeout=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -227,7 +228,7 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    cmd_kw = {'arg': [], 'ret': ret}
+    cmd_kw = {'arg': arg or [], 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
            'changes': {},
