@@ -178,7 +178,7 @@ def state(
         ret['comment'] += '\nFailures:\n'
         for minion, failure in failures.iteritems():
             ret['comment'] += '\n'.join(
-                    (' '*4 + l)
+                    (' ' * 4 + l)
                     for l in salt.output.out_format(
                         {minion: failure},
                         'highstate',
@@ -195,7 +195,7 @@ def function(
         ssh=False,
         tgt_type=None,
         ret='',
-        arg=(),
+        arg=None,
         **kwargs):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -222,7 +222,7 @@ def function(
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
+    cmd_kw = {'arg': arg or []}
     if 'expr_form' in kwargs and not tgt_type:
         tgt_type = kwargs['expr_form']
     if not tgt_type:
