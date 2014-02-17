@@ -537,6 +537,8 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            # Use the ID defined in the roster file
+            opts_pkg['id'] = self.id
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],
