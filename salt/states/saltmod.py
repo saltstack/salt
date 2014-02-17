@@ -110,10 +110,10 @@ def state(
     cmd_kw = {'arg': []}
 
     if expr_form and tgt_type:
-        ret['warnings'] = [
+        ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
-        ]
+        )
         expr_form = None
     elif expr_form and not tgt_type:
         tgt_type = expr_form
