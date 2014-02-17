@@ -107,8 +107,12 @@ def setenforce(mode):
     else:
         return 'Invalid mode {0}'.format(mode)
     enforce = os.path.join(selinux_fs_path(), 'enforce')
-    with salt.utils.fopen(enforce, 'w') as _fp:
-        _fp.write(mode)
+    try:
+        with salt.utils.fopen(enforce, 'w') as _fp:
+            _fp.write(mode)
+    except (IOError, OSError) as exc:
+        msg = 'Could not write SELinux enforce file: {0}'
+        raise CommandExecutionError(msg.format(str(exc)))
     return getenforce()
 
 
