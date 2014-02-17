@@ -10,6 +10,7 @@
 '''
 
 from __future__ import absolute_import
+import datetime
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -22,8 +23,8 @@ __all__ = ['deserialize', 'serialize', 'available']
 available = True
 
 # prefer C bindings over python when available
-Loader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-Dumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -39,7 +40,7 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Loader', Loader)
+    options.setdefault('Loader', BaseLoader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
@@ -62,7 +63,7 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Dumper', Dumper)
+    options.setdefault('Dumper', BaseDumper)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -72,3 +73,42 @@ def serialize(obj, **options):
         return response
     except Exception as error:
         raise SerializationError(error)
+
+
+class Loader(BaseLoader):
+    """Overwrites Loader as not for polute legacy Loader"""
+    pass
+
+Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
+Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
+Loader.add_multi_constructor('tag:yaml.org,2002:int', Loader.construct_yaml_int)
+Loader.add_multi_constructor('tag:yaml.org,2002:float', Loader.construct_yaml_float)
+Loader.add_multi_constructor('tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
+Loader.add_multi_constructor('tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
+Loader.add_multi_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)
+Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
+Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
+Loader.add_multi_constructor('tag:yaml.org,2002:str', Loader.construct_yaml_str)
+Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
+Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
+Loader.add_multi_constructor(None, Loader.construct_undefined)
+
+
+class Dumper(BaseDumper):
+    """Overwrites Dumper as not for polute legacy Dumper"""
+    pass
+
+Dumper.add_multi_representer(type(None), Dumper.represent_none)
+Dumper.add_multi_representer(str, Dumper.represent_str)
+Dumper.add_multi_representer(unicode, Dumper.represent_unicode)
+Dumper.add_multi_representer(bool, Dumper.represent_bool)
+Dumper.add_multi_representer(int, Dumper.represent_int)
+Dumper.add_multi_representer(long, Dumper.represent_long)
+Dumper.add_multi_representer(float, Dumper.represent_float)
+Dumper.add_multi_representer(list, Dumper.represent_list)
+Dumper.add_multi_representer(tuple, Dumper.represent_list)
+Dumper.add_multi_representer(dict, Dumper.represent_dict)
+Dumper.add_multi_representer(set, Dumper.represent_set)
+Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
+Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
+Dumper.add_multi_representer(None, Dumper.represent_undefined)

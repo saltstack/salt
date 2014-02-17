@@ -35,7 +35,7 @@
         assert isinstance(obj, OrderedDict)
 
 
-    Silas `__repr__` and `__str__` objects' methods render YAML understandable
+    sls `__repr__` and `__str__` objects' methods render YAML understandable
     string. It means that they are template friendly.
 
 
@@ -56,9 +56,30 @@
         from salt.utils.serializers import yaml
         yml_obj = yaml.deserialize(str(obj))
         assert yml_obj == obj
+
+    sls implements also a !aggregate tag, that allow structures aggregation.
+
+    For example:
+
+
+    .. code-block:: yaml
+
+        placeholder: !aggregate foo
+        placeholder: !aggregate bar
+        placeholder: !aggregate baz
+
+    is rendered as
+
+    .. code-block:: yaml
+
+        placeholder: [foo, bar, baz]
+
+    Document is defacto an aggregate mapping.
 '''
 
 from __future__ import absolute_import
+from copy import copy
+import datetime
 import logging
 
 import yaml
@@ -68,6 +89,7 @@ from yaml.scanner import ScannerError
 
 from salt._compat import string_types
 from salt.utils.serializers import DeserializationError, SerializationError
+from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
 
 __all__ = ['deserialize', 'serialize', 'available']
@@ -77,8 +99,8 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
-Loader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-Dumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -94,7 +116,7 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Loader', SLSLoader)
+    options.setdefault('Loader', Loader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
@@ -106,6 +128,7 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         raise DeserializationError(error)
     except Exception as error:
+        raise
         raise DeserializationError(error)
 
 
@@ -117,7 +140,7 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Dumper', SLSDumper)
+    options.setdefault('Dumper', Dumper)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -126,6 +149,7 @@ def serialize(obj, **options):
             return response[:-1]
         return response
     except Exception as error:
+        raise
         raise SerializationError(error)
 
 
@@ -142,27 +166,34 @@ def error(key, old, new):  # pylint: disable=W0611
     raise ConstructorError('Conflicting ID "{0}"'.format(key))
 
 
-class SLSLoader(Loader):
+class Loader(BaseLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
     to make things like sls file more intuitive.
     '''
 
+    DEFAULT_SCALAR_TAG = 'tag:yaml.org,2002:str'
+    DEFAULT_SEQUENCE_TAG = 'tag:yaml.org,2002:seq'
+    DEFAULT_MAPPING_TAG = 'tag:yaml.org,2002:omap'
+
     # who should we resolve conflicting ids?
     conflict_resolver = None
 
     def __init__(self, stream, conflict_resolver=None):
-        Loader.__init__(self, stream)
+        BaseLoader.__init__(self, stream)
         self.conflict_resolver = conflict_resolver or ignore
 
-    def construct_sls_map(self, node):
+    def compose_document(self):
+        node = super(Loader, self).compose_document()
+        node.tag = '!aggregate'
+        return node
+
+    def construct_yaml_omap(self, node):
         '''
         Build the SLSMap
         '''
         sls_map = SLSMap()
-        yield sls_map
-
         if not isinstance(node, MappingNode):
             raise ConstructorError(
                 None,
@@ -182,8 +213,9 @@ class SLSLoader(Loader):
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=False)
             if key in sls_map:
-                self.conflict_resolver(key, sls_map[key], value)
+                value = merge_recursive(sls_map[key], value)
             sls_map[key] = value
+        return sls_map
 
     def construct_sls_int(self, node):
         '''
@@ -201,9 +233,50 @@ class SLSLoader(Loader):
                 node.value = '0'
         return int(node.value)
 
-SLSLoader.add_constructor('tag:yaml.org,2002:map', SLSLoader.construct_sls_map)  # NOQA
-SLSLoader.add_constructor('tag:yaml.org,2002:omap', SLSLoader.construct_sls_map)  # NOQA
-SLSLoader.add_constructor('tag:yaml.org,2002:int', SLSLoader.construct_sls_int)
+    def construct_sls_aggregate(self, node):
+        if isinstance(node, yaml.nodes.ScalarNode):
+            # search implicit tag
+            tag = self.resolve(yaml.nodes.ScalarNode, node.value, [True, True])
+            deep = False
+        elif isinstance(node, yaml.nodes.SequenceNode):
+            tag = self.DEFAULT_SEQUENCE_TAG
+            deep = True
+        elif isinstance(node, yaml.nodes.MappingNode):
+            tag = self.DEFAULT_MAPPING_TAG
+            deep = True
+        else:
+            raise ConstructorError('unable to build aggregate')
+
+        node = copy(node)
+        node.tag = tag
+        obj = self.construct_object(node, deep)
+        if obj is None:
+            return AggregatedSequence()
+        elif tag == self.DEFAULT_MAPPING_TAG:
+            return AggregatedMap(obj)
+        elif tag == self.DEFAULT_SEQUENCE_TAG:
+            return AggregatedSequence(obj)
+        return AggregatedSequence([obj])
+
+
+Loader.add_constructor('!aggregate', Loader.construct_sls_aggregate)  # custom type
+
+Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
+Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
+Loader.add_constructor('tag:yaml.org,2002:int', Loader.construct_sls_int)  # our overwrite
+
+Loader.add_multi_constructor('tag:yaml.org,2002:float', Loader.construct_yaml_float)
+Loader.add_multi_constructor('tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
+Loader.add_multi_constructor('tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
+
+Loader.add_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # our overwrite
+
+Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
+Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
+Loader.add_multi_constructor('tag:yaml.org,2002:str', Loader.construct_yaml_str)
+Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
+Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
+Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class SLSMap(OrderedDict):
@@ -240,10 +313,38 @@ class SLSMap(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
-class SLSDumper(Dumper):  # pylint: disable=W0232
+class Aggregate(object):
+    pass
+
+
+class AggregatedMap(SLSMap, Map):
+    pass
+
+
+class AggregatedSequence(Sequence):
+    pass
+
+
+class Dumper(BaseDumper):  # pylint: disable=W0232
     def represent_odict(self, data):
-        return self.represent_dict(data.items())
         return self.represent_mapping('tag:yaml.org,2002:map', data.items())
 
-# make every dict like obj to be represented as a map
-SLSDumper.add_multi_representer(dict, SLSDumper.represent_odict)
+
+Dumper.add_multi_representer(type(None), Dumper.represent_none)
+Dumper.add_multi_representer(str, Dumper.represent_str)
+Dumper.add_multi_representer(unicode, Dumper.represent_unicode)
+Dumper.add_multi_representer(bool, Dumper.represent_bool)
+Dumper.add_multi_representer(int, Dumper.represent_int)
+Dumper.add_multi_representer(long, Dumper.represent_long)
+Dumper.add_multi_representer(float, Dumper.represent_float)
+Dumper.add_multi_representer(list, Dumper.represent_list)
+Dumper.add_multi_representer(tuple, Dumper.represent_list)
+Dumper.add_multi_representer(dict, Dumper.represent_odict)  # make every dict like obj to be represented as a map
+Dumper.add_multi_representer(set, Dumper.represent_set)
+Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
+Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
+Dumper.add_multi_representer(None, Dumper.represent_undefined)
+
+
+def merge_recursive(a, b):
+    return aggregate(a, b, level=False, Map=AggregatedMap, Sequence=AggregatedSequence)

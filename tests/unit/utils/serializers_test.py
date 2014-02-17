@@ -5,6 +5,10 @@ from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
+
+# Import Python libs
+from textwrap import dedent
+
 # Import 3rd party libs
 import jinja2
 
@@ -126,6 +130,82 @@ class TestSerializers(TestCase):
         # BLAAM! yml_src is not valid !
         final_obj = yaml.deserialize(yml_src)
         assert obj != final_obj
+
+    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    def test_sls_aggregate(self):
+        # sls_obj = sls.deserialize("foo: ")
+        # assert sls_obj == {}
+
+        src = dedent("""
+            a: lol
+            foo: !aggregate hello
+            bar: !aggregate [1, 2, 3]
+            baz: !aggregate
+              a: 42
+              b: 666
+              c: the beast
+        """).strip()
+
+        # test that !aggregate is correctly parsed
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {
+            'a': 'lol',
+            'foo': ['hello'],
+            'bar': [1, 2, 3],
+            'baz': {
+                'a': 42,
+                'b': 666,
+                'c': 'the beast'
+            }
+        }, sls_obj
+
+        assert dedent("""
+            a: lol
+            foo: [hello]
+            bar: [1, 2, 3]
+            baz: {a: 42, b: 666, c: the beast}
+        """).strip() == sls.serialize(sls_obj), sls_obj
+
+        # test that !aggregate aggregates scalars
+        src = dedent("""
+            placeholder: !aggregate foo
+            placeholder: !aggregate bar
+            placeholder: !aggregate baz
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {'placeholder': ['foo', 'bar', 'baz']}, sls_obj
+
+        # test that !aggregate aggregates lists
+        src = dedent("""
+            placeholder: !aggregate foo
+            placeholder: !aggregate [bar, baz]
+            placeholder: !aggregate []
+            placeholder: !aggregate ~
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {'placeholder': ['foo', 'bar', 'baz']}, sls_obj
+
+        # test that !aggregate aggregates dicts
+        src = dedent("""
+            placeholder: !aggregate {foo: 42}
+            placeholder: !aggregate {bar: null}
+            placeholder: !aggregate {baz: inga}
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {'placeholder': {'foo': 42, 'bar': None, 'baz': 'inga'}}, sls_obj
+
+        # test that !aggregate aggregates deep dicts
+        src = dedent("""
+            placeholder: {foo: !aggregate {foo: 42}}
+            placeholder: {foo: !aggregate {bar: null}}
+            placeholder: {foo: !aggregate {baz: inga}}
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {'placeholder': {'foo': {'foo': 42, 'bar': None, 'baz': 'inga'}}}, sls_obj
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % 'msgpack')
     def test_msgpack(self):
