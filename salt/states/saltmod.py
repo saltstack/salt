@@ -55,6 +55,7 @@ def state(
         test=False,
         fail_minions='',
         allow_fail=0,
+        timeout=None,
         **kwargs):
     '''
     Invoke a state run on a given target
@@ -107,7 +108,7 @@ def state(
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    cmd_kw = {'arg': []}
+    cmd_kw = {'arg': [], 'timeout': timeout}
     if 'expr_form' in kwargs and not tgt_type:
         tgt_type = kwargs['expr_form']
     if not tgt_type:
@@ -196,6 +197,7 @@ def function(
         tgt_type=None,
         ret='',
         arg=(),
+        timeout=None,
         **kwargs):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -222,7 +224,7 @@ def function(
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
+    cmd_kw = {'arg': [], 'timeout': timeout}
     if 'expr_form' in kwargs and not tgt_type:
         tgt_type = kwargs['expr_form']
     if not tgt_type:
