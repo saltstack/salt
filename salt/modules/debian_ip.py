@@ -1261,7 +1261,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
-    if settings['test']:
+    if 'test' in settings and settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
     ifcfg = _write_file_ifaces(iface, opts[iface])
