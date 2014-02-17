@@ -111,7 +111,6 @@ def state(
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-
     if expr_form and tgt_type:
         ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
