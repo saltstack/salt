@@ -48,14 +48,14 @@ def state(
         tgt,
         ssh=False,
         tgt_type=None,
+        expr_form=None,
         ret='',
         highstate=None,
         sls=None,
         env=None,
         test=False,
         fail_minions='',
-        allow_fail=0,
-        **kwargs):
+        allow_fail=0):
     '''
     Invoke a state run on a given target
 
@@ -108,10 +108,18 @@ def state(
         # No need to set __env__ = env since that's done in the state machinery
 
     cmd_kw = {'arg': []}
-    if 'expr_form' in kwargs and not tgt_type:
-        tgt_type = kwargs['expr_form']
-    if not tgt_type:
+
+    if expr_form and tgt_type:
+        ret['warnings'] = [
+            'Please only use \'tgt_type\' or \'expr_form\' not both. '
+            'Preferring \'tgt_type\' over \'expr_form\''
+        ]
+        expr_form = None
+    elif expr_form and not tgt_type:
+        tgt_type = expr_form
+    elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     if highstate:
