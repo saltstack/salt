@@ -133,6 +133,9 @@ class GitPillar(object):
                             # write.
                             # This should place a lock down.
                             pass
+                    else:
+                        if self.repo.remotes.origin.url != self.rp_location:
+                            self.repo.remotes.origin.config_writer.set('url', self.rp_location)
 
                 break
 
