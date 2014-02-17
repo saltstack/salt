@@ -1604,7 +1604,7 @@ class Caller(object):
 
         opts = salt.config.minion_config('/etc/salt/minion')
         opts['file_client'] = 'local'
-        caller = salt.client.Caller(opts)
+        caller = salt.client.Caller(mopts=opts)
         caller.sminion.functions['grains.items']()
 
     '''
