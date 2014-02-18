@@ -89,19 +89,39 @@ manager to automatically have their ``watch_in`` set to
 ``Service("my-service")``.
 '''
 
+import logging
 import traceback
 
 from salt.exceptions import SaltRenderError
+
+log = logging.getLogger("pyobjects")
 
 
 def render(template, saltenv='base', sls='',
            tmplpath=None, rendered_sls=None, **kwargs):
 
     from salt.loader import states
-    from salt.utils.pyobjects.state import StateFactory, StateRegistry
+    from salt.utils.pyobjects import StateFactory, StateRegistry
 
     _registry = StateRegistry()
-    _states = states(__opts__, __salt__)
+    try:
+        _states = states(__opts__, __salt__)
+    except NameError:
+        log.warning("__opts__ and __salt__ are not defined, "
+                    "setting up a local config & minion")
+
+        # this happens during testing, set it up
+        from salt.config import minion_config
+        from salt.loader import states
+        from salt.minion import SMinion
+        _config = minion_config(None)
+        _config['file_client'] = 'local'
+        _minion = SMinion(_config)
+        _states = states(_config, _minion.functions)
+
+        __pillar__ = {}
+        __grains__ = {}
+        __salt__ = {}
 
     # build our list of states and functions
     _st_funcs = {}
