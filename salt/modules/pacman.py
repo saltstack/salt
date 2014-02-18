@@ -223,7 +223,7 @@ def refresh_db():
 
 
 def install(name=None,
-            refresh=True,
+            refresh=False,
             pkgs=None,
             sources=None,
             **kwargs):
