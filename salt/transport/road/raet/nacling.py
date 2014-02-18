@@ -23,12 +23,17 @@ class Signer(object):
     def __init__(self, key=None):
         if key:
             if not isinstance(key, nacl.signing.SigningKey):
-                key = nacl.signing.SigningKey(key, nacl.encoding.HexEncoder)
+                if len(key) == 32:
+                    key = nacl.signing.SigningKey(key, nacl.encoding.RawEncoder)
+                else:
+                    key = nacl.signing.SigningKey(key, nacl.encoding.HexEncoder)
         else:
             key = nacl.signing.SigningKey.generate()
         self.key = key
         self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
+        self.keyraw = self.key.encode(nacl.encoding.RawEncoder)
         self.verhex = self.key.verify_key.encode(nacl.encoding.HexEncoder)
+        self.verraw = self.key.verify_key.encode(nacl.encoding.RawEncoder)
 
     def sign(self, msg):
         '''
@@ -50,12 +55,17 @@ class Verifier(object):
     def __init__(self, key=None):
         if key:
             if not isinstance(key, nacl.signing.VerifyKey):
-                key = nacl.signing.VerifyKey(key, nacl.encoding.HexEncoder)
+                if len(key) == 32:
+                    key = nacl.signing.VerifyKey(key, nacl.encoding.RawEncoder)
+                else:
+                    key = nacl.signing.VerifyKey(key, nacl.encoding.HexEncoder)
         self.key = key
         if isinstance(self.key, nacl.signing.VerifyKey):
             self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
+            self.keyraw = self.key.encode(nacl.encoding.RawEncoder)
         else:
             self.keyhex = ''
+            self.keyraw = ''
 
     def verify(self, signature, msg):
         '''
@@ -79,12 +89,17 @@ class Publican(object):
     def __init__(self, key=None):
         if key:
             if not isinstance(key, nacl.public.PublicKey):
-                key = nacl.public.PublicKey(key, nacl.encoding.HexEncoder)
+                if len(key) == 32:
+                    key = nacl.public.PublicKey(key, nacl.encoding.RawEncoder)
+                else:
+                    key = nacl.public.PublicKey(key, nacl.encoding.HexEncoder)
         self.key = key
         if isinstance(self.key, nacl.public.PublicKey):
             self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
+            self.keyraw = self.key.encode(nacl.encoding.RawEncoder)
         else:
             self.keyhex = ''
+            self.keyraw = ''
 
 
 class Privateer(object):
@@ -95,12 +110,17 @@ class Privateer(object):
     def __init__(self, key=None):
         if key:
             if not isinstance(key, nacl.public.PrivateKey):
-                key = nacl.public.PrivateKey(key, nacl.encoding.HexEncoder)
+                if len(key) == 32:
+                    key = nacl.public.PrivateKey(key, nacl.encoding.RawEncoder)
+                else:
+                    key = nacl.public.PrivateKey(key, nacl.encoding.HexEncoder)
         else:
             key = nacl.public.PrivateKey.generate()
         self.key = key
         self.keyhex = self.key.encode(nacl.encoding.HexEncoder)
+        self.keyraw = self.key.encode(nacl.encoding.RawEncoder)
         self.pubhex = self.key.public_key.encode(nacl.encoding.HexEncoder)
+        self.pubraw = self.key.public_key.encode(nacl.encoding.RawEncoder)
 
     def nonce(self):
         '''
@@ -125,7 +145,10 @@ class Privateer(object):
         pub is Publican instance
         '''
         if not isinstance(pubkey, nacl.public.PublicKey):
-            pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
+            if len(pubkey) == 32:
+                pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.RawEncoder)
+            else:
+                pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
         box = nacl.public.Box(self.key, pubkey)
         nonce = self.nonce()
         encoder = nacl.encoding.HexEncoder if enhex else nacl.encoding.RawEncoder
@@ -145,7 +168,10 @@ class Privateer(object):
         pub is Publican instance
         '''
         if not isinstance(pubkey, nacl.public.PublicKey):
-            pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
+            if len(pubkey) == 32:
+                pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.RawEncoder)
+            else:
+                pubkey = nacl.public.PublicKey(pubkey, nacl.encoding.HexEncoder)
         box = nacl.public.Box(self.key, pubkey)
         decoder = nacl.encoding.HexEncoder if dehex else nacl.encoding.RawEncoder
         return box.decrypt(cipher, nonce, decoder)

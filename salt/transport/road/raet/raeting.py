@@ -163,11 +163,11 @@ PCKT_KIND_NAMES = odict((v, k) for k, v in PCKT_KINDS.iteritems())  # inverse ma
 PcktKind = namedtuple('PcktKind', PCKT_KINDS.keys())
 pcktKinds = PcktKind(**PCKT_KINDS)
 
-HELLO_PACKER = struct.Struct('<64s64s80s24s') #curvecp hello packet body endow trans
-COOKIESTUFF_PACKER = struct.Struct('<64sLL24s')
-COOKIE_PACKER = struct.Struct('<112s24s')
-INITIATESTUFF_PACKER = struct.Struct('<64s80s24s128s')
-INITIATE_PACKER = struct.Struct('64s24s312s24s')
+HELLO_PACKER = struct.Struct('<64s32s80s24s') #curvecp hello packet body endow trans
+COOKIESTUFF_PACKER = struct.Struct('<32sLL24s')
+COOKIE_PACKER = struct.Struct('<80s24s')
+INITIATESTUFF_PACKER = struct.Struct('<32s48s24s128s')
+INITIATE_PACKER = struct.Struct('32s24s248s24s')
 
 # head fields that may be included in json header if not default value
 PACKET_DEFAULTS = odict([

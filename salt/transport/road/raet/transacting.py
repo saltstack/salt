@@ -454,14 +454,7 @@ class Allower(Initiator):
         remote = self.stack.devices[self.rdid]
         plain = binascii.hexlify("".rjust(32, '\x00'))
         cipher, nonce = remote.privee.encrypt(plain, remote.pubber.key)
-        body = raeting.HELLO_PACKER.pack(plain, remote.privee.pubhex, cipher, nonce)
-
-        #msg = binascii.hexlify("".rjust(32, '\x00'))
-        #cipher, nonce = remote.privee.encrypt(msg, remote.pubber.key, enhex=True)
-        #body = odict([('plain', msg),
-                      #('shorthex', remote.privee.pubhex),
-                      #('cipher', cipher),
-                      #('nonce', nonce)])
+        body = raeting.HELLO_PACKER.pack(plain, remote.privee.pubraw, cipher, nonce)
 
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.hello,
@@ -492,50 +485,21 @@ class Allower(Initiator):
 
         cipher, nonce = raeting.COOKIE_PACKER.unpack(body)
 
-        #cipher = body.get('cipher')
-        #if not cipher:
-            #emsg = "Missing cipher in cookie packet"
-            #raise raeting.TransactionError(emsg)
-
-        #nonce = body.get('nonce')
-        #if not nonce:
-            #emsg = "Missing nonce in cookie packet"
-            #raise raeting.TransactionError(emsg)
-
         remote = self.stack.devices[self.rdid]
-
-        #cipher = binascii.unhexlify(cipher)
-        #nonce = binascii.unhexlify(nonce)
 
         msg = remote.privee.decrypt(cipher, nonce, remote.pubber.key)
         if len(msg) != raeting.COOKIESTUFF_PACKER.size:
             emsg = "Invalid length of cookie stuff"
             raise raeting.TransactionError(emsg)
-        #stuff = json.loads(msg, object_pairs_hook=odict)
 
-        shorthex, sdid, ddid, oreo = raeting.COOKIESTUFF_PACKER.unpack(msg)
-
-        #shorthex= stuff.get('shorthex')
-        #if not shorthex:
-            #emsg = "Missing short term key in cookie"
-            #raise raeting.TransactionError(emsg)
+        shortraw, sdid, ddid, oreo = raeting.COOKIESTUFF_PACKER.unpack(msg)
 
         if sdid != remote.did or ddid != self.stack.device.did:
             emsg = "Invalid sdid or ddid fields in cookie stuff"
             raeting.TransactionError(emsg)
 
-
-        #if stuff.get('sdid') != remote.did or stuff.get('ddid') != self.stack.device.did:
-            #emsg = "Invalid cookie  sdid or ddid fields in cookie packet"
-            #raeting.TransactionError(emsg)
-
-        #oreo = stuff.get('oreo')
-        #if not oreo:
-            #emsg = "Missing cookie nonce in cookie packet"
-            #raeting.TransactionError(emsg)
-
         self.oreo = binascii.hexlify(oreo)
-        remote.publee = nacling.Publican(key=shorthex)
+        remote.publee = nacling.Publican(key=shortraw)
 
         self.initiate()
 
@@ -549,40 +513,24 @@ class Allower(Initiator):
 
         remote = self.stack.devices[self.rdid]
 
-
-        #vouch = json.dumps(odict(shorthex=remote.privee.pubhex), separators=(',', ':'))
-
-        vcipher, vnonce = self.stack.device.priver.encrypt(remote.privee.pubhex,
+        vcipher, vnonce = self.stack.device.priver.encrypt(remote.privee.pubraw,
                                                 remote.pubber.key)
-        #vcipher = binascii.hexlify(vcipher)
-        #vnonce = binascii.hexlify(vcipher)
+
         fqdn = remote.fqdn.ljust(128, ' ')
 
-        stuff = raeting.INITIATESTUFF_PACKER.pack(self.stack.device.priver.pubhex,
+        stuff = raeting.INITIATESTUFF_PACKER.pack(self.stack.device.priver.pubraw,
                                                   vcipher,
                                                   vnonce,
                                                   fqdn)
 
-        #stuff = odict([('fqdn', remote.fqdn),
-                       #('longhex', self.stack.device.priver.keyhex),
-                       #('vcipher', vcipher),
-                       #('vnonce', vnonce),])
-        #stuff = json.dumps(stuff, separators=(',', ':'))
-
         cipher, nonce = remote.privee.encrypt(stuff, remote.publee.key)
-        #cipher = binascii.hexlify(cipher)
-        #nonce = binascii.hexlify(nonce)
 
         oreo = binascii.unhexlify(self.oreo)
-        body = raeting.INITIATE_PACKER.pack(remote.privee.pubhex,
+        body = raeting.INITIATE_PACKER.pack(remote.privee.pubraw,
                                             oreo,
                                             cipher,
                                             nonce)
 
-        #body = odict([('shorthex', remote.privee.pubhex),
-                      #('oreo', self.oreo),
-                      #('cipher', cipher),
-                      #('nonce', nonce)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.initiate,
                                     embody=body,
@@ -672,37 +620,10 @@ class Allowent(Correspondent):
             emsg = "Invalid length of hello packet body"
             raise raeting.TransactionError(emsg)
 
-        plain, shorthex, cipher, nonce = raeting.HELLO_PACKER.unpack(body)
+        plain, shortraw, cipher, nonce = raeting.HELLO_PACKER.unpack(body)
 
-        #plain = body.get('plain')
-        #if not plain:
-            #emsg = "Missing plain in hello packet"
-            #raise raeting.TransactionError(emsg)
-
-        ##plain = binascii.unhexlify(plain)
-        #if len(plain) != 64:
-            #emsg = "Invalid plain size = {0}".format(len(plain))
-            #raise raeting.TransactionError(emsg)
-
-        #shorthex = body.get('shorthex')
-        #if not shorthex:
-            #emsg = "Missing shorthex in hello packet"
-            #raise raeting.TransactionError(emsg)
-
-        #cipher = body.get('cipher')
-        #if not cipher:
-            #emsg = "Missing cipher in hello packet"
-            #raise raeting.TransactionError(emsg)
-
-        #nonce = body.get('nonce')
-        #if not nonce:
-            #emsg = "Missing nonce in hello packet"
-            #raise raeting.TransactionError(emsg)
-
-        #cipher = binascii.unhexlify(cipher)
-        #nonce = binascii.unhexlify(nonce)
         remote = self.stack.devices[self.rdid]
-        remote.publee = nacling.Publican(key=shorthex)
+        remote.publee = nacling.Publican(key=shortraw)
         msg = self.stack.device.priver.decrypt(cipher, nonce, remote.publee.key)
         if msg != plain :
             emsg = "Invalid plain not match decrypted cipher"
@@ -722,22 +643,13 @@ class Allowent(Correspondent):
         oreo = self.stack.device.priver.nonce()
         self.oreo = binascii.hexlify(oreo)
 
-        stuff = raeting.COOKIESTUFF_PACKER.pack(remote.privee.pubhex,
+        stuff = raeting.COOKIESTUFF_PACKER.pack(remote.privee.pubraw,
                                                 self.stack.device.did,
                                                 remote.did,
                                                 oreo)
 
-        #stuff = odict([('shorthex', remote.privee.pubhex),
-                        #('sdid', self.stack.device.did),
-                        #('ddid', remote.did),
-                        #('oreo', self.oreo)])
-        #stuff = json.dumps(stuff, separators=(',', ':'))
-
         cipher, nonce = self.stack.device.priver.encrypt(stuff, remote.publee.key)
         body = raeting.COOKIE_PACKER.pack(cipher, nonce)
-        #cipher = binascii.hexlify(cipher)
-        #nonce = binascii.hexlify(nonce)
-        #body = odict([('cipher', cipher), ('nonce', nonce)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.cookie,
                                     embody=body,
@@ -765,11 +677,11 @@ class Allowent(Correspondent):
             emsg = "Invalid length of initiate packet body"
             raise raeting.TransactionError(emsg)
 
-        shorthex, oreo, cipher, nonce = raeting.INITIATE_PACKER.unpack(body)
+        shortraw, oreo, cipher, nonce = raeting.INITIATE_PACKER.unpack(body)
 
         remote = self.stack.devices[self.rdid]
 
-        if shorthex != remote.publee.keyhex:
+        if shortraw != remote.publee.keyraw:
             emsg = "Mismatch of short term public key in initiate packet"
             raise raeting.TransactionError(emsg)
 
@@ -782,8 +694,8 @@ class Allowent(Correspondent):
             emsg = "Invalid length of initiate stuff"
             raise raeting.TransactionError(emsg)
 
-        pubhex, vcipher, vnonce, fqdn = raeting.INITIATESTUFF_PACKER.unpack(msg)
-        if pubhex != remote.pubber.keyhex:
+        pubraw, vcipher, vnonce, fqdn = raeting.INITIATESTUFF_PACKER.unpack(msg)
+        if pubraw != remote.pubber.keyraw:
             emsg = "Mismatch of long term public key in initiate stuff"
             raise raeting.TransactionError(emsg)
 
@@ -794,7 +706,7 @@ class Allowent(Correspondent):
             #raise raeting.TransactionError(emsg)
 
         vouch = self.stack.device.priver.decrypt(vcipher, vnonce, remote.pubber.key)
-        if vouch != remote.publee.keyhex or vouch != shorthex:
+        if vouch != remote.publee.keyraw or vouch != shortraw:
             emsg = "Short term key vouch failed"
             raise raeting.TransactionError(emsg)
 
