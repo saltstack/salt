@@ -1210,6 +1210,21 @@ def is_sunos():
     return sys.platform.startswith('sunos')
 
 
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the `fcntl` module is available or not.
+
+    If `check_sunos` is passed as `True` an additional check to see if host is
+    SunOS is also made. For additional information check commit:
+        http://goo.gl/159FF8
+    '''
+    if HAS_FCNTL is False:
+        return False
+    if check_sunos is True:
+        return HAS_FCNTL and is_sunos()
+    return HAS_FCNTL
+
+
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     '''
     Check for glob or regexp patterns for include_pat and exclude_pat in the
