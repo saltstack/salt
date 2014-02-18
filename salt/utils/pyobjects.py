@@ -32,6 +32,11 @@ class StateRegistry(object):
     def empty(self):
         self.states = OrderedDict()
         self.requisites = []
+        self.includes = []
+        self.extends = OrderedDict()
+
+    def include(self, *args):
+        self.includes += args
 
     def salt_data(self):
         states = OrderedDict([
@@ -39,12 +44,26 @@ class StateRegistry(object):
             for id_, state in self.states.iteritems()
         ])
 
+        if self.includes:
+            states['include'] = self.includes
+
+        if self.extends:
+            states['extend'] = OrderedDict([
+                (id_, state())
+                for id_, state in self.extends.iteritems()
+            ])
+
         self.empty()
 
         return states
 
-    def add(self, id_, state):
-        if id_ in self.states:
+    def add(self, id_, state, extend=False):
+        if extend:
+            attr = self.extends
+        else:
+            attr = self.states
+
+        if id_ in attr:
             raise DuplicateState("A state with id '%s' already exists" % id_)
 
         # if we have requisites in our stack then add them to the state
@@ -54,13 +73,24 @@ class StateRegistry(object):
                     state.kwargs[req.requisite] = []
                 state.kwargs[req.requisite].append(req())
 
-        self.states[id_] = state
+        attr[id_] = state
+
+    def extend(self, id_, state):
+        self.add(id_, state, extend=True)
+
+    def make_extend(self, name):
+        return StateExtend(name)
 
     def push_requisite(self, requisite):
         self.requisites.append(requisite)
 
     def pop_requisite(self):
         del self.requisites[-1]
+
+
+class StateExtend(object):
+    def __init__(self, name):
+        self.name = name
 
 
 class StateRequisite(object):
@@ -143,10 +173,14 @@ class State(object):
         self.kwargs = kwargs
         self.registry = registry
 
+        if isinstance(self.id_, StateExtend):
+            self.registry.extend(self.id_.name, self)
+            self.id_ = self.id_.name
+        else:
+            self.registry.add(self.id_, self)
+
         self.requisite = StateRequisite('require', self.module, self.id_,
                                         registry=self.registry)
-
-        self.registry.add(self.id_, self)
 
     @property
     def attrs(self):
