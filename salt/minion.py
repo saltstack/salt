@@ -378,18 +378,22 @@ class MinionBase(object):
                     # Let's stop at this stage
                     raise
 
-        # Securely create socket files
-        if self.opts.get('ipc_mode', '') != 'tcp':
-            mode = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-            for path in (epub_sock_path, epull_sock_path):
-                log.debug('Creating pull socket {0}'.format(path))
-                os.close(os.open(path, mode, 0600))
-
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         # Bind the event sockets
         self.epub_sock.bind(epub_uri)
         self.epull_sock.bind(epull_uri)
+
+        # Restrict access to the sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            os.chmod(
+                epub_sock_path,
+                448
+            )
+            os.chmod(
+                epull_sock_path,
+                448
+            )
 
     @staticmethod
     def process_schedule(minion, loop_interval):
