@@ -1,6 +1,6 @@
-=====================
+======================
 SaltStack Walk-through
-=====================
+======================
 
 Welcome!
 ========
@@ -67,7 +67,7 @@ Starting Salt
 -------------
 
 Salt functions on a master/minion topology. A master server acts as a
-central control bus for the clients, which called ``minions```. The minions
+central control bus for the clients, which called ``minions``. The minions
 connect back to the master.
 
 
