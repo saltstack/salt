@@ -1418,6 +1418,15 @@ def valid_url(url, protos):
     return False
 
 
+def strip_proto(uri):
+    '''
+    Return a copy of the string with the protocol designation stripped, if one
+    was present.
+    '''
+    return re.sub('^[^:/]+://', '', uri)
+
+
+
 def parse_docstring(docstring):
     '''
     Parse a docstring into its parts.
