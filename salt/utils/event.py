@@ -444,29 +444,27 @@ class EventPublisher(Process):
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
+        salt.utils.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
-        # Start the master event publisher
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        pub_mode = 448
-        if self.opts.get('client_acl') or self.opts.get('external_auth'):
-            pub_mode = 511
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pub.ipc'),
-                pub_mode
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pull.ipc'),
-                448
-                )
+        salt.utils.check_ipc_path_max_len(epull_uri)
 
+        # Start the master event publisher
+        old_umask = os.umask(0177)
+        try:
+            self.epull_sock.bind(epull_uri)
+            self.epub_sock.bind(epub_uri)
+            if self.opts.get('client_acl') or self.opts.get('external_auth'):
+                os.chmod(
+                        os.path.join(self.opts['sock_dir'],
+                            'master_event_pub.ipc'),
+                        0666
+                        )
+        finally:
+            os.umask(old_umask)
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
