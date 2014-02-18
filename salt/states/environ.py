@@ -6,25 +6,24 @@ of the current salt process.
 
 # Import python libs
 import os
-import logging
 
 # Import salt libs
 from salt._compat import string_types
 from salt.exceptions import SaltException
 
-log = logging.getLogger(__name__)
+__func_alias__ = {
+    'set_': 'set'
+}
 
-# Define the module's virtual name
-__virtualname__ = 'environ'
 
 def __virtual__():
     '''
-    No dependency checks, so just return the __virtualname__
+    No dependency checks, and not renaming, just return True
     '''
-    return __virtualname__
+    return True
 
 
-def set(name, value):
+def set_(name, value):
     '''
     Set the salt process environment variables.
 
@@ -51,7 +50,7 @@ def set(name, value):
              - name: does_not_matter
              - value:
                  foo: bar
-                 baz: quux 
+                 baz: quux
     '''
 
     ret = {'name': name,
@@ -93,4 +92,3 @@ def set(name, value):
     ret['changes'] = environ_ret
     ret['comment'] = 'Environ values were set'
     return ret
-

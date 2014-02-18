@@ -6,25 +6,24 @@ of the current salt process.
 
 # Import python libs
 import os
-import logging
 
 # Import salt libs
 from salt._compat import string_types
 from salt.exceptions import SaltException
 
-log = logging.getLogger(__name__)
+__func_alias__ = {
+    'set_': 'set'
+}
 
-# Define the module's virtual name
-__virtualname__ = 'environ'
 
 def __virtual__():
     '''
-    No dependency checks, so just return the __virtualname__
+    No dependency checks, and not renaming, just return True
     '''
-    return __virtualname__
+    return True
 
 
-def set(environ):
+def set_(environ):
     '''
     Set the salt process environment variables.
 
@@ -39,18 +38,22 @@ def set(environ):
 
         salt '*' environ.set '{"foo": "bar", "baz": "quux"}'
     '''
+
     ret = {}
     if not isinstance(environ, dict):
         raise SaltException('The "environ" argument variable must be a dict')
     try:
-        for k, v in environ.items():
-            if not isinstance(v, string_types):
-                raise SaltException('The value of "environ" keys must be string type')
-            os.environ[k] = v
-            ret[k] = os.environ[k]
-    except Exception as e:
-        raise SaltException(e)
+        for key, val in environ.items():
+            if not isinstance(val, string_types):
+                raise SaltException(
+                    'The value of "environ" keys must be string type'
+                )
+            os.environ[key] = val
+            ret[key] = os.environ[key]
+    except Exception as exc:
+        raise SaltException(exc)
     return ret
+
 
 def get(keys):
     '''
@@ -73,14 +76,22 @@ def get(keys):
     elif isinstance(keys, list):
         key_list = keys
     else:
-        raise SaltException('The "keys" argument variable must be string or list.')
+        raise SaltException(
+            'The "keys" argument variable must be string or list.'
+        )
     for key in key_list:
         ret[key] = os.environ[key]
     return ret
 
+
 def get_all():
     '''
     Return a dict of the entire environment set for the salt process
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' environ.get:all
     '''
     return dict(os.environ)
-
