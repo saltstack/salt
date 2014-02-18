@@ -110,7 +110,7 @@ a state.
 import logging
 
 from salt.loader import states
-from salt.utils.pyobjects import StateRegistry
+from salt.utils.pyobjects import StateFactory, StateRegistry
 
 log = logging.getLogger(__name__)
 
