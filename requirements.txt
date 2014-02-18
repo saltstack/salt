@@ -5,4 +5,4 @@ pycrypto
 PyYAML
 pyzmq >= 2.2.0
 MarkupSafe
-apache-libcloud
+apache-libcloud >= 0.14.0
