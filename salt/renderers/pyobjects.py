@@ -112,7 +112,7 @@ import logging
 from salt.loader import states
 from salt.utils.pyobjects import StateFactory, StateRegistry
 
-log = logging.getLogger("pyobjects")
+log = logging.getLogger(__name__)
 
 
 def render(template, saltenv='base', sls='',
