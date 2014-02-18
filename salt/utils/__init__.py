@@ -1202,6 +1202,14 @@ def is_darwin():
     return sys.platform.startswith('darwin')
 
 
+@real_memoize
+def is_sunos():
+    '''
+    Simple function to return if host is SunOS or not
+    '''
+    return sys.platform.startswith('sunos')
+
+
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     '''
     Check for glob or regexp patterns for include_pat and exclude_pat in the
