@@ -9,7 +9,6 @@ import os
 
 # Import salt libs
 from salt._compat import string_types
-from salt.exceptions import SaltException
 
 __func_alias__ = {
     'set_': 'set'
@@ -68,12 +67,12 @@ def set_(name, value):
         return ret
     current_environ = dict(os.environ)
     already_set = []
-    for k, v in environ.items():
-        if current_environ.get(k, '') == v:
-            already_set.append(k)
-            environ.pop(k)
+    for key, val in environ.items():
+        if current_environ.get(key, '') == val:
+            already_set.append(key)
+            environ.pop(key)
         else:
-            ret['changes'].update({k: v})
+            ret['changes'].update({key: val})
 
     if __opts__['test']:
         ret['result'] = None
@@ -83,7 +82,7 @@ def set_(name, value):
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret
 
-    environ_ret =  __salt__['environ.set'](environ)
+    environ_ret = __salt__['environ.set'](environ)
     if not environ_ret:
         ret['result'] = False
         ret['comment'] = 'Failed to set environ variables'
