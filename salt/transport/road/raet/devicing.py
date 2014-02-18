@@ -2,8 +2,8 @@
 '''
 devicing.py raet protocol device classes
 '''
+# pylint: skip-file
 # pylint: disable=W0611
-
 # Import python libs
 import socket
 

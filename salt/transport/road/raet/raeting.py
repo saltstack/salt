@@ -84,6 +84,7 @@ Body Decoding
 
 '''
 
+# pylint: skip-file
 # pylint: disable=C0103
 
 # Import python libs

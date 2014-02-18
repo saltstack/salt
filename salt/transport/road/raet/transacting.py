@@ -2,6 +2,7 @@
 '''
 stacking.py raet protocol stacking classes
 '''
+# pylint: skip-file
 # pylint: disable=W0611
 
 # Import python libs
