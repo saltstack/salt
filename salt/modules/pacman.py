@@ -224,11 +224,13 @@ def refresh_db():
 
 def install(name=None,
             refresh=False,
+            sysupgrade=False,
             pkgs=None,
             sources=None,
             **kwargs):
     '''
-    Install the passed package, add refresh=True to install with an -Sy.
+    Install (pacman -S) the passed package, add refresh=True to install with -y,
+	add sysupgrade=True to install with -u.
 
     name
         The name of the package to be installed. Note that this parameter is
@@ -245,6 +247,9 @@ def install(name=None,
 
     refresh
         Whether or not to refresh the package database before installing.
+
+    sysupgrade
+        Whether or not to upgrade the system packages before installing.
 
 
     Multiple Package Installation Options:
@@ -307,6 +312,7 @@ def install(name=None,
     elif pkg_type == 'repository':
         targets = []
         problems = []
+        options = ['--noprogressbar', '--noconfirm', '--needed']
         for param, version_num in pkg_params.iteritems():
             if version_num is None:
                 targets.append(param)
@@ -328,14 +334,12 @@ def install(name=None,
                 log.error(problem)
             return {}
 
-        # It is critical that -Syu is run instead of -Sy:
-        # http://gist.io/5660494
         if salt.utils.is_true(refresh):
-            cmd = 'pacman -Syu --noprogressbar --noconfirm --needed ' \
-                  '"{0}"'.format('" "'.join(targets))
-        else:
-            cmd = 'pacman -S --noprogressbar --noconfirm --needed ' \
-                  '"{0}"'.format('" "'.join(targets))
+            options += '-y'
+        if salt.utils.is_true(sysupgrade):
+            options += '-u'
+
+        cmd = 'pacman -S "{0}"'.format('" "'.join(options+targets))
 
     old = list_pkgs()
     __salt__['cmd.run'](cmd, output_loglevel='debug')
