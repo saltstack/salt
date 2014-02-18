@@ -9,13 +9,6 @@ The backend for serving files pushed to master by cp.push (file_recv).
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
