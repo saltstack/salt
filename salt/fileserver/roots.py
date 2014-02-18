@@ -10,13 +10,6 @@ option.
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = os.uname()[0] != "SunOS"
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
