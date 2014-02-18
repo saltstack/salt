@@ -20,8 +20,8 @@ write our state data using an object based interface that should feel at home
 to python developers. You can import any module and do anything that you'd
 like (with caution, importing sqlalchemy, django or other large frameworks has
 not been tested yet). Using the pyobjects renderer is exactly the same as
-using the built-in Python renderer with the exception that the NaCl renderer
-takes care of creating an object for each of the available states on the minion.
+using the built-in Python renderer with the exception that pyobjects takes
+care of creating an object for each of the available states on the minion.
 Each state is represented by an object that is the capitalized version of it's
 name (ie. ``File``, ``Service``, ``User``, etc), and these objects expose all
 of their available state functions (ie. ``File.managed``,  ``Service.running``,
