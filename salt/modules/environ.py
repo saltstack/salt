@@ -95,6 +95,6 @@ def get_all():
 
     .. code-block:: bash
 
-        salt '*' environ.get:all
+        salt '*' environ.get_all
     '''
     return dict(os.environ)
