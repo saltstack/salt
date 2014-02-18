@@ -316,10 +316,14 @@ class MinionBase(object):
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
         )
+        if os.path.exists(epub_sock_path):
+            os.unlink(epub_sock_path)
         epull_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pull.ipc'.format(id_hash)
         )
+        if os.path.exists(epull_sock_path):
+            os.unlink(epull_sock_path)
 
         self.epub_sock = self.context.socket(zmq.PUB)
 
