@@ -1037,7 +1037,7 @@ def fopen(*args, **kwargs):
 
     This flag specifies that the file descriptor should be closed when an exec
     function is invoked;
-    When a file descriptor is allocated (as with open or dup ), this bit is
+    When a file descriptor is allocated (as with open or dup), this bit is
     initially cleared on the new file descriptor, meaning that descriptor will
     survive into the new program after exec.
 
@@ -1047,7 +1047,7 @@ def fopen(*args, **kwargs):
     lock = kwargs.pop('lock', False)
 
     fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
+    if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -1055,7 +1055,7 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if lock:
+        if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
@@ -1066,12 +1066,12 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager
     '''
-    with fopen(*args, lock=True, **kwargs) as fp:
+    with fopen(*args, lock=True, **kwargs) as fp_:
         try:
-            yield fp
+            yield fp_
         finally:
-            if HAS_FCNTL:
-                fcntl.flock(fp.fileno(), fcntl.LOCK_UN)
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
