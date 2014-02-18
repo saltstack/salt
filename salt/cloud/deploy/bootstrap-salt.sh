@@ -1,7 +1,7 @@
 #!/bin/sh -
-#===============================================================================
-# vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=81
-#===============================================================================
+#======================================================================================================================
+# vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=120
+#======================================================================================================================
 #
 #          FILE: bootstrap-salt.sh
 #
@@ -15,38 +15,38 @@
 #       LICENSE: Apache 2.0
 #  ORGANIZATION: SaltStack (saltstack.org)
 #       CREATED: 10/15/2012 09:49:37 PM WEST
-#===============================================================================
+#======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.02.16"
+__ScriptVersion="2014.02.18"
 __ScriptName="bootstrap-salt.sh"
 
-#===============================================================================
+#======================================================================================================================
 #  Environment variables taken into account.
-#-------------------------------------------------------------------------------
-#   * BS_COLORS:          If 0 disables colour support
-#   * BS_PIP_ALLOWED:     If 1 enable pip based installations(if needed)
-#   * BS_ECHO_DEBUG:      If 1 enable debug echo which can also be set by -D
-#   * BS_SALT_ETC_DIR:    Defaults to /etc/salt (Only tweak'able on git based installations)
-#   * BS_KEEP_TEMP_FILES: If 1, don't move temporary files, instead copy them
-#   * BS_FORCE_OVERWRITE: Force overriding copied files(config, init.d, etc)
-#   * BS_UPGRADE_SYS:     If 1 and an option, upgrade system. Default 0.
-#   * BS_GENTOO_USE_BINHOST: If 1 add `--getbinpkg` to gentoo's emerge
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
+#   * BS_COLORS:              If 0 disables colour support
+#   * BS_PIP_ALLOWED:         If 1 enable pip based installations(if needed)
+#   * BS_ECHO_DEBUG:          If 1 enable debug echo which can also be set by -D
+#   * BS_SALT_ETC_DIR:        Defaults to /etc/salt (Only tweak'able on git based installations)
+#   * BS_KEEP_TEMP_FILES:     If 1, don't move temporary files, instead copy them
+#   * BS_FORCE_OVERWRITE:     Force overriding copied files(config, init.d, etc)
+#   * BS_UPGRADE_SYS:         If 1 and an option, upgrade system. Default 0.
+#   * BS_GENTOO_USE_BINHOST:  If 1 add `--getbinpkg` to gentoo's emerge
+#======================================================================================================================
 
 
-#===============================================================================
+#======================================================================================================================
 #  LET THE BLACK MAGIC BEGIN!!!!
-#===============================================================================
+#======================================================================================================================
 
 
 # Bootstrap script truth values
 BS_TRUE=1
 BS_FALSE=0
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __detect_color_support
 #   DESCRIPTION:  Try to detect color support.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 _COLORS=${BS_COLORS:-$(tput colors 2>/dev/null || echo 0)}
 __detect_color_support() {
     if [ $? -eq 0 ] && [ "$_COLORS" -gt 2 ]; then
@@ -66,52 +66,52 @@ __detect_color_support() {
 __detect_color_support
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echoerr
 #   DESCRIPTION:  Echo errors to stderr.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echoerror() {
     printf "${RC} * ERROR${EC}: $@\n" 1>&2;
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echoinfo
 #   DESCRIPTION:  Echo information to stdout.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echoinfo() {
     printf "${GC} *  INFO${EC}: %s\n" "$@";
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echowarn
 #   DESCRIPTION:  Echo warning informations to stdout.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echodebug
 #   DESCRIPTION:  Echo debug information to stdout.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echodebug() {
     if [ $_ECHO_DEBUG -eq $BS_TRUE ]; then
         printf "${BC} * DEBUG${EC}: %s\n" "$@";
     fi
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  check_pip_allowed
 #   DESCRIPTION:  Simple function to let the users know that -P needs to be
 #                 used.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 check_pip_allowed() {
     if [ $# -eq 1 ]; then
         _PIP_ALLOWED_ERROR_MSG="$1"
     else
         _PIP_ALLOWED_ERROR_MSG="pip based installations were not allowed. Retry using '-P'"
-
     fi
+
     if [ $_PIP_ALLOWED -eq $BS_FALSE ]; then
         echoerror $_PIP_ALLOWED_ERROR_MSG
         usage
@@ -119,10 +119,10 @@ check_pip_allowed() {
     fi
 }
 
-#===  FUNCTION  ================================================================
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  __check_config_dir
 #  DESCRIPTION:  Checks the config directory, retrieves URLs if provided.
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
 __check_config_dir() {
     CC_DIR_NAME="$1"
     CC_DIR_BASE=$(basename "${CC_DIR_NAME}")
@@ -169,10 +169,10 @@ __check_config_dir() {
 }
 
 
-#===  FUNCTION  ================================================================
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  usage
 #  DESCRIPTION:  Display usage information.
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
 usage() {
     cat << EOT
 
@@ -219,7 +219,7 @@ usage() {
   -I  If set, allow insecure connections while downloading any files. For
       example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
   -A  Pass the salt-master DNS name or IP. This will be stored under
-      \${BS_SALT_ETC_DIR}/minion.conf.d/99-master-address.conf
+      \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
   -L  Install the Apache Libcloud package if possible(required for salt-cloud)
   -p  Extra-package to install while installing salt dependencies. One package
       per -p flag. You're responsible for providing the proper package name.
@@ -229,9 +229,9 @@ EOT
 
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 #  Handle command line arguments
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
 _SALTSTACK_REPO_URL="git://github.com/saltstack/salt.git"
@@ -409,7 +409,7 @@ echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 #echowarn "Running the unstable version of ${__ScriptName}"
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __exit_cleanup
 #   DESCRIPTION:  Cleanup any leftovers after script has ended
 #
@@ -424,7 +424,7 @@ echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 #               9               SIGKILL
 #              14               SIGALRM
 #              15               SIGTERM
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __exit_cleanup() {
     EXIT_CODE=$?
 
@@ -498,10 +498,10 @@ if [ $_INSECURE_DL -eq $BS_TRUE ]; then
     _FETCH_ARGS="${_FETCH_ARGS} --no-verify-peer"
 fi
 
-#===  FUNCTION  ================================================================
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  __fetch_url
 #  DESCRIPTION:  Retrieves a URL and writes it to a given path
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
 __fetch_url() {
     curl $_CURL_ARGS -s -o "$1" "$2" >/dev/null 2>&1 ||
         wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1 ||
@@ -511,10 +511,10 @@ __fetch_url() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_hardware_info
 #   DESCRIPTION:  Discover hardware information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_hardware_info() {
     if [ -f /proc/cpuinfo ]; then
         CPU_VENDOR_ID=$(awk '/vendor_id|Processor/ {sub(/-.*$/,"",$3); print $3; exit}' /proc/cpuinfo )
@@ -534,10 +534,10 @@ __gather_hardware_info() {
 __gather_hardware_info
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_os_info
 #   DESCRIPTION:  Discover operating system information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_os_info() {
     OS_NAME=$(uname -s 2>/dev/null)
     OS_NAME_L=$( echo $OS_NAME | tr '[:upper:]' '[:lower:]' )
@@ -547,11 +547,11 @@ __gather_os_info() {
 __gather_os_info
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __parse_version_string
 #   DESCRIPTION:  Parse version strings ignoring the revision.
 #                 MAJOR.MINOR.REVISION becomes MAJOR.MINOR
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __parse_version_string() {
     VERSION_STRING="$1"
     PARSED_VERSION=$(
@@ -566,35 +566,35 @@ __parse_version_string() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __unquote_string
 #   DESCRIPTION:  Strip single or double quotes from the provided string.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __unquote_string() {
     echo $@ | sed "s/^\([\"']\)\(.*\)\1\$/\2/g"
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __camelcase_split
 #   DESCRIPTION:  Convert CamelCased strings to Camel_Cased
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __camelcase_split() {
     echo $@ | sed -r 's/([^A-Z-])([A-Z])/\1 \2/g'
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __strip_duplicates
 #   DESCRIPTION:  Strip duplicate strings
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __strip_duplicates() {
     echo $@ | tr -s '[:space:]' '\n' | awk '!x[$0]++'
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __sort_release_files
 #   DESCRIPTION:  Custom sort function. Alphabetical or numerical sort is not
 #                 enough.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __sort_release_files() {
     KNOWN_RELEASE_FILES=$(echo "(arch|centos|debian|ubuntu|fedora|redhat|suse|\
         mandrake|mandriva|gentoo|slackware|turbolinux|unitedlinux|lsb|system|\
@@ -631,10 +631,10 @@ __sort_release_files() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_linux_system_info
 #   DESCRIPTION:  Discover Linux system information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_linux_system_info() {
     DISTRO_NAME=""
     DISTRO_VERSION=""
@@ -747,10 +747,10 @@ __gather_linux_system_info() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_sunos_system_info
 #   DESCRIPTION:  Discover SunOS system info
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_sunos_system_info() {
     if [ -f /sbin/uname ]; then
         DISTRO_VERSION=$(/sbin/uname -X | awk '/[kK][eE][rR][nN][eE][lL][iI][dD]/ { print $3}')
@@ -823,20 +823,20 @@ __gather_sunos_system_info() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_bsd_system_info
 #   DESCRIPTION:  Discover OpenBSD, NetBSD and FreeBSD systems information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_bsd_system_info() {
     DISTRO_NAME=${OS_NAME}
     DISTRO_VERSION=$(echo "${OS_VERSION}" | sed -e 's;[()];;' -e 's/-.*$//')
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_system_info
 #   DESCRIPTION:  Discover which system and distribution we are running.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_system_info() {
     case ${OS_NAME_L} in
         linux )
@@ -856,12 +856,12 @@ __gather_system_info() {
 
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __ubuntu_derivatives_translation
 #   DESCRIPTION:  Map Ubuntu derivatives to their Ubuntu base versions.
 #                 If distro has a known Ubuntu base version, use those install
 #                 functions by pretending to be Ubuntu (i.e. change global vars)
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __ubuntu_derivatives_translation() {
     UBUNTU_DERIVATIVES="(trisquel|linuxmint|linaro)"
     # Mappings
@@ -926,7 +926,7 @@ if [ $_INSTALL_SYNDIC -eq $BS_TRUE ]; then
 fi
 
 if [ $_INSTALL_CLOUD -eq $BS_TRUE ] && [ $_CONFIG_ONLY -eq $BS_FALSE ]; then
-    echoinfo "Installing Apache-Libloud required for salt-cloud"
+    echoinfo "Installing Apache-Libcloud required for salt-cloud"
 fi
 
 if [ $_START_DAEMONS -eq $BS_FALSE ]; then
@@ -973,12 +973,12 @@ if [ ${ITYPE} = "testing" ]; then
     _EPEL_REPO="epel-testing"
 fi
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __function_defined
 #   DESCRIPTION:  Checks if a function is defined within this scripts scope
 #    PARAMETERS:  function name
 #       RETURNS:  0 or 1 as in defined or not defined
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __function_defined() {
     FUNC_NAME=$1
     if [ "$(command -v $FUNC_NAME)x" != "x" ]; then
@@ -990,11 +990,11 @@ __function_defined() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __git_clone_and_checkout
 #   DESCRIPTION:  (DRY) Helper function to clone and checkout salt to a
 #                 specific revision.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __git_clone_and_checkout() {
     SALT_GIT_CHECKOUT_DIR=/tmp/git/salt
     [ -d /tmp/git ] || mkdir /tmp/git
@@ -1024,28 +1024,28 @@ __git_clone_and_checkout() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_get_install_noinput
 #   DESCRIPTION:  (DRY) apt-get install with noinput options
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __apt_get_install_noinput() {
     apt-get install -y -o DPkg::Options::=--force-confold $@; return $?
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_get_upgrade_noinput
 #   DESCRIPTION:  (DRY) apt-get upgrade with noinput options
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __apt_get_upgrade_noinput() {
     apt-get upgrade -y -o DPkg::Options::=--force-confold $@; return $?
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __check_end_of_life_versions
 #   DESCRIPTION:  Check for end of life distribution versions
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __check_end_of_life_versions() {
 
     case "${DISTRO_NAME_L}" in
@@ -1150,10 +1150,10 @@ __check_end_of_life_versions() {
 __check_end_of_life_versions
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  copyfile
 #   DESCRIPTION:  Simple function to copy files. Overrides if asked.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 copyfile() {
     overwrite=$_FORCE_OVERWRITE
     if [ $# -eq 2 ]; then
@@ -1198,10 +1198,10 @@ copyfile() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  movefile
 #   DESCRIPTION:  Simple function to move files. Overrides if asked.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 movefile() {
     overwrite=$_FORCE_OVERWRITE
     if [ $# -eq 2 ]; then
@@ -1358,6 +1358,9 @@ __enable_universe_repository() {
 }
 
 install_ubuntu_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     apt-get update
     if [ $DISTRO_MAJOR_VERSION -gt 12 ] || ([ $DISTRO_MAJOR_VERSION -eq 12 ] && [ $DISTRO_MINOR_VERSION -eq 10 ]); then
         # Above Ubuntu 12.04 add-apt-repository is in a different package
@@ -1548,6 +1551,9 @@ install_ubuntu_restart_daemons() {
 #   Debian Install Functions
 #
 install_debian_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -1572,6 +1578,9 @@ install_debian_deps() {
 }
 
 install_debian_6_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -1648,6 +1657,9 @@ _eof
 }
 
 install_debian_7_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -1709,6 +1721,9 @@ _eof
 }
 
 install_debian_git_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -3566,9 +3581,9 @@ daemons_running() {
 ##############################################################################
 
 
-#=============================================================================
+#======================================================================================================================
 # LET'S PROCEED WITH OUR INSTALLATION
-#=============================================================================
+#======================================================================================================================
 # Let's get the dependencies install function
 DEP_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_deps"
 DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_deps"
@@ -3785,8 +3800,8 @@ fi
 
 # Drop the master address if passed
 if [ $_SALT_MASTER_ADDRESS != "null" ]; then
-    [ ! -d $_SALT_ETC_DIR/minion.conf.d ] && mkdir -p $_SALT_ETC_DIR/minion.conf.d
-    cat <<_eof > $_SALT_ETC_DIR/minion.conf.d/99-master-address.conf
+    [ ! -d $_SALT_ETC_DIR/minion.d ] && mkdir -p $_SALT_ETC_DIR/minion.d
+    cat <<_eof > $_SALT_ETC_DIR/minion.d/99-master-address.conf
 master: $_SALT_MASTER_ADDRESS
 _eof
 fi
