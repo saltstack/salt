@@ -4,7 +4,7 @@
 '''
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, patch, mock_open, call
 from salttesting.helpers import ensure_in_syspath
 
@@ -43,6 +43,16 @@ mock_calls_list = [call.read(), call.write('##\n'),
                    call.write('\n'),
                    call.close()]
 
+mock_soa_zone = '$TTL 3D\n'\
+                '@               IN      SOA     land-5.com. root.land-5.com. (\n'\
+                '199609203       ; Serial\n'\
+                '28800   ; Refresh\n'\
+                '7200    ; Retry\n'\
+                '604800  ; Expire\n'\
+                '86400)  ; Minimum TTL\n'\
+                'NS      land-5.com.\n\n'\
+                '1                       PTR     localhost.'
+
 
 class DNSUtilTestCase(TestCase):
 
@@ -68,3 +78,9 @@ class DNSUtilTestCase(TestCase):
             helper_open = m_open()
             calls_list = helper_open.method_calls
             self.assertEqual(calls_list, mock_calls_list)
+
+    @skipIf(True, 'Waiting on bug report fixes')
+    def test_parse_zone(self):
+        with patch('salt.utils.fopen', mock_open(read_data=mock_soa_zone)):
+            print mock_soa_zone
+            print dnsutil.parse_zone('/var/lib/named/example.com.zone')
