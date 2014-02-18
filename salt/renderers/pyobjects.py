@@ -87,41 +87,41 @@ watch_in, use & use_in) when using the requisite as a context manager.
 The above example would cause all declarations inside the scope of the context
 manager to automatically have their ``watch_in`` set to
 ``Service("my-service")``.
+
+Including and Extending
+^^^^^^^^^^^^^^^^^^^^^^^
+
+To include other states use the Include() function. It takes one name per
+state to include.
+
+To extend another state use the Extend() function on the name when creating
+a state.
+
+.. code-block:: python
+   :linenos:
+    #!pyobjects
+
+    Include('http', 'ssh')
+
+    Service.running(Extend('apache'),
+                    watch=[{'file': '/etc/httpd/extra/httpd-vhosts.conf'}])
 '''
 
 import logging
-import traceback
 
-from salt.exceptions import SaltRenderError
+from salt.loader import states
+from salt.utils.pyobjects import StateFactory, StateRegistry
 
 log = logging.getLogger("pyobjects")
 
 
 def render(template, saltenv='base', sls='',
-           tmplpath=None, rendered_sls=None, **kwargs):
-
-    from salt.loader import states
-    from salt.utils.pyobjects import StateFactory, StateRegistry
+           tmplpath=None, rendered_sls=None,
+           _states=None, **kwargs):
 
     _registry = StateRegistry()
-    try:
+    if _states is None:
         _states = states(__opts__, __salt__)
-    except NameError:
-        log.warning("__opts__ and __salt__ are not defined, "
-                    "setting up a local config & minion")
-
-        # this happens during testing, set it up
-        from salt.config import minion_config
-        from salt.loader import states
-        from salt.minion import SMinion
-        _config = minion_config(None)
-        _config['file_client'] = 'local'
-        _minion = SMinion(_config)
-        _states = states(_config, _minion.functions)
-
-        __pillar__ = {}
-        __grains__ = {}
-        __salt__ = {}
 
     # build our list of states and functions
     _st_funcs = {}
@@ -141,15 +141,18 @@ def render(template, saltenv='base', sls='',
         )
         exec(mod_cmd)
 
+    # add our Include and Extend functions
+    Include = _registry.include
+    Extend = _registry.make_extend
+
+    # for convenience
     try:
-        # for convenience
         pillar = __pillar__
         grains = __grains__
         salt = __salt__
+    except NameError:
+        pass
 
-        exec(template.read())
-    except Exception:
-        trb = traceback.format_exc()
-        raise SaltRenderError(trb)
+    exec(template.read())
 
     return _registry.salt_data()
