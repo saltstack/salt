@@ -66,7 +66,7 @@ def __virtual__():
         if os.path.isfile(debian_initctl):
             initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
             if 'upstart' in initctl_version:
-                return 'service'
+                return __virtualname__
     return False
 
 

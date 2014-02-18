@@ -48,9 +48,9 @@ complex problems in infrastructures.
 
 Salt is being used today by some of the largest infrastructures in the world
 and has a proven ability to scale to astounding proportions without
-modification. With the proven ability to scale out well beyond many tens of
-thousands of servers, Salt has also proven to be an excellent choice for small
-deployments as well, lowering compute and management overhead for
+modification. Able to scale out well beyond many tens of thousands of servers,
+Salt has also shown itself to be an excellent choice for small
+deployments, lowering compute and management overhead for
 infrastructures as small as just a few systems.
 
 

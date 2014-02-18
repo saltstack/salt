@@ -21,6 +21,7 @@ import jinja2.ext
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
+from salt.utils.jinja import ensure_sequence_filter
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt import __path__ as saltpath
@@ -246,6 +247,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                                        **env_args)
 
     jinja_env.filters['strftime'] = salt.utils.date_format
+    jinja_env.filters['sequence'] = ensure_sequence_filter
 
     unicode_context = {}
     for key, value in context.iteritems():

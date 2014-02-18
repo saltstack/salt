@@ -280,7 +280,7 @@ class merger(object):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if (defaults['with_lists']):
+                if defaults['with_lists']:
                     defaults['with_lists'] = [
                         int(i) for i in defaults['with_lists'].split(',')
                     ]
@@ -293,7 +293,7 @@ class merger(object):
             Set self.focus for kwarg queries
         '''
         # There is no collision protection on root name isolation
-        if (root):
+        if root:
             self.result[root] = self.focus = {}
         else:
             self.focus = self.result
@@ -332,19 +332,19 @@ class merger(object):
                         listify_dicts[id(crd)] = crd
                     if ret[i] not in listify[id(crd)]:
                         listify[id(crd)].append(ret[i])
-                if (ret[i] not in crd):
+                if ret[i] not in crd:
                     # Key missing
                     crd[ret[i]] = {}
                     crd = crd[ret[i]]
                 else:
                     # Check type of collision
                     ty = type(crd[ret[i]])
-                    if (ty is list):
+                    if ty is list:
                         # Already made list
                         temp = {}
                         crd[ret[i]].append(temp)
                         crd = temp
-                    elif (ty is not dict):
+                    elif ty is not dict:
                         # Not a list, not a dict
                         if self.as_list:
                             # Make list
@@ -402,7 +402,7 @@ class merger(object):
                     # Collision detection
                     if self.as_list and (nk in crd):
                         # Same as before...
-                        if (type(crd[nk]) is list):
+                        if type(crd[nk]) is list:
                             crd[nk].append(ret[i])
                         else:
                             crd[nk] = [crd[nk], ret[i]]
@@ -414,10 +414,11 @@ class merger(object):
         for i in ks:
             d = listify_dicts[i]
             for k in listify[i]:
-                if (type(d[k]) is dict):
+                if type(d[k]) is dict:
                     d[k] = d[k].values()
-                elif (type(d[k]) is not list):
+                elif type(d[k]) is not list:
                     d[k] = [d[k]]
+
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     '''

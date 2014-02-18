@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
+
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting import TestCase
 
 from salt.pillar import mysql
+
 
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
@@ -21,7 +23,7 @@ class MysqlPillarTestCase(TestCase):
             'SELECT blah',
             'SELECT blah2',
             ('SELECT blah3',),
-            ('SELECT blah4',2),
+            ('SELECT blah4', 2),
             {'query': 'SELECT blah5'},
             {'query': 'SELECT blah6', 'depth': 2},
             {'query': 'SELECT blah7', 'as_list': True},
@@ -30,7 +32,7 @@ class MysqlPillarTestCase(TestCase):
         ], {}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blah',  'depth': 0, 'as_list': False, 'with_lists': None}],
+            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
@@ -47,14 +49,14 @@ class MysqlPillarTestCase(TestCase):
             '1': 'SELECT blah',
             '2': 'SELECT blah2',
             '3': ('SELECT blah3',),
-            '4': ('SELECT blah4',2),
+            '4': ('SELECT blah4', 2),
             '5': {'query': 'SELECT blah5'},
             '6': {'query': 'SELECT blah6', 'depth': 2},
             '7': {'query': 'SELECT blah7', 'as_list': True},
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            ['1', {'query': 'SELECT blah',  'depth': 0, 'as_list': False, 'with_lists': None}],
+            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
             ['2', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
             ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
             ['4', {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
@@ -67,11 +69,11 @@ class MysqlPillarTestCase(TestCase):
         return_data = mysql.merger()
         args, kwargs = [
             'SELECT blah1',
-            ('SELECT blah2',2),
+            ('SELECT blah2', 2),
             {'query': 'SELECT blah3', 'as_list': True},
         ], {
             '1': 'SELECT blah1',
-            '2': ('SELECT blah2',2),
+            '2': ('SELECT blah2', 2),
             'mysql_query': 'SELECT blahm',  # In the middle for complexity
             '3': {'query': 'SELECT blah3', 'as_list': True},
         }
@@ -81,9 +83,9 @@ class MysqlPillarTestCase(TestCase):
             [None, {'query': 'SELECT blah1', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah2', 'depth': 2, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': True, 'with_lists': None}],
-            ['1',  {'query': 'SELECT blah1', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['2',  {'query': 'SELECT blah2', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            ['3',  {'query': 'SELECT blah3', 'depth': 0, 'as_list': True, 'with_lists': None}]
+            ['1', {'query': 'SELECT blah1', 'depth': 0, 'as_list': False, 'with_lists': None}],
+            ['2', {'query': 'SELECT blah2', 'depth': 2, 'as_list': False, 'with_lists': None}],
+            ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': True, 'with_lists': None}]
         ], qbuffer)
 
     def test_005_extract_queries_bogus_list(self):
@@ -95,7 +97,7 @@ class MysqlPillarTestCase(TestCase):
             'SELECT blah2',
             ('SELECT blah3',),
             ('',),
-            ('SELECT blah4',2),
+            ('SELECT blah4', 2),
             tuple(),
             ('SELECT blah5',),
             {'query': 'SELECT blah6'},
@@ -106,7 +108,7 @@ class MysqlPillarTestCase(TestCase):
         ], {}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blah',  'depth': 0, 'as_list': False, 'with_lists': None}],
+            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
             [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
@@ -121,12 +123,12 @@ class MysqlPillarTestCase(TestCase):
         return_data = mysql.merger()
         args, kwargs = [], {
             '1': 'SELECT blah',
-            '2' : '',
+            '2': '',
             '3': 'SELECT blah2'
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            ['1', {'query': 'SELECT blah',  'depth': 0, 'as_list': False, 'with_lists': None}],
+            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
             ['3', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}]
         ], qbuffer)
 
@@ -395,7 +397,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual(
-             {1: {2: {3: [{6: 7,}, 4, {8: 9}, 5]}}},
+             {1: {2: {3: [{6: 7, }, 4, {8: 9}, 5]}}},
              return_data.result
         )
 
@@ -497,7 +499,7 @@ class MysqlPillarTestCase(TestCase):
                       ]
                   },
                   {'h': [
-                      {'j': 3, 'k': 4 }
+                      {'j': 3, 'k': 4}
                       ]
                   }
             ]},
@@ -516,13 +518,13 @@ class MysqlPillarTestCase(TestCase):
                                      ['a', 'z', 'h', 'y', 'k', 4]])
         self.assertEqual(
             {'a': [
-                  [ [
+                  [[
                       {'e': 1},
                       {'g': 2}
                       ]
                   ],
-                  [ [
-                      {'j': 3, 'k': 4 }
+                  [[
+                      {'j': 3, 'k': 4}
                       ]
                   ]
             ]},

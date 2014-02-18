@@ -1645,7 +1645,10 @@ def recurse(name,
     # Check source path relative to fileserver root, make sure it is a
     # directory
     source_rel = source.partition('://')[2]
-    if source_rel not in __salt__['cp.list_master_dirs'](__env__):
+    master_dirs = __salt__['cp.list_master_dirs'](__env__)
+    if source_rel not in master_dirs \
+            and not any((x for x in master_dirs
+                         if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
             'The directory {0!r} does not exist on the salt fileserver'
@@ -1939,7 +1942,7 @@ def blockreplace(name,
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
-    .. versionadded:: 0.18.0
+    .. versionadded:: 2014.1.0
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining

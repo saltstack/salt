@@ -130,6 +130,7 @@ VALID_OPTS = {
     'keep_jobs': int,
     'master_roots': dict,
     'gitfs_remotes': list,
+    'gitfs_mountpoint': str,
     'gitfs_root': str,
     'gitfs_base': str,
     'hgfs_remotes': list,
@@ -313,6 +314,7 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
     'gitfs_root': '',
     'gitfs_base': 'master',
     'hgfs_remotes': [],
@@ -382,7 +384,7 @@ DEFAULT_MASTER_OPTS = {
     'nodegroups': {},
     'cython_enable': False,
     'enable_gpu_grains': False,
-    # XXX: Remove 'key_logfile' support in 0.18.0
+    # XXX: Remove 'key_logfile' support in 2014.1.0
     'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
@@ -659,7 +661,7 @@ def minion_config(path,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',
@@ -1767,7 +1769,7 @@ def apply_minion_config(overrides=None,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',

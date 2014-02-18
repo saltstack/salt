@@ -635,7 +635,7 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
         try:
             linetype, status, name, version_num, arch = \
                 [cols[x] for x in (0, 2, 3, 4, 5)]
-        except ValueError:
+        except (ValueError, IndexError):
             continue
         if __grains__.get('cpuarch', '') == 'x86_64':
             osarch = __grains__.get('osarch', '')
