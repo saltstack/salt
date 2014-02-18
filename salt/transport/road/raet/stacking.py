@@ -209,7 +209,7 @@ class StackUdp(object):
         if (packet.data['tk'] == raeting.trnsKinds.allow and
                 packet.data['pk'] == raeting.pcktKinds.hello and
                 packet.data['si'] != 0):
-            self.replyEndow(packet)
+            self.replyAllow(packet)
 
     def join(self):
         '''
@@ -233,24 +233,24 @@ class StackUdp(object):
         # need to perform the check for accepted status somewhere
         joinent.accept()
 
-    def endow(self, rdid=None):
+    def allow(self, rdid=None):
         '''
-        Initiate endow transaction
+        Initiate allow transaction
         '''
         data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
-        endower = transacting.Allower(stack=self, rdid=rdid, txData=data)
-        endower.hello()
+        allower = transacting.Allower(stack=self, rdid=rdid, txData=data)
+        allower.hello()
 
-    def replyEndow(self, packet):
+    def replyAllow(self, packet):
         '''
-        Correspond to new endow transaction
+        Correspond to new allow transaction
         '''
         data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
-        endowent = transacting.Allowent(stack=self,
+        allowent = transacting.Allowent(stack=self,
                                         rdid=packet.data['sd'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        endowent.hello()
+        allowent.hello()
 

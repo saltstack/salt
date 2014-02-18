@@ -164,6 +164,7 @@ class Joiner(Initiator):
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
         self.sid = 0
         self.tid = self.stack.devices[self.rdid].nextTid()
+        self.prep()
         self.add(self.index)
 
     def receive(self, packet):
@@ -179,14 +180,10 @@ class Joiner(Initiator):
             elif packet.data['pk'] == raeting.pcktKinds.response:
                 self.accept()
 
-    def join(self):
+    def prep(self):
         '''
-        Send join request
+        Prepare .txData
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
-            raise raeting.TransactionError(emsg)
-
         self.txData.update( sh=self.stack.device.host,
                             sp=self.stack.device.port,
                             dh=self.stack.devices[self.rdid].host,
@@ -200,6 +197,14 @@ class Joiner(Initiator):
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
                             fk=raeting.footKinds.nada)
+
+    def join(self):
+        '''
+        Send join request
+        '''
+        if self.rdid not in self.stack.devices:
+            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+            raise raeting.TransactionError(emsg)
 
         body = odict([('verhex', self.stack.device.signer.verhex),
                       ('pubhex', self.stack.device.priver.pubhex)])
@@ -274,8 +279,26 @@ class Joinent(Correspondent):
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joinent, self).__init__(**kwa)
+        self.prep()
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
+
+    def prep(self):
+        '''
+        Prepare .txData
+        '''
+        #since bootstrap transaction use the reversed sdid and ddid from packet
+        self.txData.update( sh=self.stack.device.host,
+                    sp=self.stack.device.port,
+                    sd=self.rxPacket.data['dd'],
+                    dd=self.rxPacket.data['sd'],
+                    tk=self.kind,
+                    cf=self.rmt,
+                    bf=self.bcst,
+                    si=self.sid,
+                    ti=self.tid,
+                    ck=raeting.coatKinds.nada,
+                    fk=raeting.footKinds.nada,)
 
     def join(self):
         '''
@@ -319,20 +342,9 @@ class Joinent(Correspondent):
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        #since bootstrap transaction use the reversed sdid and ddid from packet
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
-                            dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port,
-                            sd=self.rxPacket.data['dd'],
-                            dd=self.rxPacket.data['sd'],
-                            tk=self.kind,
-                            cf=self.rmt,
-                            bf=self.bcst,
-                            si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nada,
-                            fk=raeting.footKinds.nada,)
+        #since bootstrap transaction use updated self.rid
+        self.txData.update( dh=self.stack.devices[self.rdid].host,
+                            dp=self.stack.devices[self.rdid].port,)
         body = odict()
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.ack,
@@ -356,20 +368,23 @@ class Joinent(Correspondent):
             raise raeting.TransactionError(emsg)
 
         remote = self.stack.devices[self.rdid]
+
+        #self.txData.update( dh=remote.host,
+                            #dp=remote.port,)
         #since bootstrap transaction use the reversed sdid and ddid from packet
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
-                            dh=remote.host,
-                            dp=remote.port,
-                            sd=self.rxPacket.data['dd'],
-                            dd=self.rxPacket.data['sd'],
-                            tk=self.kind,
-                            cf=self.rmt,
-                            bf=self.bcst,
-                            si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nada,
-                            fk=raeting.footKinds.nada,)
+        #self.txData.update( sh=self.stack.device.host,
+                            #sp=self.stack.device.port,
+                            #dh=remote.host,
+                            #dp=remote.port,
+                            #sd=self.rxPacket.data['dd'],
+                            #dd=self.rxPacket.data['sd'],
+                            #tk=self.kind,
+                            #cf=self.rmt,
+                            #bf=self.bcst,
+                            #si=self.sid,
+                            #ti=self.tid,
+                            #ck=raeting.coatKinds.nada,
+                            #fk=raeting.footKinds.nada,)
         body = odict([ ('ldid', self.rdid),
                        ('rdid', self.stack.device.did),
                        ('verhex', self.stack.device.signer.verhex),
@@ -404,7 +419,7 @@ class Allower(Initiator):
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
         remote = self.stack.devices[self.rdid]
         if not remote.joined:
-            emsg = "Must be accepted first"
+            emsg = "Must be joined first"
             raise raeting.TransactionError(emsg)
         remote.refresh() # refresh short term keys and .endowed
         self.sid = remote.sid
@@ -567,7 +582,7 @@ class Allowent(Correspondent):
         super(Allowent, self).__init__(**kwa)
         remote = self.stack.devices[self.rdid]
         if not remote.joined:
-            emsg = "Must be accepted first"
+            emsg = "Must be joined first"
             raise raeting.TransactionError(emsg)
         self.oreo = None #keep locally generated oreo around for redos
         remote.refresh() # refresh short term keys and .endowed

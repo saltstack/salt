@@ -41,6 +41,8 @@ def test():
                                      prikey=masterPriKeyHex,)
     stack1 = stacking.StackUdp(device=device)
 
+
+    print "\n********* Join Transaction **********"
     stack1.join()
 
     timer = Timer(duration=0.5)
@@ -72,7 +74,10 @@ def test():
     for device in stack1.devices.values():
             print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
-    stack1.endow()
+
+    print "\n********* Allow Transaction **********"
+
+    stack1.allow()
     timer.restart()
     while not timer.expired:
         stack1.serviceUdp()
