@@ -1044,9 +1044,7 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
     '''
     # Remove lock from kwargs if present
-    lock = None
-    if 'lock' in kwargs:
-        lock = kwargs.pop('lock')
+    lock = kwargs.pop('lock', False)
 
     fhandle = open(*args, **kwargs)
     if HAS_FCNTL:
