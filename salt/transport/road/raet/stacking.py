@@ -206,7 +206,7 @@ class StackUdp(object):
                 packet.data['si'] == 0):
             self.replyJoin(packet)
 
-        if (packet.data['tk'] == raeting.trnsKinds.endow and
+        if (packet.data['tk'] == raeting.trnsKinds.allow and
                 packet.data['pk'] == raeting.pcktKinds.hello and
                 packet.data['si'] != 0):
             self.replyEndow(packet)
@@ -237,16 +237,16 @@ class StackUdp(object):
         '''
         Initiate endow transaction
         '''
-        data = odict(hk=self.Hk, bk=self.Bk)
-        endower = transacting.Endower(stack=self, rdid=rdid, txData=data)
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        endower = transacting.Allower(stack=self, rdid=rdid, txData=data)
         endower.hello()
 
     def replyEndow(self, packet):
         '''
         Correspond to new endow transaction
         '''
-        data = odict(hk=self.Hk, bk=self.Bk)
-        endowent = transacting.Endowent(stack=self,
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        endowent = transacting.Allowent(stack=self,
                                         rdid=packet.data['sd'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],

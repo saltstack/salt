@@ -165,7 +165,9 @@ class Body(Part):
         Setup Body instance
         '''
         super(Body, self).__init__(**kwa)
-        self.data = data or odict()
+        if data is None:
+            data = odict()
+        self.data = data
 
 class TxBody(Body):
     '''
@@ -179,6 +181,9 @@ class TxBody(Body):
         self.kind = self.packet.data['bk']
         if self.kind == raeting.bodyKinds.json:
             self.packed = json.dumps(self.data, separators=(',', ':'))
+
+        if self.kind == raeting.bodyKinds.raw:
+            self.packed = self.data # data is already formatted string
 
 class RxBody(Body):
     '''
@@ -210,6 +215,9 @@ class RxBody(Body):
                     emsg = "Packet body not a mapping."
                     raise raeting.PacketError(emsg)
                 self.data = kit
+
+        if self.kind == raeting.bodyKinds.raw:
+            self.data = self.packed # return as string
 
         elif self.kind == raeting.bodyKinds.nada:
             pass

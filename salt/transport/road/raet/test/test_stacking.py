@@ -63,10 +63,14 @@ def test():
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    for device in stack0.devices.values():
+        print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    for device in stack1.devices.values():
+            print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
     stack1.endow()
     timer.restart()
@@ -100,6 +104,19 @@ def test():
 
     while stack1.udpRxes:
         stack1.processUdpRx()
+
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    for device in stack0.devices.values():
+        print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+
+    print "{0} did={1}".format(stack1.name, stack1.device.did)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    for device in stack1.devices.values():
+            print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+
 
 
 if __name__ == "__main__":

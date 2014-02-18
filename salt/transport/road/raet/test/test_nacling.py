@@ -3,6 +3,8 @@
 Tests to try out nacling. Potentially ephemeral
 
 '''
+import struct
+
 from ioflo.base.odicting import odict
 from salt.transport.road.raet import nacling
 
@@ -75,7 +77,71 @@ def test():
     #msg = priverPam.decrypt(ciphernonce, None, pubberBob.key)
     #print len(msg), msg
 
+    print "Blank"
+    msg = "".rjust(64, '\x00')
+    print len(msg), msg
+    cipher, nonce = priverBob.encrypt(msg, pubberPam.keyhex)
+    print "cipher"
+    print len(cipher), cipher
+    print "nonce"
+    print len(nonce), nonce
 
+    print "Cookie"
+    fmt = '<64sLL64s'
+    msg = struct.pack(fmt, pubberPam.keyhex, 45000, 63000, pubberBob.keyhex)
+    print "Packed"
+    print len(msg), msg
+    cipher, nonce = priverBob.encrypt(msg, pubberPam.keyhex)
+    print "cipher"
+    print len(cipher), cipher
+    print "nonce"
+    print len(nonce), nonce
+
+    print "Cookie again"
+    fmt = '<64sLL64s'
+    msg = struct.pack(fmt, pubberPam.keyhex, 1, 2, pubberBob.keyhex)
+    print "Packed"
+    print len(msg), msg
+    cipher, nonce = priverBob.encrypt(msg, pubberPam.keyhex)
+    print "cipher"
+    print len(cipher), cipher
+    print "nonce"
+    print len(nonce), nonce
+
+    print "Cookie more"
+    fmt = '<64sLL24s'
+    cookie = priverBob.nonce()
+    msg = struct.pack(fmt, pubberPam.keyhex, 1, 2, cookie)
+    print "Packed"
+    print len(msg), msg
+    cipher, nonce = priverBob.encrypt(msg, pubberPam.keyhex)
+    print "cipher"
+    print len(cipher), cipher
+    print "nonce"
+    print len(nonce), nonce
+
+
+    print "Initiate"
+    msg = priverBob.keyhex
+    vcipher, vnonce = priverBob.encrypt(msg, pubberPam.keyhex)
+    print "vcipher"
+    print len(vcipher), vcipher
+    print "vnonce"
+    print len(nonce), nonce
+
+    fqdn = "10.0.2.30".ljust(128, ' ')
+    print "fqdn"
+    print len(fqdn), fqdn
+    fmt = '<64s80s24s128s'
+    stuff = struct.pack(fmt, priverBob.keyhex,vcipher,vnonce,fqdn)
+    print "stuff"
+    print len(stuff), stuff
+
+    cipher, nonce = priverBob.encrypt(stuff, pubberPam.keyhex)
+    print "cipher"
+    print len(cipher), cipher
+    print "nonce"
+    print len(nonce), nonce
 
 
 

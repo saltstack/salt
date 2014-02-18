@@ -108,8 +108,8 @@ class RemoteDevice(Device):
         if 'host' not in kwa and 'ha' not in kwa:
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
         super(RemoteDevice, self).__init__(**kwa)
-        self.accepted = None
-        self.endowed = None
+        self.joined = None
+        self.allowed = None
         self.privee = nacling.Privateer() # short term key manager
         self.publee = nacling.Publican() # correspondent short term key  manager
         self.verfer = nacling.Verifier(verikey) # correspondent verify key manager
@@ -122,7 +122,7 @@ class RemoteDevice(Device):
         '''
         Refresh short term keys
         '''
-        self.endowed = None
+        self.allowed = None
         self.privee = nacling.Privateer() # short term key
         self.publee = nacling.Publican() # correspondent short term key  manager
 

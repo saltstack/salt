@@ -93,6 +93,8 @@ try:
 except ImportError:
     import json
 
+import struct
+
 # Import ioflo libs
 from ioflo.base.odicting import odict
 
@@ -115,7 +117,8 @@ HeadKind = namedtuple('HeadKind', HEAD_KINDS.keys())
 headKinds = HeadKind(**HEAD_KINDS)  # headKinds.json is '00'
 
 
-BODY_KINDS = odict([('nada', 0), ('json', 1), ('msgpck', 1), ('unknown', 255)])
+BODY_KINDS = odict([('nada', 0), ('json', 1), ('raw', 2), ('msgpck', 3),
+                    ('unknown', 255)])
 BODY_KIND_NAMES = odict((v, k) for k, v in BODY_KINDS.iteritems())  # inverse map
 BodyKind = namedtuple('BodyKind', BODY_KINDS.keys())
 bodyKinds = BodyKind(**BODY_KINDS)
@@ -146,7 +149,7 @@ TAIL_SIZES = odict([('nada', 0), ('nacl', 24), ('crc16', 2), ('crc64', 8),
 TailSize = namedtuple('TailSize', TAIL_SIZES.keys())
 tailSizes = TailSize(**TAIL_SIZES)
 
-TRNS_KINDS = odict([('data', 0), ('join', 1), ('accept', 2), ('endow', 3),
+TRNS_KINDS = odict([('data', 0), ('join', 1), ('accept', 2), ('allow', 3),
                      ('unknown', 255)])
 TRNS_KIND_NAMES = odict((v, k) for k, v in TRNS_KINDS.iteritems())  # inverse map
 TrnsKind = namedtuple('TrnsKind', TRNS_KINDS.keys())
@@ -160,6 +163,11 @@ PCKT_KIND_NAMES = odict((v, k) for k, v in PCKT_KINDS.iteritems())  # inverse ma
 PcktKind = namedtuple('PcktKind', PCKT_KINDS.keys())
 pcktKinds = PcktKind(**PCKT_KINDS)
 
+HELLO_PACKER = struct.Struct('<64s64s80s24s') #curvecp hello packet body endow trans
+COOKIESTUFF_PACKER = struct.Struct('<64sLL24s')
+COOKIE_PACKER = struct.Struct('<112s24s')
+INITIATESTUFF_PACKER = struct.Struct('<64s80s24s128s')
+INITIATE_PACKER = struct.Struct('64s24s312s24s')
 
 # head fields that may be included in json header if not default value
 PACKET_DEFAULTS = odict([
