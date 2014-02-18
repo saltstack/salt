@@ -229,7 +229,8 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and fstab_data['none']['fstype'] != 'swap':
+            if fstab_data['none']['device'] == name and \
+               fstab_data['none']['fstype'] != 'swap':
                 return ret
 
         # present, new, change, bad config
@@ -304,25 +305,22 @@ def unmounted(name,
             ret['changes']['umount'] = True
 
     if persist:
-        if __opts__['test']:
-            fstab_data = __salt__['mount.fstab'](config)
-            if name in fstab_data:
+        fstab_data = __salt__['mount.fstab'](config)
+        if name not in fstab_data:
+            ret['comment'] += '. fstab entry not found'
+        else:
+            if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is unmounted but needs to '
                                   'be purged from {1} to be made '
                                   'persistent').format(name, config)
                 return ret
-
-        if ret['changes'].get('umount', False):
-            out = __salt__['mount.rm_fstab'](name, config)
-        else:
-            out = 'bad mount'
-
-        if out is True:
-            ret['changes']['persist'] = 'purged'
-            return ret
-        if out == 'bad mount':
-            ret['result'] = False
-            ret['comment'] += '. Unfortunately the mount could not be purged'
+            else:
+                out = __salt__['mount.rm_fstab'](name, config)
+                if out is not True:
+                    ret['result'] = False
+                    ret['comment'] += '. Failed to persist purge'
+                else:
+                    ret['changes']['persist'] = 'purged'
 
     return ret

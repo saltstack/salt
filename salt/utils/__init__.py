@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import contextlib
 import copy
 import collections
 import datetime
@@ -1036,12 +1037,17 @@ def fopen(*args, **kwargs):
 
     This flag specifies that the file descriptor should be closed when an exec
     function is invoked;
-    When a file descriptor is allocated (as with open or dup ), this bit is
+    When a file descriptor is allocated (as with open or dup), this bit is
     initially cleared on the new file descriptor, meaning that descriptor will
     survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
     '''
+    # Remove lock from kwargs if present
+    lock = kwargs.pop('lock', False)
+
     fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
+    if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -1049,25 +1055,23 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if 'lock' in kwargs:
+        if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
+@contextlib.contextmanager
 def flopen(*args, **kwargs):
-    fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, lock=True, **kwargs) as fp_:
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-    return fhandle
+            yield fp_
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
@@ -1194,6 +1198,29 @@ def is_darwin():
     Simple function to return if a host is Darwin (OS X) or not
     '''
     return sys.platform.startswith('darwin')
+
+
+@real_memoize
+def is_sunos():
+    '''
+    Simple function to return if host is SunOS or not
+    '''
+    return sys.platform.startswith('sunos')
+
+
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the `fcntl` module is available or not.
+
+    If `check_sunos` is passed as `True` an additional check to see if host is
+    SunOS is also made. For additional information check commit:
+        http://goo.gl/159FF8
+    '''
+    if HAS_FCNTL is False:
+        return False
+    if check_sunos is True:
+        return HAS_FCNTL and is_sunos()
+    return HAS_FCNTL
 
 
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):

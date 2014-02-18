@@ -832,8 +832,26 @@ translated into salt environments.
       - file:///var/git/saltmaster
 
 .. note::
+
     ``file://`` repos will be treated as a remote, so refs you want used must
     exist in that repo as *local* refs.
+
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the
+    :conf_master:`gitfs_root` and :conf_master:`gitfs_mountpoint` parameters.
+    For example:
+
+    .. code-block:: yaml
+
+        gitfs_remotes:
+          - https://foo.com/foo.git
+          - https://foo.com/bar.git:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+          - https://foo.com/baz.git:
+            - root: salt
 
 .. conf_master:: gitfs_ssl_verify
 
@@ -852,6 +870,29 @@ is a security concern, you may want to try using the ssh transport.
 
     gitfs_ssl_verify: True
 
+.. conf_master:: gitfs_mountpoint
+
+``gitfs_mountpoint``
+--------------------
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which gitfs remotes are served.
+Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <gitfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    gitfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (i.e. ``foo/bar`` and
+    ``salt://foo/bar`` are equivalent).
+
 .. conf_master:: gitfs_root
 
 ``gitfs_root``
@@ -861,11 +902,17 @@ Default: ``''``
 
 Serve files from a subdirectory within the repository, instead of the root.
 This is useful when there are files in the repository that should not be
-available to the Salt fileserver.
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`gitfs_mountpoint`.
 
 .. code-block:: yaml
 
     gitfs_root: somefolder/otherfolder
+
+.. versionchanged:: Helium
+
+   Ability to specify gitfs roots on a per-remote basis was added. See
+   :conf_master:`here <gitfs_remotes>` for more info.
 
 .. conf_master:: gitfs_base
 

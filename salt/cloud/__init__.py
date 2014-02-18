@@ -835,9 +835,9 @@ class Cloud(object):
                 )
                 vm_['master_pub'] = master_pub
                 vm_['master_pem'] = master_priv
-        elif local_master is True and deploy is True:
-            # Since we're not creating a master, and we're deploying, accept
-            # the key on the local master
+
+        if local_master is True and deploy is True:
+            # Accept the key on the local master
             salt.utils.cloud.accept_key(
                 self.opts['pki_dir'], vm_['pub_key'], key_id
             )
@@ -1480,6 +1480,7 @@ class Map(Cloud):
         if self.opts['parallel']:
             parallel_data = []
         master_name = None
+        master_minion_name = None
         master_host = None
         master_finger = None
         try:
@@ -1487,6 +1488,7 @@ class Map(Cloud):
                 (name, profile) for name, profile in create_list
                 if profile.get('make_master', False) is True
             ).next()
+            master_minion_name = master_name
             log.debug('Creating new master {0!r}'.format(master_name))
             if salt.config.get_cloud_config_value('deploy',
                                        master_profile,
@@ -1516,10 +1518,13 @@ class Map(Cloud):
 
             if master_profile.get('make_minion', True) is True:
                 master_profile.setdefault('minion', {})
+                if 'id' in master_profile['minion']:
+                    master_minion_name = master_profile['minion']['id']
                 # Set this minion's master as local if the user has not set it
-                master_profile['minion'].setdefault('master', '127.0.0.1')
-                if master_finger is not None:
-                    master_profile['master_finger'] = master_finger
+                if 'master' not in master_profile['minion']:
+                    master_profile['minion']['master'] = '127.0.0.1'
+                    if master_finger is not None:
+                        master_profile['master_finger'] = master_finger
 
             # Generate the minion keys to pre-seed the master:
             for name, profile in create_list:
@@ -1542,7 +1547,15 @@ class Map(Cloud):
                 master_profile.setdefault('preseed_minion_keys', {})
                 master_profile['preseed_minion_keys'].update({name: pub})
 
-            out = self.create(master_profile, local_master=False)
+            local_master = False
+            if master_profile['minion'].get('local_master', False) and \
+                    master_profile['minion'].get('master', None) is not None:
+                # The minion is explicitly defining a master and it's
+                # explicitely saying it's the local one
+                local_master = True
+
+            out = self.create(master_profile, local_master=local_master)
+
             if not isinstance(out, dict):
                 log.debug(
                     'Master creation details is not a dictionary: {0}'.format(
@@ -1593,12 +1606,20 @@ class Map(Cloud):
             )
             opts['display_ssh_output'] = False
 
+        local_master = master_name is None
+
         for name, profile in create_list:
-            if name == master_name:
+            if name in (master_name, master_minion_name):
                 # Already deployed, it's the master's minion
                 continue
 
-            if master_finger is not None:
+            if profile['minion'].get('local_master', False) and \
+                    profile['minion'].get('master', None) is not None:
+                # The minion is explicitly defining a master and it's
+                # explicitely saying it's the local one
+                local_master = True
+
+            if master_finger is not None and local_master is False:
                 profile['master_finger'] = master_finger
 
             if master_host is not None:
@@ -1610,14 +1631,14 @@ class Map(Cloud):
                     'opts': opts,
                     'name': name,
                     'profile': profile,
-                    'local_master': master_name is None
+                    'local_master': local_master
                 })
                 continue
 
             # Not deploying in parallel
             try:
                 output[name] = self.create(
-                    profile, local_master=master_name is None
+                    profile, local_master=local_master
                 )
                 if self.opts.get('show_deploy_args', False) is False:
                     output[name].pop('deploy_kwargs', None)

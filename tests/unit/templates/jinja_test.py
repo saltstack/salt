@@ -16,11 +16,12 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
-from salt.utils.jinja import SaltCacheLoader, SerializerExtension
-from salt.utils.templates import (
-    JINJA,
-    render_jinja_tmpl,
+from salt.utils.jinja import (
+    SaltCacheLoader,
+    SerializerExtension,
+    ensure_sequence_filter
 )
+from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
 
 # Import 3rd party libs
@@ -583,6 +584,30 @@ class TestCustomExtensions(TestCase):
                                                             )
                                                         ])
         self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+
+    def test_sequence(self):
+        env = Environment()
+        env.filters['sequence'] = ensure_sequence_filter
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data='foo')
+        self.assertEqual(rendered, '1')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=['foo', 'bar'])
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=('foo', 'bar'))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=set(['foo', 'bar']))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data={'foo': 'bar'})
+        self.assertEqual(rendered, '1')
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

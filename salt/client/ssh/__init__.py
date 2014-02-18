@@ -537,6 +537,8 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            # Use the ID defined in the roster file
+            opts_pkg['id'] = self.id
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],
@@ -604,9 +606,11 @@ class Single(object):
         # 3. deploy salt-thin
         # 4. execute command
         if self.arg_str.startswith('cmd.run'):
-            cmd_args = ' '.join(self.arg_str.split()[1:])
+            arg_split = self.arg_str.split()
+            cmd = arg_split[0]
+            cmd_args = ' '.join(arg_split[1:])
             if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
-                self.arg_str = "cmd.run '{0}'".format(cmd_args)
+                self.arg_str = "{0} '{1}'".format(cmd, cmd_args)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],

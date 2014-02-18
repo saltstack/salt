@@ -628,14 +628,14 @@ class _MMinion(object):
         # this is to break out of salt.loaded.int and make this a true singleton
         # hack until https://github.com/saltstack/salt/pull/10273 is resolved
         # this is starting to look like PHP
-        global _mminions
+        global _mminions  # pylint: disable=W0601
         if '_mminions' not in globals():
             _mminions = {}
         if saltenv not in _mminions or reload_env:
             opts = copy.deepcopy(__opts__)
             del opts['file_roots']
             # grains at this point are in the context of the minion
-            global __grains__
+            global __grains__  # pylint: disable=W0601
             grains = copy.deepcopy(__grains__)
             m = salt.minion.MasterMinion(opts)
 
@@ -658,6 +658,12 @@ def mmodule(saltenv, fun, *args, **kwargs):
     '''
     Loads minion modules from an environment so that they can be used in pillars
     for that environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.mmodule base test.ping
     '''
     mminion = _MMinion(saltenv)
     return mminion.functions[fun](*args, **kwargs)

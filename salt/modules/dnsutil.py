@@ -205,7 +205,7 @@ def _to_seconds(time):
             time = int(time)
         except Exception:
             time = 604800
-    if time < 604800:
+    if time > 604800:
         time = 604800
     return time
 
