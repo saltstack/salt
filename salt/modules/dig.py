@@ -171,9 +171,9 @@ def NS(domain, resolve=True, nameserver=None):
 
     if resolve:
         ret = []
-        for ns in cmd['stdout'].split('\n'):
-            for a in A(ns, nameserver):
-                ret.append(a)
+        for ns_host in cmd['stdout'].split('\n'):
+            for ip_addr in A(ns_host, nameserver):
+                ret.append(ip_addr)
         return ret
 
     return cmd['stdout'].split('\n')
