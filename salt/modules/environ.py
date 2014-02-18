@@ -55,18 +55,21 @@ def set_(environ):
     return ret
 
 
-def get(keys):
+def get(keys, default=''):
     '''
     Get the salt process environment variables.
 
     'keys' can be either a string or a list of strings that will
     be used as the keys for environment lookup.
 
+    If the key is not found in the environment, return the passed
+    default. The default return is an empty string.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' environ.get foo
+        salt '*' environ.get foo default='bar'
         salt '*' environ.get '[foo, baz]'
     '''
     ret = {}
@@ -80,7 +83,7 @@ def get(keys):
             'The "keys" argument variable must be string or list.'
         )
     for key in key_list:
-        ret[key] = os.environ[key]
+        ret[key] = os.environ.get(key, default)
     return ret
 
 
@@ -92,6 +95,6 @@ def get_all():
 
     .. code-block:: bash
 
-        salt '*' environ.get:all
+        salt '*' environ.get_all
     '''
     return dict(os.environ)
