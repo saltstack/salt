@@ -23,9 +23,9 @@ class InvalidFunction(StateException):
 
 
 class StateRegistry(object):
-    """
+    '''
     The StateRegistry holds all of the states that have been created.
-    """
+    '''
     def __init__(self):
         self.empty()
 
@@ -111,7 +111,7 @@ class StateRequisite(object):
 
 
 class StateFactory(object):
-    """
+    '''
     The StateFactory is used to generate new States through a natural syntax
 
     It is used by initializing it with the name of the salt module::
@@ -124,11 +124,13 @@ class StateFactory(object):
         File.managed('/path/', owner='root', group='root')
 
     The kwargs are passed through to the State object
-    """
-    def __init__(self, module, registry, valid_funcs=[]):
+    '''
+    def __init__(self, module, registry, valid_funcs=None):
         self.module = module
-        self.valid_funcs = valid_funcs
         self.registry = registry
+        if valid_funcs is None:
+            valid_funcs = []
+        self.valid_funcs = valid_funcs
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
@@ -146,16 +148,16 @@ class StateFactory(object):
         return make_state
 
     def __call__(self, id_, requisite='require'):
-        """
+        '''
         When an object is called it is being used as a requisite
-        """
+        '''
         # return the correct data structure for the requisite
         return StateRequisite(requisite, self.module, id_,
                               registry=self.registry)
 
 
 class State(object):
-    """
+    '''
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
@@ -164,7 +166,7 @@ class State(object):
 
     The registry is where the state should be stored. It is optional and will
     use the default registry if not specified.
-    """
+    '''
 
     def __init__(self, id_, module, func, registry, **kwargs):
         self.id_ = id_
