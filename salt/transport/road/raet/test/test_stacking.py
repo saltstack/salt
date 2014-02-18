@@ -4,7 +4,10 @@ Tests to try out stacking. Potentially ephemeral
 
 '''
 from ioflo.base.odicting import odict
-from salt.transport.road.raet import raeting, stacking, nacling
+from ioflo.base.aiding import Timer
+
+from salt.transport.road.raet import (raeting, nacling, packeting,
+                                     devicing, transacting, stacking)
 
 
 def test():
@@ -26,65 +29,94 @@ def test():
     # minion did of 2
 
     #master stack
-    device = stacking.LocalDevice(did=1,
-                                  signkey=masterSignKeyHex,
-                                  prikey=masterPriKeyHex,)
-    stack1 = stacking.Stack(device=device)
+    device = devicing.LocalDevice(   did=1,
+                                     signkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(device=device)
 
-    #minon stack
-    device = stacking.LocalDevice(did=0,
-                                  ha=("", raeting.RAET_TEST_PORT),
-                                  signkey=minionSignKeyHex,
-                                  prikey=masterPriKeyHex,)
-    stack2 = stacking.Stack(device=device)
+    #minion stack
+    device = devicing.LocalDevice(   did=0,
+                                     ha=("", raeting.RAET_TEST_PORT),
+                                     signkey=minionSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack1 = stacking.StackUdp(device=device)
 
-    master = stacking.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
-    stack2.addRemoteDevice(master)
-    # minion doesn't yet know master did
+    stack1.join()
 
-    data = odict(hk=1, bk=1)
-    joiner = stacking.Joiner(stack=stack2, sid=0, txData=data)
-    joiner.join()
+    timer = Timer(duration=0.5)
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
 
-    stack2.serviceUdp()
-    stack1.serviceUdp()
+    while stack0.udpRxes:
+        stack0.processUdpRx()
 
-    packet = stack1.processRxUdp()
-    if packet:
-        print packet.data
-        print packet.body.data
-    else:
-        print "Join Packet dropped"
-        return
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
 
-    if packet.data['pk'] == raeting.packetKinds.join and packet.data['si'] == 0:
+    while stack1.udpRxes:
+        stack1.processUdpRx()
 
-        data = odict(hk=1, bk=1)
-        acceptor = stacking.Acceptor(stack=stack1, sid=0, txData=data)
-        acceptor.pend(data=packet.data, body=packet.body.data)
 
-        stack1.devices[acceptor.rdid].accepted = True
-        acceptor.accept()
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    for device in stack0.devices.values():
+        print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
-    stack1.serviceUdp()
-    stack2.serviceUdp()
+    print "{0} did={1}".format(stack1.name, stack1.device.did)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    for device in stack1.devices.values():
+            print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
-    while True:
-        packet = stack2.processRxUdp()
-        if not packet:
-            break
+    stack1.endow()
+    timer.restart()
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
 
-        print packet.data
-        print packet.body.data
+    while stack0.udpRxes:
+        stack0.processUdpRx()
 
-        if packet.data['pk'] == raeting.packetKinds.accept and packet.data['si'] == 0:
-            joiner.accept(packet.data, packet.body.data)
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
 
-            print stack2.device.did
-            print stack2.devices
+    while stack1.udpRxes:
+        stack1.processUdpRx()
 
-        if packet.data['pk'] == raeting.packetKinds.acceptAck and packet.data['si'] == 0:
-            joiner.pend(packet.data)
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack1.udpRxes:
+        stack1.processUdpRx()
+
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    for device in stack0.devices.values():
+        print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+
+    print "{0} did={1}".format(stack1.name, stack1.device.did)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    for device in stack1.devices.values():
+            print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+
 
 
 if __name__ == "__main__":

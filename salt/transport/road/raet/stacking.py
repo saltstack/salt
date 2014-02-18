@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-#pylint: skip-file
 '''
 stacking.py raet protocol stacking classes
 '''
@@ -7,11 +6,7 @@ stacking.py raet protocol stacking classes
 
 # Import python libs
 import socket
-from collections import deque, namedtuple, Mapping
-try:
-    import simplejson as json
-except ImportError:
-    import json
+from collections import deque
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -20,30 +15,40 @@ from ioflo.base import aiding
 from . import raeting
 from . import nacling
 from . import packeting
+from . import devicing
+from . import transacting
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
+class StackUdp(object):
+    '''
+    RAET protocol UDP stack object
+    '''
+    Count = 0
+    Hk = raeting.headKinds.json # stack default
+    Bk = raeting.bodyKinds.json # stack default
 
-class Stack(object):
-    '''
-    RAET protocol stack object
-    '''
     def __init__(self,
+                 name='',
                  version=raeting.VERSION,
                  device=None,
                  did=None,
                  ha=("", raeting.RAET_PORT)):
         '''
-        Setup Stack instance
+        Setup StackUdp instance
         '''
+        if not name:
+            name = "stack{0}".format(StackUdp.Count)
+            StackUdp.Count += 1
+        self.name = name
         self.version = version
-        self.devices = odict()  # remote devices attached to this stack
-        # local device for this stack
-        self.device = device or LocalDevice(stack=self, did=did, ha=ha)
-        self.transactions = odict()  # transactions
-        self.rxdsUdp = deque()
-        self.txdsUdp = deque()
+        self.devices = odict() # remote devices attached to this stack
+         # local device for this stack
+        self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
+        self.transactions = odict() #transactions
+        self.udpRxes = deque()
+        self.udpTxes = deque()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
@@ -57,7 +62,7 @@ class Stack(object):
 
         if did in self.devices:
             msg = "Device with id '{0}' alreadys exists".format(did)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
         device.stack = self
         self.devices[did] = device
 
@@ -67,16 +72,37 @@ class Stack(object):
         '''
         if ndid in self.devices:
             msg = "Cannot move, '{0}' already exists".format(ndid)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
 
         if odid not in self.devices:
             msg = "Cannot move '{0}' does not exist".format(odid)
-            raise raeting.RaetError(msg)
+            raise raeting.StackError(msg)
 
         device = self.devices[odid]
         del self.devices[odid]
         device.did = ndid
         self.devices.insert(0, device.did, device)
+
+    def addTransaction(self, index, transaction):
+        '''
+        Safely add transaction at index If not already there
+        '''
+        self.transactions[index] = transaction
+        print "Added {0} transaction to {1} at '{2}'".format(
+                transaction.__class__.__name__, self.name, index)
+
+    def removeTransaction(self, index, transaction=None):
+        '''
+        Safely remove transaction at index If transaction identity same
+        If transaction is None then remove without comparing identity
+        '''
+        if index in self.transactions:
+            if transaction:
+                if transaction is self.transactions[index]:
+                    del  self.transactions[index]
+            else:
+                del self.transactions[index]
+
 
     def serviceUdp(self):
         '''
@@ -88,41 +114,13 @@ class Stack(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.rxdsUdp.append((rx, ra, self.serverUdp.ha))
+                self.udpRxes.append((rx, ra, self.serverUdp.ha))
 
-            while self.txdsUdp:
-                tx, ta = self.txdsUdp.popleft()  # duple = (packet, destination address)
+            while self.udpTxes:
+                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
                 self.serverUdp.send(tx, ta)
 
         return None
-
-    def processRxUdp(self):
-        '''
-        Retrieve next packet from stack receive queue if any and process
-        Return packet if verified and destination did matches
-        Otherwise return None
-        '''
-        try:
-            raw, ra, da = self.rxdsUdp.popleft()
-        except IndexError:
-            return None
-
-        packet = packeting.RxPacket(packed=raw)
-        if not packet.parseFore():
-            return None
-
-        ddid = packet.data['dd']
-        if ddid != 0 and self.device.did != 0 and ddid != self.device.did:
-            return None
-
-        sh, sp = ra
-        dh, dp = da
-        packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
-
-        if not packet.parseBack():
-            return None
-
-        return packet
 
     def txUdp(self, packed, ddid):
         '''
@@ -132,320 +130,127 @@ class Stack(object):
         '''
         if ddid not in self.devices:
             msg = "Invalid destination device id '{0}'".format(ddid)
-            raise raeting.RaetError(msg)
-        self.txdsUdp.append((packed, self.devices[ddid].ha))
+            raise raeting.StackError(msg)
+        self.udpTxes.append((packed, self.devices[ddid].ha))
 
-
-class Device(object):
-    '''
-    RAET protocol endpoint device object
-    '''
-    Did = 2  # class attribute
-
-    def __init__(self, stack=None, did=None, sid=0, tid=0,
-                 host="", port=raeting.RAET_PORT, ha=None, ):
+    def fetchParseUdpRx(self):
         '''
-        Setup Device instance
+        Fetch from UDP deque next packet tuple
+        Parse packet
+        Return packet if verified and destination did matches
+        Otherwise return None
         '''
-        self.stack = stack  # Stack object that manages this device
-        if did is None:
-            if self.stack:
-                while Device.Did in self.stack.devices:
-                    Device.Did += 1
-                did = Device.Did
-            else:
-                did = 0
-        self.did = did  # device ID
+        try:
+            raw, ra, da = self.udpRxes.popleft()
+        except IndexError:
+            return None
 
-        self.accepted = None
-        self.allowed = None
+        print "{0} received\n{1}".format(self.name, raw)
 
-        self.sid = sid  # current session ID
-        self.tid = tid  # current transaction ID
+        packet = packeting.RxPacket(stack=self, packed=raw)
+        try:
+            packet.parseOuter()
+        except raeting.PacketError as ex:
+            print ex
+            return None
 
-        if ha:  # takes precendence
-            host, port = ha
-        self.host = socket.gethostbyname(host)
-        self.port = port
+        ddid = packet.data['dd']
+        if ddid != 0 and self.device.did != 0 and ddid != self.device.did:
+            emsg = "Invalid destination did = {0}. Dropping packet.".format(ddid)
+            print emsg
+            return None
 
-    @property
-    def ha(self):
+        sh, sp = ra
+        dh, dp = da
+        packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
+
+        try:
+            packet.parseInner()
+        except raeting.PacketError as ex:
+            print ex
+            return None
+
+        return packet
+
+    def processUdpRx(self):
         '''
-        property that returns ip address (host, port) tuple
+        Retrieve next packet from stack receive queue if any and parse
+        Process associated transaction or reply with new correspondent transaction
         '''
-        return (self.host, self.port)
+        packet = self.fetchParseUdpRx()
+        if not packet:
+            return
 
-    @ha.setter
-    def ha(self, ha):
-        self.host, self.port = ha
+        print "{0} received\n{1}".format(self.name, packet.data)
+        print "{0} received\n{1}".format(self.name, packet.body.data)
+        print "{0} received packet index = '{1}'".format(self.name, packet.index)
 
-    def nextSid(self):
+        trans = self.transactions.get(packet.index, None)
+        if trans:
+            trans.receive(packet)
+            return
+
+        if packet.data['cf']: #correspondent to stale transaction so drop
+            print "{0} Stale Transaction, dropping ...".format(self.name)
+            # Should send abort nack to drop transaction on other side
+            return
+
+        self.reply(packet)
+
+    def reply(self, packet):
         '''
-        Generates next session id number.
+        Reply to packet with corresponding transaction or action
         '''
-        self.sid += 1
-        if self.sid > 0xffffffffL:
-            self.sid = 1  # rollover to 1
-        return self.sid
+        if (packet.data['tk'] == raeting.trnsKinds.join and
+                packet.data['pk'] == raeting.pcktKinds.request and
+                packet.data['si'] == 0):
+            self.replyJoin(packet)
 
-    def nextTid(self):
+        if (packet.data['tk'] == raeting.trnsKinds.allow and
+                packet.data['pk'] == raeting.pcktKinds.hello and
+                packet.data['si'] != 0):
+            self.replyEndow(packet)
+
+    def join(self):
         '''
-        Generates next session id number.
+        Initiate join transaction
         '''
-        self.tid += 1
-        if self.tid > 0xffffffffL:
-            self.tid = 1  # rollover to 1
-        return self.tid
+        data = odict(hk=self.Hk, bk=self.Bk)
+        joiner = transacting.Joiner(stack=self, txData=data)
+        joiner.join()
 
-
-class LocalDevice(Device):
-    '''
-    RAET protocol endpoint local device object
-    Maintains signer for signing and privateer for encrypt/decript
-    '''
-    def __init__(self, signkey=None, prikey=None, **kwa):
+    def replyJoin(self, packet):
         '''
-        Setup Device instance
-
-        signkey is either nacl SigningKey or hex encoded key
-        prikey is either nacl PrivateKey or hex encoded key
+        Correspond to new join transaction
         '''
-        super(LocalDevice, self).__init__(**kwa)
-        self.signer = nacling.Signer(signkey)
-        self.priver = nacling.Privateer(prikey)  # Long term key
+        data = odict(hk=self.Hk, bk=self.Bk)
+        joinent = transacting.Joinent(stack=self,
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data,
+                                        rxPacket=packet)
+        joinent.join() #assigns .rdid here
+        # need to perform the check for accepted status somewhere
+        joinent.accept()
 
-
-class RemoteDevice(Device):
-    '''
-    RAET protocol endpoint remote device object
-    Maintains verifier for verifying signatures and publican for encrypt/decript
-    '''
-    def __init__(self, verikey=None, pubkey=None, **kwa):
+    def endow(self, rdid=None):
         '''
-        Setup Device instance
-
-        verikey is either nacl VerifyKey or hex encoded key
-        pubkey is either nacl PublicKey or hex encoded key
+        Initiate endow transaction
         '''
-        if 'host' not in kwa and 'ha' not in kwa:
-            kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
-        super(RemoteDevice, self).__init__(**kwa)
-        self.verfer = nacling.Verifier(verikey)
-        self.pubber = nacling.Publican(pubkey)  # long term key
-        self.publee = nacling.Publican()  # short term key
-        self.privee = nacling.Privateer()  # short term key
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        endower = transacting.Allower(stack=self, rdid=rdid, txData=data)
+        endower.hello()
 
-
-class Transaction(object):
-    '''
-    RAET protocol transaction class
-    '''
-    def __init__(self, stack=None, kind=None, rdid=None,
-                 crdr=False, bcst=False, sid=None, tid=None,
-                 rxData=None, txData=None,):
+    def replyEndow(self, packet):
         '''
-        Setup Transaction instance
+        Correspond to new endow transaction
         '''
-        self.stack = stack
-        self.kind = kind or raeting.PACKET_DEFAULTS['sk']
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        endowent = transacting.Allowent(stack=self,
+                                        rdid=packet.data['sd'],
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data,
+                                        rxPacket=packet)
+        endowent.hello()
 
-        # local device is the .stack.device
-        self.rdid = rdid  # remote device did
-
-        self.crdr = crdr
-        self.bcst = bcst
-
-        self.sid = sid
-        self.tid = tid
-
-        self.rxData = rxData or odict()
-        self.txData = txData or odict()
-        self.rxPacket = None  # last rx packet
-        self.txPacket = None  # last tx packet
-
-    def transmit(self, packet):
-        '''
-        Queue tx duple on stack transmit queue
-        '''
-        self.stack.txUdp(packet.packed, self.rdid)
-        self.txPacket = packet
-
-
-class Initiator(Transaction):
-    '''
-    RAET protocol initiator transaction class
-    '''
-    def __init__(self, crdr=False, **kwa):
-        '''
-        Setup Transaction instance
-        '''
-        crdr = False  # force crdr to False
-        super(Initiator, self).__init__(crdr=crdr, **kwa)
-        if self.sid is None:  # use current session id of local device
-            self.sid = self.stack.device.sid
-        if self.tid is None:  # use next tid
-            self.tid = self.stack.device.nextTid()
-
-
-class Corresponder(Transaction):
-    '''
-    RAET protocol corresponder transaction class
-    '''
-    def __init__(self, crdr=True, **kwa):
-        '''
-        Setup Transaction instance
-        '''
-        crdr = True  # force crdr to True
-        super(Corresponder, self).__init__(crdr=crdr, **kwa)
-
-
-class Joiner(Initiator):
-    '''
-    RAET protocol Joiner transaction class Dual of Acceptor
-    '''
-    def __init__(self, **kwa):
-        '''
-        Setup Transaction instance
-        '''
-        super(Joiner, self).__init__(**kwa)
-        if self.rdid is None:
-            self.rdid = self.stack.devices.values()[0].did  # zeroth is channel master
-
-    def join(self, body=None):
-        '''
-        Build first packet
-        '''
-        body = body or odict()
-        if self.rdid not in self.stack.devices:
-            msg = "Invalid remote destination device id '{0}'".format(self.rdid)
-            raise raeting.RaetError(msg)
-        self.txData.update(sh=self.stack.device.host,
-                           sp=self.stack.device.port,
-                           dh=self.stack.devices[self.rdid].host,
-                           dp=self.stack.devices[self.rdid].port, )
-        self.txData.update(sd=self.stack.device.did, dd=self.rdid, sk=self.kind,
-                         cf=self.crdr, bf=self.bcst,
-                         si=self.sid, ti=self.tid, nk=0, tk=0)
-        body.update(msg='Let me join',
-                    extra='Do you like me',
-                    verhex=self.stack.device.signer.verhex,
-                    pubhex=self.stack.device.priver.pubhex)
-        packet = packeting.TxPacket(kind=raeting.packetKinds.join,
-                                    embody=body,
-                                    data=self.txData)
-        packet.pack()
-        self.transmit(packet)
-
-    def accept(self, data, body=None):
-        '''
-        Perform acceptance
-        '''
-        verhex = body.get('verhex')
-        if not verhex:
-            msg = "Missing remote verifier key in accept packet"
-            raise raeting.RaetError(msg)
-
-        pubhex = body.get('pubhex')
-        if not pubhex:
-            msg = "Missing remote crypt key in accept packet"
-            raise raeting.RaetError(msg)
-
-        self.stack.device.did = data['dd']
-        device = self.stack.devices[self.rdid]
-
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
-
-        if device.did != data['sd']:  # move device to new index
-            self.stack.moveRemoteDevice(device.did, data['sd'])
-
-        self.stack.device.accepted = True
-
-    def pend(self, data, body=None):
-        '''
-        Perform pend as a result of accept ack reception
-        '''
-        pass
-
-
-class Acceptor(Corresponder):
-    '''
-    RAET protocol Accepter transaction class Dual of Joiner
-    '''
-    def __init__(self, **kwa):
-        '''
-        Setup Transaction instance
-        '''
-        super(Acceptor, self).__init__(**kwa)
-
-    def pend(self, data, body):
-        '''
-        Perform pend operation of pending device being accepted onto channel
-        '''
-        # need to add search for existing device with same host,port address
-
-        device = RemoteDevice(stack=self.stack, host=data['sh'], port=data['sp'])
-        self.stack.addRemoteDevice(device)  # provisionally add .accepted is None
-        self.rdid = device.did
-
-        verhex = body.get('verhex')
-        if not verhex:
-            msg = "Missing remote verifier key in join packet"
-            raise raeting.RaetError(msg)
-
-        pubhex = body.get('pubhex')
-        if not pubhex:
-            msg = "Missing remote crypt key in join packet"
-            raise raeting.RaetError(msg)
-
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
-
-        self.acceptAck()
-
-    def acceptAck(self, body=None):
-        '''
-        Send accept ack
-        '''
-        body = body or odict()
-        if self.rdid not in self.stack.devices:
-            msg = "Invalid remote destination device id '{0}'".format(self.rdid)
-            raise raeting.RaetError(msg)
-        self.txData.update(sh=self.stack.device.host,
-                           sp=self.stack.device.port,
-                           dh=self.stack.devices[self.rdid].host,
-                           dp=self.stack.devices[self.rdid].port, )
-        self.txData.update(sd=self.stack.device.did, dd=self.rdid, sk=self.kind,
-                         cf=self.crdr, bf=self.bcst,
-                         si=self.sid, ti=self.tid, nk=1, tk=1)
-        body.update(msg='Pending acceptance', extra='Who are you')
-        packet = packeting.TxPacket(kind=raeting.packetKinds.acceptAck,
-                                    embody=body,
-                                    data=self.txData)
-        packet.pack()
-        self.transmit(packet)
-
-    def accept(self, body=None):
-        '''
-        Build first packet
-        '''
-        body = body or odict()
-        if self.rdid not in self.stack.devices:
-            msg = "Invalid remote destination device id '{0}'".format(self.rdid)
-            raise raeting.RaetError(msg)
-        self.txData.update(sh=self.stack.device.host,
-                           sp=self.stack.device.port,
-                           dh=self.stack.devices[self.rdid].host,
-                           dp=self.stack.devices[self.rdid].port,)
-        self.txData.update(sd=self.stack.device.did, dd=self.rdid, sk=self.kind,
-                           cf=self.crdr, bf=self.bcst,
-                           si=self.sid, ti=self.tid, nk=1, tk=1)
-        body.update(msg='You are accepted',
-                    extra='We like you',
-                    verhex=self.stack.device.signer.verhex,
-                    pubhex=self.stack.device.priver.pubhex)
-        packet = packeting.TxPacket(kind=raeting.packetKinds.accept,
-                                    embody=body,
-                                    data=self.txData)
-        packet.pack()
-        self.transmit(packet)
