@@ -349,9 +349,12 @@ def install(name=None,
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a pacman -Syu
+
+    refresh
+        Whether or not to refresh the package database before installing.
 
     Return a dict containing the new package names and versions::
 
@@ -365,7 +368,9 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    cmd = 'pacman -Syu --noprogressbar --noconfirm'
+    cmd = 'pacman -Su --noprogressbar --noconfirm'
+    if salt.utils.is_true(refresh):
+        cmd += ' -y'
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
