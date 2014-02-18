@@ -110,7 +110,10 @@ a state.
 import logging
 
 from salt.loader import states
-from salt.utils.pyobjects import StateFactory, StateRegistry
+from salt.utils.pyobjects import StateRegistry
+from salt.utils.pyobjects import StateFactory  # pylint: disable=W0611
+# DO NOT REMOVE THE DISABLE ABOVE, it's used in an exec call below
+
 
 log = logging.getLogger(__name__)
 
