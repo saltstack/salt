@@ -268,4 +268,3 @@ candidate phase.
 - Fix compound commands (:issue:`9746`)
 - Add systemd notification when master is started
 - Many doc improvements
-
