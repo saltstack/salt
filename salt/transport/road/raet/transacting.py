@@ -437,9 +437,7 @@ class Allower(Initiator):
                             cf=self.rmt,
                             bf=self.bcst,
                             si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nada,
-                            fk=raeting.footKinds.nacl)
+                            ti=self.tid, )
 
     def hello(self):
         '''
@@ -605,9 +603,7 @@ class Allowent(Correspondent):
                             cf=self.rmt,
                             bf=self.bcst,
                             si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nada,
-                            fk=raeting.footKinds.nacl)
+                            ti=self.tid, )
 
     def hello(self):
         '''
@@ -796,9 +792,7 @@ class Messenger(Initiator):
                             cf=self.rmt,
                             bf=self.bcst,
                             si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nacl,
-                            fk=raeting.footKinds.nacl)
+                            ti=self.tid,)
 
     def message(self, body=None):
         '''
@@ -863,6 +857,7 @@ class Messengent(Correspondent):
         """
         super(Messengent, self).receive(packet)
 
+        # resent message
         if packet.data['tk'] == raeting.trnsKinds.message:
             if packet.data['pk'] == raeting.pcktKinds.message:
                 self.message()
@@ -882,9 +877,7 @@ class Messengent(Correspondent):
                             cf=self.rmt,
                             bf=self.bcst,
                             si=self.sid,
-                            ti=self.tid,
-                            ck=raeting.coatKinds.nacl,
-                            fk=raeting.footKinds.nacl)
+                            ti=self.tid,)
 
     def message(self):
         '''
@@ -892,9 +885,7 @@ class Messengent(Correspondent):
         '''
         data = self.rxPacket.data
         body = self.rxPacket.body.data
-
         self.stack.udpRxMsgs.append(body)
-
         self.ackMessage()
 
     def ackMessage(self):
@@ -916,6 +907,5 @@ class Messengent(Correspondent):
             print ex
             self.remove()
             return
-
         self.transmit(packet)
         self.remove()

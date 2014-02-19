@@ -28,6 +28,8 @@ class StackUdp(object):
     Count = 0
     Hk = raeting.headKinds.json # stack default
     Bk = raeting.bodyKinds.json # stack default
+    Fk = raeting.footKinds.nacl # stack default
+    Ck = raeting.coatKinds.nacl # stack default
 
     def __init__(self,
                  name='',
@@ -139,6 +141,16 @@ class StackUdp(object):
             raise raeting.StackError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
 
+    def serviceUdpTxMsg(self):
+        '''
+        Service .udpTxMsgs queue of outgoint udp messages for message transactions
+        '''
+        while self.udpTxMsgs:
+            body, ddid = self.udpTxMsgs.popleft() # duple (body dict, destination did)
+            self.message(body, ddid)
+            print "{0} sending\n{1}".format(self.name, body)
+
+
     def fetchParseUdpRx(self):
         '''
         Fetch from UDP deque next packet tuple
@@ -248,7 +260,7 @@ class StackUdp(object):
         '''
         Initiate allow transaction
         '''
-        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
         allower = transacting.Allower(stack=self, rdid=rdid, txData=data)
         allower.hello()
 
@@ -256,7 +268,7 @@ class StackUdp(object):
         '''
         Correspond to new allow transaction
         '''
-        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
         allowent = transacting.Allowent(stack=self,
                                         rdid=packet.data['sd'],
                                         sid=packet.data['si'],
@@ -269,7 +281,7 @@ class StackUdp(object):
         '''
         Initiate message transaction
         '''
-        data = odict(hk=self.Hk, bk=self.Bk)
+        data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
         messenger = transacting.Messenger(stack=self, txData=data, rdid=ddid)
         messenger.message(body)
 
@@ -277,7 +289,7 @@ class StackUdp(object):
         '''
         Correspond to new Message transaction
         '''
-        data = odict(hk=self.Hk, bk=self.Bk)
+        data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
         messengent = transacting.Messengent(stack=self,
                                         rdid=packet.data['sd'],
                                         sid=packet.data['si'],
