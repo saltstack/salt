@@ -163,14 +163,15 @@ class CronTestCase(TestCase):
                 dayweek='*',
                 cmd='ls',
                 comment=None,
-                identifier=None,
+                identifier=cron.SALT_CRON_NO_IDENTIFIER,
             )
             c1 = get_crontab()
             set_crontab(L + '* * * * * ls\n')
             self.assertEqual(
                 c1,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '* * * * * ls\n'
+                '# SALT_CRON_IDENTIFIER:NO ID SET\n'
+                '* * * * * ls'
             )
             cron.set_job(
                 user='root',
@@ -181,14 +182,13 @@ class CronTestCase(TestCase):
                 dayweek='*',
                 cmd='ls',
                 comment='foo',
-                identifier=None,
+                identifier=cron.SALT_CRON_NO_IDENTIFIER,
             )
             c2 = get_crontab()
             self.assertEqual(
                 c2,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '# foo\n'
-                '* * * * * ls'
+                '# foo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls'
             )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
@@ -198,7 +198,7 @@ class CronTestCase(TestCase):
                 daymonth='*',
                 month='*',
                 dayweek='*',
-                cmd='ls',
+                cmd='lsa',
                 comment='foo',
                 identifier='bar',
             )
@@ -206,8 +206,9 @@ class CronTestCase(TestCase):
             self.assertEqual(
                 c3,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '# foo\n'
-                '* * * * * ls'
+                '* * * * * ls\n'
+                '# foo SALT_CRON_IDENTIFIER:bar\n'
+                '* * * * * lsa'
             )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
@@ -228,6 +229,25 @@ class CronTestCase(TestCase):
                 '* * * * * ls\n'
                 '# foo SALT_CRON_IDENTIFIER:bar\n'
                 '* * * * * foo'
+            )
+            set_crontab(L + '* * * * * ls\n')
+            cron.set_job(
+                user='root',
+                minute='*',
+                hour='*',
+                daymonth='*',
+                month='*',
+                dayweek='*',
+                cmd='ls',
+                comment='foo',
+                identifier='bbar',
+            )
+            c4 = get_crontab()
+            self.assertEqual(
+                c4,
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# foo SALT_CRON_IDENTIFIER:bbar\n'
+                '* * * * * ls'
             )
 
     @patch('salt.modules.cron.raw_cron',
@@ -370,4 +390,3 @@ class PsTestCase(TestCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests([PsTestCase, CronTestCase], needs_daemon=False)
-

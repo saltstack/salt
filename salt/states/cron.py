@@ -92,7 +92,11 @@ import os
 # Import salt libs
 import salt._compat
 import salt.utils
-from salt.modules.cron import _needs_change, _cron_matched
+from salt.modules.cron import (
+    _needs_change,
+    _cron_matched,
+    SALT_CRON_NO_IDENTIFIER
+)
 
 
 def _check_cron(user,
@@ -214,17 +218,18 @@ def present(name,
 
     identifier
         Custom defined identifier for tracking the cron line for futur crontab
-        edits. This defaults to no matching (old behavior, may chance
-        in futur releases).
+        edits. This defaults to state id
     '''
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
     if __opts__['test']:
         status = _check_cron(user,
-                             name=name,
+                             cmd=name,
                              minute=minute,
                              hour=hour,
                              daymonth=daymonth,
@@ -287,14 +292,15 @@ def absent(name,
 
     identifier
         Custom defined identifier for tracking the cron line for futur crontab
-        edits. This defaults to no matching (old behavior, may chance
-        in futur releases).
+        edits. This defaults to state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'name': name,
            'result': True,
            'changes': {},

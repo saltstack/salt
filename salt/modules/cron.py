@@ -13,6 +13,7 @@ import salt.utils
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
+SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
 
 
 def _encode(string):
@@ -24,8 +25,10 @@ def _encode(string):
 def _cron_id(cron):
     '''SAFEBELT, Oanly setted if we really have an identifier'''
     cid = None
-    if cron['identifier'] is not None and cron['identifier']:
+    if cron['identifier']:
         cid = cron['identifier']
+    else:
+        cid = SALT_CRON_NO_IDENTIFIER
     if cid:
         return _encode(cid)
 
@@ -43,9 +46,15 @@ def _cron_matched(cron, cmd, identifier=None):
     cid = _cron_id(cron)
     if cid:
         eidentifier = _encode(identifier)
+        if (
+            cron.get('cmd', None) == cmd
+            and cid == SALT_CRON_NO_IDENTIFIER
+            and identifier
+        ):
+            cid = eidentifier
         id_matched = eidentifier == cid
     if (
-        ((id_matched is None) and cmd == cron['cmd'])
+        ((id_matched is None) and cmd == cron.get('cmd', None))
         or id_matched
     ):
         ret = True
@@ -351,12 +360,13 @@ def set_job(user,
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
             tests = [(cron['comment'], comment),
+                     (cron['identifier'], identifier),
                      (cron['minute'], minute),
                      (cron['hour'], hour),
                      (cron['daymonth'], daymonth),
                      (cron['month'], month),
                      (cron['dayweek'], dayweek)]
-            if cid:
+            if cid or identifier:
                 tests.append((cron['cmd'], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
                 rm_job(user, cmd, identifier=cid)
@@ -375,13 +385,18 @@ def set_job(user,
                     dayweek = cron['dayweek']
                 if not _needs_change(cron['comment'], comment):
                     comment = cron['comment']
+                if not _needs_change(cron['cmd'], cmd):
+                    cmd = cron['cmd']
+                    if (
+                        cid == SALT_CRON_NO_IDENTIFIER
+                    ):
+                        if identifier:
+                            cid = identifier
+                        cron['identifier'] = cid
                 if not cid or (
                     cid and not _needs_change(cid, identifier)
                 ):
                     identifier = cid
-                if not _needs_change(cron['cmd'], cmd):
-                    cmd = cron['cmd']
-
                 jret = set_job(user, minute, hour, daymonth,
                                month, dayweek, cmd, comment,
                                identifier=identifier)
@@ -397,6 +412,7 @@ def set_job(user,
                                     daymonth=daymonth, month=month,
                                     dayweek=dayweek))
     lst['crons'].append(cron)
+
     comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error

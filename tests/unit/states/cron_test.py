@@ -31,6 +31,9 @@ STUB_SIMPLE_CRON_DICT = {
     'env': [],
     'special': []}
 
+__low__ = {
+    '__id__': 'noo'
+}
 __grains__ = {
     'os': 'Debian',
     'os_family': 'Debian',
@@ -39,6 +42,7 @@ __grains__ = {
 cron.__opts__ = {
     'test': False,
 }
+cronmod.__low__ = cron.__low__ = __low__
 cronmod.__grains__ = cron.__grains__ = __grains__
 cronmod.__salt__ = cron.__salt__ = {
     'cmd.run_all': MagicMock(return_value={
@@ -109,6 +113,14 @@ class CronTestCase(TestCase):
             '* 2 * * * foo\n'
             '# SALT_CRON_IDENTIFIER:2\n'
             '* 2 * * * foo')
+        set_crontab(
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 2 * * * foo\n'
+            '# SALT_CRON_IDENTIFIER:2\n'
+            '* 2 * * * foo\n'
+            '* 2 * * * foo\n'
+        )
         cron.present(
             name='foo',
             hour='2',
@@ -120,6 +132,7 @@ class CronTestCase(TestCase):
             '* 2 * * * foo\n'
             '# SALT_CRON_IDENTIFIER:2\n'
             '* 2 * * * foo\n'
+            '# SALT_CRON_IDENTIFIER:NO ID SET\n'
             '* 2 * * * foo')
 
     @patch('salt.modules.cron.raw_cron',
