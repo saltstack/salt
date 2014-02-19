@@ -29,22 +29,17 @@ from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
-from salt.cloud.libcloudfuncs import libcloud_version
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 log = logging.getLogger(__name__)
 
 
 class SaltCloud(parsers.SaltCloudParser):
+
     def run(self):
         '''
         Execute the salt-cloud command line
         '''
-        try:
-            libcloud_version()
-        except ImportError as exc:
-            self.error(exc)
-
         # Parse shell arguments
         self.parse_args()
 

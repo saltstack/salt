@@ -2260,6 +2260,15 @@ class SaltCloudParser(OptionParser,
               file=file)
         self.exit()
 
+    def parse_args(self, args=None, values=None):
+        try:
+            # Late import in order not to break setup
+            from salt.cloud import libcloudfuncs
+            libcloudfuncs.check_libcloud_version()
+        except ImportError as exc:
+            self.error(exc)
+        return super(SaltCloudParser, self).parse_args(args, values)
+
     def _mixin_after_parsed(self):
         if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:
             import pprint

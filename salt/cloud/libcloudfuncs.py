@@ -27,6 +27,7 @@ import salt.utils.event
 import salt.client
 
 # Import salt cloud libs
+import salt.utils
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
@@ -35,7 +36,7 @@ from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 log = logging.getLogger(__name__)
 
 
-LIBCLOUD_MINIMAL_VERSION = '0.14.0'
+LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)
 
 
 def node_state(id_):
@@ -51,60 +52,49 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     '''
     Compare different libcloud versions
     '''
+    if not isinstance(reqver, (list, tuple)):
+        raise RuntimeError(
+            '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
+        )
     try:
         import libcloud
     except ImportError:
-        raise ImportError('salt-cloud requires >= libcloud {0}'.format(reqver))
+        raise ImportError(
+            'salt-cloud requires >= libcloud {0} which is not installed'.format(
+                '.'.join([str(num) for num in reqver])
+            )
+        )
 
-    reqver = reqver.replace('-', '.')
-    comps = reqver.split('.')
-    required_version = []
-    for number in comps[:3]:
-        required_version.append(int(number))
     ver = libcloud.__version__
     ver = ver.replace('-', '.')
     comps = ver.split('.')
     version = []
     for number in comps[:3]:
         version.append(int(number))
+
+    if tuple(version) >= reqver:
+        return libcloud.__version__
+
     errormsg = 'Your version of libcloud is {0}. '.format(libcloud.__version__)
-    errormsg += 'salt-cloud requires >= libcloud {0}'.format(required_version)
+    errormsg += 'salt-cloud requires >= libcloud {0}'.format(
+        '.'.join([str(num) for num in reqver])
+    )
     if why:
         errormsg += ' for {0}'.format(why)
     errormsg += '. Please upgrade.'
-    if version < required_version:
-        raise ImportError(errormsg)
-    return libcloud.__version__
+    raise ImportError(errormsg)
 
 
 def libcloud_version():
     '''
     Require the minimal libcloud version
     '''
-    try:
-        import libcloud
-    except ImportError:
-        raise ImportError(
-            'salt-cloud requires libcloud >= {0}'.format(
-                LIBCLOUD_MINIMAL_VERSION
-            )
-        )
-
-    ver = libcloud.__version__
-    ver = ver.replace('-', '.')
-    comps = ver.split('.')
-    version = []
-    for number in comps[:3]:
-        version.append(int(number))
-    if version < [0, 13, 2]:
-        raise ImportError(
-            'Your version of libcloud is {0}. salt-cloud requires '
-            'libcloud >= {0}. Please upgrade.'.format(
-                libcloud.__version__,
-                LIBCLOUD_MINIMAL_VERSION
-            )
-        )
-    return libcloud.__version__
+    salt.utils.warn_until(
+        'Helium',
+        'Please stop using \'salt.cloud.libcloudfuns.libcloud_version()\'. '
+        'Instead use \'salt.cloud.libcloudfuns.check_libcloud_version()\'.'
+    )
+    return check_libcloud_version()
 
 
 def get_node(conn, name):
