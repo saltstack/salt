@@ -250,7 +250,8 @@ class TxCoat(Coat):
                 self.packed = "".join([cipher, nonce])
 
         if self.kind == raeting.coatKinds.nada:
-            self.packed = self.packet.body.packed
+            #self.packed = self.packet.body.packed
+            pass
 
 class RxCoat(Coat):
     '''
@@ -278,8 +279,8 @@ class RxCoat(Coat):
                 self.packet.body.packed = self.packed
 
         if self.kind == raeting.coatKinds.nada:
-            self.packet.body.packed = self.packed
-
+            #self.packet.body.packed = self.packed
+            pass
 
 class Foot(Part):
     '''
@@ -355,7 +356,13 @@ class RxFoot(Foot):
 
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
-            msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+
+            if self.packet.coat.size:
+                stuff = self.packet.coat.packed
+            else:
+                stuff = self.packet.body.packed
+
+            msg = "".join([self.packet.head.packed, stuff, blank])
             if not self.packet.verify(signature, msg):
                 emsg = "Failed verification"
                 raise raeting.PacketError(emsg)
@@ -426,7 +433,9 @@ class TxPacket(Packet):
         Sign packet with foot
         '''
         self.foot.sign()
-        self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
+        self.packed = ''.join([self.head.packed,
+                               self.coat.packed or self.body.packed,
+                               self.foot.packed])
 
     def encrypt(self, msg):
         '''
@@ -444,7 +453,9 @@ class TxPacket(Packet):
         self.coat.pack()
         self.foot.pack()
         self.head.pack()
-        self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
+        self.packed = ''.join([self.head.packed,
+                               self.coat.packed or self.body.packed,
+                               self.foot.packed])
         self.sign()
 
 class RxPacket(Packet):
@@ -496,19 +507,27 @@ class RxPacket(Packet):
         fl = self.data['fl']
 
         ck = self.data['ck']
-        if ck == raeting.coatKinds.nada and cl != bl: #not encrypted so coat and body the same
-            emsg = ("Coat kind '{0}' incompatible with coat length '{0}' "
-                          "and body length '{2}'".format(cl, cl, bl))
-            raise raeting.PacketError(emsg)
+        #if ck == raeting.coatKinds.nada and cl != bl: #not encrypted so coat and body the same
+            #emsg = ("Coat kind '{0}' incompatible with coat length '{0}' "
+                          #"and body length '{2}'".format(cl, cl, bl))
+            #raise raeting.PacketError(emsg)
 
-        pl = hl + cl + fl
-        if self.size != pl:
-            emsg = ("Packet length '{0}' does not equal sum of the parts"
-                          " '{1}'".format(self.size, pl))
-            raise raeting.PacketError(emsg)
-
-        self.coat.packed = self.packed[hl:hl+cl]
-        self.foot.packed = self.packed[hl+cl:]
+        if ck == raeting.coatKinds.nada:
+            pl = hl + bl + fl
+            if self.size != pl:
+                emsg = ("Packet length '{0}' does not equal sum of the parts"
+                              " '{1}'".format(self.size, pl))
+                raise raeting.PacketError(emsg)
+            self.body.packed = self.packed[hl:hl+bl]
+            self.foot.packed = self.packed[hl+bl:]
+        else:
+            pl = hl + cl + fl
+            if self.size != pl:
+                emsg = ("Packet length '{0}' does not equal sum of the parts"
+                              " '{1}'".format(self.size, pl))
+                raise raeting.PacketError(emsg)
+            self.coat.packed = self.packed[hl:hl+cl] #coat.parse loads body.packed
+            self.foot.packed = self.packed[hl+cl:]
 
     def parse(self, packed=None):
         '''
