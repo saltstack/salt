@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "7" "January 02, 2014" "2014.1.0" "Salt"
+.TH "SALT" "7" "February 19, 2014" "2014.1.0" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -821,34 +821,19 @@ Now go to the \fBConfiguring Salt\fP page.
 .SS OS X
 .SS Dependency Installation
 .sp
-ZeroMQ and swig need to be installed first.
-.sp
-For installs using \fI\%python installed via homebrew\fP, sudo should be unnecessary:
-.INDENT 0.0
-.TP
-.B Using homebrew with
-\fI\%XCode Command Line Tool (XCode: Preferences: Downloads: Command Line Tools: Install)\fP pre\-installed:
-.UNINDENT
+When installing via Homebrew, dependency resolution is handled for you.
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-brew install python
-brew install swig
-brew install zmq
-pip install salt
+brew install saltstack
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.INDENT 0.0
-.TP
-.B This should pip install salt and its dependencies, such as:
-Jinja2 M2Crypto msgpack\-python pycrypto PyYAML pyzmq markupsafe
-.UNINDENT
 .sp
-Whereas when using macports, zmq, swig, and pip may need to be installed this way:
+When using macports, zmq, swig, and pip may need to be installed this way:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -1356,12 +1341,12 @@ Now go to the \fBConfiguring Salt\fP page.
 .sp
 Salt has full support for running the Salt Minion on Windows.
 .sp
-There are no plans for the foreseeable future to develop a Salt
-Master on Windows. For now you must run your Salt Master on a
-supported operating system to control your Salt Minions on Windows.
+There are no plans for the foreseeable future to develop a Salt Master on
+Windows. For now you must run your Salt Master on a supported operating system
+to control your Salt Minions on Windows.
 .sp
-Many of the standard Salt modules have been ported to work on Windows
-and many of the Salt States currently work on Windows, as well.
+Many of the standard Salt modules have been ported to work on Windows and many
+of the Salt States currently work on Windows, as well.
 .SS Windows Installer
 .sp
 A Salt Minion Windows installer can be found here:
@@ -1436,6 +1421,14 @@ A Salt Minion Windows installer can be found here:
 .IP \(bu 2
 \fI\%http://docs.saltstack.com/downloads/Salt\-Minion\-0.14.0\-AMD64\-Setup.exe\fP
 .UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+The executables above will install dependencies that the Salt minion
+requires.
 .UNINDENT
 .UNINDENT
 .sp
@@ -2178,9 +2171,23 @@ document\fP\&.
 .INDENT 3.5
 .IP "Run as an unprivileged (non\-root) user"
 .sp
-To run Salt as another user, specify \fB\-\-user\fP in the command
-line or assign \fBuser\fP in the
-\fBconfiguration file\fP\&.
+To run Salt as another user, set the \fBuser\fP parameter in the
+master config file.
+.sp
+Additionally, ownership and permissions need to be set such that the
+desired user can read from and write to the following directories (and
+their subdirectories, where applicable):
+.INDENT 0.0
+.IP \(bu 2
+/etc/salt
+.IP \(bu 2
+/var/cache/salt
+.IP \(bu 2
+/var/log/salt
+.UNINDENT
+.sp
+More information about running salt as a non\-privileged user can be found
+\fBhere\fP\&.
 .UNINDENT
 .UNINDENT
 .sp
@@ -2657,6 +2664,10 @@ Uncomment and change the \fBmaster: salt\fP value to point at \fBlocalhost\fP\&.
 Uncomment and change the \fBid:\fP value to something descriptive like
 "saltdev". This isn\(aqt strictly necessary but it will serve as a reminder of
 which Salt installation you are working with.
+.IP 5. 3
+If you changed the \fBret_port\fP value in the master config because you are
+also running a non\-development version of Salt, then you will have to
+change the \fBmaster_port\fP value in the minion config to match.
 .UNINDENT
 .sp
 \fBNOTE:\fP
@@ -2997,6 +3008,14 @@ Match the \fBweb\-x\fP, \fBweb\-y\fP, and \fBweb\-z\fP minions:
 salt \(aqweb\-[x\-z]\(aq test.ping
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+For additional targeting methods please review the
+\fBcompound matchers\fP documentation.
 .UNINDENT
 .UNINDENT
 .SS Regular Expressions
@@ -3460,6 +3479,18 @@ something like the following must be done:
 .nf
 .ft C
 salt \-C \(aq* and not G@kernel:Darwin\(aq test.ping
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Excluding a minion based on its ID is also possible:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \-C \(aq* and not web\-dc1\-srv\(aq test.ping
 .ft P
 .fi
 .UNINDENT
@@ -5869,17 +5900,16 @@ master config file.
 Distribute the minion keys.
 .UNINDENT
 .sp
-There is no single method to get the keypair to your minion. If you are
-spooling up minions on EC2, you could pass them in using user_data or a
-cloud\-init script. If you are handing them off to a team of developers for
-provisioning dev machines, you will need a secure file transfer.
+There is no single method to get the keypair to your minion.  The difficulty is
+finding a distribution method which is secure.
 .INDENT 0.0
 .INDENT 3.5
 .IP "Security Warning"
 .sp
 Since the minion key is already accepted on the master, distributing
 the private key poses a potential security risk. A malicious party
-will have access to your entire state tree and other sensitive data.
+will have access to your entire state tree and other sensitive data if they
+gain access to a preseeded minion key.
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -10508,11 +10538,8 @@ In Salt versions greater than 0.12.0, the scheduling system allows incremental
 executions on minions or the master. The schedule system exposes the execution
 of any execution function on minions or any runner on the master.
 .sp
-To set up the scheduler on the master add the schedule option to the master
-config file.
-.sp
-To set up the scheduler on the minion add the schedule option to
-the minion config file or to the minion\(aqs pillar.
+Scheduling is enabled via the \fBschedule\fP option on either the master or minion
+config files, or via a minion\(aqs pillar data.
 .sp
 \fBNOTE:\fP
 .INDENT 0.0
@@ -10523,8 +10550,36 @@ running on the minion the functions specify execution functions.
 .UNINDENT
 .UNINDENT
 .sp
-The schedule option defines jobs which execute at certain intervals. To set up a highstate
-to run on a minion every 60 minutes set this in the minion config or pillar:
+Specify \fBmaxrunning\fP to ensure that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long\-running
+and could step on each other or otherwise double execute.  The default for
+\fBmaxrunning\fP is 1.
+.sp
+States are executed on the minion, as all states are. You can pass positional
+arguments are provide a yaml dict of named arguments.
+.SS States
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+schedule:
+  log\-loadavg:
+    function: cmd.run
+    seconds: 3660
+    args:
+      \- \(aqlogger \-t salt < /proc/loadavg\(aq
+    kwargs:
+      stateful: False
+      shell: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Highstates
+.sp
+To set up a highstate to run on a minion every 60 minutes set this in the
+minion config or pillar:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -10539,9 +10594,11 @@ schedule:
 .UNINDENT
 .UNINDENT
 .sp
-Time intervals can be specified as seconds, minutes, hours, or days. Runner
-executions can also be specified on the master within the master configuration
-file:
+Time intervals can be specified as seconds, minutes, hours, or days.
+.SS Runners
+.sp
+Runner executions can also be specified on the master within the master
+configuration file:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -10585,29 +10642,53 @@ schedule:
 .UNINDENT
 .sp
 Since specifying the returner repeatedly can be tiresome, the
-\fIschedule_returner\fP option is available to specify one or a list of global
+\fBschedule_returner\fP option is available to specify one or a list of global
 returners to be used by the minions when scheduling.
-.SH RUNNING THE SALT MASTER AS UNPRIVILEGED USER
+.SH RUNNING THE SALT MASTER/MINION AS AN UNPRIVILEGED USER
 .sp
-While the default setup runs the Salt Master as the root user, it is generally
-wise to run servers as an unprivileged user. In Salt 0.9.10 the management
-of the running user was greatly improved, the only change needed is to alter
-the option \fBuser\fP in the master configuration file and all salt system
-components will be updated to function under the new user when the master
-is started.
+While the default setup runs the master and minion as the root user, it is
+generally wise to run the master as an unprivileged user.
 .sp
-If running a version older that 0.9.10 then a number of files need to be
-owned by the user intended to run the master:
+As of Salt 0.9.10 it is possible to run Salt as as a non\-root user. This can be
+done by setting the \fBuser\fP parameter in the master configuration
+file. and restarting the \fBsalt\-master\fP service.
+.sp
+The minion has it\(aqs own \fBuser\fP parameter as well, but running the
+minion as an unprivileged user will keep it from making changes to things like
+users, installed packages, etc. unless access controls (sudo, etc.) are setup
+on the minion to permit the non\-root user to make the needed changes.
+.sp
+In order to allow Salt to successfully run as a non\-root user, ownership and
+permissions need to be set such that the desired user can read from and write
+to the following directories (and their subdirectories, where applicable):
+.INDENT 0.0
+.IP \(bu 2
+/etc/salt
+.IP \(bu 2
+/var/cache/salt
+.IP \(bu 2
+/var/log/salt
+.UNINDENT
+.sp
+Ownership can be easily changed with \fBchown\fP, like so:
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-# chown \-R <user> /var/cache/salt
-# chown \-R <user> /var/log/salt
-# chown \-R <user> /etc/salt/pki
+# chown \-R user /etc/salt /var/cache/salt /var/log/salt
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBWARNING:\fP
+.INDENT 0.0
+.INDENT 3.5
+Running either the master or minion with the \fBroot_dir\fP
+parameter specified will affect these paths, as will setting options like
+\fBpki_dir\fP, \fBcachedir\fP, \fBlog_file\fP,
+and other options that normally live in the above directories.
 .UNINDENT
 .UNINDENT
 .SH TROUBLESHOOTING
@@ -10861,6 +10942,9 @@ killall \-SIGUSR1 salt\-minion
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+Also under BSD and Mac OS X in addition to SIGUSR1 signal, debug subroutine set
+up for SIGINFO which has an advantage of being sent by Ctrl+T shortcut.
 .sp
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon this information can be invaluable.
@@ -14839,6 +14923,18 @@ my\-digitalocean\-config:
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
+DigitalOcean\(aqs concept of \fBApplications\fP is nothing more than a
+pre\-configured instance (same as a normal Droplet). You will find examples
+such \fBDocker 0.7 Ubuntu 13.04 x64\fP and \fBWordpress on Ubuntu 12.10\fP
+when using the \fB\-\-list\-images\fP option. These names can be used just like
+the rest of the standard instances when specifying an image in the cloud
+profile configuration.
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
 Additional documentation is available from \fI\%Digital Ocean\fP\&.
 .UNINDENT
 .UNINDENT
@@ -17169,7 +17265,7 @@ all
 It has become increasingly common for users to set up multi\-hierarchal
 infrastructures using Salt Cloud. This sometimes involves setting up an
 instance to be a master in addition to a minion. With that in mind, you can
-now law down master configuration on a machine by specifying master options
+now lay down master configuration on a machine by specifying master options
 in the profile or map file.
 .INDENT 0.0
 .INDENT 3.5
@@ -17741,9 +17837,11 @@ cent_joyent:
 Rackspace is a major public cloud platform which may be configured using either
 the \fIrackspace\fP or the \fIopenstack\fP driver, depending on your needs.
 .sp
-Please note that the \fIrackspace\fP driver is only intended for "the old cloud" at
-Rackspace. Unless you explicitly have a reason to use it, it is highly
-recommended that you use the \fIopenstack\fP driver instead.
+Please note that the \fIrackspace\fP driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will \fInot\fP work with OpenStack\-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the \fIopenstack\fP driver
+instead.
 .INDENT 0.0
 .TP
 .B To use the \fIopenstack\fP driver (recommended), set up the cloud configuration at
@@ -18400,7 +18498,7 @@ Set up the cloud config at \fB/etc/salt/cloud.providers\fP:
     user: MYUSER1138
     apikey: \(aqe3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9\(aq
 
-    provider: softlayer\-hw
+    provider: softlayer_hw
 .ft P
 .fi
 .UNINDENT
@@ -18799,7 +18897,7 @@ The \fIglobalIdentifier\fP returned in this list is necessary for the
 \fIglobal_identifier\fP option when creating an image using a custom template.
 .SS Optional Products for SoftLayer HW
 .sp
-The softlayer\-hw provider supports the ability to add optional products, which
+The softlayer_hw provider supports the ability to add optional products, which
 are supported by SoftLayer\(aqs API. These products each have an ID associated with
 them, that can be passed into Salt Cloud with the \fIoptional_products\fP option:
 .INDENT 0.0
@@ -19542,8 +19640,9 @@ supported cloud providers.
 .UNINDENT
 .SH LEGACY RELEASES
 .sp
-Changed in version Hydrogen: Release notes will be part of Salt\(aqs main release notes starting with
-Salt\(aqs Hydrogen release.
+Changed in version 2014.1.0: (Hydrogen)
+Release notes will be part of Salt\(aqs main release notes starting with
+Salt\(aqs 2014.1.0 (Hydrogen) release.
 
 .INDENT 0.0
 .IP \(bu 2
@@ -21323,6 +21422,41 @@ result to a variable that can be used throughout the formula.
 .UNINDENT
 .UNINDENT
 .sp
+The above example is used to help explain how the mapping works. In most
+map files you will see the following structure:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{% set mysql = salt[\(aqgrains.filter_by\(aq]({
+    \(aqDebian\(aq: {
+        \(aqserver\(aq: \(aqmysql\-server\(aq,
+        \(aqclient\(aq: \(aqmysql\-client\(aq,
+        \(aqservice\(aq: \(aqmysql\(aq,
+        \(aqconfig\(aq: \(aq/etc/mysql/my.cnf\(aq,
+        \(aqpython\(aq: \(aqpython\-mysqldb\(aq,
+    },
+    \(aqRedHat\(aq: {
+        \(aqserver\(aq: \(aqmysql\-server\(aq,
+        \(aqclient\(aq: \(aqmysql\(aq,
+        \(aqservice\(aq: \(aqmysqld\(aq,
+        \(aqconfig\(aq: \(aq/etc/my.cnf\(aq,
+        \(aqpython\(aq: \(aqMySQL\-python\(aq,
+    },
+    \(aqGentoo\(aq: {
+        \(aqserver\(aq: \(aqdev\-db/mysql\(aq,
+        \(aqmysql\-client\(aq: \(aqdev\-db/mysql\(aq,
+        \(aqservice\(aq: \(aqmysql\(aq,
+        \(aqconfig\(aq: \(aq/etc/mysql/my.cnf\(aq,
+        \(aqpython\(aq: \(aqdev\-python/mysql\-python\(aq,
+    },
+}, merge=salt[\(aqpillar.get\(aq](\(aqmysql:lookup\(aq)) %}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
 The \fBmerge\fP keyword specifies the location of a dictionary in Pillar that can
 be used to override values returned from the lookup table. If the value exists
 in Pillar it will take precedence, otherwise \fBmerge\fP will be ignored. This is
@@ -21859,6 +21993,41 @@ result to a variable that can be used throughout the formula.
 
 {% set mysql = salt[\(aqgrains.filter_by\(aq](mysql_lookup_table,
     merge=salt[\(aqpillar.get\(aq](\(aqmysql:lookup\(aq))
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The above example is used to help explain how the mapping works. In most
+map files you will see the following structure:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{% set mysql = salt[\(aqgrains.filter_by\(aq]({
+    \(aqDebian\(aq: {
+        \(aqserver\(aq: \(aqmysql\-server\(aq,
+        \(aqclient\(aq: \(aqmysql\-client\(aq,
+        \(aqservice\(aq: \(aqmysql\(aq,
+        \(aqconfig\(aq: \(aq/etc/mysql/my.cnf\(aq,
+        \(aqpython\(aq: \(aqpython\-mysqldb\(aq,
+    },
+    \(aqRedHat\(aq: {
+        \(aqserver\(aq: \(aqmysql\-server\(aq,
+        \(aqclient\(aq: \(aqmysql\(aq,
+        \(aqservice\(aq: \(aqmysqld\(aq,
+        \(aqconfig\(aq: \(aq/etc/my.cnf\(aq,
+        \(aqpython\(aq: \(aqMySQL\-python\(aq,
+    },
+    \(aqGentoo\(aq: {
+        \(aqserver\(aq: \(aqdev\-db/mysql\(aq,
+        \(aqmysql\-client\(aq: \(aqdev\-db/mysql\(aq,
+        \(aqservice\(aq: \(aqmysql\(aq,
+        \(aqconfig\(aq: \(aq/etc/mysql/my.cnf\(aq,
+        \(aqpython\(aq: \(aqdev\-python/mysql\-python\(aq,
+    },
+}, merge=salt[\(aqpillar.get\(aq](\(aqmysql:lookup\(aq)) %}
 .ft P
 .fi
 .UNINDENT
@@ -24515,6 +24684,322 @@ action can be completed with Salt.
 \fI\%https://github.com/jesusaurus/hpcs\-salt\-state\fP
 .sp
 \fI\%https://github.com/gravyboat/hungryadmin\-sls\fP
+.SH SALT PROXY MINION DOCUMENTATION
+.sp
+Proxy minions are a developing Salt feature that enables controlling devices
+that, for whatever reason, cannot run a standard salt\-minion.  Examples include
+network gear that has an API but runs a proprietary OS, devices with limited
+CPU or memory, or devices that could run a minion, but for security reasons,
+will not.
+.sp
+\fIProxy minions are not an "out of the box" feature\fP\&.  Because
+there are an infinite number of controllable devices,
+you will most likely have to write the
+interface yourself. Fortunately, this is only as difficult as the actual
+interface to the proxied device.  Devices that have an existing Python module
+(PyUSB for example) would be relatively simple to interface.  Code to control
+a device that has an HTML REST\-based interface should be easy.  Code to control
+your typical housecat would be excellent source material for a PhD thesis.
+.sp
+Salt proxy\-minions provide the \(aqplumbing\(aq that allows device enumeration
+and discovery, control, status, remote execution, and state management.
+.SS Getting Started
+.sp
+The following diagram may be helpful in understanding the structure of a Salt
+installation that includes proxy\-minions:
+[image]
+.sp
+The key thing to remember is the left\-most section of the diagram.  Salt\(aqs
+nature is to have a minion connect to a master, then the master may control
+the minion.  However, for proxy minions, the target device cannot run a minion,
+and thus must rely on a separate minion to fire up the proxy\-minion and make the
+initial and persistent connection.
+.sp
+After the proxy minion is started and initiates its connection to the \(aqdumb\(aq
+device, it connects back to the salt\-master and ceases to be affiliated in
+any way with the minion that started it.
+.sp
+To create support for a proxied device one needs to create four things:
+.INDENT 0.0
+.IP 1. 3
+The \fI\%proxytype connection class\fP (located in salt/proxy).
+.IP 2. 3
+The \fI\%grains support code\fP (located in salt/grains).
+.IP 3. 3
+
+.nf
+\(gaSalt modules\(ga_
+.fi
+ specific to the controlled device.
+.IP 4. 3
+ specific to the controlled device.
+.UNINDENT
+.SS Configuration parameters on the master
+.sp
+Proxy minions require no configuration parameters in /etc/salt/master.
+.sp
+Salt\(aqs Pillar system is ideally suited for configuring proxy\-minions.  Proxies
+can either be designated via a pillar file in pillar_roots, or through an
+external pillar.  External pillars afford the opportunity for interfacing with
+a configuration management system, database, or other knowledgeable system that
+that may already contain all the details of proxy targets.  To use static files
+in pillar_roots, pattern your files after the following examples, which are
+based on the diagram above:
+.sp
+\fB/srv/salt/pillar/top.sls\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+base:
+  minioncontroller1:
+    \- networkswitches
+  minioncontroller2:
+    \- reallydumbdevices
+  minioncontroller3:
+    \- smsgateway
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fB/srv/salt/pillar/networkswitches.sls\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+proxy:
+  dumbdevice1:
+    proxytype: networkswitch
+    host: 172.23.23.5
+    username: root
+    passwd: letmein
+  dumbdevice2:
+    proxytype: networkswitch
+    host: 172.23.23.6
+    username: root
+    passwd: letmein
+  dumbdevice3:
+    proxytype: networkswitch
+    host: 172.23.23.7
+    username: root
+    passwd: letmein
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fB/srv/salt/pillar/reallydumbdevices.sls\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+proxy:
+  dumbdevice4:
+    proxytype: i2c_lightshow
+    i2c_address: 1
+  dumbdevice5:
+    proxytype: i2c_lightshow
+    i2c_address: 2
+  dumbdevice6:
+    proxytype: 433mhz_wireless
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fB/srv/salt/pillar/smsgateway.sls\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+proxy:
+  minioncontroller3:
+    dumbdevice7:
+      proxytype: sms_serial
+      deventry: /dev/tty04
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Note the contents of each minioncontroller key may differ widely based on
+the type of device that the proxy\-minion is managing.
+.sp
+In the above example
+.INDENT 0.0
+.IP \(bu 2
+dumbdevices 1, 2, and 3 are network switches that have a management
+interface available at a particular IP address.
+.IP \(bu 2
+dumbdevices 4 and 5 are very low\-level devices controlled over an i2c bus.  In this case
+the devices are physically connected to machine \(aqminioncontroller2\(aq, and are addressable
+on the i2c bus at their respective i2c addresses.
+.IP \(bu 2
+dumbdevice6 is a 433 MHz wireless transmitter, also physically connected to minioncontroller2
+.IP \(bu 2
+dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a serial port.
+.UNINDENT
+.sp
+Because of the way pillar works, each of the salt\-minions that fork off the
+proxy minions will only see the keys specific to the proxies it will be
+handling.  In other words, from the above example, only minioncontroller1 will
+see the connection information for dumbdevices 1, 2, and 3.  Minioncontroller2
+will see configuration data for dumbdevices 4, 5, and 6, and minioncontroller3
+will be privy to dumbdevice7.
+.sp
+Also, in general, proxy\-minions are lightweight, so the machines that run them
+could conceivably control a large number of devices.  The example above is just
+to illustrate that it is possible for the proxy services to be spread across
+many machines if necessary, or intentionally run on machines that need to
+control devices because of some physical interface (e.g. i2c and serial above).
+Another reason to divide proxy services might be security.  In more secure
+environments only certain machines may have a network path to certain devices.
+.sp
+Now our salt\-minions know if they are supposed to spawn a proxy\-minion process
+to control a particular device.  That proxy\-minion process will initiate
+a connection back to the master to enable control.
+.SS Proxytypes
+.sp
+A proxytype is a Python class called \(aqProxyconn\(aq that encapsulates all the code
+necessary to interface with a device.  Proxytypes are located inside the
+salt.proxy module.  At a minimum a proxytype object must implement the
+following methods:
+.sp
+\fBproxytype(self)\fP: Returns a string with the name of the proxy type.
+.sp
+\fBproxyconn(self, **kwargs)\fP: Provides the primary way to connect and communicate
+with the device. Some proxyconns instantiate a particular object that opens a
+network connection to a device and leaves the connection open for communication.
+Others simply abstract a serial connection or even implement endpoints to communicate
+via REST over HTTP.
+.sp
+\fBid(self, opts)\fP: Returns a unique, unchanging id for the controlled device.  This is
+the "name" of the device, and is used by the salt\-master for targeting and key
+authentication.
+.sp
+Optionally, the class may define a \fBshutdown(self, opts)\fP method if the
+controlled device should be informed when the minion goes away cleanly.
+.sp
+It is highly recommended that the \fBtest.ping\fP execution module also be defined
+for a proxytype. The code for \fBping\fP should contact the controlled device and make
+sure it is really available.
+.sp
+Here is an example proxytype used to interface to Juniper Networks devices that run
+the Junos operating system.  Note the additional library requirements\-\-most of the
+"hard part" of talking to these devices is handled by the jnpr.junos, jnpr.junos.utils
+and jnpr.junos.cfg modules.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+# Import python libs
+import logging
+import os
+
+import jnpr.junos
+import jnpr.junos.utils
+import jnpr.junos.cfg
+HAS_JUNOS = True
+
+class Proxyconn(object):
+
+
+    def __init__(self, details):
+        self.conn = jnpr.junos.Device(user=details[\(aqusername\(aq], host=details[\(aqhost\(aq], password=details[\(aqpasswd\(aq])
+        self.conn.open()
+        self.conn.bind(cu=jnpr.junos.cfg.Resource)
+
+
+    def proxytype(self):
+        return \(aqjunos\(aq
+
+
+    def id(self, opts):
+        return self.conn.facts[\(aqhostname\(aq]
+
+
+    def ping(self):
+        return self.conn.connected
+
+
+    def shutdown(self, opts):
+
+        print(\(aqProxy module {} shutting down!!\(aq.format(opts[\(aqid\(aq]))
+        try:
+            self.conn.close()
+        except Exception:
+            pass
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Grains are data about minions.  Most proxied devices will have a paltry amount
+of data as compared to a typical Linux server.  Because proxy\-minions are
+started by a regular minion, they inherit a sizeable number of grain settings
+which can be useful, especially when targeting (PYTHONPATH, for example).
+.sp
+All proxy minions set a grain called \(aqproxy\(aq.  If it is present, you know the
+minion is controlling another device.  To add more grains to your proxy minion
+for a particular device, create a file in salt/grains named [proxytype].py and
+place inside it the different functions that need to be run to collect the data
+you are interested in.  Here\(aqs an example:
+.SS The __proxyenabled__ directive
+.sp
+Salt states and execution modules, by and large, cannot "automatically" work
+with proxied devices.  Execution modules like \fBpkg\fP or \fBsqlite3\fP have no
+meaning on a network switch or a housecat.  For a state/execution module to be
+available to a proxy\-minion, the \fB__proxyenabled__\fP variable must be defined
+in the module as an array containing the names of all the proxytypes that this
+module can support.  The array can contain the special value \fB*\fP to indicate
+that the module supports all proxies.
+.sp
+If no \fB__proxyenabled__\fP variable is defined, then by default, the
+state/execution module is unavailable to any proxy.
+.sp
+Here is an excerpt from a module that was modified to support proxy\-minions:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def ping():
+
+    if \(aqproxyobject\(aq in __opts__:
+        if \(aqping\(aq in __opts__[\(aqproxyobject\(aq].__attr__():
+            return __opts[\(aqproxyobject\(aq].ping()
+        else:
+            return False
+    else:
+        return True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+And then in salt.proxy.junos we find
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def ping(self):
+
+   return self.connected
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The Junos API layer lacks the ability to do a traditional \(aqping\(aq, so the
+example simply checks the connection object field that indicates
+if the ssh connection was successfully made to the device.
 .SH LOGGING
 .sp
 The salt project tries to get the logging to work for you and help us solve any
@@ -25179,9 +25664,18 @@ act as a generic interface for encapsulating master side executions.
 Existing Salt runners are located here:
 .sp
 \fI\%https://github.com/saltstack/salt/blob/develop/salt/runners\fP
-.SH MODULES
+.SH EXECUTION MODULES
 .sp
-Salt modules are the functions called by the \fBsalt\fP command.
+Salt execution modules are the functions called by the \fBsalt\fP command.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Salt execution modules are different from state modules and cannot be
+called directly within state files.  You must use the \fImodule\fP state module
+to execute execution modules within state runs.
+.UNINDENT
+.UNINDENT
 .sp
 \fBSEE ALSO:\fP
 .INDENT 0.0
@@ -25609,7 +26103,7 @@ Support for Apache
 T}
 _
 T{
-\fBapt\fP
+\fBaptpkg\fP
 T}	T{
 Support for APT (Advanced Packaging Tool)
 T}
@@ -26043,7 +26537,7 @@ _
 T{
 \fBlxc\fP
 T}	T{
-Work with linux containers
+Control Linux Containers via Salt
 T}
 _
 T{
@@ -26725,7 +27219,7 @@ Module for Sending Messages via XMPP (a.k.a. Jabber)
 T}
 _
 T{
-\fByumpkg5\fP
+\fByumpkg\fP
 T}	T{
 Support for YUM
 T}
@@ -27262,12 +27756,12 @@ salt \-t 10 \(aq*\(aq apache.vhosts
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.SS salt.modules.apt
+.SS salt.modules.aptpkg
 .sp
 Support for APT (Advanced Packaging Tool)
 .INDENT 0.0
 .TP
-.B salt.modules.apt.del_repo(repo, **kwargs)
+.B salt.modules.aptpkg.del_repo(repo, **kwargs)
 Delete a repo from the sources.list / sources.list.d
 .sp
 If the .list file is in the sources.list.d directory
@@ -27291,7 +27785,7 @@ salt \(aq*\(aq pkg.del_repo "myrepo definition"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.expand_repo_def(repokwargs)
+.B salt.modules.aptpkg.expand_repo_def(repokwargs)
 Take a repository definition and expand it to the full pkg repository dict
 that can be used for comparison.  This is a helper function to make
 the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
@@ -27300,7 +27794,7 @@ There is no use to calling this function via the CLI.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.file_dict(*packages)
+.B salt.modules.aptpkg.file_dict(*packages)
 List the files that belong to a package, grouped by package. Not
 specifying any packages will return a list of _every_ file on the system\(aqs
 package database (not generally recommended).
@@ -27321,7 +27815,7 @@ salt \(aq*\(aq pkg.file_list
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.file_list(*packages)
+.B salt.modules.aptpkg.file_list(*packages)
 List the files that belong to a package. Not specifying any packages will
 return a list of _every_ file on the system\(aqs package database (not
 generally recommended).
@@ -27342,10 +27836,10 @@ salt \(aq*\(aq pkg.file_list
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.get_repo(repo, **kwargs)
+.B salt.modules.aptpkg.get_repo(repo, **kwargs)
 Display a repo from the sources.list / sources.list.d
 .sp
-The repo passwd in needs to be a complete repo entry.
+The repo passed in needs to be a complete repo entry.
 .sp
 CLI Examples:
 .INDENT 7.0
@@ -27361,7 +27855,7 @@ salt \(aq*\(aq pkg.get_repo "myrepo definition"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.get_selections(pattern=None, state=None)
+.B salt.modules.aptpkg.get_selections(pattern=None, state=None)
 View package state from the dpkg database.
 .sp
 Returns a dict of dicts containing the state, and package names:
@@ -27399,7 +27893,7 @@ salt \(aq*\(aq pkg.get_selections \(aqopenssh*\(aq state=hold
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.install(name=None, refresh=False, fromrepo=None, skip_verify=False, debconf=None, pkgs=None, sources=None, **kwargs)
+.B salt.modules.aptpkg.install(name=None, refresh=False, fromrepo=None, skip_verify=False, debconf=None, pkgs=None, sources=None, **kwargs)
 Install the passed package, add refresh=True to update the dpkg database.
 .INDENT 7.0
 .TP
@@ -27469,11 +27963,15 @@ salt \(aq*\(aq pkg.install pkgs=\(aq["foo", {"bar": "1.2.3\-0ubuntu0"}]\(aq
 .B sources
 A list of DEB packages to install. Must be passed as a list of dicts,
 with the keys being package names, and the values being the source URI
-or local path to the package.
+or local path to the package.  Dependencies are automatically resolved
+and marked as auto\-installed.
 .sp
 32\-bit packages can be installed on 64\-bit systems by appending the
 architecture designation (\fB:i386\fP, etc.) to the end of the package
 name.
+.sp
+Changed in version Helium.
+
 .sp
 CLI Example:
 .INDENT 7.0
@@ -27510,7 +28008,7 @@ Returns a dict containing the new package names and versions:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.latest_version(*names, **kwargs)
+.B salt.modules.aptpkg.latest_version(*names, **kwargs)
 Return the latest version of the named package available for upgrade or
 installation. If more than one package name is specified, a dict of
 name/version pairs is returned.
@@ -27536,7 +28034,7 @@ salt \(aq*\(aq pkg.latest_version <package1> <package2> <package3> ...
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.list_pkgs(versions_as_list=False, removed=False, **kwargs)
+.B salt.modules.aptpkg.list_pkgs(versions_as_list=False, removed=False, **kwargs)
 List the packages currently installed in a dict:
 .INDENT 7.0
 .INDENT 3.5
@@ -27580,7 +28078,7 @@ salt \(aq*\(aq pkg.list_pkgs versions_as_list=True
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.list_repos()
+.B salt.modules.aptpkg.list_repos()
 Lists all repos in the sources.list (and sources.lists.d) files
 .sp
 CLI Example:
@@ -27598,7 +28096,7 @@ salt \(aq*\(aq pkg.list_repos disabled=True
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.list_upgrades(refresh=True)
+.B salt.modules.aptpkg.list_upgrades(refresh=True)
 List all available package upgrades.
 .sp
 CLI Example:
@@ -27615,7 +28113,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.mod_repo(repo, saltenv=\(aqbase\(aq, **kwargs)
+.B salt.modules.aptpkg.mod_repo(repo, saltenv=\(aqbase\(aq, **kwargs)
 Modify one or more values for a repo.  If the repo does not exist, it will
 be created, so long as the definition is well formed.  For Ubuntu the
 "ppa:<project>/repo" format is acceptable. "ppa:" format can only be
@@ -27658,7 +28156,7 @@ salt \(aq*\(aq pkg.mod_repo \(aqmyrepo definition\(aq comps=main,universe
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.purge(name=None, pkgs=None, **kwargs)
+.B salt.modules.aptpkg.purge(name=None, pkgs=None, **kwargs)
 Remove packages via \fBapt\-get purge\fP along with all configuration files
 and unused dependencies.
 .INDENT 7.0
@@ -27696,7 +28194,7 @@ salt \(aq*\(aq pkg.purge pkgs=\(aq["foo", "bar"]\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.refresh_db()
+.B salt.modules.aptpkg.refresh_db()
 Updates the APT database to latest packages based upon repositories
 .sp
 Returns a dict, with the keys being package databases and the values being
@@ -27724,7 +28222,7 @@ salt \(aq*\(aq pkg.refresh_db
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.remove(name=None, pkgs=None, **kwargs)
+.B salt.modules.aptpkg.remove(name=None, pkgs=None, **kwargs)
 Remove packages using \fBapt\-get remove\fP\&.
 .INDENT 7.0
 .TP
@@ -27761,7 +28259,7 @@ salt \(aq*\(aq pkg.remove pkgs=\(aq["foo", "bar"]\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.set_selections(path=None, selection=None, clear=False, saltenv=\(aqbase\(aq)
+.B salt.modules.aptpkg.set_selections(path=None, selection=None, clear=False, saltenv=\(aqbase\(aq)
 Change package state in the dpkg database.
 .sp
 The state can be any one of, documented in \fBdpkg(1)\fP:
@@ -27823,7 +28321,7 @@ salt \(aq*\(aq pkg.set_selections salt://path/to/file clear=True
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.upgrade(refresh=True, **kwargs)
+.B salt.modules.aptpkg.upgrade(refresh=True, **kwargs)
 Upgrades all packages via \fBapt\-get dist\-upgrade\fP
 .sp
 Returns a dict containing the changes.
@@ -27851,7 +28349,7 @@ salt \(aq*\(aq pkg.upgrade
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.upgrade_available(name)
+.B salt.modules.aptpkg.upgrade_available(name)
 Check whether or not an upgrade is available for a given package
 .sp
 CLI Example:
@@ -27868,7 +28366,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.version(*names, **kwargs)
+.B salt.modules.aptpkg.version(*names, **kwargs)
 Returns a string representing the package version or an empty string if not
 installed. If more than one package name is specified, a dict of
 name/version pairs is returned.
@@ -27888,7 +28386,7 @@ salt \(aq*\(aq pkg.version <package1> <package2> <package3> ...
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.apt.version_cmp(pkg1, pkg2)
+.B salt.modules.aptpkg.version_cmp(pkg1, pkg2)
 Do a cmp\-style comparison on two packages. Return \-1 if pkg1 < pkg2, 0 if
 pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
 making the comparison.
@@ -28114,8 +28612,13 @@ salt \(aq*\(aq archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.archive.unzip(zipfile, dest, excludes=None, template=None)
+.B salt.modules.archive.unzip(zipfile, dest, excludes=None, template=None, options=None)
 Uses the unzip command to unpack zip files
+.INDENT 7.0
+.TP
+.B options:
+Options to pass to the \fBunzip\fP binary.
+.UNINDENT
 .sp
 CLI Example:
 .INDENT 7.0
@@ -28257,6 +28760,26 @@ CLI Example:
 salt \(aq*\(aq at.atrm <jobid> <jobid> .. <jobid>
 salt \(aq*\(aq at.atrm all
 salt \(aq*\(aq at.atrm all [tag]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.at.jobcheck(**kwargs)
+Check the job from queue.
+The kwargs dict include \(aqhour minute day month year tag runas\(aq
+Other parameters will be ignored.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq at.jobcheck runas=jam day=13
+salt \(aq*\(aq at.jobcheck day=13 month=12 year=13 tag=rose
 .ft P
 .fi
 .UNINDENT
@@ -29454,7 +29977,7 @@ salt \(aq*\(aq cassandra.version
 A dead simple module wrapping calls to the Chocolatey package manager
 (\fI\%http://chocolatey.org\fP)
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -31613,10 +32136,47 @@ salt \(aq*\(aq data.update <key> <value>
 .SS salt.modules.ddns
 .sp
 Support for RFC 2136 dynamic DNS updates.
-Requires dnspython module.
 .INDENT 0.0
 .TP
-.B salt.modules.ddns.add_host(zone, name, ttl, ip, nameserver=\(aq127.0.0.1\(aq, replace=True)
+.B depends
+.INDENT 7.0
+.IP \(bu 2
+dnspython Python module
+.UNINDENT
+.TP
+.B configuration
+If you want to use TSIG authentication for the server, there
+are a couple of optional configuration parameters made available to
+support this (the keyname is only needed if the keyring contains more
+than one key):
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ddns.keyring: keyring file (default=None)
+ddns.keyname: key name in file (default=None)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The keyring file needs to be in json format and the key name needs to end
+with an extra period in the file, similar to this:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{\(aqkeyname.\(aq: \(aqkeycontent\(aq}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.ddns.add_host(zone, name, ttl, ip, nameserver=\(aq127.0.0.1\(aq, replace=True, **kwargs)
 Add, replace, or update the A and PTR (reverse) records for a host.
 .sp
 CLI Example:
@@ -31633,7 +32193,7 @@ salt ns1 ddns.add_host example.com host1 60 10.1.1.1
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.ddns.delete(zone, name, rdtype=None, data=None, nameserver=\(aq127.0.0.1\(aq)
+.B salt.modules.ddns.delete(zone, name, rdtype=None, data=None, nameserver=\(aq127.0.0.1\(aq, **kwargs)
 Delete a DNS record.
 .sp
 CLI Example:
@@ -31650,7 +32210,7 @@ salt ns1 ddns.delete example.com host1 A
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.ddns.delete_host(zone, name, nameserver=\(aq127.0.0.1\(aq)
+.B salt.modules.ddns.delete_host(zone, name, nameserver=\(aq127.0.0.1\(aq, **kwargs)
 Delete the forward and reverse records for a host.
 .sp
 Returns true if any records are deleted.
@@ -31669,7 +32229,7 @@ salt ns1 ddns.delete_host example.com host1
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.ddns.update(zone, name, ttl, rdtype, data, nameserver=\(aq127.0.0.1\(aq, replace=False)
+.B salt.modules.ddns.update(zone, name, ttl, rdtype, data, nameserver=\(aq127.0.0.1\(aq, replace=False, **kwargs)
 Add, replace, or update a DNS record.
 nameserver must be an IP address and the minion running this module
 must have update privileges on that server.
@@ -32770,7 +33330,7 @@ salt ns1 dnsutil.parse_zone /var/lib/named/example.com.zone
 .SS salt.modules.dockerio
 .SS Management of dockers
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 \fBNOTE:\fP
@@ -33073,7 +33633,7 @@ salt \(aq*\(aq docker.commit <container id>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.dockerio.create_container(image, command=\(aq/sbin/init\(aq, hostname=None, user=None, detach=True, stdin_open=False, tty=False, mem_limit=0, ports=None, environment=None, dns=None, volumes=None, volumes_from=None, privileged=False, name=None, *args, **kwargs)
+.B salt.modules.dockerio.create_container(image, command=None, hostname=None, user=None, detach=True, stdin_open=False, tty=False, mem_limit=0, ports=None, environment=None, dns=None, volumes=None, volumes_from=None, name=None, *args, **kwargs)
 Create a new container
 .INDENT 7.0
 .TP
@@ -33123,9 +33683,6 @@ let stdin open
 .TP
 .B volumes_from
 container to get volumes definition from
-.TP
-.B privileged
-run container in privileged mode
 .TP
 .B name
 name given to container
@@ -33408,7 +33965,7 @@ salt \(aq*\(aq docker.inspect_image <image>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.dockerio.invalid(m, id=<object object at 0x35f4bf0>, comment=\(aqWe did not get any expectable answer from docker\(aq, out=None)
+.B salt.modules.dockerio.invalid(m, id=<object object at 0x1f76bf0>, comment=\(aqWe did not get any expectable answer from docker\(aq, out=None)
 Return invalid status
 .UNINDENT
 .INDENT 0.0
@@ -33594,24 +34151,20 @@ out:
     \-\-\-\-\-\-\-\-\-\-
     \- id:
         2c80228370c9
-    \- progress:
-        complete
     \- status:
-        Download
+        Download complete
     \-\-\-\-\-\-\-\-\-\-
     \- id:
         2c80228370c9
     \- progress:
-        image (latest) from NAME, endpoint: URL
+        [=========================>                         ]
     \- status:
-        Pulling
+        Downloading
     \-\-\-\-\-\-\-\-\-\-
     \- id:
         2c80228370c9
-    \- progress:
-        image (latest) from foo/ubuntubox
-    \- status:
-        Pulling
+    \- status
+        Pulling image (latest) from foo/ubuntubox
     \-\-\-\-\-\-\-\-\-\-
     \- status:
         Pulling repository foo/ubuntubox
@@ -34044,7 +34597,7 @@ salt \(aq*\(aq docker.search <term>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.dockerio.start(container, binds=None, ports=None, port_bindings=None, lxc_conf=None, publish_all_ports=None, links=None, *args, **kwargs)
+.B salt.modules.dockerio.start(container, binds=None, ports=None, port_bindings=None, lxc_conf=None, publish_all_ports=None, links=None, privileged=False, *args, **kwargs)
 restart the specified container
 .INDENT 7.0
 .TP
@@ -34192,7 +34745,7 @@ salt \(aq*\(aq docker.top <container id>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.dockerio.valid(m, id=<object object at 0x35f4bf0>, comment=\(aq\(aq, out=None)
+.B salt.modules.dockerio.valid(m, id=<object object at 0x1f76bf0>, comment=\(aq\(aq, out=None)
 Return valid status
 .UNINDENT
 .INDENT 0.0
@@ -34430,7 +34983,29 @@ salt \(aq*\(aq pkg.depclean <package name>
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.ex_mod_init(low)
-Enforce a nice tree structure for /etc/portage/package.* configuration files.
+If the config option \fBebuild.enforce_nice_config\fP is set to True, this
+module will enforce a nice tree structure for /etc/portage/package.*
+configuration files.
+.sp
+New in version 0.17.0: Initial automatic enforcement added when pkg is used on a Gentoo system.
+
+.sp
+Changed in version 2014.1.0\-Hydrogen: Configure option added to make this behaviour optional, defaulting to
+off.
+
+.sp
+\fBSEE ALSO:\fP
+.INDENT 7.0
+.INDENT 3.5
+\fBebuild.ex_mod_init\fP is called automatically when a state invokes a
+pkg state on a Gentoo system.
+\fBsalt.states.pkg.mod_init()\fP
+.sp
+\fBebuild.ex_mod_init\fP uses \fBportage_config.enforce_nice_config\fP to do
+the lifting.
+\fBsalt.modules.portage_config.enforce_nice_config()\fP
+.UNINDENT
+.UNINDENT
 .sp
 CLI Example:
 .INDENT 7.0
@@ -35248,7 +35823,7 @@ x: Test whether the path can be executed
 .UNINDENT
 .UNINDENT
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -35291,7 +35866,7 @@ salt \(aq*\(aq file.append /etc/motd \e
 .B salt.modules.file.blockreplace(path, marker_start=\(aq#\-\- start managed zone \-\-\(aq, marker_end=\(aq#\-\- end managed zone \-\-\(aq, content=\(aq\(aq, append_if_not_found=False, prepend_if_not_found=False, backup=\(aq.bak\(aq, dry_run=False, show_changes=True)
 Replace content of a text block in a file, delimited by line markers
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 A block of content delimited by comments can help you manage several lines
@@ -36011,7 +36586,7 @@ salt \(aq*\(aq file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/h
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.file.get_mode(path)
+.B salt.modules.file.get_mode(path, follow_symlinks=True)
 Return the mode of a file
 .sp
 CLI Example:
@@ -36025,6 +36600,9 @@ salt \(aq*\(aq file.get_mode /etc/passwd
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+Changed in version 2014.1.0: \fBfollow_symlinks\fP option added
+
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -36234,7 +36812,7 @@ salt \(aq*\(aq file.is_fifo /dev/fifo
 .B salt.modules.file.link(src, link)
 Create a hard link to a file
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36286,7 +36864,7 @@ symbolic links.
 .sp
 CLI Example:
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 7.0
 .INDENT 3.5
@@ -36575,7 +37153,7 @@ salt \(aq*\(aq file.sed /etc/httpd/httpd.conf \(aqLogLevel warn\(aq \(aqLogLevel
 .B salt.modules.file.readdir(path)
 Return a list containing the contents of a directory
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36595,7 +37173,7 @@ salt \(aq*\(aq file.readdir /path/to/dir/
 .B salt.modules.file.readlink(path)
 Return the path that a symlink points to
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36761,7 +37339,7 @@ salt \(aq*\(aq file.restorecon /home/user/.ssh/authorized_keys
 .B salt.modules.file.rmdir(path)
 Remove the specified directory. Fails if a directory is not empty.
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36898,7 +37476,7 @@ salt \(aq*\(aq file.contains /etc/crontab \(aqmymaintenance.sh\(aq
 .B salt.modules.file.seek_read(path, size, offset)
 Seek to a position on a file and write to it
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36918,7 +37496,7 @@ salt \(aq*\(aq file.seek_read /path/to/file 4096 0
 .B salt.modules.file.seek_write(path, data, offset)
 Seek to a position on a file and write to it
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -36986,7 +37564,7 @@ salt \(aq*\(aq file.source_list salt://http/httpd.conf \(aq{hash_type: \(aqmd5\(
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.file.stats(path, hash_type=\(aqmd5\(aq, follow_symlink=False)
+.B salt.modules.file.stats(path, hash_type=\(aqmd5\(aq, follow_symlinks=True)
 Return a dict containing the stats for a given file
 .sp
 CLI Example:
@@ -37006,7 +37584,7 @@ salt \(aq*\(aq file.stats /etc/passwd
 .B salt.modules.file.statvfs(path)
 Perform a statvfs call against the filesystem that the file resides on
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -37072,7 +37650,7 @@ salt \(aq*\(aq file.touch /var/log/emptyfile
 .B salt.modules.file.truncate(path, length)
 Seek to a position on a file and write to it
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 CLI Example:
@@ -37507,7 +38085,7 @@ salt bsdminion sys.doc pkg
 .UNINDENT
 .UNINDENT
 .sp
-This module acts as the default package provider for FreeBSD 9 and newer. If
+This module acts as the default package provider for FreeBSD 9 and older. If
 you need to use pkgng on a FreeBSD 9 system, you will need to override the
 \fBpkg\fP provider by setting the \fBproviders\fP parameter in your
 Minion config file, in order to use pkgng.
@@ -37719,7 +38297,7 @@ salt \(aq*\(aq pkg.latest_version <package1> <package2> <package3> ...
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.freebsdpkg.list_pkgs(versions_as_list=False, **kwargs)
+.B salt.modules.freebsdpkg.list_pkgs(versions_as_list=False, with_origin=False, **kwargs)
 List the packages currently installed as a dict:
 .INDENT 7.0
 .INDENT 3.5
@@ -37730,6 +38308,16 @@ List the packages currently installed as a dict:
 .ft P
 .fi
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B with_origin
+False
+Return a nested dictionary containing both the origin name and version
+for each installed package.
+.sp
+New in version 2014.1.0: (Hydrogen)
+
 .UNINDENT
 .sp
 CLI Example:
@@ -37842,6 +38430,16 @@ salt \(aq*\(aq pkg.upgrade
 Returns a string representing the package version or an empty string if not
 installed. If more than one package name is specified, a dict of
 name/version pairs is returned.
+.INDENT 7.0
+.TP
+.B with_origin
+False
+Return a nested dictionary containing both the origin name and version
+for each specified package.
+.sp
+New in version 2014.1.0: (Hydrogen)
+
+.UNINDENT
 .sp
 CLI Example:
 .INDENT 7.0
@@ -37860,7 +38458,7 @@ salt \(aq*\(aq pkg.version <package1> <package2> <package3> ...
 .sp
 Install software from the FreeBSD \fBports(7)\fP system
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This module allows you to install ports using \fBBATCH=yes\fP to bypass
@@ -40258,7 +40856,7 @@ tables for OS\-specific data. For example:
 {% set apache = salt[\(aqgrains.filter_by\(aq]({
     \(aqDebian\(aq: {\(aqpkg\(aq: \(aqapache2\(aq, \(aqsrv\(aq: \(aqapache2\(aq},
     \(aqRedHat\(aq: {\(aqpkg\(aq: \(aqhttpd\(aq, \(aqsrv\(aq: \(aqhttpd\(aq},
-    \(aqdefault\(aq: {\(aqpkg\(aq: \(aqapache\(aq, \(aqsrv\(aq: \(aqapache\(aq},
+    \(aqdefault\(aq: \(aqDebian\(aq,
 }) %}
 
 myapache:
@@ -40330,7 +40928,7 @@ Python version from the default Python version provided by the OS
 default lookup_dict\(aqs key used if the grain does not exists
 or if the grain value has no match on lookup_dict.
 .sp
-New in version 0.17.2.
+New in version 2014.1.
 
 
 .UNINDENT
@@ -41220,7 +41818,7 @@ salt \(aq*\(aq img.umount_image /mnt/foo
 Support for iptables
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.append(table=\(aqfilter\(aq, chain=None, rule=None)
+.B salt.modules.iptables.append(table=\(aqfilter\(aq, chain=None, rule=None, family=\(aqipv4\(aq)
 Append a rule to the specified table/chain.
 .INDENT 7.0
 .TP
@@ -41238,6 +41836,11 @@ CLI Example:
 .ft C
 salt \(aq*\(aq iptables.append filter INPUT \e
     rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq
+
+IPv6:
+salt \(aq*\(aq iptables.append filter INPUT \e
+    rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq \e
+    family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41245,7 +41848,7 @@ salt \(aq*\(aq iptables.append filter INPUT \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.build_rule(table=None, chain=None, command=None, position=\(aq\(aq, full=None, **kwargs)
+.B salt.modules.iptables.build_rule(table=None, chain=None, command=None, position=\(aq\(aq, full=None, family=\(aqipv4\(aq, **kwargs)
 Build a well\-formatted iptables rule based on kwargs. Long options must be
 used (\fI\-\-jump\fP instead of \fI\-j\fP) because they will have the \fI\-\-\fP added to
 them. A \fItable\fP and \fIchain\fP are not required, unless \fIfull\fP is True.
@@ -41270,6 +41873,14 @@ salt \(aq*\(aq iptables.build_rule match=state \e
     connstate=RELATED,ESTABLISHED jump=ACCEPT
 salt \(aq*\(aq iptables.build_rule filter INPUT command=I position=3 \e
     full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+
+IPv6:
+salt \(aq*\(aq iptables.build_rule match=state \e
+    connstate=RELATED,ESTABLISHED jump=ACCEPT \e
+    family=ipv6
+salt \(aq*\(aq iptables.build_rule filter INPUT command=I position=3 \e
+    full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \e
+    family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41277,7 +41888,7 @@ salt \(aq*\(aq iptables.build_rule filter INPUT command=I position=3 \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.check(table=\(aqfilter\(aq, chain=None, rule=None)
+.B salt.modules.iptables.check(table=\(aqfilter\(aq, chain=None, rule=None, family=\(aqipv4\(aq)
 Check for the existance of a rule in the table and chain
 .INDENT 7.0
 .TP
@@ -41295,6 +41906,11 @@ CLI Example:
 .ft C
 salt \(aq*\(aq iptables.check filter INPUT \e
     rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq
+
+IPv6:
+salt \(aq*\(aq iptables.check filter INPUT \e
+    rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq \e
+    family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41302,8 +41918,8 @@ salt \(aq*\(aq iptables.check filter INPUT \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.check_chain(table=\(aqfilter\(aq, chain=None)
-New in version Hydrogen.
+.B salt.modules.iptables.check_chain(table=\(aqfilter\(aq, chain=None, family=\(aqipv4\(aq)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Check for the existance of a chain in the table
@@ -41315,6 +41931,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.check_chain filter INPUT
+
+IPv6:
+salt \(aq*\(aq iptables.check_chain filter INPUT family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41322,7 +41941,7 @@ salt \(aq*\(aq iptables.check_chain filter INPUT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.delete(table, chain=None, position=None, rule=None)
+.B salt.modules.iptables.delete(table, chain=None, position=None, rule=None, family=\(aqipv4\(aq)
 .INDENT 7.0
 .TP
 .B Delete a rule from the specified table/chain, specifying either the rule
@@ -41343,6 +41962,12 @@ CLI Examples:
 salt \(aq*\(aq iptables.delete filter INPUT position=3
 salt \(aq*\(aq iptables.delete filter INPUT \e
     rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq
+
+IPv6:
+salt \(aq*\(aq iptables.delete filter INPUT position=3 family=ipv6
+salt \(aq*\(aq iptables.delete filter INPUT \e
+    rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq \e
+    family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41350,8 +41975,8 @@ salt \(aq*\(aq iptables.delete filter INPUT \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.delete_chain(table=\(aqfilter\(aq, chain=None)
-New in version Hydrogen.
+.B salt.modules.iptables.delete_chain(table=\(aqfilter\(aq, chain=None, family=\(aqipv4\(aq)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Delete custom chain to the specified table.
@@ -41363,6 +41988,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.delete_chain filter CUSTOM_CHAIN
+
+IPv6:
+salt \(aq*\(aq iptables.delete_chain filter CUSTOM_CHAIN family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41370,7 +41998,7 @@ salt \(aq*\(aq iptables.delete_chain filter CUSTOM_CHAIN
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.flush(table=\(aqfilter\(aq, chain=\(aq\(aq)
+.B salt.modules.iptables.flush(table=\(aqfilter\(aq, chain=\(aq\(aq, family=\(aqipv4\(aq)
 Flush the chain in the specified table, flush all chains in the specified
 table if not specified chain.
 .sp
@@ -41381,6 +42009,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.flush filter INPUT
+
+IPv6:
+salt \(aq*\(aq iptables.flush filter INPUT family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41388,7 +42019,7 @@ salt \(aq*\(aq iptables.flush filter INPUT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.get_policy(table=\(aqfilter\(aq, chain=None)
+.B salt.modules.iptables.get_policy(table=\(aqfilter\(aq, chain=None, family=\(aqipv4\(aq)
 Return the current policy for the specified table/chain
 .sp
 CLI Example:
@@ -41398,6 +42029,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.get_policy filter INPUT
+
+IPv6:
+salt \(aq*\(aq iptables.get_policy filter INPUT family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41405,7 +42039,7 @@ salt \(aq*\(aq iptables.get_policy filter INPUT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.get_rules()
+.B salt.modules.iptables.get_rules(family=\(aqipv4\(aq)
 Return a data structure of the current, in\-memory rules
 .sp
 CLI Example:
@@ -41415,6 +42049,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.get_rules
+
+IPv6:
+salt \(aq*\(aq iptables.get_rules family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41422,7 +42059,7 @@ salt \(aq*\(aq iptables.get_rules
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.get_saved_policy(table=\(aqfilter\(aq, chain=None, conf_file=None)
+.B salt.modules.iptables.get_saved_policy(table=\(aqfilter\(aq, chain=None, conf_file=None, family=\(aqipv4\(aq)
 Return the current policy for the specified table/chain
 .sp
 CLI Examples:
@@ -41434,6 +42071,11 @@ CLI Examples:
 salt \(aq*\(aq iptables.get_saved_policy filter INPUT
 salt \(aq*\(aq iptables.get_saved_policy filter INPUT \e
     conf_file=/etc/iptables.saved
+
+IPv6:
+salt \(aq*\(aq iptables.get_saved_policy filter INPUT family=ipv6
+salt \(aq*\(aq iptables.get_saved_policy filter INPUT \e
+    conf_file=/etc/iptables.saved family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41441,7 +42083,7 @@ salt \(aq*\(aq iptables.get_saved_policy filter INPUT \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.get_saved_rules(conf_file=None)
+.B salt.modules.iptables.get_saved_rules(conf_file=None, family=\(aqipv4\(aq)
 Return a data structure of the rules in the conf file
 .sp
 CLI Example:
@@ -41451,6 +42093,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.get_saved_rules
+
+IPv6:
+salt \(aq*\(aq iptables.get_saved_rules family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41458,7 +42103,7 @@ salt \(aq*\(aq iptables.get_saved_rules
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.insert(table=\(aqfilter\(aq, chain=None, position=None, rule=None)
+.B salt.modules.iptables.insert(table=\(aqfilter\(aq, chain=None, position=None, rule=None, family=\(aqipv4\(aq)
 Insert a rule into the specified table/chain, at the specified position.
 .INDENT 7.0
 .TP
@@ -41476,6 +42121,11 @@ CLI Examples:
 .ft C
 salt \(aq*\(aq iptables.insert filter INPUT position=3 \e
     rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq
+
+IPv6:
+salt \(aq*\(aq iptables.insert filter INPUT position=3 \e
+    rule=\(aq\-m state \-\-state RELATED,ESTABLISHED \-j ACCEPT\(aq \e
+    family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41483,8 +42133,8 @@ salt \(aq*\(aq iptables.insert filter INPUT position=3 \e
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.new_chain(table=\(aqfilter\(aq, chain=None)
-New in version Hydrogen.
+.B salt.modules.iptables.new_chain(table=\(aqfilter\(aq, chain=None, family=\(aqipv4\(aq)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Create new custom chain to the specified table.
@@ -41496,6 +42146,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.new_chain filter CUSTOM_CHAIN
+
+IPv6:
+salt \(aq*\(aq iptables.new_chain filter CUSTOM_CHAIN family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41503,7 +42156,7 @@ salt \(aq*\(aq iptables.new_chain filter CUSTOM_CHAIN
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.save(filename=None)
+.B salt.modules.iptables.save(filename=None, family=\(aqipv4\(aq)
 Save the current in\-memory rules to disk
 .sp
 CLI Example:
@@ -41513,6 +42166,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.save /etc/sysconfig/iptables
+
+IPv6:
+salt \(aq*\(aq iptables.save /etc/sysconfig/iptables family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41520,7 +42176,7 @@ salt \(aq*\(aq iptables.save /etc/sysconfig/iptables
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.set_policy(table=\(aqfilter\(aq, chain=None, policy=None)
+.B salt.modules.iptables.set_policy(table=\(aqfilter\(aq, chain=None, policy=None, family=\(aqipv4\(aq)
 Set the current policy for the specified table/chain
 .sp
 CLI Example:
@@ -41530,6 +42186,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.set_policy filter INPUT ACCEPT
+
+IPv6:
+salt \(aq*\(aq iptables.set_policy filter INPUT ACCEPT family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -41537,7 +42196,7 @@ salt \(aq*\(aq iptables.set_policy filter INPUT ACCEPT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.iptables.version()
+.B salt.modules.iptables.version(family=\(aqipv4\(aq)
 Return version from iptables \-\-version
 .sp
 CLI Example:
@@ -41547,6 +42206,9 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq iptables.version
+
+IPv6:
+salt \(aq*\(aq iptables.version family=ipv6
 .ft P
 .fi
 .UNINDENT
@@ -42863,7 +43525,7 @@ salt \(aq*\(aq lvm.fullversion
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.linux_lvm.lvcreate(lvname, vgname, size=None, extents=None, pv=\(aq\(aq)
+.B salt.modules.linux_lvm.lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=\(aq\(aq)
 Create a new logical volume, with option for which physical volume to be used
 .sp
 CLI Examples:
@@ -42874,6 +43536,7 @@ CLI Examples:
 .ft C
 salt \(aq*\(aq lvm.lvcreate new_volume_name vg_name size=10G
 salt \(aq*\(aq lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+salt \(aq*\(aq lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
 .ft P
 .fi
 .UNINDENT
@@ -43613,7 +44276,7 @@ salt \(aq*\(aq lvs.zero
 .UNINDENT
 .SS salt.modules.lxc
 .sp
-Work with linux containers
+Control Linux Containers via Salt
 .INDENT 0.0
 .TP
 .B depends
@@ -45548,7 +46211,7 @@ salt \(aq*\(aq raid.list
 .SS salt.modules.memcached
 .SS Module for Management of Memcached Keys
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -46814,7 +47477,8 @@ mysql.default_file: \(aq/etc/mysql/debian.cnf\(aq
 .UNINDENT
 .UNINDENT
 .sp
-Changed in version Hydrogen: charset connection argument added. This is a MySQL charset, not a python one
+Changed in version 2014.1.0: (Hydrogen)
+charset connection argument added. This is a MySQL charset, not a python one
 
 .sp
 Changed in version 0.16.2: Connection arguments from the minion config file can be overridden on the
@@ -48425,7 +49089,7 @@ Unique integer ID for the image
 How long to wait, after creating the instance, for the provider to
 return information about it (default 300 seconds).
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .UNINDENT
 .sp
@@ -49833,7 +50497,7 @@ salt \(aq*\(aq pkg.version <package1> <package2> <package3> ...
 .sp
 Module for Firing Events via PagerDuty
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -52121,7 +52785,7 @@ salt \(aq*\(aq pkg.latest_version <package name> chroot=/path/to/chroot
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.pkgng.list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs)
+.B salt.modules.pkgng.list_pkgs(versions_as_list=False, jail=None, chroot=None, with_origin=False, **kwargs)
 List the packages currently installed as a dict:
 .INDENT 7.0
 .INDENT 3.5
@@ -52141,6 +52805,14 @@ List the packages in the specified jail
 .B chroot
 List the pacakges in the specified chroot (ignored if \fBjail\fP is
 specified)
+.TP
+.B with_origin
+False
+Return a nested dictionary containing both the origin name and version
+for each installed package.
+.sp
+New in version 2014.1.0: (Hydrogen)
+
 .UNINDENT
 .sp
 CLI Example:
@@ -52965,6 +53637,14 @@ Get package version information for the specified jail
 .B chroot
 Get package version information for the specified chroot (ignored if
 \fBjail\fP is specified)
+.TP
+.B with_origin
+False
+Return a nested dictionary containing both the origin name and version
+for each specified package.
+.sp
+New in version 2014.1.0: (Hydrogen)
+
 .UNINDENT
 .sp
 CLI Example:
@@ -53387,6 +54067,17 @@ salt \(aq*\(aq portage_config.append_use_flags ">=app\-admin/salt\-0.14.1" "[\(a
 Enforce a nice tree structure for /etc/portage/package.* configuration
 files.
 .sp
+\fBSEE ALSO:\fP
+.INDENT 7.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B \fBsalt.modules.ebuild.ex_mod_init()\fP
+for information on automatically running this when pkg is used.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
 CLI Example:
 .INDENT 7.0
 .INDENT 3.5
@@ -53508,7 +54199,7 @@ might look like:
 .ft C
 postgres.host: \(aqlocalhost\(aq
 postgres.port: \(aq5432\(aq
-postgres.user: \(aqpostgres\(aq
+postgres.user: \(aqpostgres\(aq \-> db user
 postgres.pass: \(aq\(aq
 postgres.maintenance_db: \(aqpostgres\(aq
 .ft P
@@ -53520,6 +54211,57 @@ The default for the maintenance_db is \(aqpostgres\(aq and in most cases it can
 be left at the default setting.
 This data can also be passed into pillar. Options passed into opts will
 overwrite options passed into pillar
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.available_extensions(user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+List available postgresql extensions
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.available_extensions
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.create_extension(name, if_not_exists=None, schema=None, ext_version=None, from_version=None, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Install a postgresql extension
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.create_extension \(aqadminpack\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.create_metadata(name, ext_version=None, schema=None, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Get lifecycle informations about an extension
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.create_metadata adminpack
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -53610,7 +54352,58 @@ salt \(aq*\(aq postgres.db_remove \(aqdbname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.drop_extension(name, if_exists=None, restrict=None, cascade=None, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Drop an installed postgresql extension
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.drop_extension \(aqadminpack\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.get_available_extension(name, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Get info about an available postgresql extension
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.get_available_extension plpgsql
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.get_installed_extension(name, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Get info about an installed postgresql extension
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.get_installed_extension plpgsql
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=None, createuser=None, createroles=None, encrypted=None, login=None, inherit=None, superuser=None, replication=None, rolepassword=None, groups=None, runas=None)
 Creates a Postgres group. A group is postgres is similar to a user, but
 cannot login.
 .sp
@@ -53647,7 +54440,7 @@ salt \(aq*\(aq postgres.group_remove \(aqgroupname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=None, createroles=None, createuser=None, encrypted=None, inherit=None, login=None, superuser=None, replication=None, rolepassword=None, groups=None, runas=None)
 Updated a postgres group
 .sp
 CLI Examples:
@@ -53659,6 +54452,57 @@ CLI Examples:
 salt \(aq*\(aq postgres.group_update \(aqusername\(aq user=\(aquser\(aq \e
         host=\(aqhostname\(aq port=\(aqport\(aq password=\(aqpassword\(aq \e
         rolepassword=\(aqrolepassword\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.installed_extensions(user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+List installed postgresql extensions
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.installed_extensions
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.is_available_extension(name, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Test if a specific extension is installed
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.is_installed_extension
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.is_installed_extension(name, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+Test if a specific extension is installed
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.is_installed_extension
 .ft P
 .fi
 .UNINDENT
@@ -53702,7 +54546,26 @@ salt \(aq*\(aq postgres.psql_query \(aqselect * from pg_stat_activity\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.role_get(name, user=None, host=None, port=None, maintenance_db=None, password=None, runas=None, return_password=False)
+Return a dict with information about users of a Postgres server.
+.sp
+Set return_password to True to get password hash in the result.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq postgres.role_get postgres
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=None, createuser=None, createroles=None, inherit=None, login=None, encrypted=None, superuser=None, replication=None, rolepassword=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
@@ -53738,8 +54601,10 @@ salt \(aq*\(aq postgres.user_exists \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_list(user=None, host=None, port=None, maintenance_db=None, password=None, runas=None)
+.B salt.modules.postgres.user_list(user=None, host=None, port=None, maintenance_db=None, password=None, runas=None, return_password=False)
 Return a dict with information about users of a Postgres server.
+.sp
+Set return_password to True to get password hash in the result.
 .sp
 CLI Example:
 .INDENT 7.0
@@ -53772,7 +54637,7 @@ salt \(aq*\(aq postgres.user_remove \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, maintenance_db=None, password=None, createdb=None, createuser=None, createroles=None, encrypted=None, superuser=None, inherit=None, login=None, replication=None, rolepassword=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
@@ -55267,7 +56132,7 @@ Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 .INDENT 0.0
 .TP
-.B salt.modules.rabbitmq.add_user(name, password, runas=None)
+.B salt.modules.rabbitmq.add_user(name, password=None, runas=None)
 Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
 .sp
 CLI Example:
@@ -55837,6 +56702,24 @@ salt \(aq*\(aq rbenv.do \(aqgem list bundler\(aq deploy
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.rbenv.do_with_ruby(ruby, cmdline, runas=None)
+Execute a ruby command with rbenv\(aqs shims using a specific ruby version.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq rbenv.do_with_ruby 2.0.0\-p0 \(aqgem list bundler\(aq
+salt \(aq*\(aq rbenv.do_with_ruby 2.0.0\-p0 \(aqgem list bundler\(aq deploy
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.rbenv.install(runas=None, path=None)
 Install Rbenv systemwide
 .sp
@@ -55904,6 +56787,23 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq rbenv.list
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.rbenv.rehash(runas=None)
+Run rbenv rehash to update the installed shims.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq rbenv.rehash
 .ft P
 .fi
 .UNINDENT
@@ -61703,7 +62603,7 @@ salt \(aq*\(aq supervisord.custom "mstop \(aq*gunicorn*\(aq"
 .INDENT 0.0
 .TP
 .B salt.modules.supervisord.options(name, conf_file=None)
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Read the config file and return the config options for a given process
@@ -62331,7 +63231,7 @@ salt \(aq*\(aq svn.status /path/to/repo
 .INDENT 0.0
 .TP
 .B salt.modules.svn.switch(cwd, remote, target=None, user=None, username=None, password=None, *opts)
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Switch a working copy of a remote Subversion repository
@@ -66329,7 +67229,7 @@ salt \(aq*\(aq file.get_group c:\etemp\etest.txt
 .B salt.modules.win_file.get_mode(path)
 Return the mode of a file
 .sp
-Right now we\(aqre just returning 777
+Right now we\(aqre just returning None
 because Windows\(aq doesn\(aqt have a mode
 like Linux
 .sp
@@ -66434,7 +67334,27 @@ salt \(aq*\(aq file.set_attributes c:\etemp\ea.txt readonly=True hidden=True
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.win_file.stats(path, hash_type=\(aqmd5\(aq, follow_symlink=False)
+.B salt.modules.win_file.set_mode(path, mode)
+Set the mode of a file
+.sp
+This just calls get_mode, which returns None because we don\(aqt use mode on
+Windows
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq file.set_mode /etc/passwd 0644
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.win_file.stats(path, hash_type=\(aqmd5\(aq, follow_symlinks=False)
 Return a dict containing the stats for a given file
 .sp
 CLI Example:
@@ -67109,7 +68029,7 @@ salt \(aq*\(aq network.traceroute archlinux.org
 .sp
 Management of NTP servers on Windows
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -67432,7 +68352,7 @@ salt \(aq*\(aq pkg.refresh_db
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.win_pkg.remove(name=None, pkgs=None, version=None, **kwargs)
+.B salt.modules.win_pkg.remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwargs)
 Remove packages.
 .INDENT 7.0
 .TP
@@ -67848,6 +68768,23 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq service.getsid <service name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.win_service.has_powershell()
+Confirm if Powershell is available
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.has_powershell
 .ft P
 .fi
 .UNINDENT
@@ -69226,7 +70163,7 @@ salt \(aq*\(aq virt.vm_state <vm name>
 .sp
 Module for Sending Messages via XMPP (a.k.a. Jabber)
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -69300,12 +70237,12 @@ xmpp.send_msg \(aqadmins@xmpp.example.com\(aq \(aqThis is a salt module test\(aq
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.SS salt.modules.yumpkg5
+.SS salt.modules.yumpkg
 .sp
 Support for YUM
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.check_db(*names, **kwargs)
+.B salt.modules.yumpkg.check_db(*names, **kwargs)
 New in version 0.17.0.
 
 .sp
@@ -69338,7 +70275,27 @@ salt \(aq*\(aq pkg.check_db <package1> <package2> <package3> fromrepo=epel\-test
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.del_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
+.B salt.modules.yumpkg.clean_metadata()
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Cleans local yum metadata. Functionally identical to \fBrefresh_db()\fP\&.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.clean_metadata
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.del_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
 Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
 .sp
 If the .repo file that the repo exists in does not contain any other repo
@@ -69359,7 +70316,7 @@ salt \(aq*\(aq pkg.del_repo myrepo basedir=/path/to/dir
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.expand_repo_def(repokwargs)
+.B salt.modules.yumpkg.expand_repo_def(repokwargs)
 Take a repository definition and expand it to the full pkg repository dict
 that can be used for comparison. This is a helper function to make
 certain repo managers sane for comparison in the pkgrepo states.
@@ -69368,7 +70325,55 @@ There is no use to calling this function via the CLI.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.get_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
+.B salt.modules.yumpkg.file_dict(*packages)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+List the files that belong to a package, grouped by package. Not
+specifying any packages will return a list of _every_ file on the system\(aqs
+rpm database (not generally recommended).
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.file_list httpd
+salt \(aq*\(aq pkg.file_list httpd postfix
+salt \(aq*\(aq pkg.file_list
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.file_list(*packages)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+List the files that belong to a package. Not specifying any packages will
+return a list of _every_ file on the system\(aqs rpm database (not generally
+recommended).
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.file_list httpd
+salt \(aq*\(aq pkg.file_list httpd postfix
+salt \(aq*\(aq pkg.file_list
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.get_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
 Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
 .sp
 CLI Examples:
@@ -69386,7 +70391,146 @@ salt \(aq*\(aq pkg.get_repo myrepo basedir=/path/to/dir
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.install(name=None, refresh=False, fromrepo=None, skip_verify=False, pkgs=None, sources=None, **kwargs)
+.B salt.modules.yumpkg.group_diff(name)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Lists packages belonging to a certain group, and which are installed
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_diff \(aqPerl Support\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.group_info(name)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Lists packages belonging to a certain group
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_info \(aqPerl Support\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.group_install(name, skip=(), include=(), **kwargs)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Install the passed package group(s). This is basically a wrapper around
+pkg.install, which performs package group resolution for the user. This
+function is currently considered experimental, and should be expected to
+undergo changes.
+.INDENT 7.0
+.TP
+.B name
+Package group to install. To install more than one group, either use a
+comma\-separated list or pass the value as a python list.
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_install \(aqGroup 1\(aq
+salt \(aq*\(aq pkg.group_install \(aqGroup 1,Group 2\(aq
+salt \(aq*\(aq pkg.group_install \(aq["Group 1", "Group 2"]\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.TP
+.B skip
+The name(s), in a list, of any packages that would normally be
+installed by the package group ("default" packages), which should not
+be installed. Can be passed either as a comma\-separated list or a
+python list.
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_install \(aqMy Group\(aq skip=\(aqfoo,bar\(aq
+salt \(aq*\(aq pkg.group_install \(aqMy Group\(aq skip=\(aq["foo", "bar"]\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.TP
+.B include
+The name(s), in a list, of any packages which are included in a group,
+which would not normally be installed ("optional" packages). Note that
+this will not enforce group membership; if you include packages which
+are not members of the specified groups, they will still be installed.
+Can be passed either as a comma\-separated list or a python list.
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_install \(aqMy Group\(aq include=\(aqfoo,bar\(aq
+salt \(aq*\(aq pkg.group_install \(aqMy Group\(aq include=\(aq["foo", "bar"]\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+Because this is essentially a wrapper around pkg.install, any argument
+which can be passed to pkg.install may also be included here, and it
+will be passed along wholesale.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.group_list()
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Lists all groups known by yum on this system
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.group_list
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.install(name=None, refresh=False, fromrepo=None, skip_verify=False, pkgs=None, sources=None, **kwargs)
 Install the passed package(s), add refresh=True to clean the yum database
 before package is installed.
 .INDENT 7.0
@@ -69496,7 +70640,7 @@ Returns a dict containing the new package names and versions:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.latest_version(*names, **kwargs)
+.B salt.modules.yumpkg.latest_version(*names, **kwargs)
 Return the latest version of the named package available for upgrade or
 installation. If more than one package name is specified, a dict of
 name/version pairs is returned.
@@ -69522,7 +70666,7 @@ salt \(aq*\(aq pkg.latest_version <package1> <package2> <package3> ...
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.list_pkgs(versions_as_list=False, **kwargs)
+.B salt.modules.yumpkg.list_pkgs(versions_as_list=False, **kwargs)
 List the packages currently installed in a dict:
 .INDENT 7.0
 .INDENT 3.5
@@ -69549,8 +70693,8 @@ salt \(aq*\(aq pkg.list_pkgs
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.list_repo_pkgs(*args, **kwargs)
-New in version Hydrogen.
+.B salt.modules.yumpkg.list_repo_pkgs(*args, **kwargs)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Returns all available packages. Optionally, package names can be passed and
@@ -69599,7 +70743,7 @@ salt \(aq*\(aq pkg.list_repo_pkgs \(aqsamba4*\(aq fromrepo=base,updates
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.list_repos(basedir=\(aq/etc/yum.repos.d\(aq)
+.B salt.modules.yumpkg.list_repos(basedir=\(aq/etc/yum.repos.d\(aq)
 Lists all repos in <basedir> (default: /etc/yum.repos.d/).
 .sp
 CLI Example:
@@ -69616,7 +70760,7 @@ salt \(aq*\(aq pkg.list_repos
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.list_upgrades(refresh=True, **kwargs)
+.B salt.modules.yumpkg.list_upgrades(refresh=True, **kwargs)
 Check whether or not an upgrade is available for all packages
 .sp
 CLI Example:
@@ -69633,7 +70777,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.mod_repo(repo, basedir=None, **kwargs)
+.B salt.modules.yumpkg.mod_repo(repo, basedir=None, **kwargs)
 Modify one or more values for a repo. If the repo does not exist, it will
 be created, so long as the following values are specified:
 .INDENT 7.0
@@ -69671,9 +70815,9 @@ salt \(aq*\(aq pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.purge(name=None, pkgs=None, **kwargs)
+.B salt.modules.yumpkg.purge(name=None, pkgs=None, **kwargs)
 Package purges are not supported by yum, this function is identical to
-\fBremove()\fP\&.
+\fBpkg.remove\fP\&.
 .INDENT 7.0
 .TP
 .B name
@@ -69709,9 +70853,18 @@ salt \(aq*\(aq pkg.purge pkgs=\(aq["foo", "bar"]\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.refresh_db()
-Since yum refreshes the database automatically, this runs a yum clean,
-so that the next yum operation will have a clean database
+.B salt.modules.yumpkg.refresh_db()
+Check the yum repos for updated packages
+.sp
+Returns:
+.INDENT 7.0
+.IP \(bu 2
+\fBTrue\fP: Updates are available
+.IP \(bu 2
+\fBFalse\fP: An error occured
+.IP \(bu 2
+\fBNone\fP: No updates are available
+.UNINDENT
 .sp
 CLI Example:
 .INDENT 7.0
@@ -69727,7 +70880,7 @@ salt \(aq*\(aq pkg.refresh_db
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.remove(name=None, pkgs=None, **kwargs)
+.B salt.modules.yumpkg.remove(name=None, pkgs=None, **kwargs)
 Remove packages with \fByum \-q \-y remove\fP\&.
 .INDENT 7.0
 .TP
@@ -69764,7 +70917,7 @@ salt \(aq*\(aq pkg.remove pkgs=\(aq["foo", "bar"]\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.upgrade(refresh=True)
+.B salt.modules.yumpkg.upgrade(refresh=True)
 Run a full system upgrade, a yum upgrade
 .sp
 Return a dict containing the new package names and versions:
@@ -69794,7 +70947,7 @@ salt \(aq*\(aq pkg.upgrade
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.upgrade_available(name)
+.B salt.modules.yumpkg.upgrade_available(name)
 Check whether or not an upgrade is available for a given package
 .sp
 CLI Example:
@@ -69811,7 +70964,27 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg5.version(*names, **kwargs)
+.B salt.modules.yumpkg.verify(*names)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Runs an rpm \-Va on a system, and returns the results in a dict
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.verify
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg.version(*names, **kwargs)
 Returns a string representing the package version or an empty string if not
 installed. If more than one package name is specified, a dict of
 name/version pairs is returned.
@@ -70009,7 +71182,7 @@ Do not execute cmd if statement on the host return 0
 run buildout in newest mode
 .TP
 .B force
-run buildout unconditionnaly
+run buildout unconditionally
 .TP
 .B verbose
 run buildout in verbose mode (\-vvvvv)
@@ -70033,7 +71206,7 @@ salt \(aq*\(aq buildout.run_buildout /srv/mybuildout
 Upgrade current bootstrap.py with the last released one.
 .sp
 Indeed, when we first run a buildout, a common source of problem
-is to have an locally stale boostrap, we just try rab a new copy
+is to have a locally stale bootstrap, we just try to grab a new copy
 .INDENT 7.0
 .TP
 .B directory
@@ -72416,6 +73589,14 @@ then enforced.
 The Salt state system is comprised of a number of components. As a user, an
 understanding of the SLS and renderer systems are needed. But as a developer,
 an understanding of Salt states and how to write the states is needed as well.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+States are compiled and executed only on minions that have been targeted.
+To execute things on masters, see \fI\%runners\fP\&.
+.UNINDENT
+.UNINDENT
 .SS Salt SLS System
 .INDENT 0.0
 .TP
@@ -73595,7 +74776,7 @@ Windows
 T}
 _
 T{
-yumpkg5
+yumpkg
 T}	T{
 RedHat\-based distros and derivatives (wraps \fByum(8)\fP)
 T}
@@ -73783,18 +74964,17 @@ module can be used to provide certain functionality.
 emacs:
   pkg.installed:
     \- provider:
-      \- pkg: yumpkg5
       \- cmd: customcmd
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .sp
-In this example the default \fBpkg\fP module is being
-redirected to use the \fByumpkg5\fP module (\fByum\fP
-via shelling out instead of via the \fByum\fP Python API), but is also
-using a custom module to invoke commands. This could be used to dramatically
-change the behavior of a given state.
+In this example, the state is being instructed to use a custom module to invoke
+commands.
+.sp
+Arbitrary module redirects can be used to dramatically change the behavior of a
+given state.
 .SH REQUISITES
 .sp
 The Salt requisite system is used to create relationships between states. The
@@ -75735,6 +76915,9 @@ Archive states.
 .INDENT 0.0
 .TP
 .B salt.states.archive.extracted(name, source, archive_format, tar_options=None, source_hash=None, if_missing=None)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
 State that make sure an archive is extracted in a directory.
 The downloaded archive is erased if succesfully extracted.
 The archive is downloaded only if necessary.
@@ -75937,7 +77120,7 @@ Include additional arguments and options to the aws command line
 .SS salt.states.cloud
 .SS Using states instead of maps to deploy clouds
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Use this minion to spin up a cloud instance:
@@ -76182,6 +77365,25 @@ mycustompkg:
 .fi
 .UNINDENT
 .UNINDENT
+.SS How do I create a environment from a pillar map?
+.sp
+The map that comes from a pillar cannot be directly consumed by the env option. To use it
+one must convert it to a list. Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+printenv:
+  cmd.run:
+    \- env:
+        {% for key, value in pillar[\(aqkeys\(aq].iteritems() %}
+         \- \(aq{{ key }}\(aq: \(aq{{ value }}\(aq
+        {% endfor %}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .TP
 .B salt.states.cmd.call(name, func, args=(), kws=None, onlyif=None, unless=None, **kwargs)
@@ -76277,7 +77479,7 @@ regardless, unless \fBquiet\fP is used for this value.
 .B quiet
 The command will be executed quietly, meaning no log entries of the
 actual command or its return data. This is deprecated as of the
-\fBHydrogen\fP release, and is being replaced with
+\fB2014.1.0 (Hydrogen)\fP release, and is being replaced with
 \fBoutput_loglevel: quiet\fP\&.
 .TP
 .B timeout
@@ -76298,13 +77500,14 @@ your state which rely on the software being installed will fail.
 .sp
 .nf
 .ft C
-cmd.run:
-  \- name: /usr/bin/python /usr/local/sbin/get\-pip.py
-  \- unless: which pip
-  \- require:
-    \- pkg: python
-    \- file: /usr/local/sbin/get\-pip.py
-  \- reload_modules: True
+getpip:
+  cmd.run:
+    \- name: /usr/bin/python /usr/local/sbin/get\-pip.py
+    \- unless: which pip
+    \- require:
+      \- pkg: python
+      \- file: /usr/local/sbin/get\-pip.py
+    \- reload_modules: True
 .ft P
 .fi
 .UNINDENT
@@ -76569,17 +77772,39 @@ $COMPOSER_HOME environment variable
 .SS salt.states.cron
 .SS Management of cron, the Unix command scheduler
 .sp
-The cron state module allows for user crontabs to be cleanly managed.
+Cron declarations require a number of parameters. The following are the
+parameters used by Salt to define the various timing values for a cron job:
+.INDENT 0.0
+.IP \(bu 2
+\fBminute\fP
+.IP \(bu 2
+\fBhour\fP
+.IP \(bu 2
+\fBdaymonth\fP
+.IP \(bu 2
+\fBmonth\fP
+.IP \(bu 2
+\fBdayweek\fP (0 to 6 are Sunday through Saturday, 7 can also be used for
+Sunday)
+.UNINDENT
 .sp
-Cron declarations require a number of parameters. The timing parameters need
-to be declared: minute, hour, daymonth, month, and dayweek. The user whose
-crontab is to be edited also needs to be defined.
+\fBWARNING:\fP
+.INDENT 0.0
+.INDENT 3.5
+Any timing arguments not specified take a value of \fB*\fP\&. This means that
+setting \fBhour\fP to \fB5\fP, while not defining the \fBminute\fP param, will
+result in Salt adding a job that will execute every minute between 5 and 6
+A.M.!
 .sp
-By default, the timing arguments are all \fB*\fP (\fBCaution\fP: This means just
-setting \fBhour\fP to \fB5\fP and not defining minute will execute the cron entry
-every minute between 5 and 6 am!) and the user is root. When making changes to
-an existing cron job, the name declaration is the unique factor, so if an
-existing cron that looks like this:
+Additionally, the default user for these states is \fBroot\fP\&. Therefore, if
+the cron job is for another user, it is necessary to specify that user with
+the \fBuser\fP parameter.
+.UNINDENT
+.UNINDENT
+.sp
+When making changes to an existing cron job, the name declaration is the
+parameter used to uniquely identify the job, so if an existing cron that looks
+like this:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -77029,8 +78254,8 @@ my_service:
         \- container: mysuperdocker
         \- port_bindings:
             "5000/tcp":
-                \HostIp: ""
-                \HostPort: "5000"
+                HostIp: ""
+                HostPort: "5000"
 .ft P
 .fi
 .UNINDENT
@@ -77118,7 +78343,7 @@ or filesystem path to the dockerfile
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.dockerio.installed(name, image, command=\(aq/sbin/init\(aq, hostname=None, user=None, detach=True, stdin_open=False, tty=False, mem_limit=0, ports=None, environment=None, dns=None, volumes=None, volumes_from=None, privileged=False, *args, **kwargs)
+.B salt.states.dockerio.installed(name, image, command=None, hostname=None, user=None, detach=True, stdin_open=False, tty=False, mem_limit=0, ports=None, environment=None, dns=None, volumes=None, volumes_from=None, *args, **kwargs)
 Ensure that a container with the given name exists;
 if not, build a new container from the specified image.
 (\fIdocker run\fP)
@@ -77248,7 +78473,7 @@ Do not execute cmd if statement in the container returns 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.dockerio.running(name, container=None, port_bindings=None, binds=None, publish_all_ports=False, links=None, lxc_conf=None)
+.B salt.states.dockerio.running(name, container=None, port_bindings=None, binds=None, publish_all_ports=False, links=None, lxc_conf=None, privileged=False)
 Ensure that a container is running. (\fIdocker inspect\fP)
 .INDENT 7.0
 .TP
@@ -77306,8 +78531,8 @@ a mapping port\(aqs guest, hostname\(aqs host and port\(aqs host.
 .ft C
 \- port_bindings:
     "5000/tcp":
-        \HostIp: ""
-        \HostPort: "5000"
+        HostIp: ""
+        HostPort: "5000"
 .ft P
 .fi
 .UNINDENT
@@ -77703,6 +78928,65 @@ String or list for adding in accumulator
 One of them required for sure we fill up accumulator before we manage
 the file. Probably the same as filename
 .UNINDENT
+.sp
+Example:
+.sp
+Given the following:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+animals_doing_things:
+  file.accumulated:
+    \- filename: /tmp/animal_file.txt
+    \- text: \(aq jumps over the lazy dog.\(aq
+    \- require_in:
+      \- file: animal_file
+
+animal_file:
+  file.managed:
+    \- name: /tmp/animal_file.txt
+    \- source: salt://animal_file.txt
+    \- template: jinja
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+One might write a template for animal_file.txt like the following:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+The quick brown fox{% for animal in accumulator[\(aqanimals_doing_things\(aq] %}{{ animal }}{% endfor %}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Collectively, the above states and template file will produce:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+The quick brown fox jumps over the lazy dog.
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Multiple accumulators can be "chained" together.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+The \(aqaccumulator\(aq data structure is a Python dictionary.
+Do not expect any loop over the keys in a deterministic order!
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -77777,7 +79061,7 @@ New in version 0.18.0.
 .sp
 A block of content delimited by comments can help you manage several lines
 entries without worrying about old entries removal. This can help you maintaining
-an unmanaged file containing manual edits.
+an un\-managed file containing manual edits.
 Note: this function will store two copies of the file in\-memory
 (the original version and the edited version) in order to detect changes
 and only edit the targeted file if necessary.
@@ -77798,7 +79082,7 @@ the content block. Note that the whole line containing this marker will
 be considered, so whitespaces or extra content before or after the
 marker is included in final output.
 Note: you can use file.accumulated and target this state. All accumulated
-datas dictionnaries content will be added as new lines in the content.
+data dictionaries content will be added as new lines in the content.
 .IP \(bu 2
 \fBcontent\fP \-\- The content to be used between the two lines identified by
 marker_start and marker_stop.
@@ -77821,7 +79105,7 @@ file. If \fBFalse\fP return a boolean if any changes were made.
 .B Return type
 bool or str
 .sp
-Exemple of usage with an accumulator and with a variable:
+Example of usage with an accumulator and with a variable:
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -78104,6 +79388,7 @@ Examples:
 .ft C
 /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
 sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+ead48423703509d37c4a90e6a0d53e143b6fc268
 .ft P
 .fi
 .UNINDENT
@@ -78193,6 +79478,55 @@ using the pillar path syntax used in \fBpillar.get\fP\&. This is useful when the
 contains newlines, as referencing a pillar variable using a jinja/mako
 template can result in YAML formatting issues due to the newlines
 causing indentation mismatches.
+.sp
+For example, the following could be used to deploy an SSH private key:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+/home/deployer/.ssh/id_rsa:
+  file.managed:
+    \- user: deployer
+    \- group: deployer
+    \- mode: 600
+    \- contents_pillar: userdata:deployer:id_rsa
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This would populate \fB/home/deployer/.ssh/id_rsa\fP with the contents of
+\fBpillar[\(aquserdata\(aq][\(aqdeployer\(aq][\(aqid_rsa\(aq]\fP\&. An example of this pillar
+setup would be like so:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+userdata:
+  deployer:
+    id_rsa: |
+      \-\-\-\-\-BEGIN RSA PRIVATE KEY\-\-\-\-\-
+      MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+      U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+      B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+      GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+      \-\-\-\-\-END RSA PRIVATE KEY\-\-\-\-\-
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+The private key above is shortened to keep the example brief, but
+shows how to do multiline string in YAML. The key is followed by a
+pipe character, and the mutli\-line string is indented two more
+spaces.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -78362,26 +79696,26 @@ directory will be deleted unless it is required.
 Require other resources such as packages or files
 .TP
 .B user
-The user to own the directory, this defaults to the user salt is
+The user to own the directory. This defaults to the user salt is
 running as on the minion
 .TP
 .B group
-The group ownership set for the directory, this defaults to the group
+The group ownership set for the directory. This defaults to the group
 salt is running as on the minion
 .TP
 .B dir_mode
-The permissions mode to set any directories created
+The permissions mode to set on any directories created
 .TP
 .B file_mode
-The permissions mode to set any files created
+The permissions mode to set on any files created
 .TP
 .B sym_mode
 The permissions mode to set on any symlink created
 .TP
 .B template
 If this setting is applied then the named templating engine will be
-used to render the downloaded file, currently jinja, mako, and wempy
-are supported
+used to render the downloaded file. Supported templates are:
+\fIjinja\fP, \fImako\fP and \fIwempy\fP\&.
 .UNINDENT
 .sp
 \fBNOTE:\fP
@@ -78421,8 +79755,8 @@ Example:
 .UNINDENT
 .TP
 .B exclude_pat
-When copying, exclude this pattern from the source. If both
-include_pat and exclude_pat are supplied, then it will apply
+Exclude this pattern from the source when copying. If both
+\fIinclude_pat\fP and \fIexclude_pat\fP are supplied, then it will apply
 conditions cumulatively. i.e. first select based on include_pat, and
 then within that result apply exclude_pat.
 .sp
@@ -78444,8 +79778,8 @@ Example:
 .UNINDENT
 .TP
 .B maxdepth
-When copying, only copy paths which are depth maxdepth from the source
-path.
+When copying, only copy paths which are of depth \fImaxdepth\fP from the
+source path.
 Example:
 .INDENT 7.0
 .INDENT 3.5
@@ -78463,8 +79797,8 @@ Example:
 .TP
 .B keep_symlinks
 Keep symlinks when copying from the source. This option will cause
-the copy operation to terminate at the symlink. If you are after
-rsync\-ish behavior, then set this to True.
+the copy operation to terminate at the symlink. If desire behavior
+similar to rsync, then set this to True.
 .TP
 .B force_symlinks
 Force symlink creation. This option will force the symlink creation.
@@ -78687,14 +80021,14 @@ The location of the symlink to create
 The location that the symlink points to
 .TP
 .B force
-If the target of the symlink exists and is not a symlink and
+If the name of the symlink exists and is not a symlink and
 force is set to False, the state will fail. If force is set to
 True, the file or directory in the way of the symlink file
 will be deleted to make room for the symlink, unless
 backupname is set, when it will be renamed
 .TP
 .B backupname
-If the target of the symlink exists and is not a symlink, it will be
+If the name of the symlink exists and is not a symlink, it will be
 renamed to the backupname. If the backupname already
 exists and force is False, the state will fail. Otherwise, the
 backupname will be removed first.
@@ -79073,6 +80407,9 @@ roles:
 .INDENT 0.0
 .TP
 .B salt.states.grains.list_present(name, value)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
 Ensure the value is present in the list type grain
 .INDENT 7.0
 .TP
@@ -79310,9 +80647,74 @@ httpd:
     \- save: True
 
 httpd:
+  iptables.append:
+    \- table: filter
+    \- family: ipv6
+    \- chain: INPUT
+    \- jump: ACCEPT
+    \- match: state
+    \- connstate: NEW
+    \- dport: 80
+    \- proto: tcp
+    \- sport: 1025:65535
+    \- save: True
+
+httpd:
   iptables.insert:
     \- position: 1
     \- table: filter
+    \- chain: INPUT
+    \- jump: ACCEPT
+    \- match: state
+    \- connstate: NEW
+    \- dport: 80
+    \- proto: tcp
+    \- sport: 1025:65535
+    \- save: True
+
+httpd:
+  iptables.insert:
+    \- position: 1
+    \- table: filter
+    \- family: ipv6
+    \- chain: INPUT
+    \- jump: ACCEPT
+    \- match: state
+    \- connstate: NEW
+    \- dport: 80
+    \- proto: tcp
+    \- sport: 1025:65535
+    \- save: True
+
+httpd:
+  iptables.delete:
+    \- table: filter
+    \- chain: INPUT
+    \- jump: ACCEPT
+    \- match: state
+    \- connstate: NEW
+    \- dport: 80
+    \- proto: tcp
+    \- sport: 1025:65535
+    \- save: True
+
+httpd:
+  iptables.delete:
+    \- position: 1
+    \- table: filter
+    \- chain: INPUT
+    \- jump: ACCEPT
+    \- match: state
+    \- connstate: NEW
+    \- dport: 80
+    \- proto: tcp
+    \- sport: 1025:65535
+    \- save: True
+
+httpd:
+  iptables.delete:
+    \- table: filter
+    \- family: ipv6
     \- chain: INPUT
     \- jump: ACCEPT
     \- match: state
@@ -79327,7 +80729,7 @@ httpd:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.iptables.append(name, **kwargs)
+.B salt.states.iptables.append(name, family=\(aqipv4\(aq, **kwargs)
 New in version 0.17.0.
 
 .sp
@@ -79337,6 +80739,9 @@ Append a rule to a chain
 .B name
 A user\-defined name to call this rule by in another part of a state or
 formula. This should not be an actual rule.
+.TP
+.B family
+Network family, ipv4 or ipv6.
 .UNINDENT
 .sp
 All other arguments are passed in with the same name as the long option
@@ -79346,16 +80751,21 @@ specified as \fIconnstate\fP instead of \fIstate\fP (not to be confused with
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.iptables.chain_absent(name, table=\(aqfilter\(aq)
-New in version Hydrogen.
+.B salt.states.iptables.chain_absent(name, table=\(aqfilter\(aq, family=\(aqipv4\(aq)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Verify the chain is absent.
+.INDENT 7.0
+.TP
+.B family
+Networking family, either ipv4 or ipv6
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.iptables.chain_present(name, table=\(aqfilter\(aq)
-New in version Hydrogen.
+.B salt.states.iptables.chain_present(name, table=\(aqfilter\(aq, family=\(aqipv4\(aq)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Verify the chain is exist.
@@ -79366,28 +80776,26 @@ A user\-defined chain name.
 .TP
 .B table
 The table to own the chain.
+.TP
+.B family
+Networking family, either ipv4 or ipv6
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.iptables.flush(name, **kwargs)
-New in version Hydrogen.
+.B salt.states.iptables.delete(name, family=\(aqipv4\(aq, **kwargs)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
-Flush current iptables state
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.states.iptables.insert(name, **kwargs)
-New in version Hydrogen.
-
-.sp
-Insert a rule into a chain
+Delete a rule to a chain
 .INDENT 7.0
 .TP
 .B name
 A user\-defined name to call this rule by in another part of a state or
 formula. This should not be an actual rule.
+.TP
+.B family
+Networking family, either ipv4 or ipv6
 .UNINDENT
 .sp
 All other arguments are passed in with the same name as the long option
@@ -79397,11 +80805,51 @@ specified as \fIconnstate\fP instead of \fIstate\fP (not to be confused with
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.iptables.set_policy(name, **kwargs)
-New in version Hydrogen.
+.B salt.states.iptables.flush(name, family=\(aqipv4\(aq, **kwargs)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Flush current iptables state
+.INDENT 7.0
+.TP
+.B family
+Networking family, either ipv4 or ipv6
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.iptables.insert(name, family=\(aqipv4\(aq, **kwargs)
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Insert a rule into a chain
+.INDENT 7.0
+.TP
+.B name
+A user\-defined name to call this rule by in another part of a state or
+formula. This should not be an actual rule.
+.TP
+.B family
+Networking family, either ipv4 or ipv6
+.UNINDENT
+.sp
+All other arguments are passed in with the same name as the long option
+that would normally be used for iptables, with one exception: \fI\-\-state\fP is
+specified as \fIconnstate\fP instead of \fIstate\fP (not to be confused with
+\fIctstate\fP).
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.iptables.set_policy(name, family=\(aqipv4\(aq, **kwargs)
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Sets the default policy for iptables firewall tables
+.INDENT 7.0
+.TP
+.B family
+Networking family, either ipv4 or ipv6
+.UNINDENT
 .UNINDENT
 .SS salt.states.keyboard
 .SS Management of keyboard layouts
@@ -80130,7 +81578,7 @@ Or as a list of options.
 .SS salt.states.memcached
 .SS States for Management of Memcached Keys
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .INDENT 0.0
 .TP
@@ -81180,7 +82628,7 @@ New in version 0.17.0.
 .SS salt.states.ntp
 .SS Management of NTP servers
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This state is used to manage NTP servers. Currently only Windows is supported.
@@ -81262,7 +82710,7 @@ The value to set
 .SS salt.states.pagerduty
 .SS Create an Event in PagerDuty
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This state is useful for creating events on the PagerDuty service during state
@@ -81586,7 +83034,7 @@ logstash:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.pkg.installed(name, version=None, refresh=False, fromrepo=None, skip_verify=False, pkgs=None, sources=None, **kwargs)
+.B salt.states.pkg.installed(name, version=None, refresh=None, fromrepo=None, skip_verify=False, pkgs=None, sources=None, **kwargs)
 Verify that the package is installed, and that it is the correct version
 (if specified).
 .INDENT 7.0
@@ -81610,8 +83058,7 @@ either "pkgs" or "sources" is used. Currently, this option is supported
 for the following pkg providers: \fBapt\fP,
 \fBebuild\fP,
 \fBpacman\fP,
-\fByumpkg\fP,
-\fByumpkg5\fP, and
+\fByumpkg\fP, and
 \fBzypper\fP\&.
 .TP
 .B refresh
@@ -81663,7 +83110,6 @@ mypkgs:
 \fBNOTE:\fP For \fBapt\fP,
 \fBebuild\fP,
 \fBpacman\fP, \fByumpkg\fP,
-\fByumpkg5\fP,
 and \fBzypper\fP, version numbers can be specified
 in the \fBpkgs\fP argument. Example:
 .INDENT 7.0
@@ -81755,7 +83201,7 @@ mypkgs:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.pkg.latest(name, refresh=False, fromrepo=None, skip_verify=False, pkgs=None, **kwargs)
+.B salt.states.pkg.latest(name, refresh=None, fromrepo=None, skip_verify=False, pkgs=None, **kwargs)
 Verify that the named package is installed and the latest available
 package. If the package can be updated this state function will update
 the package. Generally it is better for the
@@ -82184,7 +83630,7 @@ A boolean to mask the package
 .sp
 Manage software from FreeBSD ports
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 \fBNOTE:\fP
@@ -82258,12 +83704,24 @@ frank:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_database.absent(name, runas=None, user=None)
+.B salt.states.postgres_database.absent(name, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named database is absent
 .INDENT 7.0
 .TP
 .B name
 The name of the database to remove
+.TP
+.B db_user
+database username if different from config or defaul
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .TP
 .B runas
 System user all operations should be performed on behalf of
@@ -82280,7 +83738,7 @@ New in version 0.17.0.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_database.present(name, tablespace=None, encoding=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None, user=None)
+.B salt.states.postgres_database.present(name, tablespace=None, encoding=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named database is present with the specified properties.
 For more information about all of these options see man createdb(1)
 .INDENT 7.0
@@ -82314,6 +83772,18 @@ Deprecated since version 0.17.0.
 .TP
 .B user
 System user all operations should be performed on behalf of
+.TP
+.B db_user
+database username if different from config or defaul
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .sp
 New in version 0.17.0.
 
@@ -82336,7 +83806,7 @@ frank:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_group.absent(name, runas=None, user=None)
+.B salt.states.postgres_group.absent(name, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named group is absent
 .INDENT 7.0
 .TP
@@ -82354,12 +83824,27 @@ System user all operations should be performed on behalf of
 .sp
 New in version 0.17.0.
 
+.TP
+.B db_user
+database username if different from config or defaul
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_group.present(name, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None, user=None)
+.B salt.states.postgres_group.present(name, createdb=None, createroles=None, createuser=None, encrypted=None, superuser=None, inherit=None, login=None, replication=None, password=None, groups=None, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named group is present with the specified privileges
+Please note that the user/group notion in postgresql is just abstract, we
+have roles, where users can be seens as roles with the LOGIN privilege
+and groups the others.
 .INDENT 7.0
 .TP
 .B name
@@ -82368,11 +83853,21 @@ The name of the group to manage
 .B createdb
 Is the group allowed to create databases?
 .TP
+.B createroles
+Is the group allowed to create other roles/users
+.TP
 .B createuser
-Is the group allowed to create other users?
+Alias to create roles, and history problem, in pgsql normally
+createuser == superuser
 .TP
 .B encrypted
 Should the password be encrypted in the system catalog?
+.TP
+.B login
+Should the group have login perm
+.TP
+.B inherit
+Should the group inherit permissions
 .TP
 .B superuser
 Should the new group be a "superuser"
@@ -82381,7 +83876,22 @@ Should the new group be a "superuser"
 Should the new group be allowed to initiate streaming replication
 .TP
 .B password
-The group\(aqs password
+The Group\(aqs password
+It can be either a plain string or a md5 postgresql hashed password:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\(aqmd5{MD5OF({password}{role}}\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If encrypted is None or True, the password will be automaticly
+encrypted to the previous
+format if it is not already done.
 .TP
 .B groups
 A string of comma separated groups the group should be in
@@ -82397,6 +83907,18 @@ System user all operations should be performed on behalf of
 .sp
 New in version 0.17.0.
 
+.TP
+.B db_user
+database username if different from config or defaul
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .UNINDENT
 .UNINDENT
 .SS salt.states.postgres_user
@@ -82416,7 +83938,7 @@ frank:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_user.absent(name, runas=None, user=None)
+.B salt.states.postgres_user.absent(name, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named user is absent
 .INDENT 7.0
 .TP
@@ -82434,12 +83956,27 @@ System user all operations should be performed on behalf of
 .sp
 New in version 0.17.0.
 
+.TP
+.B db_user
+database username if different from config or default
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.postgres_user.present(name, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None, user=None)
+.B salt.states.postgres_user.present(name, createdb=None, createroles=None, createuser=None, encrypted=None, superuser=None, replication=None, inherit=None, login=None, password=None, groups=None, runas=None, user=None, maintenance_db=None, db_password=None, db_host=None, db_port=None, db_user=None)
 Ensure that the named user is present with the specified privileges
+Please note that the user/group notion in postgresql is just abstract, we
+have roles, where users can be seens as roles with the LOGIN privilege
+and groups the others.
 .INDENT 7.0
 .TP
 .B name
@@ -82448,11 +83985,20 @@ The name of the user to manage
 .B createdb
 Is the user allowed to create databases?
 .TP
-.B createuser
+.B createroles
 Is the user allowed to create other users?
+.TP
+.B createuser
+Alias to create roles
 .TP
 .B encrypted
 Should the password be encrypted in the system catalog?
+.TP
+.B login
+Should the group have login perm
+.TP
+.B inherit
+Should the group inherit permissions
 .TP
 .B superuser
 Should the new user be a "superuser"
@@ -82462,6 +84008,21 @@ Should the new user be allowed to initiate streaming replication
 .TP
 .B password
 The user\(aqs password
+It can be either a plain string or a md5 postgresql hashed password:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\(aqmd5{MD5OF({password}{role}}\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If encrypted is None or True, the password will be automaticly
+encrypted to the previous
+format if it is not already done.
 .TP
 .B groups
 A string of comma separated groups the user should be in
@@ -82477,6 +84038,18 @@ System user all operations should be performed on behalf of
 .sp
 New in version 0.17.0.
 
+.TP
+.B db_user
+database username if different from config or default
+.TP
+.B db_password
+user password if any password for a specified user
+.TP
+.B db_host
+Database host if different from config or default
+.TP
+.B db_port
+Database port if different from config or default
 .UNINDENT
 .UNINDENT
 .SS salt.states.powerpath
@@ -82616,7 +84189,7 @@ The user to run the rabbitmq\-plugin command as
 .SS salt.states.rabbitmq_plugin
 .SS Manage RabbitMQ Plugins
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Example:
@@ -83692,7 +85265,7 @@ wsgi_server:
     \- require:
       \- pkg: supervisor
     \- watch:
-      \- file.managed: /etc/nginx/sites\-enabled/wsgi_server.conf
+      \- file: /etc/nginx/sites\-enabled/wsgi_server.conf
 .ft P
 .fi
 .UNINDENT
@@ -84281,7 +85854,7 @@ The user\(aqs home phone number (not supported in MacOS)
 .SS Setup of Python virtualenv sandboxes
 .INDENT 0.0
 .TP
-.B salt.states.virtualenv_mod.managed(name, venv_bin=\(aqvirtualenv\(aq, requirements=None, no_site_packages=None, system_site_packages=False, distribute=False, use_wheel=False, clear=False, python=None, extra_search_dir=None, never_download=None, prompt=None, user=None, runas=None, no_chown=False, cwd=None, index_url=None, extra_index_url=None, pre_releases=False, no_deps=False)
+.B salt.states.virtualenv_mod.managed(name, venv_bin=None, requirements=None, no_site_packages=None, system_site_packages=False, distribute=False, use_wheel=False, clear=False, python=None, extra_search_dir=None, never_download=None, prompt=None, user=None, runas=None, no_chown=False, cwd=None, index_url=None, extra_index_url=None, pre_releases=False, no_deps=False)
 Create a virtualenv and optionally manage it with pip
 .INDENT 7.0
 .TP
@@ -84358,7 +85931,7 @@ Disable all the firewall profiles (Windows only)
 .SS salt.states.win_network
 .SS Configuration of network interfaces on Windows hosts
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This module provides the \fBnetwork\fP state(s) on Windows hosts. DNS servers, IP
@@ -84501,10 +86074,12 @@ Example:
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.win_path.exists(name, index=0)
+.B salt.states.win_path.exists(name, index=None)
 Add the directory to the system PATH at index location
 .sp
-index: where the directory should be placed in the PATH (default: 0)
+index: where the directory should be placed in the PATH (default: None)
+[Note:  Providing no index will append directory to PATH and
+will not enforce its location within the PATH.]
 .sp
 Example:
 .INDENT 7.0
@@ -84550,7 +86125,7 @@ Other features can not be installed !
 .SS salt.states.win_system
 .SS Management of Windows system information
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This state is used to manage system information such as the computer name and
@@ -84594,7 +86169,7 @@ The desired computer name
 .SS salt.states.xmpp
 .SS Sending Messages over XMPP
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 This state is useful for firing messages during state runs, using the XMPP
@@ -85060,8 +86635,8 @@ the context into the included file is required:
 .UNINDENT
 .SS Variable and block Serializers
 .sp
-Salt allows one to serialize any variable into \fBjson\fP or \fByaml\fP\&. For example
-this variable:
+Salt allows one to serialize any variable into \fBjson\fP or \fByaml\fP or
+\fBpython\fP\&. For example this variable:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -85089,6 +86664,8 @@ with this template:
 yaml \-> {{ data|yaml }}
 
 json \-> {{ data|json }}
+
+python \-> {{ data|python }}
 .ft P
 .fi
 .UNINDENT
@@ -85103,6 +86680,8 @@ will be rendered has:
 yaml \-> {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
 
 json \-> {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
+
+python \-> {u\(aqdata\(aq: {u\(aqbar\(aq: 42, u\(aqbaz\(aq: [1, 2, 3], u\(aqfoo\(aq: True, u\(aqqux\(aq: 2.0}}
 .ft P
 .fi
 .UNINDENT
@@ -86369,8 +87948,8 @@ modules.
 .ft C
 ext_pillar:
 \- cobbler:
-  \- key: cobbler # Nest results within this key. By default, values are not nested.
-  \- only: [parameters] # Add only these keys to pillar.
+    key: cobbler # Nest results within this key. By default, values are not nested.
+    only: [parameters] # Add only these keys to pillar.
 
 cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
 cobbler.user: username # default is no username
@@ -87164,6 +88743,12 @@ T}	T{
 T}
 _
 T{
+\fBlxc\fP
+T}	T{
+Control Linux Containers via Salt
+T}
+_
+T{
 \fBmanage\fP
 T}	T{
 General management functions for salt, tools like seeing what hosts are up
@@ -87279,7 +88864,7 @@ salt\-run cache.clear_mine_func tgt=\(aq*\(aq,clear_mine_func=\(aqnetwork.interf
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.runners.cache.clear_pillar(tgt, expr_form=\(aqglob\(aq)
+.B salt.runners.cache.clear_pillar(tgt=None, expr_form=\(aqglob\(aq)
 Clear the cached pillar data of the targeted minions
 .sp
 CLI Example:
@@ -87505,6 +89090,196 @@ CLI Example:
 .nf
 .ft C
 salt\-run launchd.write_launchd_plist salt\-master
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.runners.lxc
+.sp
+Control Linux Containers via Salt
+.INDENT 0.0
+.TP
+.B depends
+lxc execution module
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.find_guest(name, quiet=False)
+Returns the host for a container.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.find_guest name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.freeze(name, quiet=False)
+Freeze the named container
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.freeze name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.info(name, quiet=False)
+Returns information about a container.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.info name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.init(name, host=None, **kwargs)
+Initialize a new container
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.init name host=minion_id [cpuset=cgroups_cpuset] \e
+        [cpushare=cgroups_cpushare] [memory=cgroups_memory] \e
+        [nic=nic_profile] [profile=lxc_profile] \e
+        [nic_opts=nic_opts] [start=(true|false)] \e
+        [seed=(true|false)] [install=(true|false)] \e
+        [config=minion_config]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B name
+Name of the container.
+.TP
+.B host
+Minion to start the container on. Required.
+.TP
+.B cpuset
+cgroups cpuset.
+.TP
+.B cpushare
+cgroups cpu shares.
+.TP
+.B memory
+cgroups memory limit, in MB.
+.TP
+.B nic
+Network interfaces profile (defined in config or pillar).
+.TP
+.B profile
+A LXC profile (defined in config or pillar).
+.TP
+.B nic_opts
+Extra options for network interfaces. E.g:
+{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}
+.TP
+.B start
+Start the newly created container.
+.TP
+.B seed
+Seed the container with the minion config and autosign its key. Default: true
+.TP
+.B install
+If salt\-minion is not already installed, install it. Default: true
+.TP
+.B config
+Optional config paramers. By default, the id is set to the name of the
+container.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.list(host=None, quiet=False)
+List defined containers (running, stopped, and frozen) for the named
+(or all) host(s).
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.list [host=minion_id]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.purge(name, delete_key=True, quiet=False)
+Purge the named container and delete its minion key if present.
+WARNING: Destroys all data associated with the container.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.purge name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.start(name, quiet=False)
+Start the named container.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.start name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.stop(name, quiet=False)
+Stop the named container.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.stop name
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.lxc.unfreeze(name, quiet=False)
+Unfreeze the named container
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run lxc.unfreeze name
 .ft P
 .fi
 .UNINDENT
@@ -87912,7 +89687,7 @@ Pause the named vm
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.runners.virt.purge(name)
+.B salt.runners.virt.purge(name, delete_key=True)
 Destroy the named vm
 .UNINDENT
 .INDENT 0.0
@@ -89278,6 +91053,13 @@ Returns the SubnetId to use
 .TP
 .B salt.cloud.clouds.ec2.get_tags(name=None, instance_id=None, call=None, location=None)
 Retrieve tags for a node
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.cloud.clouds.ec2.get_tenancy(vm_)
+Returns the Tenancy to use.
+.sp
+Can be "dedicated" or "default". Cannot be present for spot instances.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -91204,6 +92986,12 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 .sp
+Please note that the \fIrackspace\fP driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will \fInot\fP work with OpenStack\-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the \fIopenstack\fP driver
+instead.
+.sp
 The rackspace cloud module interfaces with the Rackspace public cloud service
 and requires that two configuration parameters be set for use, \fBuser\fP and
 \fBapikey\fP\&.
@@ -91562,7 +93350,7 @@ local.cmd(\(aq*\(aq, \(aqtest.fib\(aq, [10])
 .INDENT 7.0
 .TP
 .B cmd(tgt, fun, arg=(), timeout=None, expr_form=\(aqglob\(aq, ret=\(aq\(aq, kwarg=None, **kwargs)
-Syncronously execute a command on targeted minions
+Synchronously execute a command on targeted minions
 .sp
 The cmd method will execute and wait for the timeout period for all
 minions to reply, then it will return all minion data at once.
@@ -91717,7 +93505,7 @@ function name.
 .INDENT 7.0
 .TP
 .B cmd_async(tgt, fun, arg=(), expr_form=\(aqglob\(aq, ret=\(aq\(aq, kwarg=None, **kwargs)
-Asyncronously send a command to connected minions
+Asynchronously send a command to connected minions
 .sp
 The function signature is the same as \fBcmd()\fP with the
 following exceptions.
@@ -91840,7 +93628,7 @@ is reached.
 .INDENT 7.0
 .TP
 .B run_job(tgt, fun, arg=(), expr_form=\(aqglob\(aq, ret=\(aq\(aq, timeout=None, kwarg=None, **kwargs)
-Asyncronously send a command to connected minions
+Asynchronously send a command to connected minions
 .sp
 Prep the job directory and publish a command to any targeted minions.
 .INDENT 7.0
@@ -92595,6 +94383,31 @@ will be returned. If the file is not found there, then
 .sp
 This allows for directories to be overlaid and prioritized based on the order
 they are defined in the configuration.
+.sp
+It is also possible to have \fBfile_roots\fP which supports multiple
+environments:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+file_roots:
+  base:
+    \- /srv/salt/base
+  dev:
+    \- /srv/salt/dev
+    \- /srv/salt/base
+  prod:
+    \- /srv/salt/prod
+    \- /srv/salt/base
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This example ensures that each environment will check the associated
+environment directory for files first. If a file is not found in the
+appropriate directory, the system will default to using the base directory.
 .SS Local File Server
 .sp
 New in version 0.9.8.
@@ -92838,7 +94651,7 @@ Return a list of all directories on the master
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.fileserver.gitfs.envs()
+.B salt.fileserver.gitfs.envs(ignore_cache=False)
 Return a list of refs that can be used as environments
 .UNINDENT
 .INDENT 0.0
@@ -92888,12 +94701,20 @@ The backed for the mercurial based file server system.
 .sp
 After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
-feature is managed by the fileserver_backend option in the salt master config.
+feature is managed by the \fBfileserver_backend\fP option in the salt
+master config file.
 .sp
-This fileserver has an additional option \fBhgfs_branch_method\fP that will set
-the desired branch method. Possible values are: \fBbranches\fP, \fBbookmarks\fP, or
-\fBmixed\fP\&. If using \fBbranches\fP or \fBmixed\fP, the \fBdefault\fP branch will be
-mapped to \fBbase\fP\&.
+This fileserver has an additional option \fBhgfs_branch_method\fP that
+will set the desired branch method. Possible values are: \fBbranches\fP,
+\fBbookmarks\fP, or \fBmixed\fP\&. If using \fBbranches\fP or \fBmixed\fP, the
+\fBdefault\fP branch will be mapped to \fBbase\fP\&.
+.sp
+Changed in version 2014.1.0: (Hydrogen)
+The \fBhgfs_base\fP master config parameter was added, allowing
+for a branch other than \fBdefault\fP to be used for the \fBbase\fP
+environment, and allowing for a \fBbase\fP environment to be specified when
+using an \fBhgfs_branch_method\fP of \fBbookmarks\fP\&.
+
 .INDENT 0.0
 .TP
 .B depends
@@ -92909,7 +94730,7 @@ Return a list of all directories on the master
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.fileserver.hgfs.envs()
+.B salt.fileserver.hgfs.envs(ignore_cache=False)
 Return a list of refs that can be used as environments
 .UNINDENT
 .INDENT 0.0
@@ -92920,8 +94741,7 @@ Return a file hash, the hash type is set in the master config file
 .INDENT 0.0
 .TP
 .B salt.fileserver.hgfs.file_list(load)
-Return a list of all files on the file server in a specified
-environment
+Return a list of all files on the file server in a specified environment
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -93956,6 +95776,13 @@ When we are asked to update (regular interval) lets reap the cache
 # 0 and the defined value.
 #random_reauth_delay: 60
 
+# When waiting for a master to accept the minion\(aqs public key, salt will
+# continuously attempt to reconnect until successful. This is the timeout value,
+# in seconds, for each individual attempt. After this timeout expires, the minion
+# will wait for acceptance_wait_time seconds before trying again.
+# Unless your master is under unusually heavy load, this should be left at the default.
+#auth_timeout: 3
+
 
 # If you don\(aqt have any problems with syn\-floods, dont bother with the
 # three recon_* settings described below, just leave the defaults!
@@ -94038,6 +95865,16 @@ When we are asked to update (regular interval) lets reap the cache
 #
 # If the value is set to zero, this check is disabled.
 #grains_refresh_every = 1
+
+# Cache grains on the minion. Default is False.
+# grains_cache: False
+
+# Grains cache expiration, in seconds. If the cache file is older than this
+# number of seconds then the grains cache will be dumped and fully re\-populated
+# with fresh data. Defaults to 5 minutes. Will have no effect if \(aqgrains_cache\(aq
+# is not enabled.
+# grains_cache_expiration: 300
+
 
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
@@ -94525,7 +96362,7 @@ pidfile: /var/run/salt\-master.pid
 Default: \fB/\fP
 .sp
 The system root directory to operate from, change this to make Salt run from
-an alternative root
+an alternative root.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -94534,6 +96371,16 @@ an alternative root
 root_dir: /
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+This directory is prepended to the following options:
+\fBpki_dir\fP, \fBcachedir\fP, \fBsock_dir\fP,
+\fBlog_file\fP, \fBautosign_file\fP,
+\fBautoreject_file\fP, \fBpidfile\fP\&.
 .UNINDENT
 .UNINDENT
 .SS \fBpki_dir\fP
@@ -94689,7 +96536,7 @@ comparison, then by globbing, then by full\-string regex matching. This is
 insecure!
 .SS \fBautoreject_file\fP
 .sp
-New in version Hydrogen.
+New in version 2014.1.0: (Hydrogen)
 
 .sp
 Default: \fBnot defined\fP
@@ -95057,6 +96904,287 @@ The buffer size in the file server in bytes
 .nf
 .ft C
 file_buffer_size: 1048576
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBfile_ignore_regex\fP
+.sp
+Default: \fB\(aq\(aq\fP
+.sp
+A regular expression (or a list of expressions) that will be matched
+against the file path before syncing the modules and states to the minions.
+This includes files affected by the file.recurse state.
+For example, if you manage your custom modules and states in subversion
+and don\(aqt want all the \(aq.svn\(aq folders and content synced to your minions,
+you could set this to \(aq/.svn($|/)\(aq. By default nothing is ignored.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+file_ignore_regex:
+  \- \(aq/\e.svn($|/)\(aq
+  \- \(aq/\e.git($|/)\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBfile_ignore_glob\fP
+.sp
+Default \fB\(aq\(aq\fP
+.sp
+A file glob (or list of file globs) that will be matched against the file
+path before syncing the modules and states to the minions. This is similar
+to file_ignore_regex above, but works on globs instead of regex. By default
+nothing is ignored.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+file_ignore_glob:
+  \- \(aq\e*.pyc\(aq
+  \- \(aq\e*/somefolder/\e*.bak\(aq
+  \- \(aq\e*.swp\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBfileserver_backend\fP
+.sp
+Default:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+fileserver_backend:
+  \- roots
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend \fBroots\fP, which is configured using
+the \fBfile_roots\fP option.
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+fileserver_backend:
+  \- roots
+  \- git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBgitfs_provider\fP
+.sp
+New in version Helium.
+
+.sp
+Gitfs can be provided by one of two python modules: \fI\%GitPython\fP or \fI\%pygit2\fP\&.
+If using pygit2, both libgit2 and git itself must also be installed. More
+information can be found in the \fBgitfs backend documentation\fP\&.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+gitfs_provider: pygit2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBgitfs_remotes\fP
+.sp
+Default: \fB[]\fP
+.sp
+When using the \fBgit\fP fileserver backend at least one git remote needs to be
+defined. The user running the salt master will need read access to the repo.
+.sp
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and tags are
+translated into salt environments.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+gitfs_remotes:
+  \- git://github.com/saltstack/salt\-states.git
+  \- file:///var/git/saltmaster
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+\fBfile://\fP repos will be treated as a remote, so refs you want used must
+exist in that repo as \fIlocal\fP refs.
+.UNINDENT
+.UNINDENT
+.SS \fBgitfs_ssl_verify\fP
+.sp
+Default: \fB[]\fP
+.sp
+The \fBgitfs_ssl_verify\fP option specifies whether to ignore ssl certificate
+errors when contacting the gitfs backend. You might want to set this to
+false if you\(aqre using a git backend that uses a self\-signed certificate but
+keep in mind that setting this flag to anything other than the default of True
+is a security concern, you may want to try using the ssh transport.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+gitfs_ssl_verify: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBgitfs_root\fP
+.sp
+Default: \fB\(aq\(aq\fP
+.sp
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+gitfs_root: somefolder/otherfolder
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBgitfs_base\fP
+.sp
+Default: \fBmaster\fP
+.sp
+Defines which branch/tag should be used as the \fBbase\fP environment.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+gitfs_base: salt
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBhgfs_remotes\fP
+.sp
+New in version 0.17.0.
+
+.sp
+Default: \fB[]\fP
+.sp
+When using the \fBhg\fP fileserver backend at least one mercurial remote needs to
+be defined. The user running the salt master will need read access to the repo.
+.sp
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and/or bookmarks are
+translated into salt environments, as defined by the
+\fBhgfs_branch_method\fP parameter.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+hgfs_remotes:
+  \- https://username@bitbucket.org/username/reponame
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBhgfs_branch_method\fP
+.sp
+New in version 0.17.0.
+
+.sp
+Default: \fBbranches\fP
+.sp
+Defines the objects that will be used as fileserver environments.
+.INDENT 0.0
+.IP \(bu 2
+\fBbranches\fP \- Only branches and tags will be used
+.IP \(bu 2
+\fBbookmarks\fP \- Only bookmarks and tags will be used
+.IP \(bu 2
+\fBmixed\fP \- Branches, bookmarks, and tags will be used
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+hgfs_branch_method: mixed
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Starting in version 2014.1.0 (Hydrogen), the value of the
+\fBhgfs_base\fP parameter defines which branch is used as the
+\fBbase\fP environment, allowing for a \fBbase\fP environment to be used with
+an \fBhgfs_branch_method\fP of \fBbookmarks\fP\&.
+.sp
+Prior to this release, the \fBdefault\fP branch will be used as the \fBbase\fP
+environment.
+.UNINDENT
+.UNINDENT
+.SS \fBhgfs_root\fP
+.sp
+New in version 0.17.0.
+
+.sp
+Default: \fB\(aq\(aq\fP
+.sp
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+hgfs_root: somefolder/otherfolder
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS \fBhgfs_base\fP
+.sp
+New in version 2014.1.0: (Hydrogen)
+
+.sp
+Default: \fBdefault\fP
+.sp
+Defines which branch should be used as the \fBbase\fP environment. Change this if
+\fBhgfs_branch_method\fP is set to \fBbookmarks\fP to specify which
+bookmark should be used as the \fBbase\fP environment.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+hgfs_base: salt
 .ft P
 .fi
 .UNINDENT
@@ -96538,7 +98666,7 @@ Problem reading the master root key
 .UNINDENT
 .INDENT 0.0
 .TP
-.B exception salt.exceptions.SaltRenderError(error, line_num=None, buf=\(aq\(aq, marker=\(aq    <======================\(aq)
+.B exception salt.exceptions.SaltRenderError(error, line_num=None, buf=\(aq\(aq, marker=\(aq    <======================\(aq, trace=None)
 Used when a renderer needs to raise an explicit error. If a line number and
 buffer string are passed, get_context will be invoked to get the location
 of the error.
@@ -96648,7 +98776,7 @@ Problem reading the master root key
 .UNINDENT
 .INDENT 0.0
 .TP
-.B exception salt.exceptions.SaltRenderError(error, line_num=None, buf=\(aq\(aq, marker=\(aq    <======================\(aq)
+.B exception salt.exceptions.SaltRenderError(error, line_num=None, buf=\(aq\(aq, marker=\(aq    <======================\(aq, trace=None)
 Used when a renderer needs to raise an explicit error. If a line number and
 buffer string are passed, get_context will be invoked to get the location
 of the error.
@@ -98391,7 +100519,7 @@ is 25.
 .INDENT 0.0
 .TP
 .B \-\-passwd
-Set te default password to attempt to use when authenticating.
+Set the default password to attempt to use when authenticating.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -103493,7 +105621,6 @@ Default providers can also be defined in the minion config file:
 .nf
 .ft C
 providers:
-  pkg: yumpkg5
   service: systemd
 .ft P
 .fi
@@ -103568,7 +105695,7 @@ with the \fBassociated\fP
 .sp
 The \fBvirt\fP module gained basic Xen support.
 .sp
-The \fByum\fP modules gained
+The \fByum\fP module gained
 Scientific Linux support.
 .sp
 The \fBpkg\fP module on Debian, Ubuntu,
@@ -103940,40 +106067,28 @@ runners and commands like salt\-key.
 .sp
 Tests have been added to test the aspects of the client APIs and ensure that
 the client calls work, and that they manage passed data, in a desirable way.
-.SS Salt 2014.01.0 Release Notes \- Codename Hydrogen
+.SS Salt 2014.1.0 Release Notes \- Codename Hydrogen
 .INDENT 0.0
 .TP
 .B release
-2013\-12\-30
+2014\-02\-03
 .UNINDENT
 .sp
-The 2014.01.0 release of Salt is a major release which not only increases
+The 2014.1.0 release of Salt is a major release which not only increases
 stability but also brings new capabilities in virtualization, cloud
 integration, and more. This release brings a great focus on the expansion of
 testing making roughly double the coverage in the Salt tests, and comes with
 many new features.
 .sp
-2014.01.0 is the first release to follow the new date\-based release naming
+2014.1.0 is the first release to follow the new date\-based release naming
 system.
 .SS Major Features
-.SS Salt Cloud Merged in Salt
+.SS Salt Cloud Merged into Salt
 .sp
 Salt Cloud is a tool for provisioning salted minions across various cloud
-providers. Prior to this release, Salt Cloud was a seperate project but this
+providers. Prior to this release, Salt Cloud was a separate project but this
 marks its full integration with the Salt distribution. A Getting Started guide
 and additional documentation for Salt Cloud can be found \fBhere\fP:
-.SS Salt Virt
-.sp
-Salt Virt is a cloud controller that supports virtual machine deployment,
-inspection, migration and integration with many aspects of Salt.
-.sp
-Salt Virt has undergone a major overhaul with this release and now supports
-many more features and includes a number of critical improvements.
-.SS Docker Integration
-.sp
-Salt now ships with modules and states for tight integration with Docker
-containers.
-.SS Substantial Testing Expansion
 .SS Google Compute Engine
 .sp
 Alongside Salt Cloud comes new support for the Google Compute Engine. Salt Stack
@@ -103983,16 +106098,257 @@ they run.
 For more information on Salt Stack and GCE, please see \fI\%this blog post\fP\&.
 .sp
 Documentation for Salt and GCE can be found \fBhere\fP\&.
+.SS Salt Virt
+.sp
+Salt Virt is a cloud controller that supports virtual machine deployment,
+inspection, migration and integration with many aspects of Salt.
+.sp
+Salt Virt has undergone a major overhaul with this release and now supports
+many more features and includes a number of critical improvements.
+.SS Docker Integration
+.sp
+Salt now ships with \fBstates\fP and an \fBexecution
+module\fP to manage Docker containers.
+.SS Substantial Testing Expansion
+.sp
+Salt continues to increase its unit/regression test coverage. This release
+includes over 300 new tests.
 .SS BSD Package Management
 .sp
-BSD package management has been entirely rewritten and expanded with support for
-ports added.
-.SS Network Management for Debian/Ubuntu
-.SS PagerDuty Support
-.SS vt.Terminal System
+BSD package management has been entirely rewritten. FreeBSD 9 and older now
+default to using pkg_add, while FreeBSD 10 and newer will use pkgng. FreeBSD 9
+can be forced to use pkgng, however, by specifying the following option in the
+minion config file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
-Sometimes the subprocess module is nto good enough
+.nf
+.ft C
+providers:
+  pkg: pkgng
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In addition, support for installing software from the ports tree has been
+added. See the documentation for the ports \fBstate\fP and
+\fBexecution module\fP for more information.
+.SS Network Management for Debian/Ubuntu
+.sp
+Initial support for management of network interfaces on Debian\-based distros
+has been added. See the documentation for the \fBnetwork state\fP and the \fBdebian_ip\fP for
+more information.
+.SS IPv6 Support for iptables State/Module
+.sp
+The iptables \fBstate\fP and \fBmodule\fP now have IPv6 support. A new parameter \fBfamily\fP has
+been added to the states and execution functions, to distinguish between IPv4
+and IPv6. The default value for this parameter is \fBipv4\fP, specifying \fBipv6\fP
+will use ip6tables to manage firewall rules.
+.SS GitFS Improvements
+.sp
+Several performance improvements have been made to the \fBGit fileserver
+backend\fP\&. Additionally, file states can now use any
+any SHA1 commit hash as a fileserver environment:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+/etc/httpd/httpd.conf:
+  file.managed:
+    \- source: salt://webserver/files/httpd.conf
+    \- saltenv: 45af879
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This applies to the functions in the \fBcp module\fP as
+well:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cp.get_file salt://readme.txt /tmp/readme.txt saltenv=45af879
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS MinionFS
+.sp
+This new fileserver backend allows files which have been pushed from the minion
+to the master (using \fBcp.push\fP) to be served up
+from the salt fileserver. The path for these files takes the following format:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt://minion\-id/path/to/file
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBminion\-id\fP is the id of the "source" minion, the one from which the files
+were pushed to the master. \fB/path/to/file\fP is the full path of the file.
+.sp
+The \fBMinionFS Walkthrough\fP contains a more
+thorough example of how to use this backend.
+.SS saltenv
+.sp
+To distinguish between fileserver environments and execution functions which
+deal with environment variables, fileserver environments are now specified
+using the \fBsaltenv\fP parameter. \fBenv\fP will continue to work, but is
+deprecated and will be removed in a future release.
+.SS Grains Caching
+.sp
+A caching layer has been added to the Grains system, which can help speed up
+minion startup. Disabled by default, it can be enabled by setting the minion
+config option \fBgrains_cache\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+grains_cache: True
+
+# Seconds before grains cache is considered to be stale.
+grains_cache_expiration: 300
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If set to \fBTrue\fP, the grains loader will read from/write to a
+msgpack\-serialized file containing the grains data.
+.sp
+Additional command\-line parameters have been added to salt\-call, mainly for
+testing purposes:
+.INDENT 0.0
+.IP \(bu 2
+\fB\-\-skip\-grains\fP will completely bypass the grains loader when salt\-call is
+invoked.
+.IP \(bu 2
+\fB\-\-refresh\-grains\-cache\fP will force the grains loader to bypass the grains
+cache and refresh the grains, writing a new grains cache file.
+.UNINDENT
+.SS Improved Command Logging Control
+.sp
+When using the \fBcmd module\fP, either on the CLI or
+when developing Salt execution modules, a new keyword argument
+\fBoutput_loglevel\fP allows for greater control over how (or even if) the
+command and its output are logged. For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run \(aqtail /var/log/messages\(aq output_loglevel=debug
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The package management modules (\fBapt\fP, \fByumpkg\fP, etc.) have been updated to
+log the copious output generated from these commands at loglevel \fBdebug\fP\&.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+To keep a command from being logged, \fBoutput_loglevel=quiet\fP can be used.
+.sp
+Prior to this release, this could be done using \fBquiet=True\fP\&. This
+argument is still supported, but will be removed in a future Salt release.
+.UNINDENT
+.UNINDENT
+.SS PagerDuty Support
+.sp
+Initial support for firing events via \fI\%PagerDuty\fP has been added. See the
+documentation for the \fBpagerduty\fP module.
+.SS Virtual Terminal
+.sp
+Sometimes the subprocess module is not good enough, and, in fact, not even
+\fBaskpass\fP is. This virtual terminal is still in it\(aqs infant childhood, needs
+quite some love, and was originally created to replace \fBaskpass\fP, but, while
+developing it, it immediately proved that it could do so much more. It\(aqs
+currently used by salt\-cloud when bootstrapping salt on clouds which require
+the use of a password.
+.sp
+Proxy Minions¬
+\-\-\-\-\-\-\-\-\-\-\-\-\-¬
+¬
+Initial basic support for Proxy Minions is in this release.  Documentation can¬
+be found \fBhere\fP\&.⌴⌴¬
+¬
+Proxy minions are a developing feature in Salt that enables control of¬
+devices that cannot run a minion.  Examples include network gear like switches¬
+and routers that run a proprietary OS but offer an API, or "dumb"¬
+devices that just don\(aqt have the horsepower or ability to handle a Python VM.¬
+¬
+Proxy minions can be difficult to write, so a simple REST\-based example proxy¬
+is included.  A Python bottle\-based webserver can be found at⌴¬
+\fI\%http://github.com/cro/salt\-proxy\-rest\fP as an endpoint for this proxy.¬
+.sp
+This is an ALPHA\-quality feature.  There are a number of issues with it
+currently, mostly centering around process control, logging, and inability to
+work in a masterless configuration.
+.SS Additional Bugfixes (Release Candidate Period)
+.sp
+Below are many of the fixes that were implemented in salt during the release
+candidate phase.
+.INDENT 0.0
+.IP \(bu 2
+Fix mount.mounted leaving conflicting entries in fstab (\fI\%issue 7079\fP)
+.IP \(bu 2
+Fix mysql returner serialization to use json (\fI\%issue 9590\fP)
+.IP \(bu 2
+Fix \fBZMQError: Operation cannot be accomplished in current state\fP errors (\fI\%issue 6306\fP)
+.IP \(bu 2
+Rbenv and ruby improvements
+.IP \(bu 2
+Fix quoting issues with mysql port (\fI\%issue 9568\fP)
+.IP \(bu 2
+Update mount module/state to support multiple swap partitions (\fI\%issue 9520\fP)
+.IP \(bu 2
+Fix \fBarchive\fP state to work with \fBbsdtar\fP
+.IP \(bu 2
+Clarify logs for minion ID caching
+.IP \(bu 2
+Add numeric revision support to git state (\fI\%issue 9718\fP)
+.IP \(bu 2
+Update \fBmaster_uri\fP with \fBmaster_ip\fP (\fI\%issue 9694\fP)
+.IP \(bu 2
+Add comment to Debian \fBmod_repo\fP (\fI\%issue 9923\fP)
+.IP \(bu 2
+Fix potential undefined loop variable in rabbitmq state (\fI\%issue 8703\fP)
+.IP \(bu 2
+Fix for salt\-virt runner to delete key on VM deletion
+.IP \(bu 2
+Fix for \fBsalt\-run \-d\fP to limit results to specific runner or function (\fI\%issue 9975\fP)
+.IP \(bu 2
+Add tracebacks to jinja renderer when applicable (\fI\%issue 10010\fP)
+.IP \(bu 2
+Fix parsing in monit module (\fI\%issue 10041\fP)
+.IP \(bu 2
+Fix highstate output from syndic minions (\fI\%issue 9732\fP)
+.IP \(bu 2
+Quiet logging when dealing with passwords/hashes (\fI\%issue 10000\fP)
+.IP \(bu 2
+Fix for multiple remotes in git_pillar (\fI\%issue 9932\fP)
+.IP \(bu 2
+Fix npm installed command (\fI\%issue 10109\fP)
+.IP \(bu 2
+Add safeguards for utf8 errors in zcbuildout module
+.IP \(bu 2
+Fix compound commands (\fI\%issue 9746\fP)
+.IP \(bu 2
+Add systemd notification when master is started
+.IP \(bu 2
+Many doc improvements
+.UNINDENT
 .sp
 \fBSEE ALSO:\fP
 .INDENT 0.0
