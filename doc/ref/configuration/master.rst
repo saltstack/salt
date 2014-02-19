@@ -664,39 +664,32 @@ or just post what changes are going to be made
 Master File Server Settings
 ===========================
 
-.. conf_master:: file_roots
+.. conf_master:: fileserver_backend
 
-``file_roots``
---------------
+``fileserver_backend``
+----------------------
 
 Default:
 
 .. code-block:: yaml
 
-    base:
-      - /srv/salt
+    fileserver_backend:
+      - roots
 
-Salt runs a lightweight file server written in ZeroMQ to deliver files to
-minions. This file server is built into the master daemon and does not
-require a dedicated port.
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
 
-The file server works on environments passed to the master. Each environment
-can have multiple root directories. The subdirectories in the multiple file
-roots cannot match, otherwise the downloaded files will not be able to be
-reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
 
-    file_roots:
-      base:
-        - /srv/salt
-      dev:
-        - /srv/salt/dev/services
-        - /srv/salt/dev/states
-      prod:
-        - /srv/salt/prod/services
-        - /srv/salt/prod/states
+    fileserver_backend:
+      - roots
+      - git
 
 .. conf_master:: hash_type
 
@@ -765,56 +758,50 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
-.. conf_master:: fileserver_backend
+roots: Master's Local File Server
+---------------------------------
 
-``fileserver_backend``
-----------------------
+.. conf_master:: file_roots
+
+``file_roots``
+**************
 
 Default:
 
 .. code-block:: yaml
 
-    fileserver_backend:
-      - roots
+    base:
+      - /srv/salt
 
-Salt supports a modular fileserver backend system, this system allows the salt
-master to link directly to third party systems to gather and manage the files
-available to minions. Multiple backends can be configured and will be searched
-for the requested file in the order in which they are defined here. The default
-setting only enables the standard backend ``roots``, which is configured using
-the :conf_master:`file_roots` option.
+Salt runs a lightweight file server written in ZeroMQ to deliver files to
+minions. This file server is built into the master daemon and does not
+require a dedicated port.
 
+The file server works on environments passed to the master. Each environment
+can have multiple root directories. The subdirectories in the multiple file
+roots cannot match, otherwise the downloaded files will not be able to be
+reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
 
-    fileserver_backend:
-      - roots
-      - git
+    file_roots:
+      base:
+        - /srv/salt
+      dev:
+        - /srv/salt/dev/services
+        - /srv/salt/dev/states
+      prod:
+        - /srv/salt/prod/services
+        - /srv/salt/prod/states
 
-.. conf_master:: gitfs_provider
-
-``gitfs_provider``
-------------------
-
-.. versionadded:: Helium
-
-Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
-If using pygit2, both libgit2 and git itself must also be installed. More
-information can be found in the :mod:`gitfs backend documentation
-<salt.fileserver.gitfs>`.
-
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-.. _pygit2: https://github.com/libgit2/pygit2
-
-.. code-block:: yaml
-
-    gitfs_provider: pygit2
+git: Git Remote File Server Backend
+-----------------------------------
 
 .. conf_master:: gitfs_remotes
 
 ``gitfs_remotes``
------------------
+*****************
 
 Default: ``[]``
 
@@ -851,12 +838,31 @@ translated into salt environments.
             - root: salt
             - mountpoint: salt://foo/bar/baz
           - https://foo.com/baz.git:
-            - root: salt
+            - root: salt/states
+
+.. conf_master:: gitfs_provider
+
+``gitfs_provider``
+******************
+
+.. versionadded:: Helium
+
+Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
+If using pygit2, both libgit2 and git itself must also be installed. More
+information can be found in the :mod:`gitfs backend documentation
+<salt.fileserver.gitfs>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+
+.. code-block:: yaml
+
+    gitfs_provider: pygit2
 
 .. conf_master:: gitfs_ssl_verify
 
 ``gitfs_ssl_verify``
---------------------
+********************
 
 Default: ``[]``
 
@@ -873,7 +879,7 @@ is a security concern, you may want to try using the ssh transport.
 .. conf_master:: gitfs_mountpoint
 
 ``gitfs_mountpoint``
---------------------
+********************
 
 .. versionadded:: Helium
 
@@ -890,13 +896,13 @@ more info.
 
 .. note::
 
-    The ``salt://`` protocol designation can be left off (i.e. ``foo/bar`` and
-    ``salt://foo/bar`` are equivalent).
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
 
 .. conf_master:: gitfs_root
 
 ``gitfs_root``
---------------
+**************
 
 Default: ``''``
 
@@ -917,7 +923,7 @@ available to the Salt fileserver. Can be used in conjunction with
 .. conf_master:: gitfs_base
 
 ``gitfs_base``
---------------
+**************
 
 Default: ``master``
 
@@ -927,10 +933,13 @@ Defines which branch/tag should be used as the ``base`` environment.
 
     gitfs_base: salt
 
+hg: Mercurial Remote File Server Backend
+----------------------------------------
+
 .. conf_master:: hgfs_remotes
 
 ``hgfs_remotes``
-----------------
+****************
 
 .. versionadded:: 0.17.0
 
@@ -949,10 +958,27 @@ translated into salt environments, as defined by the
     hgfs_remotes:
       - https://username@bitbucket.org/username/reponame
 
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the
+    :conf_master:`hgfs_root` and :conf_master:`hgfs_mountpoint` parameters.
+    For example:
+
+    .. code-block:: yaml
+
+        hgfs_remotes:
+          - https://username@bitbucket.org/username/repo1
+          - https://username@bitbucket.org/username/repo2:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+          - https://username@bitbucket.org/username/repo3:
+            - root: salt/states
+
 .. conf_master:: hgfs_branch_method
 
 ``hgfs_branch_method``
-----------------------
+**********************
 
 .. versionadded:: 0.17.0
 
@@ -978,10 +1004,33 @@ Defines the objects that will be used as fileserver environments.
     Prior to this release, the ``default`` branch will be used as the ``base``
     environment.
 
+.. conf_master:: hgfs_mountpoint
+
+``hgfs_mountpoint``
+*******************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which hgfs remotes are served.
+Can be used in conjunction with :conf_master:`hgfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <hgfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    hgfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
 .. conf_master:: hgfs_root
 
 ``hgfs_root``
--------------
+*************
 
 .. versionadded:: 0.17.0
 
@@ -989,16 +1038,22 @@ Default: ``''``
 
 Serve files from a subdirectory within the repository, instead of the root.
 This is useful when there are files in the repository that should not be
-available to the Salt fileserver.
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`hgfs_mountpoint`.
 
 .. code-block:: yaml
 
     hgfs_root: somefolder/otherfolder
 
+.. versionchanged:: Helium
+
+   Ability to specify hgfs roots on a per-remote basis was added. See
+   :conf_master:`here <hgfs_remotes>` for more info.
+
 .. conf_master:: hgfs_base
 
 ``hgfs_base``
--------------
+*************
 
 .. versionadded:: 2014.1.0 (Hydrogen)
 
