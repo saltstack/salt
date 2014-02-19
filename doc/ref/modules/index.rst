@@ -289,7 +289,12 @@ If a "fallback_function" is defined, it will replace the function instead of rem
 
 .. code-block:: python
 
+    import logging
+
     from salt.utils.decorators import depends
+
+    log = logging.getLogger(__name__)
+
     try:
         import dependency_that_sometimes_exists
     except ImportError as e:
