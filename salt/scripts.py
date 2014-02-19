@@ -13,7 +13,6 @@ import salt
 import salt.cli
 try:
     import salt.cloud.cli
-    import salt.cloud.libcloudfuncs
     HAS_SALTCLOUD = True
 except ImportError:
     # No salt cloud on Windows
@@ -122,12 +121,6 @@ def salt_cloud():
 
     if not HAS_SALTCLOUD:
         print('salt-cloud is not available in this system')
-        sys.exit(1)
-
-    try:
-        salt.cloud.libcloudfuncs.check_libcloud_version()
-    except ImportError as exc:
-        print(exc)
         sys.exit(1)
 
     try:
