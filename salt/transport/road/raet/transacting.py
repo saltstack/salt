@@ -150,16 +150,19 @@ class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
     '''
-    def __init__(self, **kwa):
+    def __init__(self, mha = None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joiner, self).__init__(**kwa)
 
+        if mha is None:
+            mha = ('127.0.0.1', raeting.RAET_PORT)
+
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
-                master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
+                master = devicing.RemoteDevice(did=0, ha=mha)
                 self.stack.addRemoteDevice(master)
 
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
@@ -704,7 +707,7 @@ class Allowent(Correspondent):
         if fqdn != self.stack.device.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff"
             print emsg, fqdn, self.stack.device.fqdn
-            #raise raeting.TransactionError(emsg)
+            raise raeting.TransactionError(emsg)
 
         vouch = self.stack.device.priver.decrypt(vcipher, vnonce, remote.pubber.key)
         if vouch != remote.publee.keyraw or vouch != shortraw:

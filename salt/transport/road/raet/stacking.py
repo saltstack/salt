@@ -235,12 +235,12 @@ class StackUdp(object):
                 packet.data['si'] != 0):
             self.replyMessage(packet)
 
-    def join(self):
+    def join(self, mha=None):
         '''
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self, txData=data)
+        joiner = transacting.Joiner(stack=self, txData=data, mha=mha)
         joiner.join()
 
     def replyJoin(self, packet):
