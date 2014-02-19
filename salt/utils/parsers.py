@@ -32,7 +32,6 @@ from salt.utils.validate.path import is_writeable
 
 if not utils.is_windows():
     import salt.cloud.exceptions
-    import salt.cloud.libcloudfuncs
 
 
 def _sorted(mixins_or_funcs):
@@ -2263,7 +2262,9 @@ class SaltCloudParser(OptionParser,
 
     def parse_args(self, args=None, values=None):
         try:
-            salt.cloud.libcloudfuncs.check_libcloud_version()
+            # Late import in order not to break setup
+            from salt.cloud import libcloudfuncs
+            libcloudfuncs.check_libcloud_version()
         except ImportError as exc:
             self.error(exc)
         return super(SaltCloudParser, self).parse_args(args, values)
