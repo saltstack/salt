@@ -1127,7 +1127,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Return a dict containing the file lists for files, dirs, and emptydirs
+    Return a dict containing the file lists for files and dirs
     '''
     if 'env' in load:
         salt.utils.warn_until(
@@ -1156,7 +1156,6 @@ def _file_lists(load, form):
         ret = {}
         ret['files'] = _get_file_list(load)
         ret['dirs'] = _get_dir_list(load)
-        ret['empty_dirs'] = _get_file_list_emptydirs(load)
         if save_cache:
             salt.fileserver.write_file_list_cache(
                 __opts__, ret, list_cache, w_lock
@@ -1315,152 +1314,8 @@ def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
-    return _file_lists(load, 'empty_dirs')
-
-
-def _get_file_list_emptydirs(load):
-    '''
-    Return a list of all empty directories on the master
-    '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    base_branch = __opts__['gitfs_base']
-    gitfs_root = __opts__['gitfs_root']
-    gitfs_mountpoint = salt.utils.strip_proto(__opts__['gitfs_mountpoint'])
-    provider = _get_provider()
-    if 'saltenv' not in load:
-        return []
-    if load['saltenv'] == 'base':
-        load['saltenv'] = base_branch
-    ret = set()
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        root = repo_conf['root'] if repo_conf['root'] is not None \
-            else gitfs_root
-        mountpoint = repo_conf['mountpoint'] \
-            if repo_conf['mountpoint'] is not None \
-            else gitfs_mountpoint
-
-        if provider == 'gitpython':
-            ret.update(
-                _file_list_emptydirs_gitpython(
-                    repo, load['saltenv'], root, mountpoint
-                )
-            )
-        elif provider == 'pygit2':
-            ret.update(
-                _file_list_emptydirs_pygit2(
-                    repo, load['saltenv'], root, mountpoint
-                )
-            )
-        elif provider == 'dulwich':
-            ret.update(
-                _file_list_emptydirs_dulwich(
-                    repo, load['saltenv'], root, mountpoint
-                )
-            )
-    return sorted(ret)
-
-
-def _file_list_emptydirs_gitpython(repo, tgt, root, mountpoint):
-    '''
-    Get empty directories using GitPython
-    '''
-    ret = set()
-    tree = _get_tree_gitpython(repo, tgt)
-    if not tree:
-        return ret
-    if root:
-        try:
-            tree = tree / root
-        except KeyError:
-            return ret
-    for blob in tree.traverse():
-        if not isinstance(blob, git.Tree):
-            continue
-        if not blob.blobs:
-            if root:
-                path = os.path.relpath(blob.path, root)
-            else:
-                path = blob.path
-            ret.add(os.path.join(mountpoint, path))
-    return ret
-
-
-def _file_list_emptydirs_pygit2(repo, ref_tgt, root, mountpoint):
-    '''
-    Get empty directories using pygit2
-    '''
-    def _traverse(tree, repo, blobs, prefix):
-        '''
-        Traverse through a pygit2 Tree object recursively, accumulating all the
-        empty directories within it in the "blobs" list
-        '''
-        for entry in iter(tree):
-            blob = repo[entry.oid]
-            if not isinstance(blob, pygit2.Tree):
-                continue
-            if not len(blob):
-                blobs.append(os.path.join(prefix, entry.name))
-            else:
-                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
-    ret = set()
-    tree = _get_tree_pygit2(repo, ref_tgt)
-    if not tree:
-        return ret
-    if root:
-        try:
-            tree = repo[tree[root].oid]
-        except KeyError:
-            return ret
-        if not isinstance(tree, pygit2.Tree):
-            return ret
-    blobs = []
-    if len(tree):
-        _traverse(tree, repo, blobs, root)
-    for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
-    return sorted(ret)
-
-
-def _file_list_emptydirs_dulwich(repo, ref_tgt, root, mountpoint):
-    '''
-    Get empty directories using dulwich
-    '''
-    def _traverse(tree, repo, blobs, prefix):
-        '''
-        Traverse through a dulwich Tree object recursively, accumulating all the
-        empty directories within it in the "blobs" list
-        '''
-        for item in tree.items():
-            obj = repo.get_object(item.sha)
-            if not isinstance(obj, dulwich.objects.Tree):
-                continue
-            if not len(repo.get_object(item.sha)):
-                blobs.append(os.path.join(prefix, item.path))
-            else:
-                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
-    ret = set()
-    tree = _get_tree_dulwich(repo, ref_tgt)
-    tree = _dulwich_walk_tree(repo, tree, root)
-    if not isinstance(tree, dulwich.objects.Tree):
-        return ret
-    blobs = []
-    if len(tree):
-        _traverse(tree, repo, blobs, root)
-    for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
-    return sorted(ret)
+    # Cannot have empty dirs in git
+    return []
 
 
 def dir_list(load):
