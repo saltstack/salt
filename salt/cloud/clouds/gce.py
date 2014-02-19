@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C0302
 '''
 Copyright 2013 Google Inc. All Rights Reserved.
 
@@ -55,7 +56,7 @@ Supported commands:
   # List available images for provider 'gce'
   - salt-cloud --list-images gce
   # Create a persistent disk
-  - salt-cloud -f create_disk gce disk_name=pd location=us-central1-b image=debian-7
+  - salt-cloud -f create_disk gce disk_name=pd location=us-central1-b ima...
   # Permanently delete a persistent disk
   - salt-cloud -f delete_disk gce disk_name=pd
   # Attach an existing disk to an existing instance
@@ -126,7 +127,6 @@ from libcloud.compute.providers import get_driver
 from libcloud.loadbalancer.types import Provider as Provider_lb
 from libcloud.loadbalancer.providers import get_driver as get_driver_lb
 from libcloud.common.google import (
-    ResourceExistsError,
     ResourceInUseError,
     ResourceNotFoundError,
     )
@@ -263,7 +263,7 @@ def _expand_node(node):
     ret.update(node.__dict__)
     try:
         del ret['extra']['boot_disk']
-    except:
+    except Exception:  # pylint: disable=W0703
         pass
     zone = ret['extra']['zone']
     ret['extra']['zone'] = {}
@@ -557,7 +557,7 @@ def create_network(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create network',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/net/created',
         {
             'name': name,
             'cidr': cidr,
@@ -568,8 +568,8 @@ def create_network(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create network',
-        'salt/cloud/{0}/created'.format(name),
+        'created network',
+        'salt/cloud/net/created',
         {
             'name': name,
             'cidr': cidr,
@@ -603,7 +603,7 @@ def delete_network(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete network',
-        'salt/cloud/{0}/deleting'.format(name),
+        'salt/cloud/net/deleted',
         {
             'name': name,
         },
@@ -624,8 +624,8 @@ def delete_network(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete network',
-        'salt/cloud/{0}/deleted'.format(name),
+        'deleted network',
+        'salt/cloud/net/deleted',
         {
             'name': name,
         },
@@ -641,6 +641,10 @@ def show_network(kwargs=None, call=None):
 
         salt-cloud -f show_network gce name=mynet
     '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_network function must be called with -f or --function.'
+        )
     if not kwargs or 'name' not in kwargs:
         log.error(
             'Must specify name of network.'
@@ -692,7 +696,7 @@ def create_fwrule(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create firewall',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/firewall/created',
         {
             'name': name,
             'network': network_name,
@@ -709,8 +713,8 @@ def create_fwrule(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create firewall',
-        'salt/cloud/{0}/created'.format(name),
+        'created firewall',
+        'salt/cloud/firewall/created',
         {
             'name': name,
             'network': network_name,
@@ -745,7 +749,7 @@ def delete_fwrule(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete firewall',
-        'salt/cloud/{0}/deleting'.format(name),
+        'salt/cloud/firewall/deleted',
         {
             'name': name,
         },
@@ -766,8 +770,8 @@ def delete_fwrule(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete firewall',
-        'salt/cloud/{0}/deleted'.format(name),
+        'deleted firewall',
+        'salt/cloud/firewall/deleted',
         {
             'name': name,
         },
@@ -783,6 +787,10 @@ def show_fwrule(kwargs=None, call=None):
 
         salt-cloud -f show_fwrule gce name=allow-http
     '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_fwrule function must be called with -f or --function.'
+        )
     if not kwargs or 'name' not in kwargs:
         log.error(
             'Must specify name of network.'
@@ -826,7 +834,7 @@ def create_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create health_check',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/healthcheck/created',
         {
             'name': name,
             'host': host,
@@ -847,8 +855,8 @@ def create_hc(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create health_check',
-        'salt/cloud/{0}/created'.format(name),
+        'created health_check',
+        'salt/cloud/healthcheck/created'.format(name),
         {
             'name': name,
             'host': host,
@@ -888,7 +896,7 @@ def delete_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete health_check',
-        'salt/cloud/{0}/deleting'.format(name),
+        'salt/cloud/healthcheck/deleted',
         {
             'name': name,
         },
@@ -909,8 +917,8 @@ def delete_hc(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete health_check',
-        'salt/cloud/{0}/deleted'.format(name),
+        'deleted health_check',
+        'salt/cloud/healthcheck/deleted',
         {
             'name': name,
         },
@@ -926,6 +934,10 @@ def show_hc(kwargs=None, call=None):
 
         salt-cloud -f show_hc gce name=hc
     '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_hc function must be called with -f or --function.'
+        )
     if not kwargs or 'name' not in kwargs:
         log.error(
             'Must specify name of health check.'
@@ -978,6 +990,7 @@ def create_lb(kwargs=None, call=None):
     protocol = kwargs.get('protocol', 'tcp')
     algorithm = kwargs.get('algorithm', None)
     ex_healthchecks = kwargs.get('healthchecks', None)
+    # pylint: disable=W0511
     # TODO(erjohnso): need to support GCEAddress, but that requires adding
     #                 salt functions to create/destroy/show address...
     ex_address = None
@@ -989,7 +1002,7 @@ def create_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create load_balancer',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/loadbalancer/created',
         kwargs,
     )
 
@@ -1001,8 +1014,8 @@ def create_lb(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create load_balancer',
-        'salt/cloud/{0}/created'.format(name),
+        'created load_balancer',
+        'salt/cloud/loadbalancer/created',
         kwargs,
     )
     return _expand_balancer(lb)
@@ -1033,7 +1046,7 @@ def delete_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete load_balancer',
-        'salt/cloud/{0}/deleting'.format(name),
+        'salt/cloud/loadbalancer/deleted',
         {
             'name': name,
         },
@@ -1054,8 +1067,8 @@ def delete_lb(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete load_balancer',
-        'salt/cloud/{0}/deleted'.format(name),
+        'deleted load_balancer',
+        'salt/cloud/loadbalancer/deleted',
         {
             'name': name,
         },
@@ -1071,6 +1084,10 @@ def show_lb(kwargs=None, call=None):
 
         salt-cloud -f show_lb gce name=lb
     '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_lb function must be called with -f or --function.'
+        )
     if not kwargs or 'name' not in kwargs:
         log.error(
             'Must specify name of load-balancer.'
@@ -1114,7 +1131,7 @@ def attach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attach load_balancer',
-        'salt/cloud/{0}/attaching'.format(kwargs['name']),
+        'salt/cloud/loadbalancer/attach',
         kwargs,
     )
 
@@ -1122,8 +1139,8 @@ def attach_lb(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'attach load_balancer',
-        'salt/cloud/{0}/attached'.format(kwargs['name']),
+        'attached load_balancer',
+        'salt/cloud/loadbalancer/attach',
         kwargs,
     )
     return _expand_item(result)
@@ -1175,7 +1192,7 @@ def detach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detach load_balancer',
-        'salt/cloud/{0}/detaching'.format(kwargs['name']),
+        'salt/cloud/loadbalancer/detach',
         kwargs,
     )
 
@@ -1183,8 +1200,8 @@ def detach_lb(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'detach load_balancer',
-        'salt/cloud/{0}/detached'.format(kwargs['name']),
+        'detached load_balancer',
+        'salt/cloud/loadbalancer/detach',
         kwargs,
     )
     return result
@@ -1215,7 +1232,7 @@ def delete_snapshot(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete snapshot',
-        'salt/cloud/{0}/deleting'.format(name),
+        'salt/cloud/snapshot/deleted',
         {
             'name': name,
         },
@@ -1236,8 +1253,8 @@ def delete_snapshot(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete snapshot',
-        'salt/cloud/{0}/deleted'.format(name),
+        'deleted snapshot',
+        'salt/cloud/snapshot/deleted',
         {
             'name': name,
         },
@@ -1271,7 +1288,7 @@ def delete_disk(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete disk',
-        'salt/cloud/{0}/deleting'.format(disk.name),
+        'salt/cloud/disk/deleted',
         {
             'name': disk.name,
             'location': disk.extra['zone'].name,
@@ -1292,8 +1309,8 @@ def delete_disk(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'delete disk',
-        'salt/cloud/{0}/deleted'.format(disk.name),
+        'deleted disk',
+        'salt/cloud/disk/deleted',
         {
             'name': disk.name,
             'location': disk.extra['zone'].name,
@@ -1349,7 +1366,7 @@ def create_disk(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create disk',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/disk/created',
         {
             'name': name,
             'location': location.name,
@@ -1364,8 +1381,8 @@ def create_disk(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create disk',
-        'salt/cloud/{0}/created'.format(name),
+        'created disk',
+        'salt/cloud/disk/created',
         {
             'name': name,
             'location': location.name,
@@ -1420,7 +1437,7 @@ def create_snapshot(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create snapshot',
-        'salt/cloud/{0}/creating'.format(name),
+        'salt/cloud/snapshot/created',
         {
             'name': name,
             'disk_name': disk_name,
@@ -1431,8 +1448,8 @@ def create_snapshot(kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create snapshot',
-        'salt/cloud/{0}/created'.format(name),
+        'created snapshot',
+        'salt/cloud/snapshot/created',
         {
             'name': name,
             'disk_name': disk_name,
@@ -1441,7 +1458,7 @@ def create_snapshot(kwargs=None, call=None):
     return _expand_item(snapshot)
 
 
-def show_disk(name=None, kwargs=None, call=None):
+def show_disk(name=None, kwargs=None, call=None): # pylint: disable=W0613
     '''
     Show the details of an existing disk.
 
@@ -1516,7 +1533,7 @@ def detach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detach disk',
-        'salt/cloud/{0}/detaching'.format(disk_name),
+        'salt/cloud/disk/detach',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1527,8 +1544,8 @@ def detach_disk(name=None, kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'detach disk',
-        'salt/cloud/{0}/detached'.format(disk_name),
+        'detached disk',
+        'salt/cloud/disk/detach',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1583,7 +1600,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attach disk',
-        'salt/cloud/{0}/attaching'.format(disk_name),
+        'salt/cloud/disk/attach',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1596,8 +1613,8 @@ def attach_disk(name=None, kwargs=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'attach disk',
-        'salt/cloud/{0}/attached'.format(disk_name),
+        'attached disk',
+        'salt/cloud/disk/attach',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1660,7 +1677,7 @@ def destroy(vm_name, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete instance',
-        'salt/cloud/{0}/deleting'.format(vm_name),
+        'salt/cloud/{0}/deleted'.format(vm_name),
         {'name': vm_name},
     )
 
@@ -1707,8 +1724,8 @@ def destroy(vm_name, call=None):
             )
         salt.utils.cloud.fire_event(
             'event',
-            'delete persistent_disk',
-            'salt/cloud/{0}/deleting'.format(vm_name),
+            'delete disk',
+            'salt/cloud/disk/deleted',
             {'name': vm_name},
         )
         try:
@@ -1727,8 +1744,8 @@ def destroy(vm_name, call=None):
             )
         salt.utils.cloud.fire_event(
             'event',
-            'delete persistent_disk',
-            'salt/cloud/{0}/deleted'.format(vm_name),
+            'deleted disk',
+            'salt/cloud/disk/deleted',
             {'name': vm_name},
         )
 
@@ -1769,7 +1786,7 @@ def create(vm_=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create instance',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
@@ -1864,7 +1881,7 @@ def create(vm_=None, call=None):
         salt.utils.cloud.fire_event(
             'event',
             'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
+            'salt/cloud/{0}/created'.format(vm_['name']),
             {'kwargs': event_kwargs},
         )
 
@@ -1881,8 +1898,8 @@ def create(vm_=None, call=None):
 
         salt.utils.cloud.fire_event(
             'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deployed'.format(vm_['name']),
+            'executed deploy script',
+            'salt/cloud/{0}/created'.format(vm_['name']),
             {'kwargs': event_kwargs},
         )
 
@@ -1895,7 +1912,7 @@ def create(vm_=None, call=None):
 
     salt.utils.cloud.fire_event(
         'event',
-        'create instance',
+        'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
         {
             'name': vm_['name'],
