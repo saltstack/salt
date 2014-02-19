@@ -5,7 +5,6 @@ Support for the Git SCM
 
 # Import python libs
 import os
-import tempfile
 try:
     import pipes
     HAS_PIPES = True
