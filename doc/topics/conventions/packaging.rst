@@ -209,7 +209,7 @@ Depends
 
 - `Salt Common`
 - `sshpass`
-- `apache libcloud`
+- `apache libcloud` >= 0.14.0
 
 Salt Doc
 --------
