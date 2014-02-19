@@ -1322,6 +1322,8 @@ class Minion(MinionBase):
                         self.epub_sock.send(package)
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)
+                    # Add an extra fallback in case a forked process leeks through
+                    multiprocessing.active_children()
 
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
