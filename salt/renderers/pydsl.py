@@ -10,7 +10,7 @@ The `pydsl` renderer allows one to author salt formulas(.sls files) in pure
 Python using a DSL that's easy to write and easy to read. Here's an example:
 
 .. code-block:: python
-   :linenos:
+    :linenos:
 
     #!pydsl
 
@@ -321,6 +321,7 @@ by getting a reference from Python's `sys.modules` dictionary.
 For example:
 
 .. code-block:: python
+
     #!pydsl|stateconf -ps
 
     def main():

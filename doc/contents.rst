@@ -8,33 +8,34 @@ Salt Table of Contents
 
     faq
 
+    topics/cloud/index
+    topics/community
+    topics/configuration
+    topics/conventions/*
+    topics/development/*
+    topics/eauth/*
+    topics/event/index
+    topics/git/*
+    topics/hacking
     topics/index
     topics/installation/index
-    topics/configuration
-    topics/hacking
-    topics/targeting/index
-    topics/tutorials/index
-    topics/eauth/*
-    topics/pillar/index
-    topics/master_tops/index
     topics/jobs/*
-    topics/nonroot
-    topics/troubleshooting/*
-    topics/community
-    topics/projects/index
-    topics/event/index
+    topics/master_tops/index
     topics/mine/*
-    topics/cloud/index
-    topics/virt/*
-    topics/ssh/*
-    topics/tests/*
+    topics/nonroot
+    topics/pillar/index
+    topics/projects/index
+    topics/proxyminion/*
     topics/reactor/*
-    topics/conventions/*
-    topics/git/*
-    topics/development/index
-    topics/translating
     topics/salt_projects
-    topics/proxyminion/index
+    topics/ssh/*
+    topics/targeting/index
+    topics/tests/*
+    topics/translating
+    topics/troubleshooting/*
+    topics/tutorials/index
+    topics/virt/*
+    topics/yaml/*
 
     ref/configuration/logging/*
     ref/configuration/logging/handlers/*
