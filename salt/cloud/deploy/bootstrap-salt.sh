@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.02.18"
+__ScriptVersion="2014.02.19"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -107,13 +107,13 @@ echodebug() {
 #----------------------------------------------------------------------------------------------------------------------
 check_pip_allowed() {
     if [ $# -eq 1 ]; then
-        _PIP_ALLOWED_ERROR_MSG="$1"
+        _PIP_ALLOWED_ERROR_MSG=$1
     else
         _PIP_ALLOWED_ERROR_MSG="pip based installations were not allowed. Retry using '-P'"
     fi
 
     if [ $_PIP_ALLOWED -eq $BS_FALSE ]; then
-        echoerror $_PIP_ALLOWED_ERROR_MSG
+        echoerror "$_PIP_ALLOWED_ERROR_MSG"
         usage
         exit 1
     fi
@@ -1936,6 +1936,8 @@ install_fedora_stable_post() {
 
 install_fedora_git_deps() {
     install_fedora_deps || return 1
+
+    yum install -y git || return 1
 
     __git_clone_and_checkout || return 1
 
