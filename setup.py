@@ -620,6 +620,7 @@ else:
         SETUP_KWARGS['scripts'].extend([
             'scripts/salt',
             'scripts/salt-cloud',
+            'scripts/salt-git-ssh',
             'scripts/salt-key',
             'scripts/salt-master',
             'scripts/salt-run',
