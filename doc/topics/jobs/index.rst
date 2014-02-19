@@ -5,13 +5,12 @@ Job Management
 .. versionadded:: 0.9.7
 
 Since Salt executes jobs running on many systems, Salt needs to be able to
-manage jobs running on many systems. As of Salt 0.9.7, the capability was
-added for more advanced job management.
+manage jobs running on many systems.
 
 The Minion proc System
 ======================
 
-The Salt Minions now maintain a *proc* directory in the Salt cachedir, the *proc*
+Salt Minions maintain a *proc* directory in the Salt ``cachedir``. The *proc*
 directory maintains files named after the executed job ID. These files contain
 the information about the current running jobs on the minion and allow for
 jobs to be looked up. This is located in the *proc* directory under the
