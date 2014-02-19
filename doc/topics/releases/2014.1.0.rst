@@ -2,7 +2,7 @@
 Salt 2014.1.0 Release Notes - Codename Hydrogen
 ===============================================
 
-:release: 2014-02-03
+:release: 2014-02-24
 
 The 2014.1.0 release of Salt is a major release which not only increases
 stability but also brings new capabilities in virtualization, cloud
