@@ -180,7 +180,8 @@ class TxBody(Body):
         self.packed = ''
         self.kind = self.packet.data['bk']
         if self.kind == raeting.bodyKinds.json:
-            self.packed = json.dumps(self.data, separators=(',', ':'))
+            if self.data:
+                self.packed = json.dumps(self.data, separators=(',', ':'))
 
         if self.kind == raeting.bodyKinds.raw:
             self.packed = self.data # data is already formatted string
@@ -244,8 +245,9 @@ class TxCoat(Coat):
 
         if self.kind == raeting.coatKinds.nacl:
             msg = self.packet.body.packed
-            cipher, nonce = self.packet.encrypt(msg)
-            self.packed = "".join([cipher, nonce])
+            if msg:
+                cipher, nonce = self.packet.encrypt(msg)
+                self.packed = "".join([cipher, nonce])
 
         if self.kind == raeting.coatKinds.nada:
             self.packed = self.packet.body.packed
@@ -266,12 +268,14 @@ class RxCoat(Coat):
             raise raeting.PacketError(emsg)
 
         if self.kind == raeting.coatKinds.nacl:
-            tl = raeting.tailSizes.nacl # nonce length
-
-            cipher = self.packed[:-tl]
-            nonce = self.packed[-tl:]
-            msg = self.packet.decrypt(cipher, nonce)
-            self.packet.body.packed = msg
+            if self.packed:
+                tl = raeting.tailSizes.nacl # nonce length
+                cipher = self.packed[:-tl]
+                nonce = self.packed[-tl:]
+                msg = self.packet.decrypt(cipher, nonce)
+                self.packet.body.packed = msg
+            else:
+                self.packet.body.packed = self.packed
 
         if self.kind == raeting.coatKinds.nada:
             self.packet.body.packed = self.packed
@@ -478,7 +482,7 @@ class RxPacket(Packet):
         with short term keys
         '''
         remote = self.stack.devices[self.data['sd']]
-        return (self.stack.device.privee.decrypt(cipher, nonce, remote.publee, key))
+        return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
 
     def unpack(self, packed=None):
         '''

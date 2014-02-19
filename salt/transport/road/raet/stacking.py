@@ -29,13 +29,20 @@ class StackUdp(object):
     Count = 0
     Hk = raeting.headKinds.json # stack default
     Bk = raeting.bodyKinds.json # stack default
+    Fk = raeting.footKinds.nacl # stack default
+    Ck = raeting.coatKinds.nacl # stack default
 
     def __init__(self,
                  name='',
                  version=raeting.VERSION,
                  device=None,
                  did=None,
-                 ha=("", raeting.RAET_PORT)):
+                 ha=("", raeting.RAET_PORT),
+                 udpRxMsgs = None,
+                 udpTxMsgs = None,
+                 udpRxes = None,
+                 udpTxes = None,
+                 ):
         '''
         Setup StackUdp instance
         '''
@@ -48,8 +55,10 @@ class StackUdp(object):
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.udpRxes = deque()
-        self.udpTxes = deque()
+        self.udpRxMsgs = udpRxMsgs or deque() # messages received
+        self.udpTxMsgs = udpTxMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
+        self.udpRxes = udpRxes or deque() # udp packets received
+        self.udpTxes = udpTxes or deque() # udp packet to transmit
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
@@ -104,7 +113,6 @@ class StackUdp(object):
             else:
                 del self.transactions[index]
 
-
     def serviceUdp(self):
         '''
         Service the UDP receive and transmit queues
@@ -133,6 +141,16 @@ class StackUdp(object):
             msg = "Invalid destination device id '{0}'".format(ddid)
             raise raeting.StackError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
+
+    def serviceUdpTxMsg(self):
+        '''
+        Service .udpTxMsgs queue of outgoint udp messages for message transactions
+        '''
+        while self.udpTxMsgs:
+            body, ddid = self.udpTxMsgs.popleft() # duple (body dict, destination did)
+            self.message(body, ddid)
+            print "{0} sending\n{1}".format(self.name, body)
+
 
     def fetchParseUdpRx(self):
         '''
@@ -210,7 +228,12 @@ class StackUdp(object):
         if (packet.data['tk'] == raeting.trnsKinds.allow and
                 packet.data['pk'] == raeting.pcktKinds.hello and
                 packet.data['si'] != 0):
-            self.replyEndow(packet)
+            self.replyAllow(packet)
+
+        if (packet.data['tk'] == raeting.trnsKinds.message and
+                packet.data['pk'] == raeting.pcktKinds.message and
+                packet.data['si'] != 0):
+            self.replyMessage(packet)
 
     def join(self):
         '''
@@ -234,24 +257,45 @@ class StackUdp(object):
         # need to perform the check for accepted status somewhere
         joinent.accept()
 
-    def endow(self, rdid=None):
+    def allow(self, rdid=None):
         '''
-        Initiate endow transaction
+        Initiate allow transaction
         '''
-        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
-        endower = transacting.Allower(stack=self, rdid=rdid, txData=data)
-        endower.hello()
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
+        allower = transacting.Allower(stack=self, rdid=rdid, txData=data)
+        allower.hello()
 
-    def replyEndow(self, packet):
+    def replyAllow(self, packet):
         '''
-        Correspond to new endow transaction
+        Correspond to new allow transaction
         '''
-        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw)
-        endowent = transacting.Allowent(stack=self,
+        data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
+        allowent = transacting.Allowent(stack=self,
                                         rdid=packet.data['sd'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        endowent.hello()
+        allowent.hello()
+
+    def message(self, body=None, ddid=None):
+        '''
+        Initiate message transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
+        messenger = transacting.Messenger(stack=self, txData=data, rdid=ddid)
+        messenger.message(body)
+
+    def replyMessage(self, packet):
+        '''
+        Correspond to new Message transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
+        messengent = transacting.Messengent(stack=self,
+                                        rdid=packet.data['sd'],
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data,
+                                        rxPacket=packet)
+        messengent.message()
 
