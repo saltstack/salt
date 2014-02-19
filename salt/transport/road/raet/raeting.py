@@ -99,6 +99,10 @@ import struct
 # Import ioflo libs
 from ioflo.base.odicting import odict
 
+UDP_MAX_SAFE_PAYLOAD = 548  # IPV4 MTU 576 - udp headers 28
+# IPV6 MTU is 1280 but headers are bigger
+MAX_SEGMENT_SIZE = 1024 # assuming IPV6 capable equipment
+
 RAET_PORT = 7530
 RAET_TEST_PORT = 7531
 DEFAULT_SRC_HOST = ''

@@ -4,27 +4,32 @@ Tests to try out packeting. Potentially ephemeral
 
 '''
 
-from salt.transport.road.raet import packeting
+
 from ioflo.base.odicting import odict
+
+from salt.transport.road.raet import raeting
+from salt.transport.road.raet import packeting
+
 
 
 def test():
-    data = odict(hk=1, bk=1, bf=1, cf=1)
+    data = odict(hk=1, bk=raeting.bodyKinds.json)
     body = odict(msg='Hello Raet World', extra='what is this')
-    packet1 = packeting.Packet(data=data, body=body)
+    packet1 = packeting.TxPacket(embody=body, data=data, )
     print packet1.body.data
-    print packet1.pack()
+    packet1.pack()
+    print packet1.packed
 
-    packet2 = packeting.Packet()
-    packet2.parse(packet1.packed)
-    print packet2.body.data
+    stuff =  "".rjust(1200, '\x00')
+    data.update(bk=raeting.bodyKinds.raw)
+    packet1 = packeting.TxPacket(embody=stuff, data=data, )
+    #print packet1.body.data
+    packet1.pack()
+    print packet1.packed
 
-    packet3 = packeting.Packet(raw=packet1.packed)
-    print packet3.body.data
-
-    packet1.parse(packet1.packed)
-    print packet1.body.data
-    print packet1.pack()
+    if packet1.segments:
+        for index, segment in  packet1.segments.items():
+            print index, segment.packed
 
 
 if __name__ == "__main__":

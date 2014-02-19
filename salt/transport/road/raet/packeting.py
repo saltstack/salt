@@ -379,7 +379,7 @@ class Packet(object):
         self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['pk']
         self.packed = ''  # packed string
-        self.segments = [] # subpackets when segmented
+        self.segments = None # subpackets when segmented
         self.data = odict(raeting.PACKET_DEFAULTS)
 
     @property
@@ -456,7 +456,47 @@ class TxPacket(Packet):
         self.packed = ''.join([self.head.packed,
                                self.coat.packed or self.body.packed,
                                self.foot.packed])
-        self.sign()
+
+        if self.size <= raeting.MAX_SEGMENT_SIZE:
+            self.sign()
+        else:
+            print "****Segmentize**** packet size = {0}".format(self.size)
+            self.segmentize()
+
+    def segmentize(self):
+        '''
+        Create packeted segments from existing packet
+        '''
+        self.segments = odict()
+        fullsize = self.coat.size or self.body.size
+        full = self.coat.packed or self.body.packed
+
+        extra = 0
+        if self.head.kind == raeting.headKinds.json:
+            extra = 22 # extra header size as a result of segmentation
+
+        hotelsize = self.head.size + extra + self.foot.size
+        haulsize = raeting.MAX_SEGMENT_SIZE - hotelsize
+
+        segcount = (hotelsize // haulsize) + (1 if hotelsize % haulsize else 0)
+        for i in range(segcount):
+            if i == segcount - 1: #last segment
+                haul = full[i * haulsize:]
+            else:
+                haul = full[i * haulsize: (i+1) * haulsize]
+
+            segment = TxPacket( stack=self.stack,
+                                kind=raeting.pcktKinds.message,
+                                data=self.data)
+            segment.data.update(bk=self.body.kind,
+                                ck=self.coat.kind,
+                                sn=i, sc=segcount, )
+            segment.body.packed = haul
+            segment.foot.pack()
+            segment.head.pack()
+            segment.sign()
+            self.segments[i] = segment
+
 
 class RxPacket(Packet):
     '''
@@ -577,3 +617,9 @@ class RxPacket(Packet):
         '''
         self.coat.parse()
         self.body.parse()
+
+    def unsegmentize(self):
+        '''
+        Create packeted segments from existing packet
+        '''
+        pass
