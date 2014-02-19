@@ -224,7 +224,7 @@ def refresh_db():
 
 def install(name=None,
             refresh=False,
-            sysupgrade=False,
+            sysupgrade=True,
             pkgs=None,
             sources=None,
             **kwargs):
