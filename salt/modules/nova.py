@@ -74,7 +74,7 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None):
+def _auth(profile=None, service_type='computer'):
     '''
     Set up nova credentials
     '''
@@ -96,7 +96,7 @@ def _auth(profile=None):
         'api_key': password,
         'project_id': tenant,
         'auth_url': auth_url,
-        'service_type': 'compute',
+        'service_type': service_type,
     }
     if region_name:
         kwargs['region_name'] = region_name
@@ -158,6 +158,133 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
             log.debug(
                 'Retrying server_show() (try {0})'.format(trycount)
             )
+
+
+def _volume_get(volume_id, profile=None):
+    nt_ks = _auth(profile, service_type='volume')
+    volume = nt_ks.volumes.get(volume_id)
+    response = {'name': volume.display_name,
+                'size': volume.size,
+                'id': volume.id,
+                'description': volume.display_description}
+    return response
+
+
+def volume_list(search_opts=None, profile=None):
+    '''
+    List storage volumes
+
+    search_opts
+        Dictionary of search options
+
+    profile
+        Profile to use
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.volume_list \
+                search_opts='{"display_name": "myblock"}' \
+                profile=openstack
+
+    '''
+    nt_ks = _auth(profile, service_type='volume')
+    volume = nt_ks.volumes.list(search_opts=search_opts)
+    return volume
+
+
+def volume_show(volume_name, profile=None):
+    '''
+    Create a block storage volume
+
+    name
+        Name of the volume
+
+    profile
+        Profile to use
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.volume_show myblock profile=openstack
+
+    '''
+    nt_ks = _auth(profile, service_type='volume')
+    volume = volume_list(
+        search_opts={'display_name': volume_name},
+        profile=profile
+    )[0]
+    response = {'name': volume.display_name,
+                'size': volume.size,
+                'id': volume.id,
+                'description': volume.display_description,
+                'attachments': volume.attachments,
+                'status': volume.status
+                }
+    return response
+
+
+def volume_create(name, size=100, snapshot=None, voltype=None,
+                  profile=None):
+    '''
+    Create a block storage volume
+
+    name
+        Name of the new volume (must be first)
+
+    size
+        Volume size
+
+    snapshot
+        Block storage snapshot id
+
+    voltype
+        Type of storage
+
+    profile
+        Profile to build on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.create myblock size=300 profile=openstack
+
+    '''
+    nt_ks = _auth(profile, service_type='volume')
+    response = nt_ks.volumes.create(
+        size=size,
+        display_name=name,
+        volume_type=voltype,
+        snapshot_id=snapshot
+    )
+
+    return _volume_get(response.id, profile=profile)
+
+
+def volume_delete(volume_name, profile=None):
+    '''
+    Create a block storage volume
+
+    name
+        Name of the new volume (must be first)
+
+    profile
+        Profile to build on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.delete myblock profile=openstack
+
+    '''
+    nt_ks = _auth(profile, service_type='volume')
+    volume = volume_show(volume_name, profile)
+    response = nt_ks.volumes.delete(volume['id'])
+    return response
 
 
 def suspend(instance_id, profile=None):
@@ -253,14 +380,14 @@ def flavor_list(profile=None):
         for link in flavor.links:
             links[link['rel']] = link['href']
         ret[flavor.name] = {
-                'disk': flavor.disk,
-                'id': flavor.id,
-                'name': flavor.name,
-                'ram': flavor.ram,
-                'swap': flavor.swap,
-                'vcpus': flavor.vcpus,
-                'links': links,
-            }
+            'disk': flavor.disk,
+            'id': flavor.id,
+            'name': flavor.name,
+            'ram': flavor.ram,
+            'swap': flavor.swap,
+            'vcpus': flavor.vcpus,
+            'links': links,
+        }
         if hasattr(flavor, 'rxtx_factor'):
             ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
     return ret
@@ -333,10 +460,10 @@ def keypair_list(profile=None):
     ret = {}
     for keypair in nt_ks.keypairs.list():
         ret[keypair.name] = {
-                'name': keypair.name,
-                'fingerprint': keypair.fingerprint,
-                'public_key': keypair.public_key,
-            }
+            'name': keypair.name,
+            'fingerprint': keypair.fingerprint,
+            'public_key': keypair.public_key,
+        }
     return ret
 
 
@@ -349,7 +476,7 @@ def keypair_add(name, pubfile=None, pubkey=None, profile=None):
     .. code-block:: bash
 
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
-        salt '*' nova.keypair_add mykey pubkey='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuGj4A7HcPLPl/etc== myuser@mybox'
+        salt '*' nova.keypair_add mykey pubkey='ssh-rsa <key> myuser@mybox'
     '''
     nt_ks = _auth(profile)
     if pubfile:
@@ -396,15 +523,15 @@ def image_list(name=None, profile=None):
         for link in image.links:
             links[link['rel']] = link['href']
         ret[image.name] = {
-                'name': image.name,
-                'id': image.id,
-                'status': image.status,
-                'progress': image.progress,
-                'created': image.created,
-                'updated': image.updated,
-                'metadata': image.metadata,
-                'links': links,
-            }
+            'name': image.name,
+            'id': image.id,
+            'status': image.status,
+            'progress': image.progress,
+            'created': image.created,
+            'updated': image.updated,
+            'metadata': image.metadata,
+            'links': links,
+        }
         if hasattr(image, 'minDisk'):
             ret[image.name]['minDisk'] = image.minDisk
         if hasattr(image, 'minRam'):
@@ -414,7 +541,10 @@ def image_list(name=None, profile=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, profile=None, **kwargs):  # pylint: disable=C0103
+def image_meta_set(id=None,
+                   name=None,
+                   profile=None,
+                   **kwargs):  # pylint: disable=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
@@ -422,7 +552,8 @@ def image_meta_set(id=None, name=None, profile=None, **kwargs):  # pylint: disab
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
+        salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
+                cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
     nt_ks = _auth(profile)
@@ -441,13 +572,15 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
                       keys=None,
                       profile=None):
     '''
-    Delete a key=value pair from the metadata for an image (nova image-meta set)
+    Delete a key=value pair from the metadata for an image
+    (nova image-meta set)
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete \
+                id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     nt_ks = _auth(profile)
@@ -642,12 +775,12 @@ def secgroup_list(profile=None):
     ret = {}
     for item in nt_ks.security_groups.list():
         ret[item.name] = {
-                'name': item.name,
-                'description': item.description,
-                'id': item.id,
-                'tenant_id': item.tenant_id,
-                'rules': item.rules,
-            }
+            'name': item.name,
+            'description': item.description,
+            'id': item.id,
+            'tenant_id': item.tenant_id,
+            'rules': item.rules,
+        }
     return ret
 
 
@@ -749,11 +882,8 @@ def _item_list(profile=None):
 #unrescue            Unrescue a server.
 #usage-list          List usage data for all tenants
 #volume-attach       Attach a volume to a server.
-#volume-create       Add a new volume.
-#volume-delete       Remove a volume.
 #volume-detach       Detach a volume from a server.
 #volume-list         List all the volumes.
-#volume-show         Show details about a volume.
 #volume-snapshot-create
 #                    Add a new snapshot.
 #volume-snapshot-delete
