@@ -3,10 +3,6 @@
 ============
 Installation
 ============
-
-The Salt system setup is amazingly simple, as this is one of the central design
-goals of Salt.
-
 .. seealso::
 
     :doc:`Installing Salt for development </topics/hacking>` and contributing
@@ -44,10 +40,10 @@ See `Salt Bootstrap`_ for more information.
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 
 
-Platform-specific installation instructions
+Platform-specific Installation Instructions
 -------------------------------------------
 
-These guides go into detail how to install salt on a given platform.
+These guides go into detail how to install Salt on a given platform.
 
 .. toctree::
     :maxdepth: 1
@@ -77,6 +73,8 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
+* `MarkupSafe`_ - Implements a XML/HTML/XHTML Markup safe string for Python
+* `apache-libcloud` - Python lib for interacting with many of the popular cloud service providers using a unified API
 
 Optional Dependencies
 ---------------------
