@@ -230,7 +230,7 @@ def install(name=None,
             **kwargs):
     '''
     Install (pacman -S) the passed package, add refresh=True to install with -y,
-	add sysupgrade=True to install with -u.
+    add sysupgrade=True to install with -u.
 
     name
         The name of the package to be installed. Note that this parameter is
