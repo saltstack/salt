@@ -1426,7 +1426,6 @@ def strip_proto(uri):
     return re.sub('^[^:/]+://', '', uri)
 
 
-
 def parse_docstring(docstring):
     '''
     Parse a docstring into its parts.
