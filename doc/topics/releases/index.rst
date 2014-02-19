@@ -1,6 +1,6 @@
-======================================
-Release notes and upgrade instructions
-======================================
+=============
+Release notes
+=============
 
 .. releasestree::
     :maxdepth: 1
