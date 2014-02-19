@@ -67,6 +67,14 @@ class Device(object):
             self.sid = 1  # rollover to 1
         return self.sid
 
+    def validSid(self, sid):
+        '''
+        Compare new sid to old .sid and return True if new is greater than old
+        modulo N where N is 2^32 = 0x100000000
+        And greater means the difference is less than N/2
+        '''
+        return (((sid - self.sid) % 0x100000000) < (0x100000000 / 2))
+
     def nextTid(self):
         '''
         Generates next session id number.
@@ -126,5 +134,10 @@ class RemoteDevice(Device):
         self.privee = nacling.Privateer() # short term key
         self.publee = nacling.Publican() # correspondent short term key  manager
 
-
-
+    def validRsid(self, rsid):
+        '''
+        Compare new rsid to old .rsid and return True if new is greater than old
+        modulo N where N is 2^32 = 0x100000000
+        And greater means the difference is less than N/2
+        '''
+        return (((rsid - self.rsid) % 0x100000000) < (0x100000000 / 2))

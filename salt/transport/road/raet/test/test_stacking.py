@@ -123,6 +123,67 @@ def test():
             print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
 
 
+    print "\n********* Message Transaction Minion to Master **********"
+    body = odict(what="This is a message to the master. How are you", extra="And some more.")
+    stack1.message(body=body, ddid=1)
+
+    timer.restart()
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack1.udpRxes:
+        stack1.processUdpRx()
+
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.udpRxMsgs)
+
+    print "{0} did={1}".format(stack1.name, stack1.device.did)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.udpRxMsgs)
+
+    print "\n********* Message Transaction Master to Minion **********"
+    body = odict(what="This is a message to the minion. Get to Work", extra="Fix the fence.")
+    stack0.message(body=body, ddid=2)
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    while stack1.udpRxes:
+        stack1.processUdpRx()
+
+    timer.restart()
+    while not timer.expired:
+        stack1.serviceUdp()
+        stack0.serviceUdp()
+
+    while stack0.udpRxes:
+        stack0.processUdpRx()
+
+    print "{0} did={1}".format(stack0.name, stack0.device.did)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.udpRxMsgs)
+
+    print "{0} did={1}".format(stack1.name, stack1.device.did)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.udpRxMsgs)
+
+
 
 if __name__ == "__main__":
     test()

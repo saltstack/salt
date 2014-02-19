@@ -34,7 +34,12 @@ class StackUdp(object):
                  version=raeting.VERSION,
                  device=None,
                  did=None,
-                 ha=("", raeting.RAET_PORT)):
+                 ha=("", raeting.RAET_PORT),
+                 udpRxMsgs = None,
+                 udpTxMsgs = None,
+                 udpRxes = None,
+                 udpTxes = None,
+                 ):
         '''
         Setup StackUdp instance
         '''
@@ -47,8 +52,10 @@ class StackUdp(object):
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.udpRxes = deque()
-        self.udpTxes = deque()
+        self.udpRxMsgs = udpRxMsgs or deque() # messages received
+        self.udpTxMsgs = udpTxMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
+        self.udpRxes = udpRxes or deque() # udp packets received
+        self.udpTxes = udpTxes or deque() # udp packet to transmit
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
@@ -102,7 +109,6 @@ class StackUdp(object):
                     del  self.transactions[index]
             else:
                 del self.transactions[index]
-
 
     def serviceUdp(self):
         '''
@@ -211,6 +217,11 @@ class StackUdp(object):
                 packet.data['si'] != 0):
             self.replyAllow(packet)
 
+        if (packet.data['tk'] == raeting.trnsKinds.message and
+                packet.data['pk'] == raeting.pcktKinds.message and
+                packet.data['si'] != 0):
+            self.replyMessage(packet)
+
     def join(self):
         '''
         Initiate join transaction
@@ -253,4 +264,25 @@ class StackUdp(object):
                                         txData=data,
                                         rxPacket=packet)
         allowent.hello()
+
+    def message(self, body=None, ddid=None):
+        '''
+        Initiate message transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk)
+        messenger = transacting.Messenger(stack=self, txData=data, rdid=ddid)
+        messenger.message(body)
+
+    def replyMessage(self, packet):
+        '''
+        Correspond to new Message transaction
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk)
+        messengent = transacting.Messengent(stack=self,
+                                        rdid=packet.data['sd'],
+                                        sid=packet.data['si'],
+                                        tid=packet.data['ti'],
+                                        txData=data,
+                                        rxPacket=packet)
+        messengent.message()
 

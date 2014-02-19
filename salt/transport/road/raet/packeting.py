@@ -478,7 +478,7 @@ class RxPacket(Packet):
         with short term keys
         '''
         remote = self.stack.devices[self.data['sd']]
-        return (self.stack.device.privee.decrypt(cipher, nonce, remote.publee, key))
+        return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
 
     def unpack(self, packed=None):
         '''
