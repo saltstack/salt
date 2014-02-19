@@ -25,24 +25,29 @@ Rule Two: Colons
 Python dictionaries are, of course, simply key-value pairs. Users from other
 languages may recognize this data type as hashes or associative arrays.
 
-Dictionary keys are represented in YAML as strings terminated by a trailing colon.
-Values are represented by either a string following the colon, separated by a space:
+Dictionary keys are represented in YAML as strings terminated by a trailing
+colon. Values are represented by either a string following the colon,
+separated by a space:
 
 .. code-block:: yaml
+
     my_key: my_value
 
 In Python, the above maps to:
 
 .. code-block:: python
+
     {'my_key': 'my_value'}
 
 Alternatively, a value can be associated with a key through indentation.
 
 .. code-block:: yaml
+
     my_key:
       my_value
 
 .. note::
+
     The above syntax is valid YAML but is uncommon in SLS files because most often,
     the value for a key is not singular but instead is a *list* of values.
 
@@ -52,12 +57,19 @@ In Python, the above maps to:
 Dictionaries can be nested:
 
 .. code-block:: yaml
+
     first_level_dict_key:
       second_level_dict_key: value_in_second_level_dict
 
 And in Python:
+
 .. code-block:: python
-    
+
+    {
+        'first_level_dict_key': {
+            'second_level_dict_key': 'value_in_second_level_dict'
+        }
+    }
 
 Rules Three: Dashes
 -------------------
@@ -66,6 +78,7 @@ To represent lists of items, a single dash followed by a space is used. Multiple
 items are a part of the same list as a function of their having the same level of indentation.
 
 .. code-block:: yaml
+
     - list_value_one
     - list_value_two
     - list_value_three

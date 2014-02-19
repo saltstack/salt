@@ -3,6 +3,7 @@
 Tests to try out nacling. Potentially ephemeral
 
 '''
+# pylint: skip-file
 import struct
 
 from ioflo.base.odicting import odict

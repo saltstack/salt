@@ -3,6 +3,7 @@
 Tests to try out stacking. Potentially ephemeral
 
 '''
+# pylint: skip-file
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import Timer
 
