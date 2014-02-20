@@ -41,7 +41,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
         get_hash, comment, manage_file, file_exists, get_diff, get_managed,
         __clean_tmp, check_managed, check_file_meta, _binary_replace,
-        contains_regex)
+        contains_regex, access, copy, readdir, rmdir, replace, search, truncate)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -95,6 +95,13 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment = _namespaced_function(comment, globals())
             get_diff = _namespaced_function(get_diff, globals())
+            access = _namespaced_function(access, globals())
+            copy = _namespaced_function(copy, globals())
+            readdir = _namespaced_function(readdir, globals())
+            rmdir = _namespaced_function(rmdir, globals())
+            replace = _namespaced_function(replace, globals())
+            search = _namespaced_function(search, globals())
+            truncate = _namespaced_function(truncate, globals())
 
             return __virtualname__
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
