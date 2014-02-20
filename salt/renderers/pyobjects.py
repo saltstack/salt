@@ -145,6 +145,7 @@ TODO
 '''
 
 import logging
+import sys
 
 from salt.loader import states
 from salt.utils.pyobjects import StateRegistry, SaltObject
@@ -159,6 +160,9 @@ def render(template, saltenv='base', sls='',
            tmplpath=None, rendered_sls=None,
            _states=None, **kwargs):
 
+    _globals = {}
+    _locals = {}
+
     _registry = StateRegistry()
     if _states is None:
         _states = states(__opts__, __salt__)
@@ -172,33 +176,44 @@ def render(template, saltenv='base', sls='',
         _st_funcs[mod].append(func)
 
     # create our StateFactory objects
+    _st_globals = {'StateFactory': StateFactory, '_registry': _registry}
     for mod in _st_funcs:
+        _st_locals = {}
         _st_funcs[mod].sort()
         mod_upper = mod.capitalize()
         mod_cmd = "%s = StateFactory('%s', registry=_registry, valid_funcs=['%s'])" % (
             mod_upper, mod,
             "','".join(_st_funcs[mod])
         )
-        exec(mod_cmd)
+        if sys.version > 3:
+            exec(mod_cmd, _st_globals, _st_locals)
+        else:
+            exec mod_cmd in _st_globals, _st_locals
+        _globals[mod_upper] = _st_locals[mod_upper]
 
     # add our Include and Extend functions
-    Include = _registry.include
-    Extend = _registry.make_extend
+    _globals['Include'] = _registry.include
+    _globals['Extend'] = _registry.make_extend
 
     # for convenience
     try:
-        pillar = __pillar__
-        grains = __grains__
-        salt = __salt__
+        _globals.update({
+            # salt, pillar & grains all provide shortcuts or object interfaces
+            'salt': SaltObject(__salt__),
+            'pillar': __salt__['pillar.get'],
+            'grains': __salt__['grains.get'],
 
-        # create our SaltObject
-        Salt = SaltObject(__salt__)
-
-        # add a Pillar shortcut
-        Pillar = __salt__['pillar.get']
+            # the "dunder" formats are still available for direct use
+            '__salt__': __salt__,
+            '__pillar__': __pillar__,
+            '__grains__': __grains__
+        })
     except NameError:
         pass
 
-    exec(template.read())
+    if sys.version > 3:
+        exec(template.read(), _globals, _locals)
+    else:
+        exec template.read() in _globals, _locals
 
     return _registry.salt_data()
