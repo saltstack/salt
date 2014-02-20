@@ -82,6 +82,30 @@ def test():
         print segmentage.body.packed
         print segmentage.body.data
 
+    body = odict(stuff=stuff)
+    print body
+    data.update(bk=raeting.bodyKinds.json, fk=raeting.footKinds.nacl)
+    packet1 = packeting.TxPacket(stack=stack0, embody=body, data=data, )
+    packet1.pack()
+    print packet1.packed
+
+    segmentage = None
+    if packet1.segmented:
+        for segment in packet1.segments.values():
+            if segment.segmentive:
+                if not segmentage:
+                    segmentage = packeting.RxPacket(stack=segment.stack,
+                                                    data=segment.data)
+                segmentage.parseSegment(segment)
+            if segmentage.desegmentable():
+                segmentage.desegmentize()
+                break
+
+    if segmentage:
+        print segmentage.body.packed
+        print segmentage.body.data
+
+
 
     #minion stack
     signer = nacling.Signer()
