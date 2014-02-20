@@ -185,6 +185,11 @@ VALID_OPTS = {
     'gather_job_timeout': int,
     'auth_timeout': int,
     'enumerate_proxy_minions': bool,
+    'ssh_passwd': str,
+    'ssh_port': str,
+    'ssh_sudo': bool,
+    'ssh_timeout': float,
+    'ssh_user': str,
 }
 
 # default configurations
@@ -393,6 +398,11 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'gather_job_timeout': 2,
     'enumerate_proxy_minions': False,
+    'ssh_passwd': '',
+    'ssh_port': '22',
+    'ssh_sudo': False,
+    'ssh_timeout': 60,
+    'ssh_user': 'root',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
