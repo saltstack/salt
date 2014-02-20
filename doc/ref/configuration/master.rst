@@ -1067,6 +1067,154 @@ bookmark should be used as the ``base`` environment.
 
     hgfs_base: salt
 
+svn: Subversion Remote File Server Backend
+------------------------------------------
+
+.. conf_master:: svnfs_remotes
+
+``svnfs_remotes``
+****************
+
+.. versionadded:: 0.17.0
+
+Default: ``[]``
+
+When using the ``svn`` fileserver backend at least one subversion remote needs
+to be defined. The user running the salt master will need read access to the
+repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. The trunk, branches, and tags
+become environments, with the trunk being the ``base`` environment.
+
+.. code-block:: yaml
+
+    svnfs_remotes:
+      - svn://foo.com/svn/myproject
+
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the following
+    configuration parameters:
+
+    * :conf_master:`svnfs_root`
+    * :conf_master:`svnfs_mountpoint`
+    * :conf_master:`svnfs_trunk`
+    * :conf_master:`svnfs_branches`
+    * :conf_master:`svnfs_tags`
+
+    For example:
+
+    .. code-block:: yaml
+
+        svnfs_remotes:
+          - svn://foo.com/svn/project1
+          - svn://foo.com/svn/project2:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+          - svn//foo.com/svn/project3:
+            - root: salt/states
+            - branches: branch
+            - tags: tag
+
+.. conf_master:: svnfs_mountpoint
+
+``svnfs_mountpoint``
+********************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which svnfs remotes are served.
+Can be used in conjunction with :conf_master:`svnfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    svnfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: svnfs_root
+
+``svnfs_root``
+**************
+
+.. versionadded:: 0.17.0
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`svnfs_mountpoint`.
+
+.. code-block:: yaml
+
+    svnfs_root: somefolder/otherfolder
+
+.. versionchanged:: Helium
+
+   Ability to specify svnfs roots on a per-remote basis was added. See
+   :conf_master:`here <svnfs_remotes>` for more info.
+
+.. conf_master:: svnfs_trunk
+
+``svnfs_trunk``
+***************
+
+.. versionadded:: Helium
+
+Default: ``trunk``
+
+Path relative to the root of the repository where the trunk is located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
+
+.. code-block:: yaml
+
+    svnfs_trunk: trunk
+
+.. conf_master:: svnfs_branches
+
+``svnfs_branches``
+******************
+
+.. versionadded:: Helium
+
+Default: ``branches``
+
+Path relative to the root of the repository where the branches are located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
+
+.. code-block:: yaml
+
+    svnfs_branches: branches
+
+.. conf_master:: svnfs_tags
+
+``svnfs_tags``
+**************
+
+.. versionadded:: Helium
+
+Default: ``tags``
+
+Path relative to the root of the repository where the tags is located. Can also
+be configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>`
+for more info.
+
+.. code-block:: yaml
+
+    svnfs_tags: tags
+
 
 .. _pillar-configuration:
 
