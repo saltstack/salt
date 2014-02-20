@@ -17,6 +17,7 @@ import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
+import salt.transport
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -116,6 +117,16 @@ class Caller(object):
                 except Exception:
                     pass
         return ret
+
+    def return_pub(self, ret):
+        '''
+        Return the data up to the master
+        '''
+        channel = salt.transport.Channel(self.opts)
+        load = {'cmd': '_return', 'id': self.opts['id']}
+        for key, value in ret.items():
+            load[key] = value
+        channel.send(load)
 
     def print_docs(self):
         '''
