@@ -109,12 +109,12 @@ ERROR_MAP = {
 
 
 def deserialize(stream_or_string, **options):
-    """
+    '''
     Deserialize any string of stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower yaml module.
-    """
+    '''
 
     options.setdefault('Loader', Loader)
     try:
@@ -133,12 +133,12 @@ def deserialize(stream_or_string, **options):
 
 
 def serialize(obj, **options):
-    """
+    '''
     Serialize Python data to YAML.
 
     :param obj: the datastructure to serialize
     :param options: options given to lower yaml module.
-    """
+    '''
 
     options.setdefault('Dumper', Dumper)
     try:
@@ -309,7 +309,7 @@ class SLSMap(OrderedDict):
 
 
 class SLSString(str):
-    """
+    '''
     Ensures that str str() and repr() are YAML friendly.
 
     .. code-block:: python
@@ -322,7 +322,7 @@ class SLSString(str):
         >>> print sls_scalar
         "foo"
 
-    """
+    '''
 
     def __str__(self):
         return serialize(self, default_style='"')

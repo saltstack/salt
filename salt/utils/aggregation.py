@@ -1,3 +1,107 @@
+# -*- coding: utf-8 -*-
+'''
+    salt.utils.aggregation
+    ~~~~~~~~~~~~~~~~~~~~~~
+
+    This library allows to introspect dataset and aggregate nodes when it is
+    instructed.
+
+    .. note::
+
+        The following examples with be expressed in YAML for convenience sake:
+
+        - !aggr-scalar will refer to Scalar python function
+        - !aggr-map will refer to Map python object
+        - !aggr-seq will refer for Sequence python object
+
+
+    How to instructs merging
+    ------------------------
+
+    This yaml document have duplicate keys:
+
+    .. code-block:: yaml
+
+        foo: !aggr-scalar first
+        foo: !aggr-scalar second
+        bar: !aggr-map {first: foo}
+        bar: !aggr-map {second: bar}
+        baz: !aggr-scalar 42
+
+    but tagged values instruct salt that overlaping values they can be merged
+    together:
+
+    .. code-block:: yaml
+
+        foo: !aggr-seq [first, second]
+        bar: !aggr-map {first: foo, second: bar}
+        baz: !aggr-seq [42]
+
+
+    Default merge strategy is keeped untouched
+    ------------------------------------------
+
+    For example, this yaml document have still duplicate keys, but does not
+    instruct aggregation:
+
+    .. code-block:: yaml
+
+        foo: first
+        foo: second
+        bar: {first: foo}
+        bar: {second: bar}
+        baz: 42
+
+    So the late found values prevail:
+
+    .. code-block:: yaml
+
+        foo: second
+        bar: {second: bar}
+        baz: 42
+
+
+    Limitations
+    -----------
+
+    Aggregation is permitted between tagged objects that share the same type.
+    If not, the default merge strategy prevails.
+
+    For example, these examples:
+
+    .. code-block:: yaml
+
+        foo: {first: value}
+        foo: !aggr-map {second: value}
+
+        bar: !aggr-map {first: value}
+        bar: 42
+
+        baz: !aggr-seq [42]
+        baz: [fail]
+
+        qux: 42
+        qux: !aggr-scalar fail
+
+    are interpreted like this:
+
+    .. code-block:: yaml
+
+        foo: !aggr-map{second: value}
+
+        bar: 42
+
+        baz: [fail]
+
+        qux: !aggr-seq [fail]
+
+
+    Introspection
+    -------------
+
+    .. todo:: write this part
+
+'''
 
 from __future__ import absolute_import
 from copy import copy
@@ -23,17 +127,17 @@ class Sequence(list, Aggregate):
 
 
 def Scalar(obj):
-    """
+    '''
     Shortcut for Sequence creation
 
     >>> Scalar('foo') == Sequence(['foo'])
     True
-    """
+    '''
     return Sequence([obj])
 
 
 def levelise(level):
-    """
+    '''
     Describe which levels are allowed to do deep merging.
 
     level can be:
@@ -53,7 +157,7 @@ def levelise(level):
         * a list of bool and int values
         * a string of 0 and 1 characters
 
-    """
+    '''
 
     if not level:  # False, 0, [] ...
         return False, False
@@ -81,10 +185,12 @@ def mark(obj, Map=Map, Sequence=Sequence):
 
 
 def aggregate(a, b, level=False, Map=Map, Sequence=Sequence):  # NOQA
-    """
+    '''
+    Merge b into a.
+
     >>> aggregate('first', 'second', True) == ['first', 'second']
     True
-    """
+    '''
     deep, subdeep = levelise(level)
 
     if deep:
