@@ -211,7 +211,7 @@ Building the installer
 
 The Salt Windows installer is built with the open-source NSIS compiler. The
 source for the installer is found in the pkg directory of the Salt repo here:
-https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt-Minion-Setup.nsi.
+https://github.com/saltstack/salt/tree/develop/pkg/windows/installer/Salt-Minion-Setup.nsi.
 To create the installer, extract the frozen archive from ``dist/`` into ``pkg/windows/buildenv/``
 and run NSIS.
 
@@ -289,12 +289,12 @@ On windows Server 2003, you need to install optional component "wmi windows inst
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt
-.. _vcredist_x86: http://www.microsoft.com/download/en/details.aspx?id=5582
-.. _vcredist_x64: http://www.microsoft.com/download/en/details.aspx?id=2092
+.. _vcredist_x86: http://www.microsoft.com/en-us/download/details.aspx?id=5582
+.. _vcredist_x64: http://www.microsoft.com/en-us/download/details.aspx?id=2092
 .. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3
-.. _Python 2.7: http://www.python.org/getit
+.. _Python 2.7: http://www.python.org/downloads
 .. _ez_setup.py: https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
-.. _OpenSSL for Windows: http://www.slproweb.com/products/Win32OpenSSL.html
+.. _OpenSSL for Windows: http://slproweb.com/products/Win32OpenSSL.html
 .. _M2Crypto: http://chandlerproject.org/Projects/MeTooCrypto
 .. _pycrypto: http://www.voidspace.org.uk/python/modules.shtml#pycrypto
 .. _pywin32: http://sourceforge.net/projects/pywin32/files/pywin32

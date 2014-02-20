@@ -105,4 +105,4 @@ loaded as simply ``redis``:
             return False
         return 'redis'
 
-.. _`redis`: https://github.com/saltstack/salt/blob/develop/salt/returners/redis_return.py
+.. _`redis`: https://github.com/saltstack/salt/tree/develop/salt/returners/redis_return.py

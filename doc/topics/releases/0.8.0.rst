@@ -80,7 +80,7 @@ configuration file can be accessed inside of the minion modules via the __opt__
 dict.
 
 Information on how to use this simple addition has been added to the wiki:
-https://github.com/thatch45/salt/wiki/Writing-Salt-Modules
+:doc:`Writing modules </ref/states/>`
 
 The test module has an example of using the __opts__ dict, and how to set
 default options:

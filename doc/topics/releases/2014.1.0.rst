@@ -204,7 +204,7 @@ PagerDuty Support
 Initial support for firing events via PagerDuty_ has been added. See the
 documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
 
-.. _PagerDuty: http://pagerduty.com
+.. _PagerDuty: http://www.pagerduty.com
 
 
 Virtual Terminal
@@ -231,7 +231,7 @@ don't have the horsepower or ability to handle a Python VM.
 
 Proxy minions can be difficult to write, so a simple REST-based example proxy
 is included. A Python bottle-based webserver can be found at
-http://github.com/cro/salt-proxy-rest as an endpoint for this proxy.
+https://github.com/cro/salt-proxy-rest as an endpoint for this proxy.
 
 This is an ALPHA-quality feature. There are a number of issues with it
 currently, mostly centering around process control, logging, and inability to

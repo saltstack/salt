@@ -61,7 +61,7 @@ authentication and encryption are integral to Salt.  Salt takes
 advantage of communication via `msgpack`_, enabling fast and light
 network traffic.
 
-.. _`ZeroMQ`: http://www.zeromq.org/
+.. _`ZeroMQ`: http://zeromq.org/
 .. _`msgpack`: http://msgpack.org/
 .. _`AES`: https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 

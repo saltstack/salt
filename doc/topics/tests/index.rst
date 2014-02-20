@@ -74,9 +74,9 @@ You can see the current list of test suite images on our `docker repository`__.
 If you wish to provide your own `docker`_ container, you can submit pull
 requests against our `docker salt test containers`__ repository.
 
-.. _docker: http://www.docker.io/
+.. _docker: https://www.docker.io/
 .. __: https://index.docker.io/u/salttest/
-.. __: https://github.com/saltstack/docker-salttest-containers
+.. __: https://github.com/saltstack/docker-containers
 
 
 =============

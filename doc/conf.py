@@ -113,11 +113,11 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2013 SaltStack, Inc.'
+copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.17.5'
+release = '2014.1'
 
 language = 'en'
 locale_dirs = [
@@ -150,7 +150,7 @@ rst_prolog = """\
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://github.com/downloads/saltstack/salt/%s', None),
+    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
     'formula': ('https://github.com/saltstack-formulas/%s', ''),
 }
@@ -218,6 +218,36 @@ latex_documents = [
 
 latex_logo = '_static/saltstack_logo.png'
 
+### Linkcheck options
+linkcheck_ignore = [r'http://127.0.0.1',
+                    r'http://salt:\d+',
+                    r'http://local:\d+',
+                    r'https://console.aws.amazon.com',
+                    r'http://192.168.33.10',
+                    r'http://domain:\d+',
+                    r'http://123.456.789.012:\d+',
+                    r'http://localhost',
+                    r'https://groups.google.com/forum/#!forum/salt-users',
+                    r'http://logstash.net/docs/latest/inputs/udp',
+                    r'http://logstash.net/docs/latest/inputs/zeromq',
+                    r'http://www.youtube.com/saltstack',
+                    r'http://raven.readthedocs.org',
+                    r'https://getsentry.com',
+                    r'http://salt-cloud.readthedocs.org',
+                    r'http://salt.readthedocs.org',
+                    r'http://www.pip-installer.org/',
+                    r'http://www.windowsazure.com/',
+                    r'https://github.com/watching',
+                    r'dash-feed://',
+                    r'https://github.com/saltstack/salt/',
+                    r'http://bootstrap.saltstack.org',
+                    r'media.readthedocs.org/dash/salt/latest/salt.xml',
+                    r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
+                    r'https://help.github.com/articles/fork-a-repo',
+                    r'dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml'
+                    ]
+
+linkcheck_anchors = False
 
 ### Manpage options
 # One entry per manual page. List of tuples

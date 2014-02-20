@@ -267,7 +267,7 @@ strftime
       {{ datetime|strftime("%u") }}
       {{ "now"|strftime }}
 
-.. _`builtin filters`: http://jinja.pocoo.org/docs/templates/##builtin-filters
+.. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
 
 Jinja in Files
