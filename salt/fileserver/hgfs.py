@@ -30,7 +30,6 @@ import hashlib
 import logging
 import os
 import shutil
-import time
 from datetime import datetime
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
@@ -147,48 +146,6 @@ def _get_ref(repo, name):
     elif __opts__['hgfs_branch_method'] == 'mixed':
         return _get_branch(repo, name) or _get_bookmark(repo, name) \
             or _get_tag(repo, name)
-    return False
-
-
-def _wait_lock(lk_fn, dest):
-    '''
-    If the write lock is there, check to see if the file is actually being
-    written. If there is no change in the file size after a short sleep,
-    remove the lock and move forward.
-    '''
-    if not os.path.isfile(lk_fn):
-        return False
-    if not os.path.isfile(dest):
-        # The dest is not here, sleep for a bit, if the dest is not here yet
-        # kill the lockfile and start the write
-        time.sleep(1)
-        if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
-            return False
-    # There is a lock file, the dest is there, stat the dest, sleep and check
-    # that the dest is being written, if it is not being written kill the lock
-    # file and continue. Also check if the lock file is gone.
-    s_count = 0
-    s_size = os.stat(dest).st_size
-    while True:
-        time.sleep(1)
-        if not os.path.isfile(lk_fn):
-            return False
-        size = os.stat(dest).st_size
-        if size == s_size:
-            s_count += 1
-            if s_count >= 3:
-                # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
-                return False
-        else:
-            s_size = size
     return False
 
 
@@ -448,7 +405,7 @@ def find_file(path, tgt_env='base', **kwargs):
             # Branch or tag not found in repo, try the next
             repo.close()
             continue
-        _wait_lock(lk_fn, dest)
+        salt.fileserver.wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
