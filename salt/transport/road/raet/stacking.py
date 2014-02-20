@@ -211,8 +211,7 @@ class StackUdp(object):
 
         trans = self.transactions.get(packet.index, None)
         if trans:
-            if self.parseInner(packet):
-                trans.receive(packet)
+            trans.receive(packet)
             return
 
         if packet.data['cf']: #correspondent to stale transaction so drop
@@ -226,9 +225,6 @@ class StackUdp(object):
         '''
         Reply to packet with corresponding transaction or action
         '''
-        if not self.parseInner(packet):
-            return
-
         if (packet.data['tk'] == raeting.trnsKinds.join and
                 packet.data['pk'] == raeting.pcktKinds.request and
                 packet.data['si'] == 0):

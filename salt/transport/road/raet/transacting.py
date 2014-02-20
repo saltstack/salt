@@ -175,7 +175,7 @@ class Joiner(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joiner, self).receive(packet)
+        super(Joiner, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack: #pended
@@ -227,6 +227,8 @@ class Joiner(Initiator):
         '''
         Process ack to join packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         #data = self.rxPacket.data
         #body = self.rxPacket.body.data
         #set timer for redo
@@ -234,8 +236,10 @@ class Joiner(Initiator):
 
     def accept(self):
         '''
-        Perform acceptance in response to joint response packt
+        Perform acceptance in response to join response packt
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -307,6 +311,8 @@ class Joinent(Correspondent):
         Process join packet
         Perform pend operation of pending remote device being accepted onto channel
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -418,7 +424,7 @@ class Allower(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Allower, self).receive(packet)
+        super(Allower, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.cookie:
@@ -472,6 +478,8 @@ class Allower(Initiator):
         '''
         Process cookie packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -546,8 +554,11 @@ class Allower(Initiator):
 
     def allow(self):
         '''
+        Process ackInitiate packet
         Perform allowment in response to ack to initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         self.stack.devices[self.rdid].allowed = True
         self.remove()
 
@@ -584,7 +595,7 @@ class Allowent(Correspondent):
         """
         Process received packet belonging to this transaction
         """
-        super(Allowent, self).receive(packet)
+        super(Allowent, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.hello:
@@ -613,6 +624,8 @@ class Allowent(Correspondent):
         '''
         Process hello packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -670,6 +683,8 @@ class Allowent(Correspondent):
         '''
         Process initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -887,6 +902,8 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
         self.stack.udpRxMsgs.append(body)
