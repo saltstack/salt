@@ -923,8 +923,8 @@ def os_data():
                 rel_data = fp_.read()
                 try:
                     release_re = re.compile(
-                        r'((?:Open)Solaris|OpenIndiana)( Development)?'
-                        r'\s+(\d+ \d+\/\d+|oi_\S+|snv_\S+)?'
+                        r'((?:Open)?Solaris|OpenIndiana) (Development)?'
+                        r'\s*(\d+ \d+\/\d+|oi_\S+|snv_\S+)?'
                     )
                     osname, development, osrelease = \
                         release_re.search(rel_data).groups()
