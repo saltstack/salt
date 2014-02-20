@@ -40,12 +40,12 @@ File.fail('/tmp')
 '''
 
 include_template = '''#!pyobjects
-Include('http')
+include('http')
 '''
 
 extend_template = '''#!pyobjects
-Include('http')
-Service.running(Extend('apache'), watch=[{'file': '/etc/file'}])
+include('http')
+Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
 
