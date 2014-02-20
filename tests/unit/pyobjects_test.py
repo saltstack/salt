@@ -13,7 +13,7 @@ from salt.minion import SMinion
 from salt.renderers.pyobjects import render as pyobjects_render
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, StateRegistry,
-                                  InvalidFunction)
+                                  InvalidFunction, SaltObject)
 
 test_registry = StateRegistry()
 File = StateFactory('file', registry=test_registry)
@@ -163,3 +163,19 @@ class RendererTests(TestCase):
                 }),
             ])),
         ]))
+
+
+class SaltObjectTests(TestCase):
+    def test_salt_object(self):
+        def times2(x):
+            return x*2
+
+        __salt__ = {
+            'math.times2': times2
+        }
+
+        Salt = SaltObject(__salt__)
+
+        self.assertRaises(AttributeError, lambda: Salt.fail.blah())
+        self.assertEqual(Salt.math.times2, times2)
+        self.assertEqual(Salt.math.times2(2), 4)

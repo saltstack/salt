@@ -5,6 +5,8 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
+from collections import namedtuple
+
 from salt.utils.odict import OrderedDict
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
@@ -228,3 +230,36 @@ class State(object):
 
     def __exit__(self, type, value, traceback):
         self.registry.pop_requisite()
+
+
+class SaltObject(object):
+    '''
+    Object based interface to the functions in __salt__
+
+    .. code-block:: python
+       :linenos:
+        Salt = SaltObject(__salt__)
+        Salt.cmd.run(bar)
+    '''
+    def __init__(self, salt):
+        _mods = {}
+        for full_func in salt:
+            mod, func = full_func.split('.')
+
+            if mod not in _mods:
+                _mods[mod] = {}
+            _mods[mod][func] = salt[full_func]
+
+        # now transform using namedtuples
+        self.mods = {}
+        for mod in _mods:
+            mod_object = namedtuple('%sModule' % mod.capitalize(),
+                                    _mods[mod].keys())
+
+            self.mods[mod] = mod_object(**_mods[mod])
+
+    def __getattr__(self, mod):
+        if mod not in self.mods:
+            raise AttributeError
+
+        return self.mods[mod]

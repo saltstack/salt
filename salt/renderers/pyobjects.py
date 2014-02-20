@@ -105,12 +105,34 @@ a state.
 
     Service.running(Extend('apache'),
                     watch=[{'file': '/etc/httpd/extra/httpd-vhosts.conf'}])
+
+SaltObject
+^^^^^^^^^^
+In the spirit of the object interface for creating state data pyobjects also
+provides a simple object interface to the ``__salt__`` object.
+
+An object named ``Salt`` exists in scope for your sls files and will dispatch
+its attributes to the ``__salt__`` dictionary.
+
+The following lines are functionally equivalent:
+
+.. code-block:: python
+   :linenos:
+    #!pyobjects
+
+    ret = Salt.cmd.run(bar)
+    ret = salt['cmd.run'](bar)
+
+
+TODO
+^^^^
+* Interface for working with reactor files
 '''
 
 import logging
 
 from salt.loader import states
-from salt.utils.pyobjects import StateRegistry
+from salt.utils.pyobjects import StateRegistry, SaltObject
 from salt.utils.pyobjects import StateFactory  # pylint: disable=W0611
 # DO NOT REMOVE THE DISABLE ABOVE, it's used in an exec call below
 
@@ -153,6 +175,9 @@ def render(template, saltenv='base', sls='',
         pillar = __pillar__
         grains = __grains__
         salt = __salt__
+
+        # create our SaltObject
+        Salt = SaltObject(__salt__)
     except NameError:
         pass
 
