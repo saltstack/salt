@@ -200,21 +200,21 @@ def init():
     new_remote = False
     repos = []
     hgfs_remotes = salt.utils.repack_dictlist(__opts__['hgfs_remotes'])
-    for repo_uri, remote_conf_params in hgfs_remotes.iteritems():
+    for repo_uri, repo_conf_params in hgfs_remotes.iteritems():
 
         # Validate and compile per-remote configuration parameters, if present
-        remote_conf = dict([(x, None) for x in PER_REMOTE_PARAMS])
-        if remote_conf_params is not None:
-            remote_conf_params = salt.utils.repack_dictlist(remote_conf_params)
-            if not remote_conf_params:
+        repo_conf = dict([(x, None) for x in PER_REMOTE_PARAMS])
+        if repo_conf_params is not None:
+            repo_conf_params = salt.utils.repack_dictlist(repo_conf_params)
+            if not repo_conf_params:
                 log.error(
                     'Invalid per-remote configuration for remote {0!r}'
                     .format(repo_uri)
                 )
             else:
-                for param, value in remote_conf_params.iteritems():
+                for param, value in repo_conf_params.iteritems():
                     if param in PER_REMOTE_PARAMS:
-                        remote_conf[param] = value
+                        repo_conf[param] = value
                     else:
                         log.error(
                             'Invalid configuration parameter {0!r} in remote '
@@ -225,8 +225,8 @@ def init():
                             )
                         )
         try:
-            remote_conf['mountpoint'] = salt.utils.strip_proto(
-                remote_conf['mountpoint']
+            repo_conf['mountpoint'] = salt.utils.strip_proto(
+                repo_conf['mountpoint']
             )
         except TypeError:
             # mountpoint not specified
@@ -260,13 +260,13 @@ def init():
                 hgconfig.write('[paths]\n')
                 hgconfig.write('default = {0}\n'.format(repo_uri))
 
-        remote_conf.update({
+        repo_conf.update({
             'repo': repo,
             'uri': repo_uri,
             'hash': repo_hash,
             'cachedir': rp_
         })
-        repos.append(remote_conf)
+        repos.append(repo_conf)
         repo.close()
 
     if new_remote:
@@ -275,10 +275,10 @@ def init():
             with salt.utils.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
-                for remote_conf in repos:
+                for repo_conf in repos:
                     fp_.write(
                         '{0} = {1}\n'.format(
-                            remote_conf['hash'], remote_conf['uri']
+                            repo_conf['hash'], repo_conf['uri']
                         )
                     )
         except OSError:
