@@ -305,21 +305,21 @@ class Joinent(Correspondent):
     def join(self):
         '''
         Process join packet
-        Perform pend operation of pending device being accepted onto channel
+        Perform pend operation of pending remote device being accepted onto channel
         '''
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
         # need to add search for existing device with same host,port address
 
-        device = devicing.RemoteDevice(stack=self.stack,
+        remote = devicing.RemoteDevice(stack=self.stack,
                               host=data['sh'],
                               port=data['sp'],
                               rsid=self.sid,
                               rtid=self.tid, )
-        self.stack.addRemoteDevice(device) #provisionally add .accepted is None
+        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
 
-        self.rdid = device.did
+        self.rdid = remote.did
 
         verhex = body.get('verhex')
         if not verhex:
@@ -331,8 +331,8 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
+        remote.verfer = nacling.Verifier(key=verhex)
+        remote.pubber = nacling.Publican(key=pubhex)
 
         self.ackJoin()
 

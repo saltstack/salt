@@ -65,8 +65,9 @@ class TxHead(Head):
         '''
         self.packed = ''
         data = self.packet.data  # for speed
-        data['bl'] = self.packet.body.size
-        data['cl'] = self.packet.coat.size
+        if not self.packet.segmentive: #only set these if packet is not a segment
+            data['bl'] = self.packet.body.size
+            data['cl'] = self.packet.coat.size
         data['fl'] = self.packet.foot.size
 
         data['fg'] = "{:02x}".format(self.packFlags())
@@ -366,18 +367,20 @@ class Packet(object):
     '''
     RAET protocol packet object
     '''
-    def __init__(self, stack=None, kind=None):
+    def __init__(self, stack=None, data=None, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
         self.stack = stack
         self.packed = ''  # packed string
-        self.segments = None # subpackets when segmented
         self.data = odict(raeting.PACKET_DEFAULTS)
+        if data:
+            self.data.update(data)
         if kind:
             if kind not in raeting.PCKT_KIND_NAMES:
                 self.data['pk'] = raeting.pcktKinds.unknown
                 emsg = "Unrecognizible packet kind."
                 raise raeting.PacketError(emsg)
             self.data.update(pk=kind)
+        self.segments = None
 
     @property
     def size(self):
@@ -385,6 +388,20 @@ class Packet(object):
         Property is the length of the .packed of this Packet
         '''
         return len(self.packed)
+
+    @property
+    def segmented(self):
+        '''
+        Property is True if packet has at least one entry in .segments
+        '''
+        return (True if self.segments else False)
+
+    @property
+    def segmentive(self):
+        '''
+        Property is True if packet segment count is > 1
+        '''
+        return (True if self.data.get('sc', 1) > 1 else False)
 
     def refresh(self, data=None):
         '''
@@ -399,7 +416,7 @@ class TxPacket(Packet):
     '''
     RAET Protocol Transmit Packet object
     '''
-    def __init__(self, embody=None, data=None, **kwa):
+    def __init__(self, embody=None, **kwa):
         '''
         Setup TxPacket instance
         '''
@@ -408,8 +425,6 @@ class TxPacket(Packet):
         self.body = TxBody(packet=self, data=embody)
         self.coat = TxCoat(packet=self)
         self.foot = TxFoot(packet=self)
-        if data:
-            self.data.update(data)
 
     @property
     def index(self):
@@ -483,7 +498,6 @@ class TxPacket(Packet):
                 haul = full[i * haulsize: (i+1) * haulsize]
 
             segment = TxPacket( stack=self.stack,
-                                kind=raeting.pcktKinds.message,
                                 data=self.data)
             segment.data.update(sn=i, sc=segcount, )
             segment.body.packed = haul
@@ -506,6 +520,7 @@ class RxPacket(Packet):
         self.body = RxBody(packet=self)
         self.coat = RxCoat(packet=self)
         self.foot = RxFoot(packet=self)
+        self.segments = odict() # desegmentize assumes odict()
         self.packed = packed or ''
 
     @property
@@ -599,6 +614,14 @@ class RxPacket(Packet):
         self.unpack()
         self.foot.parse()
 
+    def parseSegment(self, packet):
+        '''
+        If packet is segmentive then adds to .segments at index of segment number
+        Assumes packet parseOuter has already happened
+        '''
+        if packet.segmentive:
+            self.segments[packet.data['sn']] = packet
+
     def parseInner(self):
         '''
         Assumes the head as already been parsed so self.data is valid
@@ -613,8 +636,31 @@ class RxPacket(Packet):
         self.coat.parse()
         self.body.parse()
 
-    def unsegmentize(self):
+    def desegmentable(self):
         '''
-        Create packeted segments from existing packet
+        Return True of  .segments is complete
         '''
-        pass
+        if not self.segmentive or not self.segmented:
+            return False
+
+        sc = self.data['sc']
+        for i in range(0, sc):
+            if i not in self.segments:
+                return False
+            if not self.segments[i]:
+                return False
+        return True
+
+    def desegmentize(self):
+        '''
+        Reassemble packet from segments
+        '''
+        hauls = []
+        for segment in self.segments.values():
+            hauls.append(segment.body.packed)
+        packed = "".join(hauls)
+        if self.data['ck'] != raeting.coatKinds.nada:
+            self.coat.packed = packed
+        else:
+            self.body.packed = packed
+        self.parseInner()
