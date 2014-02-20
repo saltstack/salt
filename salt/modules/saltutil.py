@@ -415,7 +415,6 @@ def running():
                 # Proc file is empty, remove
                 os.remove(path)
                 continue
-            data = serial.loads(fp_.read())
         if not isinstance(data, dict):
             # Invalid serial object
             continue
