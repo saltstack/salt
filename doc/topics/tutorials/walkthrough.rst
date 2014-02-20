@@ -2,28 +2,16 @@
 SaltStack Walk-through
 ======================
 
-Welcome!
-========
-
-Welcome to SaltStack! I am excited that you are interested in Salt and
-starting down the path to better infrastructure management. I developed
-(and am continuing to develop) Salt with the goal of making the best
-software available to manage computers of almost any kind. I hope you enjoy
-working with Salt and that the software can solve your real world needs!
-
-- Thomas S Hatch
-- Salt creator and Chief Developer
-- CTO of SaltStack, Inc.
-
 .. note::
+    Welcome to SaltStack! I am excited that you are interested in Salt and
+    starting down the path to better infrastructure management. I developed
+    (and am continuing to develop) Salt with the goal of making the best
+    software available to manage computers of almost any kind. I hope you enjoy
+    working with Salt and that the software can solve your real world needs!
 
-    This is the first of a series of walk-through and serves as the best entry
-    point for people new to Salt, after this be sure to read up on pillar and
-    more on states:
-
-    :doc:`Starting States </topics/tutorials/starting_states>`
-
-    :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
+    - Thomas S Hatch
+    - Salt creator and Chief Developer
+    - CTO of SaltStack, Inc.
 
 
 Getting Started
@@ -33,26 +21,14 @@ What is Salt?
 -------------
 
 Salt is a different approach to infrastructure management, founded on
-the idea that high speed communication with large numbers of systems can open
+the idea that high-speed communication with large numbers of systems can open
 up new capabilities. This approach makes Salt a powerful multitasking system
 that can solve many specific problems in an infrastructure.
 
-The backbone of Salt is the remote execution engine, which creates a high speed,
+The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
 communication system, Salt provides an extremely fast, flexible and easy-to-use
 configuration management system called ``Salt States``.
-
-This unique approach to management makes for a transparent control system that
-is not only amazingly easy to set up and use but also capable of solving very
-complex problems in infrastructures.
-
-Salt is being used today by some of the largest infrastructures in the world
-and has a proven ability to scale to astounding proportions without
-modification. Able to scale out well beyond many tens of thousands of servers,
-Salt has also shown itself to be an excellent choice for small
-deployments, lowering compute and management overhead for
-infrastructures as small as just a few systems.
-
 
 Installing Salt
 ---------------
@@ -283,13 +259,20 @@ The ``*`` is the target, which specifies all minions.
 
 ``test.ping`` tells the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
 
+In the case of ``test.ping``, ``test`` refers to a :doc:`execution module </ref/modules/>`.
+``ping`` refers to the :py:func:`ping <salt.modules.test.ping>` function contained in the
+aforementioned ``test`` module.
+
+.. note::
+    Execution modules are the workhorses of Salt. They do the work on the system to perform
+    various tasks, such as manipulating files and restarting services.
+
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
 and return the result.
 
-This is not an actual ICMP ping, but rather a simple
-function which returns ``True``. Using :py:func:`test.ping
-<salt.modules.test.ping>` is a good way of confirming that a minion is
+This is not an actual ICMP ping, but rather a simple function which returns ``True``.
+Using :py:func:`test.ping <salt.modules.test.ping>` is a good way of confirming that a minion is
 connected.
 
 .. note::
@@ -297,6 +280,12 @@ connected.
     Each minion registers itself with a unique minion ID. This ID defaults to
     the minion's hostname, but can be explicitly defined in the minion config as
     well by using the :conf_minion:`id` parameter.
+
+Of course, there are hundreds of other modules that can be called just as ``test.ping`` can.
+For example, the following would return disk usage on all targeted minions:
+
+.. code-block::
+    salt '*' disk.percent
 
 
 Getting to Know the Functions
@@ -367,11 +356,13 @@ addresses, etc:
 
 The examples so far have described running commands from the Master using the
 ``salt`` command, but when troubleshooting it can be more beneficial to login
-to the minion directly and use ``salt-call``. Doing so allows you to see the
-minion log messages specific to the command you are running (which are *not*
-part of the return data you see when running the command from the Master using
-``salt``), making it unnecessary to tail the minion log. More information on
-``salt-call`` and how to use it can be found :ref:`here <using-salt-call>`.
+to the minion directly and use ``salt-call``.
+
+Doing so allows you to see the minion log messages specific to the command you
+are running (which are *not* part of the return data you see when running the
+command from the Master using ``salt``), making it unnecessary to tail the
+minion log. More information on ``salt-call`` and how to use it can be found
+:ref:`here <using-salt-call>`.
 
 Grains
 ~~~~~~
@@ -382,10 +373,13 @@ system that is running, CPU architecture and much more. The grains system is
 used throughout Salt to deliver platform data to many components and to users.
 
 Grains can also be statically set, this makes it easy to assign values to
-minions for grouping and managing. A common practice is to assign grains to
-minions to specify what the role or roles a minion might be. These static
-grains can be set in the minion configuration file or via the
-:mod:`grains.setval <salt.modules.grains.setval>` function.
+minions for grouping and managing.
+
+A common practice is to assign grains to minions to specify what the role or
+roles a minion might be. These static grains can be set in the minion
+configuration file or via the :mod:`grains.setval <salt.modules.grains.setval>`
+function.
+
 
 
 Targeting
@@ -571,16 +565,24 @@ and that it results in success.
     Requisites are a powerful component of Salt States, for more information
     on how requisites work and what is available see:
     :doc:`Requisites</ref/states/requisites>`
+
     Also evaluation ordering is available in Salt as well:
     :doc:`Ordering States</ref/states/ordering>`
 
-This new sls formula has a special name --  ``init.sls``. When an sls formula is
+This new sls formula has a special name --  ``init.sls``. When an SLS formula is
 named ``init.sls`` it inherits the name of the directory path that contains it.
 This formula can be referenced via the following command:
 
 .. code-block:: bash
 
     salt '*' state.sls nginx
+
+.. note::
+    Reminder!
+
+    Just as one could call the ``test.ping`` or ``disk.usage`` execution modules,
+    ``state.sls`` is simply another execution module. It simply takes the name of an
+    SLS file as an argument.
 
 Now that subdirectories can be used, the ``vim.sls`` formula can be cleaned up.
 To make things more flexible, move the ``vim.sls`` and vimrc into a new subdirectory
