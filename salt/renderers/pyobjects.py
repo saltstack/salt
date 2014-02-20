@@ -106,6 +106,21 @@ a state.
     Service.running(Extend('apache'),
                     watch=[{'file': '/etc/httpd/extra/httpd-vhosts.conf'}])
 
+Pillar data
+^^^^^^^^^^^
+Pyobjects provides a shortcut function for calling ``salt['pillar.get']`` that
+helps maintain the readability of your state files. It can be accessed using
+the ``Pillar`` object.
+
+The following lines are functionally equivalent:
+
+.. code-block:: python
+   :linenos:
+    #!pyobjects
+
+    value = Pillar('foo:bar:baz', 'qux')
+    value = salt['pillar.get']('foo:bar:baz', 'qux')
+
 SaltObject
 ^^^^^^^^^^
 In the spirit of the object interface for creating state data pyobjects also
@@ -178,6 +193,9 @@ def render(template, saltenv='base', sls='',
 
         # create our SaltObject
         Salt = SaltObject(__salt__)
+
+        # add a Pillar shortcut
+        Pillar = __salt__['pillar.get']
     except NameError:
         pass
 
