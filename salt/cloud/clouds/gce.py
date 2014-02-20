@@ -557,7 +557,7 @@ def create_network(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create network',
-        'salt/cloud/net/created',
+        'salt/cloud/net/creating',
         {
             'name': name,
             'cidr': cidr,
@@ -603,7 +603,7 @@ def delete_network(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete network',
-        'salt/cloud/net/deleted',
+        'salt/cloud/net/deleting',
         {
             'name': name,
         },
@@ -696,7 +696,7 @@ def create_fwrule(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create firewall',
-        'salt/cloud/firewall/created',
+        'salt/cloud/firewall/creating',
         {
             'name': name,
             'network': network_name,
@@ -749,7 +749,7 @@ def delete_fwrule(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete firewall',
-        'salt/cloud/firewall/deleted',
+        'salt/cloud/firewall/deleting',
         {
             'name': name,
         },
@@ -834,7 +834,7 @@ def create_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create health_check',
-        'salt/cloud/healthcheck/created',
+        'salt/cloud/healthcheck/creating',
         {
             'name': name,
             'host': host,
@@ -896,7 +896,7 @@ def delete_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete health_check',
-        'salt/cloud/healthcheck/deleted',
+        'salt/cloud/healthcheck/deleting',
         {
             'name': name,
         },
@@ -1002,7 +1002,7 @@ def create_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create load_balancer',
-        'salt/cloud/loadbalancer/created',
+        'salt/cloud/loadbalancer/creating',
         kwargs,
     )
 
@@ -1046,7 +1046,7 @@ def delete_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete load_balancer',
-        'salt/cloud/loadbalancer/deleted',
+        'salt/cloud/loadbalancer/deleting',
         {
             'name': name,
         },
@@ -1131,7 +1131,7 @@ def attach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attach load_balancer',
-        'salt/cloud/loadbalancer/attach',
+        'salt/cloud/loadbalancer/attaching',
         kwargs,
     )
 
@@ -1140,7 +1140,7 @@ def attach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attached load_balancer',
-        'salt/cloud/loadbalancer/attach',
+        'salt/cloud/loadbalancer/attached',
         kwargs,
     )
     return _expand_item(result)
@@ -1192,7 +1192,7 @@ def detach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detach load_balancer',
-        'salt/cloud/loadbalancer/detach',
+        'salt/cloud/loadbalancer/detaching',
         kwargs,
     )
 
@@ -1201,7 +1201,7 @@ def detach_lb(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detached load_balancer',
-        'salt/cloud/loadbalancer/detach',
+        'salt/cloud/loadbalancer/detached',
         kwargs,
     )
     return result
@@ -1232,7 +1232,7 @@ def delete_snapshot(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete snapshot',
-        'salt/cloud/snapshot/deleted',
+        'salt/cloud/snapshot/deleting',
         {
             'name': name,
         },
@@ -1288,7 +1288,7 @@ def delete_disk(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete disk',
-        'salt/cloud/disk/deleted',
+        'salt/cloud/disk/deleting',
         {
             'name': disk.name,
             'location': disk.extra['zone'].name,
@@ -1366,7 +1366,7 @@ def create_disk(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create disk',
-        'salt/cloud/disk/created',
+        'salt/cloud/disk/creating',
         {
             'name': name,
             'location': location.name,
@@ -1437,7 +1437,7 @@ def create_snapshot(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create snapshot',
-        'salt/cloud/snapshot/created',
+        'salt/cloud/snapshot/creating',
         {
             'name': name,
             'disk_name': disk_name,
@@ -1533,7 +1533,7 @@ def detach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detach disk',
-        'salt/cloud/disk/detach',
+        'salt/cloud/disk/detaching',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1545,7 +1545,7 @@ def detach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'detached disk',
-        'salt/cloud/disk/detach',
+        'salt/cloud/disk/detached',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1600,7 +1600,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attach disk',
-        'salt/cloud/disk/attach',
+        'salt/cloud/disk/attaching',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1614,7 +1614,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'attached disk',
-        'salt/cloud/disk/attach',
+        'salt/cloud/disk/attached',
         {
             'name': node_name,
             'disk_name': disk_name,
@@ -1677,7 +1677,7 @@ def destroy(vm_name, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'delete instance',
-        'salt/cloud/{0}/deleted'.format(vm_name),
+        'salt/cloud/{0}/deleting'.format(vm_name),
         {'name': vm_name},
     )
 
@@ -1725,7 +1725,7 @@ def destroy(vm_name, call=None):
         salt.utils.cloud.fire_event(
             'event',
             'delete disk',
-            'salt/cloud/disk/deleted',
+            'salt/cloud/disk/deleting',
             {'name': vm_name},
         )
         try:
@@ -1786,7 +1786,7 @@ def create(vm_=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'create instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
@@ -1881,7 +1881,7 @@ def create(vm_=None, call=None):
         salt.utils.cloud.fire_event(
             'event',
             'executing deploy script',
-            'salt/cloud/{0}/created'.format(vm_['name']),
+            'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
         )
 
@@ -1899,7 +1899,7 @@ def create(vm_=None, call=None):
         salt.utils.cloud.fire_event(
             'event',
             'executed deploy script',
-            'salt/cloud/{0}/created'.format(vm_['name']),
+            'salt/cloud/{0}/deployed'.format(vm_['name']),
             {'kwargs': event_kwargs},
         )
 
