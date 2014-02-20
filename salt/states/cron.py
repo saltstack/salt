@@ -24,9 +24,9 @@ parameters used by Salt to define the various timing values for a cron job:
     the cron job is for another user, it is necessary to specify that user with
     the ``user`` parameter.
 
-When making changes to an existing cron job, the name declaration is the
-parameter used to uniquely identify the job, so if an existing cron that looks
-like this:
+In a time, a long ago when making changes to an existing cron job,
+the name declaration is the parameter used to uniquely identify the job,
+so if an existing cron that looks like this:
 
 .. code-block:: yaml
 
@@ -48,7 +48,31 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-Salt also supports running a cron every ``x minutes`` very similarly to the Unix
+The current behavior is still relying on that mecanism, but you can also
+specify an identifier to identify your crontabs:
+.. code-block:: yaml
+
+    date > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 7
+        - hour: 2
+
+And, some monthes later, you modify it:
+.. code-block:: yaml
+
+    superscript > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 3
+        - hour: 4
+
+The old **date > /tmp/crontest** will be replaced by
+**superscript > /tmp/crontest**.
+
+Additionaly, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
