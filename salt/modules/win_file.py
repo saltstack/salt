@@ -19,6 +19,7 @@ import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
+import errno  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
