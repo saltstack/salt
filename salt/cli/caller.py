@@ -7,7 +7,6 @@ minion modules.
 # Import python libs
 from __future__ import print_function
 import os
-import copy
 import sys
 import logging
 import datetime
