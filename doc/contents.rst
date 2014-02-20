@@ -7,6 +7,7 @@ Salt Table of Contents
     :glob:
 
     faq
+    glossary
 
     topics/cloud/index
     topics/community
