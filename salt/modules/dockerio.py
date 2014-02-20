@@ -473,10 +473,10 @@ def commit(container,
         for k in ('Id', 'id', 'ID'):
             if k in info:
                 found = True
-                id = info[k]
+                image_id = info[k]
         if not found:
             raise Exception('Invalid commit return')
-        image = _get_image_infos(id)['id']
+        image = _get_image_infos(image_id)['id']
         comment = 'Image {0} created from {1}'.format(image, container)
         valid(status, id=image, out=info, comment=comment)
     except Exception:
@@ -1408,11 +1408,11 @@ def build(path=None,
                                rm=rm,
                                nocache=nocache)
             if isinstance(ret, tuple):
-                id, out = ret[0], ret[1]
-                if id:
-                    valid(status, id=id, out=out, comment='Image built')
+                image_id, out = ret[0], ret[1]
+                if image_id:
+                    valid(status, id=image_id, out=out, comment='Image built')
                 else:
-                    invalid(status, id=id, out=out)
+                    invalid(status, id=image_id, out=out)
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
