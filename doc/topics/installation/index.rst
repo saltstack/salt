@@ -70,6 +70,7 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `ZeroMQ`_ >= 3.2.0
 * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
 * `PyCrypto`_ - The Python cryptography toolkit
+* `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
@@ -86,11 +87,11 @@ Optional Dependencies
 .. _`Python 2.6`: http://python.org/download/
 .. _`ZeroMQ`: http://www.zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  http://pypi.python.org/pypi/msgpack-python/0.1.12
-.. _`YAML`: http://pyyaml.org/
 .. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
 .. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
-.. _`Cython`: http://cython.org/
+.. _`msgpack-python`:  http://pypi.python.org/pypi/msgpack-python
+.. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
+.. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
 .. _`mako`: http://www.makotemplates.org/
-
+.. _`Cython`: http://cython.org/

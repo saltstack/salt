@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Module for managing block devices
+
+.. versionadded:: Helium
 '''
 
 # Import python libs

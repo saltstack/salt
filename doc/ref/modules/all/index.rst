@@ -24,6 +24,7 @@ Full list of builtin execution modules
     at
     augeas_cfg
     aws_sqs
+    blockdev
     bluez
     brew
     bridge
@@ -161,6 +162,7 @@ Full list of builtin execution modules
     rh_service
     riak
     rpm
+    rsync
     rvm
     s3
     saltcloudmod
