@@ -20,6 +20,7 @@ import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
+import shutil  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -41,7 +42,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
         get_hash, comment, manage_file, file_exists, get_diff, get_managed,
         __clean_tmp, check_managed, check_file_meta, _binary_replace,
-        contains_regex, access, copy, readdir, rmdir, replace, search, truncate)
+        contains_regex, access, copy, readdir, rmdir, truncate)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -64,6 +65,7 @@ def __virtual__():
             global contains_regex, contains_regex_multiline, contains_glob
             global sed, find, psed, get_sum, check_hash, get_hash
             global uncomment, comment, get_diff
+            global access, copy, readdir, rmdir, truncate
 
             remove = _namespaced_function(remove, globals())
             append = _namespaced_function(append, globals())
@@ -99,8 +101,6 @@ def __virtual__():
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
             rmdir = _namespaced_function(rmdir, globals())
-            replace = _namespaced_function(replace, globals())
-            search = _namespaced_function(search, globals())
             truncate = _namespaced_function(truncate, globals())
 
             return __virtualname__
