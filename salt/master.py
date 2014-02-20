@@ -1232,15 +1232,21 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        new_loadp = False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
+            # The minion is returning a standalone job, request a jobid
+            load['arg'] = load.get('arg', load.get('fun_args', []))
+            load['tgt_type'] = 'glob'
+            load['tgt'] = load['id']
             load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                load.get('nocache', False))
+            new_loadp = load.get('nocache', True) and True
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(
+            load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
             fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
@@ -1249,12 +1255,17 @@ class AESFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+            load['jid'],
+            self.opts['cachedir'],
+            self.opts['hash_type']
+        )
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
+        if new_loadp:
+            with salt.utils.fopen(
+                os.path.join(jid_dir, '.load.p'), 'w+b'
+            ) as fp_:
+                self.serial.dump(load, fp_)
         hn_dir = os.path.join(jid_dir, load['id'])
         try:
             os.mkdir(hn_dir)

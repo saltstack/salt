@@ -175,7 +175,8 @@ def print_job(job_id):
 def _format_job_instance(job):
     return {'Function': job['fun'],
             'Arguments': list(job.get('arg', [])),
-            'Target': job['tgt'],
+            # unlikely but safeguard from invalid returns
+            'Target': job.get('tgt', 'unknown-target'),
             'Target-type': job.get('tgt_type', []),
             'User': job.get('user', 'root')}
 

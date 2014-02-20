@@ -106,23 +106,37 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-        if self.opts.get('return', ''):
+        is_local = self.opts['local'] or self.opts.get(
+            'file_client', False) == 'local'
+        returners = self.opts.get('return', '').split(',')
+        if (not is_local) or returners:
             ret['id'] = self.opts['id']
             ret['fun'] = fun
             ret['fun_args'] = self.opts['arg']
-            for returner in self.opts['return'].split(','):
-                try:
-                    ret['success'] = True
-                    self.minion.returners['{0}.returner'.format(returner)](ret)
-                except Exception:
-                    pass
+
+        for returner in returners:
+            try:
+                ret['success'] = True
+                self.minion.returners['{0}.returner'.format(returner)](ret)
+            except Exception:
+                pass
+
+        # return the job infos back up to the respective minion's master
+
+        if not is_local:
+            try:
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                self.return_pub(mret)
+            except Exception:
+                pass
         return ret
 
     def return_pub(self, ret):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.Channel(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in ret.items():
             load[key] = value
