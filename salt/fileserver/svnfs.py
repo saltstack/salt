@@ -42,6 +42,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.fileserver
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -272,7 +274,7 @@ def envs(ignore_cache=False):
     Return a list of refs that can be used as environments
     '''
     if not ignore_cache:
-        env_cache = os.path.join(__opts__['cachedir'], 'hgfs/envs.p')
+        env_cache = os.path.join(__opts__['cachedir'], 'svnfs/envs.p')
         cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
         if cache_match is not None:
             return cache_match
@@ -300,7 +302,6 @@ def envs(ignore_cache=False):
                 'environment will be provided by this remote'
                 .format(repo_trunk, repo_conf['uri'])
             )
-
 
         branches = os.path.join(repo_conf['repo'], repo_branches)
         if os.path.isdir(branches):
@@ -378,7 +379,7 @@ def find_file(path, tgt_env='base', **kwargs):
             # Environment not found, try the next repo
             continue
         root = repo_conf['root'] if repo_conf['root'] is not None \
-            else hgfs_root
+            else svnfs_root
         mountpoint = repo_conf['mountpoint'] \
             if repo_conf['mountpoint'] is not None \
             else svnfs_mountpoint
