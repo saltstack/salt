@@ -679,7 +679,6 @@ def create_fwrule(kwargs=None, call=None):
         )
         return False
 
-
     name = kwargs['name']
     network_name = kwargs.get('network', 'default')
     allow = _parse_allow(kwargs['allow'])
@@ -1348,7 +1347,7 @@ def create_disk(kwargs=None, call=None):
         return False
 
     if 'size' not in kwargs:
-        if ('image' not in kwargs and 'snapshot' not in kwargs):
+        if 'image' not in kwargs and 'snapshot' not in kwargs:
             log.error(
                 'Must specify image, snapshot, or size.'
             )
@@ -1458,7 +1457,7 @@ def create_snapshot(kwargs=None, call=None):
     return _expand_item(snapshot)
 
 
-def show_disk(name=None, kwargs=None, call=None): # pylint: disable=W0613
+def show_disk(name=None, kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Show the details of an existing disk.
 
@@ -1582,7 +1581,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     disk_name = kwargs['disk_name']
     mode = kwargs.get('mode', 'READ_WRITE').upper()
     boot = kwargs.get('boot', False)
-    if  boot and boot.lower() in ['true', 'yes', 'enabled']:
+    if boot and boot.lower() in ['true', 'yes', 'enabled']:
         boot = True
     else:
         boot = False
