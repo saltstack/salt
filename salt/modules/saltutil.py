@@ -15,6 +15,7 @@ import fnmatch
 import time
 import sys
 import copy
+import threading
 
 # Import salt libs
 import salt
@@ -396,24 +397,17 @@ def running():
 
         salt '*' saltutil.running
     '''
-
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
+    current_thread = threading.currentThread().name
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                # Proc file is empty, remove
-                os.remove(path)
-                continue
+            data = serial.loads(fp_.read())
         if not isinstance(data, dict):
             # Invalid serial object
             continue
@@ -422,8 +416,14 @@ def running():
             # continue
             os.remove(path)
             continue
-        if data.get('pid') == pid:
-            continue
+        if __opts__['multiprocessing']:
+            if data.get('pid') == pid:
+                continue
+        else:
+            if data.get('pid') != pid:
+                continue
+            if data.get('tid') == current_thread:
+                continue
         ret.append(data)
     return ret
 

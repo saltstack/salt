@@ -799,7 +799,8 @@ class Minion(MinionBase):
             )
         else:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
+                target=target, args=(instance, self.opts, data),
+                name=data['jid']
             )
         process.start()
 
@@ -813,13 +814,18 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
+        fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
-            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             salt.utils.daemonize_if(opts)
             sdata = {'pid': os.getpid()}
-            sdata.update(data)
-            with salt.utils.fopen(fn_, 'w+b') as fp_:
-                fp_.write(minion_instance.serial.dumps(sdata))
+        else:
+            sdata = {
+                'pid': os.getpid(),
+                'tid': threading.currentThread().name
+            }
+        sdata.update(data)
+        with salt.utils.fopen(fn_, 'w+b') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
         if function_name in minion_instance.functions:
