@@ -422,7 +422,10 @@ def running():
         else:
             if data.get('pid') != pid:
                 continue
-            if data.get('tid') == current_thread:
+            if data.get('jid') == current_thread:
+                continue
+            if not data.get('jid') in [x.name for x in threading.enumerate()]:
+                os.remove(path)
                 continue
         ret.append(data)
     return ret

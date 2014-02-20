@@ -817,12 +817,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
-            sdata = {'pid': os.getpid()}
-        else:
-            sdata = {
-                'pid': os.getpid(),
-                'tid': threading.currentThread().name
-            }
+        sdata = {'pid': os.getpid()}
         sdata.update(data)
         with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
