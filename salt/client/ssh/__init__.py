@@ -492,7 +492,15 @@ class Single(object):
         if self.opts.get('raw_shell'):
             if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
                 arg_str = "'{0}'".format(arg_str)
-            stdout, stderr = self.shell.exec_cmd(arg_str)
+            r_out = []
+            r_err = []
+            for out, err in self.shell.exec_nb_cmd(arg_str):
+                if out is not None:
+                    r_out.append(out)
+                if err is not None:
+                    r_err.append(err)
+            stdout = ''.join(r_out)
+            stderr = ''.join(r_err)
 
         elif self.fun in self.wfuncs:
             stdout, stderr = self.run_wfunc()

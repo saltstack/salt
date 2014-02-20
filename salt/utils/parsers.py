@@ -1489,7 +1489,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -1682,7 +1682,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         'files.'
     )
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' SOURCE DEST'
 
@@ -2088,7 +2088,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 1
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options]'
 
@@ -2126,9 +2126,11 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, TargetOptionsMixIn,
+                          TimeoutMixIn, LogLevelMixIn, TargetOptionsMixIn,
                           OutputOptionsMixIn, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
+
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options]'
 
