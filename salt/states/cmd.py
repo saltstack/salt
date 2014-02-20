@@ -636,48 +636,42 @@ def script(name,
            timeout=None,
            **kwargs):
     '''
-    Download a script from a remote source and execute it. The name can be the
-    source or the source value can be defined.
+    Download a script and execute it with specified arguments.
 
     source
-        The source script being downloaded to the minion, this source script is
-        hosted on the salt master server.  If the file is located on the master
+        The location of the script to download. If the file is located on the master
         in the directory named spam, and is called eggs, the source string is
         salt://spam/eggs
 
     template
         If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
+        used to render the downloaded file. Currently jinja, mako, and wempy
         are supported
 
     name
-        The command to execute, remember that the command will execute with the
-        path and permissions of the salt-minion.
+        Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source "salt://...".
 
     onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
+        Run the named command only if the command passed to the ``onlyif`` option returns true
 
     unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
+        Run the named command only if the command passed to the ``unless`` option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
         /root
 
     user
-        The user name to run the command as
+        The name of the user to run the command as
 
     group
         The group context to run the command as
 
     shell
-        The shell to use for execution, defaults to the shell grain
+        The shell to use for execution. The default is set in grains['shell']
 
     env
-        Pass in a list or dict of environment variables to be applied to the
-        command upon execution
+        A list or dict of environment variables to be set prior to execution
 
     umask
          The umask (in octal) to use when running the command.
@@ -692,7 +686,8 @@ def script(name,
 
     args
         String of command line args to pass to the script.  Only used if no
-        args are specified as part of the `name` argument.
+        args are specified as part of the `name` argument. To pass a string containing
+        spaces in YAML, you will need to doubly-quote it:  "arg1 'arg two' arg3"
     '''
     ret = {'changes': {},
            'comment': '',
