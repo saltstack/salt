@@ -205,7 +205,30 @@ class TestSerializers(TestCase):
         """).strip()
 
         sls_obj = sls.deserialize(src)
-        assert sls_obj == {'placeholder': {'foo': {'foo': 42, 'bar': None, 'baz': 'inga'}}}, sls_obj
+        assert sls_obj == {
+            'placeholder': {
+                'foo': {
+                    'foo': 42,
+                    'bar': None,
+                    'baz': 'inga'
+                }
+            }
+        }, sls_obj
+
+
+    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    def test_sls_repr(self):
+        def convert(obj):
+            return sls.deserialize(sls.serialize(obj))
+        sls_obj = convert(OrderedDict([('foo', 'bar'), ('baz', 'qux')]))
+
+        # ensure that repr and str are yaml friendly
+        assert sls_obj.__str__() == '{foo: bar, baz: qux}'
+        assert sls_obj.__repr__() == '{foo: bar, baz: qux}'
+
+        # ensure that repr and str are already quoted
+        assert sls_obj['foo'].__str__() == '"bar"'
+        assert sls_obj['foo'].__repr__() == '"bar"'
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % 'msgpack')
     def test_msgpack(self):

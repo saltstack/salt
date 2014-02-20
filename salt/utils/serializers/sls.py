@@ -149,7 +149,6 @@ def serialize(obj, **options):
             return response[:-1]
         return response
     except Exception as error:
-        raise
         raise SerializationError(error)
 
 
@@ -217,6 +216,13 @@ class Loader(BaseLoader):
             sls_map[key] = value
         return sls_map
 
+    def construct_sls_str(self, node):
+        '''
+        Build the SLSString
+        '''
+        obj = self.construct_yaml_str(node)
+        return SLSString(obj)
+
     def construct_sls_int(self, node):
         '''
         Verify integers and pass them in correctly is they are declared
@@ -273,7 +279,7 @@ Loader.add_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # 
 
 Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
 Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
-Loader.add_multi_constructor('tag:yaml.org,2002:str', Loader.construct_yaml_str)
+Loader.add_constructor('tag:yaml.org,2002:str', Loader.construct_sls_str)  # our overwrite
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
 Loader.add_multi_constructor(None, Loader.construct_undefined)
@@ -285,36 +291,44 @@ class SLSMap(OrderedDict):
 
     .. code-block:: python
 
-        mapping = OrderedDict([('a', 'b'), ('c', None)])
-        print mapping
-        # OrderedDict([('a', 'b'), ('c', None)])
+        >>> mapping = OrderedDict([('a', 'b'), ('c', None)])
+        >>> print mapping
+        OrderedDict([('a', 'b'), ('c', None)])
 
-        sls_map = SLSMap(mapping)
-        print sls_map
-        # {'a': 'b', 'c': None}
+        >>> sls_map = SLSMap(mapping)
+        >>> print sls_map.__str__()
+        {a: b, c: null}
 
     '''
 
     def __str__(self):
-        output = []
-        for key, value in self.items():
-            if isinstance(value, string_types):
-                # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
-            else:
-                # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
-        return '{' + ', '.join(output) + '}'
+        return serialize(self, default_flow_style=True)
 
-    def __repr__(self):  # pylint: disable=W0221
-        output = []
-        for key, value in self.items():
-            output.append('{0!r}: {1!r}'.format(key, value))
-        return '{' + ', '.join(output) + '}'
+    def __repr__(self):
+        return serialize(self, default_flow_style=True)
 
 
-class Aggregate(object):
-    pass
+class SLSString(str):
+    """
+    Ensures that str str() and repr() are YAML friendly.
+
+    .. code-block:: python
+
+        >>> scalar = str('foo')
+        >>> print 'foo'
+        foo
+
+        >>> sls_scalar = SLSMap(scalar)
+        >>> print sls_scalar
+        "foo"
+
+    """
+
+    def __str__(self):
+        return serialize(self, default_style='"')
+
+    def __repr__(self):
+        return serialize(self, default_style='"')
 
 
 class AggregatedMap(SLSMap, Map):
@@ -328,7 +342,6 @@ class AggregatedSequence(Sequence):
 class Dumper(BaseDumper):  # pylint: disable=W0232
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', data.items())
-
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
