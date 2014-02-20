@@ -57,7 +57,6 @@ import os
 import re
 import shutil
 import subprocess
-import time
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
@@ -434,48 +433,6 @@ def _get_tree_dulwich(repo, short):
         # No matching sha_commit object was created. Unable to find SHA.
         pass
     return None
-
-
-def _wait_lock(lk_fn, dest):
-    '''
-    If the write lock is there, check to see if the file is actually being
-    written. If there is no change in the file size after a short sleep,
-    remove the lock and move forward.
-    '''
-    if not os.path.isfile(lk_fn):
-        return False
-    if not os.path.isfile(dest):
-        # The dest is not here, sleep for a bit, if the dest is not here yet
-        # kill the lockfile and start the write
-        time.sleep(1)
-        if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
-            return False
-    # There is a lock file, the dest is there, stat the dest, sleep and check
-    # that the dest is being written, if it is not being written kill the lock
-    # file and continue. Also check if the lock file is gone.
-    s_count = 0
-    s_size = os.stat(dest).st_size
-    while True:
-        time.sleep(1)
-        if not os.path.isfile(lk_fn):
-            return False
-        size = os.stat(dest).st_size
-        if size == s_size:
-            s_count += 1
-            if s_count >= 3:
-                # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
-                return False
-        else:
-            s_size = size
-    return False
 
 
 def _stale_refs_pygit2(repo):
@@ -1022,7 +979,7 @@ def find_file(path, tgt_env='base', **kwargs):
                 continue
             blob_hexsha = blob.sha().hexdigest()
 
-        _wait_lock(lk_fn, dest)
+        salt.fileserver.wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
