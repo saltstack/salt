@@ -351,6 +351,11 @@ def wait(name,
     stateful
         The command being executed is expected to return data about executing
         a state
+
+    creates
+        Only run if the file specified by ``creates`` does not exist.
+
+        .. versionadded:: Helium
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -503,6 +508,11 @@ def run(name,
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    creates
+        Only run if the file specified by ``creates`` does not exist.
+
+        .. versionadded:: Helium
 
     .. note::
 
@@ -688,6 +698,11 @@ def script(name,
         String of command line args to pass to the script.  Only used if no
         args are specified as part of the `name` argument. To pass a string containing
         spaces in YAML, you will need to doubly-quote it:  "arg1 'arg two' arg3"
+
+    creates
+        Only run if the file specified by ``creates`` does not exist.
+
+        .. versionadded:: Helium
     '''
     ret = {'changes': {},
            'comment': '',
