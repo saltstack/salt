@@ -190,6 +190,7 @@ VALID_OPTS = {
     'random_master': bool,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
+    'salt_fails_if_highstate_fails': bool,
 }
 
 # default configurations
@@ -403,6 +404,7 @@ DEFAULT_MASTER_OPTS = {
     'gather_job_timeout': 2,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
+    'salt_fails_if_highstate_fails': False
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
