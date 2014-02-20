@@ -92,7 +92,11 @@ import os
 # Import salt libs
 import salt._compat
 import salt.utils
-from salt.modules.cron import _needs_change
+from salt.modules.cron import (
+    _needs_change,
+    _cron_matched,
+    SALT_CRON_NO_IDENTIFIER
+)
 
 
 def _check_cron(user,
@@ -102,7 +106,8 @@ def _check_cron(user,
                 daymonth=None,
                 month=None,
                 dayweek=None,
-                comment=None):
+                comment=None,
+                identifier=None):
     '''
     Return the changes
     '''
@@ -118,7 +123,7 @@ def _check_cron(user,
         dayweek = str(dayweek).lower()
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
-        if cmd == cron['cmd']:
+        if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
@@ -175,7 +180,8 @@ def present(name,
             daymonth='*',
             month='*',
             dayweek='*',
-            comment=None):
+            comment=None,
+            identifier=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -209,21 +215,28 @@ def present(name,
 
     comment
         User comment to be added on line previous the cron job
+
+    identifier
+        Custom defined identifier for tracking the cron line for futur crontab
+        edits. This defaults to state id
     '''
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
     if __opts__['test']:
         status = _check_cron(user,
-                             name,
-                             minute,
-                             hour,
-                             daymonth,
-                             month,
-                             dayweek,
-                             comment)
+                             cmd=name,
+                             minute=minute,
+                             hour=hour,
+                             daymonth=daymonth,
+                             month=month,
+                             dayweek=dayweek,
+                             comment=comment,
+                             identifier=identifier)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -241,7 +254,8 @@ def present(name,
                                     month=month,
                                     dayweek=dayweek,
                                     cmd=name,
-                                    comment=comment)
+                                    comment=comment,
+                                    identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -263,6 +277,7 @@ def present(name,
 
 def absent(name,
            user='root',
+           identifier=None,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -274,12 +289,18 @@ def absent(name,
     user
         The name of the user whose crontab needs to be modified, defaults to
         the root user
+
+    identifier
+        Custom defined identifier for tracking the cron line for futur crontab
+        edits. This defaults to state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -295,7 +316,7 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user, name)
+    data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
