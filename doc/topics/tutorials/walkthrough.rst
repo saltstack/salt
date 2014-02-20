@@ -30,21 +30,6 @@ secure and bi-directional communication net for groups of systems. On top of thi
 communication system, Salt provides an extremely fast, flexible and easy-to-use
 configuration management system called ``Salt States``.
 
-<<<<<<< HEAD
-This unique approach to management makes for a transparent control system that
-is not only amazingly easy to set up and use but also capable of solving very
-complex problems in infrastructures.
-
-Salt is being used today by some of the largest infrastructures in the world
-and has a proven ability to scale to astounding proportions without
-modification. Able to scale out well beyond many tens of thousands of servers,
-Salt has also shown itself to be an excellent choice for small
-deployments, lowering compute and management overhead for
-infrastructures as small as just a few systems.
-
-=======
->>>>>>> 8a612fc... More changes in walk-through for clarity.
-
 Installing Salt
 ---------------
 
