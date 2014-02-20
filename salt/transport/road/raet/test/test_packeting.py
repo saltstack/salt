@@ -20,7 +20,12 @@ def test():
     packet1.pack()
     print packet1.packed
 
-    stuff =  "".rjust(1200, '\x00')
+    stuff = []
+    for i in range(300):
+        stuff.append(str(i).rjust(4, " "))
+
+    stuff = "".join(stuff)
+
     data.update(bk=raeting.bodyKinds.raw)
     packet1 = packeting.TxPacket(embody=stuff, data=data, )
     #print packet1.body.data

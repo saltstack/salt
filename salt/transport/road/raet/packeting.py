@@ -478,7 +478,7 @@ class TxPacket(Packet):
         hotelsize = self.head.size + extra + self.foot.size
         haulsize = raeting.MAX_SEGMENT_SIZE - hotelsize
 
-        segcount = (hotelsize // haulsize) + (1 if hotelsize % haulsize else 0)
+        segcount = (fullsize // haulsize) + (1 if fullsize % haulsize else 0)
         for i in range(segcount):
             if i == segcount - 1: #last segment
                 haul = full[i * haulsize:]
