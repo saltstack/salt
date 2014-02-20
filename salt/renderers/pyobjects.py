@@ -91,42 +91,27 @@ manager to automatically have their ``watch_in`` set to
 Including and Extending
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-To include other states use the Include() function. It takes one name per
+To include other states use the ``include()`` function. It takes one name per
 state to include.
 
-To extend another state use the Extend() function on the name when creating
+To extend another state use the ``extend()`` function on the name when creating
 a state.
 
 .. code-block:: python
    :linenos:
     #!pyobjects
 
-    Include('http', 'ssh')
+    include('http', 'ssh')
 
-    Service.running(Extend('apache'),
+    Service.running(extend('apache'),
                     watch=[{'file': '/etc/httpd/extra/httpd-vhosts.conf'}])
 
-Pillar data
+Salt object
 ^^^^^^^^^^^
-Pyobjects provides a shortcut function for calling ``salt['pillar.get']`` that
-helps maintain the readability of your state files. It can be accessed using
-the ``Pillar`` object.
-
-The following lines are functionally equivalent:
-
-.. code-block:: python
-   :linenos:
-    #!pyobjects
-
-    value = Pillar('foo:bar:baz', 'qux')
-    value = salt['pillar.get']('foo:bar:baz', 'qux')
-
-SaltObject
-^^^^^^^^^^
 In the spirit of the object interface for creating state data pyobjects also
 provides a simple object interface to the ``__salt__`` object.
 
-An object named ``Salt`` exists in scope for your sls files and will dispatch
+A function named ``salt`` exists in scope for your sls files and will dispatch
 its attributes to the ``__salt__`` dictionary.
 
 The following lines are functionally equivalent:
@@ -135,8 +120,32 @@ The following lines are functionally equivalent:
    :linenos:
     #!pyobjects
 
-    ret = Salt.cmd.run(bar)
-    ret = salt['cmd.run'](bar)
+    ret = salt.cmd.run(bar)
+    ret = __salt__['cmd.run'](bar)
+
+Pillar, grain & mine data
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Pyobjects provides shortcut functions for calling ``pillar.get``,
+``grains.get`` & ``mine.get`` on the ``__salt__`` object. This helps maintain
+the readability of your state files.
+
+Each type of data can be access by a function of the same name: ``pillar()``,
+``grains()`` and ``mine()``.
+
+The following pairs of lines are functionally equivalent:
+
+.. code-block:: python
+   :linenos:
+    #!pyobjects
+
+    value = pillar('foo:bar:baz', 'qux')
+    value = __salt__['pillar.get']('foo:bar:baz', 'qux')
+
+    value = grains('pkg:apache')
+    value = __salt__['grains.get']('pkg:apache')
+
+    value = mine('os:Fedora', 'network.interfaces', 'grain')
+    value = __salt__['mine.get']('os:Fedora', 'network.interfaces', 'grain')
 
 
 TODO
@@ -148,10 +157,7 @@ import logging
 import sys
 
 from salt.loader import states
-from salt.utils.pyobjects import StateRegistry, SaltObject
-from salt.utils.pyobjects import StateFactory  # pylint: disable=W0611
-# DO NOT REMOVE THE DISABLE ABOVE, it's used in an exec call below
-
+from salt.utils.pyobjects import StateRegistry, StateFactory, SaltObject
 
 log = logging.getLogger(__name__)
 
@@ -192,8 +198,8 @@ def render(template, saltenv='base', sls='',
         _globals[mod_upper] = _st_locals[mod_upper]
 
     # add our Include and Extend functions
-    _globals['Include'] = _registry.include
-    _globals['Extend'] = _registry.make_extend
+    _globals['include'] = _registry.include
+    _globals['extend'] = _registry.make_extend
 
     # for convenience
     try:
@@ -202,6 +208,7 @@ def render(template, saltenv='base', sls='',
             'salt': SaltObject(__salt__),
             'pillar': __salt__['pillar.get'],
             'grains': __salt__['grains.get'],
+            'mine': __salt__['mine.get'],
 
             # the "dunder" formats are still available for direct use
             '__salt__': __salt__,
