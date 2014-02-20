@@ -190,6 +190,11 @@ VALID_OPTS = {
     'random_master': bool,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
+    'ssh_passwd': str,
+    'ssh_port': str,
+    'ssh_sudo': bool,
+    'ssh_timeout': float,
+    'ssh_user': str,
 }
 
 # default configurations
@@ -403,6 +408,11 @@ DEFAULT_MASTER_OPTS = {
     'gather_job_timeout': 2,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
+    'ssh_passwd': '',
+    'ssh_port': '22',
+    'ssh_sudo': False,
+    'ssh_timeout': 60,
+    'ssh_user': 'root',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
