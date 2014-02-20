@@ -429,6 +429,7 @@ def running():
                 continue
         else:
             if data.get('pid') != pid:
+                os.remove(path)
                 continue
             if data.get('jid') == current_thread:
                 continue
