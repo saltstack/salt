@@ -93,14 +93,16 @@ def mounted(name,
         real_device = device
 
     # LVS devices have 2 names under /dev:
-    # /dev/mapper/vgname-lvname and /dev/vgname/lvname
+    # /dev/mapper/vg--name-lv--name and /dev/vg-name/lv-name
     # No matter what name is used for mounting,
-    # mount always displays the device as /dev/mapper/vgname-lvname
+    # mount always displays the device as /dev/mapper/vg--name-lv--name
+    # Note the double-dash escaping.
     # So, let's call that the canonical device name
-    # We should normalize names of the /dev/vgname/lvname type to the canonical name
+    # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
     m = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
     if m:
-        mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**m.groupdict())
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in m.groupdict().iteritems())
+        mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
