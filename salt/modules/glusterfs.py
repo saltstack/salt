@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage glusterfs pool.
+Manage a glusterfs pool
 '''
 
 # Import python libs
@@ -31,7 +31,7 @@ def list_peers():
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt '*' glusterfs.list_peers
     '''
@@ -50,7 +50,7 @@ def peer(name):
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt 'one.gluster.*' glusterfs.peer two
     '''
@@ -96,7 +96,7 @@ def create(name,
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt 'one.gluster*' glusterfs.create mymount /srv/ \
             peers='["one", "two"]'
@@ -144,7 +144,7 @@ def list_volumes():
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt '*' glusterfs.list_volumes
     '''
@@ -161,7 +161,7 @@ def status(name):
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt '*' glusterfs.status mycluster
     '''
@@ -181,7 +181,7 @@ def start(name):
 
     CLI Example:
 
-    .. clodeblock:: bash
+    .. code-block:: bash
 
         salt '*' glusterfs.start mycluster
     '''
