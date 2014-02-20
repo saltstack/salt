@@ -470,7 +470,7 @@ def commit(container,
             author=author,
             conf=conf)
         found = False
-        for k in 'Id', 'id', 'ID':
+        for k in ('Id', 'id', 'ID'):
             if k in info:
                 found = True
                 id = info[k]
