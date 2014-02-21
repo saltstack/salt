@@ -1195,6 +1195,20 @@ class Minion(MinionBase):
         ).compile_pillar()
         self.module_refresh()
 
+    def environ_setenv(self, package):
+        '''
+        Set the salt-minion main process environment according to
+        the data contained in the minion event data
+        '''
+        tag, data = salt.utils.event.MinionEvent.unpack(package)
+        environ = data.get('environ', None)
+        if environ is None:
+            return False
+        false_unsets = data.get('false_unsets', False)
+        clear_all = data.get('clear_all', False)
+        import salt.modules.environ as mod_environ
+        return mod_environ.setenv(environ, false_unsets, clear_all)
+
     def clean_die(self, signum, frame):
         '''
         Python does not handle the SIGTERM cleanly, if it is signaled exit
@@ -1313,6 +1327,8 @@ class Minion(MinionBase):
                             if self.grains_cache != self.opts['grains']:
                                 self.pillar_refresh()
                                 self.grains_cache = self.opts['grains']
+                        elif package.startswith('environ_setenv'):
+                            self.environ_setenv(package)
                         elif package.startswith('fire_master'):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
                             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
