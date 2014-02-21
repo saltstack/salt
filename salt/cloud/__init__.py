@@ -383,7 +383,8 @@ class Cloud(object):
         self.__cached_provider_queries[query] = output
         return output
 
-    def get_running_by_names(self, names, query='list_nodes', cached=False):
+    def get_running_by_names(self, names, query='list_nodes', cached=False,
+                             profile=None):
         if isinstance(names, basestring):
             names = [names]
 
@@ -394,6 +395,16 @@ class Cloud(object):
             for driver, vms in drivers.iteritems():
                 if driver not in handled_drivers:
                     handled_drivers[driver] = alias
+                # When a profile is specified, only return an instance
+                # that matches the provider specified in the profile.
+                # This solves the issues when many providers return the
+                # same instance. For example there may be one provider for
+                # each avaliablity zone in amazon in the same region, but
+                # the search returns the same instance for each provider because
+                # amazon returns all instances in a region, not avaliabilty zone.
+                if profile:
+                    if alias not in self.opts['profiles'][profile]['provider'].split(':')[0]:
+                        continue
 
                 for vm_name, details in vms.iteritems():
                     # XXX: The logic bellow can be removed once the aws driver
