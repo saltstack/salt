@@ -3,16 +3,18 @@
 Tests to try out packeting. Potentially ephemeral
 
 '''
-
+# pylint: disable=C0103
 
 from ioflo.base.odicting import odict
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                     devicing, transacting, stacking)
-
+                                      devicing, transacting, stacking)
 
 
 def test():
+    '''
+    Test packeting.
+    '''
     data = odict(hk=1, bk=raeting.bodyKinds.json)
     body = odict(msg='Hello Raet World', extra='what is this')
     packet1 = packeting.TxPacket(embody=body, data=data, )
@@ -33,13 +35,12 @@ def test():
 
     rejoin = []
     if packet1.segmented:
-        for index, segment in  packet1.segments.items():
+        for index, segment in packet1.segments.items():
             print index, segment.packed
             rejoin.append(segment.body.packed)
 
     rejoin = "".join(rejoin)
     print stuff == rejoin
-
 
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
@@ -47,9 +48,9 @@ def test():
     masterPriKeyHex = privateer.keyhex
 
     #master stack
-    device = devicing.LocalDevice(   did=1,
-                                     signkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
+    device = devicing.LocalDevice(did=1,
+                                  signkey=masterSignKeyHex,
+                                  prikey=masterPriKeyHex)
     stack0 = stacking.StackUdp(device=device)
 
     data.update(fk=raeting.footKinds.nacl)
@@ -59,7 +60,7 @@ def test():
 
     rejoin = []
     if packet1.segmented:
-        for index, segment in  packet1.segments.items():
+        for index, segment in packet1.segments.items():
             print index, segment.packed
             rejoin.append(segment.body.packed)
 
@@ -110,8 +111,6 @@ def test():
             print "*******BAD SEGMENTAGE********"
         print segmentage.body.packed
         print segmentage.body.data
-
-
 
 
 if __name__ == "__main__":
