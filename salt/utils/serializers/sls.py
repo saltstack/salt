@@ -171,19 +171,6 @@ def serialize(obj, **options):
         raise SerializationError(error)
 
 
-def ignore(key, old, new):
-    return new
-
-
-def warning(key, old, new):
-    log.warn('Conflicting ID "{0}"'.format(key))
-    return new
-
-
-def error(key, old, new):  # pylint: disable=W0611
-    raise ConstructorError('Conflicting ID "{0}"'.format(key))
-
-
 class Loader(BaseLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
@@ -195,15 +182,8 @@ class Loader(BaseLoader):
     DEFAULT_SEQUENCE_TAG = 'tag:yaml.org,2002:seq'
     DEFAULT_MAPPING_TAG = 'tag:yaml.org,2002:omap'
 
-    # who should we resolve conflicting ids?
-    conflict_resolver = None
-
-    def __init__(self, stream, conflict_resolver=None):
-        BaseLoader.__init__(self, stream)
-        self.conflict_resolver = conflict_resolver or ignore
-
     def compose_document(self):
-        node = super(Loader, self).compose_document()
+        node = BaseLoader.compose_document(self)
         node.tag = '!aggregate'
         return node
 
@@ -246,19 +226,6 @@ class Loader(BaseLoader):
                 value = merge_recursive(sls_map[key], value)
             sls_map[key] = value
         return sls_map
-
-    def flatten_mapping(self, node):
-        return super(Loader, self).flatten_mapping(node)
-        # remove !resets
-        value = []
-        for key_node, value_node in node.value:
-            if key_node.tag == u'!reset':
-                key_node.tag = self.resolve_sls_tag(key_node)[0]
-            elif key_node.tag == u'!aggregate':
-                value_node.tag = key_node.tag
-                key_node.tag = self.resolve_sls_tag(key_node)[0]
-            value.append((key_node, value_node))
-        node.value = value
 
     def construct_sls_str(self, node):
         '''
@@ -326,22 +293,19 @@ class Loader(BaseLoader):
             raise ConstructorError('unable to resolve tag')
         return tag, deep
 
+
 Loader.add_constructor('!aggregate', Loader.construct_sls_aggregate)  # custom type
 Loader.add_constructor('!reset', Loader.construct_sls_reset)  # custom type
-
+Loader.add_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # our overwrite
+Loader.add_constructor('tag:yaml.org,2002:str', Loader.construct_sls_str)  # our overwrite
+Loader.add_constructor('tag:yaml.org,2002:int', Loader.construct_sls_int)  # our overwrite
 Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
 Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
-Loader.add_constructor('tag:yaml.org,2002:int', Loader.construct_sls_int)  # our overwrite
-
 Loader.add_multi_constructor('tag:yaml.org,2002:float', Loader.construct_yaml_float)
 Loader.add_multi_constructor('tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
 Loader.add_multi_constructor('tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
-
-Loader.add_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # our overwrite
-
 Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
 Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
-Loader.add_constructor('tag:yaml.org,2002:str', Loader.construct_sls_str)  # our overwrite
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
 Loader.add_multi_constructor(None, Loader.construct_undefined)
@@ -402,6 +366,9 @@ class AggregatedSequence(Sequence):
 
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
+    '''
+    sls dumper.
+    '''
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', data.items())
 
@@ -421,5 +388,10 @@ Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
 
 
-def merge_recursive(a, b):
-    return aggregate(a, b, level=False, Map=AggregatedMap, Sequence=AggregatedSequence)
+def merge_recursive(obj_a, obj_b):
+    '''
+    Merge obj_b into obj_a.
+    '''
+    return aggregate(obj_a, obj_b,
+                     map_class=AggregatedMap,
+                     sequence_class=AggregatedSequence)

@@ -115,18 +115,27 @@ log = logging.getLogger(__name__)
 
 
 class Aggregate(object):
+    """
+    Aggregation base.
+    """
     pass
 
-
 class Map(OrderedDict, Aggregate):
+    """
+    Map aggregation.
+    """
     pass
 
 
 class Sequence(list, Aggregate):
+    """
+    Sequence aggregation.
+    """
     pass
 
 
 def Scalar(obj):
+
     '''
     Shortcut for Sequence creation
 
@@ -173,20 +182,23 @@ def levelise(level):
         raise
 
 
-def mark(obj, Map=Map, Sequence=Sequence):
+def mark(obj, map_class=Map, sequence_class=Sequence):
+    '''
+    Convert obj into an Aggregate instance
+    '''
     if isinstance(obj, Aggregate):
         return obj
     if isinstance(obj, dict):
-        return Map(obj)
+        return map_class(obj)
     if isinstance(obj, (list, tuple, set)):
-        return Sequence(obj)
+        return sequence_class(obj)
     else:
-        return Sequence([obj])
+        return sequence_class([obj])
 
 
-def aggregate(a, b, level=False, Map=Map, Sequence=Sequence):  # NOQA
+def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence):  # NOQA
     '''
-    Merge b into a.
+    Merge obj_b into obj_a.
 
     >>> aggregate('first', 'second', True) == ['first', 'second']
     True
@@ -194,38 +206,34 @@ def aggregate(a, b, level=False, Map=Map, Sequence=Sequence):  # NOQA
     deep, subdeep = levelise(level)
 
     if deep:
-        a, b = mark(a), mark(b)
+        obj_a = mark(obj_a, map_class=Map, sequence_class=Sequence)
+        obj_b = mark(obj_b, map_class=Map, sequence_class=Sequence)
 
-    specs = {
-        'level': subdeep,
-        'Map': Map,
-        'Sequence': Sequence
-    }
-
-    if isinstance(a, dict) and isinstance(b, dict):
-        if isinstance(a, Aggregate) and isinstance(b, Aggregate):
-            # deep merging is more or less a.update(b)
-            response = copy(a)
+    if isinstance(obj_a, dict) and isinstance(obj_b, dict):
+        if isinstance(obj_a, Aggregate) and isinstance(obj_b, Aggregate):
+            # deep merging is more or less a.update(obj_b)
+            response = copy(obj_a)
         else:
-            # introspection on b keys only
-            response = copy(b)
+            # introspection on obj_b keys only
+            response = copy(obj_b)
 
-        for key, value in b.items():
-            if key in a:
-                value = aggregate(a[key], value, **specs)
+        for key, value in obj_b.items():
+            if key in obj_a:
+                value = aggregate(obj_a[key], value,
+                                  subdeep, map_class, sequence_class)
             response[key] = value
         return response
 
-    if isinstance(a, Sequence) and isinstance(a, Sequence):
-        response = a.__class__(a[:])
-        for value in b:
-            if value not in a:
+    if isinstance(obj_a, Sequence) and isinstance(obj_a, Sequence):
+        response = obj_a.__class__(obj_a[:])
+        for value in obj_b:
+            if value not in obj_a:
                 response.append(value)
         return response
 
-    if isinstance(a, Aggregate) or isinstance(a, Aggregate):
-        log.info('only one value marked as aggregate. keep `a` value')
-        return b
+    if isinstance(obj_a, Aggregate) or isinstance(obj_a, Aggregate):
+        log.info('only one value marked as aggregate. keep `obj_a` value')
+        return obj_b
 
-    log.debug('no value marked as aggregate. keep `a` value')
-    return b
+    log.debug('no value marked as aggregate. keep `obj_a` value')
+    return obj_b

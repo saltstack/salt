@@ -39,8 +39,8 @@ def deserialize(stream_or_string, **options):
             stream_or_string = stream_or_string.decode('utf-8')
 
         return json.loads(stream_or_string)
-    except Exception as e:
-        raise DeserializationError(e)
+    except Exception as error:
+        raise DeserializationError(error)
 
 
 def serialize(obj, **options):

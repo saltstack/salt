@@ -133,9 +133,6 @@ class TestSerializers(TestCase):
 
     @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
     def test_sls_aggregate(self):
-        # sls_obj = sls.deserialize("foo: ")
-        # assert sls_obj == {}
-
         src = dedent("""
             a: lol
             foo: !aggregate hello
@@ -259,6 +256,9 @@ class TestSerializers(TestCase):
 
     @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
     def test_sls_repr(self):
+        """
+        Ensure that obj __repr__ and __str__ methods are yaml friendly.
+        """
         def convert(obj):
             return sls.deserialize(sls.serialize(obj))
         sls_obj = convert(OrderedDict([('foo', 'bar'), ('baz', 'qux')]))
@@ -270,6 +270,42 @@ class TestSerializers(TestCase):
         # ensure that repr and str are already quoted
         assert sls_obj['foo'].__str__() == '"bar"'
         assert sls_obj['foo'].__repr__() == '"bar"'
+
+    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    def test_sls_micking_file_merging(self):
+        def convert(obj):
+            return sls.deserialize(sls.serialize(obj))
+
+        # let say that we have 2 pillar files
+
+        src1 = dedent("""
+            a: first
+            b: !aggregate first
+            c:
+              subkey1: first
+              subkey2: !aggregate first
+        """).strip()
+
+        src2 = dedent("""
+            a: second
+            b: !aggregate second
+            c:
+              subkey2: !aggregate second
+              subkey3: second
+        """).strip()
+
+        sls_obj1 = sls.deserialize(src1)
+        sls_obj2 = sls.deserialize(src2)
+        sls_obj3 = sls.merge_recursive(sls_obj1, sls_obj2)
+
+        assert sls_obj3 == {
+            'a': 'second',
+            'b': ['first', 'second'],
+            'c': {
+                'subkey2': ['first', 'second'],
+                'subkey3': 'second'
+            }
+        }, sls_obj3
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % 'msgpack')
     def test_msgpack(self):
