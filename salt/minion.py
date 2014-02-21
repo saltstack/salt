@@ -607,6 +607,10 @@ class Minion(MinionBase):
 
         self.grains_cache = self.opts['grains']
 
+        # store your hexid to subscribe to zmq, hash since zmq filters are prefix
+        # matches this way we can avoid collisions
+        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+
         if 'proxy' in self.opts['pillar']:
             log.debug('I am {0} and I need to start some proxies for {0}'.format(self.opts['id'],
                                                                                  self.opts['pillar']['proxy']))
@@ -1129,7 +1133,8 @@ class Minion(MinionBase):
         )
 
     def _setsockopts(self):
-        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
+        self.socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         self._set_ipv4only()
         self._set_reconnect_ivl_max()
@@ -1381,7 +1386,12 @@ class Minion(MinionBase):
 
     def _do_socket_recv(self, socks):
         if socks.get(self.socket) == zmq.POLLIN:
-            payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+            # topic filtering is done at the zmq level, so we just strip it
+            recv_str = self.socket.recv(zmq.NOBLOCK)
+            # if you have a header, then you have another one coming down the pipe
+            if recv_str in (self.hexid, 'broadcast'):
+                recv_str = self.socket.recv(zmq.NOBLOCK)
+            payload = self.serial.loads(recv_str)
             log.trace('Handling payload')
             self._handle_payload(payload)
 
@@ -1500,6 +1510,8 @@ class Syndic(Minion):
         # Share the poller with the event object
         self.poller = self.local.event.poller
         self.socket = self.context.socket(zmq.SUB)
+        # no filters for syndication masters, unless we want to maintain a
+        # list of all connected minions and update the filter
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
@@ -1577,7 +1589,20 @@ class Syndic(Minion):
 
     def _process_cmd_socket(self):
         try:
-            payload = self.serial.loads(self.socket.recv(zmq.NOBLOCK))
+            messages = self.socket.recv_multipart(zmq.NOBLOCK)
+            messages_len = len(messages)
+            idx = None
+            if messages_len == 1:
+                idx = 0
+            elif messages_len == 2:
+                idx = 1
+            else:
+                raise SaltSyndicMasterError('Syndication master recieved message of invalid len ({0}/2)'.format(messages_len))
+
+            payload = self.serial.loads(messages[idx])
+
+
+
         except zmq.ZMQError as e:
             # Swallow errors for bad wakeups or signals needing processing
             if e.errno != errno.EAGAIN and e.errno != errno.EINTR:

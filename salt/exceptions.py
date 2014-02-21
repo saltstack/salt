@@ -27,6 +27,11 @@ class SaltMasterError(SaltException):
     Problem reading the master root key
     '''
 
+class SaltSyndicMasterError(SaltException):
+    '''
+    Problem while proxying a request in the syndication master
+    '''
+
 
 class MasterExit(SystemExit):
     '''
