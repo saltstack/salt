@@ -2150,16 +2150,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
-            '--priv',
-            dest='ssh_priv',
-            help=('Ssh private key file'))
-        self.add_option(
             '--roster',
             dest='roster',
             default='',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
-                  'used. Default is the flat file roster.'))
+                  'used. Default is the flat file roster.')
+        )
         self.add_option(
             '--roster-file',
             dest='roster_file',
@@ -2167,7 +2164,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('define an alternative location for the default roster '
                   'file location. The default roster file is called roster '
                   'and is found in the same directory as the master config '
-                  'file.'))
+                  'file.')
+        )
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
@@ -2176,7 +2174,15 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Force a refresh of the master side data cache of the '
                   'target\'s data. This is needed if a target\'s grains have '
                   'been changed and the auto refresh timeframe has not been '
-                  'reached.'))
+                  'reached.')
+        )
+        self.add_option(
+            '-v', '--verbose',
+            default=False,
+            action='store_true',
+            help=('Turn on command verbosity, display jid')
+        )
+
         self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
@@ -2185,35 +2191,50 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is %default')
-        self.add_option(
-            '-i',
-            '--ignore-host-keys',
-            dest='ignore_host_keys',
-            default=False,
-            action='store_true',
-            help='By default ssh host keys are honored and connections will '
-                 'ask for approval')
+                 'faster communication should be, default is %default'
+        )
         self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
         )
-        self.add_option(
+
+        auth_group = optparse.OptionGroup(
+            self, 'Authentication Options',
+            'Parameters affecting authentication'
+        )
+        auth_group.add_option(
+            '--priv',
+            dest='ssh_priv',
+            help='Ssh private key file'
+        )
+        auth_group.add_option(
+            '-i',
+            '--ignore-host-keys',
+            dest='ignore_host_keys',
+            default=False,
+            action='store_true',
+            help='By default ssh host keys are honored and connections will '
+                 'ask for approval'
+        )
+        auth_group.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
             help='Set the default password to attempt to use when '
-                 'authenticating')
-        self.add_option(
+                 'authenticating'
+        )
+        auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
             action='store_true',
             help='Set this flag to atempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
-                 'initial deployment of keys very fast and easy')
+                 'initial deployment of keys very fast and easy'
+        )
+        self.add_option_group(auth_group)
 
     def _mixin_after_parsed(self):
         if not self.args:
