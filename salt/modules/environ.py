@@ -60,7 +60,7 @@ def setval(key, val, false_unsets=False):
                 return None
             except Exception as exc:
                 log.error(
-                    '{0}: Exception occurred when unsetting'
+                    '{0}: Exception occurred when unsetting '
                     'environ key "{1!r}": {2!r}'
                     .format(__name__, key, exc)
                 )
@@ -80,7 +80,7 @@ def setval(key, val, false_unsets=False):
             return False
     else:
         log.debug(
-            '{0}: "val" argument for key "{1!r}" is not a string'
+            '{0}: "val" argument for key "{1!r}" is not a string '
             'or False: {2!r}'
             .format(__name__, key, val)
         )
@@ -145,7 +145,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
             ret[key] = setval(key, val, false_unsets)
         else:
             log.debug(
-                '{0}: "val" argument for key "{1!r}" is not a string'
+                '{0}: "val" argument for key "{1!r}" is not a string '
                 'or False: {2!r}'
                 .format(__name__, key, val)
             )
