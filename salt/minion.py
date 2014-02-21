@@ -56,7 +56,8 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltClientError, SaltSystemExit
+    SaltInvocationError, SaltReqTimeoutError, SaltClientError,
+    SaltSystemExit, SaltSyndicMasterError
 )
 import salt.client
 import salt.crypt
@@ -1600,8 +1601,6 @@ class Syndic(Minion):
                 raise SaltSyndicMasterError('Syndication master recieved message of invalid len ({0}/2)'.format(messages_len))
 
             payload = self.serial.loads(messages[idx])
-
-
 
         except zmq.ZMQError as e:
             # Swallow errors for bad wakeups or signals needing processing
