@@ -43,7 +43,8 @@ def setenv(name,
         Default: False
 
     clear_all
-        USE WITH CAUTION!
+        USE WITH CAUTION! This option can unset environment variables
+        needed for salt to function properly.
         If clear_all is True, then any environment variables not
         defined in the environ dict will be deleted.
         Default: False
