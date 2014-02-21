@@ -37,6 +37,7 @@ import salt.utils.event
 from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
+from salt.utils.yamldumper import OrderedDumper
 
 # Import salt cloud libs
 import salt.cloud
@@ -246,7 +247,8 @@ def salt_config_to_yaml(configuration, line_break='\n'):
     '''
     return yaml.safe_dump(configuration,
                           line_break=line_break,
-                          default_flow_style=False)
+                          default_flow_style=False,
+                          Dumper=OrderedDumper)
 
 
 def wait_for_fun(fun, timeout=900, **kwargs):
