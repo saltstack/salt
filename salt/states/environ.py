@@ -122,7 +122,6 @@ def setenv(name,
                     ret['changes'].update({key: None})
         elif current_environ.get(key, '') == val:
             already_set.append(key)
-            #environ.pop(key)
         else:
             ret['changes'].update({key: val})
 
