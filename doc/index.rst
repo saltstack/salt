@@ -30,7 +30,7 @@ for orchestration, remote execution, configuration management and much more.
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
 .. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
 .. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
-.. _`SaltStack YouTube channel`: http://youtube.com/saltstack
+.. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
 
 Download
 ========

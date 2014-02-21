@@ -161,7 +161,7 @@ function. Some examples:
 
 - :blob:`pacman.py <salt/modules/pacman.py>`
 - :blob:`yumpkg.py <salt/modules/yumpkg.py>`
-- :blob:`apt.py <salt/modules/apt.py>`
+- :blob:`aptpkg.py <salt/modules/aptpkg.py>`
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that

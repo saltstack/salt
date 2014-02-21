@@ -4,7 +4,7 @@
 Manage Docker containers
 ========================
 
-`Docker <https://docker.io>`_
+`Docker <https://www.docker.io>`_
 is a lightweight, portable, self-sufficient software container
 wrapper. The base supported wrapper type is
 `LXC <https://en.wikipedia.org/wiki/Linux_Containers>`_,
@@ -21,7 +21,7 @@ wrapper. The base supported wrapper type is
     This state module requires
     `docker-py <https://github.com/dotcloud/docker-py>`_
     which supports `Docker Remote API version 1.6
-    <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
+    <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 
 Available Functions
 -------------------
@@ -221,7 +221,7 @@ def pulled(name, force=False, *args, **kwargs):
         `docker push`,
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
-        <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
+        <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that We added saltack a way to identify yourself via pillar,
         see in the salt.modules.dockerio execution module how to ident yourself
         via the pillar.

@@ -114,7 +114,7 @@ Then to accept the changes and merge into the current branch:
 For more info, see `GitHub Fork a Repo Guide`_ or `Open Comparison Contributing
 Docs`_
 
-.. _`GitHub Fork a Repo Guide`: http://help.github.com/fork-a-repo/
+.. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
 .. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
 Posting patches to the mailing list
@@ -125,7 +125,7 @@ format-patch`_ and send them to the Salt users mailing list. The contributor
 will then get credit for the patch, and the Salt community will have an archive
 of the patch and a place for discussion.
 
-.. _`git format-patch`: http://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 
 Installing Salt for development
 -------------------------------
@@ -145,7 +145,7 @@ Clone the repository using:
 
     .. code-block:: bash
 
-        git remote add upstream http://github.com/saltstack/salt
+        git remote add upstream https://github.com/saltstack/salt
 
     Fetching tags is done with the git 'fetch' utility:
 
@@ -159,7 +159,7 @@ Create a new `virtualenv`_:
 
     virtualenv /path/to/your/virtualenv
 
-.. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
+.. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
 On Arch Linux, where Python 3 is the default installation of Python, use the
 ``virtualenv2`` command instead of ``virtualenv``.

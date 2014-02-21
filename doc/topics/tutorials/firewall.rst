@@ -91,7 +91,7 @@ common locations, but your mileage may vary.
 
 **Debian**
 
-Follow these instructions: http://wiki.debian.org/iptables
+Follow these instructions: https://wiki.debian.org/iptables
 
 Once you've found your firewall rules, you'll need to add the two lines below
 to allow traffic on ``tcp/4505`` and ``tcp/4506``:

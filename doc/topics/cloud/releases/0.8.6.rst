@@ -16,7 +16,7 @@ Download
 
 Salt Cloud can be downloaded and install via pypi:
 
-http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.6.tar.gz
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.6.tar.gz
 
 Some packages have been made available for salt-cloud and more on on their
 way. Packages for Arch and FreeBSD are being made available thanks to the
