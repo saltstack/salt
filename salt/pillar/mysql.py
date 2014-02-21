@@ -153,7 +153,9 @@ More complete example
 # Import python libs
 from contextlib import contextmanager
 import logging
-import collections
+
+# Import Salt libs
+from salt.utils.odict import OrderedDict
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -318,8 +320,8 @@ class merger(object):
             This function takes a list of database results and iterates over,
             merging them in to a dict form.
         '''
-        listify = collections.OrderedDict()
-        listify_dicts = collections.OrderedDict()
+        listify = OrderedDict()
+        listify_dicts = OrderedDict()
         for ret in rows:
             # crd is the Current Return Data level, to make this non-recursive.
             crd = self.focus
