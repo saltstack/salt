@@ -204,8 +204,8 @@ def test():
         stuff.append(str(i).rjust(4, " "))
     stuff = "".join(stuff)
 
-    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="fix me", stuff=stuff), None))
-    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="run me", stuff=stuff), None))
+    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
+    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="gig stuff", stuff=stuff), None))
 
     stack1.serviceUdpTxMsg()
     stack0.serviceUdpTxMsg()
