@@ -31,7 +31,7 @@ def setval(key, val, false_unsets=False):
 
     val
         The value to set. Must be a string or False. Refer to the
-        'descrtuctive' parameter for behavior when set to False.
+        'false_unsets' parameter for behavior when set to False.
 
     false_unsets
         If val is False and false_unsets is True, then the key will be
@@ -95,7 +95,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
     environ
         Must be a dict. The top-level keys of the dict are the names
         of the environment variables to set. Each key's value must be
-        a string or False. Refer to the 'descrtuctive' parameter for
+        a string or False. Refer to the 'false_unsets' parameter for
         behavior when a value set to False.
 
     false_unsets
