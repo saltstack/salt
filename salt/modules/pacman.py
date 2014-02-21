@@ -334,9 +334,12 @@ def install(name=None,
                 log.error(problem)
             return {}
 
-        if salt.utils.is_true(refresh):
+        if refresh is True and sysupgrade is None:
+            options += '-yu'
+        elif refresh is True:
             options += '-y'
-        if salt.utils.is_true(sysupgrade):
+
+        if sysupgrade is True::
             options += '-u'
 
         cmd = 'pacman -S "{0}"'.format('" "'.join(options+targets))
