@@ -1896,6 +1896,7 @@ class ProxyMinion(Minion):
         Pass in the options dict
         '''
 
+        self._running = None
         # Warn if ZMQ < 3.2
         if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
                         zmq.zmq_version_info() < (3, 2)):
@@ -1930,6 +1931,7 @@ class ProxyMinion(Minion):
             self.functions,
             self.returners)
         self.grains_cache = self.opts['grains']
+        # self._running = True
 
     def _prep_mod_opts(self):
         '''
