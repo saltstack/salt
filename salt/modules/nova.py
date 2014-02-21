@@ -48,7 +48,6 @@ except ImportError:
 # Import python libs
 import time
 import logging
-import pprint
 
 # Import salt libs
 import salt.utils
@@ -259,7 +258,7 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
 
     .. code-block:: bash
 
-        salt '*' nova.create myblock size=300 profile=openstack
+        salt '*' nova.volume_create myblock size=300 profile=openstack
 
     '''
     nt_ks = _auth(profile, service_type='volume')
@@ -271,6 +270,29 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
     )
 
     return _volume_get(response.id, profile=profile)
+
+
+def volume_delete(name, profile=None):
+    '''
+    Destroy the volume
+
+    name
+        Name of the volume
+
+    profile
+        Profile to build on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.volume_delete myblock profile=openstack
+
+    '''
+    nt_ks = _auth(profile, service_type='volume')
+    volume = volume_show(name, profile)
+    response = nt_ks.volumes.delete(volume['id'])
+    return response
 
 
 def volume_delete(volume_name, profile=None):
@@ -999,7 +1021,6 @@ def _item_list(profile=None):
 #unpause             Unpause a server.
 #unrescue            Unrescue a server.
 #usage-list          List usage data for all tenants
-#volume-detach       Detach a volume from a server.
 #volume-list         List all the volumes.
 #volume-snapshot-create
 #                    Add a new snapshot.
