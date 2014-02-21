@@ -914,15 +914,13 @@ class Messengent(Correspondent):
             if not self.segmentage:
                 self.segmentage = packeting.RxPacket(stack=self.stack,
                                                 data=self.rxPacket.data)
-            self.segmentage.parseSegment(segment)
+            self.segmentage.parseSegment(self.rxPacket)
             if not self.segmentage.desegmentable():
                 return
-
-            if self.segmentage:
-                self.segmentage.desegmentize()
-                if not self.stack.parseInner(segmentage):
-                    return
-                body = segmentage.body.data
+            self.segmentage.desegmentize()
+            if not self.stack.parseInner(self.segmentage):
+                return
+            body = self.segmentage.body.data
         else:
             if not self.stack.parseInner(self.rxPacket):
                 return

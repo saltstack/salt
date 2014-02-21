@@ -46,7 +46,7 @@ header data =
     tk: Transaction Kind (TrnsKind)
     pk: Packet Kind (PcktKind)
     sf: Succedent Flag    (ScdtFlag) Default 0
-        Send segments or ordered packets without waiting for interleafed acks
+        Send segments or ordered packets without waiting for interleaved acks
 
     oi: Order index (OrdrIndx)   Default 0
     dt: Datetime Stamp  (Datetime) Default 0
