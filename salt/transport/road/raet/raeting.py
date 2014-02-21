@@ -45,17 +45,18 @@ header data =
     ti: Transaction ID (TID) Default 0
     tk: Transaction Kind (TrnsKind)
     pk: Packet Kind (PcktKind)
-    sf: Succedent Flag    (ScdtFlag) Default 0
-        Send segments or ordered packets without waiting for interleaved acks
 
-    oi: Order index (OrdrIndx)   Default 0
     dt: Datetime Stamp  (Datetime) Default 0
+    oi: Order index (OrdrIndx)   Default 0
 
-    sn: Segment Number (SegNum) Default 0
-    sc: Segment Count  (SegCnt) Default 1
+    pf: Pending Ack Flag    (PendFlag) Default 0
+        Next segment or ordered packet is pended waiting for ack to this packet
 
-    pf: Pending Segment Flag  (PendFlag) Default 0
-        Not the last segment more pending
+    sn: Segment Number (SgmtNum) Default 0
+    sc: Segment Count  (SgmtCnt) Default 1
+
+    sf: Segment Flag  (SgmtFlag) Default 0
+        This packet is part of a segmented message
     af: All Flag (AllFlag) Default 0
         Resend all segments not just one
 
@@ -69,7 +70,7 @@ header data =
     fl: Footer length (FootLen) Default 0
 
     fg: flags  packed (Flags) Default '00' hs
-         2 char Hex string with bits (0, 0, af, pf, 0, sf, bf, cf)
+         2 char Hex string with bits (0, 0, af, sf, 0, pf, bf, cf)
          Zeros are TBD flags
 }
 
@@ -191,12 +192,12 @@ PACKET_DEFAULTS = odict([
                             ('ti', 0),
                             ('tk', 0),
                             ('pk', 0),
-                            ('sf', False),
-                            ('oi', 0),
                             ('dt', 0),
+                            ('oi', 0),
+                            ('pf', False),
                             ('sn', 0),
                             ('sc', 1),
-                            ('pf', False),
+                            ('sf', False),
                             ('af', False),
                             ('bk', 0),
                             ('bl', 0),
@@ -209,15 +210,15 @@ PACKET_DEFAULTS = odict([
 
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
-                 'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+                 'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
                  'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
-               'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+               'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
-PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
-PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
+PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']
+PACKET_FLAG_FIELDS = ['', '', 'af', 'sf', '', 'pf', 'bf', 'cf']
 
 
 class RaetError(Exception):
