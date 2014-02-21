@@ -161,11 +161,17 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
 
 
 def _server_by_name(server_name, profile=None):
+    '''
+    Returns information about one server based on the name
+    '''
     servers = server_list(profile=profile)
     return servers[server_name]
 
 
 def _volume_get(volume_id, profile=None):
+    '''
+    Get information about a volume by its id
+    '''
     nt_ks = _auth(profile, service_type='volume')
     volume = nt_ks.volumes.get(volume_id)
     response = {'name': volume.display_name,
