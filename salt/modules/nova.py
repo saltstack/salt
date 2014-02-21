@@ -48,6 +48,7 @@ except ImportError:
 # Import python libs
 import time
 import logging
+import pprint
 
 # Import salt libs
 import salt.utils
@@ -74,7 +75,7 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None, service_type='computer'):
+def _auth(profile=None, service_type='compute'):
     '''
     Set up nova credentials
     '''
@@ -160,13 +161,21 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
             )
 
 
+def _server_by_name(server_name, profile=None):
+    servers = server_list(profile=profile)
+    return servers[server_name]
+
+
 def _volume_get(volume_id, profile=None):
     nt_ks = _auth(profile, service_type='volume')
     volume = nt_ks.volumes.get(volume_id)
     response = {'name': volume.display_name,
                 'size': volume.size,
                 'id': volume.id,
-                'description': volume.display_description}
+                'description': volume.display_description,
+                'attachments': volume.attachments,
+                'status': volume.status
+                }
     return response
 
 
@@ -285,6 +294,115 @@ def volume_delete(volume_name, profile=None):
     volume = volume_show(volume_name, profile)
     response = nt_ks.volumes.delete(volume['id'])
     return response
+
+
+def volume_detach(volume_name,
+                  server_name,
+                  profile=None,
+                  timeout=300):
+    '''
+    Attach a block storage volume
+
+    volume_name
+        Name of the new volume to attach
+
+    server_name
+        Name of the server to detach from
+
+    profile
+        Profile to build on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.volume_detach myblock profile=openstack
+
+    '''
+    nt_ks = _auth(profile)
+    volume = volume_show(volume_name, profile)
+    server = _server_by_name(server_name, profile)
+    response = nt_ks.volumes.delete_server_volume(
+        server['id'],
+        volume['attachments'][0]['id']
+    )
+    trycount = 0
+    start = time.time()
+    while True:
+        trycount += 1
+        try:
+            response = _volume_get(volume['id'], profile)
+            if response['status'] == 'available':
+                return response
+        except Exception as exc:
+            log.debug('Volume is detaching: {0}'.format(volume_name))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Timed out after {0} seconds '
+                          'while waiting for data'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying volume_show() (try {0})'.format(trycount)
+            )
+
+
+def volume_attach(volume_name,
+                  server_name,
+                  device='/dev/xvdb',
+                  profile=None,
+                  timeout=300):
+    '''
+    Attach a block storage volume
+
+    volume_name
+        Name of the new volume to attach
+
+    server_name
+        Name of the server to attach to
+
+    device
+        Name of the device on the server
+
+    profile
+        Profile to build on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.volume_attach myblock slice.example.com profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com \
+                device='/dev/xvdb' profile=openstack
+
+    '''
+    nt_ks = _auth(profile)
+    volume = volume_show(volume_name, profile)
+    server = _server_by_name(server_name, profile)
+    response = nt_ks.volumes.create_server_volume(
+        server['id'],
+        volume['id'],
+        device=device
+    )
+    trycount = 0
+    start = time.time()
+    while True:
+        trycount += 1
+        try:
+            response = _volume_get(volume['id'], profile)
+            if response['status'] == 'in-use':
+                return response
+        except Exception as exc:
+            log.debug('Volume is attaching: {0}'.format(volume_name))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Timed out after {0} seconds '
+                          'while waiting for data'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying volume_show() (try {0})'.format(trycount)
+            )
 
 
 def suspend(instance_id, profile=None):
@@ -881,7 +999,6 @@ def _item_list(profile=None):
 #unpause             Unpause a server.
 #unrescue            Unrescue a server.
 #usage-list          List usage data for all tenants
-#volume-attach       Attach a volume to a server.
 #volume-detach       Detach a volume from a server.
 #volume-list         List all the volumes.
 #volume-snapshot-create
