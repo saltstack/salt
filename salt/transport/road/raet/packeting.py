@@ -335,11 +335,19 @@ class RxFoot(Foot):
         Parses foot. Assumes foot already unpacked
         '''
         fk = self.packet.data['fk']
+        fl = self.packet.data['fl']
+        self.packed = ''
 
         if fk not in raeting.FOOT_KIND_NAMES:
             self.packet.data['fk'] = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
             raise raeting.PacketError(emsg)
+
+        if self.packet.size < fl:
+            emsg = "Packet size not big enough for foot."
+            raise raeting.PacketError(emsg)
+
+        self.packed = self.packet.packed[-fl:]
 
         if fk == raeting.footKinds.nacl:
             if self.size != raeting.footSizes.nacl:
@@ -350,12 +358,14 @@ class RxFoot(Foot):
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
 
-            if self.packet.coat.size:
-                stuff = self.packet.coat.packed
-            else:
-                stuff = self.packet.body.packed
+            #if self.packet.coat.size:
+                #stuff = self.packet.coat.packed
+            #else:
+                #stuff = self.packet.body.packed
+            front = self.packet.packed[:-fl]
 
-            msg = "".join([self.packet.head.packed, stuff, blank])
+            #msg = "".join([self.packet.head.packed, stuff, blank])
+            msg = "".join([front, blank])
             if not self.packet.verify(signature, msg):
                 emsg = "Failed verification"
                 raise raeting.PacketError(emsg)
@@ -547,7 +557,7 @@ class RxPacket(Packet):
 
     def unpack(self, packed=None):
         '''
-        Unpacks the foot, body, and coat parts of .packed
+        Unpacks the body, and coat parts of .packed
         Assumes that the lengths of the parts are valid in .data as would be
         the case after successfully parsing the head section
         '''
@@ -557,10 +567,6 @@ class RxPacket(Packet):
         fl = self.data['fl']
 
         ck = self.data['ck']
-        #if ck == raeting.coatKinds.nada and cl != bl: #not encrypted so coat and body the same
-            #emsg = ("Coat kind '{0}' incompatible with coat length '{0}' "
-                          #"and body length '{2}'".format(cl, cl, bl))
-            #raise raeting.PacketError(emsg)
 
         if ck == raeting.coatKinds.nada:
             pl = hl + bl + fl
@@ -569,7 +575,6 @@ class RxPacket(Packet):
                               " '{1}'".format(self.size, pl))
                 raise raeting.PacketError(emsg)
             self.body.packed = self.packed[hl:hl+bl]
-            self.foot.packed = self.packed[hl+bl:]
         else:
             pl = hl + cl + fl
             if self.size != pl:
@@ -577,7 +582,6 @@ class RxPacket(Packet):
                               " '{1}'".format(self.size, pl))
                 raise raeting.PacketError(emsg)
             self.coat.packed = self.packed[hl:hl+cl] #coat.parse loads body.packed
-            self.foot.packed = self.packed[hl+cl:]
 
     def parse(self, packed=None):
         '''
@@ -611,8 +615,7 @@ class RxPacket(Packet):
                     "version '{1}'".format(self.data['vn']))
             raise raeting.PacketError(emsg)
 
-        self.unpack()
-        self.foot.parse()
+        self.foot.parse() #foot unpacks itself
 
     def parseSegment(self, packet):
         '''
@@ -621,6 +624,34 @@ class RxPacket(Packet):
         '''
         if packet.segmentive:
             self.segments[packet.data['sn']] = packet
+
+    def unpackInner(self, packed=None):
+        '''
+        Unpacks the body, and coat parts of .packed
+        Assumes that the lengths of the parts are valid in .data as would be
+        the case after successfully parsing the head section
+        '''
+        hl = self.data['hl']
+        cl = self.data['cl']
+        bl = self.data['bl']
+        fl = self.data['fl']
+
+        ck = self.data['ck']
+
+        if ck == raeting.coatKinds.nada:
+            pl = hl + bl + fl
+            if self.size != pl:
+                emsg = ("Packet length '{0}' does not equal sum of the parts"
+                              " '{1}'".format(self.size, pl))
+                raise raeting.PacketError(emsg)
+            self.body.packed = self.packed[hl:hl+bl]
+        else:
+            pl = hl + cl + fl
+            if self.size != pl:
+                emsg = ("Packet length '{0}' does not equal sum of the parts"
+                              " '{1}'".format(self.size, pl))
+                raise raeting.PacketError(emsg)
+            self.coat.packed = self.packed[hl:hl+cl] #coat.parse loads body.packed
 
     def parseInner(self):
         '''
@@ -633,6 +664,8 @@ class RxPacket(Packet):
         Result is .body.data and .data
         Raises PacketError exception If failure
         '''
+        if not self.segmentive:
+            self.unpackInner()
         self.coat.parse()
         self.body.parse()
 
@@ -654,6 +687,7 @@ class RxPacket(Packet):
     def desegmentize(self):
         '''
         Reassemble packet from segments
+        When done ready to call parseInner on self
         '''
         hauls = []
         for segment in self.segments.values():
@@ -663,4 +697,4 @@ class RxPacket(Packet):
             self.coat.packed = packed
         else:
             self.body.packed = packed
-        self.parseInner()
+

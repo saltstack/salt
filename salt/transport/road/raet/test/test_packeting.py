@@ -69,6 +69,7 @@ def test():
     segmentage = None
     if packet1.segmented:
         for segment in packet1.segments.values():
+            #segment.parseOuter()
             if segment.segmentive:
                 if not segmentage:
                     segmentage = packeting.RxPacket(stack=segment.stack,
@@ -79,6 +80,8 @@ def test():
                 break
 
     if segmentage:
+        if not stack0.parseInner(segmentage):
+            print "*******BAD SEGMENTAGE********"
         print segmentage.body.packed
         print segmentage.body.data
 
@@ -92,6 +95,7 @@ def test():
     segmentage = None
     if packet1.segmented:
         for segment in packet1.segments.values():
+            #segment.parseOuter()
             if segment.segmentive:
                 if not segmentage:
                     segmentage = packeting.RxPacket(stack=segment.stack,
@@ -102,25 +106,11 @@ def test():
                 break
 
     if segmentage:
+        if not stack0.parseInner(segmentage):
+            print "*******BAD SEGMENTAGE********"
         print segmentage.body.packed
         print segmentage.body.data
 
-
-
-    #minion stack
-    signer = nacling.Signer()
-    minionSignKeyHex = signer.keyhex
-    privateer = nacling.Privateer()
-    minionPriKeyHex = privateer.keyhex
-
-    #minion stack
-    device = devicing.LocalDevice(   did=0,
-                                     ha=("", raeting.RAET_TEST_PORT),
-                                     signkey=minionSignKeyHex,
-                                     prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(device=device)
-
-    # exchange keys
 
 
 

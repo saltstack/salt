@@ -198,6 +198,15 @@ def test():
     stack0.udpTxMsgs.append((odict(house="Papa pia3", queue="stop me"), None))
     stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="run me"), None))
 
+    #segmented packets
+    stuff = []
+    for i in range(300):
+        stuff.append(str(i).rjust(4, " "))
+    stuff = "".join(stuff)
+
+    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="fix me", stuff=stuff), None))
+    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="run me", stuff=stuff), None))
+
     stack1.serviceUdpTxMsg()
     stack0.serviceUdpTxMsg()
 
@@ -232,8 +241,10 @@ def test():
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
-    for msg in stack0.udpRxMsgs:
+    for msg in stack1.udpRxMsgs:
             print msg
+
+
 
 
 

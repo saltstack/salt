@@ -775,6 +775,7 @@ class Messenger(Initiator):
         '''
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         if self.rdid is None:
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
         remote = self.stack.devices[self.rdid]
@@ -834,8 +835,12 @@ class Messenger(Initiator):
             print ex
             self.remove()
             return
-        self.transmit(packet)
-
+        if packet.segmented:
+            self.segmentage = packet
+            for segment in self.segmentage.segments.values():
+                self.transmit(segment)
+        else:
+            self.transmit(packet)
 
     def done(self):
         '''
@@ -857,6 +862,7 @@ class Messengent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('rdid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         remote = self.stack.devices[self.rdid]
         if not remote.allowed:
             emsg = "Must be allowed first"
@@ -902,10 +908,26 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        if not self.stack.parseInner(self.rxPacket):
-            return
-        data = self.rxPacket.data
-        body = self.rxPacket.body.data
+        print "segment count =", self.rxPacket.data['sc']
+        print "tid", self.tid
+        if self.rxPacket.segmentive:
+            if not self.segmentage:
+                self.segmentage = packeting.RxPacket(stack=self.stack,
+                                                data=self.rxPacket.data)
+            self.segmentage.parseSegment(segment)
+            if not self.segmentage.desegmentable():
+                return
+
+            if self.segmentage:
+                self.segmentage.desegmentize()
+                if not self.stack.parseInner(segmentage):
+                    return
+                body = segmentage.body.data
+        else:
+            if not self.stack.parseInner(self.rxPacket):
+                return
+            body = self.rxPacket.body.data
+
         self.stack.udpRxMsgs.append(body)
         self.ackMessage()
 
