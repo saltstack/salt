@@ -12,6 +12,14 @@ from salt.transport.road.raet import (raeting, nacling, packeting,
 
 
 def test():
+    '''
+    initially
+    master on port 7530 with did of 1
+    minion on port 7531 with did of 0
+    eventually
+    master did of 1
+    minion did of 2
+    '''
 
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
@@ -21,13 +29,7 @@ def test():
     signer = nacling.Signer()
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
-    masterPriKeyHex = privateer.keyhex
-
-    # initially
-    # master on port 7530 with did of 1
-    # minion on port 7531 with did of 0
-    # eventually
-    # minion did of 2
+    minionPriKeyHex = privateer.keyhex
 
     #master stack
     device = devicing.LocalDevice(   did=1,
@@ -39,7 +41,7 @@ def test():
     device = devicing.LocalDevice(   did=0,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
-                                     prikey=masterPriKeyHex,)
+                                     prikey=minionPriKeyHex,)
     stack1 = stacking.StackUdp(device=device)
 
 
@@ -196,6 +198,15 @@ def test():
     stack0.udpTxMsgs.append((odict(house="Papa pia3", queue="stop me"), None))
     stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="run me"), None))
 
+    #segmented packets
+    stuff = []
+    for i in range(300):
+        stuff.append(str(i).rjust(4, " "))
+    stuff = "".join(stuff)
+
+    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
+    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="gig stuff", stuff=stuff), None))
+
     stack1.serviceUdpTxMsg()
     stack0.serviceUdpTxMsg()
 
@@ -230,8 +241,10 @@ def test():
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
-    for msg in stack0.udpRxMsgs:
+    for msg in stack1.udpRxMsgs:
             print msg
+
+
 
 
 

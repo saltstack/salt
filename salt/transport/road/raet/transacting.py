@@ -150,16 +150,19 @@ class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
     '''
-    def __init__(self, **kwa):
+    def __init__(self, mha = None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joiner, self).__init__(**kwa)
 
+        if mha is None:
+            mha = ('127.0.0.1', raeting.RAET_PORT)
+
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
-                master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
+                master = devicing.RemoteDevice(did=0, ha=mha)
                 self.stack.addRemoteDevice(master)
 
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
@@ -172,7 +175,7 @@ class Joiner(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joiner, self).receive(packet)
+        super(Joiner, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack: #pended
@@ -224,6 +227,8 @@ class Joiner(Initiator):
         '''
         Process ack to join packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         #data = self.rxPacket.data
         #body = self.rxPacket.body.data
         #set timer for redo
@@ -231,8 +236,10 @@ class Joiner(Initiator):
 
     def accept(self):
         '''
-        Perform acceptance in response to joint response packt
+        Perform acceptance in response to join response packt
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -302,21 +309,23 @@ class Joinent(Correspondent):
     def join(self):
         '''
         Process join packet
-        Perform pend operation of pending device being accepted onto channel
+        Perform pend operation of pending remote device being accepted onto channel
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
         # need to add search for existing device with same host,port address
 
-        device = devicing.RemoteDevice(stack=self.stack,
+        remote = devicing.RemoteDevice(stack=self.stack,
                               host=data['sh'],
                               port=data['sp'],
                               rsid=self.sid,
                               rtid=self.tid, )
-        self.stack.addRemoteDevice(device) #provisionally add .accepted is None
+        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
 
-        self.rdid = device.did
+        self.rdid = remote.did
 
         verhex = body.get('verhex')
         if not verhex:
@@ -328,8 +337,8 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
+        remote.verfer = nacling.Verifier(key=verhex)
+        remote.pubber = nacling.Publican(key=pubhex)
 
         self.ackJoin()
 
@@ -415,7 +424,7 @@ class Allower(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Allower, self).receive(packet)
+        super(Allower, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.cookie:
@@ -469,6 +478,8 @@ class Allower(Initiator):
         '''
         Process cookie packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -543,8 +554,11 @@ class Allower(Initiator):
 
     def allow(self):
         '''
+        Process ackInitiate packet
         Perform allowment in response to ack to initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         self.stack.devices[self.rdid].allowed = True
         self.remove()
 
@@ -581,7 +595,7 @@ class Allowent(Correspondent):
         """
         Process received packet belonging to this transaction
         """
-        super(Allowent, self).receive(packet)
+        super(Allowent, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.hello:
@@ -610,6 +624,8 @@ class Allowent(Correspondent):
         '''
         Process hello packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -667,6 +683,8 @@ class Allowent(Correspondent):
         '''
         Process initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -704,7 +722,7 @@ class Allowent(Correspondent):
         if fqdn != self.stack.device.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff"
             print emsg, fqdn, self.stack.device.fqdn
-            #raise raeting.TransactionError(emsg)
+            raise raeting.TransactionError(emsg)
 
         vouch = self.stack.device.priver.decrypt(vcipher, vnonce, remote.pubber.key)
         if vouch != remote.publee.keyraw or vouch != shortraw:
@@ -757,6 +775,7 @@ class Messenger(Initiator):
         '''
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         if self.rdid is None:
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
         remote = self.stack.devices[self.rdid]
@@ -816,8 +835,12 @@ class Messenger(Initiator):
             print ex
             self.remove()
             return
-        self.transmit(packet)
-
+        if packet.segmented:
+            self.segmentage = packet
+            for segment in self.segmentage.segments.values():
+                self.transmit(segment)
+        else:
+            self.transmit(packet)
 
     def done(self):
         '''
@@ -839,6 +862,7 @@ class Messengent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('rdid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         remote = self.stack.devices[self.rdid]
         if not remote.allowed:
             emsg = "Must be allowed first"
@@ -884,8 +908,24 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        data = self.rxPacket.data
-        body = self.rxPacket.body.data
+        print "segment count =", self.rxPacket.data['sc']
+        print "tid", self.tid
+        if self.rxPacket.segmentive:
+            if not self.segmentage:
+                self.segmentage = packeting.RxPacket(stack=self.stack,
+                                                data=self.rxPacket.data)
+            self.segmentage.parseSegment(self.rxPacket)
+            if not self.segmentage.desegmentable():
+                return
+            self.segmentage.desegmentize()
+            if not self.stack.parseInner(self.segmentage):
+                return
+            body = self.segmentage.body.data
+        else:
+            if not self.stack.parseInner(self.rxPacket):
+                return
+            body = self.rxPacket.body.data
+
         self.stack.udpRxMsgs.append(body)
         self.ackMessage()
 

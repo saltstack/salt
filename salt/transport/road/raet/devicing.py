@@ -45,7 +45,12 @@ class Device(object):
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port
-        self.fqdn = socket.getfqdn(self.host)
+        if self.host == '0.0.0.0':
+            host = '127.0.0.1'
+        else:
+            host = self.host
+        self.fqdn = socket.getfqdn(host)
+
 
     @property
     def ha(self):

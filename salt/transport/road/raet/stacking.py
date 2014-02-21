@@ -151,7 +151,6 @@ class StackUdp(object):
             self.message(body, ddid)
             print "{0} sending\n{1}".format(self.name, body)
 
-
     def fetchParseUdpRx(self):
         '''
         Fetch from UDP deque next packet tuple
@@ -164,7 +163,7 @@ class StackUdp(object):
         except IndexError:
             return None
 
-        print "{0} received\n{1}".format(self.name, raw)
+        print "{0} received packet\n{1}".format(self.name, raw)
 
         packet = packeting.RxPacket(stack=self, packed=raw)
         try:
@@ -183,12 +182,19 @@ class StackUdp(object):
         dh, dp = da
         packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
+        return packet # outer only has been parsed
+
+    def parseInner(self, packet):
+        '''
+        Parse inner of packet and return
+        Assume all drop checks done
+        '''
         try:
             packet.parseInner()
+            print "{0} received packet body\n{1}".format(self.name, packet.body.data)
         except raeting.PacketError as ex:
             print ex
             return None
-
         return packet
 
     def processUdpRx(self):
@@ -200,8 +206,7 @@ class StackUdp(object):
         if not packet:
             return
 
-        print "{0} received\n{1}".format(self.name, packet.data)
-        print "{0} received\n{1}".format(self.name, packet.body.data)
+        print "{0} received packet data\n{1}".format(self.name, packet.data)
         print "{0} received packet index = '{1}'".format(self.name, packet.index)
 
         trans = self.transactions.get(packet.index, None)
@@ -235,12 +240,12 @@ class StackUdp(object):
                 packet.data['si'] != 0):
             self.replyMessage(packet)
 
-    def join(self):
+    def join(self, mha=None):
         '''
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self, txData=data)
+        joiner = transacting.Joiner(stack=self, txData=data, mha=mha)
         joiner.join()
 
     def replyJoin(self, packet):
