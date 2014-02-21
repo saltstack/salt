@@ -195,7 +195,13 @@ class TestSerializers(TestCase):
         """).strip()
 
         sls_obj = sls.deserialize(src)
-        assert sls_obj == {'placeholder': {'foo': 42, 'bar': None, 'baz': 'inga'}}, sls_obj
+        assert sls_obj == {
+            'placeholder': {
+                'foo': 42,
+                'bar': None,
+                'baz': 'inga'
+            }
+        }, sls_obj
 
         # test that !aggregate aggregates deep dicts
         src = dedent("""
@@ -215,6 +221,41 @@ class TestSerializers(TestCase):
             }
         }, sls_obj
 
+        # test that {foo: !aggregate bar} and {!aggregate foo: bar}
+        # are roughly equivalent.
+        src = dedent("""
+            placeholder: {!aggregate foo: {foo: 42}}
+            placeholder: {!aggregate foo: {bar: null}}
+            placeholder: {!aggregate foo: {baz: inga}}
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {
+            'placeholder': {
+                'foo': {
+                    'foo': 42,
+                    'bar': None,
+                    'baz': 'inga'
+                }
+            }
+        }, sls_obj
+
+    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    def test_sls_reset(self):
+        src = dedent("""
+            placeholder: {!aggregate foo: {foo: 42}}
+            placeholder: {!aggregate foo: {bar: null}}
+            !reset placeholder: {!aggregate foo: {baz: inga}}
+        """).strip()
+
+        sls_obj = sls.deserialize(src)
+        assert sls_obj == {
+            'placeholder': {
+                'foo': {
+                    'baz': 'inga'
+                }
+            }
+        }, sls_obj
 
     @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
     def test_sls_repr(self):

@@ -57,22 +57,42 @@
         yml_obj = yaml.deserialize(str(obj))
         assert yml_obj == obj
 
-    sls implements also a !aggregate tag, that allow structures aggregation.
+    sls implements also custom tags:
 
-    For example:
+    !aggregate
+
+         this tag allows structures aggregation.
+
+        For example:
 
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        placeholder: !aggregate foo
-        placeholder: !aggregate bar
-        placeholder: !aggregate baz
+            placeholder: !aggregate foo
+            placeholder: !aggregate bar
+            placeholder: !aggregate baz
 
-    is rendered as
+        is rendered as
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        placeholder: [foo, bar, baz]
+            placeholder: [foo, bar, baz]
+
+    !reset
+
+         this tag allows to flush the computing value.
+
+        .. code-block:: yaml
+
+            placeholder: {!aggregate foo: {foo: 42}}
+            placeholder: {!aggregate foo: {bar: null}}
+            !reset placeholder: {!aggregate foo: {baz: inga}}
+
+        is roughly equivalent to
+
+        .. code-block:: yaml
+
+            placeholder: {!aggregate foo: {baz: inga}}
 
     Document is defacto an aggregate mapping.
 '''
@@ -87,7 +107,6 @@ from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
-from salt._compat import string_types
 from salt.utils.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
@@ -203,6 +222,18 @@ class Loader(BaseLoader):
         self.flatten_mapping(node)
 
         for key_node, value_node in node.value:
+
+            # !reset instruction applies on document only.
+            # It tells to reset previous decoded value for this present key.
+            reset = key_node.tag == u'!reset'
+
+            # even if !aggregate tag apply only to values and not keys
+            # it's a reason to act as a such nazi.
+            if key_node.tag == u'!aggregate':
+                log.warning('!aggregate applies on values only, not on keys')
+                value_node.tag = key_node.tag
+                key_node.tag = self.resolve_sls_tag(key_node)[0]
+
             key = self.construct_object(key_node, deep=False)
             try:
                 hash(key)
@@ -211,10 +242,23 @@ class Loader(BaseLoader):
                        'key {1}').format(node.start_mark, key_node.start_mark)
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=False)
-            if key in sls_map:
+            if key in sls_map and not reset:
                 value = merge_recursive(sls_map[key], value)
             sls_map[key] = value
         return sls_map
+
+    def flatten_mapping(self, node):
+        return super(Loader, self).flatten_mapping(node)
+        # remove !resets
+        value = []
+        for key_node, value_node in node.value:
+            if key_node.tag == u'!reset':
+                key_node.tag = self.resolve_sls_tag(key_node)[0]
+            elif key_node.tag == u'!aggregate':
+                value_node.tag = key_node.tag
+                key_node.tag = self.resolve_sls_tag(key_node)[0]
+            value.append((key_node, value_node))
+        node.value = value
 
     def construct_sls_str(self, node):
         '''
@@ -240,18 +284,10 @@ class Loader(BaseLoader):
         return int(node.value)
 
     def construct_sls_aggregate(self, node):
-        if isinstance(node, yaml.nodes.ScalarNode):
-            # search implicit tag
-            tag = self.resolve(yaml.nodes.ScalarNode, node.value, [True, True])
-            deep = False
-        elif isinstance(node, yaml.nodes.SequenceNode):
-            tag = self.DEFAULT_SEQUENCE_TAG
-            deep = True
-        elif isinstance(node, yaml.nodes.MappingNode):
-            tag = self.DEFAULT_MAPPING_TAG
-            deep = True
-        else:
-            raise ConstructorError('unable to build aggregate')
+        try:
+            tag, deep = self.resolve_sls_tag(node)
+        except:
+            raise ConstructorError('unable to build reset')
 
         node = copy(node)
         node.tag = tag
@@ -264,8 +300,34 @@ class Loader(BaseLoader):
             return AggregatedSequence(obj)
         return AggregatedSequence([obj])
 
+    def construct_sls_reset(self, node):
+        try:
+            tag, deep = self.resolve_sls_tag(node)
+        except:
+            raise ConstructorError('unable to build reset')
+
+        node = copy(node)
+        node.tag = tag
+
+        return self.construct_object(node, deep)
+
+    def resolve_sls_tag(self, node):
+        if isinstance(node, yaml.nodes.ScalarNode):
+            # search implicit tag
+            tag = self.resolve(yaml.nodes.ScalarNode, node.value, [True, True])
+            deep = False
+        elif isinstance(node, yaml.nodes.SequenceNode):
+            tag = self.DEFAULT_SEQUENCE_TAG
+            deep = True
+        elif isinstance(node, yaml.nodes.MappingNode):
+            tag = self.DEFAULT_MAPPING_TAG
+            deep = True
+        else:
+            raise ConstructorError('unable to resolve tag')
+        return tag, deep
 
 Loader.add_constructor('!aggregate', Loader.construct_sls_aggregate)  # custom type
+Loader.add_constructor('!reset', Loader.construct_sls_reset)  # custom type
 
 Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
 Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
