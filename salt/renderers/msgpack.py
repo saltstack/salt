@@ -11,7 +11,6 @@ def render(msgpack_data, saltenv='base', sls='', **kws):
     a python dict.
 
     .. note:
-    
         This renderer is NOT intended for use in creating sls files by hand,
         but exists to allow for data backends to serialize the highdata
         structure in an easily transportable way. This is to allow for more
