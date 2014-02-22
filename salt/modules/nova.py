@@ -222,7 +222,7 @@ def volume_list(search_opts=None, profile=None):
     return volume
 
 
-def volume_show(volume_name, profile=None):
+def volume_show(name, profile=None):
     '''
     Create a block storage volume
 
@@ -241,7 +241,7 @@ def volume_show(volume_name, profile=None):
     '''
     nt_ks = _auth(profile, service_type='volume')
     volumes = volume_list(
-        search_opts={'display_name': volume_name},
+        search_opts={'display_name': name},
         profile=profile
     )
     try:
@@ -300,29 +300,6 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
 
 def volume_delete(name, profile=None):
     '''
-    Destroy the volume
-
-    name
-        Name of the volume
-
-    profile
-        Profile to build on
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nova.volume_delete myblock profile=openstack
-
-    '''
-    nt_ks = _auth(profile, service_type='volume')
-    volume = volume_show(name, profile)
-    response = nt_ks.volumes.delete(volume['id'])
-    return response
-
-
-def volume_delete(volume_name, profile=None):
-    '''
     Create a block storage volume
 
     name
@@ -339,19 +316,19 @@ def volume_delete(volume_name, profile=None):
 
     '''
     nt_ks = _auth(profile, service_type='volume')
-    volume = volume_show(volume_name, profile)
+    volume = volume_show(name, profile)
     response = nt_ks.volumes.delete(volume['id'])
     return response
 
 
-def volume_detach(volume_name,
+def volume_detach(name,
                   server_name,
                   profile=None,
                   timeout=300):
     '''
     Attach a block storage volume
 
-    volume_name
+    name
         Name of the new volume to attach
 
     server_name
@@ -368,7 +345,7 @@ def volume_detach(volume_name,
 
     '''
     nt_ks = _auth(profile)
-    volume = volume_show(volume_name, profile)
+    volume = volume_show(name, profile)
     server = server_by_name(server_name, profile)
     response = nt_ks.volumes.delete_server_volume(
         server['id'],
@@ -383,7 +360,7 @@ def volume_detach(volume_name,
             if response['status'] == 'available':
                 return response
         except Exception as exc:
-            log.debug('Volume is detaching: {0}'.format(volume_name))
+            log.debug('Volume is detaching: {0}'.format(name))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('Timed out after {0} seconds '
@@ -395,7 +372,7 @@ def volume_detach(volume_name,
             )
 
 
-def volume_attach(volume_name,
+def volume_attach(name,
                   server_name,
                   device='/dev/xvdb',
                   profile=None,
@@ -403,7 +380,7 @@ def volume_attach(volume_name,
     '''
     Attach a block storage volume
 
-    volume_name
+    name
         Name of the new volume to attach
 
     server_name
@@ -425,7 +402,7 @@ def volume_attach(volume_name,
 
     '''
     nt_ks = _auth(profile)
-    volume = volume_show(volume_name, profile)
+    volume = volume_show(name, profile)
     server = server_by_name(server_name, profile)
     response = nt_ks.volumes.create_server_volume(
         server['id'],
@@ -441,7 +418,7 @@ def volume_attach(volume_name,
             if response['status'] == 'in-use':
                 return response
         except Exception as exc:
-            log.debug('Volume is attaching: {0}'.format(volume_name))
+            log.debug('Volume is attaching: {0}'.format(name))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('Timed out after {0} seconds '
