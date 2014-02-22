@@ -45,6 +45,7 @@ header data =
     ti: Transaction ID (TID) Default 0
     tk: Transaction Kind (TrnsKind)
     pk: Packet Kind (PcktKind)
+    pl: Packet Length (PcktLen)
 
     dt: Datetime Stamp  (Datetime) Default 0
     oi: Order index (OrdrIndx)   Default 0
@@ -103,13 +104,15 @@ from ioflo.base.odicting import odict
 UDP_MAX_SAFE_PAYLOAD = 548  # IPV4 MTU 576 - udp headers 28
 # IPV6 MTU is 1280 but headers are bigger
 MAX_SEGMENT_SIZE = 1024 # assuming IPV6 capable equipment
+MAX_SEGMENT_COUNT = (2 ** 16) - 1
 
 RAET_PORT = 7530
 RAET_TEST_PORT = 7531
 DEFAULT_SRC_HOST = ''
 DEFAULT_DST_HOST = '127.0.0.1'
 
-MAX_HEAD_LEN = 255
+MAX_PACKET_SIZE = min(67107840, MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT) # assuming IPV6 capable equipment
+MAX_HEAD_SIZE = 255
 JSON_END = '\r\n\r\n'
 
 VERSIONS = odict([('0.1', 0)])
@@ -181,9 +184,12 @@ PACKET_DEFAULTS = odict([
                             ('sp', RAET_PORT),
                             ('dh', DEFAULT_DST_HOST),
                             ('dp', RAET_PORT),
+                            ('ri', 'RAET'),
+                            ('vn', 0),
+                            ('pk', 0),
+                            ('pl', 0),
                             ('hk', 0),
                             ('hl', 0),
-                            ('vn', 0),
                             ('sd', 0),
                             ('dd', 0),
                             ('cf', False),
@@ -191,7 +197,6 @@ PACKET_DEFAULTS = odict([
                             ('si', 0),
                             ('ti', 0),
                             ('tk', 0),
-                            ('pk', 0),
                             ('dt', 0),
                             ('oi', 0),
                             ('pf', False),
@@ -209,11 +214,13 @@ PACKET_DEFAULTS = odict([
                       ])
 
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
-                 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
+                 'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
+                 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
                  'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
                  'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
-HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
+HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
+               'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
                'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
