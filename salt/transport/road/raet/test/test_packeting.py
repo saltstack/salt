@@ -3,16 +3,18 @@
 Tests to try out packeting. Potentially ephemeral
 
 '''
-
+# pylint: disable=C0103
 
 from ioflo.base.odicting import odict
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                     devicing, transacting, stacking)
-
+                                      devicing, transacting, stacking)
 
 
 def test():
+    '''
+    Test packeting.
+    '''
     data = odict(hk=1, bk=raeting.bodyKinds.json)
     body = odict(msg='Hello Raet World', extra='what is this')
     packet0 = packeting.TxPacket(embody=body, data=data, )
@@ -55,9 +57,9 @@ def test():
     minionPubKeyHex = privateer.pubhex
 
     #master stack
-    device = devicing.LocalDevice(   did=1,
-                                     signkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
+    device = devicing.LocalDevice(did=1,
+                                  signkey=masterSignKeyHex,
+                                  prikey=masterPriKeyHex)
     stack0 = stacking.StackUdp(device=device)
 
     remote1 = devicing.RemoteDevice(  did=2,
@@ -182,8 +184,6 @@ def test():
         print segmentage.body.packed
         print segmentage.body.data
         print segmentage.body.packed == packet0.body.packed
-
-
 
 if __name__ == "__main__":
     test()
