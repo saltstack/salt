@@ -139,8 +139,8 @@ class StackUdp(object):
         Safely add transaction at index If not already there
         '''
         self.transactions[index] = transaction
-        print "Added {0} transaction to {1} at '{2}'".format(
-                transaction.__class__.__name__, self.name, index)
+        console.verbose( "Added {0} transaction to {1} at '{2}'".format(
+                transaction.__class__.__name__, self.name, index))
 
     def removeTransaction(self, index, transaction=None):
         '''
@@ -190,7 +190,7 @@ class StackUdp(object):
         while self.txMsgs:
             body, ddid = self.txMsgs.popleft() # duple (body dict, destination did)
             self.message(body, ddid)
-            print "{0} sending\n{1}".format(self.name, body)
+            console.verbose("{0} sending\n{1}".format(self.name, body))
 
     def fetchParseUdpRx(self):
         '''
@@ -204,7 +204,7 @@ class StackUdp(object):
         except IndexError:
             return None
 
-        print "{0} received packet\n{1}".format(self.name, raw)
+        console.verbose("{0} received packet\n{1}".format(self.name, raw))
 
         packet = packeting.RxPacket(stack=self, packed=raw)
         try:
@@ -232,7 +232,7 @@ class StackUdp(object):
         '''
         try:
             packet.parseInner()
-            print "{0} received packet body\n{1}".format(self.name, packet.body.data)
+            console.verbose("{0} received packet body\n{1}".format(self.name, packet.body.data))
         except raeting.PacketError as ex:
             print ex
             return None
@@ -247,8 +247,8 @@ class StackUdp(object):
         if not packet:
             return
 
-        print "{0} received packet data\n{1}".format(self.name, packet.data)
-        print "{0} received packet index = '{1}'".format(self.name, packet.index)
+        console.verbose("{0} received packet data\n{1}".format(self.name, packet.data))
+        console.verbose("{0} received packet index = '{1}'".format(self.name, packet.index))
 
         trans = self.transactions.get(packet.index, None)
         if trans:

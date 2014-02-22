@@ -927,8 +927,8 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        print "segment count =", self.rxPacket.data['sc']
-        print "tid", self.tid
+        console.verbose("segment count = {0} tid={1}".format(
+                 self.rxPacket.data['sc'], self.tid))
         if self.rxPacket.segmentive:
             if not self.segmentage:
                 self.segmentage = packeting.RxPacket(stack=self.stack,
