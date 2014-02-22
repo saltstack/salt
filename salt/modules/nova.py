@@ -160,9 +160,22 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
             )
 
 
-def _server_by_name(server_name, profile=None):
+def server_by_name(name, profile=None):
     '''
     Returns information about one server based on the name
+
+    name
+        name of the server
+
+    profile
+        profile to use
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.server_by_name test.example.com profile=openstack
     '''
     servers = server_list(profile=profile)
     return servers[server_name]
@@ -226,10 +239,16 @@ def volume_show(volume_name, profile=None):
 
     '''
     nt_ks = _auth(profile, service_type='volume')
-    volume = volume_list(
+    volumes = volume_list(
         search_opts={'display_name': volume_name},
         profile=profile
-    )[0]
+    )
+    try:
+        volume = volumes[0]
+    except IndexError:
+        # volume doesn't exist
+        return False
+
     response = {'name': volume.display_name,
                 'size': volume.size,
                 'id': volume.id,
@@ -349,7 +368,7 @@ def volume_detach(volume_name,
     '''
     nt_ks = _auth(profile)
     volume = volume_show(volume_name, profile)
-    server = _server_by_name(server_name, profile)
+    server = server_by_name(server_name, profile)
     response = nt_ks.volumes.delete_server_volume(
         server['id'],
         volume['attachments'][0]['id']
@@ -406,7 +425,7 @@ def volume_attach(volume_name,
     '''
     nt_ks = _auth(profile)
     volume = volume_show(volume_name, profile)
-    server = _server_by_name(server_name, profile)
+    server = server_by_name(server_name, profile)
     response = nt_ks.volumes.create_server_volume(
         server['id'],
         volume['id'],
