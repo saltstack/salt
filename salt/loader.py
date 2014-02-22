@@ -268,15 +268,17 @@ def ssh_wrapper(opts, functions=None):
     return load.gen_functions(pack)
 
 
-def render(opts, functions):
+def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
     load = _create_loader(
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+            'value': functions}]
+    if states:
+        pack.append({'name': '__states__', 'value': states})
     rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
