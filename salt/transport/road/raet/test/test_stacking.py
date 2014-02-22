@@ -33,12 +33,14 @@ def test():
 
     #master stack
     device = devicing.LocalDevice(   did=1,
+                                     name='master',
                                      signkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(device=device)
 
     #minion stack
     device = devicing.LocalDevice(   did=0,
+                                     name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
@@ -67,12 +69,14 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     for device in stack0.devices.values():
         print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     for device in stack1.devices.values():
             print "Remote Device {0} joined= {1}".format(device.did, device.joined)
@@ -115,12 +119,14 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     for device in stack0.devices.values():
         print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     for device in stack1.devices.values():
             print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
@@ -148,11 +154,13 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
@@ -178,11 +186,13 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
