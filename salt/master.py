@@ -1729,24 +1729,11 @@ class ClearFuncs(object):
         with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
-
                 if line.startswith('#'):
                     continue
-
-                if line == keyid:
-                    return True
-                if fnmatch.fnmatch(keyid, line):
-                    return True
-                try:
-                    if re.match(r'\A{0}\Z'.format(line), keyid):
+                else:
+                    if salt.utils.expr_match(keyid, line):
                         return True
-                except re.error:
-                    log.warn(
-                        '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(line, signing_file)
-                    )
-                    continue
-
         return False
 
     def __check_autoreject(self, keyid):
