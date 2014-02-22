@@ -65,9 +65,6 @@ class TxHead(Head):
         '''
         self.packed = ''
         data = self.packet.data  # for speed
-        #if not self.packet.segmentive: #only set these if packet is not a segment
-            #data['bl'] = self.packet.body.size
-            #data['cl'] = self.packet.coat.size
         data['fl'] = self.packet.foot.size
         data['fg'] = "{:02x}".format(self.packFlags())
 
@@ -142,9 +139,9 @@ class RxHead(Head):
                 raise raeting.PacketError(emsg)
             data['hl'] = hl
             pl = int(data['pl'], 16)
-            #if pl != self.packet.size:
-                #emsg = 'Actual packet length does not match head field value.'
-                #raise raeting.PacketError(emsg)
+            if pl != self.packet.size:
+                emsg = 'Actual packet length does not match head field value.'
+                raise raeting.PacketError(emsg)
             data['pl'] = pl
 
         else:  # notify unrecognizible packet head
@@ -207,11 +204,6 @@ class RxBody(Body):
             self.packet.data['bk']= raeting.bodyKinds.unknown
             emsg = "Unrecognizible packet body."
             raise raeting.PacketError(emsg)
-
-        #if self.size != self.packet.data['bl']:
-            #emsg = ("Mismatching body size '{0}' and data length '{1}'"
-                   #"".format(self.size, self.packet.data['bl']))
-            #raise raeting.PacketError(emsg)
 
         self.data = odict()
 
@@ -369,13 +361,8 @@ class RxFoot(Foot):
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
 
-            #if self.packet.coat.size:
-                #stuff = self.packet.coat.packed
-            #else:
-                #stuff = self.packet.body.packed
             front = self.packet.packed[:self.packet.size - fl]
 
-            #msg = "".join([self.packet.head.packed, stuff, blank])
             msg = "".join([front, blank])
             if not self.packet.verify(signature, msg):
                 emsg = "Failed verification"
@@ -505,11 +492,11 @@ class TxPacket(Packet):
         fullsize = self.coat.size
         full = self.coat.packed
 
-        extra = 0
+        extrasize = 0
         if self.data['hk'] == raeting.headKinds.json:
-            extra = 22 # extra header size as a result of segmentation
+            extrasize = 32 # extra header size as a result of segmentation
 
-        hotelsize = self.head.size + extra + self.foot.size
+        hotelsize = self.head.size + extrasize + self.foot.size
         haulsize = raeting.MAX_SEGMENT_SIZE - hotelsize
 
         segcount = (fullsize // haulsize) + (1 if fullsize % haulsize else 0)
@@ -521,7 +508,7 @@ class TxPacket(Packet):
 
             segment = TxPacket( stack=self.stack,
                                 data=self.data)
-            segment.data.update(sn=i, sc=segcount)
+            segment.data.update(sn=i, sc=segcount, sl=fullsize, sf=True)
             segment.coat.packed = segment.body.packed = haul
             segment.foot.pack()
             segment.head.pack()
@@ -569,34 +556,6 @@ class RxPacket(Packet):
         '''
         remote = self.stack.devices[self.data['sd']]
         return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
-
-    def unpack(self, packed=None):
-        '''
-        Unpacks the body, and coat parts of .packed
-        Assumes that the lengths of the parts are valid in .data as would be
-        the case after successfully parsing the head section
-        '''
-        hl = self.data['hl']
-        cl = self.data['cl']
-        bl = self.data['bl']
-        fl = self.data['fl']
-
-        ck = self.data['ck']
-
-        if ck == raeting.coatKinds.nada:
-            pl = hl + bl + fl
-            if self.size != pl:
-                emsg = ("Packet length '{0}' does not equal sum of the parts"
-                              " '{1}'".format(self.size, pl))
-                raise raeting.PacketError(emsg)
-            self.body.packed = self.packed[hl:hl+bl]
-        else:
-            pl = hl + cl + fl
-            if self.size != pl:
-                emsg = ("Packet length '{0}' does not equal sum of the parts"
-                              " '{1}'".format(self.size, pl))
-                raise raeting.PacketError(emsg)
-            self.coat.packed = self.packed[hl:hl+cl] #coat.parse loads body.packed
 
     def parse(self, packed=None):
         '''
@@ -650,38 +609,6 @@ class RxPacket(Packet):
         fl = self.data['fl']
         self.coat.packed = self.packed[hl:self.size - fl] #coat.parse loads body.packed
 
-        #ck = self.data['ck']
-
-        #if ck == raeting.coatKinds.nada:
-            #self.body.packed = self.packed[hl:self.size - fl]
-        #else:
-            #self.coat.packed = self.packed[hl:self.size - fl] #coat.parse loads body.packed
-
-    def validateLengths(self):
-        '''
-        Validate that the lengths add up
-        '''
-        hl = self.data['hl']
-        cl = self.data['cl']
-        bl = self.data['bl']
-        fl = self.data['fl']
-
-        ck = self.data['ck']
-
-        if ck == raeting.coatKinds.nada:
-            pl = hl + bl + fl
-            if self.size != pl:
-                emsg = ("Packet length '{0}' does not equal sum of the parts"
-                              " '{1}'".format(self.size, pl))
-                raise raeting.PacketError(emsg)
-        else:
-            pl = hl + cl + fl
-            if self.size != pl:
-                emsg = ("Packet length '{0}' does not equal sum of the parts"
-                              " '{1}'".format(self.size, pl))
-                raise raeting.PacketError(emsg)
-
-
     def parseInner(self):
         '''
         Assumes the head as already been parsed so self.data is valid
@@ -726,4 +653,11 @@ class RxPacket(Packet):
             hauls.append(haul)
         packed = "".join(hauls)
         self.coat.packed = packed
+        sl = self.data['sl']
+        if self.coat.size != sl:
+            emsg = ("Full segmented payload length '{0}' does not equal head field"
+                                          " '{1}'".format(self.cost.size, sl))
+            raise raeting.PacketError(emsg)
+
+
 

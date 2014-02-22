@@ -202,6 +202,7 @@ PACKET_DEFAULTS = odict([
                             ('pf', False),
                             ('sn', 0),
                             ('sc', 1),
+                            ('sl', 0),
                             ('sf', False),
                             ('af', False),
                             ('bk', 0),
@@ -216,12 +217,12 @@ PACKET_DEFAULTS = odict([
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                  'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
-                 'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
+                 'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
                  'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
-               'dt', 'oi', 'pf', 'sn', 'sc', 'sf', 'af',
+               'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
 PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']
