@@ -33,12 +33,14 @@ def test():
 
     #master stack
     device = devicing.LocalDevice(   did=1,
+                                     name='master',
                                      signkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(device=device)
 
     #minion stack
     device = devicing.LocalDevice(   did=0,
+                                     name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
                                      signkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
@@ -67,12 +69,14 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     for device in stack0.devices.values():
         print "Remote Device {0} joined= {1}".format(device.did, device.joined)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     for device in stack1.devices.values():
             print "Remote Device {0} joined= {1}".format(device.did, device.joined)
@@ -115,12 +119,14 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     for device in stack0.devices.values():
         print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     for device in stack1.devices.values():
             print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
@@ -148,13 +154,15 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.udpRxMsgs)
+    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.udpRxMsgs)
+    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
     print "\n********* Message Transaction Master to Minion **********"
     body = odict(what="This is a message to the minion. Get to Work", extra="Fix the fence.")
@@ -178,25 +186,27 @@ def test():
 
     print "{0} did={1}".format(stack0.name, stack0.device.did)
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.udpRxMsgs)
+    print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.udpRxMsgs)
+    print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
-    print "\n********* Message Transaction Minion to Master **********"
+    print "\n********* Message Transactions Both Ways **********"
 
-    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="fix me"), None))
-    stack1.udpTxMsgs.append((odict(house="Mama mia2", queue="help me"), None))
-    stack1.udpTxMsgs.append((odict(house="Mama mia3", queue="stop me"), None))
-    stack1.udpTxMsgs.append((odict(house="Mama mia4", queue="run me"), None))
+    stack1.txMsgs.append((odict(house="Mama mia1", queue="fix me"), None))
+    stack1.txMsgs.append((odict(house="Mama mia2", queue="help me"), None))
+    stack1.txMsgs.append((odict(house="Mama mia3", queue="stop me"), None))
+    stack1.txMsgs.append((odict(house="Mama mia4", queue="run me"), None))
 
-    stack0.udpTxMsgs.append((odict(house="Papa pia1", queue="fix me"), None))
-    stack0.udpTxMsgs.append((odict(house="Papa pia2", queue="help me"), None))
-    stack0.udpTxMsgs.append((odict(house="Papa pia3", queue="stop me"), None))
-    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="run me"), None))
+    stack0.txMsgs.append((odict(house="Papa pia1", queue="fix me"), None))
+    stack0.txMsgs.append((odict(house="Papa pia2", queue="help me"), None))
+    stack0.txMsgs.append((odict(house="Papa pia3", queue="stop me"), None))
+    stack0.txMsgs.append((odict(house="Papa pia4", queue="run me"), None))
 
     #segmented packets
     stuff = []
@@ -204,8 +214,8 @@ def test():
         stuff.append(str(i).rjust(4, " "))
     stuff = "".join(stuff)
 
-    stack1.udpTxMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
-    stack0.udpTxMsgs.append((odict(house="Papa pia4", queue="gig stuff", stuff=stuff), None))
+    stack1.txMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
+    stack0.txMsgs.append((odict(house="Papa pia4", queue="gig stuff", stuff=stuff), None))
 
     stack1.serviceUdpTxMsg()
     stack0.serviceUdpTxMsg()
@@ -234,14 +244,14 @@ def test():
     print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages".format(stack0.name)
-    for msg in stack0.udpRxMsgs:
+    for msg in stack0.rxMsgs:
         print msg
     print
     print "{0} did={1}".format(stack1.name, stack1.device.did)
     print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
-    for msg in stack1.udpRxMsgs:
+    for msg in stack1.rxMsgs:
             print msg
 
 

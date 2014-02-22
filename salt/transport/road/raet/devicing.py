@@ -23,7 +23,7 @@ class Device(object):
     '''
     Did = 2 # class attribute
 
-    def __init__(self, stack=None, did=None, sid=0, tid=0,
+    def __init__(self, stack=None, did=None, name="", sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
         '''
         Setup Device instance
@@ -37,6 +37,7 @@ class Device(object):
             else:
                 did = 0
         self.did = did # device ID
+        self.name = name or "device{0}".format(self.did)
 
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID

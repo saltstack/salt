@@ -47,7 +47,7 @@ class Transaction(object):
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
-        self.timer = aiding.Timer(duration=self.timeout)
+        self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
         if start: #enables synchronized starts not just current time
             self.timer.restart(start=start)
 
@@ -209,7 +209,8 @@ class Joiner(Initiator):
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        body = odict([('verhex', self.stack.device.signer.verhex),
+        body = odict([('name', self.stack.device.name),
+                      ('verhex', self.stack.device.signer.verhex),
                       ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.request,
@@ -253,6 +254,11 @@ class Joiner(Initiator):
             emsg = "Missing remote device id in accept packet"
             raise raeting.TransactionError(emsg)
 
+        name = body.get('name')
+        if not name:
+            emsg = "Missing remote name in accept packet"
+            raise raeting.TransactionError(emsg)
+
         verhex = body.get('verhex')
         if not verhex:
             emsg = "Missing remote verifier key in accept packet"
@@ -270,7 +276,9 @@ class Joiner(Initiator):
         remote.verfer = nacling.Verifier(key=verhex)
         remote.pubber = nacling.Publican(key=pubhex)
         if remote.did != rdid: #move remote device to new index
-            self.stack.moveRemoteDevice(remote.did, rdid)
+            self.stack.moveRemoteDevice(old=remote.did, new=rdid)
+        if remote.name != name: # rename remote device to new name
+            self.stack.renameRemoteDevice(old=remote.name, new=name)
         remote.joined = True #accepted
         remote.nextSid()
         self.remove(index)
@@ -318,14 +326,10 @@ class Joinent(Correspondent):
 
         # need to add search for existing device with same host,port address
 
-        remote = devicing.RemoteDevice(stack=self.stack,
-                              host=data['sh'],
-                              port=data['sp'],
-                              rsid=self.sid,
-                              rtid=self.tid, )
-        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
-
-        self.rdid = remote.did
+        name = body.get('name')
+        if not name:
+            emsg = "Missing remote name in join packet"
+            raise raeting.TransactionError(emsg)
 
         verhex = body.get('verhex')
         if not verhex:
@@ -337,8 +341,22 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        remote.verfer = nacling.Verifier(key=verhex)
-        remote.pubber = nacling.Publican(key=pubhex)
+        if name in self.stack.dids:
+            emsg = "Another device with name  already exists"
+            raise raeting.TransactionError(emsg)
+
+        remote = devicing.RemoteDevice( stack=self.stack,
+                                        name=name,
+                                        host=data['sh'],
+                                        port=data['sp'],
+                                        verkey=verhex,
+                                        pubkey=pubhex,
+                                        rsid=self.sid,
+                                        rtid=self.tid, )
+        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
+        self.rdid = remote.did # auto generated at instance creation above
+        #remote.verfer = nacling.Verifier(key=verhex)
+        #remote.pubber = nacling.Publican(key=pubhex)
 
         self.ackJoin()
 
@@ -379,6 +397,7 @@ class Joinent(Correspondent):
 
         body = odict([ ('ldid', self.rdid),
                        ('rdid', self.stack.device.did),
+                       ('name', self.stack.device.name),
                        ('verhex', self.stack.device.signer.verhex),
                        ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
@@ -908,8 +927,8 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        print "segment count =", self.rxPacket.data['sc']
-        print "tid", self.tid
+        console.verbose("segment count = {0} tid={1}".format(
+                 self.rxPacket.data['sc'], self.tid))
         if self.rxPacket.segmentive:
             if not self.segmentage:
                 self.segmentage = packeting.RxPacket(stack=self.stack,
@@ -926,7 +945,7 @@ class Messengent(Correspondent):
                 return
             body = self.rxPacket.body.data
 
-        self.stack.udpRxMsgs.append(body)
+        self.stack.rxMsgs.append(body)
         self.ackMessage()
 
     def ackMessage(self):
