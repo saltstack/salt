@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for handling OpenStack Nova calls.
+Module for handling OpenStack Nova calls
 
 :depends:   - novaclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
@@ -162,6 +162,8 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
 
 def server_by_name(name, profile=None):
     '''
+    .. versionadded:: Helium
+
     Returns information about one server based on the name
 
     name
@@ -177,8 +179,7 @@ def server_by_name(name, profile=None):
 
         salt '*' nova.server_by_name test.example.com profile=openstack
     '''
-    servers = server_list(profile=profile)
-    return servers[server_name]
+    return server_list(profile=profile).get(name, {})
 
 
 def _volume_get(volume_id, profile=None):
