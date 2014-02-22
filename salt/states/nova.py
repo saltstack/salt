@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Using states to manage nova
-=============================================
+States to manage OpenStack Nova
+===============================
 
+.. versionadded:: Helium
 
 Use this minion to do things with nova:
 
