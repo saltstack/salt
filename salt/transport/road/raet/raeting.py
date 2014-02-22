@@ -31,10 +31,12 @@ Header encoding.
 
 header data =
 {
+    ri: raet id Default 'RAET'
+    vn: Version (Version) Default 0
+    pk: Packet Kind (PcktKind)
+    pl: Packet Length (PcktLen)
     hk: Header kind   (HeadKind) Default 0
     hl: Header length (HeadLen) Default 0
-
-    vn: Version (Version) Default 0
 
     sd: Source Device ID (SDID)
     dd: Destination Device ID (DDID)
@@ -44,8 +46,7 @@ header data =
     si: Session ID (SID) Default 0
     ti: Transaction ID (TID) Default 0
     tk: Transaction Kind (TrnsKind)
-    pk: Packet Kind (PcktKind)
-    pl: Packet Length (PcktLen)
+
 
     dt: Datetime Stamp  (Datetime) Default 0
     oi: Order index (OrdrIndx)   Default 0
@@ -55,18 +56,13 @@ header data =
 
     sn: Segment Number (SgmtNum) Default 0
     sc: Segment Count  (SgmtCnt) Default 1
-
     sf: Segment Flag  (SgmtFlag) Default 0
         This packet is part of a segmented message
     af: All Flag (AllFlag) Default 0
         Resend all segments not just one
 
     bk: Body kind   (BodyKind) Default 0
-    bl: Body length (BodyLen)  Default 0
-
     ck: Coat kind   (CoatKind) Default 0
-    cl: Coat length (CoatLen)  Default 0
-
     fk: Footer kind   (FootKind) Default 0
     fl: Footer length (FootLen) Default 0
 
@@ -206,9 +202,7 @@ PACKET_DEFAULTS = odict([
                             ('sf', False),
                             ('af', False),
                             ('bk', 0),
-                            ('bl', 0),
                             ('ck', 0),
-                            ('cl', 0),
                             ('fk', 0),
                             ('fl', 0),
                             ('fg', '00'),
@@ -218,7 +212,7 @@ PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                  'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
                  'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
-                 'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
+                 'bk', 'ck', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
