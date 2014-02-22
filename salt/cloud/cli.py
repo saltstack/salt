@@ -238,7 +238,7 @@ class SaltCloud(parsers.SaltCloudParser):
             else:
                 matching = mapper.get_running_by_names(
                     self.config.get('names', ()),
-                    profile = self.options.profile
+                    profile=self.options.profile
                 )
 
             if not matching:
