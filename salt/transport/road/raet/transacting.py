@@ -47,7 +47,7 @@ class Transaction(object):
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
-        self.timer = aiding.Timer(duration=self.timeout)
+        self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
         if start: #enables synchronized starts not just current time
             self.timer.restart(start=start)
 
@@ -926,7 +926,7 @@ class Messengent(Correspondent):
                 return
             body = self.rxPacket.body.data
 
-        self.stack.udpRxMsgs.append(body)
+        self.stack.rxMsgs.append(body)
         self.ackMessage()
 
     def ackMessage(self):

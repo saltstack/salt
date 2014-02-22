@@ -12,6 +12,7 @@ from collections import deque
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
+from ioflo.base import storing
 
 from . import raeting
 from . import nacling
@@ -35,11 +36,12 @@ class StackUdp(object):
     def __init__(self,
                  name='',
                  version=raeting.VERSION,
+                 store=None,
                  device=None,
                  did=None,
                  ha=("", raeting.RAET_PORT),
-                 udpRxMsgs = None,
-                 udpTxMsgs = None,
+                 rxMsgs = None,
+                 txMsgs = None,
                  udpRxes = None,
                  udpTxes = None,
                  ):
@@ -51,12 +53,13 @@ class StackUdp(object):
             StackUdp.Count += 1
         self.name = name
         self.version = version
+        self.store = store or storing.Store(stamp=0.0)
         self.devices = odict() # remote devices attached to this stack
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.udpRxMsgs = udpRxMsgs or deque() # messages received
-        self.udpTxMsgs = udpTxMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
+        self.rxMsgs = rxMsgs or deque() # messages received
+        self.txMsgs = txMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
         self.udpRxes = udpRxes or deque() # udp packets received
         self.udpTxes = udpTxes or deque() # udp packet to transmit
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
@@ -146,8 +149,8 @@ class StackUdp(object):
         '''
         Service .udpTxMsgs queue of outgoint udp messages for message transactions
         '''
-        while self.udpTxMsgs:
-            body, ddid = self.udpTxMsgs.popleft() # duple (body dict, destination did)
+        while self.txMsgs:
+            body, ddid = self.txMsgs.popleft() # duple (body dict, destination did)
             self.message(body, ddid)
             print "{0} sending\n{1}".format(self.name, body)
 
