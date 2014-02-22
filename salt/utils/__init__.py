@@ -1074,6 +1074,25 @@ def flopen(*args, **kwargs):
                 fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
 
 
+def expr_match(expr, line):
+    '''
+    Evaluate a line of text against an expression. First try a full-string
+    match, next try globbing, and then try to match assuming expr is a regular
+    expression. Originally designed to match minion IDs for
+    whitelists/blacklists.
+    '''
+    if line == expr:
+        return True
+    if fnmatch.fnmatch(line, expr):
+        return True
+    try:
+        if re.match(r'\A{0}\Z'.format(expr), line):
+            return True
+    except re.error:
+        pass
+    return False
+
+
 def subdict_match(data, expr, delim=':', regex_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
