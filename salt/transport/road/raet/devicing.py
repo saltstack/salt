@@ -111,12 +111,12 @@ class RemoteDevice(Device):
     RAET protocol endpoint remote device object
     Maintains verifier for verifying signatures and publican for encrypt/decript
     '''
-    def __init__(self, verikey=None, pubkey=None, rsid=0, rtid=0, **kwa):
+    def __init__(self, verkey=None, pubkey=None, rsid=0, rtid=0, **kwa):
         '''
         Setup Device instance
 
-        verikey is either nacl VerifyKey or hex encoded key
-        pubkey is either nacl PublicKey or hex encoded key
+        verkey is either nacl VerifyKey or raw or hex encoded key
+        pubkey is either nacl PublicKey or raw or hex encoded key
         '''
         if 'host' not in kwa and 'ha' not in kwa:
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
@@ -125,7 +125,7 @@ class RemoteDevice(Device):
         self.allowed = None
         self.privee = nacling.Privateer() # short term key manager
         self.publee = nacling.Publican() # correspondent short term key  manager
-        self.verfer = nacling.Verifier(verikey) # correspondent verify key manager
+        self.verfer = nacling.Verifier(verkey) # correspondent verify key manager
         self.pubber = nacling.Publican(pubkey) # correspondent long term key manager
 
         self.rsid = rsid # last sid received from remote when RmtFlag is True
