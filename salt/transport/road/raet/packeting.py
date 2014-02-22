@@ -481,7 +481,7 @@ class TxPacket(Packet):
         if self.size <= raeting.MAX_SEGMENT_SIZE:
             self.sign()
         else:
-            print "****Segmentize**** packet size = {0}".format(self.size)
+            #print "****Segmentize**** packet size = {0}".format(self.size)
             self.segmentize()
 
     def segmentize(self):

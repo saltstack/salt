@@ -196,7 +196,7 @@ def test():
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
-    print "\n********* Message Transaction Minion to Master **********"
+    print "\n********* Message Transactions Both Ways **********"
 
     stack1.txMsgs.append((odict(house="Mama mia1", queue="fix me"), None))
     stack1.txMsgs.append((odict(house="Mama mia2", queue="help me"), None))
