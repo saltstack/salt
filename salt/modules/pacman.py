@@ -335,9 +335,9 @@ def install(name=None,
             return {}
 
         if salt.utils.is_true(refresh):
-            options += '-y'
+            options.append('-y')
         if salt.utils.is_true(sysupgrade):
-            options += '-u'
+            options.append('-u')
 
         cmd = 'pacman -S "{0}"'.format('" "'.join(options+targets))
 

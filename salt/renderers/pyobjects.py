@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-:maintainer: Evan Borgstrom <evan@borgstrom.ca>
-
 Python renderer that includes a Pythonic Object based interface
+
+:maintainer: Evan Borgstrom <evan@borgstrom.ca>
 
 Let's take a look at how you use pyobjects in a state file. Here's a quick
 example that ensures the ``/tmp`` directory is in the correct state.
@@ -20,12 +20,24 @@ write our state data using an object based interface that should feel at home
 to python developers. You can import any module and do anything that you'd
 like (with caution, importing sqlalchemy, django or other large frameworks has
 not been tested yet). Using the pyobjects renderer is exactly the same as
-using the built-in Python renderer with the exception that pyobjects takes
-care of creating an object for each of the available states on the minion.
-Each state is represented by an object that is the capitalized version of it's
-name (ie. ``File``, ``Service``, ``User``, etc), and these objects expose all
-of their available state functions (ie. ``File.managed``,  ``Service.running``,
-etc).
+using the built-in Python renderer with the exception that pyobjects provides
+you with an object based interface for generating state data.
+
+Creating state data
+^^^^^^^^^^^^^^^^^^^
+Pyobjects takes care of creating an object for each of the available states on
+the minion. Each state is represented by an object that is the CamelCase
+version of it's name (ie. ``File``, ``Service``, ``User``, etc), and these
+objects expose all of their available state functions (ie. ``File.managed``,
+``Service.running``, etc).
+
+The name of the state is split based upon underscores (``_``), then each part
+is capitalized and finally the parts are joined back together.
+
+Some examples:
+
+* ``postgres_user`` becomes ``PostgresUser``
+* ``ssh_known_hosts`` becomes ``SshKnownHosts``
 
 Context Managers and requisites
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -186,16 +198,19 @@ def render(template, saltenv='base', sls='',
     for mod in _st_funcs:
         _st_locals = {}
         _st_funcs[mod].sort()
-        mod_upper = mod.capitalize()
+        mod_camel = ''.join([
+            part.capitalize()
+            for part in mod.split('_')
+        ])
         mod_cmd = "%s = StateFactory('%s', registry=_registry, valid_funcs=['%s'])" % (
-            mod_upper, mod,
+            mod_camel, mod,
             "','".join(_st_funcs[mod])
         )
         if sys.version > 3:
             exec(mod_cmd, _st_globals, _st_locals)
         else:
             exec mod_cmd in _st_globals, _st_locals
-        _globals[mod_upper] = _st_locals[mod_upper]
+        _globals[mod_camel] = _st_locals[mod_camel]
 
     # add our Include and Extend functions
     _globals['include'] = _registry.include
