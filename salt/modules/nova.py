@@ -300,10 +300,10 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
 
 def volume_delete(name, profile=None):
     '''
-    Create a block storage volume
+    Destroy the volume
 
     name
-        Name of the new volume (must be first)
+        Name of the volume
 
     profile
         Profile to build on
@@ -312,7 +312,7 @@ def volume_delete(name, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.delete myblock profile=openstack
+        salt '*' nova.volume_delete myblock profile=openstack
 
     '''
     nt_ks = _auth(profile, service_type='volume')
