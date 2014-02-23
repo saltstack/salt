@@ -94,7 +94,7 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
-    cmd_kw = {'arg': [], 'ret': ret, 'timeout': timeout}
+    cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
            'changes': {},
@@ -136,10 +136,12 @@ def state(
         ret['comment'] = 'No highstate or sls specified, no execution made'
         ret['result'] = False
         return ret
+
     if test:
-        cmd_kw['arg'].append('test={0}'.format(test))
+        cmd_kw['kwarg']['test'] = test
     if __env__ != 'base':
-        cmd_kw['arg'].append('saltenv={0}'.format(__env__))
+        cmd_kw['kwarg']['saltenv'] = __env__
+
     if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
