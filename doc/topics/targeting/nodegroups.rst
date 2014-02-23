@@ -23,9 +23,9 @@ nodegroups. Here's an example nodegroup configuration within
 
 .. note::
 
-    The 'L' within group1 is matching a list of minions, while the 'G' in
-    group2 is matching specific grains. See the
-    :doc:`compound matchers <compound>` documentation for more details.
+    The ``L`` within group1 is matching a list of minions, while the ``G`` in
+    group2 is matching specific grains. See the :doc:`compound matchers
+    <compound>` documentation for more details.
 
 To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
@@ -33,8 +33,8 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
     salt -N group1 test.ping
 
-To match in your :term:`top file`, make sure to put ``- match: nodegroup`` on
-the line directly following the nodegroup name.
+To match a nodegroup in your :term:`top file`, make sure to put ``- match:
+nodegroup`` on the line directly following the nodegroup name.
 
 .. code-block:: yaml
 

@@ -106,7 +106,9 @@ same way as in the above example, only without a top-level ``grains:`` key:
 Matching Grains in the Top File
 ===============================
 
-With correctly setup grains on the Minion, the Top file used in Pillar or during Highstate can be made really efficient.  Like for example, you could do:
+With correctly configured grains on the Minion, the :term:`top file` used in
+Pillar or during Highstate can be made very efficient. For example, consider
+the following configuration:
 
 .. code-block:: yaml
 
@@ -126,17 +128,28 @@ With correctly setup grains on the Minion, the Top file used in Pillar or during
         - match: grain
         - lb
         
-For this example to work, you would need the grain ``node_type`` and the correct value to match on.  This simple example is nice, but too much of the code is similar.  To go one step further, we can place some Jinja template code into the Top file.
+For this example to work, you would need to have defined the grain
+``node_type`` for the minions you wish to match. This simple example is nice,
+but too much of the code is similar. To go one step further, Jinja templating
+can be used to simplify the the :term:`top file`.
 
 .. code-block:: yaml
 
-    {% set self = grains['node_type'] %}
+    {% set node_type = salt['grains.get']('node_type', '') %}
 
+    {% if node_type %}
         'node_type:{{ self }}':
             - match: grain
             - {{ self }}
+    {% endif %}
 
-The Jinja code simplified the Top file, and allowed SaltStack to work its magic.
+Using Jinja templating, only one match entry needs to be defined.
+
+.. note::
+
+    The example above uses the :mod:`grains.get <salt.modules.grains.get>`
+    function to account for minions which do not have the ``node_type`` grain
+    set.
 
 .. _writing-grains:
 
