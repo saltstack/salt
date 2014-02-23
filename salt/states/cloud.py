@@ -14,11 +14,7 @@ Use this minion to spin up a cloud instance:
         my-ec2-config
 '''
 
-# Import python libs
 import pprint
-
-# Import salt libs
-import salt._compat
 
 
 def __virtual__():
@@ -101,69 +97,30 @@ def absent(name):
            'changes': {},
            'result': None,
            'comment': ''}
-    if isinstance(name, salt._compat.string_types):
-        name = [minion_id.strip() for minion_id in name.split(',')]
-    elif not isinstance(name, (list, tuple)):
-        ret.setdefault('warnings', []).append(
-            '\'name\' needs to be a string, a comma separated list of names '
-            'or an actual list'
-        )
-        ret['result'] = False
-        ret['comment'] = 'No VM(s) were destroyed'
+    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    if not instance:
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} already absent'.format(name)
         return ret
-
-    # Make the variable plural to ease on code understanding
-    names = name
-    absent = set()
-    destroy = set()
-    failure = False
-    for name in names:
-        instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-        if not instance:
-            absent.add(name)
-            continue
-        destroy.add(name)
-
     if __opts__['test']:
-        ret['comment'] = ''
-        if destroy:
-            if len(destroy) > 1:
-                ret['comment'] += 'Instances {0} need to be destroyed.'
-            else:
-                ret['comment'] += 'Instance {0} needs to be destroyed.'
-            ret['comment'] = ret['comment'].format(', '.join(destroy))
-        if absent:
-            if len(absent) > 1:
-                ret['comment'] += ' Instances {0} were already absent.'
-            else:
-                ret['comment'] += ' Instance {0} was already absent.'
-            ret['comment'] = ret['comment'].format(', '.join(absent))
+        ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
         return ret
-
-    destroyed = set()
-    failures = {}
-    for name in destroy:
-        info = __salt__['cloud.destroy'](name)
-        if info and not 'Error' in info:
-            ret['changes'][name] = info
-            destroyed.add(name)
-        elif 'Error' in info:
-            failures[name] = info['Error']
-        else:
-            failures[name] = 'Failed to destroy instance {0}'.format(name)
-
-    if failures:
+    info = __salt__['cloud.destroy'](name)
+    if info and not 'Error' in info:
+        ret['changes'] = info
+        ret['result'] = True
+        ret['comment'] = ('Destroyed instance {0}').format(
+            name,
+        )
+    elif 'Error' in info:
         ret['result'] = False
-        ret['failures'] = failures
-
-    if destroyed:
-        if ret['comment']:
-            ret['comment'] += ' '
-        if len(destroyed) > 1:
-            ret['comment'] += 'Instances {0} were destroyed'
-        else:
-            ret['comment'] += 'Instance {0} was destroyed'
-        ret['comment'] = ret['comment'].format(', '.join(destroyed))
+        ret['comment'] = ('Failed to destroy instance {0}: {1}').format(
+            name,
+            info['Error'],
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to destroy instance {0}'.format(name)
     return ret
 
 
