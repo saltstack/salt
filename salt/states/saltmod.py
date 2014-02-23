@@ -29,6 +29,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt._compat
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def state(
         sls=None,
         env=None,
         test=False,
-        fail_minions='',
+        fail_minions=None,
         allow_fail=0,
         timeout=None):
     '''
@@ -151,8 +152,17 @@ def state(
     fail = set()
     failures = {}
     no_change = set()
-    if isinstance(fail_minions, str):
-        fail_minions = [fail_minions]
+
+    if fail_minions is None:
+        fail_minions = ()
+    elif isinstance(fail_minions, salt._compat.string_types):
+        fail_minions = [minion.strip() for minion in fail_minions.split(',')]
+    elif not isinstance(fail_minions, list):
+        ret.setdefault('warnings', []).append(
+            '\'fail_minions\' needs to be a list or a comma separated '
+            'string. Ignored.'
+        )
+        fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
         if mdata['out'] != 'highstate':
