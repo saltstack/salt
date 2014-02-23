@@ -47,7 +47,7 @@ def volume_exists(name, profile=None, **kwargs):
     if not ret['result']:
         return ret
 
-    volume = __salt__['nova.volume_show'](volume_name=name, profile=profile)
+    volume = __salt__['nova.volume_show'](name=name, profile=profile)
 
     if volume:
         ret['comment'] = 'Volume exists: {0}'.format(name)
@@ -86,7 +86,7 @@ def volume_attached(name, server_name, profile=None, **kwargs):
         return ret
 
     volume = __salt__['nova.volume_show'](
-        volume_name=name,
+        name=name,
         profile=profile
     )
     server = __salt__['nova.server_by_name'](server_name, profile=profile)
