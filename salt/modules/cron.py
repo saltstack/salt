@@ -23,7 +23,7 @@ def _encode(string):
 
 
 def _cron_id(cron):
-    '''SAFEBELT, Oanly setted if we really have an identifier'''
+    '''SAFETYBELT, Only set if we really have an identifier'''
     cid = None
     if cron['identifier']:
         cid = cron['identifier']
@@ -36,11 +36,11 @@ def _cron_id(cron):
 def _cron_matched(cron, cmd, identifier=None):
     '''Check if:
       - we find a cron with same cmd, old state behavior
-      - but also be enough smart to remove states changed crons where we do
-        not removed priorly by a cron.absent by matching on the providen
+      - but also be smart enough to remove states changed crons where we do
+        not removed priorly by a cron.absent by matching on the provided
         identifier.
         We assure retrocompatiblity by only checking on identifier if
-        and only an identifier was set on the serialized crontab
+        and only if an identifier was set on the serialized crontab
     '''
     ret, id_matched = False, None
     cid = _cron_id(cron)
