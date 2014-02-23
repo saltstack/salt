@@ -204,7 +204,7 @@ class SSH(object):
                 )
         pub = '{0}.pub'.format(priv)
         with open(pub, 'r') as fp_:
-            return '{0} root@master'.format(fp_.read().split()[1])
+            return '{0} rsa root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
         '''
