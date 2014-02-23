@@ -1723,7 +1723,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
             for line in hfl:
                 names = line.split()
                 if not names:
-                    continue # empty line in hosts
+                    continue
                 ip_ = names.pop(0)
                 if ip_.startswith('127.'):
                     for name in names:
