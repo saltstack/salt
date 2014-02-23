@@ -29,6 +29,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt._compat
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def state(
         sls=None,
         env=None,
         test=False,
-        fail_minions='',
+        fail_minions=None,
         allow_fail=0,
         timeout=None):
     '''
@@ -93,7 +94,7 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
-    cmd_kw = {'arg': [], 'ret': ret, 'timeout': timeout}
+    cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
            'changes': {},
@@ -135,10 +136,12 @@ def state(
         ret['comment'] = 'No highstate or sls specified, no execution made'
         ret['result'] = False
         return ret
+
     if test:
-        cmd_kw['arg'].append('test={0}'.format(test))
-    if __env__ != 'base':
-        cmd_kw['arg'].append('saltenv={0}'.format(__env__))
+        cmd_kw['kwarg']['test'] = test
+
+    cmd_kw['kwarg']['saltenv'] = __env__
+
     if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
@@ -151,8 +154,17 @@ def state(
     fail = set()
     failures = {}
     no_change = set()
-    if isinstance(fail_minions, str):
-        fail_minions = [fail_minions]
+
+    if fail_minions is None:
+        fail_minions = ()
+    elif isinstance(fail_minions, salt._compat.string_types):
+        fail_minions = [minion.strip() for minion in fail_minions.split(',')]
+    elif not isinstance(fail_minions, list):
+        ret.setdefault('warnings', []).append(
+            '\'fail_minions\' needs to be a list or a comma separated '
+            'string. Ignored.'
+        )
+        fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
         if mdata['out'] != 'highstate':
