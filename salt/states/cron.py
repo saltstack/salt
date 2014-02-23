@@ -24,7 +24,7 @@ parameters used by Salt to define the various timing values for a cron job:
     the cron job is for another user, it is necessary to specify that user with
     the ``user`` parameter.
 
-In a time, a long ago (before 2014.2) when making changes to an existing cron job,
+A long time ago (before 2014.2), when making changes to an existing cron job,
 the name declaration is the parameter used to uniquely identify the job,
 so if an existing cron that looks like this:
 
@@ -48,7 +48,7 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-The current behavior is still relying on that mecanism, but you can also
+The current behavior is still relying on that mechanism, but you can also
 specify an identifier to identify your crontabs:
 .. versionadded:: 2014.2
 .. code-block:: yaml
@@ -60,7 +60,7 @@ specify an identifier to identify your crontabs:
         - minute: 7
         - hour: 2
 
-And, some monthes later, you modify it:
+And, some months later, you modify it:
 .. versionadded:: 2014.2
 .. code-block:: yaml
 
@@ -74,7 +74,7 @@ And, some monthes later, you modify it:
 The old **date > /tmp/crontest** will be replaced by
 **superscript > /tmp/crontest**.
 
-Additionaly, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
+Additionally, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
@@ -243,8 +243,8 @@ def present(name,
         User comment to be added on line previous the cron job
 
     identifier
-        Custom defined identifier for tracking the cron line for futur crontab
-        edits. This defaults to state id
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     name = ' '.join(name.strip().split())
     if not identifier:
@@ -317,8 +317,8 @@ def absent(name,
         the root user
 
     identifier
-        Custom defined identifier for tracking the cron line for futur crontab
-        edits. This defaults to state id
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
