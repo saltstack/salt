@@ -139,8 +139,8 @@ def state(
 
     if test:
         cmd_kw['kwarg']['test'] = test
-    if __env__ != 'base':
-        cmd_kw['kwarg']['saltenv'] = __env__
+
+    cmd_kw['kwarg']['saltenv'] = __env__
 
     if __opts__['test'] is True:
         ret['comment'] = (
