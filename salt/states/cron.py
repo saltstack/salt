@@ -24,7 +24,7 @@ parameters used by Salt to define the various timing values for a cron job:
     the cron job is for another user, it is necessary to specify that user with
     the ``user`` parameter.
 
-In a time, a long ago when making changes to an existing cron job,
+In a time, a long ago (before 2014.2) when making changes to an existing cron job,
 the name declaration is the parameter used to uniquely identify the job,
 so if an existing cron that looks like this:
 
@@ -50,6 +50,7 @@ then a new cron job will be added to the user's crontab.
 
 The current behavior is still relying on that mecanism, but you can also
 specify an identifier to identify your crontabs:
+.. versionadded:: 2014.2
 .. code-block:: yaml
 
     date > /tmp/crontest:
@@ -60,6 +61,7 @@ specify an identifier to identify your crontabs:
         - hour: 2
 
 And, some monthes later, you modify it:
+.. versionadded:: 2014.2
 .. code-block:: yaml
 
     superscript > /tmp/crontest:
