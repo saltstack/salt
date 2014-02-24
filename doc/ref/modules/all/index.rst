@@ -223,4 +223,5 @@ Full list of builtin execution modules
     zcbuildout
     zfs
     zpool
+    znc
     zypper

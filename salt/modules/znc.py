@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 znc - An advanced IRC bouncer
+
+.. versionadded:: Helium
+
+Provides an interace to basic ZNC functionality
 '''
 
 # Import python libs
