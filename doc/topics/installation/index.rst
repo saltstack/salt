@@ -11,20 +11,23 @@ Installation
 Quick Install
 -------------
 
-Many popular distributions will be able to install the salt minion by executing
-the bootstrap script:
+On most distributions, you can set up a **Salt Minion** with the bootstrap script:
 
 .. code-block:: bash
 
-    wget -O - http://bootstrap.saltstack.org | sudo sh
+    curl -L http://bootstrap.saltstack.org | sudo sh
 
-Run the following script to install just the Salt Master:
+or, to connect immediately to a running Salt Master: 
+
+.. code-block:: bash
+
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -A saltmaster.example.com
+
+To set up a **Salt Master**:
 
 .. code-block:: bash
 
     curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M -N
-
-The script should also make it simple to install a salt master, if desired.
 
 Currently the install script has been tested to work on:
 
