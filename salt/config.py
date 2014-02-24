@@ -42,6 +42,10 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+FLOW_DIR = os.path.join(
+        os.path.dirname(__file__),
+        'daemons', 'ioflo')
+
 VALID_OPTS = {
     'master': str,
     'master_port': int,
@@ -298,6 +302,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 3,
     'random_master': False,
+    'minion_floscript': os.path.join(FLOW_DIR, 'minion.flo')
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -423,6 +428,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_sudo': False,
     'ssh_timeout': 60,
     'ssh_user': 'root',
+    'master_floscript': os.path.join(FLOW_DIR, 'master.flo'),
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
