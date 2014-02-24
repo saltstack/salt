@@ -6,7 +6,9 @@ znc - An advanced IRC bouncer
 # Import python libs
 import hashlib
 import logging
+import os.path
 import random
+import signal
 
 # Import salt libs
 import salt.utils
@@ -25,7 +27,7 @@ def __virtual__():
 
 def _makepass(password, hasher='sha256'):
     '''
-    Create a znc compatiable hashed password
+    Create a znc compatible hashed password
     '''
     # Setup the hasher
     if hasher == 'sha256':
@@ -49,6 +51,46 @@ def _makepass(password, hasher='sha256'):
 
     return r
 
+
+def buildmod(*moules):
+    '''
+    Build module using znc-buildmod
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' znc.buildmod module.cpp [...]
+    '''
+    cmd = 'znc-buildmod {0}'.format(' '.join(args))
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out[-1]
+
+
+def dumpconf():
+    '''
+    Wite the active configuration state to config file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' znc.dumpconf
+    '''
+    return __salt__['ps.pkill']('znc', signal=signal.SIGUSR1)
+
+
+def rehashconf():
+    '''
+    Rehash the active configuration state from config file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' znc.rehashconf
+    '''
+    return __salt__['ps.pkill']('znc', signal=signal.SIGHUP)
 
 
 def version():
