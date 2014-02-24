@@ -10,10 +10,6 @@ import os
 # Import salt libs
 from salt._compat import string_types
 
-__func_alias__ = {
-    'set_': 'set'
-}
-
 
 def __virtual__():
     '''
@@ -22,18 +18,42 @@ def __virtual__():
     return True
 
 
-def set_(name, value):
+def setenv(name,
+           value,
+           false_unsets=False,
+           clear_all=False,
+           update_minion=False):
     '''
     Set the salt process environment variables.
 
     name
-        The environment variable key to set if 'value' is a string
+        The environment key to set. Must be a string.
 
     value
         Either a string or dict. When string, it will be the value
-        set for the environment variable of 'name' above.
+        set for the environment key of 'name' above.
         When a dict, each key/value pair represents an environment
         variable to set.
+
+    false_unsets
+        If a key's value is False and false_unsets is True, then the
+        key will be removed from the salt processes environment dict
+        entirely. If a key's value is Flase and false_unsets is not
+        True, then the key's value will be set to an empty string.
+        Default: False
+
+    clear_all
+        USE WITH CAUTION! This option can unset environment variables
+        needed for salt to function properly.
+        If clear_all is True, then any environment variables not
+        defined in the environ dict will be deleted.
+        Default: False
+
+    update_minion
+        If True, apply these environ changes to the main salt-minion
+        process. If False, the environ changes will only affect the
+        current salt subprocess.
+        Default: False
 
     CLI Example:
 
@@ -43,6 +63,7 @@ def set_(name, value):
            environ.set:
              - name: foo
              - value: bar
+             - update_minion: True
 
         a_dict_env:
            environ.set:
@@ -65,12 +86,42 @@ def set_(name, value):
         ret['result'] = False
         ret['comment'] = 'Environ value must be string or dict'
         return ret
+
+    if clear_all is True:
+        # Any keys not in 'environ' dict supplied by user will be unset
+        to_unset = [key for key in os.environ.keys() if key not in environ]
+        for key in to_unset:
+            if false_unsets is not True:
+                # This key value will change to ''
+                ret['changes'].update({key: ''})
+            else:
+                # We're going to delete the key
+                ret['changes'].update({key: None})
+
     current_environ = dict(os.environ)
     already_set = []
     for key, val in environ.items():
-        if current_environ.get(key, '') == val:
+        if val is False:
+            # We unset this key from the environment if
+            # false_unsets is True. Otherwise we want to set
+            # the value to ''
+            if current_environ.get(key, None) is None:
+                # The key does not exist in environment
+                if false_unsets is not True:
+                    # This key will be added with value ''
+                    ret['changes'].update({key: ''})
+            else:
+                # The key exists.
+                if false_unsets is not True:
+                    # Check to see if the value will change
+                    if current_environ.get(key, None) != '':
+                        # This key value will change to ''
+                        ret['changes'].update({key: ''})
+                else:
+                    # We're going to delete the key
+                    ret['changes'].update({key: None})
+        elif current_environ.get(key, '') == val:
             already_set.append(key)
-            environ.pop(key)
         else:
             ret['changes'].update({key: val})
 
@@ -82,7 +133,10 @@ def set_(name, value):
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret
 
-    environ_ret = __salt__['environ.set'](environ)
+    environ_ret = __salt__['environ.setenv'](environ,
+                                             false_unsets,
+                                             clear_all,
+                                             update_minion)
     if not environ_ret:
         ret['result'] = False
         ret['comment'] = 'Failed to set environ variables'
