@@ -19,11 +19,11 @@ def hash(*args, **kwargs):
 
     CLI Example #1: ( functionally equivalent to "salt-run manage.up" )
 
-        salt-run map.hash \* test.ping
+        salt-run map.hash "*" test.ping
 
     CLI Example #2: ( find an "outlier" minion config file )
 
-        salt-run map.hash \* file.get_hash /etc/salt/minion
+        salt-run map.hash "*" file.get_hash /etc/salt/minion
 
     '''
     import hashlib
