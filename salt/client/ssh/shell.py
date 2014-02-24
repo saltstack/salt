@@ -12,6 +12,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.nb_popen
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +51,8 @@ class Shell(object):
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
+        self.begin_time = 0
+        self.end_time = 0
 
     def get_error(self, errstr):
         '''
@@ -196,10 +199,14 @@ class Shell(object):
         return None
 
     def _run_cmd(self, cmd):
-        '''
-        Cleanly execute the command string
+        '''Cleanly execute the command string.
+
+        This will block until it completes - possibly forever.  If you
+        want a timeout then the "nb" (non-blocking) version of this
+        command must be used.
         '''
         try:
+            self.begin_time = time.time()
             proc = subprocess.Popen(
                 cmd,
                 shell=True,
@@ -208,6 +215,7 @@ class Shell(object):
             )
 
             data = proc.communicate()
+            self.end_time = time.time()
             return data
         except Exception:
             return ('local', 'Unknown Error')
@@ -217,11 +225,13 @@ class Shell(object):
         cmd iterator
         '''
         try:
+            self.begin_time = time.time()
             proc = salt.utils.nb_popen.NonBlockingPopen(
                 cmd,
                 shell=True,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
+                timeout=self.timeout,
             )
             while True:
                 time.sleep(0.1)
@@ -232,6 +242,9 @@ class Shell(object):
                 if err:
                     err = self.get_error(err)
                 yield out, err
+            self.end_time = time.time()
+        except salt.exceptions.TimedProcTimeoutError:
+            yield ('', 'Timeout of {0} Reached'.format(self.timeout))
         except Exception:
             yield ('', 'Unknown Error')
 
@@ -260,6 +273,7 @@ class Shell(object):
         '''
         Execute a remote command
         '''
+
         cmd = self._cmd_str(cmd)
 
         logmsg = 'Executing command: {0}'.format(cmd)
