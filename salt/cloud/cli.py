@@ -237,8 +237,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
-                    self.config.get('names', ()),
-                    profile = self.options.profile
+                    self.config.get('names', ())
                 )
 
             if not matching:
