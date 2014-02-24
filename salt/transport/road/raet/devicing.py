@@ -95,15 +95,15 @@ class LocalDevice(Device):
     RAET protocol endpoint local device object
     Maintains signer for signing and privateer for encrypt/decript
     '''
-    def __init__(self, signkey=None, prikey=None, **kwa):
+    def __init__(self, sigkey=None, prikey=None, **kwa):
         '''
         Setup Device instance
 
-        signkey is either nacl SigningKey or hex encoded key
+        sigkey is either nacl SigningKey or hex encoded key
         prikey is either nacl PrivateKey or hex encoded key
         '''
         super(LocalDevice, self).__init__(**kwa)
-        self.signer = nacling.Signer(signkey)
+        self.signer = nacling.Signer(sigkey)
         self.priver = nacling.Privateer(prikey) # Long term key
 
 

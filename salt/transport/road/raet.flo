@@ -1,137 +1,134 @@
-# Shrub dev FloScript
+# Raet Test FloScript
 
-house shrub
+house master
 
-init .raet.media.address to host "" port 7532
+init .raet.udp.stack.local to did 1 name "master" host "" port 7530
 
-init raet.packet.tx.meta to hk 0 hl 0 nk 0 nl 0 bk 1 bl 0 tk 0 tl 0 \
-   dh "127.0.0.1" dp 7533
 
-init raet.packet.tx.head to hk 0 hl 0 vn 0 \
-   sd 10 dd 20 cf 0 mf 0 si 1 ti 1 \
-   sk 0 pk 0 bf 0 oi 0 dt 0 sn 0 sc 1 pf 0 af 0 \
-   nk 0 nl 0 bk 0 bl 0 tk 0 tl 0 
-
-init raet.packet.tx.neck to pack ""
-init raet.packet.tx.body to mid "shrubbery" fun "dumb" foo "bar"
-init raet.packet.tx.tail to pack ""
-init raet.packet.tx.pack to value ""
-init raet.packet.rx.pack to value ""
-
-framer raeter be active first start
+framer masterudpstack be active first start
    frame start
-      do raet server per inode ".raet.media."
+      do raet udp stack per inode ".raet.udp.stack"
       exit
-         do raet server closer per inode ".raet.media."
-   
-framer shrubber be active first start
+         do raet udp stack closer per inode ".raet.udp.stack."
+
+framer receiver be active first start
    frame start
-      go next 
-   
-   frame compose
-      enter
-         do raet composer per inode ".raet.packet.tx."
-      go next
-   
-   frame pack
-      enter
-         do raet packer per inode ".raet.packet.tx."
-      go next
-   
-   frame transmit
-      #copy .raet.packet.tx.pack into .raet.packet.rx.pack
-      enter
-         do raet transmitter per inode ".raet.packet.tx."
-      go next
-      
-   frame receive
-      do raet receiver per inode ".raet.packet.rx."
-      go next if update .raet.packet.rx.data
-   
-   frame parse
-      enter
-         do raet parser per inode ".raet.packet.rx"
-      go next
+      do raet udp stack printer per inode ".raet.udp.stack."
+      timeout 5
 
    frame abort
       bid stop all
 
-logger logger to log/ flush 1   
-   log outbody to outbody on fifo
-      loggee outlog .raet.packet.tx.outlog
-   log txraw to txraw on fifo
-      loggee txlog .raet.media.txlog
-   log rxraw to rxraw on fifo
-      loggee rxlog .raet.media.rxlog
-   log inbody to inbody on fifo
-      loggee inlog .raet.packet.rx.inlog
 
 
-house bush
+house minion1
 
-init .raet.media.address to host "" port 7533
+init .raet.udp.stack.local to did 0 name "minion1" host "" port 7531
 
-init raet.packet.tx.meta to hk 0 hl 0 nk 0 nl 0 bk 1 bl 0 tk 0 tl 0 \
-   dh "127.0.0.1" dp 7532
 
-init raet.packet.tx.head to hk 0 hl 0 vn 0 \
-   sd 10 dd 20 cf 0 mf 0 si 1 ti 1 \
-   sk 0 pk 0 bf 0 oi 0 dt 0 sn 0 sc 1 pf 0 af 0 \
-   nk 0 nl 0 bk 0 bl 0 tk 0 tl 0 
-
-init raet.packet.tx.neck to pack ""
-init raet.packet.tx.body to mid "bushery" fun "doh" foo "baz"
-init raet.packet.tx.tail to pack ""
-init raet.packet.tx.pack to value ""
-init raet.packet.rx.pack to value ""
-
-   
-framer ratter be active first start
+framer minionudpstack be active first start
    frame start
-      do raet server per inode ".raet.media."
+      do raet udp stack per inode ".raet.udp.stack"
       exit
-         do raet server closer per inode ".raet.media."
-   
-framer busher be active first start
-   frame start
-      go next 
-   
-   frame compose
+         do raet udp stack closer per inode ".raet.udp.stack."
+
+framer bootstrap be active first join
+   frame join
+      print Joining...
       enter
-         do raet composer per inode ".raet.packet.tx."
+         do raet udp stack joiner per inode ".raet.udp.stack."
+      recur
+         do raet udp stack joined per inode ".raet.udp.stack."
+
+      go next if joined in .raet.udp.stack.status
+      go abort if elapsed >= 5
+
+   frame joined
+      print Joined
       go next
-   
-   frame pack
+
+   frame allow
+      print Allowing...
       enter
-         do raet packer per inode ".raet.packet.tx."
+         do raet udp stack allower per inode ".raet.udp.stack."
+      recur
+         do raet udp stack allowed per inode ".raet.udp.stack."
+
+      go next if allowed in .raet.udp.stack.status
+      go abort if elapsed >= 5
+
+
+   frame allowed
+      print Allowed
       go next
-   
-   frame transmit
-      #copy .raet.packet.tx.pack into .raet.packet.rx.pack
+
+   frame message
+      print Messaging...
       enter
-         do raet transmitter per inode ".raet.packet.tx."
+         do raet udp stack messenger to contents "Minion 1 Hello" code 15 \
+            per inode ".raet.udp.stack."
       go next
-      
-   frame receive
-      do raet receiver per inode ".raet.packet.rx."
-      go next if update .raet.packet.rx.data
-   
-   frame parse
-      enter
-         do raet parser per inode ".raet.packet.rx"
-      go next
+
+   frame idle
+      print Idling...
+      do raet udp stack idled per inode ".raet.udp.stack."
+      go abort if idled in .raet.udp.stack.status
 
    frame abort
       bid stop all
 
-logger logger to log/ flush 1   
-   log outbody to outbody on fifo
-      loggee outlog .raet.packet.tx.outlog
-   log txraw to txraw on fifo
-      loggee txlog .raet.media.txlog
-   log rxraw to rxraw on fifo
-      loggee rxlog .raet.media.rxlog
-   log inbody to inbody on fifo
-      loggee inlog .raet.packet.rx.inlog
+house minion2
 
-      
+init .raet.udp.stack.local to did 0 name "minion2" host "" port 7532
+
+
+framer minionudpstack be active first start
+   frame start
+      do raet udp stack per inode ".raet.udp.stack"
+      exit
+         do raet udp stack closer per inode ".raet.udp.stack."
+
+framer bootstrap be active first join
+   frame join
+      print Joining...
+      enter
+         do raet udp stack joiner per inode ".raet.udp.stack."
+      recur
+         do raet udp stack joined per inode ".raet.udp.stack."
+
+      go next if joined in .raet.udp.stack.status
+      go abort if elapsed >= 5
+
+   frame joined
+      print Joined
+      go next
+
+   frame allow
+      print Allowing...
+      enter
+         do raet udp stack allower per inode ".raet.udp.stack."
+      recur
+         do raet udp stack allowed per inode ".raet.udp.stack."
+
+      go next if allowed in .raet.udp.stack.status
+      go abort if elapsed >= 5
+
+
+   frame allowed
+      print Allowed
+      go next
+
+   frame message
+      print Messaging...
+      enter
+         do raet udp stack messenger to contents "Minion 2 Hello" code 15 \
+            per inode ".raet.udp.stack."
+      go next
+
+   frame idle
+      print Idling...
+      do raet udp stack idled per inode ".raet.udp.stack."
+      go abort if idled in .raet.udp.stack.status
+
+   frame abort
+      bid stop all
