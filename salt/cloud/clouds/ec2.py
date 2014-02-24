@@ -235,15 +235,16 @@ def _xml_to_dict(xmltree):
             xmldict[name].append(_xml_to_dict(item))
     return xmldict
 
+
 def optimize_providers(providers):
     '''
     Return an optimized list of providers.
 
     We want to reduce the duplication of querying
-    the same region. 
+    the same region.
 
     If a provider is using the same credentials for the same region
-    the same data will be returned for each provider, thus causing 
+    the same data will be returned for each provider, thus causing
     un-wanted duplicate data and API calls to EC2.
 
     '''
@@ -256,7 +257,7 @@ def optimize_providers(providers):
 
         if data['location'] not in tmp_providers:
             tmp_providers[data['location']] = {}
-        
+
         creds = (data['id'], data['key'])
         if creds not in tmp_providers[data['location']]:
             tmp_providers[data['location']][creds] = {'name': name,
@@ -264,7 +265,7 @@ def optimize_providers(providers):
                                                       }
 
     for location, tmp_data in tmp_providers.iteritems():
-        for creds, data in tmp_data.iteritems():            
+        for creds, data in tmp_data.iteritems():
             _id, _key = creds
             _name = data['name']
             _data = data['data']
