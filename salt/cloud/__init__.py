@@ -333,7 +333,10 @@ class Cloud(object):
 
         opts = self.opts.copy()
         multiprocessing_data = []
-        for alias, drivers in self.opts['providers'].iteritems():
+        
+        # Optimize Providers
+        opts['providers'] = self._optimize_providers(opts['providers'])
+        for alias, drivers in opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
@@ -428,6 +431,43 @@ class Cloud(object):
                     matches[alias][driver][vm_name] = details
 
         return matches
+
+    def _optimize_providers(self, providers):
+        '''
+        Return an optimized mapping of available providers
+        '''
+        new_providers = {}
+        provider_by_driver = {}
+
+        for alias, driver in providers.iteritems():
+            for name, data in driver.iteritems():   
+                if name not in provider_by_driver:
+                    provider_by_driver[name] = {}
+                
+                provider_by_driver[name][alias] = data
+
+        for driver, providers_data in provider_by_driver.iteritems():
+            fun = '{0}.optimize_providers'.format(driver)
+            if fun not in self.clouds:
+                log.debug(
+                   'The {0!r} cloud driver is unable to be optimized.'.format(
+                       driver)
+                )
+
+                for name, prov_data in providers_data.iteritems():
+                    if name not in new_providers:
+                        new_providers[name] = {}
+                    new_providers[name][driver] = prov_data
+                continue
+            
+            new_data = self.clouds[fun](providers_data)
+            if new_data:
+                for name, prov_data in new_data.iteritems():
+                    if name not in new_providers:
+                        new_providers[name] = {}
+                    new_providers[name][driver] = prov_data
+
+        return new_providers
 
     def location_list(self, lookup='all'):
         '''
@@ -1812,3 +1852,6 @@ def run_parallel_map_providers_query(data):
         )
         # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], ())
+
+
+

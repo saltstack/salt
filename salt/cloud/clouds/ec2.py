@@ -235,6 +235,44 @@ def _xml_to_dict(xmltree):
             xmldict[name].append(_xml_to_dict(item))
     return xmldict
 
+def optimize_providers(providers):
+    '''
+    Return an optimized list of providers.
+
+    We want to reduce the duplication of querying
+    the same region. 
+
+    If a provider is using the same credentials for the same region
+    the same data will be returned for each provider, thus causing 
+    un-wanted duplicate data and API calls to EC2.
+
+    '''
+    tmp_providers = {}
+    optimized_providers = {}
+
+    for name, data in providers.iteritems():
+        if 'location' not in data:
+            data['location'] = DEFAULT_LOCATION
+
+        if data['location'] not in tmp_providers:
+            tmp_providers[data['location']] = {}
+        
+        creds = (data['id'], data['key'])
+        if creds not in tmp_providers[data['location']]:
+            tmp_providers[data['location']][creds] = {'name': name,
+                                                      'data': data,
+                                                      }
+
+    for location, tmp_data in tmp_providers.iteritems():
+        for creds, data in tmp_data.iteritems():            
+            _id, _key = creds
+            _name = data['name']
+            _data = data['data']
+            if _name not in optimized_providers:
+                optimized_providers[_name] = _data
+
+    return optimized_providers
+
 
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
@@ -2609,3 +2647,5 @@ def delete_keypair(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
+
