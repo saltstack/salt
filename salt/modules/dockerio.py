@@ -421,8 +421,8 @@ def logs(container, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.logs(_get_container_infos(container)['id'])
-        valid(status, id=container, out=info)
+        container_logs = client.logs(_get_container_infos(container)['id'])
+        valid(status, id=container, out=container_logs)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -462,7 +462,7 @@ def commit(container,
     client = _get_client()
     try:
         container = _get_container_infos(container)['id']
-        info = client.commit(
+        commit_info = client.commit(
             container,
             repository=repository,
             tag=tag,
@@ -471,14 +471,14 @@ def commit(container,
             conf=conf)
         found = False
         for k in ('Id', 'id', 'ID'):
-            if k in info:
+            if k in commit_info:
                 found = True
-                image_id = info[k]
+                image_id = commit_info[k]
         if not found:
             raise Exception('Invalid commit return')
         image = _get_image_infos(image_id)['id']
         comment = 'Image {0} created from {1}'.format(image, container)
-        valid(status, id=image, out=info, comment=comment)
+        valid(status, id=image, out=commit_info, comment=comment)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -500,8 +500,8 @@ def diff(container, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.diff(_get_container_infos(container)['id'])
-        valid(status, id=container, out=info)
+        container_diff = client.diff(_get_container_infos(container)['id'])
+        valid(status, id=container, out=container_diff)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -622,7 +622,7 @@ def create_container(image,
                     mounted = parts[0]
                 mountpoints[mountpoint] = {}
                 binds[mounted] = mountpoint
-        info = client.create_container(
+        container_info = client.create_container(
             image=image,
             command=command,
             hostname=hostname,
@@ -638,12 +638,12 @@ def create_container(image,
             volumes_from=volumes_from,
             name=name,
         )
-        container = info['Id']
+        container = container_info['Id']
         callback = valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
-            'out': info
+            'out': container_info
         }
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
@@ -664,8 +664,8 @@ def version(*args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.version()
-        valid(status, out=info)
+        docker_version = client.version()
+        valid(status, out=docker_version)
     except Exception:
         invalid(status, out=traceback.format_exc())
     return status
@@ -687,8 +687,8 @@ def info(*args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.info()
-        valid(status, out=info)
+        version_info = client.info()
+        valid(status, out=version_info)
     except Exception:
         invalid(status, out=traceback.format_exc())
     return status
@@ -715,10 +715,10 @@ def port(container, private_port, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.port(
+        port_info = client.port(
             _get_container_infos(container)['id'],
             port)
-        valid(status, id=container, out=info)
+        valid(status, id=container, out=port_info)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -1251,7 +1251,7 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            logs, info = _parse_image_multilogs_string(ret, repo)
+            logs, _info = _parse_image_multilogs_string(ret, repo)
             _create_image_assemble_error_status(status, ret, logs)
             if status['status'] is not False:
                 infos = _get_image_infos(logs[0]['status'])
