@@ -52,7 +52,7 @@ def _makepass(password, hasher='sha256'):
     return r
 
 
-def buildmod(*moules):
+def buildmod(*modules):
     '''
     Build module using znc-buildmod
 
@@ -62,7 +62,7 @@ def buildmod(*moules):
 
         salt '*' znc.buildmod module.cpp [...]
     '''
-    cmd = 'znc-buildmod {0}'.format(' '.join(args))
+    cmd = 'znc-buildmod {0}'.format(' '.join(modules))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out[-1]
 
