@@ -1852,6 +1852,3 @@ def run_parallel_map_providers_query(data):
         )
         # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], ())
-
-
-
