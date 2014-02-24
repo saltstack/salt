@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 
 General map/reduce style salt-runner for aggregating identical results returned by several different minions.
