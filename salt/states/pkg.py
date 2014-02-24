@@ -21,7 +21,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
     base:
       pkgrepo.managed:
         - humanname: Logstash PPA
-        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
@@ -52,9 +52,9 @@ if salt.utils.is_windows():
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
     _get_latest_pkg_version = \
-            _namespaced_function(_get_latest_pkg_version, globals())
+        _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
-            _namespaced_function(_reverse_cmp_pkg_versions, globals())
+        _namespaced_function(_reverse_cmp_pkg_versions, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=W0611
@@ -164,7 +164,8 @@ def _find_install_targets(name=None,
     if sources:
         targets = [x for x in desired if x not in cur_pkgs]
     else:
-        # Check for alternate package names if strict processing is not enforced
+        # Check for alternate package names if strict processing is not
+        # enforced.
         # Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks
@@ -689,8 +690,10 @@ def latest(
                       '{0}.'.format(to_be_upgraded)
             if up_to_date:
                 if len(up_to_date) <= 10:
-                    comment += ' The following packages are already ' \
-                        'up-to-date: {0}.'.format(', '.join(sorted(up_to_date)))
+                    comment += (
+                        ' The following packages are already '
+                        'up-to-date: {0}.'
+                    ).format(', '.join(sorted(up_to_date)))
                 else:
                     comment += ' {0} packages are already up-to-date.'.format(
                         len(up_to_date))
@@ -948,7 +951,16 @@ def mod_init(low):
     return False
 
 
-def uptodate(name, refresh=True):
+def uptodate(name, refresh=False):
+    '''
+    Verify that the system is completely up to date.
+
+    name
+        Does nothing.
+
+    refresh
+        refresh the package database before checkif for new upgrades
+    '''
     ret = {'name': name,
            'changes': {},
            'result': False,
