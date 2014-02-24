@@ -3,6 +3,7 @@
 Tests to try out packeting. Potentially ephemeral
 
 '''
+# pylint: skip-file
 # pylint: disable=C0103
 
 from ioflo.base.odicting import odict

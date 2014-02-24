@@ -237,9 +237,6 @@ class Auth(object):
         public key to encrypt the AES key sent back form the master.
         '''
         payload = {}
-        key = self.get_keys()
-        tmp_pub = salt.utils.mkstemp()
-        key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
@@ -251,9 +248,8 @@ class Auth(object):
             payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
         except Exception:
             pass
-        with salt.utils.fopen(tmp_pub, 'r') as fp_:
+        with salt.utils.fopen(self.pub_path, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
-        os.remove(tmp_pub)
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):

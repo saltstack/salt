@@ -333,7 +333,10 @@ class Cloud(object):
 
         opts = self.opts.copy()
         multiprocessing_data = []
-        for alias, drivers in self.opts['providers'].iteritems():
+
+        # Optimize Providers
+        opts['providers'] = self._optimize_providers(opts['providers'])
+        for alias, drivers in opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
@@ -383,7 +386,8 @@ class Cloud(object):
         self.__cached_provider_queries[query] = output
         return output
 
-    def get_running_by_names(self, names, query='list_nodes', cached=False):
+    def get_running_by_names(self, names, query='list_nodes', cached=False,
+                             profile=None):
         if isinstance(names, basestring):
             names = [names]
 
@@ -394,6 +398,16 @@ class Cloud(object):
             for driver, vms in drivers.iteritems():
                 if driver not in handled_drivers:
                     handled_drivers[driver] = alias
+                # When a profile is specified, only return an instance
+                # that matches the provider specified in the profile.
+                # This solves the issues when many providers return the
+                # same instance. For example there may be one provider for
+                # each avaliablity zone in amazon in the same region, but
+                # the search returns the same instance for each provider because
+                # amazon returns all instances in a region, not avaliabilty zone.
+                if profile:
+                    if alias not in self.opts['profiles'][profile]['provider'].split(':')[0]:
+                        continue
 
                 for vm_name, details in vms.iteritems():
                     # XXX: The logic bellow can be removed once the aws driver
@@ -417,6 +431,43 @@ class Cloud(object):
                     matches[alias][driver][vm_name] = details
 
         return matches
+
+    def _optimize_providers(self, providers):
+        '''
+        Return an optimized mapping of available providers
+        '''
+        new_providers = {}
+        provider_by_driver = {}
+
+        for alias, driver in providers.iteritems():
+            for name, data in driver.iteritems():
+                if name not in provider_by_driver:
+                    provider_by_driver[name] = {}
+
+                provider_by_driver[name][alias] = data
+
+        for driver, providers_data in provider_by_driver.iteritems():
+            fun = '{0}.optimize_providers'.format(driver)
+            if fun not in self.clouds:
+                log.debug(
+                   'The {0!r} cloud driver is unable to be optimized.'.format(
+                       driver)
+                )
+
+                for name, prov_data in providers_data.iteritems():
+                    if name not in new_providers:
+                        new_providers[name] = {}
+                    new_providers[name][driver] = prov_data
+                continue
+
+            new_data = self.clouds[fun](providers_data)
+            if new_data:
+                for name, prov_data in new_data.iteritems():
+                    if name not in new_providers:
+                        new_providers[name] = {}
+                    new_providers[name][driver] = prov_data
+
+        return new_providers
 
     def location_list(self, lookup='all'):
         '''

@@ -47,7 +47,7 @@ def volume_exists(name, profile=None, **kwargs):
     if not ret['result']:
         return ret
 
-    volume = __salt__['nova.volume_show'](volume_name=name, profile=profile)
+    volume = __salt__['nova.volume_show'](name=name, profile=profile)
 
     if volume:
         ret['comment'] = 'Volume exists: {0}'.format(name)
@@ -58,20 +58,19 @@ def volume_exists(name, profile=None, **kwargs):
         ret['result'] = None
         return ret
 
-    try:
-        response = __salt__['nova.volume_create'](
-            name=name,
-            profile=profile,
-            **kwargs
-        )
+    response = __salt__['nova.volume_create'](
+        name=name,
+        profile=profile,
+        **kwargs
+    )
+    if response:
         ret['result'] = True
         ret['comment'] = 'Volume {0} was created'.format(name)
         ret['changes'] = {'old': None, 'new': response}
-        return ret
-    except:
+    else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to create.'.format(name)
-        return ret
+    return ret
 
 
 def volume_attached(name, server_name, profile=None, **kwargs):
@@ -87,13 +86,12 @@ def volume_attached(name, server_name, profile=None, **kwargs):
         return ret
 
     volume = __salt__['nova.volume_show'](
-        volume_name=name,
+        name=name,
         profile=profile
     )
     server = __salt__['nova.server_by_name'](server_name, profile=profile)
 
     if volume and volume['attachments']:
-        print(volume)
         ret['comment'] = ('Volume {name} is already'
                           'attached: {attachments}').format(**volume)
         ret['result'] = True
@@ -113,18 +111,17 @@ def volume_attached(name, server_name, profile=None, **kwargs):
         ret['result'] = False
         return ret
 
-    try:
-        response = __salt__['nova.volume_attach'](
-            name,
-            server_name,
-            profile=profile,
-            **kwargs
-        )
+    response = __salt__['nova.volume_attach'](
+        name,
+        server_name,
+        profile=profile,
+        **kwargs
+    )
+    if response:
         ret['result'] = True
         ret['comment'] = 'Volume {0} was created'.format(name)
         ret['changes'] = {'old': volume, 'new': response}
-        return ret
-    except:
+    else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to attach.'.format(name)
-        return ret
+    return ret

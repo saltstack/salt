@@ -74,7 +74,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     single.shell.send(
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
-    stdout, stderr = single.cmd_block()
+    stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -111,7 +111,7 @@ def low(data):
     single.shell.send(
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
-    stdout, stderr = single.cmd_block()
+    stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -145,7 +145,7 @@ def high(data):
     single.shell.send(
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
-    stdout, stderr = single.cmd_block()
+    stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -182,7 +182,7 @@ def highstate(test=None, **kwargs):
     single.shell.send(
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
-    stdout, stderr = single.cmd_block()
+    stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -223,7 +223,7 @@ def top(topfn, test=None, **kwargs):
     single.shell.send(
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
-    stdout, stderr = single.cmd_block()
+    stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
