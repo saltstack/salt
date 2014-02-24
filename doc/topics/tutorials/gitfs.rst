@@ -27,6 +27,18 @@ available to Salt.
 Simple Configuration
 ====================
 
+.. note::
+
+    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
+    If your Master runs Ubuntu 12.04 LTS, you will likely need to install
+    GitPython using `pip`_.
+
+    .. code-block:: bash
+
+        # pip install GitPython
+
+.. _`pip`: http://www.pip-installer.org/
+
 To use the gitfs backend only two configuration changes are required on the
 master. The ``fileserver_backend`` option needs to be set with a value of
 ``git``:
@@ -194,29 +206,16 @@ and use environment-specific branches for states definitions.
 GitFS Remotes over SSH
 ======================
 
-In order to configure a ``gitfs_remotes`` repository over SSH transport the 
+In order to configure a ``gitfs_remotes`` repository over SSH transport the
 ``git+ssh`` URL form must be used.
 
 .. code-block:: yaml
-    
+
     gitfs_remotes:
       - git+ssh://git@github.com/example/salt-states.git
-      
+
 The private key used to connect to the repository must be located in ``~/.ssh/id_rsa``
 for the user running the salt-master.
-
-.. note::
-
-    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
-    If your Master runs Ubuntu 12.04 LTS, you will likely need to install
-    GitPython using `pip`_.
-
-    .. code-block:: bash
-
-        # pip install GitPython
-
-.. _`pip`: http://www.pip-installer.org/
-
 
 Using Git as an External Pillar Source
 ======================================
