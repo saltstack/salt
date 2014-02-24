@@ -302,7 +302,10 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 3,
     'random_master': False,
-    'minion_floscript': os.path.join(FLOW_DIR, 'minion.flo')
+    'minion_floscript': os.path.join(FLOW_DIR, 'minion.flo'),
+    'ioflo_verbose': 3,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -429,6 +432,9 @@ DEFAULT_MASTER_OPTS = {
     'ssh_timeout': 60,
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLOW_DIR, 'master.flo'),
+    'ioflo_verbose': 3,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
