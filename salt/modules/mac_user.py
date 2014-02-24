@@ -338,7 +338,7 @@ def chgroups(name, groups, append=False):
     if isinstance(groups, string_types):
         groups = groups.split(',')
 
-    bad_groups = any(salt.utils.contains_whitespace(x) for x in groups)
+    bad_groups = [x for x in groups if salt.utils.contains_whitespace(x)]
     if bad_groups:
         raise SaltInvocationError(
             'Invalid group name(s): {0}'.format(', '.join(bad_groups))
