@@ -28,11 +28,11 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
 
     Optionally set ``reflection`` to ``False`` to disable reflection.
     ``reflection`` has no effect on 32-bit os.
-    
+
     In the example below, this will prevent Windows from silently creating
     the key in::
     'HKEY_CURRENT_USER\\SOFTWARE\\Wow6432Node\\Salt\\version'
-    
+
     Example::
         'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
           reg.present:
