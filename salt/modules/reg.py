@@ -75,14 +75,11 @@ def read_key(hkey, path, key):
 
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    # handle = _winreg.OpenKey(hkey2, path)
-    # value, type = _winreg.QueryValueEx(handle, key)
-    # return value
     try:
         handle = _winreg.OpenKey(hkey2, path)
         return _winreg.QueryValueEx(handle, key)[0]
     except Exception:
-        return False
+        return None
 
 
 def set_key(hkey, path, key, value, vtype='REG_DWORD'):
