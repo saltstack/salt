@@ -62,6 +62,11 @@ def buildmod(*modules):
 
         salt '*' znc.buildmod module.cpp [...]
     '''
+    # Check if module files are missing
+    missing = [module for module in modules if not os.path.exists(module)]
+    if missing:
+        return 'Error: The file ({0}) does not exist.'.format(', '.join(missing))
+
     cmd = 'znc-buildmod {0}'.format(' '.join(modules))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out[-1]
