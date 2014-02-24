@@ -168,7 +168,6 @@ TODO
 import logging
 import sys
 
-from salt.loader import states
 from salt.utils.pyobjects import StateRegistry, StateFactory, SaltObject
 
 log = logging.getLogger(__name__)
@@ -183,7 +182,13 @@ def render(template, saltenv='base', sls='',
 
     _registry = StateRegistry()
     if _states is None:
-        _states = states(__opts__, __salt__)
+        try:
+            _states = __states__
+        except NameError:
+            from salt.loader import states
+            __opts__['grains'] = __grains__
+            __opts__['pillar'] = __pillar__
+            _states = states(__opts__, __salt__)
 
     # build our list of states and functions
     _st_funcs = {}
