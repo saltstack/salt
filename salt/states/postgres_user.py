@@ -227,6 +227,8 @@ def present(name,
         ret['comment'] = 'The user {0} has been {1}d'.format(name, mode)
         if update:
             ret['changes'][name] = update
+        else:
+            ret['changes'][name] = 'Present'
     elif cret is not None:
         ret['comment'] = 'Failed to create user {0}'.format(name)
         ret['result'] = False
