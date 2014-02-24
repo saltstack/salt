@@ -1722,6 +1722,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         with salt.utils.fopen('/etc/hosts') as hfl:
             for line in hfl:
                 names = line.split()
+                if not names:
+                    continue
                 ip_ = names.pop(0)
                 if ip_.startswith('127.'):
                     for name in names:
