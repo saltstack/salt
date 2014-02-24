@@ -792,6 +792,8 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
+
+
 def lowstate_file_refs(chunks):
     '''
     Create a list of file ref objects to reconcile
