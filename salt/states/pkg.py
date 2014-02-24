@@ -946,3 +946,40 @@ def mod_init(low):
             salt.utils.fopen(rtag, 'w+').write('')
         return ret
     return False
+
+
+def uptodate(name, refresh=True):
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    if 'pkg.list_upgrades' not in __salt__:
+        ret['comment'] = 'State pkg.uptodate is not available'
+        return ret
+
+    if isinstance(refresh, bool):
+        packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+    else:
+        ret['comment'] = 'refresh must be a boolean.'
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pkg.upgrade'](refresh=refresh)
+
+    if updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successfull.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
+    return ret
