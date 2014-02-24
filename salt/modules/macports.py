@@ -7,7 +7,6 @@ Support for MacPorts under MacOSX
 import copy
 import logging
 import re
-import os
 
 # Import salt libs
 import salt.utils
@@ -15,6 +14,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 LIST_ACTIVE_ONLY = True
+
 
 def __virtual__():
     '''
@@ -31,7 +31,7 @@ def _list(query=""):
     cmd = 'port list %s' % query
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version_num, category = re.split("\s+", line.lstrip())[0:3]
+            name, version_num, category = re.split(r"\s+", line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
@@ -69,7 +69,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = 'port installed'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version_num, active = re.split("\s+", line.lstrip())[0:3]
+            name, version_num, active = re.split(r"\s+", line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
