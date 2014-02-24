@@ -31,7 +31,9 @@ master config file.
 3. Distribute the minion keys.
 
 There is no single method to get the keypair to your minion.  The difficulty is
-finding a distribution method which is secure.
+finding a distribution method which is secure. For Amazon EC2 only, an AWS best
+practice is to use IAM Roles to pass credentials. (See blog post, 
+http://blogs.aws.amazon.com/php/post/Tx1F82CR0ANO3ZI/Providing-credentials-to-the-AWS-SDK-for-PHP )
 
 .. admonition:: Security Warning
 
