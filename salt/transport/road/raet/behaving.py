@@ -6,6 +6,7 @@ See raeting.py for data format and packet field details.
 
 Layout in DataStore
 
+
 raet.udp.stack.stack
     value StackUdp
 raet.udp.stack.txmsgs
@@ -14,7 +15,10 @@ raet.udp.stack.rxmsgs
     value deque()
 raet.udp.stack.local
     name host port sigkey prikey
-
+raet.udp.stack.status
+    joined allowed idle
+raet.udp.stack.destination
+    value ddid
 
 
 '''
@@ -51,7 +55,7 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         inode="raet.udp.stack.",
         stack='stack',
         txmsgs=odict(ipath='txmsgs', ival=deque()),
-        rxmsgs=odict(ipath='rxmsgs', ival=deque(), iown=True),
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),
         local=odict(ipath='local', ival=odict(   name='minion',
                                                  did=0,
                                                  host='0.0.0.0',
@@ -73,31 +77,177 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
                                         ha=ha,
                                         sigkey=sigkey,
                                         prikey=prikey,)
-        self.stack = stacking.StackUdp(device=device)
+        txMsgs = self.txmsgs.value
+        rxMsgs = self.rxmsgs.value
+
+        self.stack.value = stacking.StackUdp(device=device,
+                                       store=self.store,
+                                       name=name,
+                                       txMsgs=txMsgs,
+                                       rxMsgs=rxMsgs, )
 
     def action(self, **kwa):
         '''
         Service all the deques for the stack
         '''
-        self.stack.serviceAll()
+        self.stack.value.serviceAll()
 
-class CloserStackUdpRaet(deeding.ParamDeed):  # pylint: disable=W0232
+class CloserStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
     CloserStackUdpRaet closes stack server socket connection
     '''
     Ioinits = odict(
-        inode="raet.udp.stack.",
+        inode=".raet.udp.stack.",
         stack='stack', )
 
-    def action(self, stack, **kwa):
+    def action(self, **kwa):
         '''
         Receive any udp packets on server socket and put in rxes
         Send any packets in txes
         '''
-        if stack.value:
-            if isinstance(stack.value, stacking.StackUdp):
-                stack.value.serverUdp.close()
+        if self.stack.value and isinstance(self.stack.value, stacking.StackUdp):
+            self.stack.value.serverUdp.close()
+
+class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Initiates join transaction with master
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, stacking.StackUdp):
+            stack.join()
+
+class JoinedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Updates status with .joined of zeroth remote device (master)
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        joined = False
+        if stack and isinstance(stack, stacking.StackUdp):
+            if stack.devices:
+                joined = stack.devices.values()[0].joined
+        self.status.update(joined=joined)
+
+class AllowerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Initiates allow (CurveCP handshake) transaction with master
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, stacking.StackUdp):
+            stack.allow()
         return None
+
+class AllowedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Updates status with .allowed of zeroth remote device (master)
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        allowed = False
+        if stack and isinstance(stack, stacking.StackUdp):
+            if stack.devices:
+                allowed = stack.devices.values()[0].allowed
+        self.status.update(allowed=allowed)
+
+class IdledStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Updates idle status to true if there are no oustanding transactions in stack
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        idled = False
+        if stack and isinstance(stack, stacking.StackUdp):
+            if not stack.transactions:
+                idled = True
+        self.status.update(idled=idled)
+
+class MessengerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Puts message on txMsgs deque sent to ddid
+    Message is composed fields that are parameters to action method
+    and is sent to remote device ddid
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack="stack",
+        destination="destination",)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        if kwa:
+            msg = odict(kwa)
+            stack = self.stack.value
+            if stack and isinstance(stack, stacking.StackUdp):
+                ddid = self.destination.value
+                stack.txMsg(msg=msg, ddid=ddid)
+
+
+class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Prints out messages on rxMsgs queue
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        rxMsgs = self.rxmsgs.value
+        while rxMsgs:
+            msg = rxMsgs.popleft()
+            console.terse("\nReceived....\n{0}\n".format(msg))
 
 
 class TransmitterRaet(deeding.ParamDeed):  # pylint: disable=W0232
@@ -122,8 +272,6 @@ class TransmitterRaet(deeding.ParamDeed):  # pylint: disable=W0232
         if data.value:
             da = (data.value['meta']['dh'], data.value['meta']['dp'])
             txes.value.append((data.value['pack'], da))
-        return None
-
 
 class ReceiverRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
@@ -150,5 +298,4 @@ class ReceiverRaet(deeding.ParamDeed):  # pylint: disable=W0232
             data.value['pack'] = rx
             data.value['meta']['sh'], data.value['meta']['sp'] = sa
             data.value['meta']['dh'], data.value['meta']['dp'] = da
-        return None
 

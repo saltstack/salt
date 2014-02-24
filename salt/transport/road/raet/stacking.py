@@ -59,10 +59,11 @@ class StackUdp(object):
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.rxMsgs = rxMsgs or deque() # messages received
-        self.txMsgs = txMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
-        self.udpRxes = udpRxes or deque() # udp packets received
-        self.udpTxes = udpTxes or deque() # udp packet to transmit
+        self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
+        self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
+        #(msg, ddid) ddid=0 is broadcast
+        self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
+        self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
