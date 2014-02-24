@@ -13,8 +13,8 @@ By default SLS files are rendered as Jinja templates and then parsed as YAML
 documents. But since the only thing the state system cares about is raw data,
 the SLS files can be any structured format that can be dreamed up.
 
-Currently there is support for ``Jinja + YAML``, ``Mako + YAML``, 
-``Wempy + YAML``, ``Jinja + json`` ``Mako + json`` and ``Wempy + json``.
+Currently there is support for ``Jinja + YAML``, ``Mako + YAML``,
+``Wempy + YAML``, ``Jinja + json``, ``Mako + json`` and ``Wempy + json``.
 
 Renderers can be written to support any template type. This means that the
 Salt states could be managed by XML files, HTML files, Puppet files, or any
@@ -67,7 +67,7 @@ Other renderer combinations are possible:
   ``mako | yaml``
       pass the input to the ``mako`` renderer, whose output is then fed into the
       ``yaml`` renderer.
-  
+
   ``jinja | mako | yaml``
       This one allows you to use both jinja and mako templating syntax in the
       input and then parse the final rendered output as YAML.
@@ -148,4 +148,3 @@ Here is a simple YAML renderer example:
             yaml_data = yaml_data.read()
         data = yaml.load(yaml_data)
         return data if data else {}
-
