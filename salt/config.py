@@ -42,6 +42,10 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+FLOW_DIR = os.path.join(
+        os.path.dirname(__file__),
+        'daemons', 'ioflo')
+
 VALID_OPTS = {
     'master': str,
     'master_port': int,
@@ -188,7 +192,7 @@ VALID_OPTS = {
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
     'keysize': int,
-    'salt_transport': str,
+    'transport': str,
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
     'auth_timeout': int,
@@ -295,9 +299,13 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'keysize': 4096,
-    'salt_transport': 'zeromq',
+    'transport': 'zeromq',
     'auth_timeout': 3,
     'random_master': False,
+    'minion_floscript': os.path.join(FLOW_DIR, 'minion.flo'),
+    'ioflo_verbose': 3,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -413,7 +421,7 @@ DEFAULT_MASTER_OPTS = {
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
     'keysize': 4096,
-    'salt_transport': 'zeromq',
+    'transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 2,
     'syndic_event_forward_timeout': 0.5,
@@ -423,6 +431,10 @@ DEFAULT_MASTER_OPTS = {
     'ssh_sudo': False,
     'ssh_timeout': 60,
     'ssh_user': 'root',
+    'master_floscript': os.path.join(FLOW_DIR, 'master.flo'),
+    'ioflo_verbose': 3,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

@@ -95,16 +95,21 @@ class Master(parsers.MasterOptionParser):
         self.setup_logfile_logger()
         logger.info('Setting up the Salt Master')
 
-        if not verify_socket(self.config['interface'],
-                             self.config['publish_port'],
-                             self.config['ret_port']):
-            self.exit(4, 'The ports are not available to bind\n')
-        self.config['interface'] = ip_bracket(self.config['interface'])
-        migrations.migrate_paths(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            if not verify_socket(self.config['interface'],
+                                 self.config['publish_port'],
+                                 self.config['ret_port']):
+                self.exit(4, 'The ports are not available to bind\n')
+            self.config['interface'] = ip_bracket(self.config['interface'])
+            migrations.migrate_paths(self.config)
 
-        # Late import so logging works correctly
-        import salt.master
-        self.master = salt.master.Master(self.config)
+            # Late import so logging works correctly
+            import salt.master
+            self.master = salt.master.Master(self.config)
+        else:
+            # Add a udp port check here
+            import salt.daemons
+            self.master = salt.daemons.IoFloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
 
@@ -196,18 +201,22 @@ class Minion(parsers.MinionOptionParser):
             )
         )
         migrations.migrate_paths(self.config)
-        # Late import so logging works correctly
-        import salt.minion
-        # If the minion key has not been accepted, then Salt enters a loop
-        # waiting for it, if we daemonize later then the minion could halt
-        # the boot process waiting for a key to be accepted on the master.
-        # This is the latest safe place to daemonize
-        self.daemonize_if_required()
-        self.set_pidfile()
-        if isinstance(self.config.get('master'), list):
-            self.minion = salt.minion.MultiMinion(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            # Late import so logging works correctly
+            import salt.minion
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion could halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
+            self.daemonize_if_required()
+            self.set_pidfile()
+            if isinstance(self.config.get('master'), list):
+                self.minion = salt.minion.MultiMinion(self.config)
+            else:
+                self.minion = salt.minion.Minion(self.config)
         else:
-            self.minion = salt.minion.Minion(self.config)
+            import salt.daemons
+            self.minion = salt.daemons.IoFloMinion(self.config)
 
     def start(self):
         '''

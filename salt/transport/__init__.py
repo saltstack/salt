@@ -13,10 +13,10 @@ class Channel(object):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
-        if 'transport_type' in opts:
-            ttype = opts['transport_type']
-        elif 'transport_type' in opts.get('pillar', {}).get('master', {}):
-            ttype = opts['pillar']['master']['transport_type']
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
 
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
