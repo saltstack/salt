@@ -28,6 +28,12 @@ class SaltMasterError(SaltException):
     '''
 
 
+class SaltSyndicMasterError(SaltException):
+    '''
+    Problem while proxying a request in the syndication master
+    '''
+
+
 class MasterExit(SystemExit):
     '''
     Rise when the master exits
