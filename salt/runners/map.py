@@ -11,7 +11,7 @@ in a large infrastructure managed by salt.
 import salt.client
 
 
-def hash(*args,  **kwargs ):
+def hash(*args, **kwargs):
     '''
     Return the aggregated and sorted results from a salt command submitted by a
     salt runner...
@@ -36,7 +36,7 @@ def hash(*args,  **kwargs ):
     # hash minion return values as a string
     for minion in minions:
         h = hashlib.sha256(str(minions[minion])).hexdigest()
-        if not ret.has_key(h):
+        if not h in ret:
             ret[h] = []
 
         ret[h].append(minion)
