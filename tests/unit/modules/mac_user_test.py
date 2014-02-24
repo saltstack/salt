@@ -39,7 +39,7 @@ class MacUserTestCase(TestCase):
     mock_getgrall = [grp.struct_group(('accessibility', '*', 90, [])),
                      grp.struct_group(('admin', '*', 80, ['root', 'admin']))]
     mock_info_ret = {'shell': '/bin/bash', 'name': 'test', 'gid': 4376,
-                     'groups': ['TEST_GROUP'], 'home': '/var/test',
+                     'groups': ['TEST_GROUP'], 'home': '/Users/foo',
                      'fullname': 'TEST USER', 'uid': 4376}
 
     def test_osmajor(self):
@@ -110,16 +110,14 @@ class MacUserTestCase(TestCase):
         '''
         Tests if the uid is an int
         '''
-        with self.assertRaises(SaltInvocationError):
-            mac_user.chuid('foo', 'foo')
+        self.assertRaises(SaltInvocationError, mac_user.chuid, 'foo', 'foo')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chuid_user_exists(self):
         '''
         Tests if the user exists or not
         '''
-        with self.assertRaises(CommandExecutionError):
-            mac_user.chuid('foo', 4376)
+        self.assertRaises(CommandExecutionError, mac_user.chuid, 'foo', 4376)
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chuid_same_uid(self):
@@ -132,16 +130,14 @@ class MacUserTestCase(TestCase):
         '''
         Tests if the gid is an int
         '''
-        with self.assertRaises(SaltInvocationError):
-            mac_user.chgid('foo', 'foo')
+        self.assertRaises(SaltInvocationError, mac_user.chgid, 'foo', 'foo')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chgid_user_exists(self):
         '''
         Tests if the user exists or not
         '''
-        with self.assertRaises(CommandExecutionError):
-            mac_user.chgid('foo', 4376)
+        self.assertRaises(CommandExecutionError, mac_user.chgid, 'foo', 4376)
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chgid_same_gid(self):
@@ -149,6 +145,62 @@ class MacUserTestCase(TestCase):
         Tests if the user's gid is the same as as the argument
         '''
         self.assertTrue(mac_user.chgid('foo', 4376))
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_chshell_user_exists(self):
+        '''
+        Tests if the user exists or not
+        '''
+        self.assertRaises(CommandExecutionError, mac_user.chshell, 'foo', '/bin/bash')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    def test_chshell_same_shell(self):
+        '''
+        Tests if the user's shell is the same as the argument
+        '''
+        self.assertTrue(mac_user.chshell('foo', '/bin/bash'))
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_chhome_user_exists(self):
+        '''
+        Test if the user exists or not
+        '''
+        self.assertRaises(CommandExecutionError, mac_user.chhome, 'foo', '/Users/foo')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    def test_chhome_same_home(self):
+        '''
+        Tests if the user's home is the same as the argument
+        '''
+        self.assertTrue(mac_user.chhome('foo', '/Users/foo'))
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_chfullname_user_exists(self):
+        '''
+        Tests if the user exists or not
+        '''
+        self.assertRaises(CommandExecutionError, mac_user.chfullname, 'test', 'TEST USER')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    def test_chfullname_same_name(self):
+        '''
+        Tests if the user's full name is the same as the argument
+        '''
+        self.assertTrue(mac_user.chfullname('test', 'TEST USER'))
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_chgroups_user_exists(self):
+        '''
+        Tests if the user exists or not
+        '''
+        self.assertRaises(CommandExecutionError, mac_user.chgroups, 'foo', 'wheel, root')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    def test_chgroups_bad_groups(self):
+        '''
+        Test if there is white space in groups argument
+        '''
+        self.assertRaises(SaltInvocationError, mac_user.chgroups, 'test', 'bad group')
 
     @patch('salt.modules.mac_user.list_groups',
            MagicMock(return_value=['_TEST_GROUP']))
