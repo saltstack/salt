@@ -29,12 +29,13 @@ class IofloMaster(object):
         behaviors = []
         behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
 
-        ioflo.app.run.run(  name='master',
-                            filename=self.opts['master_floscript'],
-                            period=float(self.opts['ioflo_period']),
-                            verbose=int(self.opts['ioflo_verbose']),
-                            realtime=self.opts['ioflo_realtime'],
-                            behaviors=behaviors,)
+        ioflo.app.run.run(
+                name='master',
+                filename=self.opts['master_floscript'],
+                period=float(self.opts['ioflo_period']),
+                verbose=int(self.opts['ioflo_verbose']),
+                realtime=self.opts['ioflo_realtime'],
+                behaviors=behaviors,)
 
 
 class IofloMinion(object):
@@ -54,9 +55,10 @@ class IofloMinion(object):
         behaviors = []
         behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
 
-        ioflo.app.run.run(  name='minion',
-                            filename=self.opts['minion_floscript'],
-                            period=float(self.opts['ioflo_period']),
-                            verbose=int(self.opts['ioflo_verbose']),
-                            realtime=self.opts['ioflo_realtime'],
-                            behaviors=behaviors,)
+        ioflo.app.run.run(
+                name='minion',
+                filename=self.opts['minion_floscript'],
+                period=float(self.opts['ioflo_period']),
+                verbose=int(self.opts['ioflo_verbose']),
+                realtime=self.opts['ioflo_realtime'],
+                behaviors=behaviors,)
