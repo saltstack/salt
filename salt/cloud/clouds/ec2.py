@@ -2647,5 +2647,3 @@ def delete_keypair(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
-
-
