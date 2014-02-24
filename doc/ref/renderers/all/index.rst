@@ -15,6 +15,7 @@ Full list of builtin renderer modules
     mako
     py
     pydsl
+    pyobjects
     stateconf
     wempy
     yaml
