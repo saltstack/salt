@@ -7,11 +7,16 @@ See raeting.py for data format and packet field details.
 Layout in DataStore
 
 raet.udp.stack.stack
+    value StackUdp
 raet.udp.stack.txmsgs
+    value deque()
 raet.udp.stack.rxmsgs
-raet.udp.stack.address
-      host port
-raet.udp.stack.local.
+    value deque()
+raet.udp.stack.local
+    name host port sigkey prikey
+
+
+
 '''
 # pylint: skip-file
 # pylint: disable=W0611
@@ -34,88 +39,64 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting
+from . import raeting, packeting, stacking, devicing
 
 
-class ComposerRaet(deeding.ParamDeed):  # pylint: disable=W0232
+class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    ComposerRaet creates packet data as nested dicts from fields in
-    share parms meta, head, neck, body, tail
+    StackUdpRaet initialize and run raet udp stack
 
-    inherited attributes
-        .name is actor name string
-        .store is data store ref
-        .ioinits is dict of io init data for initio
-        ._parametric is flag for initio to not create attributes
     '''
     Ioinits = odict(
-        data=odict(ipath='data', ival=odict(), iown='True'),
-        meta='meta',
-        head='head',
-        neck='neck',
-        body='body',
-        tail='tail')
+        inode="raet.udp.stack.",
+        stack='stack',
+        txmsgs=odict(ipath='txmsgs', ival=deque()),
+        rxmsgs=odict(ipath='rxmsgs', ival=deque(), iown=True),
+        local=odict(ipath='local', ival=odict(   name='minion',
+                                                 did=0,
+                                                 host='0.0.0.0',
+                                                 port=raeting.RAET_PORT,
+                                                 sigkey=None,
+                                                 prikey=None)),)
 
-    def action(self, data, meta, head, neck, body, tail, **kwa):
+    def postinitio(self):
         '''
-        Build packet data from data section shares
+        Setup stack instance
         '''
-        dat = raeting.defaultData()
-        dat['meta'].update(raeting.META_DEFAULTS)
-        dat['meta'].update(meta.items())
-        dat['head'].update(raeting.HEAD_DEFAULTS)
-        dat['head'].update(head.items())
-        dat['neck'].update(neck.items())
-        dat['body'].update(data=odict(body.items()))
-        dat['tail'].update(tail.items())
-        data.value = dat
-        return None
+        sigkey = self.local.data.sigkey
+        prikey = self.local.data.prikey
+        ha = (self.local.data.host, self.local.data.port)
+        name = self.local.data.name
+        did = self.local.data.did
+        device = devicing.LocalDevice(  did=did,
+                                        name=name,
+                                        ha=ha,
+                                        sigkey=sigkey,
+                                        prikey=prikey,)
+        self.stack = stacking.StackUdp(device=device)
 
+    def action(self, **kwa):
+        '''
+        Service all the deques for the stack
+        '''
+        self.stack.serviceAll()
 
-class PackerRaet(deeding.ParamDeed):  # pylint: disable=W0232
+class CloserStackUdpRaet(deeding.ParamDeed):  # pylint: disable=W0232
     '''
-    PackerRaet creates a new packed RAET packet from data and fills in pack field
-
-    inherited attributes
-        .name is actor name string
-        .store is data store ref
-        .ioinits is dict of io init data for initio
-        ._parametric is flag for initio to not create attributes
-    '''
-    Ioinits = odict(
-        data=odict(ipath='data', ival=odict(), iown=True),
-        outlog=odict(ipath='outlog', ival=odict(), iown=True),)
-
-    def action(self, data, outlog, **kwa):
-        """ Build packet from data"""
-        if data.value:
-            raeting.packPacket(data.value)
-            data.stampNow()
-            outlog.value[(data.value['meta']['dh'], data.value['meta']['dp'])] = data.value['body'].get('data', {})
-        return None
-
-
-class ParserRaet(deeding.ParamDeed):  # pylint: disable=W0232
-    '''
-    ParserRaet parses a packed RAET packet from pack and fills in data
-
-    inherited attributes
-        .name is actor name string
-        .store is data store ref
-        .ioinits is dict of io init data for initio
-        ._parametric is flag for initio to not create attributes
+    CloserStackUdpRaet closes stack server socket connection
     '''
     Ioinits = odict(
-        data=odict(ipath='data', ival=odict(), iown=True),
-        inlog=odict(ipath='inlog', ival=odict(), iown=True),)
+        inode="raet.udp.stack.",
+        stack='stack', )
 
-    def action(self, data, inlog, **kwa):
-        """ Parse packet from raw packed"""
-        if data.value:
-            data.value = raeting.defaultData(data.value)
-            rest = raeting.parsePacket(data.value)
-            data.stampNow()
-            inlog.value[(data.value['meta']['sh'], data.value['meta']['sp'])] = data.value['body'].get('data', {})
+    def action(self, stack, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        if stack.value:
+            if isinstance(stack.value, stacking.StackUdp):
+                stack.value.serverUdp.close()
         return None
 
 
@@ -171,81 +152,3 @@ class ReceiverRaet(deeding.ParamDeed):  # pylint: disable=W0232
             data.value['meta']['dh'], data.value['meta']['dp'] = da
         return None
 
-
-class ServerRaet(deeding.ParamDeed):  # pylint: disable=W0232
-    '''
-    ServerRaet transmits and recieves udp packets from txes and rxes deques
-    using sh, sp fields in sa server address (server host, server port) to receive on.
-    Server is nonblocking socket connection
-
-    inherited attributes
-        .name is actor name string
-        .store is data store ref
-        .ioinits is dict of io init data for initio
-        ._parametric is flag for initio to not create attributes
-    '''
-    Ioinits = odict(
-        txes=odict(ipath='txes', ival=deque(), iown=True),
-        rxes=odict(ipath='rxes', ival=deque(), iown=True),
-        connection=odict(ipath='connection', ival=None, iown=True),
-        address=odict(ipath='address', ival=odict(host='', port=7530, ha=None)),
-        txlog=odict(ipath='txlog', ival=odict(), iown=True),
-        rxlog=odict(ipath='rxlog', ival=odict(), iown=True), )
-
-    def postinitio(self, connection, address, **kwa):
-        '''
-        Set up server to transmit and recive on address
-        '''
-        connection.value = aiding.SocketUdpNb(host=address.data.host, port=address.data.port)
-        connection.value.reopen()  # create socket connection
-        host, port = connection.value.ha
-        address.update(host=host, port=port, ha=(host, port))
-        return None
-
-    def action(self, txes, rxes, connection, address, txlog, rxlog, **kwa):
-        '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
-        '''
-        server = connection.value
-        txl = txlog.value
-        rxl = rxlog.value
-
-        if server:
-            rxds = rxes.value
-            while True:
-                rx, ra = server.receive()  # if no data the tuple is ('',None)
-                if not rx:  # no received data so break
-                    break
-                rxds.append((rx, ra, address.data.ha))
-                rxl[ra] = rx
-
-            txds = txes.value
-            while txds:
-                tx, ta = txds.popleft()
-                server.send(tx, ta)
-                txl[ta] = tx
-        return None
-
-
-class CloserServerRaet(deeding.ParamDeed):  # pylint: disable=W0232
-    '''
-    CloserServerRaet closes server socket connection
-
-    inherited attributes
-        .name is actor name string
-        .store is data store ref
-        .ioinits is dict of io init data for initio
-        ._parametric is flag for initio to not create attributes
-    '''
-    Ioinits = odict(
-        connection=odict(ipath='connection', ival=None))
-
-    def action(self, connection, **kwa):
-        '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
-        '''
-        if connection.value:
-            connection.value.close()
-        return None

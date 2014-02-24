@@ -7,7 +7,7 @@ stacking.py raet protocol stacking classes
 
 # Import python libs
 import socket
-from collections import deque
+from collections import deque,  Mapping
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -172,6 +172,34 @@ class StackUdp(object):
 
         return None
 
+    def serviceAll(self):
+        '''
+        Service or Process:
+           UDP Socket receive
+           UdpRxes queue
+           txMsgs queue
+           udpTxes queue
+           UDP Socket send
+
+        '''
+        if self.serverUdp:
+            while True:
+                rx, ra = self.serverUdp.receive()  # if no data the duple is ('',None)
+                if not rx:  # no received data so break
+                    break
+                # triple = ( packet, source address, destination address)
+                self.udpRxes.append((rx, ra, self.serverUdp.ha))
+
+            self.serviceUdpRx()
+
+            self.serviceTxMsg()
+
+            while self.udpTxes:
+                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
+                self.serverUdp.send(tx, ta)
+
+        return None
+
     def txUdp(self, packed, ddid):
         '''
         Queue duple of (packed, da) on stack transmit queue
@@ -183,7 +211,18 @@ class StackUdp(object):
             raise raeting.StackError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
 
-    def serviceUdpTxMsg(self):
+    def txMsg(self, msg, ddid=None):
+        '''
+        Append duple (msg,ddid) to .txMsgs deque
+        If msg is not mapping then raises exception
+        If ddid is None then it will default to the first entry in .devices
+        '''
+        if not isinstance(msg, Mapping):
+            emsg = "Invalid msg, not a mapping {0}".format(msg)
+            raise raeting.StackError(emsg)
+        self.txMsgs.append((msg, ddid))
+
+    def serviceTxMsg(self):
         '''
         Service .udpTxMsgs queue of outgoint udp messages for message transactions
         '''
@@ -225,19 +264,6 @@ class StackUdp(object):
 
         return packet # outer only has been parsed
 
-    def parseInner(self, packet):
-        '''
-        Parse inner of packet and return
-        Assume all drop checks done
-        '''
-        try:
-            packet.parseInner()
-            console.verbose("{0} received packet body\n{1}".format(self.name, packet.body.data))
-        except raeting.PacketError as ex:
-            print ex
-            return None
-        return packet
-
     def processUdpRx(self):
         '''
         Retrieve next packet from stack receive queue if any and parse
@@ -262,6 +288,13 @@ class StackUdp(object):
 
         self.reply(packet)
 
+    def serviceUdpRx(self):
+        '''
+        Process all packets in .udpRxes deque
+        '''
+        while self.udpRxes:
+            self.processUdpRx()
+
     def reply(self, packet):
         '''
         Reply to packet with corresponding transaction or action
@@ -280,6 +313,19 @@ class StackUdp(object):
                 packet.data['pk'] == raeting.pcktKinds.message and
                 packet.data['si'] != 0):
             self.replyMessage(packet)
+
+    def parseInner(self, packet):
+        '''
+        Parse inner of packet and return
+        Assume all drop checks done
+        '''
+        try:
+            packet.parseInner()
+            console.verbose("{0} received packet body\n{1}".format(self.name, packet.body.data))
+        except raeting.PacketError as ex:
+            print ex
+            return None
+        return packet
 
     def join(self, mha=None):
         '''
