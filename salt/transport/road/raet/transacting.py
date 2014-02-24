@@ -355,8 +355,6 @@ class Joinent(Correspondent):
                                         rtid=self.tid, )
         self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
         self.rdid = remote.did # auto generated at instance creation above
-        #remote.verfer = nacling.Verifier(key=verhex)
-        #remote.pubber = nacling.Publican(key=pubhex)
 
         self.ackJoin()
 

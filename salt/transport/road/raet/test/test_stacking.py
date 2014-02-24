@@ -34,7 +34,7 @@ def test():
     #master stack
     device = devicing.LocalDevice(   did=1,
                                      name='master',
-                                     signkey=masterSignKeyHex,
+                                     sigkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(device=device)
 
@@ -42,7 +42,7 @@ def test():
     device = devicing.LocalDevice(   did=0,
                                      name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
-                                     signkey=minionSignKeyHex,
+                                     sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
     stack1 = stacking.StackUdp(device=device)
 

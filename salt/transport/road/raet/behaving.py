@@ -4,32 +4,14 @@ behaving.py raet ioflo behaviors
 
 See raeting.py for data format and packet field details.
 
-Data format. The data from which a packet is created is a nested dict of dicts.
-What fields are included in a packed head, neck, body is dependent
-on the header kind, service kind, packet kind and defaults.
-To minimize lenght of JSON headers if field missing then the default is assumed
+Layout in DataStore
 
-data =
-{
-    meta: dict of meta data about packet
-    {
-
-    }
-    head: dict of header fields
-    {
-        pack: packed version of header
-    }
-    neck: dict of authentication fields
-    {
-        pack: packed version of neck
-    }
-    body: dict of body fields
-    {
-        pack: packed version of body
-    }
-    pack: packed version of whole packet on tx and raw packet on rx
-
-}
+raet.udp.stack.stack
+raet.udp.stack.txmsgs
+raet.udp.stack.rxmsgs
+raet.udp.stack.address
+      host port
+raet.udp.stack.local.
 '''
 # pylint: skip-file
 # pylint: disable=W0611
