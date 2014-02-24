@@ -333,7 +333,7 @@ class Cloud(object):
 
         opts = self.opts.copy()
         multiprocessing_data = []
-        
+
         # Optimize Providers
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
@@ -440,10 +440,10 @@ class Cloud(object):
         provider_by_driver = {}
 
         for alias, driver in providers.iteritems():
-            for name, data in driver.iteritems():   
+            for name, data in driver.iteritems():
                 if name not in provider_by_driver:
                     provider_by_driver[name] = {}
-                
+
                 provider_by_driver[name][alias] = data
 
         for driver, providers_data in provider_by_driver.iteritems():
@@ -459,7 +459,7 @@ class Cloud(object):
                         new_providers[name] = {}
                     new_providers[name][driver] = prov_data
                 continue
-            
+
             new_data = self.clouds[fun](providers_data)
             if new_data:
                 for name, prov_data in new_data.iteritems():
