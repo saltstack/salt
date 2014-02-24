@@ -341,7 +341,7 @@ def chgroups(name, groups, append=False):
     bad_groups = any(salt.utils.contains_whitespace(x) for x in groups)
     if bad_groups:
         raise SaltInvocationError(
-            'Invalid group name(s): {0}'.format(', '.join(bad_groups))
+            'Invalid group name(s): {0}'.format(', '.join(groups))
         )
     ugrps = set(list_groups(name))
     desired = set(str(x) for x in groups if bool(str(x)))
