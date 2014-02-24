@@ -42,7 +42,7 @@ class Registry(object):
 
         self.reflection_mask = {
             True: _winreg.KEY_ALL_ACCESS,
-            False: _winreg.KEY_ALL_ACCESS|_winreg.KEY_WOW64_64KEY,
+            False: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_64KEY,
             }
 
     def __getattr__(self, k):
