@@ -72,7 +72,7 @@ class IofloMinion(object):
         '''
         self.opts = opts
 
-    def start(self):
+    def tune_in(self):
         '''
         Start up ioflo
 
