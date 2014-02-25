@@ -27,6 +27,18 @@ __all__ = ['master', 'minion']
 import ioflo.app.run
 
 
+def explode_opts(opts):
+    '''
+    Explode the opts into a metadata object
+    '''
+    metadata = []
+    metadata = [('opts', '.salt.opts', dict(value=opts))]
+    for key, val in opts.items():
+        ukey = key.replace('.', '_')
+        metadata.append(ukey, '.salt.etc.{0}'.format(ukey), dict(value=val))
+    return metadata
+
+
 class IofloMaster(object):
     '''
     IofloMaster Class
@@ -44,8 +56,7 @@ class IofloMaster(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = [('opts', '.salt.opts', dict(value=self.opts))]
-
+        metadata = explode_opts(self.opts)
         ioflo.app.run.start(
                 name='master',
                 period=float(self.opts['ioflo_period']),
@@ -79,7 +90,7 @@ class IofloMinion(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = [('opts', '.salt.opts', dict(value=self.opts))]
+        metadata = explode_opts(self.opts)
 
         ioflo.app.run.start(
                 name=self.opts['id'],
