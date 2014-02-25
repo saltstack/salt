@@ -44,7 +44,7 @@ MOCK_ETC_HOSTS = (
     '# localhost is used to configure the loopback interface\n'
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
-    '\n'
+    '\n'  # This empty line MUST STAY HERE, it factors into the tests
     '127.0.0.1      localhost   foo.bar.net\n'
     '10.0.0.100     foo.bar.net\n'
 )
