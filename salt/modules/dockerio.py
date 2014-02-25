@@ -1200,19 +1200,19 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
     try:
         is_invalid = False
         status['out'] += '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
@@ -1542,19 +1542,19 @@ def _pull_assemble_error_status(status, ret, logs):
     out = ''
     try:
         out = '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
