@@ -45,14 +45,38 @@ MOCK_ETC_HOSTS = (
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
     '\n'
-    '127.0.0.1	localhost	foo.bar.net\n'
-    '10.0.0.100   foo.bar.net\n'
+    '127.0.0.1      localhost   foo.bar.net\n'
+    '10.0.0.100     foo.bar.net\n'
 )
 MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
 
 
+def _unhandled_mock_read(filename):
+    '''
+    Raise an error because we should not be calling salt.utils.fopen()
+    '''
+    raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
+
+
+@contextmanager
+def _fopen_side_effect_etc_hostname(filename):
+    '''
+    Mock reading from /etc/hostname
+    '''
+    log.debug('Mock-reading {0}'.format(filename))
+    if filename == '/etc/hostname':
+        mock_open = MagicMock()
+        mock_open.read.return_value = MOCK_ETC_HOSTNAME
+        yield mock_open
+    else:
+        _unhandled_mock_read(filename)
+
+
 @contextmanager
 def _fopen_side_effect_etc_hosts(filename):
+    '''
+    Mock /etc/hostname not existing, and falling back to reading /etc/hosts
+    '''
     log.debug('Mock-reading {0}'.format(filename))
     if filename == '/etc/hostname':
         raise IOError(2, "No such file or directory: '/etc/hostname'")
@@ -61,7 +85,7 @@ def _fopen_side_effect_etc_hosts(filename):
         mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
         yield mock_open
     else:
-        raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
+        _unhandled_mock_read(filename)
 
 
 class ConfigTestCase(TestCase):
@@ -419,6 +443,29 @@ class ConfigTestCase(TestCase):
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    @patch('socket.getfqdn', MagicMock(return_value='foo.bar.org'))
+    def test_get_id_socket_getfqdn(self):
+        '''
+        Test calling salt.config.get_id() and getting the hostname from
+        socket.getfqdn()
+        '''
+        with patch('salt.utils.fopen',
+                   MagicMock(side_effect=_unhandled_mock_read)):
+            self.assertEqual(
+                sconfig.get_id(cache=False), ('foo.bar.org', False)
+            )
+
+    @patch('socket.getfqdn', MagicMock(return_value='localhost'))
+    def test_get_id_etc_hostname(self):
+        '''
+        Test calling salt.config.get_id() and falling back to looking at
+        /etc/hostname.
+        '''
+        with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
+            self.assertEqual(
+                sconfig.get_id(cache=False), ('foo.bar.com', False)
+            )
 
     @patch('socket.getfqdn', MagicMock(return_value='localhost'))
     def test_get_id_etc_hosts(self):
