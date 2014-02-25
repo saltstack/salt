@@ -204,6 +204,7 @@ VALID_OPTS = {
     'ssh_sudo': bool,
     'ssh_timeout': float,
     'ssh_user': str,
+    'raet_port': int,
 }
 
 # default configurations
@@ -306,6 +307,7 @@ DEFAULT_MINION_OPTS = {
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
+    'raet_port': 4510,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -435,6 +437,7 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
+    'raet_port': 4505,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
