@@ -87,3 +87,7 @@ that have already, or partially returned.
 .. code-block:: bash
 
     # salt-run jobs.list_jobs
+
+Scheduling Jobs
+===============
+.. include:: schedule.rst

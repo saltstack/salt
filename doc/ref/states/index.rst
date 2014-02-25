@@ -6,6 +6,12 @@ Salt offers an optional interface to manage the configuration or "state" of the
 Salt minions. This interface is a fully capable mechanism used to enforce the
 state of systems from a central manager.
 
+
+.. toctree::
+    :glob:
+
+    *
+
 State management
 ================
 
@@ -315,3 +321,4 @@ The output is:
 .. _`pep8`: https://pypi.python.org/pypi/pep8
 .. _`setuptools`: https://pypi.python.org/pypi/setuptools
 .. _`runners`: /ref/runners
+

@@ -1,9 +1,10 @@
-===========================
-Salt Development Guidelines
-===========================
+===============
+Developing Salt
+===============
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :glob:
 
     *
+    tests/index

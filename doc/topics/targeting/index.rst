@@ -1,6 +1,6 @@
-=========
-Targeting
-=========
+=================
+Targeting Minions
+=================
 
 .. glossary::
 
