@@ -5,4 +5,3 @@ Minion enabling different transports
 
 Package for ioflo and raet based daemons
 '''
-
