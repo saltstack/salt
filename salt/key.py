@@ -24,7 +24,10 @@ class KeyCLI(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.key = Key(opts)
+        if self.opts['transport'] == 'zeromq':
+            self.key = Key(opts)
+        else:
+            self.key = RaetKey(opts)
 
     def list_status(self, status):
         '''
