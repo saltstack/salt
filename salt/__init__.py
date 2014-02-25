@@ -109,7 +109,7 @@ class Master(parsers.MasterOptionParser):
         else:
             # Add a udp port check here
             import salt.daemons.flo
-            self.master = salt.daemons.flo.IoFloMaster(self.config)
+            self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
 
@@ -216,7 +216,7 @@ class Minion(parsers.MinionOptionParser):
                 self.minion = salt.minion.Minion(self.config)
         else:
             import salt.daemons.flo
-            self.minion = salt.daemons.flo.IoFloMinion(self.config)
+            self.minion = salt.daemons.flo.IofloMinion(self.config)
 
     def start(self):
         '''
