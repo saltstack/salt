@@ -2,6 +2,9 @@
 '''
 raeting module provides constants and values for the RAET protocol
 
+Production Ports for Raet
+Master 4505
+Minion(s) 4510
 
 Packet Data Format.
 The data used to initialize a packet is an ordered dict with several fields
