@@ -7,7 +7,7 @@ Runs minion floscript
 
 """
 import os
-import salt.daemons
+import salt.daemons.flo
 import ioflo.app.run
 
 FLO_DIR_PATH = os.path.join(
@@ -25,7 +25,7 @@ def test():
             ioflo_verbose=2,
             raet_port=7530)
 
-    master = salt.daemons.IofloMaster(opts=opts)
+    master = salt.daemons.flo.IofloMaster(opts=opts)
     master.start()
 
 if __name__ == '__main__':
