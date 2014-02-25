@@ -44,7 +44,7 @@ _DFLT_LOG_FMT_LOGFILE = (
 
 FLO_DIR = os.path.join(
         os.path.dirname(__file__),
-        'daemons', 'ioflo')
+        'daemons', 'flo')
 
 VALID_OPTS = {
     'master': str,
