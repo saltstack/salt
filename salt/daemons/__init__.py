@@ -6,9 +6,6 @@ Minion enabling different transports
 Package for ioflo and raet based daemons
 '''
 
-# Import python libs
-import sys
-
 # Import ioflo libs
 try:
     import ioflo.app.run
@@ -31,7 +28,7 @@ class IofloMaster(object):
         Start up ioflo
         '''
         behaviors = []
-        behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+        behaviors.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
 
         ioflo.app.run.run(
                 name='master',
@@ -57,7 +54,7 @@ class IofloMinion(object):
         Start up ioflo
         '''
         behaviors = []
-        behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+        behaviors.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
 
         ioflo.app.run.run(
                 name='minion',
