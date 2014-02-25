@@ -68,6 +68,17 @@ class StackUdp(object):
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
 
+    def fetchRemoteDeviceByHostPort(self, host, port):
+        '''
+        Search for remote device with matching (host, port)
+        Return device if found Otherwise return None
+        '''
+        for device in self.devices.values():
+            if device.host == host and device.port == port:
+                return device
+
+        return None
+
     def addRemoteDevice(self, device, did=None):
         '''
         Add a remote device to .devices
