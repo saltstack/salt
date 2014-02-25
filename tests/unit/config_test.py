@@ -45,7 +45,7 @@ MOCK_ETC_HOSTS = (
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
     '\n'
-    '127.0.0.1	localhost\n'
+    '127.0.0.1	localhost	foo.bar.net\n'
     '10.0.0.100   foo.bar.net\n'
 )
 MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
@@ -54,12 +54,11 @@ MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
 @contextmanager
 def _fopen_side_effect_etc_hosts(filename):
     log.debug('Mock-reading {0}'.format(filename))
-    mock_open = MagicMock()
     if filename == '/etc/hostname':
-        mock_open.read.return_value = MOCK_ETC_HOSTNAME
-        yield mock_open
+        raise IOError(2, "No such file or directory: '/etc/hostname'")
     elif filename == '/etc/hosts':
-        mock_open.read.return_value = MOCK_ETC_HOSTS
+        mock_open = MagicMock()
+        mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
         yield mock_open
     else:
         raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
@@ -427,8 +426,7 @@ class ConfigTestCase(TestCase):
         Test calling salt.config.get_id() and falling back all the way to
         looking up data from /etc/hosts.
         '''
-        with patch('salt.utils.fopen',
-                   MagicMock(side_effect=_fopen_side_effect_etc_hosts)):
+        with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
             self.assertEqual(
                 sconfig.get_id(cache=False), ('foo.bar.net', False)
             )
