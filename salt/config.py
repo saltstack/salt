@@ -437,7 +437,7 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
-    'raet_port': 4505,
+    'raet_port': 4506,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
