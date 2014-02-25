@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 
-General map/reduce style salt-runner for aggregating identical results returned by several different minions.
-Aggregated results are sorted by the size of the minion pools returning identical results.
+General map/reduce style salt-runner for aggregating identical results returned
+by several different minions.
+Aggregated results are sorted by the size of the minion pools which returned
+identical results.
 
-Useful for playing the game: " some of these things are not like the others... " when identifying discrepancies
-in a large infrastructure managed by salt.
+Useful for playing the game: " some of these things are not like the others... "
+when identifying discrepancies in a large infrastructure managed by salt.
 
 '''
 
@@ -19,11 +21,11 @@ def hash(*args, **kwargs):
 
     CLI Example #1: ( functionally equivalent to "salt-run manage.up" )
 
-        salt-run map.hash "*" test.ping
+        salt-run diff.hash "*" test.ping
 
     CLI Example #2: ( find an "outlier" minion config file )
 
-        salt-run map.hash "*" file.get_hash /etc/salt/minion
+        salt-run diff.hash "*" file.get_hash /etc/salt/minion
 
     '''
     import hashlib
@@ -35,7 +37,7 @@ def hash(*args, **kwargs):
     minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
     ret = {}
     # hash minion return values as a string
-    for minion in minions:
+    for minion in sorted(minions):
         h = hashlib.sha256(str(minions[minion])).hexdigest()
         if not h in ret:
             ret[h] = []
@@ -46,12 +48,16 @@ def hash(*args, **kwargs):
         # return aggregated results, sorted by size of the hash pool
         # TODO:  use a custom outputter for better display results
 
-        print 'minion pool:\n--------'
+        print 'minion pool:\n' \
+              '-----------'
         print ret[k]
-        print 'size:\n-----'
+        print 'pool size:\n' \
+              '---------'
         print '    ' + str(len(ret[k]))
-        print 'result:\n-------'
+        print 'result:\n' \
+              '------'
         print '    ' + str(minions[ret[k][0]])
         print '\n'
 
     return ret
+
