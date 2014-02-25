@@ -35,7 +35,7 @@ def explode_opts(opts):
     metadata = [('opts', '.salt.opts', dict(value=opts))]
     for key, val in opts.items():
         ukey = key.replace('.', '_')
-        metadata.append(ukey, '.salt.etc.{0}'.format(ukey), dict(value=val))
+        metadata.append((ukey, '.salt.etc.{0}'.format(ukey), dict(value=val)))
     return metadata
 
 
