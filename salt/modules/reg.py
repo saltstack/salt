@@ -40,6 +40,11 @@ class Registry(object):
             "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
             }
 
+        self.reflection_mask = {
+            True: _winreg.KEY_ALL_ACCESS,
+            False: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_64KEY,
+            }
+
     def __getattr__(self, k):
         try:
             return self.hkeys[k]
@@ -62,7 +67,7 @@ def __virtual__():
     return False
 
 
-def read_key(hkey, path, key):
+def read_key(hkey, path, key, reflection=True):
     '''
     Read registry key value
 
@@ -75,14 +80,15 @@ def read_key(hkey, path, key):
 
     registry = Registry()
     hkey2 = getattr(registry, hkey)
+    access_mask = registry.reflection_mask[reflection]
     try:
-        handle = _winreg.OpenKey(hkey2, path)
+        handle = _winreg.OpenKeyEx(hkey2, path, 0, access_mask)
         return _winreg.QueryValueEx(handle, key)[0]
     except Exception:
         return None
 
 
-def set_key(hkey, path, key, value, vtype='REG_DWORD'):
+def set_key(hkey, path, key, value, vtype='REG_DWORD', reflection=True):
     '''
     Set a registry key
     vtype: http://docs.python.org/2/library/_winreg.html#value-types
@@ -95,7 +101,7 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD'):
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    # fullpath = '\\\\'.join([path, key])
+    access_mask = registry.reflection_mask[reflection]
 
     try:
         _type = getattr(_winreg, vtype)
@@ -103,19 +109,18 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD'):
         return False
 
     try:
-        # handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
-        handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
+        handle = _winreg.OpenKey(hkey2, path, 0, access_mask)
         _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
         return True
     except Exception:
-        handle = _winreg.CreateKey(hkey2, path)
+        handle = _winreg.CreateKeyEx(hkey2, path, 0, access_mask)
         _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
     return True
 
 
-def create_key(hkey, path, key, value=None):
+def create_key(hkey, path, key, value=None, reflection=True):
     '''
     Create a registry key
 
@@ -127,21 +132,21 @@ def create_key(hkey, path, key, value=None):
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    # fullpath = '\\\\'.join([path, key])
+    access_mask = registry.reflection_mask[reflection]
 
     try:
-        handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
+        handle = _winreg.OpenKey(hkey2, path, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
     except Exception:
-        handle = _winreg.CreateKey(hkey2, path)
+        handle = _winreg.CreateKeyEx(hkey2, path, 0, access_mask)
         if value:
             _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
         _winreg.CloseKey(handle)
     return True
 
 
-def delete_key(hkey, path, key):
+def delete_key(hkey, path, key, reflection=True):
     '''
     Delete a registry key
 
@@ -155,9 +160,10 @@ def delete_key(hkey, path, key):
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
+    access_mask = registry.reflection_mask[reflection]
 
     try:
-        handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
+        handle = _winreg.OpenKey(hkey2, path, 0, access_mask)
         _winreg.DeleteKeyEx(handle, key)
         _winreg.CloseKey(handle)
         return True
