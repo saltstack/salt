@@ -345,11 +345,11 @@ def _get_container_infos(container):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.inspect_container(container)
-        if info:
+        container_info = client.inspect_container(container)
+        if container_info:
             valid(status,
-                  id=info['ID'],
-                  out=info)
+                  id=container_info['ID'],
+                  out=container_info)
     except Exception:
         pass
     if not status['id']:
