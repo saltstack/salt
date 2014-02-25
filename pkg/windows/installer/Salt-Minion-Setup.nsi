@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "0.17.5"
+!define PRODUCT_VERSION "2014.1.0"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -50,14 +50,14 @@ Page custom nsDialogsPage nsDialogsPageLeave
 Function nsDialogsPage
   nsDialogs::Create 1018
   Pop $Dialog
-  
+
   ${If} $Dialog == error
     Abort
   ${EndIf}
-  
+
   ${NSD_CreateLabel} 0 0 100% 12u "Master IP or Hostname:"
   Pop $Label
-  
+
   ${NSD_CreateText} 0 13u 100% 12u $MasterHost_State
   Pop $MasterHost
 
@@ -68,7 +68,7 @@ Function nsDialogsPage
   Pop $MinionName
 
   nsDialogs::Show
-  
+
 FunctionEnd
 
 Function nsDialogsPageLeave

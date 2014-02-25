@@ -40,7 +40,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class Router(ioflo.deeding.Deed):
+class Router(ioflo.base.deeding.Deed):
     '''
     Route packaets from raet into minion proessing bins
     '''
@@ -77,7 +77,7 @@ class Router(ioflo.deeding.Deed):
                 break
 
 
-class PillarLoad(ioflo.deeding.Deed):
+class PillarLoad(ioflo.base.deeding.Deed):
     '''
     Load up the pillar in the data store
     '''
@@ -88,7 +88,7 @@ class PillarLoad(ioflo.deeding.Deed):
         ioflo.base.deeding.Deed.__init__(self)
 
 
-class ModulesLoad(ioflo.deeding.Deed):
+class ModulesLoad(ioflo.base.deeding.Deed):
     '''
     Reload the minion modules
     '''
@@ -141,7 +141,7 @@ class ModulesLoad(ioflo.deeding.Deed):
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
 
-class Schedule(ioflo.deeding.Deed):
+class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the scedule
     '''
@@ -170,7 +170,7 @@ class Schedule(ioflo.deeding.Deed):
         self.scedule.eval()
 
 
-class FunctionNix(ioflo.deeding.Deed):
+class FunctionNix(ioflo.base.deeding.Deed):
     '''
     Execute a function call
     '''

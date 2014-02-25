@@ -54,7 +54,7 @@ class RemoteMaster(ioflo.base.deeding.Deed):
                'ret_out': '.salt.net.ret_out'}
 
     def __init__(self):
-        ioflo.base.deeding.deeding.Deed.__init__(self)
+        ioflo.base.deeding.Deed.__init__(self)
 
     def postioinit(self):
         '''

@@ -28,8 +28,7 @@ class IofloMaster(object):
 
         port = self.opts['raet_port']
         '''
-        behaviors = []
-        behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
         metadata = [("opts", ".salt.opts", dict(value=self.opts))]
 
         ioflo.app.run.start(
@@ -61,14 +60,24 @@ class IofloMinion(object):
     def start(self):
         '''
         Start up ioflo
-        '''
-        behaviors = []
-        behavior.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+
         port = self.opts['raet_port']
-        ioflo.app.run.run(
-                name='minion',
-                filename=self.opts['minion_floscript'],
+        '''
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        metadata = [("opts", ".salt.opts", dict(value=self.opts))]
+
+        ioflo.app.run.start(
+                name=self.opts['id'],
                 period=float(self.opts['ioflo_period']),
+                stamp=0.0,
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['minion_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metadata=metadata,
                 verbose=int(self.opts['ioflo_verbose']),
-                realtime=self.opts['ioflo_realtime'],
-                behaviors=behaviors,)
+                )
+
