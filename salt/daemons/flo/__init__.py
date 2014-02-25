@@ -26,17 +26,26 @@ class IofloMaster(object):
     def start(self):
         '''
         Start up ioflo
-        '''
-        behaviors = []
-        behaviors.append('salt.transport.road.raet', 'salt.daemons.flo', )
 
-        ioflo.app.run.run(
+        port = self.opts['raet_port']
+        '''
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        metadata = [("opts", ".salt.opts", dict(value=self.opts))]
+
+        ioflo.app.run.start(
                 name='master',
-                filename=self.opts['master_floscript'],
                 period=float(self.opts['ioflo_period']),
+                stamp=0.0,
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['master_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metadata=metadata,
                 verbose=int(self.opts['ioflo_verbose']),
-                realtime=self.opts['ioflo_realtime'],
-                behaviors=behaviors,)
+                )
 
 
 class IofloMinion(object):
@@ -52,14 +61,23 @@ class IofloMinion(object):
     def start(self):
         '''
         Start up ioflo
-        '''
-        behaviors = []
-        behaviors.append('salt.transport.road.raet', 'salt.daemons.flo', )
 
-        ioflo.app.run.run(
-                name='minion',
-                filename=self.opts['minion_floscript'],
+        port = self.opts['raet_port']
+        '''
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        metadata = [("opts", ".salt.opts", dict(value=self.opts))]
+
+        ioflo.app.run.start(
+                name=self.opts['id'],
                 period=float(self.opts['ioflo_period']),
+                stamp=0.0,
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['minion_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metadata=metadata,
                 verbose=int(self.opts['ioflo_verbose']),
-                realtime=self.opts['ioflo_realtime'],
-                behaviors=behaviors,)
+                )
