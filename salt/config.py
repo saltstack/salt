@@ -1736,29 +1736,30 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     except (IOError, OSError):
         pass
 
-    # Can Windows 'hosts' file help?
-    try:
-        windir = os.getenv('WINDIR')
-        with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
-            for line in hfl:
-                # skip commented or blank lines
-                if line[0] == '#' or len(line) <= 1:
-                    continue
-                # process lines looking for '127.' in first column
-                try:
-                    entry = line.split()
-                    if entry[0].startswith('127.'):
-                        for name in entry[1:]:  # try each name in the row
-                            if name != 'localhost':
-                                log.info('Found minion id in hosts file: {0}'
-                                         .format(name))
-                                if minion_id and cache:
-                                    _cache_id(name, id_cache)
-                                return name, False
-                except IndexError:
-                    pass  # could not split line (malformed entry?)
-    except (IOError, OSError):
-        pass
+    if salt.utils.is_windows():
+        # Can Windows 'hosts' file help?
+        try:
+            windir = os.getenv('WINDIR')
+            with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
+                for line in hfl:
+                    # skip commented or blank lines
+                    if line[0] == '#' or len(line) <= 1:
+                        continue
+                    # process lines looking for '127.' in first column
+                    try:
+                        entry = line.split()
+                        if entry[0].startswith('127.'):
+                            for name in entry[1:]:  # try each name in the row
+                                if name != 'localhost':
+                                    log.info('Found minion id in hosts file: {0}'
+                                            .format(name))
+                                    if minion_id and cache:
+                                        _cache_id(name, id_cache)
+                                    return name, False
+                    except IndexError:
+                        pass  # could not split line (malformed entry?)
+        except (IOError, OSError):
+            pass
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
