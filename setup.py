@@ -458,6 +458,9 @@ SETUP_KWARGS = {'name': NAME,
                                     'debian_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
+                                 'salt.daemons.flo': [
+                                    '*.flo'
+                                    ]
                                 },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-cp.1',
