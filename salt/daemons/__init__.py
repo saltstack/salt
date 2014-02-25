@@ -25,7 +25,7 @@ class IofloMaster(object):
         Start up ioflo
         '''
         behaviors = []
-        behaviors.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+        behaviors.append('salt.transport.road.raet', 'salt.daemons.flo', )
 
         ioflo.app.run.run(
                 name='master',
@@ -51,7 +51,7 @@ class IofloMinion(object):
         Start up ioflo
         '''
         behaviors = []
-        behaviors.append('salt.transport.road.raet', 'salt.daemons.ioflo', )
+        behaviors.append('salt.transport.road.raet', 'salt.daemons.flo', )
 
         ioflo.app.run.run(
                 name='minion',
