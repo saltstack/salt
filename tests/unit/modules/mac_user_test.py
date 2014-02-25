@@ -50,7 +50,7 @@ class MacUserTestCase(TestCase):
                                               'osrelease': '10.9.1'}):
             self.assertEqual(mac_user._osmajor(), 10.9)
 
-    @skipIf(True, 'Waiting on some clarifications from bug report')
+    @skipIf(True, 'Waiting on some clarifications from bug report #10594')
     def test_flush_dscl_cache(self):
         # TODO: Implement tests after clarifications come in
         pass
@@ -78,15 +78,54 @@ class MacUserTestCase(TestCase):
         '''
         self.assertEqual(mac_user._first_avail_uid(), 501)
 
-    @skipIf(True, 'Test not implemented yet')
-    def test_add(self):
-        # TODO: Implement this guy last
-        pass
+    # 'add' function tests: 4
+    # Only tested error handling
+    # Full functionality tests covered in integration testing
 
-    @skipIf(True, 'Test not implemented yet')
-    def test_delete(self):
-        # TODO: Implement after chgroups is tested
-        pass
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    def test_add_user_exists(self):
+        '''
+        Tests if the user exists or not
+        '''
+        self.assertRaises(CommandExecutionError, mac_user.add, 'test')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_add_whitespace(self):
+        '''
+        Tests if there is whitespace in the user name
+        '''
+        self.assertRaises(SaltInvocationError, mac_user.add, 'foo bar')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_add_uid_int(self):
+        '''
+        Tests if the uid is an int
+        '''
+        self.assertRaises(SaltInvocationError, mac_user.add, 'foo', 'foo')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_add_gid_int(self):
+        '''
+        Tests if the gid is an int
+        '''
+        self.assertRaises(SaltInvocationError, mac_user.add, 'foo', 20, 'foo')
+
+    # 'delete' function tests: 2
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
+    def test_delete_whitespace(self):
+        '''
+        Tests if there is whitespace in the user name
+        '''
+        self.assertRaises(SaltInvocationError, mac_user.delete, 'foo bar')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
+    def test_delete_user_exists(self):
+        '''
+        Tests if the user exists or not
+        '''
+        self.assertTrue(mac_user.delete('foo'))
 
     @patch('pwd.getpwall', MagicMock(return_value=mock_pwall))
     @patch('salt.modules.mac_user.list_groups',
@@ -105,6 +144,10 @@ class MacUserTestCase(TestCase):
                 'groups': ['TEST_GROUP'], 'home': '/var/empty',
                 'fullname': 'Application Owner', 'uid': 87}]
         self.assertEqual(mac_user.getent(), ret)
+
+    # 'chuid' function tests: 3
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
 
     def test_chuid_int(self):
         '''
@@ -126,6 +169,10 @@ class MacUserTestCase(TestCase):
         '''
         self.assertTrue(mac_user.chuid('foo', 4376))
 
+    # 'chgid' function tests: 3
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
     def test_chgid_int(self):
         '''
         Tests if the gid is an int
@@ -146,12 +193,17 @@ class MacUserTestCase(TestCase):
         '''
         self.assertTrue(mac_user.chgid('foo', 4376))
 
+    # 'chshell' function tests: 2
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chshell_user_exists(self):
         '''
         Tests if the user exists or not
         '''
-        self.assertRaises(CommandExecutionError, mac_user.chshell, 'foo', '/bin/bash')
+        self.assertRaises(CommandExecutionError, mac_user.chshell,
+                          'foo', '/bin/bash')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chshell_same_shell(self):
@@ -160,12 +212,17 @@ class MacUserTestCase(TestCase):
         '''
         self.assertTrue(mac_user.chshell('foo', '/bin/bash'))
 
+    # 'chhome' function tests: 2
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chhome_user_exists(self):
         '''
         Test if the user exists or not
         '''
-        self.assertRaises(CommandExecutionError, mac_user.chhome, 'foo', '/Users/foo')
+        self.assertRaises(CommandExecutionError, mac_user.chhome,
+                          'foo', '/Users/foo')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chhome_same_home(self):
@@ -174,12 +231,17 @@ class MacUserTestCase(TestCase):
         '''
         self.assertTrue(mac_user.chhome('foo', '/Users/foo'))
 
+    # 'chfullname' function tests: 2
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chfullname_user_exists(self):
         '''
         Tests if the user exists or not
         '''
-        self.assertRaises(CommandExecutionError, mac_user.chfullname, 'test', 'TEST USER')
+        self.assertRaises(CommandExecutionError, mac_user.chfullname,
+                          'test', 'TEST USER')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chfullname_same_name(self):
@@ -188,19 +250,36 @@ class MacUserTestCase(TestCase):
         '''
         self.assertTrue(mac_user.chfullname('test', 'TEST USER'))
 
+    # 'chgroups' function tests: 3
+    # Only tested pure logic of function
+    # Full functionality tests covered in integration testing
+
     @patch('salt.modules.mac_user.info', MagicMock(return_value={}))
     def test_chgroups_user_exists(self):
         '''
         Tests if the user exists or not
         '''
-        self.assertRaises(CommandExecutionError, mac_user.chgroups, 'foo', 'wheel, root')
+        self.assertRaises(CommandExecutionError, mac_user.chgroups,
+                          'foo', 'wheel,root')
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     def test_chgroups_bad_groups(self):
         '''
         Test if there is white space in groups argument
         '''
-        self.assertRaises(SaltInvocationError, mac_user.chgroups, 'test', 'bad group')
+        self.assertRaises(SaltInvocationError, mac_user.chgroups,
+                          'test', 'bad group')
+
+    @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
+    @patch('salt.modules.mac_user.list_groups',
+           MagicMock(return_value={'wheel', 'root'}))
+    def test_chgroups_same_desired(self):
+        '''
+        Tests if the user's list of groups is the same as the arguments
+        '''
+        mock_primary = MagicMock(return_value='wheel')
+        with patch.dict(mac_user.__salt__, {'file.gid_to_group': mock_primary}):
+            self.assertTrue(mac_user.chgroups('test', 'wheel,root'))
 
     @patch('salt.modules.mac_user.list_groups',
            MagicMock(return_value=['_TEST_GROUP']))
