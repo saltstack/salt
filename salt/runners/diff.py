@@ -60,4 +60,3 @@ def hash(*args, **kwargs):
         print '\n'
 
     return ret
-
