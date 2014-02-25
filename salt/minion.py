@@ -57,7 +57,7 @@ except ImportError:
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
     SaltInvocationError, SaltReqTimeoutError, SaltClientError,
-    SaltSystemExit, SaltSyndicMasterError
+    SaltSystemExit
 )
 import salt.client
 import salt.crypt
