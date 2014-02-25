@@ -44,7 +44,7 @@ class IofloMaster(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = [("opts", ".salt.opts", dict(value=self.opts))]
+        metadata = [('opts', '.salt.opts', dict(value=self.opts))]
 
         ioflo.app.run.start(
                 name='master',
@@ -79,7 +79,7 @@ class IofloMinion(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = [("opts", ".salt.opts", dict(value=self.opts))]
+        metadata = [('opts', '.salt.opts', dict(value=self.opts))]
 
         ioflo.app.run.start(
                 name=self.opts['id'],
