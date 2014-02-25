@@ -7,10 +7,7 @@ Package for ioflo and raet based daemons
 '''
 
 # Import ioflo libs
-try:
-    import ioflo.app.run
-except ImportError:
-    pass
+import ioflo.app.run
 
 
 class IofloMaster(object):
