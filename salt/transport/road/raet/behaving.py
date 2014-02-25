@@ -116,10 +116,10 @@ class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         inode=".raet.udp.stack.",
         stack='stack',
         masterhost='.salt.etc.master',
-        masterport='.salt.etc.master_port')
+        masterport='.salt.etc.master_port', )
 
     def postinitio(self):
-        self.mha = (self.masterhost.value, self.masterport.value)
+        self.mha = (self.masterhost.value, int(self.masterport.value))
 
     def action(self, **kwa):
         '''
