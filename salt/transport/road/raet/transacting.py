@@ -324,8 +324,6 @@ class Joinent(Correspondent):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        # need to add search for existing device with same host,port address
-
         name = body.get('name')
         if not name:
             emsg = "Missing remote name in join packet"
@@ -341,9 +339,21 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
+        remote = self.stack.fetchRemoteDeviceByHostPort(host=data['sh'], port=data['sp'])
+        if remote:
+            if (name != remote.name or
+                verhex != remote.verfer.keyhex or
+                pubhex != remote.pubber.keyhex):
+                # nack join request another device at same address but different credentials
+                # and return
+                pass
+            # accept here and return
+
         if name in self.stack.dids:
             emsg = "Another device with name  already exists"
             raise raeting.TransactionError(emsg)
+
+
 
         remote = devicing.RemoteDevice( stack=self.stack,
                                         name=name,

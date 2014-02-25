@@ -1,6 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-ioflo behaviors for master and minion
+Package for ioflo and raet based daemons and associated ioflo behaviors
+
+To use set
+opts['transport'] ='raet'
+master minion config
+transport: raet
+
+See salt.config.py for relevant defaults
+
+opts['raet_port']
+opts['master_floscript']
+opts['minion_floscript']
+opts['ioflo_period']
+opts['ioflo_realtime']
+opts['ioflo_verbose']
 '''
 
 # Import modules
