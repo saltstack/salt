@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
@@ -44,7 +42,7 @@ MOCK_ETC_HOSTS = (
     '# localhost is used to configure the loopback interface\n'
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
-    '\n'
+    '\n'  # This empty line MUST STAY HERE, it factors into the tests
     '127.0.0.1      localhost   foo.bar.net\n'
     '10.0.0.100     foo.bar.net\n'
 )
