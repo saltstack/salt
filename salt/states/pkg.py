@@ -920,39 +920,10 @@ def purged(name, pkgs=None, **kwargs):
                 'comment': str(exc)}
 
 
-def mod_init(low):
-    '''
-    Set a flag to tell the install functions to refresh the package database.
-    This ensures that the package database is refreshed only once during
-    a state run significantly improving the speed of package management
-    during a state run.
-
-    It sets a flag for a number of reasons, primarily due to timeline logic.
-    When originally setting up the mod_init for pkg a number of corner cases
-    arose with different package managers and how they refresh package data.
-
-    It also runs the "ex_mod_init" from the package manager module that is
-    currently loaded. The "ex_mod_init" is expected to work as a normal
-    "mod_init" function.
-
-    .. seealso::
-       :py:func:`salt.modules.ebuild.ex_mod_init`
-
-    '''
-    ret = True
-    if 'pkg.ex_mod_init' in __salt__:
-        ret = __salt__['pkg.ex_mod_init'](low)
-
-    if low['fun'] == 'installed' or low['fun'] == 'latest':
-        rtag = __gen_rtag()
-        if not os.path.exists(rtag):
-            salt.utils.fopen(rtag, 'w+').write('')
-        return ret
-    return False
-
-
 def uptodate(name, refresh=False):
     '''
+    .. versionadded:: Helium
+
     Verify that the system is completely up to date.
 
     name
@@ -995,3 +966,34 @@ def uptodate(name, refresh=False):
         ret['comment'] = 'Upgrade failed.'
 
     return ret
+
+
+def mod_init(low):
+    '''
+    Set a flag to tell the install functions to refresh the package database.
+    This ensures that the package database is refreshed only once during
+    a state run significantly improving the speed of package management
+    during a state run.
+
+    It sets a flag for a number of reasons, primarily due to timeline logic.
+    When originally setting up the mod_init for pkg a number of corner cases
+    arose with different package managers and how they refresh package data.
+
+    It also runs the "ex_mod_init" from the package manager module that is
+    currently loaded. The "ex_mod_init" is expected to work as a normal
+    "mod_init" function.
+
+    .. seealso::
+       :py:func:`salt.modules.ebuild.ex_mod_init`
+
+    '''
+    ret = True
+    if 'pkg.ex_mod_init' in __salt__:
+        ret = __salt__['pkg.ex_mod_init'](low)
+
+    if low['fun'] == 'installed' or low['fun'] == 'latest':
+        rtag = __gen_rtag()
+        if not os.path.exists(rtag):
+            salt.utils.fopen(rtag, 'w+').write('')
+        return ret
+    return False
