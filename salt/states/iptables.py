@@ -296,7 +296,7 @@ def insert(name, family='ipv4', **kwargs):
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
-    rule = __salt__['iptables.build_rule'](family, **kwargs)
+    rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='I', **kwargs)
     if __salt__['iptables.check'](kwargs['table'],
                                   kwargs['chain'],
@@ -325,7 +325,7 @@ def insert(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['iptables.save'](filename=None, family=family)
                 ret['comment'] = ('Set and Saved iptables rule for {0} to: '
-                                  '{1} for {2}'.format(name, command.strip()), family)
+                                  '{1} for {2}'.format(name, command.strip(), family))
         return ret
     else:
         ret['result'] = False
