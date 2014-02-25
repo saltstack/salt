@@ -25,9 +25,19 @@ from salttesting.mock import MagicMock, patch, mock_open, call
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 from salt.exceptions import CommandExecutionError
 
+ensure_in_syspath('../')
+
+# Import salt libs
+import salt.minion
+import salt.utils
+import integration
+from salt import config as sconfig, version as salt_version
+from salt.version import SaltStackVersion
+
 log = logging.getLogger(__name__)
 
-mock_etc_hosts = (
+
+MOCK_ETC_HOSTS = (
     '##\n'
     '# Host Database\n'
     '#\n'
@@ -38,7 +48,8 @@ mock_etc_hosts = (
     '127.0.0.1      localhost   foo.bar.net\n'
     '10.0.0.100     foo.bar.net\n'
 )
-mock_etc_hostname = 'foo.bar.com\n'
+MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
+
 
 def _unhandled_mock_read(filename):
     '''
