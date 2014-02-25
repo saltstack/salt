@@ -21,13 +21,23 @@ from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.mock import MagicMock, patch, mock_open, call
+from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 from salt.exceptions import CommandExecutionError
 
+ensure_in_syspath('../')
+
+# Import salt libs
+import salt.minion
+import salt.utils
+import integration
+from salt import config as sconfig, version as salt_version
+from salt.version import SaltStackVersion
+
 log = logging.getLogger(__name__)
 
-mock_etc_hosts = (
+
+MOCK_ETC_HOSTS = (
     '##\n'
     '# Host Database\n'
     '#\n'
@@ -38,30 +48,21 @@ mock_etc_hosts = (
     '127.0.0.1	localhost\n'
     '10.0.0.100   foo.bar.net\n'
 )
-mock_etc_hostname = 'foo.bar.com\n'
+MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
+
 
 @contextmanager
 def _fopen_side_effect_etc_hosts(filename):
     log.debug('Mock-reading {0}'.format(filename))
+    mock_open = MagicMock()
     if filename == '/etc/hostname':
-        return mock_open(read_data=mock_etc_hostname)
-        #return OSError(2, "No such file or directory: '/etc/hostname'")
-        return mock_open(
-            read_data=OSError(2, "No such file or directory: '/etc/hostname'")
-        )
+        mock_open.read.return_value = MOCK_ETC_HOSTNAME
+        yield mock_open
     elif filename == '/etc/hosts':
-        return mock_open(read_data=mock_etc_hosts)
-    raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
-
-
-ensure_in_syspath('../')
-
-# Import salt libs
-import salt.minion
-import salt.utils
-import integration
-from salt import config as sconfig, version as salt_version
-from salt.version import SaltStackVersion
+        mock_open.read.return_value = MOCK_ETC_HOSTS
+        yield mock_open
+    else:
+        raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
 
 
 class ConfigTestCase(TestCase):
