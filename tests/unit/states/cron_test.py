@@ -76,6 +76,14 @@ def write_crontab(*args, **kw):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CronTestCase(TestCase):
 
+    def setUp(self):
+        super(CronTestCase, self).setUp()
+        set_crontab('')
+
+    def tearDown(self):
+        super(CronTestCase, self).tearDown()
+        set_crontab('')
+
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
@@ -177,6 +185,42 @@ class CronTestCase(TestCase):
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit'
         )
+
+    @patch('salt.modules.cron.raw_cron',
+           new=MagicMock(side_effect=get_crontab))
+    @patch('salt.modules.cron._write_cron_lines',
+           new=MagicMock(side_effect=write_crontab))
+    def test_aissue_1072(self):
+        (
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# I have a multi-line comment SALT_CRON_IDENTIFIER:1\n'
+            '* 1 * * * foo'
+        )
+        cron.present(
+            name='foo',
+            hour='1',
+            comment='1I have a multi-line comment\n2about my script here.\n',
+            identifier='1',
+            user='root')
+        cron.present(
+            name='foo',
+            hour='1',
+            comment='3I have a multi-line comment\n3about my script here.\n',
+            user='root')
+        cron.present(
+            name='foo',
+            hour='1',
+            comment='I have a multi-line comment\nabout my script here.\n',
+            identifier='2',
+            user='root')
+        self.assertEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# 2about my script here. SALT_CRON_IDENTIFIER:1\n'
+            '* 1 * * * foo\n'
+            '# I have a multi-line comment\n'
+            '# about my script here. SALT_CRON_IDENTIFIER:2\n'
+            '* 1 * * * foo')
 
 
 if __name__ == '__main__':

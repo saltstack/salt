@@ -94,7 +94,8 @@ def _render_tab(lst):
         if cron['comment'] is not None or cron['identifier'] is not None:
             comment = '#'
             if cron['comment']:
-                comment += ' {0}'.format(cron['comment'])
+                comment += ' {0}'.format(
+                    cron['comment'].rstrip().replace('\n', '\n# '))
             if cron['identifier']:
                 comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
                                              cron['identifier'])
