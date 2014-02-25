@@ -3,6 +3,7 @@
 house minion
 
 init .raet.udp.stack.local to did 0 name "minion" host "" port 7531
+init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 
 framer minionudpstack be active first start
