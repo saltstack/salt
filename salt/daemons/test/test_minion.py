@@ -1,19 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-"""
+'''
 Runs minion floscript
-
-
-"""
+'''
 # pylint: skip-file
+
 import os
 import salt.daemons.flo
-import ioflo.app.run
 
 FLO_DIR_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    , 'flo')
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'flo'
+)
 
 
 def test():
