@@ -323,15 +323,20 @@ _dulwich_env_refs = lambda refs: [x for x in refs
 
 def _get_tree_gitpython(repo, short):
     '''
-    Return a git.Tree object if the branch/tag/SHA is found, otherwise False
+    Return a git.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    for ref in repo.refs:
-        if isinstance(ref, (git.RemoteReference, git.TagReference)):
-            parted = ref.name.partition('/')
-            refname = parted[2] if parted[2] else parted[0]
-            if short == refname:
-                return ref.commit.tree
+    if short in envs():
+        for ref in repo.refs:
+            if isinstance(ref, (git.RemoteReference, git.TagReference)):
+                parted = ref.name.partition('/')
+                rspec = parted[2] if parted[2] else parted[0]
+                rspec = rspec.replace('/', '_')
+                if rspec == short:
+                    return ref.commit.tree
+
     # Branch or tag not matched, check if 'short' is a commit
+    if not _env_is_exposed(short):
+        return None
     try:
         commit = repo.rev_parse(short)
     except gitdb.exc.BadObject:
@@ -343,16 +348,21 @@ def _get_tree_gitpython(repo, short):
 
 def _get_tree_pygit2(repo, short):
     '''
-    Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise False
+    Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    for ref in repo.listall_references():
-        _, rtype, rspec = ref.split('/', 2)
-        if rtype in ('remotes', 'tags'):
-            parted = rspec.partition('/')
-            refname = parted[2] if parted[2] else parted[0]
-            if short == refname:
-                return repo.lookup_reference(ref).get_object().tree
+    if short in envs():
+        for ref in repo.listall_references():
+            _, rtype, rspec = ref.split('/', 2)
+            if rtype in ('remotes', 'tags'):
+                parted = rspec.partition('/')
+                rspec = parted[2] if parted[2] else parted[0]
+                rspec = rspec.replace('/', '_')
+                if rspec == short and _env_is_exposed(rspec):
+                    return repo.lookup_reference(ref).get_object().tree
+
     # Branch or tag not matched, check if 'short' is a commit
+    if not _env_is_exposed(short):
+        return None
     try:
         commit = repo.revparse_single(short)
     except (KeyError, TypeError):
@@ -366,35 +376,39 @@ def _get_tree_pygit2(repo, short):
 def _get_tree_dulwich(repo, short):
     '''
     Return a dulwich.objects.Tree object if the branch/tag/SHA is found,
-    otherwise False
+    otherwise None
     '''
-    refs = repo.get_refs()
-    # Sorting ensures we check heads (branches) before tags
-    for ref in sorted(_dulwich_env_refs(refs)):
-        # ref will be something like 'refs/heads/master'
-        rtype, rspec = ref[5:].split('/')
-        if rspec == short:
-            if rtype == 'heads':
-                commit = repo.get_object(refs[ref])
-            elif rtype == 'tags':
-                tag = repo.get_object(refs[ref])
-                if isinstance(tag, dulwich.objects.Tag):
-                    # Tag.get_object() returns a 2-tuple, the 2nd element of
-                    # which is the commit SHA to which the tag refers
-                    commit = repo.get_object(tag.object[1])
-                elif isinstance(tag, dulwich.objects.Commit):
-                    commit = tag
-                else:
-                    log.error(
-                        'Unhandled object type {0!r} in _get_tree_dulwich. '
-                        'This is a bug, please report it.'
-                        .format(tag.type_name)
-                    )
-            return repo.get_object(commit.tree)
+    if short in envs():
+        refs = repo.get_refs()
+        # Sorting ensures we check heads (branches) before tags
+        for ref in sorted(_dulwich_env_refs(refs)):
+            # ref will be something like 'refs/heads/master'
+            rtype, rspec = ref[5:].split('/', 1)
+            rspec = rspec.replace('/', '_')
+            if rspec == short and _env_is_exposed(rspec):
+                if rtype == 'heads':
+                    commit = repo.get_object(refs[ref])
+                elif rtype == 'tags':
+                    tag = repo.get_object(refs[ref])
+                    if isinstance(tag, dulwich.objects.Tag):
+                        # Tag.get_object() returns a 2-tuple, the 2nd element
+                        # of which is the commit SHA to which the tag refers
+                        commit = repo.get_object(tag.object[1])
+                    elif isinstance(tag, dulwich.objects.Commit):
+                        commit = tag
+                    else:
+                        log.error(
+                            'Unhandled object type {0!r} in '
+                            '_get_tree_dulwich. This is a bug, please report '
+                            'it.'.format(tag.type_name)
+                        )
+                return repo.get_object(commit.tree)
 
     # Branch or tag not matched, check if 'short' is a commit. This is more
     # difficult with Dulwich because of its inability to deal with shortened
     # SHA-1 hashes.
+    if not _env_is_exposed(short):
+        return None
     try:
         int(short, 16)
     except ValueError:
@@ -407,18 +421,18 @@ def _get_tree_dulwich(repo, short):
             if isinstance(sha_obj, dulwich.objects.Commit):
                 sha_commit = sha_obj
         else:
-            matches = [
+            matches = set([
                 x for x in (
                     repo.get_object(x) for x in repo.object_store
                     if x.startswith(short)
                 )
                 if isinstance(x, dulwich.objects.Commit)
-            ]
+            ])
             if len(matches) > 1:
                 log.warning('Ambiguous commit ID {0!r}'.format(short))
                 return None
             try:
-                sha_commit = matches[0]
+                sha_commit = matches.pop()
             except IndexError:
                 pass
     except TypeError as exc:
@@ -802,6 +816,18 @@ def update():
         pass
 
 
+def _env_is_exposed(env):
+    '''
+    Check if an environment is exposed by comparing it against a whitelist and
+    blacklist.
+    '''
+    return salt.utils.check_whitelist_blacklist(
+        env,
+        whitelist=__opts__['gitfs_env_whitelist'],
+        blacklist=__opts__['gitfs_env_blacklist']
+    )
+
+
 def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
@@ -841,14 +867,15 @@ def _envs_gitpython(repo, base_branch):
     remote = repo.remotes[0]
     for ref in repo.refs:
         parted = ref.name.partition('/')
-        short = parted[2] if parted[2] else parted[0]
+        rspec = parted[2] if parted[2] else parted[0]
+        rspec = rspec.replace('/', '_')
         if isinstance(ref, git.Head):
-            if short == base_branch:
-                short = 'base'
-            if ref not in remote.stale_refs:
-                ret.add(short)
-        elif isinstance(ref, git.Tag):
-            ret.add(short)
+            if rspec == base_branch:
+                rspec = 'base'
+            if ref not in remote.stale_refs and _env_is_exposed(rspec):
+                ret.add(rspec)
+        elif isinstance(ref, git.Tag) and _env_is_exposed(rspec):
+            ret.add(rspec)
     return ret
 
 
@@ -863,15 +890,17 @@ def _envs_pygit2(repo, base_branch):
     for ref in repo.listall_references():
         ref = re.sub('^refs/', '', ref)
         rtype, rspec = ref.split('/', 1)
-        if rtype == 'tags':
-            ret.add(rspec)
-        elif rtype == 'remotes':
+        if rtype == 'remotes':
             if rspec not in stale_refs:
                 parted = rspec.partition('/')
-                short = parted[2] if parted[2] else parted[0]
-                if short == base_branch:
-                    short = 'base'
-                ret.add(short)
+                rspec = parted[2] if parted[2] else parted[0]
+                rspec = rspec.replace('/', '_')
+                if rspec == base_branch:
+                    rspec = 'base'
+                if _env_is_exposed(rspec):
+                    ret.add(rspec)
+        elif rtype == 'tags' and _env_is_exposed(rspec):
+            ret.add(rspec)
     return ret
 
 
@@ -884,11 +913,13 @@ def _envs_dulwich(repo, base_branch):
     for ref in _dulwich_env_refs(repo.get_refs()):
         # ref will be something like 'refs/heads/master'
         rtype, rspec = ref[5:].split('/', 1)
-        if rtype == 'tags':
-            ret.add(rspec)
-        elif rtype == 'heads':
+        rspec = rspec.replace('/', '_')
+        if rtype == 'heads':
             if rspec == base_branch:
                 rspec = 'base'
+            if _env_is_exposed(rspec):
+                ret.add(rspec)
+        elif rtype == 'tags' and _env_is_exposed(rspec):
             ret.add(rspec)
     return ret
 
