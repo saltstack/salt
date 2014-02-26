@@ -523,12 +523,13 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
-if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
-    # We're freezing, and when freezing ZMQ needs to be installed, so this
-    # works fine
-    if 'zmq.core.*' in FREEZER_INCLUDES:
-        # For PyZMQ >= 0.14, freezing does not need 'zmq.core.*'
-        FREEZER_INCLUDES.remove('zmq.core.*')
+if hasattr(zmq, 'pyzmq_version_info'):
+    if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
+        # We're freezing, and when freezing ZMQ needs to be installed, so this
+        # works fine
+        if 'zmq.core.*' in FREEZER_INCLUDES:
+            # For PyZMQ >= 0.14, freezing does not need 'zmq.core.*'
+            FREEZER_INCLUDES.remove('zmq.core.*')
 
 if IS_WINDOWS_PLATFORM:
     FREEZER_INCLUDES.extend([
