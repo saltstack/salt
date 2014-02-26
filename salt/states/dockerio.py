@@ -92,7 +92,6 @@ Available Functions
         - running
         - absent
         - run
-        - script
 
 
 '''
@@ -536,6 +535,12 @@ def run(name,
         return _invalid(comment=result['comment'], name=name)
 
 
+def script(*args, **kw):
+    salt.utils.warn_until((0, 19),
+                          'The state \'docker.script\' is an alias of'
+                          ' \'docker.run\' and such, has been deprecated')
+    return run(*args, **kw)
+
 
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
@@ -597,92 +602,3 @@ def running(name, container=None, port_bindings=None, binds=None,
                 comment=('Container {!r}'
                          ' cannot be started\n{!s}').format(container,
                                                             started['out']))
-
-
-def script(name,
-           cid=None,
-           hostname=None,
-           state_id=None,
-           stateful=False,
-           onlyif=None,
-           unless=None,
-           docked_onlyif=None,
-           docked_unless=None,
-           *args, **kwargs):
-    '''
-    Run a command in a specific container
-
-    XXX: TODO: IMPLEMENT
-
-    Matching can be done by either name or hostname
-
-    name
-        command to run in the docker
-
-    cid
-        Container id
-
-    state_id
-        State Id
-
-    stateful
-        stateful mode
-
-    onlyif
-        Only execute cmd if statement on the host return 0
-
-    unless
-        Do not execute cmd if statement on the host return 0
-
-    docked_onlyif
-        Only execute cmd if statement in the container returns 0
-
-    docked_unless
-        Do not execute cmd if statement in the container returns 0
-
-    '''
-    if not hostname:
-        hostname = cid
-    retcode = __salt__['docker.retcode']
-    drun = __salt__['docker.run']
-    cmd_kwargs = ''
-    if onlyif is not None:
-        if not isinstance(onlyif, string_types):
-            if not onlyif:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
-        elif isinstance(onlyif, string_types):
-            if retcode(onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
-
-    if unless is not None:
-        if not isinstance(unless, string_types):
-            if unless:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
-        elif isinstance(unless, string_types):
-            if retcode(unless, **cmd_kwargs) == 0:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
-
-    if docked_onlyif is not None:
-        if not isinstance(docked_onlyif, string_types):
-            if not docked_onlyif:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
-        elif isinstance(docked_onlyif, string_types):
-            if drun(docked_onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
-
-    if docked_unless is not None:
-        if not isinstance(docked_unless, string_types):
-            if docked_unless:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
-        elif isinstance(docked_unless, string_types):
-            if drun(docked_unless, **cmd_kwargs) == 0:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
-    return drun(**cmd_kwargs)
