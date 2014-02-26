@@ -1,0 +1,42 @@
+#!/usr/bin/env python2
+
+# Import python libs
+import sys
+
+# Import salt libs
+import salt.scripts
+
+def get_avail():
+    '''
+    Return the available salt commands
+    '''
+    ret = []
+    for fun in dir(salt.scripts):
+        if fun.startswith('salt'):
+            ret.append(fun[5:])
+    return ret
+
+def redirect():
+    '''
+    Change the args and redirect to another salt script
+    '''
+    avail = get_avail()
+    if len(sys.argv) < 2:
+        msg = 'Must pass in a salt command, available commands are:'
+        for cmd in avail:
+            msg += '\n{0}'.format(cmd)
+        print(msg)
+        sys.exit(1)
+    cmd = sys.argv[1]
+    if cmd not in avail:
+        # Fall back to the salt command
+        sys.argv[0] = 'salt'
+        s_fun = salt.scripts.salt_main
+    else:
+        sys.argv[0] = 'salt-{0}'.format(cmd)
+        sys.argv.pop(1)
+        s_fun = getattr(salt.scripts, 'salt_{0}'.format(cmd))
+    s_fun()
+
+if __name__ == '__main__':
+    redirect()
