@@ -1093,6 +1093,50 @@ def expr_match(expr, line):
     return False
 
 
+def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    if not any((whitelist, blacklist)):
+        return True
+    in_whitelist = False
+    in_blacklist = False
+    if whitelist:
+        try:
+            for expr in whitelist:
+                if expr_match(expr, value):
+                    in_whitelist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable whitelist {0}'.format(whitelist))
+            whitelist = None
+    else:
+        whitelist = None
+
+    if blacklist:
+        try:
+            for expr in blacklist:
+                if expr_match(expr, value):
+                    in_blacklist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable blacklist {0}'.format(whitelist))
+            blacklist = None
+    else:
+        blacklist = None
+
+    if whitelist and not blacklist:
+        ret = in_whitelist
+    elif blacklist and not whitelist:
+        ret = not in_blacklist
+    elif whitelist and blacklist:
+        ret = in_whitelist and not in_blacklist
+    else:
+        ret = True
+
+    return ret
+
+
 def subdict_match(data, expr, delim=':', regex_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
