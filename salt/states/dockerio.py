@@ -101,6 +101,7 @@ Available Functions
 
 # Import salt libs
 from salt._compat import string_types
+import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'docker'
@@ -491,8 +492,10 @@ def run(name,
         Do not execute cmd if statement in the container returns 0
 
     '''
-    if not hostname:
-        hostname = cid
+    if hostname:
+        salt.utils.warn_until((0, 19),
+                              'The argument \'hostname\' argument'
+                              ' has been deprecated.')
     retcode = __salt__['docker.retcode']
     drun = __salt__['docker.run']
     cmd_kwargs = ''
