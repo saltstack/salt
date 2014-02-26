@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Run nagios plugins/checks from salt and get the return as datai,
-retcode commands are compatible with carbon returner.
+Run nagios plugins/checks from salt and get the return as data.
 """
 
 # Import python libs
