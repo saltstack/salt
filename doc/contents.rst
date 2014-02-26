@@ -17,10 +17,14 @@ Salt Table of Contents
     ref/renderers/index
     ref/runners/index
     ref/output/index
+    ref/returners/index
     ref/file_server/index
     topics/reactor/index
+    topics/mine/index
+    topics/eauth/index
     topics/jobs/index
     topics/event/index
+    topics/topology/index
     topics/cloud/index
     topics/virt/index
     topics/ssh/*
@@ -29,5 +33,6 @@ Salt Table of Contents
     topics/troubleshooting/index
     topics/development/index
     topics/releases/index
+    topics/projects/index
     faq
     glossary

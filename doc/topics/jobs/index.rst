@@ -91,3 +91,8 @@ that have already, or partially returned.
 Scheduling Jobs
 ===============
 .. include:: schedule.rst
+
+.. toctree::
+    :hidden:
+
+    schedule

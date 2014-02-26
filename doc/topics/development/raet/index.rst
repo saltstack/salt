@@ -21,8 +21,7 @@ OSI Layers
 Link is hidden from Raet
 Network is IP host address and Udp Port
 Transport is Raet transactions, service kind, tail error checking, 
-    Could include header signing as part of transport reliable delivery
-    serialization of header
+Could include header signing as part of transport reliable delivery serialization of header
 Session is session id key exchange for signing. Grouping is Road (like 852 channel)
 Presentation is Encrpt Decript body Serialize Deserialize Body
 Application is body data dictionary
