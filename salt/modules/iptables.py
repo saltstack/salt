@@ -885,7 +885,7 @@ def _parser():
     add_arg('--string', dest='string', action='append')
     add_arg('--hex-string', dest='hex-string', action='append')
     ## tcp
-    add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    add_arg('--tcp-flags', dest='tcp-flags', action='append', nargs='*')
     add_arg('--syn', dest='syn', action='append')
     add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss
