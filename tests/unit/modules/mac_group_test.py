@@ -77,3 +77,6 @@ class MacGroupTestCase(TestCase):
         self.assertEqual(mac_group._format_info(data), ret)
 
 
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MacGroupTestCase, needs_daemon=False)
