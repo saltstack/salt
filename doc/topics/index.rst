@@ -96,17 +96,14 @@ the Salt project so that we can all benefit together as Salt grows.
 Please feel free to sprinkle Salt around your systems and let the
 deliciousness come forth.
 
-=========
-Community
-=========
+Salt Community
+==============
 
 Join the Salt!
 
 There are many ways to participate in and communicate with the Salt community.
 
 Salt has an active IRC channel and a mailing list.
-
-.. _community-mailing-list:
 
 Mailing List
 ============
@@ -119,7 +116,6 @@ https://groups.google.com/forum/#!forum/salt-users
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
-.. _community-irc:
 
 IRC
 ===
@@ -136,7 +132,6 @@ can use the `Freenode webchat client`__ right from your browser.
 If you wish to discuss the development of Salt itself join us in
 ``#salt-devel``.
 
-.. _community-github:
 
 Follow on Github
 ================
@@ -146,7 +141,6 @@ is happening in Salt development:
 
 |saltrepo|
 
-.. _community-blog:
 
 Blogs
 =====
@@ -201,7 +195,7 @@ Hack the Source
 
 If you want to get involved with the development of source code or the
 documentation efforts, please review the :doc:`hacking section
-<hacking>`!
+<development/hacking>`!
 
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
