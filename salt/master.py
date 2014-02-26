@@ -165,6 +165,25 @@ class Master(SMaster):
                 br, loc = opts_dict['git'].strip().split()
                 pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
 
+        # Clear remote fileserver backend env cache so it gets recreated during
+        # the first loop_interval
+        for backend in ('git', 'hg', 'svn'):
+            if backend in self.opts['fileserver_backend']:
+                env_cache = os.path.join(
+                    self.opts['cachedir'],
+                    '{0}fs'.format(backend),
+                    'envs.p'
+                )
+                if os.path.isfile(env_cache):
+                    log.debug('Clearing {0}fs env cache'.format(backend))
+                    try:
+                        os.remove(env_cache)
+                    except (IOError, OSError) as exc:
+                        log.critical(
+                            'Unable to clear env cache file {0}: {1}'
+                            .format(env_cache, exc)
+                        )
+
         old_present = set()
         while True:
             now = int(time.time())
