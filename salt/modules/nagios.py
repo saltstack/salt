@@ -25,7 +25,7 @@ def __virtual__():
     return False
 
 
-def _execute_cmd(plugin, args='', run_type='cmd.retcode', key_name=None):
+def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
     '''
     Execute nagios plugin if it's in the directory with salt command specified in run_type
     '''
