@@ -1271,12 +1271,12 @@ def delete_disk(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The create_disk function must be called with -f or --function.'
+            'The delete_disk function must be called with -f or --function.'
         )
 
     if not kwargs or 'disk_name' not in kwargs:
         log.error(
-            'A disk_name must be specified when creating a disk.'
+            'A disk_name must be specified when deleting a disk.'
         )
         return False
 
