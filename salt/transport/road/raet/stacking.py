@@ -359,7 +359,7 @@ class StackUdp(object):
                                         rxPacket=packet)
         joinent.join() #assigns .rdid here
         # need to perform the check for accepted status somewhere
-        joinent.accept()
+        #joinent.accept()
 
     def allow(self, rdid=None):
         '''

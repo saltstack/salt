@@ -297,6 +297,15 @@ class Joinent(Correspondent):
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
 
+    def process(self):
+        '''
+        Perform time based processing of transaction
+
+        '''
+        # need to perform the check for accepted status somewhere
+                #joinent.accept()
+        pass
+
     def prep(self):
         '''
         Prepare .txData

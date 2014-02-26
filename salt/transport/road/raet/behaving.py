@@ -114,12 +114,7 @@ class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
-        stack='stack',
-        masterhost='.salt.etc.master',
-        masterport='.salt.etc.master_port', )
-
-    def postinitio(self):
-        self.mha = (self.masterhost.value, int(self.masterport.value))
+        stack='stack',)
 
     def action(self, **kwa):
         '''
@@ -128,7 +123,7 @@ class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         '''
         stack = self.stack.value
         if stack and isinstance(stack, stacking.StackUdp):
-            stack.join(mha=self.mha)
+            stack.join()
 
 class JoinedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
