@@ -165,7 +165,7 @@ def retcode_pillar(pillar_name):
     for group in groups:
         commands = groups[group]
         for command in commands:
-            #Check if is a dict to get the arguments 
+            #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
             if isinstance(command, dict):
                 plugin = command.keys()[0]
