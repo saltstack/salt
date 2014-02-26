@@ -32,11 +32,11 @@ class ImmutableDict(collections.Mapping):
     def __iter__(self):
         return iter(self.__obj)
 
-    def __repr__(self):
-        return repr(self.__obj)
-
     def __getitem__(self, key):
-        return self.__obj[key]
+        return ImmutableLazyProxy(self.__obj[key])
+
+    def __repr__(self):
+        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
 class ImmutableList(collections.Sequence):
@@ -53,11 +53,11 @@ class ImmutableList(collections.Sequence):
     def __iter__(self):
         return iter(self.__obj)
 
-    def __repr__(self):
-        return repr(self.__obj)
-
     def __getitem__(self, key):
-        return self.__obj[key]
+        return ImmutableLazyProxy(self.__obj[key])
+
+    def __repr__(self):
+        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
 class ImmutableSet(collections.Set):
@@ -74,11 +74,11 @@ class ImmutableSet(collections.Set):
     def __iter__(self):
         return iter(self.__obj)
 
-    def __repr__(self):
-        return repr(self.__obj)
-
     def __contains__(self, key):
         return key in self.__obj
+
+    def __repr__(self):
+        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
 class ImmutableLazyProxy(LazyLoadProxy):
