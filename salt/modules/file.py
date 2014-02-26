@@ -2635,7 +2635,8 @@ def manage_file(name,
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group,
+                             mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
