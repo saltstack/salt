@@ -253,6 +253,7 @@ DEFAULT_MINION_OPTS = {
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
+    'auto_accept': True,
     'multiprocessing': True,
     'mine_interval': 60,
     'ipc_mode': 'ipc',
