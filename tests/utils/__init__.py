@@ -49,3 +49,38 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     def tearDown(self):
         cherrypy.engine.exit()
 
+class Root(object):
+    '''
+    The simplest CherryPy app needed to test individual tools
+    '''
+    exposed = True
+
+    _cp_config = {}
+
+    def GET(self):
+        return {'return': ['Hello world.']}
+
+    def POST(self, *args, **kwargs):
+        return {'return': [{'args': args}, {'kwargs': kwargs}]}
+
+class BaseToolsTest(BaseCherryPyTestCase):
+    '''
+    A base class so tests can selectively turn individual tools on for testing
+    '''
+    conf = {
+        '/': {
+            'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
+        },
+    }
+
+    def setUp(self):
+        Root._cp_config = self._cp_config
+        root = Root()
+
+        cherrypy.tree.mount(root, '/', self.conf)
+        cherrypy.server.unsubscribe()
+        cherrypy.engine.start()
+
+    def tearDown(self):
+        cherrypy.engine.exit()
+
