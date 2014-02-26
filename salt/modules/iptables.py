@@ -192,6 +192,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
         del kwargs['to-destination']
 
+    if 'reject-with' in kwargs:
+        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
+        del kwargs['reject-with']
+
     for item in kwargs:
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
