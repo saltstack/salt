@@ -10,6 +10,10 @@ Author: David Boucha <boucha@gmail.com>
 # Import salt libs
 import salt.utils
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def __virtual__():
     '''
@@ -126,3 +130,27 @@ def member_status():
                                           'Pending': vals[2],
                                           }
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' riak.help
+
+        salt '*' riak.help status
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

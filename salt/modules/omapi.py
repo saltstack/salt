@@ -18,6 +18,10 @@ import struct
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 try:
     import pypureomapi as omapi
@@ -118,3 +122,27 @@ def delete_host(mac=None, name=None):
     if response.opcode != omapi.OMAPI_OP_STATUS:
         return False
     return True
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' omapi.help
+
+        salt '*' omapi.help add_host
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

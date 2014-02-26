@@ -11,6 +11,10 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def __virtual__():
     '''
@@ -276,3 +280,27 @@ def dump(device, args=None):
                 line = line.strip()
                 ret['blocks'][group]['extra'].append(line)
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' extfs.help
+
+        salt '*' extfs.help mkfs
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

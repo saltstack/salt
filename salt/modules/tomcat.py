@@ -53,6 +53,7 @@ import os
 import salt.utils
 
 __func_alias__ = {
+    'help_': 'help',
     'reload_': 'reload'
 }
 
@@ -622,3 +623,27 @@ def signal(signal=None):
         __catalina_home(), valid_signals[signal]
     )
     __salt__['cmd.run'](cmd)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tomcat.help
+
+        salt '*' tomcat.help signal
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

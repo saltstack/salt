@@ -38,6 +38,10 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 _DEFAULT_PASSWORDS_ENCRYPTION = True
 _EXTENSION_NOT_INSTALLED = 'EXTENSION NOT INSTALLED'
@@ -1500,3 +1504,27 @@ def owner_to(dbname,
                                    password=password,
                                    maintenance_db=dbname)
     return cmdret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.help
+
+        salt '*' postgres.help user_create
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

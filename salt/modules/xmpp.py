@@ -45,6 +45,10 @@ except ImportError:
 
 __virtualname__ = 'xmpp'
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def __virtual__():
     '''
@@ -101,3 +105,27 @@ def send_msg(recipient, message, jid=None, password=None, profile=None):
         xmpp.process(block=True)
         return True
     return False
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xmpp.help
+
+        salt '*' xmpp.help send_msg
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

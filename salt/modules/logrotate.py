@@ -16,6 +16,7 @@ default_conf = '/etc/logrotate.conf'
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
+    'help_': 'help',
     'set_': 'set'
 }
 
@@ -183,3 +184,27 @@ def _dict_to_stanza(key, stanza):
             stanza[skey] = ''
         ret += '    {0} {1}\n'.format(skey, stanza[skey])
     return '{0} {{\n{1}}}'.format(key, ret)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' logrotate.help
+
+        salt '*' logrotate.help set
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

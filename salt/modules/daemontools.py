@@ -23,7 +23,8 @@ from salt.exceptions import CommandExecutionError
 
 # Function alias to not shadow built-ins.
 __func_alias__ = {
-    'reload_': 'reload'
+    'reload_': 'reload',
+    'help_': 'help'
 }
 
 VALID_SERVICE_DIRS = [
@@ -201,3 +202,27 @@ def get_all():
         raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' daemontools.help
+
+        salt '*' daemontools.help get_all
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

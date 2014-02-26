@@ -23,6 +23,10 @@ POLICY_MAP_DICT = {
 
 POLICY_RE = re.compile('.*policy=([^;]+)')
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def has_powerpath():
     if os.path.exists('/sbin/emcpreg'):
@@ -123,3 +127,26 @@ def remove_license(key):
         result['result'] = True
 
     return result
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' powerpath.help
+
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

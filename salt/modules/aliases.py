@@ -13,6 +13,14 @@ import tempfile
 import salt.utils
 from salt.utils import which as _which
 
+import logging
+
+log = logging.getLogger(__name__)
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 __outputter__ = {
     'rm_alias': 'txt',
@@ -195,3 +203,27 @@ def rm_alias(alias):
 
     __write_aliases_file(out)
     return True
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aliases.help
+
+        salt '*' aliases.help rm_alias
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

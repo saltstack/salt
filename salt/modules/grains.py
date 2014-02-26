@@ -23,6 +23,11 @@ __proxyenabled__ = ['*']
 # Seed the grains dict so cython will build
 __grains__ = {}
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 # Change the default outputter to make it more readable
 __outputter__ = {
     'items': 'grains',
@@ -452,3 +457,27 @@ def get_or_set_hash(name,
         setval(name, val)
 
     return get(name)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.help
+
+        salt '*' grains.help get_or_set_hash
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

@@ -15,6 +15,10 @@ import salt.utils
 
 __authorized_modules__ = ['namenode', 'dfsadmin', 'dfs', 'fs']
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def __virtual__():
     '''
@@ -132,3 +136,27 @@ def namenode_format(force=None):
         force_param = '-force'
 
     return _hadoop_cmd('namenode', 'format', '-nonInteractive', force_param)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hadoop.help
+
+        salt '*' hadoop.help dfs_absent
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

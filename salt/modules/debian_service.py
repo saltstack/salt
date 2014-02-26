@@ -11,7 +11,8 @@ import re
 from .systemd import _sd_booted
 
 __func_alias__ = {
-    'reload_': 'reload'
+    'reload_': 'reload',
+    'help_': 'help'
 }
 
 # Define the module's virtual name
@@ -265,3 +266,27 @@ def disabled(name):
         salt '*' service.disabled <service name>
     '''
     return name in get_disabled()
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.help
+
+        salt '*' service.help disabled
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

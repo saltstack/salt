@@ -13,9 +13,9 @@ from salt.exceptions import SaltException
 
 
 __func_alias__ = {
+    'help_': 'help',
     'list_': 'list'
 }
-
 
 # Cache the output of running which('ipvsadm')
 @decorators.memoize
@@ -469,3 +469,27 @@ def check_server(protocol=None, service_address=None, server_address=None, **kwa
     else:
         ret = 'Error: server not exists'
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lvs.help
+
+        salt '*' lvs.help check_server
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

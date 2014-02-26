@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 
 # Function alias to set mapping. Filled
 # in later on.
-__func_alias__ = {}
+__func_alias__ = {
+    'help_': 'help'
+}
 
 
 @decorators.memoize
@@ -133,3 +135,26 @@ if _check_zfs():
 
         # Update the function alias so that salt finds the functions properly.
         __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.help
+
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+
