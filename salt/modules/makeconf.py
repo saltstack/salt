@@ -4,6 +4,11 @@ Support for modifying make.conf under Gentoo
 
 '''
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -796,3 +801,26 @@ def features_contains(value):
         salt '*' makeconf.features_contains 'webrsync-gpg'
     '''
     return var_contains('FEATURES', value)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' makeconf.help
+
+        salt '*' makeconf.help trim_features
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

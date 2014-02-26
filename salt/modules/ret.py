@@ -6,6 +6,11 @@ Module to integrate with the returner system and retrieve data sent to a salt re
 # Import salt libs
 import salt.loader
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def get_jid(returner, jid):
     '''
@@ -61,3 +66,26 @@ def get_minions(returner):
     '''
     returners = salt.loader.returners(__opts__, __salt__)
     return returners['{0}.get_minions'.format(returner)]()
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ret.help
+
+        salt '*' ret.help get_minions
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

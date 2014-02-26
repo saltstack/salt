@@ -14,7 +14,8 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'set_': 'set'
+    'set_': 'set',
+    'help_': 'help'
 }
 
 # Define the module's virtual name
@@ -157,3 +158,26 @@ def set_file(path, saltenv='base', **kwargs):
         return True
 
     return False
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' debconf.help
+
+        salt '*' debconf.help show
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

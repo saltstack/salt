@@ -13,6 +13,7 @@ import salt.utils.decorators as decorators
 from salt.exceptions import CommandNotFoundError
 
 __func_alias__ = {
+    'help_': 'help',
     'reload_': 'reload'
 }
 
@@ -367,3 +368,26 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
     return not __salt__['cmd.retcode'](cmd)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.help
+
+        salt '*' service.help status
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

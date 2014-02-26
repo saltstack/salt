@@ -10,6 +10,11 @@ import re
 # Import salt libs
 import salt.utils
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -272,3 +277,26 @@ def remove(mod, persist=False, comment=True):
     if persist:
         persist_mods = _remove_persistent_module(mod, comment)
     return sorted(list(mods | persist_mods))
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kmod.help
+
+        salt '*' kmod.help remove
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

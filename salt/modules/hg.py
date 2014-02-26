@@ -11,6 +11,11 @@ if utils.is_windows():
 else:
     hg_binary = "hg"
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def _check_hg():
     utils.check_or_die(hg_binary)
@@ -205,3 +210,26 @@ def clone(cwd, repository, opts=None, user=None):
         opts = ''
     cmd = 'hg clone {0} {1} {2}'.format(repository, cwd, opts)
     return __salt__['cmd.run'](cmd, runas=user)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hg.help
+
+        salt '*' hg.help clone
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
