@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import fnmatch
 import signal
 import shutil
 import stat
