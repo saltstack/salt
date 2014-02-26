@@ -3,9 +3,9 @@ Reference
 .. toctree::
     :glob:
 
-    *
     auth/all/index
     cli/index
+    clientacl
     clients/index   
     clouds/all/index
     configuration/*
@@ -14,10 +14,9 @@ Reference
     file_server/index
     file_server/all/index
     internals/index
-    master_tops/index
-    modules/index
     modules/all/index
     output/all/index 
+    peer
     pillar/index
     pillar/all/index
     renderers/index

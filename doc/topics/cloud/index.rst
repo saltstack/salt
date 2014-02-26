@@ -50,7 +50,7 @@ Miscellaneous Options
 .. toctree::
     :maxdepth: 3
 
-   Miscellaneous <misc>
+    Miscellaneous <misc>
 
 Troubleshooting Steps
 =====================

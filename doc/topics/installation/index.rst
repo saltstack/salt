@@ -98,3 +98,4 @@ Optional Dependencies
 .. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
 .. _`mako`: http://www.makotemplates.org/
 .. _`Cython`: http://cython.org/
+.. _`apache-libcloud`: http://libcloud.apache.org

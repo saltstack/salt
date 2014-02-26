@@ -284,7 +284,8 @@ connected.
 Of course, there are hundreds of other modules that can be called just as ``test.ping`` can.
 For example, the following would return disk usage on all targeted minions:
 
-.. code-block::
+.. code-block:: bash
+
     salt '*' disk.percent
 
 

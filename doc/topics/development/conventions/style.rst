@@ -104,9 +104,9 @@ When adding a new function or state, where possible try to use a
         '''
         print msg
 
-If you are uncertain what version should be used, either :doc:`consult a core
-developer in IRC </topics/community>` or bring this up when opening your
-:doc:`pull request </topics/hacking>` and a core developer will add the proper
+If you are uncertain what version should be used, either consult a core
+developer in IRC or bring this up when opening your
+:doc:`pull request </topics/development/hacking>` and a core developer will add the proper
 version once your pull request has been merged. Bugfixes will be available in a
 bugfix release (i.e. 0.17.1, the first bugfix release for 0.17.0), while new
 features are held for feature releases, and this will affect what version

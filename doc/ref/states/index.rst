@@ -39,7 +39,7 @@ an understanding of Salt states and how to write the states is needed as well.
 .. note::
 
     States are compiled and executed only on minions that have been targeted.
-    To execute functions directly on masters, see :doc:`runners </topics/ref/runners>`.
+    To execute functions directly on masters, see :doc:`runners </ref/runners/index>`.
 
 Salt SLS System
 ---------------
