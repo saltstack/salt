@@ -971,10 +971,14 @@ class Login(LowDataAdapter):
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
 
         # Grab eauth config for the current backend for the current user
-        if token['name'] in self.opts['external_auth'][token['eauth']]:
+        try:
             perms = self.opts['external_auth'][token['eauth']][token['name']]
-        else:
-            perms = self.opts['external_auth'][token['eauth']]['*']
+        except (AttributeError, IndexError):
+            logger.debug("Configuration for external_auth malformed for "\
+                "eauth '{0}', and user '{1}'."
+                .format(token.get('eauth'), token.get('name')), exc_info=True)
+            raise cherrypy.HTTPError(500,
+                'Configuration for external_auth could not be read.')
 
         return {'return': [{
             'token': cherrypy.session.id,
