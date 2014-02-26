@@ -1466,6 +1466,12 @@ source_file = _build/locale/ref/renderers/all/salt.renderers.pydsl.pot
 source_lang = en
 source_name = ref/renderers/all/salt.renderers.pydsl.rst
 
+[salt.ref--renderers--all--salt_renderers_pyobjects]
+file_filter = locale/<lang>/LC_MESSAGES/ref/renderers/all/salt.renderers.pyobjects.po
+source_file = _build/locale/ref/renderers/all/salt.renderers.pyobjects.pot
+source_lang = en
+source_name = ref/renderers/all/salt.renderers.pyobjects.rst
+
 [salt.ref--renderers--all--salt_renderers_stateconf]
 file_filter = locale/<lang>/LC_MESSAGES/ref/renderers/all/salt.renderers.stateconf.po
 source_file = _build/locale/ref/renderers/all/salt.renderers.stateconf.pot

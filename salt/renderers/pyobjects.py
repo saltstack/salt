@@ -9,6 +9,7 @@ example that ensures the ``/tmp`` directory is in the correct state.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     File.managed("/tmp", user='root', group='root', mode='1777')
@@ -46,6 +47,7 @@ core of what makes pyobjects the best way to write states.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     with Pkg.installed("nginx"):
@@ -66,6 +68,7 @@ The above could have also been written use direct requisite statements as.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     Pkg.installed("nginx")
@@ -80,6 +83,7 @@ generated outside of the current file.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     # some-other-package is defined in some other state file
@@ -91,6 +95,7 @@ watch_in, use & use_in) when using the requisite as a context manager.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     with Service("my-service", "watch_in"):
@@ -111,6 +116,7 @@ a state.
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     include('http', 'ssh')
@@ -130,6 +136,7 @@ The following lines are functionally equivalent:
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     ret = salt.cmd.run(bar)
@@ -148,6 +155,7 @@ The following pairs of lines are functionally equivalent:
 
 .. code-block:: python
    :linenos:
+
     #!pyobjects
 
     value = pillar('foo:bar:baz', 'qux')

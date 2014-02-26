@@ -5,7 +5,10 @@
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
+from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch
+
+ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import mac_user
@@ -272,7 +275,7 @@ class MacUserTestCase(TestCase):
 
     @patch('salt.modules.mac_user.info', MagicMock(return_value=mock_info_ret))
     @patch('salt.modules.mac_user.list_groups',
-           MagicMock(return_value={'wheel', 'root'}))
+           MagicMock(return_value=('wheel', 'root')))
     def test_chgroups_same_desired(self):
         '''
         Tests if the user's list of groups is the same as the arguments
@@ -324,3 +327,8 @@ class MacUserTestCase(TestCase):
         '''
         ret = ['_amavisd', '_appleevents', '_appowner']
         self.assertEqual(mac_user.list_users(), ret)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MacUserTestCase, needs_daemon=False)

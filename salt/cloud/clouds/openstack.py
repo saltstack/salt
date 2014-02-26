@@ -326,6 +326,7 @@ def create(vm_):
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
+    key_filename = os.path.expanduser(key_filename)
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined ssh_key_file {0!r} does not exist'.format(

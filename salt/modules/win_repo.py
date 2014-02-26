@@ -105,9 +105,14 @@ def update_git_repos():
         #else:
             #targetname = gitrepo
         targetname = gitrepo
+        rev = None
+        # If a revision is specified, use it.
+        if len(gitrepo.strip().split(' ')) > 1:
+            rev, gitrepo = gitrepo.strip().split(' ')
         gittarget = os.path.join(repo, targetname)
         #result = mminion.states['git.latest'](gitrepo,
         result = __salt__['git.latest'](gitrepo,
+                                        rev=rev,
                                         target=gittarget,
                                         force=True)
         ret[result['name']] = result['result']

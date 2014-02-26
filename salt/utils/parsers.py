@@ -2177,13 +2177,6 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
-            '-v', '--verbose',
-            default=False,
-            action='store_true',
-            help=('Turn on command verbosity, display jid')
-        )
-
-        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,

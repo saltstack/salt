@@ -933,6 +933,60 @@ Defines which branch/tag should be used as the ``base`` environment.
 
     gitfs_base: salt
 
+.. conf_master:: gitfs_env_whitelist
+
+``gitfs_env_whitelist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your gitfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are accepted.
+
+If used, only branches/tags/SHAs which match one of the specified expressions
+will be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`gitfs_env_blacklist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    gitfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: gitfs_env_blacklist
+
+``gitfs_env_blacklist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your gitfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are accepted.
+
+If used, branches/tags/SHAs which match one of the specified expressions will
+*not* be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`gitfs_env_whitelist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    gitfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
 hg: Mercurial Remote File Server Backend
 ----------------------------------------
 
