@@ -88,7 +88,7 @@ def run(plugin, args='', key_name=None):
     Run nagios plugin and return all the data execution with cmd.run
 
     '''
-    data = _execute_cmd(plugin, args, 'cmd.run', key_name)
+    data = _execute_cmd(plugin, args, 'cmd.run')
 
     return data
 
@@ -112,7 +112,7 @@ def retcode(plugin, args='', key_name=None):
 
     data[key_name] = {}
 
-    status = _execute_cmd(plugin, args, 'cmd.retcode', key_name)
+    status = _execute_cmd(plugin, args, 'cmd.retcode')
     data[key_name]['status'] = status
 
     return data
@@ -122,7 +122,7 @@ def run_all(plugin, args='', key_name=None):
     '''
     Run nagios plugin and return all the data execution with cmd.run_all
     '''
-    data = _execute_cmd(plugin, args, 'cmd.run_all', key_name)
+    data = _execute_cmd(plugin, args, 'cmd.run_all')
     return data
 
 
