@@ -609,6 +609,7 @@ else:
     SETUP_KWARGS['scripts'] = ['scripts/salt-call',
                                'scripts/salt-cp',
                                'scripts/salt-minion',
+                               'scripts/salt-unity',
                                ]
 
     if IS_WINDOWS_PLATFORM is False:
