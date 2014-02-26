@@ -450,7 +450,7 @@ def set_policy(name, family='ipv4', **kwargs):
             family):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Set default policy for {0} to {1} family {2]'.format(
+        ret['comment'] = 'Set default policy for {0} to {1} family {2}'.format(
             kwargs['chain'],
             kwargs['policy'],
             family
@@ -487,7 +487,7 @@ def flush(name, family='ipv4', **kwargs):
     if not __salt__['iptables.flush'](kwargs['table'], kwargs['chain'], family):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Flush iptables rules in {0} table {1} chain {2] family'.format(
+        ret['comment'] = 'Flush iptables rules in {0} table {1} chain {2} family'.format(
             kwargs['table'],
             kwargs['chain'],
             family
