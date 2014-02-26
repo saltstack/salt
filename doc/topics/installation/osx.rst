@@ -52,4 +52,4 @@ Now the salt-master should run without errors:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.

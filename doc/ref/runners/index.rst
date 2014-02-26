@@ -11,6 +11,11 @@ A Salt runner can be a simple client call or a complex application.
 
 .. seealso:: :ref:`The full list of runners <all-salt.runners>`
 
+.. toctree::
+    :hidden:
+
+    all/index
+
 Writing Salt Runners
 --------------------
 

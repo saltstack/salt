@@ -16,7 +16,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 
 .. seealso::
 
-    :doc:`/topics/configuration`
+    :doc:`/ref/configuration`
 
 Using the Salt Command
 ======================
@@ -221,3 +221,64 @@ You may change the arguments separator using the ``--args-separator`` option:
 .. code-block:: bash
 
     salt --args-separator=:: '*' some.fun,test.echo params with , comma :: foo
+
+salt-call
+=========
+.. toctree::
+
+    salt-call
+
+salt
+====
+.. toctree::
+
+    salt
+
+salt-cloud
+==========
+.. toctree::
+
+    salt-cloud
+
+salt-cp
+=======
+.. toctree::
+
+    salt-cp
+
+salt-key
+========
+.. toctree::
+
+    salt-key
+
+salt-master
+===========
+.. toctree::
+
+    salt-master
+
+salt-minion
+===========
+.. toctree::
+
+    salt-minion
+
+salt-run
+========
+.. toctree::
+
+    salt-run
+
+salt-ssh
+========
+.. toctree::
+
+    salt-ssh
+
+salt-syndic
+===========
+.. toctree::
+
+    salt-syndic
+

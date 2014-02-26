@@ -1127,7 +1127,7 @@ svn: Subversion Remote File Server Backend
 .. conf_master:: svnfs_remotes
 
 ``svnfs_remotes``
-****************
+*****************
 
 .. versionadded:: 0.17.0
 
