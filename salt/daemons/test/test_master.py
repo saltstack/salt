@@ -6,6 +6,7 @@ Runs minion floscript
 
 
 """
+# pylint: skip-file
 import os
 import salt.daemons.flo
 import ioflo.app.run
