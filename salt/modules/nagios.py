@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Run nagios plugins/checks from salt and get the return as data.
-'''
+"""
 
 # Import python libs
 import os
 import stat
 
 # Import salt libs
-import salt.utils
-from salt._compat import string_types
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -35,14 +34,14 @@ def _execute_cmd(plugin, args='', run_type='cmd.retcode', key_name=None):
 
     all_plugins = list_plugins()
     if plugin in all_plugins:
-        data = __salt__[run_type]('{0}{1} {2}'.format(PLUGINDIR,plugin,args))
+        data = __salt__[run_type]('{0}{1} {2}'.format(PLUGINDIR, plugin, args))
 
     return data
 
 
-def _execute_pillar(pillar_name, cmd_command):
+def _execute_pillar(pillar_name, run_type):
     """
-    Run one or more nagios plugins from pillar data and get the result of run_all
+    Run one or more nagios plugins from pillar data and get the result of run_type
     The pillar have to be in this format:
     ------
     webserver:
@@ -54,43 +53,34 @@ def _execute_pillar(pillar_name, cmd_command):
         APT:
             - check_apt
     -------
-    webserver is the role to check, the next keys are the group and the items the check with the arguments if needed
-    You have to group different checks in a group
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nagios.run webserver
-
     """
 
     groups = __salt__['pillar.get'](pillar_name)
 
     data = {}
     for group in groups:
-        data[group]={}
+        data[group] = {}
         commands = groups[group]
         for command in commands:
             #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
-            if isinstance(command,dict):
+            if isinstance(command, dict):
                 plugin = command.keys()[0]
                 args = command[plugin]
             else:
                 plugin = command
                 args = ''
-            command_key=_format_dict_key(args, plugin)
-            data[group][command_key]=cmd_command(plugin, args, group)
+            command_key = _format_dict_key(args, plugin)
+            data[group][command_key] = run_type(plugin, args, group)
     return data
 
 
 def _format_dict_key(args, plugin):
-
     key_name = plugin
-    args_key = args.replace(' ','')
+    args_key = args.replace(' ', '')
     if args != '':
-        args_key = '_'+args_key
-        key_name = plugin+args_key
+        args_key = '_' + args_key
+        key_name = plugin + args_key
 
     return key_name
 
@@ -122,11 +112,11 @@ def retcode(plugin, args='', key_name=None):
 
     # Remove all the spaces, the key must not have any space
     if key_name is None:
-        key_name= _format_dict_key(args, plugin)
+        key_name = _format_dict_key(args, plugin)
 
     data[key_name] = {}
 
-    status = _execute_cmd(plugin, args,'cmd.retcode', key_name)
+    status = _execute_cmd(plugin, args, 'cmd.retcode', key_name)
     data[key_name]['status'] = status
 
     return data
@@ -177,26 +167,22 @@ def retcode_pillar(pillar_name):
         for command in commands:
             #Check if is a dict to get the arguments 
             #in command if not set the arguments to empty string
-            if isinstance(command,dict):
+            if isinstance(command, dict):
                 plugin = command.keys()[0]
                 args = command[plugin]
             else:
                 plugin = command
                 args = ''
-            
+
             check.update(retcode(plugin, args, group))
-           
+
             current_value = 0
             new_value = int(check[group]['status'])
             if group in data:
                 current_value = int(data[group]['status'])
-            
-            log.debug('Value to check in {0}: {1}'.format(group,new_value))  
-            
+
             if (new_value > current_value) or (group not in data):
-                
-                log.debug('Updating {0}'.format(group))
-                
+
                 if group not in data:
                     data[group] = {}
                 data[group]['status'] = new_value
