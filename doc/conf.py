@@ -55,6 +55,11 @@ MOCK_MODULES = [
     'libcloud.compute.deployment',
     'libcloud.compute.providers',
     'libcloud.compute.types',
+    'libcloud.loadbalancer',
+    'libcloud.loadbalancer.types',
+    'libcloud.loadbalancer.providers',
+    'libcloud.common',
+    'libcloud.common.google',
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',

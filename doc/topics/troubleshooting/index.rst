@@ -245,3 +245,17 @@ As of release 0.17.1 you can no longer run different versions of Salt on your
 Master and Minion servers. This is due to a protocol change for security
 purposes. The Salt team will continue to attempt to ensure versions are as
 backwards compatible as possible.
+
+
+Debugging the Master and Minion
+===============================
+
+.. toctree::
+    master
+    minion
+
+Debugging YAML
+==============
+
+.. toctree::
+    yaml_idiosyncrasies

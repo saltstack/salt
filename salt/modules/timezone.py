@@ -117,10 +117,7 @@ def set_zone(timezone):
     else:
         os.symlink(zonepath, '/etc/localtime')
 
-    if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
-    elif 'RedHat' in __grains__['os_family']:
+    if 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
@@ -181,9 +178,12 @@ def get_hwclock():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep HARDWARECLOCK /etc/rc.conf | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
-        return out[1].replace('"', '')
+        cmd = ('timedatectl | grep "RTC in local TZ" | '
+               'sed -e"s/^[ \t]*//" | cut -d" " -f5')
+        if __salt__['cmd.run'](cmd) == 'yes':
+            return 'localtime'
+        else:
+            return 'UTC'
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)
@@ -252,9 +252,12 @@ def set_hwclock(clock):
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(
-                clock))
+        if clock == 'localtime':
+            cmd = 'timezonectl set-local-rtc true'
+            __salt__['cmd.run'](cmd)
+        else:
+            cmd = 'timezonectl set-local-rtc false'
+            __salt__['cmd.run'](cmd)
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))

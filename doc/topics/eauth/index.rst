@@ -7,6 +7,10 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to  pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
+.. toctree::
+
+    access_control
+
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
 in the master configuration file and uses the :ref:`access control system

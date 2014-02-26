@@ -44,7 +44,7 @@ class Router(ioflo.base.deeding.Deed):
     '''
     Route packaets from raet into minion proessing bins
     '''
-    Ioinits = {'opts_store': '.salt.etc.opts',
+    Ioinits = {'opts_store': '.salt.opts',
                'raet_udp_in': '.raet.udp.in',
                'raet_sock_out': '.raet.sock.out',
                'fun_in': '.salt.net.fun_in',
@@ -81,7 +81,7 @@ class PillarLoad(ioflo.base.deeding.Deed):
     '''
     Load up the pillar in the data store
     '''
-    Ioinits = {'opts_store': '.salt.etc.opts',
+    Ioinits = {'opts_store': '.salt.opts',
                'grains': '.salt.loader.grains'}
 
     def __init__(self):
@@ -92,7 +92,7 @@ class ModulesLoad(ioflo.base.deeding.Deed):
     '''
     Reload the minion modules
     '''
-    Ioinits = {'opts_store': '.salt.etc.opts',
+    Ioinits = {'opts_store': '.salt.opts',
                'grains': '.salt.loader.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
@@ -145,8 +145,8 @@ class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the scedule
     '''
-    Ioinits = {'opts_store': '.salt.etc.opts',
-               'grains': '.salt.etc.grains',
+    Ioinits = {'opts_store': '.salt.opts',
+               'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'master_ret': '.salt.net.master_out'}
@@ -170,12 +170,145 @@ class Schedule(ioflo.base.deeding.Deed):
         self.scedule.eval()
 
 
+class FunctionInline(ioflo.base.deeding.Deed):
+    '''
+    Execute a function without threading
+    '''
+    Ioinits = {'opts_store': '.salt.opts',
+               'grains': '.salt.grains',
+               'modules': '.salt.loader.modules',
+               'returners': '.salt.loader.returners',
+               'fun_ack': '.salt.net.fun_ack',
+               'fun_in': '.salt.net.fun_in',
+               'master_ret': '.salt.net.master_out'}
+
+    def __init__(self):
+        ioflo.base.deeding.Deed.__init__(self)
+
+    def postinitio(self):
+        '''
+        Map opts for convenience
+        '''
+        self.opts = self.opts_store.value
+        self.matcher = salt.minion.Matcher(
+                self.opts,
+                self.modules.value)
+        self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
+        self.serial = salt.payload.Serial(self.opts)
+
+    def action(self):
+        '''
+        Pull the queue and exeute
+        '''
+        if not self.fun_in.value:
+            return
+        exchange = self.fun_in.value.pop()
+        data = exchange['load']
+        match = getattr(
+                self.matcher,
+                '{0}_match'.format(
+                    data.get('tgt_type', 'glob')
+                    )
+                )(data['tgt'])
+        if not match:
+            return
+        self.fun_ack.value.append(exchange)
+        if 'user' in data:
+            log.info(
+                    'User {0[user]} Executing command {0[fun]} with jid '
+                    '{0[jid]}'.format(data))
+        else:
+            log.info(
+                    'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+                    )
+        log.debug('Command details {0}'.format(data))
+        ret = {'success': False}
+        function_name = data['fun']
+        if function_name in self.modules.value:
+            try:
+                func = self.modules.value[data['fun']]
+                args, kwargs = salt.minion.parse_args_and_kwargs(func, data['arg'], data)
+                sys.modules[func.__module__].__context__['retcode'] = 0
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = salt.utils.event.tagify(
+                                [data['jid'], 'prog', self.opts['id'], str(ind)],
+                                'job')
+                        event_data = {'return': single}
+                        self._fire_master(event_data, tag)  # Need to look into this
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
+                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode',
+                    0
+                )
+                ret['success'] = True
+            except CommandNotFoundError as exc:
+                msg = 'Command required for {0!r} not found'.format(
+                    function_name
+                )
+                log.debug(msg, exc_info=True)
+                ret['return'] = '{0}: {1}'.format(msg, exc)
+            except CommandExecutionError as exc:
+                log.error(
+                    'A command in {0!r} had a problem: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR: {0}'.format(exc)
+            except SaltInvocationError as exc:
+                log.error(
+                    'Problem executing {0!r}: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
+                    function_name, exc
+                )
+            except TypeError as exc:
+                aspec = salt.utils.get_function_argspec(
+                    self.modules.value[data['fun']]
+                )
+                msg = ('TypeError encountered executing {0}: {1}. See '
+                       'debug log for more info.  Possibly a missing '
+                       'arguments issue:  {2}').format(function_name,
+                                                       exc,
+                                                       aspec)
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = msg
+            except Exception:
+                msg = 'The minion function caused an exception'
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
+        else:
+            ret['return'] = '{0!r} is not available.'.format(function_name)
+
+        ret['jid'] = data['jid']
+        ret['fun'] = data['fun']
+        ret['fun_args'] = data['arg']
+
+
 class FunctionNix(ioflo.base.deeding.Deed):
     '''
     Execute a function call
     '''
-    Ioinits = {'opts_store': '.salt.etc.opts',
-               'grains': '.salt.etc.grains',
+    Ioinits = {'opts_store': '.salt.opts',
+               'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun_ack': '.salt.net.fun_ack',

@@ -148,3 +148,9 @@ Here is a simple YAML renderer example:
             yaml_data = yaml_data.read()
         data = yaml.load(yaml_data)
         return data if data else {}
+
+Full List of Renderers
+======================
+.. toctree::
+
+    all/index
