@@ -222,7 +222,7 @@ Proxy Minions
 -------------
 
 Initial basic support for Proxy Minions is in this release. Documentation can
-be found :doc:`here </topics/proxyminion/index>`.
+be found :doc:`here </topics/topology/proxyminion/index>`.
 
 Proxy minions are a developing feature in Salt that enables control of devices
 that cannot run a minion. Examples include network gear like switches and

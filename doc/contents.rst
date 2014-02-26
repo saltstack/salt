@@ -12,12 +12,6 @@ Salt Table of Contents
     topics/tutorials/index
     topics/targeting/index
     topics/pillar/index
-    ref/states/index
-    ref/renderers/index
-    ref/runners/index
-    ref/output/all/index
-    ref/returners/index
-    ref/file_server/index
     topics/reactor/index
     topics/mine/index
     topics/eauth/index
@@ -29,8 +23,6 @@ Salt Table of Contents
     topics/virt/index
     topics/master_tops/index
     topics/ssh/*
-    ref/configuration/*
-    ref/cli/index
     ref/index
     topics/troubleshooting/index
     topics/development/index
