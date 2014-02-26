@@ -32,6 +32,11 @@ JINJA = jinja2.Environment(
 # Define the module's virtual name
 __virtualname__ = 'ip'
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -1511,3 +1516,27 @@ def build_network_settings(**settings):
 
     network = template.render(opts)
     return _read_temp(network)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.help
+
+        salt '*' ip.help get_interface
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+    log.debug("module_name: {0}" . format(module_name))
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

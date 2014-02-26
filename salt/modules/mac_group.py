@@ -16,6 +16,11 @@ from salt.modules.mac_user import _osmajor, _dscl, _flush_dscl_cache
 # Define the module's virtual name
 __virtualname__ = 'group'
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     global _osmajor, _dscl, _flush_dscl_cache
@@ -153,3 +158,26 @@ def chgid(name, gid):
         return True
     cmd = 'dseditgroup -o edit -i {0} {1}'.format(gid, name)
     return __salt__['cmd.retcode'](cmd) == 0
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.help
+
+        salt '*' group.help getent
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

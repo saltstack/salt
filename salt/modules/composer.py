@@ -14,7 +14,8 @@ log = logging.getLogger(__name__)
 
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'help_': 'help'
 }
 
 
@@ -155,3 +156,26 @@ def install(dir,
         return True
 
     return result['stdout']
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' composer.help
+
+        salt '*' composer.help install
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

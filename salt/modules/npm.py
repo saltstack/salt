@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {
+    'help_': 'help',
     'list_': 'list'
 }
 
@@ -196,3 +197,27 @@ def list_(pkg=None, dir=None):
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout']).get('dependencies', {})
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' npm.help
+
+        salt '*' npm.help install
+    '''
+
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

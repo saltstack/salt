@@ -14,6 +14,7 @@ import logging
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
+    'help_': 'help',
     'list_': 'list'
 }
 
@@ -317,3 +318,26 @@ def do_with_ruby(ruby, cmdline, runas=None):
         cmd = cmdline
 
     return do(cmd, runas=runas)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbenv.help
+
+        salt '*' rbenv.help do
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

@@ -36,6 +36,11 @@ import salt.utils
 # Define the module's virtual name
 __virtualname__ = 'virt'
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
@@ -934,3 +939,26 @@ def vm_diskstats(vm_=None):
             for vm_ in list_vms():
                 info[vm_] = _info(vm_)
         return info
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.help
+
+        salt '*' virt.help vm_diskstats
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
