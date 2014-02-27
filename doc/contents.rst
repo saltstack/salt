@@ -7,28 +7,6 @@ Salt Table of Contents
     :glob:
     :numbered:
 
-<<<<<<< HEAD
-    faq
-    glossary
-
-    topics/cloud/index
-    topics/community
-    topics/configuration
-<<<<<<< HEAD
-    topics/hacking
-    topics/best_practices
-    topics/targeting/index
-    topics/tutorials/index
-=======
-    topics/conventions/*
-    topics/development/*
->>>>>>> upstream/develop
-    topics/eauth/*
-    topics/event/index
-    topics/git/*
-    topics/hacking
-=======
->>>>>>> upstream/develop
     topics/index
     topics/installation/index
     topics/tutorials/index
