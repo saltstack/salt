@@ -57,6 +57,7 @@ def state(
         test=False,
         fail_minions=None,
         allow_fail=0,
+        concurrent=False,
         timeout=None):
     '''
     Invoke a state run on a given target
@@ -93,6 +94,13 @@ def state(
 
     fail_minions
         An optional list of targeted minions where failure is an option
+
+    concurrent
+        Allow multiple state runs to occur at once.
+
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
+        Do not use this flag for performance optimization.
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
@@ -141,6 +149,13 @@ def state(
         cmd_kw['kwarg']['test'] = test
 
     cmd_kw['kwarg']['saltenv'] = __env__
+
+    if isinstance(concurrent, bool):
+        cmd_kw['kwarg']['concurrent'] = concurrent
+    else:
+        ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
+        ret['result'] = False
+        return ret
 
     if __opts__['test'] is True:
         ret['comment'] = (

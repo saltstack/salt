@@ -7,6 +7,9 @@ Tests to try out stacking. Potentially ephemeral
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import Timer
 
+from ioflo.base.consoling import getConsole
+console = getConsole()
+
 from salt.transport.road.raet import (raeting, nacling, packeting,
                                      devicing, transacting, stacking)
 
@@ -20,6 +23,7 @@ def test():
     master did of 1
     minion did of 2
     '''
+    console.reinit(verbosity=console.Wordage.concise)
 
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
@@ -56,6 +60,7 @@ def test():
         stack0.serviceUdp()
 
     stack0.serviceUdpRx()
+    stack0.process()
 
     timer.restart()
     while not timer.expired:

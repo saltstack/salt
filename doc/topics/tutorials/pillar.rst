@@ -7,14 +7,23 @@ Pillar Walkthrough
     This walkthrough assumes that the reader has already completed the initial
     Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
-The pillar interface inside of Salt is one of the most important components
-of a Salt deployment. Pillar is the interface used to generate arbitrary data
-for specific minions. The data generated in pillar is made available to almost
-every component of Salt and is used for a number of purposes:
+Pillars are tree-like structures of data defined on the Salt Master and passed 
+through to minions. They allow confidential, targeted data to be securely sent
+only to the relevant minion.
+
+.. note::
+
+    Grains and Pillar are somtimes confused, just remember that Grains
+    is data about a minion which is stored or generated from the minion.
+    This is why information like the OS and CPU type are found in Grains.
+    Pillar is information about a minion or many minions stored or generated
+    on the Salt Master.
+
+Pillar data is useful for:
 
 Highly Sensitive Data:
     Information transferred via pillar is guaranteed to only be presented to
-    the minions that are targeted, this makes pillar the engine to use in Salt
+    the minions that are targeted, making Pillar suitable 
     for managing security information, such as cryptographic keys and
     passwords.
 Minion Configuration:
@@ -30,15 +39,15 @@ Arbitrary Data:
     of values in sls formulas
 
 Pillar is therefore one of the most important systems when using Salt, this
-walkthrough is designed to get a simple pillar up and running in a few minutes
-and then to dive into the capabilities of pillar and where the data is
+walkthrough is designed to get a simple Pillar up and running in a few minutes
+and then to dive into the capabilities of Pillar and where the data is
 available.
 
 Setting Up Pillar
 =================
 
-The pillar is already running in Salt by default. The data in the minion's
-pillars can be seen via the following command:
+The pillar is already running in Salt by default. To see the minion's
+pillar data:
 
 .. code-block:: bash
 
@@ -49,13 +58,11 @@ pillars can be seen via the following command:
     function name is still supported for backwards compatibility.
 
 By default the contents of the master configuration file are loaded into
-pillar for all minions, this is to enable the master configuration file to
+pillar for all minions. This enables the master configuration file to
 be used for global configuration of minions.
 
-The pillar is built in a similar fashion as the state tree, it is comprised
-of sls files and has a top file, just like the state tree. The pillar is stored
-in a different location on the Salt master than the state tree. The default
-location for the pillar is in /srv/pillar.
+Similar to the state tree, the pillar is comprised of sls files and has a top file.
+The default location for the pillar is in /srv/pillar.
 
 .. note::
 
@@ -68,8 +75,8 @@ To start setting up the pillar, the /srv/pillar directory needs to be present:
 
     mkdir /srv/pillar
 
-Now a simple top file, following the same format as the top file used for
-states needs to be created:
+Now ceate a simple top file, following the same format as the top file used for
+states:
 
 ``/srv/pillar/top.sls``:
 
@@ -88,7 +95,7 @@ This top file associates the data.sls file to all minions. Now the
 
     info: some data
 
-Now that the file has been saved the minions' pillars will be updated:
+Now that the file has been saved, the minions' pillars will be updated:
 
 .. code-block:: bash
 
@@ -99,9 +106,8 @@ The key ``info`` should now appear in the returned pillar data.
 More Complex Data
 ~~~~~~~~~~~~~~~~~
 
-Pillar files are sls files, just like states, but unlike states they do not
-need to define :strong:`formulas`, the data can be arbitrary, this example for
-instance sets up user data with a UID:
+Unlike states, pillar files do not need to define :strong:`formulas`. 
+This example sets up user data with a UID:
 
 ``/srv/pillar/users/init.sls``:
 
@@ -131,7 +137,7 @@ The top file will need to be updated to include this sls file:
         - users
 
 Now the data will be available to the minions. To use the pillar data in a
-state just access the pillar via Jinja:
+state, you can use Jinja:
 
 ``/srv/salt/users/init.sls``
 
@@ -149,13 +155,11 @@ user data is applied in an sls file.
 Paramaterizing States With Pillar
 =================================
 
-One of the most powerful abstractions in pillar is the ability to parameterize
-states. Instead of defining macros or functions within the state context the
-entire state tree can be freely parameterized relative to the minion's pillar.
-
-This approach allows for Salt to be very flexible while staying very
-straightforward. It also means that simple sls formulas used in the state tree
-can be directly parameterized without needing to refactor the state tree.
+Pillar data can be accessed in state files to customise behaviour for each 
+minion. All pillar (and grain) data applicable to each minion is substituted 
+into the state files through templating before being run. Typical uses
+include setting directories appropriate for the minion and skipping states 
+that don't apply.
 
 A simple example is to set up a mapping of package names in pillar for
 separate Linux distributions:
@@ -219,7 +223,7 @@ set in the minion's pillar, then the default of ``httpd`` will be used.
 
 .. note::
 
-    Under the hood, pillar is just a python dict, so python dict methods such
+    Under the hood, pillar is just a Python dict, so Python dict methods such
     as `get` and `items` can be used.
 
 Pillar Makes Simple States Grow Easily
@@ -286,7 +290,7 @@ Ensuring that the right vimrc is sent out to the correct minions.
 More On Pillar
 ==============
 
-The pillar data is generated on the Salt master and securely distributed to
+Pillar data is generated on the Salt master and securely distributed to
 minions. Salt is not restricted to the pillar sls files when defining the
 pillar but can retrieve data from external sources. This can be useful when
 information about an infrastructure is stored in a separate location.

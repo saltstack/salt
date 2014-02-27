@@ -9,11 +9,12 @@ __init__.py file for raet package
 from . import raeting
 from . import nacling
 from . import devicing
+from . import keeping
 from . import packeting
 from . import stacking
 from . import transacting
 from . import behaving
 
 
-__all__ = ['raeting', 'nacling', 'devicing', 'packeting', 'stacking',
+__all__ = ['raeting', 'nacling', 'devicing', 'keeping', 'packeting', 'stacking',
            'transacting', 'behaving']
