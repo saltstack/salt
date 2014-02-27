@@ -1233,7 +1233,7 @@ def create_extension(name,
             args = ['CREATE EXTENSION']
             if if_not_exists:
                 args.append('IF NOT EXISTS')
-            args.append(name)
+            args.append('"{0}"'.format(name))
             sargs = []
             if schema:
                 sargs.append('SCHEMA {0}'.format(schema))
