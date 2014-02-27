@@ -32,8 +32,8 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context
-from salt.utils.datafreeze import ImmutableLazyProxy
 from salt._compat import string_types
+from salt.utils.immutabletypes import ImmutableLazyProxy
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 

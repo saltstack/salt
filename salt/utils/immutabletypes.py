@@ -5,10 +5,10 @@
     :license: Apache 2.0, see LICENSE for more details.
 
 
-    salt.utils.datafreeze
-    ~~~~~~~~~~~~~~~~~~~~~
+    salt.utils.immutabletypes
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Built-in data types freeze
+    Immutable types
 '''
 
 # Import python libs
