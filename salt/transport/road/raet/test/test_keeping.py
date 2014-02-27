@@ -46,7 +46,7 @@ def test():
                                     verkey=minionVerKeyHex,
                                     pubkey=minionPubKeyHex,)
 
-    pond = keeping.ChannelKeep(dirpath=os.getcwd())
+    pond = keeping.RoadKeep(dirpath=os.getcwd())
     safe = keeping.KeyKeep(dirpath=os.getcwd())
 
     pond.dumpLocalDevice(device)

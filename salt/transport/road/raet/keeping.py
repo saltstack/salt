@@ -223,15 +223,15 @@ class Keep(object):
         uid = device.did
         self.removeRemoteData(uid)
 
-class ChannelKeep(Keep):
+class RoadKeep(Keep):
     '''
     RAET protocol device channel data persistence
     '''
     def __init__(self, prefix='device', **kwa):
         '''
-        Setup ChannelKeep instance
+        Setup RoadKeep instance
         '''
-        super(ChannelKeep, self).__init__(prefix=prefix, **kwa)
+        super(RoadKeep, self).__init__(prefix=prefix, **kwa)
 
     def dumpLocalDevice(self, device):
         '''

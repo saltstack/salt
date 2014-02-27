@@ -45,7 +45,7 @@ class StackUdp(object):
                  txMsgs = None,
                  udpRxes = None,
                  udpTxes = None,
-                 pond = None,
+                 road = None,
                  safe = None,
                  ):
         '''
@@ -67,11 +67,14 @@ class StackUdp(object):
         #(msg, ddid) ddid=0 is broadcast
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
-        self.pond = pond or keeping.ChannelKeep()
+        self.road = road or keeping.RoadKeep()
         self.safe = safe or keeping.KeyKeep()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
+
+        #self.road.dumpLocalDevice(self.device)
+        #self.safe.dumpLocalDevice(self.device)
 
     def fetchRemoteDeviceByHostPort(self, host, port):
         '''
