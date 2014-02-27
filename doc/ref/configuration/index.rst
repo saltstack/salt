@@ -7,19 +7,6 @@ Salt configuration is very simple. The default configuration for the
 setting up a :term:`minion` is to set the location of the master in the minion
 configuration file.
 
-.. glossary::
-
-    master
-        The Salt master is the central server that all minions connect to. 
-        Commands are run on the minions through the master, and minions send data
-        back to the master (unless otherwise redirected with a :doc:`returner
-        </ref/returners/index>`). It is started with the
-        :command:`salt-master` program.
-
-    minion
-        Salt minions are the potentially hundreds or thousands of servers that
-        may be queried and controlled from the master.
-
 The configuration files will be installed to :file:`/etc/salt` and are named
 after the respective components, :file:`/etc/salt/master` and
 :file:`/etc/salt/minion`.

@@ -2,12 +2,6 @@
 Compound matchers
 =================
 
-.. glossary::
-
-    Compound matcher
-        A combination of many target definitions that can be combined with
-        boolean operators.
-
 Compound matchers allow very granular minion targeting using any of Salt's
 matchers. The default matcher is a :mod:`glob <python2:fnmatch>` match, just as
 with CLI and :term:`top file` matching. To match using anything other than a
@@ -26,7 +20,7 @@ S      Subnet/IP address    ``S@192.168.1.0/24`` or ``S@192.168.1.100``
 R      Range cluster        ``R@%foo.bar``
 ====== ==================== ===============================================================
 
-| Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
+Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
 
 For example, the following string matches all Debian minions with a hostname
 that begins with ``webserv``, as well as any minions that have a hostname which
