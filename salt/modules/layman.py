@@ -5,6 +5,10 @@ Support for Layman
 
 import salt.utils
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def __virtual__():
     '''
@@ -126,3 +130,27 @@ def list_local():
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' layman.help
+
+        salt '*' layman.help list_local
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

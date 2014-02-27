@@ -10,6 +10,10 @@ import logging
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def mount_image(location):
     '''
@@ -96,3 +100,27 @@ def bootstrap(location, size, fmt):
     __salt__['partition.mkfs']('{0}p1'.format(nbd), 'ext4')
     mnt = __salt__['qemu_nbd.mount'](nbd)
     #return __salt__['pkg.bootstrap'](nbd, mnt.keys()[0])
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' img.help
+
+        salt '*' img.help bootstrap
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

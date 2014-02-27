@@ -16,7 +16,6 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-
 def __virtual__():
     '''
     Only load the module if apache is installed

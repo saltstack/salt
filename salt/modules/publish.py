@@ -17,6 +17,10 @@ from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 def _publish(
         tgt,
@@ -233,3 +237,27 @@ def runner(fun, arg=None, timeout=5):
         #    sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' publish.help
+
+        salt '*' publish.help runner
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

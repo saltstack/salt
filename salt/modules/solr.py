@@ -69,6 +69,10 @@ import urllib2
 import salt.utils
 from salt._compat import string_types, url_open
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
 
 ########################## PRIVATE METHODS ##############################
 
@@ -1332,3 +1336,27 @@ def import_status(handler, host=None, core_name=None, verbose=False):
         extra.append("verbose=true")
     url = _format_url(handler, host=host, core_name=core_name, extra=extra)
     return _http_request(url)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' solr.help
+
+        salt '*' solr.help import_status
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+

@@ -47,6 +47,7 @@ import os
 import salt.utils
 
 __func_alias__ = {
+    'help_': 'reload',
     'reload_': 'reload'
 }
 
@@ -508,3 +509,27 @@ def disabled(name):
         if _service_is_sysv(name):
             return _sysv_is_disabled(name)
     return None
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.help
+
+        salt '*' service.help disabled
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
+
