@@ -145,8 +145,10 @@ class MacGroupTestCase(TestCase):
         Tests if the group id exists or not
         '''
         mock_pre_gid = MagicMock(return_value='')
-        with patch.dict(mac_group.__salt__, {'file.group_to_gid': mock_pre_gid}):
-            self.assertRaises(CommandExecutionError, mac_group.chgid, 'foo', 4376)
+        with patch.dict(mac_group.__salt__,
+                        {'file.group_to_gid': mock_pre_gid}):
+            self.assertRaises(CommandExecutionError,
+                              mac_group.chgid, 'foo', 4376)
 
     @patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group))
     def test_chgid_gid_same(self):
@@ -154,7 +156,8 @@ class MacGroupTestCase(TestCase):
         Tests if the group id is the same as argument
         '''
         mock_pre_gid = MagicMock(return_value=0)
-        with patch.dict(mac_group.__salt__, {'file.group_to_gid': mock_pre_gid}):
+        with patch.dict(mac_group.__salt__,
+                        {'file.group_to_gid': mock_pre_gid}):
             self.assertTrue(mac_group.chgid('test', 0))
 
     @patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group))
@@ -164,7 +167,8 @@ class MacGroupTestCase(TestCase):
         '''
         mock_pre_gid = MagicMock(return_value=0)
         mock_ret = MagicMock(return_value=0)
-        with patch.dict(mac_group.__salt__, {'file.group_to_gid': mock_pre_gid}):
+        with patch.dict(mac_group.__salt__,
+                        {'file.group_to_gid': mock_pre_gid}):
             with patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}):
                 self.assertTrue(mac_group.chgid('test', 500))
 
