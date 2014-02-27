@@ -225,7 +225,7 @@ class Keep(object):
 
 class RoadKeep(Keep):
     '''
-    RAET protocol device channel data persistence
+    RAET protocol device road (channel) data persistence
     '''
     def __init__(self, prefix='device', **kwa):
         '''
@@ -263,15 +263,15 @@ class RoadKeep(Keep):
 
         self.dumpRemoteData(data, uid)
 
-class KeyKeep(Keep):
+class SafeKeep(Keep):
     '''
-    RAET protocol device key data persistence and status
+    RAET protocol device safe (key) data persistence and status
     '''
     def __init__(self, prefix='key', **kwa):
         '''
-        Setup KeyKeep instance
+        Setup SafeKeep instance
         '''
-        super(KeyKeep, self).__init__(prefix=prefix, **kwa)
+        super(SafeKeep, self).__init__(prefix=prefix, **kwa)
 
         self.pendeddirpath = os.path.join(self.remotedirpath, 'pended')
         if not os.path.exists(self.pendeddirpath):

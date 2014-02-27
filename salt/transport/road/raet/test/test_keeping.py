@@ -47,7 +47,7 @@ def test():
                                     pubkey=minionPubKeyHex,)
 
     pond = keeping.RoadKeep(dirpath=os.getcwd())
-    safe = keeping.KeyKeep(dirpath=os.getcwd())
+    safe = keeping.SafeKeep(dirpath=os.getcwd())
 
     pond.dumpLocalDevice(device)
     pond.dumpRemoteDevice(remote0)
