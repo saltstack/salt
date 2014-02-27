@@ -1,6 +1,6 @@
-================
-Network Topology
-================
+=============
+Salt Topology
+=============
 
 Salt is based on a powerful, asynchronous, network topology using ZeroMQ. Many
 ZeroMQ systems are in place to enable communication. The central idea is to

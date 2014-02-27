@@ -47,7 +47,7 @@ class Transaction(object):
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
-        self.timer = aiding.Timer(duration=self.timeout)
+        self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
         if start: #enables synchronized starts not just current time
             self.timer.restart(start=start)
 
@@ -150,16 +150,19 @@ class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
     '''
-    def __init__(self, **kwa):
+    def __init__(self, mha = None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joiner, self).__init__(**kwa)
 
+        if mha is None:
+            mha = ('127.0.0.1', raeting.RAET_PORT)
+
         if self.rdid is None:
             if not self.stack.devices: # no channel master so make one
-                master = devicing.RemoteDevice(did=0, ha=('127.0.0.1', raeting.RAET_PORT))
+                master = devicing.RemoteDevice(did=0, ha=mha)
                 self.stack.addRemoteDevice(master)
 
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
@@ -172,7 +175,7 @@ class Joiner(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Joiner, self).receive(packet)
+        super(Joiner, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack: #pended
@@ -206,7 +209,8 @@ class Joiner(Initiator):
             emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
             raise raeting.TransactionError(emsg)
 
-        body = odict([('verhex', self.stack.device.signer.verhex),
+        body = odict([('name', self.stack.device.name),
+                      ('verhex', self.stack.device.signer.verhex),
                       ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.request,
@@ -224,6 +228,8 @@ class Joiner(Initiator):
         '''
         Process ack to join packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         #data = self.rxPacket.data
         #body = self.rxPacket.body.data
         #set timer for redo
@@ -231,8 +237,10 @@ class Joiner(Initiator):
 
     def accept(self):
         '''
-        Perform acceptance in response to joint response packt
+        Perform acceptance in response to join response packt
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -244,6 +252,11 @@ class Joiner(Initiator):
         rdid = body.get('rdid')
         if not rdid:
             emsg = "Missing remote device id in accept packet"
+            raise raeting.TransactionError(emsg)
+
+        name = body.get('name')
+        if not name:
+            emsg = "Missing remote name in accept packet"
             raise raeting.TransactionError(emsg)
 
         verhex = body.get('verhex')
@@ -263,7 +276,9 @@ class Joiner(Initiator):
         remote.verfer = nacling.Verifier(key=verhex)
         remote.pubber = nacling.Publican(key=pubhex)
         if remote.did != rdid: #move remote device to new index
-            self.stack.moveRemoteDevice(remote.did, rdid)
+            self.stack.moveRemoteDevice(old=remote.did, new=rdid)
+        if remote.name != name: # rename remote device to new name
+            self.stack.renameRemoteDevice(old=remote.name, new=name)
         remote.joined = True #accepted
         remote.nextSid()
         self.remove(index)
@@ -302,21 +317,17 @@ class Joinent(Correspondent):
     def join(self):
         '''
         Process join packet
-        Perform pend operation of pending device being accepted onto channel
+        Perform pend operation of pending remote device being accepted onto channel
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        # need to add search for existing device with same host,port address
-
-        device = devicing.RemoteDevice(stack=self.stack,
-                              host=data['sh'],
-                              port=data['sp'],
-                              rsid=self.sid,
-                              rtid=self.tid, )
-        self.stack.addRemoteDevice(device) #provisionally add .accepted is None
-
-        self.rdid = device.did
+        name = body.get('name')
+        if not name:
+            emsg = "Missing remote name in join packet"
+            raise raeting.TransactionError(emsg)
 
         verhex = body.get('verhex')
         if not verhex:
@@ -328,8 +339,32 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        device.verfer = nacling.Verifier(key=verhex)
-        device.pubber = nacling.Publican(key=pubhex)
+        remote = self.stack.fetchRemoteDeviceByHostPort(host=data['sh'], port=data['sp'])
+        if remote:
+            if (name != remote.name or
+                verhex != remote.verfer.keyhex or
+                pubhex != remote.pubber.keyhex):
+                # nack join request another device at same address but different credentials
+                # and return
+                pass
+            # accept here and return
+
+        if name in self.stack.dids:
+            emsg = "Another device with name  already exists"
+            raise raeting.TransactionError(emsg)
+
+
+
+        remote = devicing.RemoteDevice( stack=self.stack,
+                                        name=name,
+                                        host=data['sh'],
+                                        port=data['sp'],
+                                        verkey=verhex,
+                                        pubkey=pubhex,
+                                        rsid=self.sid,
+                                        rtid=self.tid, )
+        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
+        self.rdid = remote.did # auto generated at instance creation above
 
         self.ackJoin()
 
@@ -370,6 +405,7 @@ class Joinent(Correspondent):
 
         body = odict([ ('ldid', self.rdid),
                        ('rdid', self.stack.device.did),
+                       ('name', self.stack.device.name),
                        ('verhex', self.stack.device.signer.verhex),
                        ('pubhex', self.stack.device.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
@@ -415,7 +451,7 @@ class Allower(Initiator):
         """
         Process received packet belonging to this transaction
         """
-        super(Allower, self).receive(packet)
+        super(Allower, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.cookie:
@@ -469,6 +505,8 @@ class Allower(Initiator):
         '''
         Process cookie packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -543,8 +581,11 @@ class Allower(Initiator):
 
     def allow(self):
         '''
+        Process ackInitiate packet
         Perform allowment in response to ack to initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         self.stack.devices[self.rdid].allowed = True
         self.remove()
 
@@ -581,7 +622,7 @@ class Allowent(Correspondent):
         """
         Process received packet belonging to this transaction
         """
-        super(Allowent, self).receive(packet)
+        super(Allowent, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.allow:
             if packet.data['pk'] == raeting.pcktKinds.hello:
@@ -610,6 +651,8 @@ class Allowent(Correspondent):
         '''
         Process hello packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -667,6 +710,8 @@ class Allowent(Correspondent):
         '''
         Process initiate packet
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
@@ -704,7 +749,7 @@ class Allowent(Correspondent):
         if fqdn != self.stack.device.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff"
             print emsg, fqdn, self.stack.device.fqdn
-            #raise raeting.TransactionError(emsg)
+            raise raeting.TransactionError(emsg)
 
         vouch = self.stack.device.priver.decrypt(vcipher, vnonce, remote.pubber.key)
         if vouch != remote.publee.keyraw or vouch != shortraw:
@@ -757,6 +802,7 @@ class Messenger(Initiator):
         '''
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         if self.rdid is None:
             self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
         remote = self.stack.devices[self.rdid]
@@ -816,8 +862,12 @@ class Messenger(Initiator):
             print ex
             self.remove()
             return
-        self.transmit(packet)
-
+        if packet.segmented:
+            self.segmentage = packet
+            for segment in self.segmentage.segments.values():
+                self.transmit(segment)
+        else:
+            self.transmit(packet)
 
     def done(self):
         '''
@@ -839,6 +889,7 @@ class Messengent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('rdid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
+        self.segmentage = None # special packet to hold segments if any
         remote = self.stack.devices[self.rdid]
         if not remote.allowed:
             emsg = "Must be allowed first"
@@ -884,9 +935,25 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        data = self.rxPacket.data
-        body = self.rxPacket.body.data
-        self.stack.udpRxMsgs.append(body)
+        console.verbose("segment count = {0} tid={1}".format(
+                 self.rxPacket.data['sc'], self.tid))
+        if self.rxPacket.segmentive:
+            if not self.segmentage:
+                self.segmentage = packeting.RxPacket(stack=self.stack,
+                                                data=self.rxPacket.data)
+            self.segmentage.parseSegment(self.rxPacket)
+            if not self.segmentage.desegmentable():
+                return
+            self.segmentage.desegmentize()
+            if not self.stack.parseInner(self.segmentage):
+                return
+            body = self.segmentage.body.data
+        else:
+            if not self.stack.parseInner(self.rxPacket):
+                return
+            body = self.rxPacket.body.data
+
+        self.stack.rxMsgs.append(body)
         self.ackMessage()
 
     def ackMessage(self):

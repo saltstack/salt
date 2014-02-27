@@ -192,6 +192,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
         del kwargs['to-destination']
 
+    if 'reject-with' in kwargs:
+        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
+        del kwargs['reject-with']
+
     for item in kwargs:
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
@@ -881,7 +885,10 @@ def _parser():
     add_arg('--string', dest='string', action='append')
     add_arg('--hex-string', dest='hex-string', action='append')
     ## tcp
-    add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    if sys.version.startswith('2.6'):
+        add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    else:
+        add_arg('--tcp-flags', dest='tcp-flags', action='append', nargs='*')
     add_arg('--syn', dest='syn', action='append')
     add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss

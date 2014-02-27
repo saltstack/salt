@@ -105,4 +105,10 @@ loaded as simply ``redis``:
             return False
         return 'redis'
 
+Full List of Returners
+======================
+
+.. toctree::
+    all/index
+
 .. _`redis`: https://github.com/saltstack/salt/tree/develop/salt/returners/redis_return.py

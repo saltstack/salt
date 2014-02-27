@@ -23,7 +23,7 @@ class Device(object):
     '''
     Did = 2 # class attribute
 
-    def __init__(self, stack=None, did=None, sid=0, tid=0,
+    def __init__(self, stack=None, did=None, name="", sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
         '''
         Setup Device instance
@@ -37,6 +37,7 @@ class Device(object):
             else:
                 did = 0
         self.did = did # device ID
+        self.name = name or "device{0}".format(self.did)
 
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
@@ -45,7 +46,12 @@ class Device(object):
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port
-        self.fqdn = socket.getfqdn(self.host)
+        if self.host == '0.0.0.0':
+            host = '127.0.0.1'
+        else:
+            host = self.host
+        self.fqdn = socket.getfqdn(host)
+
 
     @property
     def ha(self):
@@ -89,15 +95,15 @@ class LocalDevice(Device):
     RAET protocol endpoint local device object
     Maintains signer for signing and privateer for encrypt/decript
     '''
-    def __init__(self, signkey=None, prikey=None, **kwa):
+    def __init__(self, sigkey=None, prikey=None, **kwa):
         '''
         Setup Device instance
 
-        signkey is either nacl SigningKey or hex encoded key
+        sigkey is either nacl SigningKey or hex encoded key
         prikey is either nacl PrivateKey or hex encoded key
         '''
         super(LocalDevice, self).__init__(**kwa)
-        self.signer = nacling.Signer(signkey)
+        self.signer = nacling.Signer(sigkey)
         self.priver = nacling.Privateer(prikey) # Long term key
 
 
@@ -106,12 +112,12 @@ class RemoteDevice(Device):
     RAET protocol endpoint remote device object
     Maintains verifier for verifying signatures and publican for encrypt/decript
     '''
-    def __init__(self, verikey=None, pubkey=None, rsid=0, rtid=0, **kwa):
+    def __init__(self, verkey=None, pubkey=None, rsid=0, rtid=0, **kwa):
         '''
         Setup Device instance
 
-        verikey is either nacl VerifyKey or hex encoded key
-        pubkey is either nacl PublicKey or hex encoded key
+        verkey is either nacl VerifyKey or raw or hex encoded key
+        pubkey is either nacl PublicKey or raw or hex encoded key
         '''
         if 'host' not in kwa and 'ha' not in kwa:
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
@@ -120,7 +126,7 @@ class RemoteDevice(Device):
         self.allowed = None
         self.privee = nacling.Privateer() # short term key manager
         self.publee = nacling.Publican() # correspondent short term key  manager
-        self.verfer = nacling.Verifier(verikey) # correspondent verify key manager
+        self.verfer = nacling.Verifier(verkey) # correspondent verify key manager
         self.pubber = nacling.Publican(pubkey) # correspondent long term key manager
 
         self.rsid = rsid # last sid received from remote when RmtFlag is True

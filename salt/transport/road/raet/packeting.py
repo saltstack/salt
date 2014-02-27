@@ -24,12 +24,11 @@ class Part(object):
     Should be subclassed
     '''
 
-    def __init__(self, packet=None, kind=None, **kwa):
+    def __init__(self, packet=None, **kwa):
         '''
         Setup Part instance
         '''
         self.packet = packet  # Packet this Part belongs too
-        self.kind = kind  # part kind
         self.packed = ''
 
     def __len__(self):
@@ -65,38 +64,37 @@ class TxHead(Head):
         Composes .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind = self.packet.data['hk']
         data = self.packet.data  # for speed
-
-        data['pk'] = self.packet.kind
-        data['bk'] = self.packet.body.kind
-        data['bl'] = self.packet.body.size
-        data['ck'] = self.packet.coat.kind
-        data['cl'] = self.packet.coat.size
-        data['fk'] = self.packet.foot.kind
         data['fl'] = self.packet.foot.size
-
         data['fg'] = "{:02x}".format(self.packFlags())
 
         # kit always includes header kind and length fields
-        kit = odict([('hk', self.kind), ('hl', 0)])
+        kit = odict([('ri', 'RAET'), ('pl', 0), ('hl', 0)])
         for k, v in raeting.PACKET_DEFAULTS.items():  # include if not equal to default
             if ((k in raeting.HEAD_FIELDS) and
                 (k not in raeting.PACKET_FLAGS) and
                 (data[k] != v)):
                 kit[k] = data[k]
 
-        if self.kind == raeting.headKinds.json:
+        if data['hk'] == raeting.headKinds.json:
+            kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
             kit['hl'] = '00'  # need hex string so fixed length and jsonable
             packed = json.dumps(kit, separators=(',', ':'), encoding='ascii',)
             packed = '{0}{1}'.format(packed, raeting.JSON_END)
             hl = len(packed)
-            if hl > raeting.MAX_HEAD_LEN:
-                emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_LEN)
+            if hl > raeting.MAX_HEAD_SIZE:
+                emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_SIZE)
                 raise raeting.PacketError(emsg)
-
+            data['hl'] = hl
+            pl = hl + self.packet.coat.size + data['fl']
+            if pl > raeting.MAX_PACKET_SIZE:
+                emsg = "Packet length of {0}, exceeds max of {1}".format(hl, MAX_PACKET_SIZE)
+                raise raeting.PacketError(emsg)
+            data['pl'] = pl
             #subsitute true length converted to 2 byte hex string
+            packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
             self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
+
 
     def packFlags(self):
         '''
@@ -120,8 +118,8 @@ class RxHead(Head):
         self.packed = ''
         data = self.packet.data  # for speed
         packed = self.packet.packed  # for speed
-        if packed.startswith('{"hk":1,') and raeting.JSON_END in packed:  # json header
-            self.kind = raeting.headKinds.json
+        if packed.startswith('{"ri":"RAET",') and raeting.JSON_END in packed:  # json header
+            hk = raeting.headKinds.json
             front, sep, back = packed.partition(raeting.JSON_END)
             self.packed = "{0}{1}".format(front, sep)
             kit = json.loads(front,
@@ -131,7 +129,7 @@ class RxHead(Head):
             if 'fg' in data:
                 self.unpackFlags(data['fg'])
 
-            if data['hk'] != self.kind:
+            if data['hk'] != hk:
                 emsg = 'Recognized head kind does not match head field value.'
                 raise raeting.PacketError(emsg)
 
@@ -140,9 +138,14 @@ class RxHead(Head):
                 emsg = 'Actual head length does not match head field value.'
                 raise raeting.PacketError(emsg)
             data['hl'] = hl
+            pl = int(data['pl'], 16)
+            if pl != self.packet.size:
+                emsg = 'Actual packet length does not match head field value.'
+                raise raeting.PacketError(emsg)
+            data['pl'] = pl
 
         else:  # notify unrecognizible packet head
-            self.kind = raeting.headKinds.unknown
+            data['hk'] = raeting.headKinds.unknown
             emsg = "Unrecognizible packet head."
             raise raeting.PacketError(emsg)
 
@@ -178,12 +181,12 @@ class TxBody(Body):
         Composes .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind = self.packet.data['bk']
-        if self.kind == raeting.bodyKinds.json:
+        bk = self.packet.data['bk']
+        if bk == raeting.bodyKinds.json:
             if self.data:
                 self.packed = json.dumps(self.data, separators=(',', ':'))
 
-        if self.kind == raeting.bodyKinds.raw:
+        if bk == raeting.bodyKinds.raw:
             self.packed = self.data # data is already formatted string
 
 class RxBody(Body):
@@ -195,21 +198,16 @@ class RxBody(Body):
         Parses body. Assumes already unpacked.
         Results in updated .data
         '''
-        self.kind = self.packet.data['bk']
+        bk = self.packet.data['bk']
 
-        if self.kind not in raeting.BODY_KIND_NAMES:
-            self.kind = raeting.bodyKinds.unknown
+        if bk not in raeting.BODY_KIND_NAMES:
+            self.packet.data['bk']= raeting.bodyKinds.unknown
             emsg = "Unrecognizible packet body."
-            raise raeting.PacketError(emsg)
-
-        if self.size != self.packet.data['bl']:
-            emsg = ("Mismatching body size '{0}' and data length '{1}'"
-                   "".format(self.size, self.packet.data['bl']))
             raise raeting.PacketError(emsg)
 
         self.data = odict()
 
-        if self.kind == raeting.bodyKinds.json:
+        if bk == raeting.bodyKinds.json:
             if self.packed:
                 kit = json.loads(self.packed, object_pairs_hook=odict)
                 if not isinstance(kit, Mapping):
@@ -217,10 +215,10 @@ class RxBody(Body):
                     raise raeting.PacketError(emsg)
                 self.data = kit
 
-        if self.kind == raeting.bodyKinds.raw:
+        if bk == raeting.bodyKinds.raw:
             self.data = self.packed # return as string
 
-        elif self.kind == raeting.bodyKinds.nada:
+        elif bk == raeting.bodyKinds.nada:
             pass
 
 class Coat(Part):
@@ -241,15 +239,15 @@ class TxCoat(Coat):
         Composes .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind = self.packet.data['ck']
+        ck = self.packet.data['ck']
 
-        if self.kind == raeting.coatKinds.nacl:
+        if ck == raeting.coatKinds.nacl:
             msg = self.packet.body.packed
             if msg:
                 cipher, nonce = self.packet.encrypt(msg)
                 self.packed = "".join([cipher, nonce])
 
-        if self.kind == raeting.coatKinds.nada:
+        if ck == raeting.coatKinds.nada:
             self.packed = self.packet.body.packed
 
 class RxCoat(Coat):
@@ -260,14 +258,14 @@ class RxCoat(Coat):
         '''
         Parses coat. Assumes already unpacked.
         '''
-        self.kind = self.packet.data['ck']
+        ck = self.packet.data['ck']
 
-        if self.kind not in raeting.COAT_KIND_NAMES:
-            self.kind = raeting.coatKinds.unknown
+        if ck not in raeting.COAT_KIND_NAMES:
+            self.packet.data['ck'] = raeting.coatKinds.unknown
             emsg = "Unrecognizible packet coat."
             raise raeting.PacketError(emsg)
 
-        if self.kind == raeting.coatKinds.nacl:
+        if ck == raeting.coatKinds.nacl:
             if self.packed:
                 tl = raeting.tailSizes.nacl # nonce length
                 cipher = self.packed[:-tl]
@@ -277,9 +275,9 @@ class RxCoat(Coat):
             else:
                 self.packet.body.packed = self.packed
 
-        if self.kind == raeting.coatKinds.nada:
+        if ck == raeting.coatKinds.nada:
             self.packet.body.packed = self.packed
-
+            pass
 
 class Foot(Part):
     '''
@@ -302,34 +300,33 @@ class TxFoot(Foot):
         Composes .packed, which is the packed form of this part
         '''
         self.packed = ''
-        self.kind = self.packet.data['fk']
+        fk = self.packet.data['fk']
 
-        if self.kind not in raeting.FOOT_KIND_NAMES:
-            self.kind = raeting.footKinds.unknown
+        if fk not in raeting.FOOT_KIND_NAMES:
+            self.packet.data['fk'] = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
             raise raeting.PacketError(emsg)
 
-        if self.kind == raeting.footKinds.nacl:
+        if fk == raeting.footKinds.nacl:
             self.packed = "".rjust(raeting.footSizes.nacl, '\x00')
 
-        elif self.kind == raeting.footKinds.nada:
+        elif fk == raeting.footKinds.nada:
             pass
 
     def sign(self):
         '''
         Compute signature on packet.packed and update packet.packet with signature
         '''
-        if self.kind not in raeting.FOOT_KIND_NAMES:
-            self.kind = raeting.footKinds.unknown
+        fk = self.packet.data['fk']
+        if fk not in raeting.FOOT_KIND_NAMES:
+            self.packet.data['fk'] = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
             raise raeting.PacketError(emsg)
 
-        if self.kind == raeting.footKinds.nacl:
-            #blank = "".rjust(raeting.footSizes.nacl, '\x00')
-            #msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+        if fk == raeting.footKinds.nacl:
             self.packed = self.packet.signature(self.packet.packed)
 
-        elif self.kind == raeting.footKinds.nada:
+        elif fk == raeting.footKinds.nada:
             pass
 
 class RxFoot(Foot):
@@ -340,14 +337,22 @@ class RxFoot(Foot):
         '''
         Parses foot. Assumes foot already unpacked
         '''
-        self.kind = self.packet.data['fk']
+        fk = self.packet.data['fk']
+        fl = self.packet.data['fl']
+        self.packed = ''
 
-        if self.kind not in raeting.FOOT_KIND_NAMES:
-            self.kind = raeting.footKinds.unknown
+        if fk not in raeting.FOOT_KIND_NAMES:
+            self.packet.data['fk'] = raeting.footKinds.unknown
             emsg = "Unrecognizible packet foot."
             raise raeting.PacketError(emsg)
 
-        if self.kind == raeting.footKinds.nacl:
+        if self.packet.size < fl:
+            emsg = "Packet size not big enough for foot."
+            raise raeting.PacketError(emsg)
+
+        self.packed = self.packet.packed[self.packet.size - fl:]
+
+        if fk == raeting.footKinds.nacl:
             if self.size != raeting.footSizes.nacl:
                 emsg = ("Actual foot size '{0}' does not match "
                     "kind size '{1}'".format(self.size, raeting.footSizes.nacl))
@@ -355,25 +360,35 @@ class RxFoot(Foot):
 
             signature = self.packed
             blank = "".rjust(raeting.footSizes.nacl, '\x00')
-            msg = "".join([self.packet.head.packed, self.packet.coat.packed, blank])
+
+            front = self.packet.packed[:self.packet.size - fl]
+
+            msg = "".join([front, blank])
             if not self.packet.verify(signature, msg):
                 emsg = "Failed verification"
                 raise raeting.PacketError(emsg)
 
-        if self.kind == raeting.footKinds.nada:
+        if fk == raeting.footKinds.nada:
             pass
 
 class Packet(object):
     '''
     RAET protocol packet object
     '''
-    def __init__(self, stack=None, kind=None):
+    def __init__(self, stack=None, data=None, kind=None):
         ''' Setup Packet instance. Meta data for a packet. '''
         self.stack = stack
-        self.kind = kind or raeting.PACKET_DEFAULTS['pk']
         self.packed = ''  # packed string
-        self.segments = [] # subpackets when segmented
         self.data = odict(raeting.PACKET_DEFAULTS)
+        if data:
+            self.data.update(data)
+        if kind:
+            if kind not in raeting.PCKT_KIND_NAMES:
+                self.data['pk'] = raeting.pcktKinds.unknown
+                emsg = "Unrecognizible packet kind."
+                raise raeting.PacketError(emsg)
+            self.data.update(pk=kind)
+        self.segments = None
 
     @property
     def size(self):
@@ -381,6 +396,21 @@ class Packet(object):
         Property is the length of the .packed of this Packet
         '''
         return len(self.packed)
+
+    @property
+    def segmented(self):
+        '''
+        Property is True if packet has at least one entry in .segments
+        '''
+        return (True if self.segments else False)
+
+    @property
+    def segmentive(self):
+        '''
+        Property is True
+        If packet segment flag is True Or packet segment count is > 1
+        '''
+        return (True if (self.data.get('sf') or (self.data.get('sc', 1) > 1)) else False)
 
     def refresh(self, data=None):
         '''
@@ -395,7 +425,7 @@ class TxPacket(Packet):
     '''
     RAET Protocol Transmit Packet object
     '''
-    def __init__(self, embody=None, data=None, **kwa):
+    def __init__(self, embody=None, **kwa):
         '''
         Setup TxPacket instance
         '''
@@ -404,8 +434,6 @@ class TxPacket(Packet):
         self.body = TxBody(packet=self, data=embody)
         self.coat = TxCoat(packet=self)
         self.foot = TxFoot(packet=self)
-        if data:
-            self.data.update(data)
 
     @property
     def index(self):
@@ -426,7 +454,9 @@ class TxPacket(Packet):
         Sign packet with foot
         '''
         self.foot.sign()
-        self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
+        self.packed = ''.join([self.head.packed,
+                               self.coat.packed,
+                               self.foot.packed])
 
     def encrypt(self, msg):
         '''
@@ -444,8 +474,50 @@ class TxPacket(Packet):
         self.coat.pack()
         self.foot.pack()
         self.head.pack()
-        self.packed = ''.join([self.head.packed, self.coat.packed, self.foot.packed])
-        self.sign()
+        self.packed = ''.join([self.head.packed,
+                               self.coat.packed,
+                               self.foot.packed])
+
+        if self.size <= raeting.MAX_SEGMENT_SIZE:
+            self.sign()
+        else:
+            #print "****Segmentize**** packet size = {0}".format(self.size)
+            self.segmentize()
+
+    def segmentize(self):
+        '''
+        Create packeted segments from existing packet
+        '''
+        self.segments = odict()
+        fullsize = self.coat.size
+        full = self.coat.packed
+
+        extrasize = 0
+        if self.data['hk'] == raeting.headKinds.json:
+            extrasize = 32 # extra header size as a result of segmentation
+
+        hotelsize = self.head.size + extrasize + self.foot.size
+        haulsize = raeting.MAX_SEGMENT_SIZE - hotelsize
+
+        segcount = (fullsize // haulsize) + (1 if fullsize % haulsize else 0)
+        for i in range(segcount):
+            if i == segcount - 1: #last segment
+                haul = full[i * haulsize:]
+            else:
+                haul = full[i * haulsize: (i+1) * haulsize]
+
+            segment = TxPacket( stack=self.stack,
+                                data=self.data)
+            segment.data.update(sn=i, sc=segcount, sl=fullsize, sf=True)
+            segment.coat.packed = segment.body.packed = haul
+            segment.foot.pack()
+            segment.head.pack()
+            segment.packed = ''.join([  segment.head.packed,
+                                        segment.coat.packed,
+                                        self.foot.packed])
+            segment.sign()
+            self.segments[i] = segment
+
 
 class RxPacket(Packet):
     '''
@@ -460,6 +532,7 @@ class RxPacket(Packet):
         self.body = RxBody(packet=self)
         self.coat = RxCoat(packet=self)
         self.foot = RxFoot(packet=self)
+        self.segments = odict() # desegmentize assumes odict()
         self.packed = packed or ''
 
     @property
@@ -483,32 +556,6 @@ class RxPacket(Packet):
         '''
         remote = self.stack.devices[self.data['sd']]
         return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
-
-    def unpack(self, packed=None):
-        '''
-        Unpacks the foot, body, and coat parts of .packed
-        Assumes that the lengths of the parts are valid in .data as would be
-        the case after successfully parsing the head section
-        '''
-        hl = self.data['hl']
-        cl = self.data['cl']
-        bl = self.data['bl']
-        fl = self.data['fl']
-
-        ck = self.data['ck']
-        if ck == raeting.coatKinds.nada and cl != bl: #not encrypted so coat and body the same
-            emsg = ("Coat kind '{0}' incompatible with coat length '{0}' "
-                          "and body length '{2}'".format(cl, cl, bl))
-            raise raeting.PacketError(emsg)
-
-        pl = hl + cl + fl
-        if self.size != pl:
-            emsg = ("Packet length '{0}' does not equal sum of the parts"
-                          " '{1}'".format(self.size, pl))
-            raise raeting.PacketError(emsg)
-
-        self.coat.packed = self.packed[hl:hl+cl]
-        self.foot.packed = self.packed[hl+cl:]
 
     def parse(self, packed=None):
         '''
@@ -542,8 +589,25 @@ class RxPacket(Packet):
                     "version '{1}'".format(self.data['vn']))
             raise raeting.PacketError(emsg)
 
-        self.unpack()
-        self.foot.parse()
+        self.foot.parse() #foot unpacks itself
+
+    def parseSegment(self, packet):
+        '''
+        If packet is segmentive then adds to .segments at index of segment number
+        Assumes packet parseOuter has already happened
+        '''
+        if packet.segmentive:
+            self.segments[packet.data['sn']] = packet
+
+    def unpackInner(self, packed=None):
+        '''
+        Unpacks the body, and coat parts of .packed
+        Assumes that the lengths of the parts are valid in .data as would be
+        the case after successfully parsing the head section
+        '''
+        hl = self.data['hl']
+        fl = self.data['fl']
+        self.coat.packed = self.packed[hl:self.size - fl] #coat.parse loads body.packed
 
     def parseInner(self):
         '''
@@ -556,5 +620,46 @@ class RxPacket(Packet):
         Result is .body.data and .data
         Raises PacketError exception If failure
         '''
+        if not self.segmented: #since head and foot are not valid
+            self.unpackInner()
         self.coat.parse()
         self.body.parse()
+
+    def desegmentable(self):
+        '''
+        Return True of  .segments is complete
+        '''
+        if not self.segmentive or not self.segmented:
+            return False
+
+        sc = self.data['sc']
+        for i in range(0, sc):
+            if i not in self.segments:
+                return False
+            if not self.segments[i]:
+                return False
+        return True
+
+    def desegmentize(self):
+        '''
+        Reassemble packet from segments
+        When done ready to call parseInner on self
+        '''
+        hauls = []
+        sc = self.data['sc']
+        for i in range(0, sc):
+            segment = self.segments[i]
+            hl = segment.data['hl']
+            fl = segment.data['fl']
+            haul = segment.packed[hl:segment.size - fl]
+            hauls.append(haul)
+        packed = "".join(hauls)
+        self.coat.packed = packed
+        sl = self.data['sl']
+        if self.coat.size != sl:
+            emsg = ("Full segmented payload length '{0}' does not equal head field"
+                                          " '{1}'".format(self.cost.size, sl))
+            raise raeting.PacketError(emsg)
+
+
+

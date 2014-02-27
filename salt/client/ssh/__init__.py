@@ -204,7 +204,7 @@ class SSH(object):
                 )
         pub = '{0}.pub'.format(priv)
         with open(pub, 'r') as fp_:
-            return '{0} root@master'.format(fp_.read().split()[1])
+            return '{0} rsa root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
         '''
@@ -255,7 +255,7 @@ class SSH(object):
                     self.opts['arg_str'],
                     host,
                     **target)
-            stdout, stderr = single.cmd_block()
+            stdout, stderr, retcode = single.cmd_block()
             try:
                 data = salt.utils.find_json(stdout)
                 return {host: data.get('local', data)}
@@ -276,25 +276,27 @@ class SSH(object):
                 host,
                 **target)
         ret = {'id': single.id}
-        stdout, stderr = single.run()
+        stdout, stderr, retcode = single.run()
         if stdout.startswith('deploy'):
             single.deploy()
-            stdout, stderr = single.run()
+            stdout, stderr, retcode = single.run()
         # This job is done, yield
         try:
-            if not stdout and stderr:
-                if 'Permission denied' in stderr:
-                    ret['ret'] = 'Permission denied'
-                else:
-                    ret['ret'] = stderr
+            data = salt.utils.find_json(stdout)
+            if len(data) < 2 and 'local' in data:
+                ret['ret'] = data['local']
             else:
-                data = salt.utils.find_json(stdout)
-                if len(data) < 2 and 'local' in data:
-                    ret['ret'] = data['local']
-                else:
-                    ret['ret'] = data
+                ret['ret'] = {
+                    'stdout': stdout,
+                    'stderr': stderr,
+                    'retcode': retcode,
+                }
         except Exception:
-            ret['ret'] = stdout
+            ret['ret'] = {
+                'stdout': stdout,
+                'stderr': stderr,
+                'retcode': retcode,
+            }
         que.put(ret)
 
     def handle_ssh(self):
@@ -503,27 +505,27 @@ class Single(object):
         If a (re)deploy is needed, then retry the operation after a deploy
         attempt
 
-        Returns tuple of (stdout, stderr)
+        Returns tuple of (stdout, stderr, retcode)
         '''
-        stdout, stderr = None, None
+        stdout = stderr = retcode = None
         arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):
             if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
                 arg_str = "'{0}'".format(arg_str)
-            stdout, stderr = self.shell.exec_cmd(arg_str)
+            stdout, stderr, retcode = self.shell.exec_cmd(arg_str)
 
         elif self.fun in self.wfuncs:
-            stdout, stderr = self.run_wfunc()
+            stdout, stderr, retcode = self.run_wfunc()
 
         else:
-            stdout, stderr = self.cmd_block()
+            stdout, stderr, retcode = self.cmd_block()
 
         if stdout.startswith('deploy') and not deploy_attempted:
             self.deploy()
             return self.run(deploy_attempted=True)
 
-        return stdout, stderr
+        return stdout, stderr, retcode
 
     def run_wfunc(self):
         '''
@@ -587,7 +589,7 @@ class Single(object):
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
         ret = json.dumps(self.wfuncs[self.fun](*self.arg))
-        return ret, ''
+        return ret, '', None
 
     def cmd(self):
         '''
@@ -613,8 +615,8 @@ class Single(object):
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
-        for stdout, stderr in self.shell.exec_nb_cmd(cmd):
-            yield stdout, stderr
+        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd):
+            yield stdout, stderr, retcode
 
     def cmd_block(self, is_retry=False):
         '''
@@ -641,26 +643,32 @@ class Single(object):
                 thin_sum,
                 self.minion_config)
         log.debug('Performing shimmed command as follows:\n{0}'.format(cmd))
-        stdout, stderr = self.shell.exec_cmd(cmd)
+        stdout, stderr, retcode = self.shell.exec_cmd(cmd)
 
         log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
         log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
+        log.debug('RETCODE {1}\n{0}'.format(retcode, self.target['host']))
 
-        error = self.categorize_shim_errors(stdout, stderr)
+        error = self.categorize_shim_errors(stdout, stderr, retcode)
         if error:
-            return 'ERROR: {0}'.format(error), stderr
+            return 'ERROR: {0}'.format(error), stderr, retcode
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
         if stdout.startswith('deploy'):
             self.deploy()
-            stdout, stderr = self.shell.exec_cmd(cmd)
+            stdout, stderr, retcode = self.shell.exec_cmd(cmd)
             if RSTR in stdout:
                 stdout = stdout.split(RSTR)[1].strip()
 
-        return stdout, stderr
+        return stdout, stderr, retcode
 
-    def categorize_shim_errors(self, stdout, stderr):
+    def categorize_shim_errors(self, stdout, stderr, retcode):
+        # Unused stdout and retcode for now but these may be used to
+        # categorize errors
+        _ = stdout
+        _ = retcode
+
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
         if stderr.startswith('Permission denied'):

@@ -7,11 +7,12 @@ stacking.py raet protocol stacking classes
 
 # Import python libs
 import socket
-from collections import deque
+from collections import deque,  Mapping
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
+from ioflo.base import storing
 
 from . import raeting
 from . import nacling
@@ -35,11 +36,12 @@ class StackUdp(object):
     def __init__(self,
                  name='',
                  version=raeting.VERSION,
+                 store=None,
                  device=None,
                  did=None,
                  ha=("", raeting.RAET_PORT),
-                 udpRxMsgs = None,
-                 udpTxMsgs = None,
+                 rxMsgs = None,
+                 txMsgs = None,
                  udpRxes = None,
                  udpTxes = None,
                  ):
@@ -51,17 +53,31 @@ class StackUdp(object):
             StackUdp.Count += 1
         self.name = name
         self.version = version
-        self.devices = odict() # remote devices attached to this stack
+        self.store = store or storing.Store(stamp=0.0)
+        self.devices = odict() # remote devices attached to this stack by did
+        self.dids = odict() # reverse lookup did by device.name
          # local device for this stack
         self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
         self.transactions = odict() #transactions
-        self.udpRxMsgs = udpRxMsgs or deque() # messages received
-        self.udpTxMsgs = udpTxMsgs or deque() # messages to transmit (msg, ddid) ddid=0 is broadcast
-        self.udpRxes = udpRxes or deque() # udp packets received
-        self.udpTxes = udpTxes or deque() # udp packet to transmit
+        self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
+        self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
+        #(msg, ddid) ddid=0 is broadcast
+        self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
+        self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
+
+    def fetchRemoteDeviceByHostPort(self, host, port):
+        '''
+        Search for remote device with matching (host, port)
+        Return device if found Otherwise return None
+        '''
+        for device in self.devices.values():
+            if device.host == host and device.port == port:
+                return device
+
+        return None
 
     def addRemoteDevice(self, device, did=None):
         '''
@@ -71,35 +87,72 @@ class StackUdp(object):
             did = device.did
 
         if did in self.devices:
-            msg = "Device with id '{0}' alreadys exists".format(did)
-            raise raeting.StackError(msg)
+            emsg = "Device with id '{0}' alreadys exists".format(did)
+            raise raeting.StackError(emsg)
         device.stack = self
         self.devices[did] = device
+        if device.name in self.dids:
+            emsg = "Device with name '{0}' alreadys exists".format(device.name)
+            raise raeting.StackError(emsg)
+        self.dids[device.name] = device.did
 
-    def moveRemoteDevice(self, odid, ndid):
+    def moveRemoteDevice(self, old, new):
         '''
-        Move device at odid to ndid
+        Move device at key old did to key new did but keep same index
         '''
-        if ndid in self.devices:
-            msg = "Cannot move, '{0}' already exists".format(ndid)
-            raise raeting.StackError(msg)
+        if new in self.devices:
+            emsg = "Cannot move, '{0}' already exists".format(new)
+            raise raeting.StackError(emsg)
 
-        if odid not in self.devices:
-            msg = "Cannot move '{0}' does not exist".format(odid)
-            raise raeting.StackError(msg)
+        if old not in self.devices:
+            emsg = "Cannot move '{0}' does not exist".format(old)
+            raise raeting.StackError(emsg)
 
-        device = self.devices[odid]
-        del self.devices[odid]
-        device.did = ndid
-        self.devices.insert(0, device.did, device)
+        device = self.devices[old]
+        index = self.devices.keys().index(old)
+        device.did = new
+        self.dids[device.name] = new
+        del self.devices[old]
+        self.devices.insert(index, device.did, device)
+
+    def renameRemoteDevice(self, old, new):
+        '''
+        rename device with old name to new name but keep same index
+        '''
+        if new in self.dids:
+            emsg = "Cannot rename, '{0}' already exists".format(new)
+            raise raeting.StackError(emsg)
+
+        if old not in self.dids:
+            emsg = "Cannot rename '{0}' does not exist".format(old)
+            raise raeting.StackError(emsg)
+
+        did = self.dids[old]
+        device = self.devices[did]
+        device.name = new
+        index = self.dids.keys().index(old)
+        del self.dids[old]
+        self.dids.insert(index, device.name, device.did)
+
+    def removeRemoteDevice(self, did):
+        '''
+        Remove device at key did
+        '''
+        if did not in self.devices:
+            emsg = "Cannot remove, '{0}' does not exist".format(did)
+            raise raeting.StackError(emsg)
+
+        device = self.devices[did]
+        del self.devices[did]
+        del self.dids[device.name]
 
     def addTransaction(self, index, transaction):
         '''
         Safely add transaction at index If not already there
         '''
         self.transactions[index] = transaction
-        print "Added {0} transaction to {1} at '{2}'".format(
-                transaction.__class__.__name__, self.name, index)
+        console.verbose( "Added {0} transaction to {1} at '{2}'".format(
+                transaction.__class__.__name__, self.name, index))
 
     def removeTransaction(self, index, transaction=None):
         '''
@@ -131,6 +184,34 @@ class StackUdp(object):
 
         return None
 
+    def serviceAll(self):
+        '''
+        Service or Process:
+           UDP Socket receive
+           UdpRxes queue
+           txMsgs queue
+           udpTxes queue
+           UDP Socket send
+
+        '''
+        if self.serverUdp:
+            while True:
+                rx, ra = self.serverUdp.receive()  # if no data the duple is ('',None)
+                if not rx:  # no received data so break
+                    break
+                # triple = ( packet, source address, destination address)
+                self.udpRxes.append((rx, ra, self.serverUdp.ha))
+
+            self.serviceUdpRx()
+
+            self.serviceTxMsg()
+
+            while self.udpTxes:
+                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
+                self.serverUdp.send(tx, ta)
+
+        return None
+
     def txUdp(self, packed, ddid):
         '''
         Queue duple of (packed, da) on stack transmit queue
@@ -142,15 +223,25 @@ class StackUdp(object):
             raise raeting.StackError(msg)
         self.udpTxes.append((packed, self.devices[ddid].ha))
 
-    def serviceUdpTxMsg(self):
+    def txMsg(self, msg, ddid=None):
+        '''
+        Append duple (msg,ddid) to .txMsgs deque
+        If msg is not mapping then raises exception
+        If ddid is None then it will default to the first entry in .devices
+        '''
+        if not isinstance(msg, Mapping):
+            emsg = "Invalid msg, not a mapping {0}".format(msg)
+            raise raeting.StackError(emsg)
+        self.txMsgs.append((msg, ddid))
+
+    def serviceTxMsg(self):
         '''
         Service .udpTxMsgs queue of outgoint udp messages for message transactions
         '''
-        while self.udpTxMsgs:
-            body, ddid = self.udpTxMsgs.popleft() # duple (body dict, destination did)
+        while self.txMsgs:
+            body, ddid = self.txMsgs.popleft() # duple (body dict, destination did)
             self.message(body, ddid)
-            print "{0} sending\n{1}".format(self.name, body)
-
+            console.verbose("{0} sending\n{1}".format(self.name, body))
 
     def fetchParseUdpRx(self):
         '''
@@ -164,7 +255,7 @@ class StackUdp(object):
         except IndexError:
             return None
 
-        print "{0} received\n{1}".format(self.name, raw)
+        console.verbose("{0} received packet\n{1}".format(self.name, raw))
 
         packet = packeting.RxPacket(stack=self, packed=raw)
         try:
@@ -183,13 +274,7 @@ class StackUdp(object):
         dh, dp = da
         packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
-        try:
-            packet.parseInner()
-        except raeting.PacketError as ex:
-            print ex
-            return None
-
-        return packet
+        return packet # outer only has been parsed
 
     def processUdpRx(self):
         '''
@@ -200,9 +285,8 @@ class StackUdp(object):
         if not packet:
             return
 
-        print "{0} received\n{1}".format(self.name, packet.data)
-        print "{0} received\n{1}".format(self.name, packet.body.data)
-        print "{0} received packet index = '{1}'".format(self.name, packet.index)
+        console.verbose("{0} received packet data\n{1}".format(self.name, packet.data))
+        console.verbose("{0} received packet index = '{1}'".format(self.name, packet.index))
 
         trans = self.transactions.get(packet.index, None)
         if trans:
@@ -215,6 +299,13 @@ class StackUdp(object):
             return
 
         self.reply(packet)
+
+    def serviceUdpRx(self):
+        '''
+        Process all packets in .udpRxes deque
+        '''
+        while self.udpRxes:
+            self.processUdpRx()
 
     def reply(self, packet):
         '''
@@ -235,12 +326,25 @@ class StackUdp(object):
                 packet.data['si'] != 0):
             self.replyMessage(packet)
 
-    def join(self):
+    def parseInner(self, packet):
+        '''
+        Parse inner of packet and return
+        Assume all drop checks done
+        '''
+        try:
+            packet.parseInner()
+            console.verbose("{0} received packet body\n{1}".format(self.name, packet.body.data))
+        except raeting.PacketError as ex:
+            print ex
+            return None
+        return packet
+
+    def join(self, mha=None):
         '''
         Initiate join transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk)
-        joiner = transacting.Joiner(stack=self, txData=data)
+        joiner = transacting.Joiner(stack=self, txData=data, mha=mha)
         joiner.join()
 
     def replyJoin(self, packet):

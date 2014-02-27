@@ -37,6 +37,7 @@ import salt.utils.event
 from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import salt cloud libs
 import salt.cloud
@@ -244,9 +245,10 @@ def salt_config_to_yaml(configuration, line_break='\n'):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.safe_dump(configuration,
-                          line_break=line_break,
-                          default_flow_style=False)
+    return yaml.dump(configuration,
+                     line_break=line_break,
+                     default_flow_style=False,
+                     Dumper=SafeOrderedDumper)
 
 
 def wait_for_fun(fun, timeout=900, **kwargs):
@@ -425,6 +427,43 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
+def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None):
+    '''
+    Wait until winexe connection can be established.
+    '''
+    start = time.time()
+    log.debug(
+        'Attempting winexe connection to host {0} on port {1}'.format(
+            host, port
+        )
+    )
+    creds = '-U {0}%{1} //{2}'.format(
+            username, password, host)
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            # Shell out to winexe to check %TEMP%
+            ret_code = win_cmd('winexe {0} "sc query winexesvc"'.format(creds))
+            if ret_code == 0:
+                log.debug('winexe connected...')
+                return True
+            log.debug('Return code was {0}'.format(ret_code))
+            time.sleep(1)
+        except socket.error as exc:
+            log.debug('Caught exception in wait_for_winexesvc: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('winexe connection timed out: {0}'.format(timeout))
+                return False
+            log.debug(
+                'Retrying winexe connection to host {0} on port {1} '
+                '(try {2})'.format(
+                    host, port, trycount
+                )
+            )
+
+
 def validate_windows_cred(host, username='Administrator', password=None):
     '''
     Check if the windows credentials are valid
@@ -510,7 +549,10 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
     '''
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
-    if wait_for_port(host=host, port=port, timeout=port_timeout * 60):
+    if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
+                wait_for_winexesvc(host=host, port=port,
+                             username=username, password=password,
+                             timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(

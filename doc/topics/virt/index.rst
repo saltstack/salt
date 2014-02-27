@@ -1,6 +1,6 @@
-==========================================
-Salt Virt - The SaltStack Cloud Controller
-==========================================
+=========
+Salt Virt
+=========
 
 The Salt Virt cloud controller capability was initial added to Salt in version
 0.14.0 as an alpha technology.
@@ -54,3 +54,12 @@ The Salt Virt system is based on using Salt to query live data about
 hypervisors and then using the data gathered to make decisions about cloud
 operations. This means that no external resources are required to run Salt
 Virt, and that the information gathered about the cloud is live and accurate.
+
+
+Deploy from Network or Disk
+===========================
+
+.. toctree::
+    disk
+    nic
+

@@ -187,7 +187,7 @@ Salt is many splendid things.
     Salt can easily and quickly transfer files (in fact, that's how Salt
     States work). Even under heavy load, files are chunked and served.
 
-:doc:`Syndic <ref/syndic>`
+:doc:`Syndic <topics/topology/syndic>`
     A seamless master of masters. Scale Salt to tens of thousands of hosts or
     across many different networks.
 
@@ -207,16 +207,16 @@ Salt is many splendid things.
     The schedule system in Salt allows for executions to be run of all sorts
     from the master or minion at automatic intervals.
 
-:doc:`Network topology <ref/topology>`
+:doc:`Network topology <topics/topology/index>`
     At it's core, Salt is a highly scalable communication layer built on
     top of ZeroMQ that enables remote execution and configuration
     management. The possibilities are endless and Salt's future looks
     bright.
 
-:doc:`Testing Salt <topics/tests/index>`
+:doc:`Testing Salt <topics/development/tests/index>`
     A howto for writing unit tests and integration tests.
 
-:doc:`Salt Proxy Minions <topics/proxyminion/index>`
+:doc:`Salt Proxy Minions <topics/topology/proxyminion/index>`
     Controlling devices and machines unable to run a salt-minion.
 
 :ref:`Python API interface <python-api>`
@@ -228,7 +228,7 @@ Salt is many splendid things.
     take advantage of automatic updates to keep minions running the latest
     builds.
 
-:doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
+:doc:`Windows Software Manager / Package Repository <topics/windows/windows-package-manager>`
     Looking for an easy way to manage software on Windows machines?
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
@@ -260,13 +260,10 @@ More information about the project
 :doc:`Release notes </topics/releases/index>`
     Living history of SaltStack.
 
-:doc:`Community </topics/community>`
-    How to get involved.
-
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt
 
-:doc:`Translate Documentation </topics/translating>`
+:doc:`Translate Documentation </topics/development/translating>`
     How to help out translating Salt to your language.
 
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib

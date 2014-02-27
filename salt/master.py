@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import fnmatch
 import signal
 import shutil
 import stat
@@ -164,6 +163,25 @@ class Master(SMaster):
             if 'git' in opts_dict:
                 br, loc = opts_dict['git'].strip().split()
                 pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
+
+        # Clear remote fileserver backend env cache so it gets recreated during
+        # the first loop_interval
+        for backend in ('git', 'hg', 'svn'):
+            if backend in self.opts['fileserver_backend']:
+                env_cache = os.path.join(
+                    self.opts['cachedir'],
+                    '{0}fs'.format(backend),
+                    'envs.p'
+                )
+                if os.path.isfile(env_cache):
+                    log.debug('Clearing {0}fs env cache'.format(backend))
+                    try:
+                        os.remove(env_cache)
+                    except (IOError, OSError) as exc:
+                        log.critical(
+                            'Unable to clear env cache file {0}: {1}'
+                            .format(env_cache, exc)
+                        )
 
         old_present = set()
         while True:
@@ -1729,24 +1747,11 @@ class ClearFuncs(object):
         with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
-
                 if line.startswith('#'):
                     continue
-
-                if line == keyid:
-                    return True
-                if fnmatch.fnmatch(keyid, line):
-                    return True
-                try:
-                    if re.match(r'\A{0}\Z'.format(line), keyid):
+                else:
+                    if salt.utils.expr_match(keyid, line):
                         return True
-                except re.error:
-                    log.warn(
-                        '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(line, signing_file)
-                    )
-                    continue
-
         return False
 
     def __check_autoreject(self, keyid):

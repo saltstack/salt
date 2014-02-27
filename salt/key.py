@@ -24,7 +24,10 @@ class KeyCLI(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.key = Key(opts)
+        if self.opts['transport'] == 'zeromq':
+            self.key = Key(opts)
+        else:
+            self.key = RaetKey(opts)
 
     def list_status(self, status):
         '''
@@ -988,3 +991,36 @@ class RaetKey(Key):
                     path = os.path.join(self.opts['pki_dir'], status, key)
                 ret[status][key] = self._get_key_finger(path)
         return ret
+
+    def read_remote(self, minion_id):
+        '''
+        Read in a remote accepted key
+        '''
+        path = os.path.join(self.opts['pki_dir'], 'accepted', minion_id)
+        if not os.path.isfile(path):
+            return {}
+        with salt.utils.fopen(path, 'rb') as fp_:
+            return self.serial.loads(fp_.read())
+
+    def read_local(self):
+        '''
+        Read in the local private keys, return an empy dict if the keys do not
+        exist
+        '''
+        path = os.path.join(self.opts['pki_dir'], 'local.key')
+        if not os.path.isfile(path):
+            return {}
+        with salt.utils.fopen(path, 'rb') as fp_:
+            return self.serial.loads(fp_.read())
+
+    def write_local(self, priv, sign):
+        '''
+        Write the private key and the signing key to a file on disk
+        '''
+        keydata = {'priv': priv,
+                   'sign': sign}
+        path = os.path.join(self.opts['pki_dir'], 'local.key')
+        c_umask = os.umask(191)
+        with salt.utils.fopen(path, 'w+') as fp_:
+            fp_.write(self.serial.dumps(keydata))
+        os.umask(c_umask)

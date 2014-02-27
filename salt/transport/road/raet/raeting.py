@@ -2,6 +2,9 @@
 '''
 raeting module provides constants and values for the RAET protocol
 
+Production Ports for Raet
+Master 4505
+Minion(s) 4510
 
 Packet Data Format.
 The data used to initialize a packet is an ordered dict with several fields
@@ -31,10 +34,12 @@ Header encoding.
 
 header data =
 {
+    ri: raet id Default 'RAET'
+    vn: Version (Version) Default 0
+    pk: Packet Kind (PcktKind)
+    pl: Packet Length (PcktLen)
     hk: Header kind   (HeadKind) Default 0
     hl: Header length (HeadLen) Default 0
-
-    vn: Version (Version) Default 0
 
     sd: Source Device ID (SDID)
     dd: Destination Device ID (DDID)
@@ -44,32 +49,28 @@ header data =
     si: Session ID (SID) Default 0
     ti: Transaction ID (TID) Default 0
     tk: Transaction Kind (TrnsKind)
-    pk: Packet Kind (PcktKind)
-    sf: Succedent Flag    (ScdtFlag) Default 0
-        Send segments or ordered packets without waiting for interleafed acks
 
-    oi: Order index (OrdrIndx)   Default 0
+
     dt: Datetime Stamp  (Datetime) Default 0
+    oi: Order index (OrdrIndx)   Default 0
 
-    sn: Segment Number (SegNum) Default 0
-    sc: Segment Count  (SegCnt) Default 1
+    pf: Pending Ack Flag    (PendFlag) Default 0
+        Next segment or ordered packet is pended waiting for ack to this packet
 
-    pf: Pending Segment Flag  (PendFlag) Default 0
-        Not the last segment more pending
+    sn: Segment Number (SgmtNum) Default 0
+    sc: Segment Count  (SgmtCnt) Default 1
+    sf: Segment Flag  (SgmtFlag) Default 0
+        This packet is part of a segmented message
     af: All Flag (AllFlag) Default 0
         Resend all segments not just one
 
     bk: Body kind   (BodyKind) Default 0
-    bl: Body length (BodyLen)  Default 0
-
     ck: Coat kind   (CoatKind) Default 0
-    cl: Coat length (CoatLen)  Default 0
-
     fk: Footer kind   (FootKind) Default 0
     fl: Footer length (FootLen) Default 0
 
     fg: flags  packed (Flags) Default '00' hs
-         2 char Hex string with bits (0, 0, af, pf, 0, sf, bf, cf)
+         2 char Hex string with bits (0, 0, af, sf, 0, pf, bf, cf)
          Zeros are TBD flags
 }
 
@@ -99,12 +100,18 @@ import struct
 # Import ioflo libs
 from ioflo.base.odicting import odict
 
+UDP_MAX_SAFE_PAYLOAD = 548  # IPV4 MTU 576 - udp headers 28
+# IPV6 MTU is 1280 but headers are bigger
+MAX_SEGMENT_SIZE = 1024 # assuming IPV6 capable equipment
+MAX_SEGMENT_COUNT = (2 ** 16) - 1
+
 RAET_PORT = 7530
 RAET_TEST_PORT = 7531
 DEFAULT_SRC_HOST = ''
 DEFAULT_DST_HOST = '127.0.0.1'
 
-MAX_HEAD_LEN = 255
+MAX_PACKET_SIZE = min(67107840, MAX_SEGMENT_SIZE * MAX_SEGMENT_COUNT) # assuming IPV6 capable equipment
+MAX_HEAD_SIZE = 255
 JSON_END = '\r\n\r\n'
 
 VERSIONS = odict([('0.1', 0)])
@@ -176,9 +183,12 @@ PACKET_DEFAULTS = odict([
                             ('sp', RAET_PORT),
                             ('dh', DEFAULT_DST_HOST),
                             ('dp', RAET_PORT),
+                            ('ri', 'RAET'),
+                            ('vn', 0),
+                            ('pk', 0),
+                            ('pl', 0),
                             ('hk', 0),
                             ('hl', 0),
-                            ('vn', 0),
                             ('sd', 0),
                             ('dd', 0),
                             ('cf', False),
@@ -186,34 +196,34 @@ PACKET_DEFAULTS = odict([
                             ('si', 0),
                             ('ti', 0),
                             ('tk', 0),
-                            ('pk', 0),
-                            ('sf', False),
-                            ('oi', 0),
                             ('dt', 0),
+                            ('oi', 0),
+                            ('pf', False),
                             ('sn', 0),
                             ('sc', 1),
-                            ('pf', False),
+                            ('sl', 0),
+                            ('sf', False),
                             ('af', False),
                             ('bk', 0),
-                            ('bl', 0),
                             ('ck', 0),
-                            ('cl', 0),
                             ('fk', 0),
                             ('fl', 0),
                             ('fg', '00'),
                       ])
 
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
-                 'hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
-                 'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
-                 'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
+                 'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
+                 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
+                 'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
+                 'bk', 'ck', 'fk', 'fl', 'fg']
 
-HEAD_FIELDS = ['hk', 'hl', 'vn', 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk', 'pk',
-               'sf', 'oi', 'dt', 'sn', 'sc', 'pf', 'af',
+HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
+               'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
+               'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
-PACKET_FLAGS = ['af', 'pf', 'sf', 'bf', 'cf']
-PACKET_FLAG_FIELDS = ['', '', 'af', 'pf', '', 'sf', 'bf', 'cf']
+PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']
+PACKET_FLAG_FIELDS = ['', '', 'af', 'sf', '', 'pf', 'bf', 'cf']
 
 
 class RaetError(Exception):

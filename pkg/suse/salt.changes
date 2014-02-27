@@ -1,4 +1,52 @@
 -------------------------------------------------------------------
+Thu Feb 20 19:10:20 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.0 Major Release
+- features:
+  - 2014.1.0 is the first release to follow the new date-based release naming system.
+  - Salt Cloud Merged into Salt
+  - Google Compute Engine support is added to salt-cloud.
+  - Salt Virt released
+  - Docker Integration
+  - IPv6 Support for iptables State/Module
+  - GitFS Improvements
+  - MinionFS
+  - saltenv
+  - Grains Caching
+  - Improved Command Logging Control
+  - PagerDuty Support
+  - Virtual Terminal
+  - Proxy Minions
+- bugfixes:
+  - Fix mount.mounted leaving conflicting entries in fstab (:issue:`7079`)
+  - Fix mysql returner serialization to use json (:issue:`9590`)
+  - Fix ZMQError: Operation cannot be accomplished in current state errors (:issue:`6306`)
+  - Rbenv and ruby improvements
+  - Fix quoting issues with mysql port (:issue:`9568`)
+  - Update mount module/state to support multiple swap partitions (:issue:`9520`)
+  - Fix archive state to work with bsdtar
+  - Clarify logs for minion ID caching
+  - Add numeric revision support to git state (:issue:`9718`)
+  - Update master_uri with master_ip (:issue:`9694`)
+  - Add comment to Debian mod_repo (:issue:`9923`)
+  - Fix potential undefined loop variable in rabbitmq state (:issue:`8703`)
+  - Fix for salt-virt runner to delete key on VM deletion
+  - Fix for salt-run -d to limit results to specific runner or function (:issue:`9975`)
+  - Add tracebacks to jinja renderer when applicable (:issue:`10010`)
+  - Fix parsing in monit module (:issue:`10041`)
+  - Fix highstate output from syndic minions (:issue:`9732`)
+  - Quiet logging when dealing with passwords/hashes (:issue:`10000`)
+  - Fix for multiple remotes in git_pillar (:issue:`9932`)
+  - Fix npm installed command (:issue:`10109`)
+  - Add safeguards for utf8 errors in zcbuildout module
+  - Fix compound commands (:issue:`9746`)
+  - Add systemd notification when master is started
+  - Many doc improvements
+- packaging:
+  - source tarball includes all packaging files in pkg folder.
+  - fixed rpmlint errors about duplicates.
+  - fixed rpmlint errors about non executables scripts.
+-------------------------------------------------------------------
 Sat Jan 25 20:21:12 UTC 2014 - aboe76@gmail.com
 
 - Updated to 0.17.5 a bugfix release for 0.17.0:

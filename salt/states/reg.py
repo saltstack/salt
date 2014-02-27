@@ -22,16 +22,23 @@ def _parse_key(key):
     return hive, path, key
 
 
-def present(name, value, vtype='REG_DWORD'):
+def present(name, value, vtype='REG_DWORD', reflection=True):
     '''
     Set a registry entry
 
-    Example::
+    Optionally set ``reflection`` to ``False`` to disable reflection.
+    ``reflection`` has no effect on 32-bit os.
 
+    In the example below, this will prevent Windows from silently creating
+    the key in::
+    'HKEY_CURRENT_USER\\SOFTWARE\\Wow6432Node\\Salt\\version'
+
+    Example::
         'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
           reg.present:
             - value: 0.15.3
             - vtype: REG_SZ
+            - reflection: False
     '''
     ret = {'name': name,
            'result': True,
@@ -40,7 +47,7 @@ def present(name, value, vtype='REG_DWORD'):
 
     # determine what to do
     hive, path, key = _parse_key(name)
-    if value == __salt__['reg.read_key'](hive, path, key):
+    if value == __salt__['reg.read_key'](hive, path, key, reflection):
         ret['comment'] = '{0} is already configured'.format(name)
         return ret
     else:
@@ -51,7 +58,8 @@ def present(name, value, vtype='REG_DWORD'):
         return ret
 
     # configure the key
-    ret['result'] = __salt__['reg.set_key'](hive, path, key, value, vtype)
+    ret['result'] = __salt__['reg.set_key'](hive, path, key, value, vtype,
+                                            reflection)
     if not ret:
         ret['changes'] = {}
         ret['comment'] = 'could not configure the registry key'

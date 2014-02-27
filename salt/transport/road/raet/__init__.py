@@ -6,8 +6,14 @@ __init__.py file for raet package
 '''
 
 # Import raet modules
+from . import raeting
+from . import nacling
+from . import devicing
 from . import packeting
 from . import stacking
-from . import raeting
+from . import transacting
+from . import behaving
 
-__all__ = ['packeting', 'stacking', 'raeting']
+
+__all__ = ['raeting', 'nacling', 'devicing', 'packeting', 'stacking',
+           'transacting', 'behaving']

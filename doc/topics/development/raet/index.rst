@@ -21,8 +21,7 @@ OSI Layers
 Link is hidden from Raet
 Network is IP host address and Udp Port
 Transport is Raet transactions, service kind, tail error checking, 
-    Could include header signing as part of transport reliable delivery
-    serialization of header
+Could include header signing as part of transport reliable delivery serialization of header
 Session is session id key exchange for signing. Grouping is Road (like 852 channel)
 Presentation is Encrpt Decript body Serialize Deserialize Body
 Application is body data dictionary
@@ -169,36 +168,33 @@ So its more reliable to fragment large packets.
 Better approach might be to have more modularity.
 Services Levels
 
-1) Maybe one or more
-    A) Fire and forget 
-        no transaction either side
-    B) Repeat, no ack, no dupdet
-        repeat counter send side, 
-        no transaction on receive side
-    C) Repeat, no Ack, dupdet
-        repeat counter send side, 
-        dup detection transaction receive side
-2) More or Less Once
-   A) retry finite, ack no dupdet  
-      retry timer send side, finite number of retires
-      ack receive side no dupdet
+    1) Maybe one or more
+        A) Fire and forget 
+            no transaction either side
+        B) Repeat, no ack, no dupdet
+            repeat counter send side, 
+            no transaction on receive side
+        C) Repeat, no Ack, dupdet
+            repeat counter send side, 
+            dup detection transaction receive side
+    2) More or Less Once
+        A) retry finite, ack no dupdet  
+            retry timer send side, finite number of retires
+            ack receive side no dupdet
+    3) At most Once
+        A) retry finite, ack, dupdet
+            retry timer send side, finite number of retires
+            ack receive side dupdet
+    4) Exactly once  
+        A) ack retry 
+            retry timer send side,  
+            ack and duplicate detection receive side
+            Infinite retries with exponential backoff
+    5) Sequential sequence number
+            A) reorder escrow
+            B) Segmented packets
+    6) request response to application layer
 
-3) At most Once
-   A) retry finite, ack, dupdet
-      retry timer send side, finite number of retires
-      ack receive side dupdet
-   
-4) Exactly once  
-   A) ack retry 
-      retry timer send side,  
-      ack and duplicate detection receive side
-      Infinite retries with exponential backoff
-   
-4) Sequential sequence number
-   A) reorder escrow
-   B) Segmented packets
-
-5) request response to application layer
 
 
 Service Features
@@ -206,7 +202,8 @@ Service Features
 1) repeats
 2) ack retry transaction id
 3) sequence number duplicate detection  out of order detection sequencing
-5) rep-req
+4) rep-req
+
 
 Always include transaction id since multiple transactions on same port
 So get duplicate detection for free if keep transaction alive but if use

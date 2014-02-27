@@ -10,6 +10,11 @@ The main intent of the Salt file server is to present files for use in the
 Salt state system. With this said, the Salt file server can be used for any
 general file transfer from the master to the minions.
 
+.. toctree::
+    :glob:
+
+    *
+
 The cp Module
 -------------
 
@@ -139,4 +144,5 @@ data is not available, it needs to be generated:
         client = salt.minion.FileClient(opts)
         # Call get_file
         return client.get_file(path, dest, False, env)
+
 

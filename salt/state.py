@@ -596,7 +596,7 @@ class State(object):
                                         )
                                 self.functions[f_key] = funcs[func]
         self.states = salt.loader.states(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
     def module_refresh(self):
         '''
@@ -1380,11 +1380,9 @@ class State(object):
             if len(cdata['args']) > 0:
                 name = cdata['args'][0]
             elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs'].get(
-                    'name',
-                    low.get('name',
-                            low.get('__id__'))
-                )
+                name = cdata['kwargs']['name']
+            else:
+                name = low.get('name', low.get('__id__'))
             ret = {
                 'result': False,
                 'name': name,
@@ -2615,7 +2613,7 @@ class MasterState(State):
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.states = salt.loader.states(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
 
 class MasterHighState(HighState):
