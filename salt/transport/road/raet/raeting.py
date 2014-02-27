@@ -286,3 +286,13 @@ class PacketError(RaetError):
             raise raeting.PacketError(emsg)
     '''
     pass
+
+class KeepError(RaetError):
+    '''
+       Exceptions in RAET keep processing
+
+       Usage:
+            emsg = "Invalid device id '{0}'".format(did)
+            raise raeting.KeepError(emsg)
+    '''
+    pass

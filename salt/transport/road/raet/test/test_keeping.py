@@ -5,6 +5,7 @@ Tests to try out packeting. Potentially ephemeral
 '''
 # pylint: skip-file
 # pylint: disable=C0103
+import os
 
 from ioflo.base.odicting import odict
 
@@ -35,14 +36,40 @@ def test():
                                   sigkey=masterSignKeyHex,
                                   prikey=masterPriKeyHex)
 
-    remote1 = devicing.RemoteDevice(  did=2,
-                                     verkey=minionVerKeyHex,
-                                     pubkey=minionPubKeyHex,)
+    remote0 = devicing.RemoteDevice(did=2,
+                                    ha=('127.0.0.1', 7532),
+                                    verkey=minionVerKeyHex,
+                                    pubkey=minionPubKeyHex,)
 
-    remote0 = devicing.RemoteDevice(  did=1,
-                                     ha=('127.0.0.1', raeting.RAET_PORT),
-                                     verkey=masterVerKeyHex,
-                                     pubkey=masterPubKeyHex,)
+    remote1 = devicing.RemoteDevice(did=3,
+                                    ha=('127.0.0.1', 7533),
+                                    verkey=minionVerKeyHex,
+                                    pubkey=minionPubKeyHex,)
+
+    channel = keeping.ChannelKeep(dirpath=os.getcwd())
+    safe = keeping.KeyKeep(dirpath=os.getcwd())
+
+    channel.dumpLocalDevice(device)
+    channel.dumpRemoteDevice(remote0)
+    channel.dumpRemoteDevice(remote1)
+
+    safe.dumpLocalDevice(device)
+    safe.dumpRemoteDevice(remote0)
+    safe.dumpRemoteDevice(remote1)
+
+    data = channel.loadLocalData()
+    print data
+
+    data = channel.loadAllRemoteData()
+    print data
+
+    data = safe.loadLocalData()
+    print data
+
+    data = safe.loadAllRemoteData()
+    print data
+
+
 
 
 if __name__ == "__main__":
