@@ -10,6 +10,9 @@ You need lxc >= 1.0 (even beta alpha)
 
 # Import python libs
 from __future__ import print_function
+import traceback
+import datetime
+import pipes
 import logging
 import tempfile
 import os
@@ -240,6 +243,9 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         Name of the LVM volume group in which to create the volume for this
         container. Only applicable if backing=lvm. Defaults to 'lxc'.
 
+    fstype
+        fstype to use on LVM lv.
+
     size
         Size of the volume to create. Only applicable if backing=lvm.
         Defaults to 1G.
@@ -262,6 +268,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     template = select('template')
     backing = select('backing')
+    lvname = select('lvname')
+    fstype = select('fstype')
     vgname = select('vgname')
     size = select('size', '1G')
 
@@ -271,8 +279,12 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         cmd += ' -t {0}'.format(template)
     if backing:
         cmd += ' -B {0}'.format(backing)
+        if lvname:
+            cmd += ' --lvname {0}'.format(vgname)
         if vgname:
             cmd += ' --vgname {0}'.format(vgname)
+        if fstype:
+            cmd += ' --fstype {0}'.format(size)
         if size:
             cmd += ' --fssize {0}'.format(size)
     if profile:
@@ -290,6 +302,80 @@ def create(name, config=None, profile=None, options=None, **kwargs):
             cmd = 'lxc-destroy -n {0}'.format(name)
             __salt__['cmd.retcode'](cmd)
         log.warn('lxc-create failed to create container')
+        return {'created': False, 'error':
+                'container could not be created: {0}'.format(ret['stderr'])}
+
+
+def clone(name,
+          orig,
+          snapshot=False,
+          profile=None,
+          **kwargs):
+
+    '''
+    Create a new container.
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.clone name ARGS
+
+    name
+        Name of the container.
+
+    orig
+        Name of the cloned original container
+
+    snapshot
+        Do we use Copy On Write snapshots (LVM)
+
+    size
+        Size of the container
+
+    vgname
+        LVM volume group(lxc)
+
+    profile
+        A LXC profile (defined in config or pillar).
+
+    .. code-block:: bash
+
+        salt '*' lxc.clone myclone ubuntu "snapshot=True"
+
+    '''
+
+    if exists(name):
+        return {'created': False, 'error': 'container already exists'}
+    if not exists(orig):
+        return {'created': False,
+                'error': 'original container does not exists'.format(orig)}
+    if not snapshot:
+        snapshot = ''
+    else:
+        snapshot = '-s'
+    cmd = 'lxc-clone {2} -o {0} -n {1}'.format(orig, name, snapshot)
+    profile = _lxc_profile(profile)
+
+    def select(k, default=None):
+        kw = kwargs.pop(k, None)
+        p = profile.pop(k, default)
+        return kw or p
+
+    vgname = select('vgname')
+    size = select('size', '1G')
+    if size:
+        cmd += ' -L {0}'.format(size)
+    if vgname:
+        cmd += ' -v {0}'.format(vgname)
+
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode'] == 0 and exists(name):
+        return {'cloned': True}
+    else:
+        if exists(name):
+            # destroy the container if it was partially created
+            cmd = 'lxc-destroy -n {0}'.format(name)
+            __salt__['cmd.retcode'](cmd)
+        log.warn('lxc-clone failed to create container')
         return {'created': False, 'error':
                 'container could not be created: {0}'.format(ret['stderr'])}
 
@@ -538,3 +624,137 @@ def info(name):
         ret['memory_free'] = free
 
     return ret
+
+
+def set_pass(name, users, password):
+    '''Set the password of one or more system users inside containers
+
+    .. code-block:: bash
+
+        salt '*' lxc.set_pass root foo
+    '''
+    ret = {'result': True, 'comment': ''}
+    if not isinstance(users, list):
+        users = [users]
+    ret['comment'] = ''
+    if users:
+        try:
+            cmd = (
+                "lxc-attach -n \"{0}\" -- "
+                " /bin/sh -c \""
+                "").format(name)
+            for i in users:
+                cmd += "echo {0}:{1}|chpasswd && ".format(
+                    pipes.quote(i),
+                    pipes.quote(password),
+                )
+            cmd += " /bin/true\""
+            cret = __salt__['cmd.run_all'](cmd)
+            if cret['retcode'] != 0:
+                raise Exception('Can\'t change passwords')
+            ret['comment'] = 'Password updated for {0}'.format(users)
+        except Exception, ex:
+            trace = traceback.format_exc()
+            ret['result'] = False
+            ret['comment'] = 'Error in setting base password\n'
+            ret['comment'] += '{0}\n{1}\n'.format(ex, trace)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'No user selected'
+    return ret
+
+
+def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
+    '''Edit LXC configuration options
+
+    .. code-block:: bash
+
+        salt-call -lall lxc.update_lxc_conf ubuntu \
+                lxc_conf="[{'network.ipv4.ip':'10.0.3.5'}]" \
+                lxc_conf_unset="['lxc.utsname']"
+
+    '''
+    changes = {'edited': [], 'added': [], 'removed': []}
+    ret = {'changes': changes, 'result': True, 'comment': ''}
+    lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
+    if not __salt__['lxc.exists'](name):
+        ret['result'] = False
+        ret['comment'] = 'Container does not exists: {0}'.fomart(name)
+    elif not os.path.exists(lxc_conf_p):
+        ret['result'] = False
+        ret['comment'] = (
+            'Configuration does not exists: {0}'.format(lxc_conf_p))
+    else:
+        try:
+            with open(lxc_conf_p, 'r') as fic:
+                filtered_lxc_conf = []
+                for row in lxc_conf:
+                    if not row:
+                        continue
+                    for conf in row:
+                        filtered_lxc_conf.append((conf, row[conf]))
+                ret['comment'] = 'lxc.conf is up to date'
+                lines = []
+                orig_config = fic.read()
+                for line in orig_config.splitlines():
+                    if line.startswith('#') or not line.strip():
+                        lines.append([line, ''])
+                    else:
+                        line = line.split('=')
+                        index = line.pop(0)
+                        lines.append((index.strip(), '='.join(line)))
+                for k, item in filtered_lxc_conf:
+                    matched = False
+                    for idx, line in enumerate(lines[:]):
+                        if line[0].startswith(k):
+                            matched = True
+                            lines[idx] = (k, item)
+                            if '='.join(line[1:]).strip() != item.strip():
+                                changes['edited'].append(
+                                    ({line[0]: line[1:]}, {k: item}))
+                                break
+                    if not matched:
+                        lines.append((k, item))
+                        changes['added'].append({k: item})
+                dest_lxc_conf = []
+                # filter unset
+                if lxc_conf_unset:
+                    for line in lines:
+                        for opt in lxc_conf_unset:
+                            if not line[0].startswith(opt):
+                                dest_lxc_conf.append(line)
+                            else:
+                                changes['removed'].append(opt)
+                else:
+                    dest_lxc_conf = lines
+                conf = ''
+                for k, val in dest_lxc_conf:
+                    if not val:
+                        conf += '{0}\n'.format(k)
+                    else:
+                        conf += '{0} = {1}\n'.format(k.strip(), val.strip())
+                conf_changed = conf != orig_config
+                chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                if conf_changed:
+                    wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
+                    wfic.write(conf)
+                    wfic.close()
+                    wfic = open(lxc_conf_p, 'w')
+                    wfic.write(conf)
+                    wfic.close()
+                    ret['comment'] = 'Updated'
+                    ret['result'] = True
+        except Exception, ex:
+            trace = traceback.format_exc()
+            ret['result'] = False
+            ret['comment'] = 'Error in storing lxc configuration'
+            ret['comment'] += '{0}\n{1}\n'.format(ex, trace)
+    if (
+        not changes['added']
+        and not changes['edited']
+        and not changes['removed']
+    ):
+        ret['changes'] = {}
+    return ret
+
+#
