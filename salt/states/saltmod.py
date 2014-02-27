@@ -96,10 +96,10 @@ def state(
         An optional list of targeted minions where failure is an option
 
     concurrent
-        Allow multiple state runs to occur at once.  
+        Allow multiple state runs to occur at once.
 
-        WARNING: This flag is potentially dangerous. It is designed 
-        for use when multiple state runs can safely be run at the same 
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}

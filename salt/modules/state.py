@@ -319,9 +319,9 @@ def sls(mods,
 
     Custom Pillar data can be passed with the ``pillar`` kwarg.
 
-    concurrent: 
-        WARNING: This flag is potentially dangerous. It is designed 
-        for use when multiple state runs can safely be run at the same 
+    concurrent:
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
 
     CLI Example:
