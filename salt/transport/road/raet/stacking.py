@@ -69,7 +69,7 @@ class StackUdp(object):
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
         self.road = road or keeping.RoadKeep()
         self.safe = safe or keeping.SafeKeep()
-        self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
+        self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
 

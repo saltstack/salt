@@ -23,7 +23,7 @@ def test():
     master did of 1
     minion did of 2
     '''
-    console.reinit(verbosity=console.Wordage.concise)
+    console.reinit(verbosity=console.Wordage.verbose)
 
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
