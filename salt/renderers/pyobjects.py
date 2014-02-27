@@ -136,8 +136,6 @@ from salt.utils.pyobjects import StateRegistry, SaltObject
 from salt.utils.pyobjects import StateFactory  # pylint: disable=W0611
 # DO NOT REMOVE THE DISABLE ABOVE, it's used in an exec call below
 
->>>>>>> adae60f... Adding a object interface to the __salt__ dictionary
-
 log = logging.getLogger(__name__)
 
 

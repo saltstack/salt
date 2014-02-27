@@ -68,7 +68,7 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'](),
+            test_registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
@@ -77,7 +77,7 @@ class StateTests(TestCase):
             pydmesg = File.managed('/usr/local/bin/pydmesg', **pydmesg_kwargs)
 
             self.assertEqual(
-                test_registry.states['/usr/local/bin/pydmesg'](),
+                test_registry.states['/usr/local/bin/pydmesg'],
                 pydmesg_expected
             )
 
@@ -85,7 +85,7 @@ class StateTests(TestCase):
                 File.managed('/tmp/something', owner='root')
 
                 self.assertEqual(
-                    test_registry.states['/tmp/something'](),
+                    test_registry.states['/tmp/something'],
                     {
                         'file.managed': [
                             {'owner': 'root'},
@@ -103,7 +103,7 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'](),
+            test_registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
@@ -119,12 +119,26 @@ class StateTests(TestCase):
 
     def test_duplicates(self):
         def add_dup():
-            File.managed('dup', name='/dup', owner='root')
+            File.managed('dup', name='/dup')
 
         add_dup()
         self.assertRaises(DuplicateState, add_dup)
 
         Service.running('dup', name='dup-service')
+
+        self.assertEqual(
+            test_registry.states,
+            OrderedDict([
+                ('dup', OrderedDict([
+                    ('file.managed', [
+                        {'name': '/dup'}
+                    ]),
+                    ('service.running', [
+                        {'name': 'dup-service'}
+                    ])
+                ]))
+            ])
+        )
 
 
 class RendererTests(TestCase):
