@@ -77,7 +77,7 @@ def _wait(jid):
         states = _prior_running_states(jid)
 
 
-def running():
+def running(concurrent=False):
     '''
     Return a dict of state return data if a state function is already running.
     This function is used to prevent multiple state calls from being run at
@@ -90,6 +90,8 @@ def running():
         salt '*' state.running
     '''
     ret = []
+    if concurrent:
+        return ret
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
         err = (
@@ -308,6 +310,7 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        concurrent=False,
         **kwargs):
     '''
     Execute a set list of state modules from an environment. The default
@@ -315,6 +318,11 @@ def sls(mods,
     to specify a different environment
 
     Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    concurrent: 
+        WARNING: This flag is potentially dangerous. It is designed 
+        for use when multiple state runs can safely be run at the same 
+        Do not use this flag for performance optimization.
 
     CLI Example:
 
@@ -337,7 +345,7 @@ def sls(mods,
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
-        conflict = running()
+        conflict = running(concurrent)
         if conflict:
             __context__['retcode'] = 1
             return conflict
