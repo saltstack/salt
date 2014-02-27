@@ -176,7 +176,8 @@ def diff_mtime_map(map1, map2):
 
 def reap_fileserver_cache_dir(cache_base, find_func):
     '''
-    Remove unused cache items assuming the cache directory follows a directory convention:
+    Remove unused cache items assuming the cache directory follows a directory
+    convention:
 
     cache_base -> saltenv -> relpath
     '''
@@ -184,7 +185,8 @@ def reap_fileserver_cache_dir(cache_base, find_func):
         env_base = os.path.join(cache_base, saltenv)
         for root, dirs, files in os.walk(env_base):
             # if we have an empty directory, lets cleanup
-            # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
+            # This will only remove the directory on the second time
+            # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
                 os.rmdir(root)
                 continue
@@ -195,11 +197,15 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
                 except ValueError:
-                    log.warn('Found invalid hash file [{0}] when attempting to reap cache directory.'.format(file_))
+                    log.warn((
+                        'Found invalid hash file [{0}] when attempting to reap'
+                        ' cache directory.'
+                    ).format(file_))
                     continue
                 # do we have the file?
                 ret = find_func(filename, saltenv=saltenv)
-                # if we don't actually have the file, lets clean up the cache object
+                # if we don't actually have the file, lets clean up the cache
+                # object
                 if ret['path'] == '':
                     os.unlink(file_path)
 
@@ -491,5 +497,7 @@ class Fileserver(object):
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
-            ret = [f for f in ret if f.startswith(prefix)]
+            ret = dict([
+                (x, y) for x, y in ret.items() if x.startswith(prefix)
+            ])
         return ret

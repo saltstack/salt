@@ -224,6 +224,8 @@ def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
@@ -232,6 +234,8 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -310,12 +314,16 @@ def sls(mods,
     environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
     to specify a different environment
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.sls core,edit.vim dev
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -413,7 +421,7 @@ def sls(mods,
                 pass
     except (IOError, OSError):
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
-        log.error(msg.format(fp_))
+        log.error(msg.format(cfn))
     return ret
 
 

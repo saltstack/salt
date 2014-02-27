@@ -1251,10 +1251,10 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            logs, _info = _parse_image_multilogs_string(ret, repo)
-            _create_image_assemble_error_status(status, ret, logs)
+            image_logs, _info = _parse_image_multilogs_string(ret, repo)
+            _create_image_assemble_error_status(status, ret, image_logs)
             if status['status'] is not False:
-                infos = _get_image_infos(logs[0]['status'])
+                infos = _get_image_infos(image_logs[0]['status'])
                 valid(status,
                       comment='Image {0} was created'.format(infos['id']),
                       id=infos['id'],
@@ -1498,7 +1498,7 @@ def _parse_image_multilogs_string(ret, repo):
     '''
     Parse image log strings into grokable data
     '''
-    logs, infos = [], None
+    image_logs, infos = [], None
     if ret and ret.startswith('{') and ret.endswith('}'):
         pushd = 0
         buf = ''
@@ -1513,16 +1513,16 @@ def _parse_image_multilogs_string(ret, repo):
                     buf = json.loads(buf)
                 except Exception:
                     pass
-                logs.append(buf)
+                image_logs.append(buf)
                 buf = ''
-        logs.reverse()
+        image_logs.reverse()
         # search last layer grabbed
-        for l in logs:
+        for l in image_logs:
             if isinstance(l, dict):
                 if l.get('status') == 'Download complete' and l.get('id'):
                     infos = _get_image_infos(repo)
                     break
-    return logs, infos
+    return image_logs, infos
 
 
 def _pull_assemble_error_status(status, ret, logs):
@@ -1626,19 +1626,19 @@ def pull(repo, tag=None, *args, **kwargs):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            logs, infos = _parse_image_multilogs_string(ret, repo)
+            image_logs, infos = _parse_image_multilogs_string(ret, repo)
             if infos and infos.get('id', None):
                 repotag = repo
                 if tag:
                     repotag = '{0}:{1}'.format(repo, tag)
                 valid(status,
-                      out=logs if logs else ret,
+                      out=image_logs if image_logs else ret,
                       id=infos['id'],
                       comment='Image {0} was pulled ({1})'.format(
                           repotag, infos['id']))
 
             else:
-                _pull_assemble_error_status(status, ret, logs)
+                _pull_assemble_error_status(status, ret, image_logs)
         else:
             invalid(status)
     except Exception:
@@ -1663,19 +1663,19 @@ def _push_assemble_error_status(status, ret, logs):
     status['out'] = ''
     try:
         status['out'] += '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
@@ -1712,9 +1712,9 @@ def push(repo, *args, **kwargs):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
-    logs, infos = _parse_image_multilogs_string(ret, repo_name)
-    if logs:
-        laststatus = logs[0].get('status', None)
+    image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
+    if image_logs:
+        laststatus = image_logs[0].get('status', None)
         if laststatus and (
             ('already pushed' in laststatus)
             or ('Pushing tags for rev' in laststatus)
@@ -1723,14 +1723,14 @@ def push(repo, *args, **kwargs):
             status['id'] = _get_image_infos(repo)['id']
             status['comment'] = 'Image {0}({1}) was pushed'.format(
                 repo, status['id'])
-            if logs:
-                status['out'] = logs
+            if image_logs:
+                status['out'] = image_logs
             else:
                 status['out'] = ret
         else:
-            _push_assemble_error_status(status, ret, logs)
+            _push_assemble_error_status(status, ret, image_logs)
     else:
-        _push_assemble_error_status(status, ret, logs)
+        _push_assemble_error_status(status, ret, image_logs)
     return status
 
 
