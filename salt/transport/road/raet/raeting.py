@@ -177,6 +177,11 @@ COOKIE_PACKER = struct.Struct('<80s24s')
 INITIATESTUFF_PACKER = struct.Struct('<32s48s24s128s')
 INITIATE_PACKER = struct.Struct('32s24s248s24s')
 
+ACCEPTANCES = odict([('rejected', 0), ('accepted', 1), ('pending', 2),])
+ACCEPTANCE_NAMES = odict((v, k) for k, v in ACCEPTANCES.iteritems())  # inverse map
+Acceptance = namedtuple('Acceptance', ACCEPTANCES.keys())
+acceptance = Acceptance(**ACCEPTANCES)
+
 # head fields that may be included in json header if not default value
 PACKET_DEFAULTS = odict([
                             ('sh', DEFAULT_SRC_HOST),
@@ -279,5 +284,15 @@ class PacketError(RaetError):
        Usage:
             emsg = "Invalid device id '{0}'".format(did)
             raise raeting.PacketError(emsg)
+    '''
+    pass
+
+class KeepError(RaetError):
+    '''
+       Exceptions in RAET keep processing
+
+       Usage:
+            emsg = "Invalid device id '{0}'".format(did)
+            raise raeting.KeepError(emsg)
     '''
     pass

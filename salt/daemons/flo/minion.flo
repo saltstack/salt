@@ -16,7 +16,7 @@ framer bootstrap be active first join
    frame join
       print Joining...
       enter
-         do raet udp stack joiner per inode ".raet.udp.stack."
+         do salt raet udp stack joiner per inode ".raet.udp.stack."
       recur
          do raet udp stack joined per inode ".raet.udp.stack."
 

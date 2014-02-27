@@ -16,6 +16,9 @@ except ImportError:
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import packByte, unpackByte
 
+from ioflo.base.consoling import getConsole
+console = getConsole()
+
 from . import raeting
 
 class Part(object):
@@ -441,7 +444,13 @@ class TxPacket(Packet):
         Property is transaction tuple (rf, ld, rd, si, ti, bf,)
         '''
         data = self.data
-        return ((data['cf'], data['sd'], data['dd'], data['si'], data['ti'], data['bf']))
+        ld = data['sd']
+        if ld == 0:
+            ld = (data['sh'], data['sp'])
+        rd = data['dd']
+        if rd == 0:
+            rd = (data['dh'], data['dp'])
+        return ((data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
 
     def signature(self, msg):
         '''
@@ -541,7 +550,13 @@ class RxPacket(Packet):
         Property is transaction tuple (rf, ld, rd, si, ti, bf,)
         '''
         data = self.data
-        return ((not data['cf'], data['dd'], data['sd'], data['si'], data['ti'], data['bf']))
+        ld = data['dd']
+        if ld == 0:
+            ld = (data['dh'], data['dp'])
+        rd = data['sd']
+        if rd == 0:
+            rd = (data['sh'], data['sp'])
+        return ((not data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
 
     def verify(self, signature, msg):
         '''
