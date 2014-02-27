@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.02.19"
+__ScriptVersion="2014.02.27"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -728,6 +728,9 @@ __gather_linux_system_info() {
                             if [ "$(cat /etc/debian_version)" = "wheezy/sid" ]; then
                                 # I've found an EC2 wheezy image which did not tell its version
                                 v=$(__parse_version_string "7.0")
+                            elif [ "$(cat /etc/debian_version)" = "jessie/sid" ]; then
+                                # Let's start detecting the upcoming Debian 8 (Jessie)
+                                v=$(__parse_version_string "8.0")
                             fi
                         else
                             echowarn "Unable to parse the Debian Version"
@@ -1254,7 +1257,64 @@ movefile() {
     return 0
 }
 
-##############################################################################
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_systemd
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_systemd() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ "$(systemctl is-enabled ${servicename})" = "enabled" ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_systemd  ----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_upstart
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_upstart() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    # Check if service is enabled to start at boot
+    initctl list | grep ${servicename} > /dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_upstart  ----------
+
+
+#######################################################################################################################
 #
 #   Distribution install functions
 #
@@ -1329,10 +1389,10 @@ movefile() {
 #       5. install_<distro>_<install_type>_check_services
 #       6. install_<distro>_check_services
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Ubuntu Install Functions
 #
@@ -1541,12 +1601,27 @@ install_ubuntu_restart_daemons() {
     done
     return 0
 }
+
+install_ubuntu_check_services() {
+    if [ ! -f /sbin/initctl ]; then
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_upstart salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   End of Ubuntu Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Debian Install Functions
 #
@@ -1720,6 +1795,11 @@ _eof
     return 0
 }
 
+install_debian_8_deps__DISABLED() {
+    install_debian_7_deps || return 1
+    return 0
+}
+
 install_debian_git_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
         echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
@@ -1788,6 +1868,11 @@ install_debian_7_git_deps() {
     return 0
 }
 
+install_debian_8_git_deps() {
+    install_debian_7_git_deps || return 1
+    return 0
+}
+
 __install_debian_stable() {
     packages=""
     if [ $_INSTALL_MINION -eq $BS_TRUE ]; then
@@ -1823,6 +1908,11 @@ install_debian_7_stable() {
     return 0
 }
 
+install_debian_8_stable() {
+    __install_debian_stable || return 1
+    return 0
+}
+
 install_debian_git() {
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         # Building pyzmq from source to build it against libzmq3.
@@ -1845,6 +1935,11 @@ install_debian_6_git() {
 }
 
 install_debian_7_git() {
+    install_debian_git || return 1
+    return 0
+}
+
+install_debian_8_git() {
     install_debian_git || return 1
     return 0
 }
@@ -1882,9 +1977,9 @@ install_debian_restart_daemons() {
 #
 #   Ended Debian Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Fedora Install Functions
 #
@@ -1989,12 +2084,23 @@ install_fedora_restart_daemons() {
         systemctl start salt-$fname.service
     done
 }
+
+install_fedora_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Fedora Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   CentOS Install Functions
 #
@@ -2116,19 +2222,26 @@ install_centos_git_post() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ -f /sbin/initctl ]; then
-            # We have upstart support
-            /sbin/initctl status salt-$fname > /dev/null 2>&1
-            if [ $? -eq 1 ]; then
-                # upstart does not know about our service, let's copy the proper file
-                copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.upstart /etc/init/salt-$fname.conf
-            fi
-        # Still in SysV init?!
-        elif [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
+        # While the RPM's use init.d, so will we.
+        if [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
             copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname} /etc/init.d/
             chmod +x /etc/init.d/salt-${fname}
             /sbin/chkconfig salt-${fname} on
         fi
+
+        #if [ -f /sbin/initctl ]; then
+        #    # We have upstart support
+        #    /sbin/initctl status salt-$fname > /dev/null 2>&1
+        #    if [ $? -eq 1 ]; then
+        #        # upstart does not know about our service, let's copy the proper file
+        #        copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.upstart /etc/init/salt-$fname.conf
+        #    fi
+        ## Still in SysV init?!
+        #elif [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
+        #    copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname} /etc/init.d/
+        #    chmod +x /etc/init.d/salt-${fname}
+        #    /sbin/chkconfig salt-${fname} on
+        #fi
     done
 }
 
@@ -2178,12 +2291,27 @@ install_centos_testing_post() {
     return 0
 }
 
+install_centos_check_services() {
+    if [ ! -f /sbin/initctl ]; then
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_upstart salt-$fname || return 1
+    done
+    return 0
+}
+
 #
 #   Ended CentOS Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   RedHat Install Functions
 #
@@ -2385,9 +2513,9 @@ install_red_hat_enterprise_workstation_testing_post() {
 #
 #   Ended RedHat Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Amazon Linux AMI Install Functions
 #
@@ -2479,25 +2607,13 @@ install_amazon_linux_ami_testing_post() {
 #
 #   Ended Amazon Linux AMI Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Arch Install Functions
 #
 install_arch_linux_stable_deps() {
-    grep '\[salt\]' /etc/pacman.conf >/dev/null 2>&1 || echo '[salt]
-Include = /etc/pacman.d/salt.conf
-' >> /etc/pacman.conf
-
-    # Create a pacman .d directory so we can just override salt's
-    # included configuration if needed
-    [ -d /etc/pacman.d ] || mkdir -p /etc/pacman.d
-
-    cat <<_eof > /etc/pacman.d/salt.conf
-Server = http://intothesaltmine.org/archlinux
-SigLevel = Optional TrustAll
-_eof
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         pacman -Syyu --noconfirm --needed || return 1
@@ -2633,12 +2749,28 @@ install_arch_linux_restart_daemons() {
         /etc/rc.d/salt-$fname start
     done
 }
+
+install_arch_check_services() {
+    if [ ! -f /usr/bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Arch Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   FreeBSD Install Functions
 #
@@ -2871,9 +3003,9 @@ install_freebsd_restart_daemons() {
 #
 #   Ended FreeBSD Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   SmartOS Install Functions
 #
@@ -3005,9 +3137,9 @@ install_smartos_restart_daemons() {
 #
 #   Ended SmartOS Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    openSUSE Install Functions.
 #
@@ -3154,12 +3286,29 @@ install_opensuse_restart_daemons() {
 
     done
 }
+
+install_opensuse_check_services() {
+    if [ ! -f /bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
+
 #
 #   End of openSUSE Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    SuSE Install Functions.
 #
@@ -3306,12 +3455,28 @@ install_suse_11_restart_daemons() {
     install_opensuse_restart_daemons || return 1
     return 0
 }
+
+install_suse_check_services() {
+    if [ ! -f /bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   End of SuSE Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    Gentoo Install Functions.
 #
@@ -3428,13 +3593,28 @@ install_gentoo_restart_daemons() {
     done
 }
 
+install_gentoo_check_services() {
+    if [ ! -d "/run/systemd/system" ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   End of Gentoo Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Default minion configuration function. Matches ANY distribution as long as
 #   the -c options is passed.
@@ -3512,10 +3692,10 @@ config_salt() {
 #
 #  Ended Default Configuration function
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Default salt master minion keys pre-seed function. Matches ANY distribution
 #   as long as the -k option is passed.
@@ -3547,10 +3727,10 @@ preseed_master() {
 #
 #  Ended Default Salt Master Pre-Seed minion keys function
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   This function checks if all of the installed daemons are running or not.
 #
@@ -3580,7 +3760,7 @@ daemons_running() {
 #
 #  Ended daemons running check function
 #
-##############################################################################
+#######################################################################################################################
 
 
 #======================================================================================================================
@@ -3719,11 +3899,11 @@ echodebug "DAEMONS_RUNNING_FUNC=${DAEMONS_RUNNING_FUNC}"
 
 # Let's get the check services function
 CHECK_SERVICES_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_check_services"
-CHECK_SERVICES_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_check_services"
-CHECK_SERVICES_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_check_services"
-CHECK_SERVICES_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_check_services"
-CHECK_SERVICES_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_check_services"
-CHECK_SERVICES_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}_check_services"
 
 CHECK_SERVICES_FUNC="null"
 for FUNC_NAME in $(__strip_duplicates $CHECK_SERVICES_FUNC_NAMES); do
