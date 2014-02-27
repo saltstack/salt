@@ -1766,7 +1766,9 @@ def recurse(name,
                     continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
-            _filenames = filenames
+            # This needs to use list() otherwise they reference
+            # the same list.
+            _filenames = list(filenames)
             for filename in _filenames:
                 if filename.startswith(lname):
                     log.debug('** skipping file ** {0}, it intersects a '
@@ -1787,6 +1789,7 @@ def recurse(name,
             merge_ret(os.path.join(name, srelpath), _ret)
             # Add the path to the keep set in case clean is set to True
             keep.add(os.path.join(name, srelpath))
+        vdir.update(keep)
         return filenames
 
     keep = set()
@@ -1851,11 +1854,16 @@ def recurse(name,
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
-                for link in symlinks:
+                islink = False
+                for link in symlinks.keys():
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
+                        islink = True
+                        break
+                if islink:
                     continue
+
             manage_directory(mdest)
             keep.add(mdest)
 

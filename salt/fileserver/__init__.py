@@ -491,5 +491,5 @@ class Fileserver(object):
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
-            ret = [f for f in ret if f.startswith(prefix)]
+            ret = {x: y for x, y in ret.items() if x.startswith(prefix)}
         return ret
