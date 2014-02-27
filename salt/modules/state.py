@@ -413,7 +413,7 @@ def sls(mods,
                 pass
     except (IOError, OSError):
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
-        log.error(msg.format(fp_))
+        log.error(msg.format(cfn))
     return ret
 
 
