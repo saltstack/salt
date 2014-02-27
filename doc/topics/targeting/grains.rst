@@ -1,3 +1,5 @@
+.. _targeting-grains:
+
 ======
 Grains
 ======

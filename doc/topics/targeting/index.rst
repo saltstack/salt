@@ -1,3 +1,5 @@
+.. _targeting:
+
 =================
 Targeting Minions
 =================

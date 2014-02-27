@@ -1,3 +1,5 @@
+.. _targeting-nodegroups:
+
 ===========
 Node groups
 ===========

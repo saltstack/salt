@@ -1,3 +1,5 @@
+.. _targeting-compound:
+
 =================
 Compound matchers
 =================
