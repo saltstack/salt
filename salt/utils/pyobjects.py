@@ -42,8 +42,8 @@ class StateRegistry(object):
 
     def salt_data(self):
         states = OrderedDict([
-            (id_, state())
-            for id_, state in self.states.iteritems()
+            (id_, states_)
+            for id_, states_ in self.states.iteritems()
         ])
 
         if self.includes:
@@ -51,8 +51,8 @@ class StateRegistry(object):
 
         if self.extends:
             states['extend'] = OrderedDict([
-                (id_, state())
-                for id_, state in self.extends.iteritems()
+                (id_, states_)
+                for id_, states_ in self.extends.iteritems()
             ])
 
         self.empty()
@@ -66,7 +66,13 @@ class StateRegistry(object):
             attr = self.states
 
         if id_ in attr:
-            raise DuplicateState("A state with id '%s' already exists" % id_)
+            if state.full_func in attr[id_]:
+                raise DuplicateState("A state with id '%s', type '%s' exists" % (
+                    id_,
+                    state.full_func
+                ))
+        else:
+            attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
         if len(self.requisites) > 0:
@@ -75,7 +81,7 @@ class StateRegistry(object):
                     state.kwargs[req.requisite] = []
                 state.kwargs[req.requisite].append(req())
 
-        attr[id_] = state
+        attr[id_].update(state())
 
     def extend(self, id_, state):
         self.add(id_, state, extend=True)

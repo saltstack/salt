@@ -13,10 +13,11 @@ from salt.minion import SMinion
 from salt.renderers.pyobjects import render as pyobjects_render
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, StateRegistry,
-                                  InvalidFunction, SaltObject)
+                                  SaltObject, InvalidFunction, DuplicateState)
 
 test_registry = StateRegistry()
 File = StateFactory('file', registry=test_registry)
+Service = StateFactory('service', registry=test_registry)
 
 pydmesg_expected = {
     'file.managed': [
@@ -67,7 +68,7 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'](),
+            test_registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
@@ -76,7 +77,7 @@ class StateTests(TestCase):
             pydmesg = File.managed('/usr/local/bin/pydmesg', **pydmesg_kwargs)
 
             self.assertEqual(
-                test_registry.states['/usr/local/bin/pydmesg'](),
+                test_registry.states['/usr/local/bin/pydmesg'],
                 pydmesg_expected
             )
 
@@ -84,7 +85,7 @@ class StateTests(TestCase):
                 File.managed('/tmp/something', owner='root')
 
                 self.assertEqual(
-                    test_registry.states['/tmp/something'](),
+                    test_registry.states['/tmp/something'],
                     {
                         'file.managed': [
                             {'owner': 'root'},
@@ -102,7 +103,7 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'](),
+            test_registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
@@ -114,6 +115,29 @@ class StateTests(TestCase):
         self.assertEqual(
             test_registry.states,
             OrderedDict()
+        )
+
+    def test_duplicates(self):
+        def add_dup():
+            File.managed('dup', name='/dup')
+
+        add_dup()
+        self.assertRaises(DuplicateState, add_dup)
+
+        Service.running('dup', name='dup-service')
+
+        self.assertEqual(
+            test_registry.states,
+            OrderedDict([
+                ('dup', OrderedDict([
+                    ('file.managed', [
+                        {'name': '/dup'}
+                    ]),
+                    ('service.running', [
+                        {'name': 'dup-service'}
+                    ])
+                ]))
+            ])
         )
 
 
