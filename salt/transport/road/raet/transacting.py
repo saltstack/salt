@@ -69,7 +69,13 @@ class Transaction(object):
         '''
         Property is transaction tuple (rf, ld, rd, si, ti, bf,)
         '''
-        return ((self.rmt, self.stack.device.did, self.rdid, self.sid, self.tid, self.bcst,))
+        ld = self.stack.device.did
+        if ld == 0: #bootstapping onto channel use ha
+            ld = self.stack.device.ha
+        rd = self.rdid
+        if rd == 0:
+            rd = self.stack.devices[self.rdid].ha
+        return ((self.rmt, ld, rd, self.sid, self.tid, self.bcst,))
 
     def process(self):
         '''
@@ -303,8 +309,7 @@ class Joinent(Correspondent):
 
         '''
         # need to perform the check for accepted status somewhere
-                #joinent.accept()
-        pass
+        self.accept()
 
     def prep(self):
         '''
@@ -944,7 +949,7 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        console.verbose("segment count = {0} tid={1}".format(
+        console.verbose("segment count = {0} tid={1}\n".format(
                  self.rxPacket.data['sc'], self.tid))
         if self.rxPacket.segmentive:
             if not self.segmentage:

@@ -18,6 +18,7 @@ from . import raeting
 from . import nacling
 from . import packeting
 from . import devicing
+from . import keeping
 from . import transacting
 
 from ioflo.base.consoling import getConsole
@@ -44,6 +45,8 @@ class StackUdp(object):
                  txMsgs = None,
                  udpRxes = None,
                  udpTxes = None,
+                 pond = None,
+                 safe = None,
                  ):
         '''
         Setup StackUdp instance
@@ -64,6 +67,8 @@ class StackUdp(object):
         #(msg, ddid) ddid=0 is broadcast
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
+        self.pond = pond or keeping.ChannelKeep()
+        self.safe = safe or keeping.KeyKeep()
         self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
@@ -151,7 +156,7 @@ class StackUdp(object):
         Safely add transaction at index If not already there
         '''
         self.transactions[index] = transaction
-        console.verbose( "Added {0} transaction to {1} at '{2}'".format(
+        console.verbose( "Added {0} transaction to {1} at '{2}'\n".format(
                 transaction.__class__.__name__, self.name, index))
 
     def removeTransaction(self, index, transaction=None):
@@ -204,6 +209,8 @@ class StackUdp(object):
 
             self.serviceUdpRx()
 
+            self.process()
+
             self.serviceTxMsg()
 
             while self.udpTxes:
@@ -241,7 +248,7 @@ class StackUdp(object):
         while self.txMsgs:
             body, ddid = self.txMsgs.popleft() # duple (body dict, destination did)
             self.message(body, ddid)
-            console.verbose("{0} sending\n{1}".format(self.name, body))
+            console.verbose("{0} sending\n{1}\n".format(self.name, body))
 
     def fetchParseUdpRx(self):
         '''
@@ -255,7 +262,7 @@ class StackUdp(object):
         except IndexError:
             return None
 
-        console.verbose("{0} received packet\n{1}".format(self.name, raw))
+        console.verbose("{0} received packet\n{1}\n".format(self.name, raw))
 
         packet = packeting.RxPacket(stack=self, packed=raw)
         try:
@@ -285,8 +292,8 @@ class StackUdp(object):
         if not packet:
             return
 
-        console.verbose("{0} received packet data\n{1}".format(self.name, packet.data))
-        console.verbose("{0} received packet index = '{1}'".format(self.name, packet.index))
+        console.verbose("{0} received packet data\n{1}\n".format(self.name, packet.data))
+        console.verbose("{0} received packet index = '{1}'\n".format(self.name, packet.index))
 
         trans = self.transactions.get(packet.index, None)
         if trans:
@@ -326,6 +333,13 @@ class StackUdp(object):
                 packet.data['si'] != 0):
             self.replyMessage(packet)
 
+    def process(self):
+        '''
+        Call .process or all transactions to allow timer based processing
+        '''
+        for transaction in self.transactions.values():
+            transaction.process()
+
     def parseInner(self, packet):
         '''
         Parse inner of packet and return
@@ -333,7 +347,7 @@ class StackUdp(object):
         '''
         try:
             packet.parseInner()
-            console.verbose("{0} received packet body\n{1}".format(self.name, packet.body.data))
+            console.verbose("{0} received packet body\n{1}\n".format(self.name, packet.body.data))
         except raeting.PacketError as ex:
             print ex
             return None
@@ -359,7 +373,7 @@ class StackUdp(object):
                                         rxPacket=packet)
         joinent.join() #assigns .rdid here
         # need to perform the check for accepted status somewhere
-        #joinent.accept()
+        #joinent.accept() now in joinent.process()
 
     def allow(self, rdid=None):
         '''

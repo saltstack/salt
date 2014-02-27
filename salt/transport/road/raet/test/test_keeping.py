@@ -46,21 +46,21 @@ def test():
                                     verkey=minionVerKeyHex,
                                     pubkey=minionPubKeyHex,)
 
-    channel = keeping.ChannelKeep(dirpath=os.getcwd())
+    pond = keeping.ChannelKeep(dirpath=os.getcwd())
     safe = keeping.KeyKeep(dirpath=os.getcwd())
 
-    channel.dumpLocalDevice(device)
-    channel.dumpRemoteDevice(remote0)
-    channel.dumpRemoteDevice(remote1)
+    pond.dumpLocalDevice(device)
+    pond.dumpRemoteDevice(remote0)
+    pond.dumpRemoteDevice(remote1)
 
     safe.dumpLocalDevice(device)
     safe.dumpRemoteDevice(remote0)
     safe.dumpRemoteDevice(remote1)
 
-    data = channel.loadLocalData()
+    data = pond.loadLocalData()
     print data
 
-    data = channel.loadAllRemoteData()
+    data = pond.loadAllRemoteData()
     print data
 
     data = safe.loadLocalData()
