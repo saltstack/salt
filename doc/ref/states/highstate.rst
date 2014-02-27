@@ -1,3 +1,5 @@
+.. _states-highstate:
+
 ====================================
 Highstate data structure definitions
 ====================================
@@ -9,6 +11,8 @@ A state tree is a collection of ``SLS`` files that live under the directory
 specified in :conf_master:`file_roots`. A state tree can be organized into
 ``SLS modules``.
 
+.. _states-highstate-top-file:
+
 Top file
 --------
 
@@ -18,6 +22,8 @@ during state execution.
 Configurable via :conf_master:`state_top`.
 
 .. seealso:: :doc:`A detailed description of the top file </ref/states/top>`
+
+.. _states-highstate-include-declaration:
 
 Include declaration
 -------------------
@@ -35,12 +41,16 @@ Example:
       - edit.vim
       - http.server
 
+.. _states-highstate-module-reference:
+
 Module reference
 ----------------
 
 The name of a SLS module defined by a separate SLS file and residing on
 the Salt Master. A module named ``edit.vim`` is a reference to the SLS
 file ``salt://edit/vim.sls``.
+
+.. _states-highstate-id-declaration:
 
 ID declaration
 --------------
@@ -62,6 +72,7 @@ ID declarations with the same name will be ignored.
         Until 0.9.6, IDs could **not** contain a dot, otherwise highstate summary output was
         unpredictable. (It was fixed in versions 0.9.7 and above)
 
+.. _states-highstate-extend-declaration:
 
 Extend declaration
 ------------------
@@ -103,6 +114,8 @@ declaration that will restart Apache whenever the Apache configuration file,
 
     :doc:`State Requisites </ref/states/requisites>`
 
+.. _states-highstate-state-declaration:
+
 State declaration
 -----------------
 
@@ -117,6 +130,8 @@ declarations <requisite declaration>`.
 
 Occurs under an :term:`ID declaration`.
 
+.. _states-highstate-requisite-declaration:
+
 Requisite declaration
 ---------------------
 
@@ -129,6 +144,8 @@ and watching other Salt states.
 Occurs as a list component under a :term:`state declaration` or as a
 key under an :term:`ID declaration`.
 
+.. _states-highstate-requisite-reference:
+
 Requisite reference
 -------------------
 
@@ -137,6 +154,8 @@ A single key dictionary. The key is the name of the referenced
 :term:`ID declaration`.
 
 Occurs as a single index in a :term:`requisite declaration` list.
+
+.. _states-highstate-function-declaration:
 
 Function declaration
 --------------------
@@ -192,6 +211,8 @@ VALID:
 
 Occurs as the only index in the :term:`state declaration` list.
 
+.. _states-highstate-function-arg-declaration:
+
 Function arg declaration
 ------------------------
 
@@ -212,6 +233,8 @@ For example in the following state declaration ``user``, ``group``, and
         - user: root
         - group: root
         - mode: 644
+
+.. _states-highstate-name-declaration:
 
 Name declaration
 ----------------
@@ -263,6 +286,8 @@ easier to specify ``mywebsite`` than to specify
         - watch:
           - file: mywebsite
 
+.. _states-highstate-names-declaration:
+
 Names declaration
 -----------------
 
@@ -293,6 +318,8 @@ declaration will be expanded into the following three state declarations:
 
       python-yaml:
         pkg.installed
+
+.. _states-highstate-example:
 
 Large example
 =============
