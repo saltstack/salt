@@ -1,3 +1,5 @@
+.. _states-top:
+
 ============
 The Top File
 ============
@@ -6,6 +8,8 @@ The top file is used to map what SLS modules get loaded onto what minions via
 the state system. The top file creates a few general abstractions. First it
 maps what nodes should pull from which environments, next it defines which
 matches systems should draw from.
+
+.. _states-top-environments:
 
 Environments
 ============
