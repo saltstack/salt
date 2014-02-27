@@ -2,18 +2,18 @@
 Salt Best Practices
 ===================
 
-Salt's extreme flexibility leads to many questions concerning how states,
-pillars, and other portions of Salt should be structured and laid out. This
-document attempts to clarify these points through the usage of examples and
-existing code which will empower users to know they are making a decision
-which will ensure extensibility throughout the life cycle of an infrastructure.
+Salt's extreme flexibility leads to many questions concerning the structure of 
+configuration files. 
+
+This document exists to clarify these points through examples and
+code.
 
 General rules
 -------------
 
 1. Modularity and clarity should be emphasized whenever possible.
-2. Create clear relations (naming and content) between pillars and states.
-3. Use variables when it makes sense, but don't overuse them.
+2. Create clear relations between pillars and states.
+3. Use variables when it makes sense but don't overuse them.
 4. Store sensitive data in pillar.
 
 
@@ -23,9 +23,11 @@ Structuring States and Formulas
 When structuring Salt States and Formulas it is important to begin with the
 directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
-name. Reviewing the `MySQL Salt formula
+name. 
+
+Reviewing the `MySQL Salt formula
 <https://github.com/saltstack-formulas/mysql-formula>`_ it is clear to see
-the benefits to the end user when reviewing a sample of the available states:
+the benefits to the end-user when reviewing a sample of the available states:
 
 .. code-block:: bash
 
@@ -50,7 +52,7 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Reviewing another example such as the `vim formula 
+Another example comes from the `vim formula 
 <https://github.com/saltstack-formulas/vim-formula>`_:
 
 .. code-block:: bash
@@ -78,9 +80,9 @@ Once again viewing how this would look in a top file:
       'db*':
         - vim.absent
 
-The usage of a clear top level directory, as well as properly named states
-reduces the overall complexity, and leads a user to both understand what will be
-included at a glance, and where it is located.
+The usage of a clear top-level directory as well as properly named states
+reduces the overall complexity and leads a user to both understand what will be
+included at a glance and where it is located.
 
 In addition
 `Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_ should
@@ -95,18 +97,18 @@ be used as often as possible.
 Structuring Pillar Files
 ------------------------
 
-`Pillars <https://docs.saltstack.com/topics/pillar/>`_ are used to store both
-secure, and insecure data pertaining to minions. When designing the structure
-of the ``/srv/pillar`` directory, and the pillars contained within there
-should once again be a focus on clear and concise data which users can easily
-review, modify, and understand.
+`Pillars <https://docs.saltstack.com/topics/pillar/>`_ are used to store 
+secure and insecure data pertaining to minions. When designing the structure
+of the ``/srv/pillar`` directory, the pillars contained within 
+should once again be focused on clear and concise data which users can easily
+review, modify and understand.
 
-The /srv/pillar/ directory is primarily controlled by the top.sls. It should
-be noted that the pillar top.sls is not used as a location to declare variables
-and their values. The top.sls is used as a way to include other pillar files
+The ``/srv/pillar/`` directory is primarily controlled by ``top.sls``. It should
+be noted that the pillar ``top.sls`` is not used as a location to declare variables
+and their values. The ``top.sls`` is used as a way to include other pillar files
 and organize the way they are matched based on environments or grains.
 
-An example top.sls may be as simple as the following:
+An example ``top.sls`` may be as simple as the following:
 
 /srv/pillar/top.sls:
 
@@ -135,16 +137,18 @@ Or much more complicated, using a variety of matchers:
         - emacs
 
 It is clear to see through these examples how the top file provides users with
-power, but when used incorrectly it can lead to confusing configurations. This
+power but when used incorrectly it can lead to confusing configurations. This
 is why it is important to understand that the top file for pillar is not used
 for variable definitions.
 
-Each sls file within the /srv/pillar/ directory should correspond to the
-states which it matches. This would mean that the apache pillar file should
+Each SLS file within the ``/srv/pillar/`` directory should correspond to the
+states which it matches. 
+
+This would mean that the apache pillar file should
 contain data relevant to apache. Structuring files in this way once again
 ensures modularity, and creates a consistent understanding throughout our Salt
-environment. Users can expect that pillar variables found in an apache state
-will live inside of an apache pillar:
+environment. Users can expect that pillar variables found in an Apache state
+will live inside of an Apache pillar:
 
 /srv/salt/pillar/apache.sls
 
@@ -163,8 +167,7 @@ relates to the state it is associated with.
 Variable Flexibility
 --------------------
 
-Salt allows users to define variables in several locations, within the states
-themselves, inside of pillars, as well as map files and other custom files.
+Salt allows users to define variables in SLS files.
 When creating a state variables should provide users with as much flexibility
 as possible. This means that variables should be clearly defined and easy to
 manipulate, and that sane defaults should exist in the event a variable is not
@@ -238,7 +241,7 @@ Ensuring that states are modular is one of the key concepts to understand
 within Salt. When creating a state a user must consider how many times the
 state could be re-used, and what it relies on to operate. Below are several
 examples which will iteratively explain how a user can go from a state which
-is not very modular, to one that is:
+is not very modular to one that is:
 
 /srv/salt/apache/init.sls:
 
@@ -259,14 +262,16 @@ is not very modular, to one that is:
         - watch_in:
           - service: httpd
 
-The example above is probably the worst case scenario when writing a state.
+The example above is probably the worst-case scenario when writing a state.
 There is a clear lack of focus by naming both the pkg/service, and managed file
 directly as the state ID. This would lead to changing multiple requires within
-this state, as well as others that may depend upon the state. Imagine if a
-require was used for the httpd package in another state, and then suddenly
+this state, as well as others that may depend upon the state. 
+
+Imagine if a require was used for the ``httpd`` package in another state, and then suddenly
 it's a custom package. Now changes need to be made in multiple locations which
-increases the complexity, and leads to a more error prone configuration. There
-is also the issue of having the configuration file located in the init as a
+increases the complexity and leads to a more error prone configuration. 
+
+There is also the issue of having the configuration file located in the init,  as a
 user would be unable to simply install the service and use the default conf
 file.
 
@@ -479,19 +484,19 @@ Many users would review this state and see that the password is there in plain
 text, which is quite problematic. It results in several issues which may not be
 immediately visible. 
 
-The first of these issues is clear to most users, the password being visible
+The first of these issues is clear to most users -- the password being visible
 in this state. This  means that any minion will have a copy of this, and
 therefore the password which is a major security concern as minions may not
 be locked down as tightly as the master server.
 
-The other issue that can be encountered is access by users ON the master. If
+The other issue that can be encountered is access by users on the master. If
 everyone has access to the states (or their repository), then they are able to
 review this password. Keeping your password data accessible by only a few
-users is critical for both security, and peace of mind.
+users is critical for both security and peace of mind.
 
 There is also the issue of portability. When a state is configured this way
 it results in multiple changes needing to be made. This was discussed in the
-sections above, but it is a critical idea to drive home. If states are not
+sections above but it is a critical idea to drive home. If states are not
 portable it may result in more work later!
 
 Fixing this issue is relatively simple, the content just needs to be moved to
@@ -533,7 +538,7 @@ the associated pillar:
         - require:
           - sls: mysql.testerdb
 
-Now that the database details have been moved to the associated pillar file
+Now that the database details have been moved to the associated pillar file,
 only machines which are targeted via pillar will have access to these details.
 Access to users who should not be able to review these details can also be
 prevented while ensuring that they are still able to write states which take
