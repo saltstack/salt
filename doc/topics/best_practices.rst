@@ -8,6 +8,14 @@ document attempts to clarify these points through the usage of examples and
 existing code which will empower users to know they are making a decision
 which will ensure extensibility throughout the life cycle of an infrastructure.
 
+General rules
+-------------
+
+1. Modularity and clarity should be emphasized whenever possible.
+2. Create clear relations (naming and content) between pillars and states.
+3. Use variables when it makes sense, but don't overuse them.
+4. Store sensitive data in pillar.
+
 
 Structuring States and Formulas
 -------------------------------
@@ -77,6 +85,11 @@ included at a glance, and where it is located.
 In addition
 `Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_ should
 be used as often as possible.
+
+.. note::
+
+    Formulas should never be referenced from the main repository, and should
+    be forked to a repo where unintended changes will not take place.
 
 
 Structuring Pillar Files
