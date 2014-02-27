@@ -15,6 +15,7 @@ import fnmatch
 import time
 import sys
 import copy
+import threading
 
 # Import salt libs
 import salt
@@ -396,10 +397,10 @@ def running():
 
         salt '*' saltutil.running
     '''
-
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
+    current_thread = threading.currentThread().name
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
@@ -422,8 +423,18 @@ def running():
             # continue
             os.remove(path)
             continue
-        if data.get('pid') == pid:
-            continue
+        if __opts__['multiprocessing']:
+            if data.get('pid') == pid:
+                continue
+        else:
+            if data.get('pid') != pid:
+                os.remove(path)
+                continue
+            if data.get('jid') == current_thread:
+                continue
+            if not data.get('jid') in [x.name for x in threading.enumerate()]:
+                os.remove(path)
+                continue
         ret.append(data)
     return ret
 

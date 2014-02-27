@@ -117,7 +117,7 @@ Or much more complicated, using a variety of matchers:
         - match: grain
         - vim
     test:
-      'and not G@os: Debian':
+      '* and not G@os: Debian':
         - match: compound
         - emacs
 

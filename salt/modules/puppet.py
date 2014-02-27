@@ -117,7 +117,7 @@ def run(*args, **kwargs):
     subcommand. Following positional arguments should be ordered with arguments
     required by the subcommand first, followed by non-keyvalue pair options.
     Tags are specified by a tag keyword and comma separated list of values. --
-    http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
+    http://docs.puppetlabs.com/puppet/latest/reference/lang_tags.html
 
     CLI Examples:
 

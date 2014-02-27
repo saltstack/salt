@@ -29,6 +29,7 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.exceptions
+import salt.config
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
@@ -154,13 +155,31 @@ class SSH(object):
         if not os.path.isfile(priv):
             salt.client.ssh.shell.gen_key(priv)
         self.defaults = {
-                'user': self.opts.get('ssh_user', 'root'),
-                'port': self.opts.get('ssh_port', '22'),
-                'passwd': self.opts.get('ssh_passwd', ''),
-                'priv': priv,
-                'timeout': self.opts.get('ssh_timeout', 60),
-                'sudo': self.opts.get('ssh_sudo', False),
-                }
+            'user': self.opts.get(
+                'ssh_user',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_user']
+            ),
+            'port': self.opts.get(
+                'ssh_port',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_port']
+            ),
+            'passwd': self.opts.get(
+                'ssh_passwd',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
+            ),
+            'priv': priv,
+            'timeout': self.opts.get(
+                'ssh_timeout',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
+            ) + self.opts.get(
+                'timeout',
+                salt.config.DEFAULT_MASTER_OPTS['timeout']
+            ),
+            'sudo': self.opts.get(
+                'ssh_sudo',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
+            ),
+        }
         self.serial = salt.payload.Serial(opts)
 
     def verify_env(self):
@@ -537,6 +556,8 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            # Use the ID defined in the roster file
+            opts_pkg['id'] = self.id
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],

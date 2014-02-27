@@ -388,19 +388,22 @@ class Publisher(multiprocessing.Process):
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
-        pull_path = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-        pull_mode = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-        pull_uri = 'ipc://{0}'.format(pull_path)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        )
         salt.utils.check_ipc_path_max_len(pull_uri)
-
-        # Securely create pull socket file
-        log.debug('Creating pull socket {0}'.format(pull_path))
-        os.close(os.open(pull_path, pull_mode, 0600))
 
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
-        pull_sock.bind(pull_uri)
+
+        # Securely create socket
+        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+        old_umask = os.umask(0177)
+        try:
+            pull_sock.bind(pull_uri)
+        finally:
+            os.umask(old_umask)
 
         try:
             while True:
@@ -1229,15 +1232,21 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        new_loadp = False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
+            # The minion is returning a standalone job, request a jobid
+            load['arg'] = load.get('arg', load.get('fun_args', []))
+            load['tgt_type'] = 'glob'
+            load['tgt'] = load['id']
             load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                load.get('nocache', False))
+            new_loadp = load.get('nocache', True) and True
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(
+            load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
             fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
@@ -1246,12 +1255,17 @@ class AESFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+            load['jid'],
+            self.opts['cachedir'],
+            self.opts['hash_type']
+        )
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
+        if new_loadp:
+            with salt.utils.fopen(
+                os.path.join(jid_dir, '.load.p'), 'w+b'
+            ) as fp_:
+                self.serial.dump(load, fp_)
         hn_dir = os.path.join(jid_dir, load['id'])
         try:
             os.mkdir(hn_dir)

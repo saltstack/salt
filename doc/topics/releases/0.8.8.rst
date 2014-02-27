@@ -12,7 +12,7 @@ to the salt website which is still under heavy development. The new sphinx
 documentation system has also been used to greatly clean up the salt manpages.
 The salt 7 manpage in particular now contains extensive information which was
 previously only in the wiki. The new documentation can be found at:
-http://thatch45.github.com/salt-www/
+http://docs.saltstack.com/
 We still have a lot to add, and when the domain is set up I will post another
 announcement.
 
@@ -72,10 +72,6 @@ maintaining supreme usability and simplicity.
 
 If you would like a more complete overview of Salt please watch the Salt
 presentation:
-Flash Video:
-http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
-OGV Video Download:
-http://blip.tv/file/get/Thatch45-Salt087Presentation416.ogv
 Slides:
 :download:`Salt.pdf`
 

@@ -48,6 +48,7 @@ def state(
         tgt,
         ssh=False,
         tgt_type=None,
+        expr_form=None,
         ret='',
         highstate=None,
         sls=None,
@@ -55,7 +56,7 @@ def state(
         test=False,
         fail_minions='',
         allow_fail=0,
-        **kwargs):
+        timeout=None):
     '''
     Invoke a state run on a given target
 
@@ -92,10 +93,13 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
+    cmd_kw = {'arg': [], 'ret': ret, 'timeout': timeout}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+
     if env is not None:
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -107,11 +111,17 @@ def state(
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    cmd_kw = {'arg': []}
-    if 'expr_form' in kwargs and not tgt_type:
-        tgt_type = kwargs['expr_form']
-    if not tgt_type:
+    if expr_form and tgt_type:
+        ret.setdefault('warnings', []).append(
+            'Please only use \'tgt_type\' or \'expr_form\' not both. '
+            'Preferring \'tgt_type\' over \'expr_form\''
+        )
+        expr_form = None
+    elif expr_form and not tgt_type:
+        tgt_type = expr_form
+    elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     if highstate:
@@ -129,8 +139,6 @@ def state(
         cmd_kw['arg'].append('test={0}'.format(test))
     if __env__ != 'base':
         cmd_kw['arg'].append('saltenv={0}'.format(__env__))
-    if ret:
-        cmd_kw['ret'] = ret
     if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
@@ -178,7 +186,7 @@ def state(
         ret['comment'] += '\nFailures:\n'
         for minion, failure in failures.iteritems():
             ret['comment'] += '\n'.join(
-                    (' '*4 + l)
+                    (' ' * 4 + l)
                     for l in salt.output.out_format(
                         {minion: failure},
                         'highstate',
@@ -194,9 +202,10 @@ def function(
         tgt,
         ssh=False,
         tgt_type=None,
+        expr_form=None,
         ret='',
-        arg=(),
-        **kwargs):
+        arg=None,
+        timeout=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -218,20 +227,27 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
+    cmd_kw = {'arg': arg or [], 'ret': ret, 'timeout': timeout}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
-    if 'expr_form' in kwargs and not tgt_type:
-        tgt_type = kwargs['expr_form']
-    if not tgt_type:
+
+    if expr_form and tgt_type:
+        ret['warnings'] = [
+            'Please only use \'tgt_type\' or \'expr_form\' not both. '
+            'Preferring \'tgt_type\' over \'expr_form\''
+        ]
+        expr_form = None
+    elif expr_form and not tgt_type:
+        tgt_type = expr_form
+    elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     fun = name
-    if ret:
-        cmd_kw['ret'] = ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     ret['changes'] = cmd_ret
     ret['comment'] = 'Function {0} ran successfully on {0}'.format(

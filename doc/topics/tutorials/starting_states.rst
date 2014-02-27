@@ -336,7 +336,7 @@ provides a flexible, domain-specific language for authoring SLS data in Python.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`Mako`: http://www.makotemplates.org/
-.. _`Wempy`: http://www.wempy.org/
+.. _`Wempy`: https://fossil.secution.com/u/gcw/wempy/doc/tip/README.wiki
 
 .. note::
     The templating engines described above aren't just available in SLS files.

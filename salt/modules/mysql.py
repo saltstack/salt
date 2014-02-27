@@ -60,6 +60,7 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 __grants__ = [
+    'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
     'CREATE',
@@ -1399,6 +1400,23 @@ def db_optimize(name,
 
 
 # Grants
+def __grant_normalize(grant):
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
+
+    # Grants are paste directly in SQL, must filter it
+    exploded_grants = grant.split(",")
+    for chkgrant in exploded_grants:
+        if not chkgrant.strip().upper() in __grants__:
+            raise Exception('Invalid grant : {0!r}'.format(
+                chkgrant
+            ))
+
+    return grant
+
+
 def __grant_generate(grant,
                     database,
                     user,
@@ -1415,20 +1433,7 @@ def __grant_generate(grant,
     #       SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = re.sub(r'\s*,\s*', ', ', grant).upper()
 
-    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
-    # grant_exists and grant_add ALL work correctly
-    if grant == 'ALL':
-        grant = 'ALL PRIVILEGES'
-    else:
-        # Grants won't be used as query arguments, so we need
-        # some SQL barriers.
-        # White-list security check
-        grants = grant.split(', ')
-        for chkgrant in grants:
-            if not chkgrant.strip() in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(
-                    chkgrant
-                ))
+    grant = __grant_normalize(grant)
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1622,13 +1627,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
-            raise Exception('Invalid grant : {0!r}'.format(
-                chkgrant
-            ))
+    grant = __grant_normalize(grant)
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'

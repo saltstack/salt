@@ -191,7 +191,7 @@ other salt modules which needed to import :mod:`sys<python2:sys>` would have to
 also import :mod:`absolute_import<python2:__future__>`, which should be 
 avoided.
 
-.. _`absolute imports`: http://www.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
+.. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
 
 
 Vertical is Better
@@ -304,6 +304,6 @@ PEP 8. Code churn is a leading source of bugs and is strongly discouraged.
 While style fixes are encouraged they should be isolated to a single file per
 commit, and the changes should be legitimate, if there are any questions about
 whether a style change is legitimate please reference this document and the
-official PEP 8 (http://www.python.org/dev/peps/pep-0008/) document before
+official PEP 8 (http://legacy.python.org/dev/peps/pep-0008/) document before
 changing code. Many claims that a change is PEP 8 have been invalid, please
 double check before committing fixes.

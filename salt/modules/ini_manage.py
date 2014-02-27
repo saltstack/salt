@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+Edit ini files
+
 :maintainer: <ageeleshwar.kandavelu@csscorp.com>
 :maturity: new
 :depends: re
 :platform: all
 
-Module for editing ini files through saltstack
-
-use section as DEFAULT_IMPLICIT if your ini file does not have any section
-for example /etc/sysctl.conf
+Use section as DEFAULT_IMPLICIT if your ini file does not have any section
+(for example /etc/sysctl.conf)
 '''
 
 # Import Python libs
@@ -31,23 +31,29 @@ option_regexp2 = re.compile(r'\s*(.+?)\s*(:)\s*(.+)\s*')
 
 def set_option(file_name, sections=None, summary=True):
     '''
-    Edit ini files
-    file_name: path of ini_file
-    sections: a dictionary representing the ini file
+    Edit an ini file, replacing one or more sections. Returns a dictionary
+    containing the changes made.
 
-    returns a dictionary containing the changes made
+    file_name
+        path of ini_file
 
-    set summary=False if return data need not have previous option value
+    sections : None
+        A dictionary representing the sections to be edited ini file
 
-    from api:
-    import salt
-    sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini.set_option',
-           ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
+    Set ``summary=False`` if return data need not have previous option value
+
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.LocalClient()
+        sc.cmd('target', 'ini.set_option',
+               ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
@@ -93,17 +99,21 @@ def set_option(file_name, sections=None, summary=True):
 
 def get_option(file_name, section, option):
     '''
-    Get value of a key from a section in a ini file
+    Get value of a key from a section in an ini file. Returns ``None`` if
+    no matching key was found.
 
-    from api:
-    import salt
-    sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini.get_option',
-           [path_to_ini_file, section_name, option])
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.LocalClient()
+        sc.cmd('target', 'ini.get_option',
+               [path_to_ini_file, section_name, option])
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ini.get_option /path/to/ini section_name option_name
     '''
@@ -116,18 +126,21 @@ def get_option(file_name, section, option):
 
 def remove_option(file_name, section, option):
     '''
-    Remove a key,value pair from a section in a ini file
-    returns the value of the removed key
+    Remove a key/value pair from a section in an ini file. Returns the value of
+    the removed key, or ``None`` if nothing was removed.
 
-    from api:
-    import salt
-    sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini.remove_option',
-           [path_to_ini_file, section_name, option])
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.LocalClient()
+        sc.cmd('target', 'ini.remove_option',
+               [path_to_ini_file, section_name, option])
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ini.remove_option /path/to/ini section_name option_name
     '''
@@ -141,18 +154,21 @@ def remove_option(file_name, section, option):
 
 def get_section(file_name, section):
     '''
-    get a section in a ini file
-    returns the section as dictionary
+    Retrieve a section from an ini file. Returns the section as dictionary. If
+    the section is not found, an empty dictionary is returned.
 
-    from api:
-    import salt
-    sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini.get_section',
-           [path_to_ini_file, section_name])
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.LocalClient()
+        sc.cmd('target', 'ini.get_section',
+               [path_to_ini_file, section_name])
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ini.get_section /path/to/ini section_name
     '''
@@ -161,22 +177,26 @@ def get_section(file_name, section):
         sect = inifile.get_section(section)
         if sect:
             return sect.contents()
+    return {}
 
 
 def remove_section(file_name, section):
     '''
-    remove a section in a ini file
-    returns the removed section as dictionary
+    Remove a section in an ini file. Returns the removed section as dictionary,
+    or ``None`` if nothing was removed.
 
-    from api:
-    import salt
-    sc = salt.client.LocalClient()
-    sc.cmd('target', 'ini.remove_section',
-           [path_to_ini_file, section_name])
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.LocalClient()
+        sc.cmd('target', 'ini.remove_section',
+               [path_to_ini_file, section_name])
 
     CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ini.remove_section /path/to/ini section_name
     '''

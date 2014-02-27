@@ -23,7 +23,7 @@ The Salt source can be downloaded from the salt GitHub site:
 
 Or from PyPI:
 
-http://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz
+https://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz
 
 For instructions on how to set up Salt please see the :ref:`installation`
 instructions.
@@ -54,7 +54,7 @@ state system is ready for early testers to start playing with. If you are
 interested in working with the state system please check out the (still very
 small) salt-states GitHub repo:
 
-https://github.com/thatch45/salt-states
+https://github.com/saltstack/salt-states
 
 This git repo is the active development branch for determining how a clean
 salt-state database should look and act. Since the salt state system is still

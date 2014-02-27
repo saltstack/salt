@@ -65,7 +65,7 @@
 
 
     .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
-    .. _`Sentry`: http://getsentry.com
+    .. _`Sentry`: https://getsentry.com
     .. _`Raven`: http://raven.readthedocs.org
     .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
 '''

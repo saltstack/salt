@@ -26,7 +26,7 @@ Create a new `virtualenv`_:
 
     virtualenv /path/to/your/virtualenv
 
-.. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
+.. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
 
 On Arch Linux, where Python 3 is the default installation of Python, use the

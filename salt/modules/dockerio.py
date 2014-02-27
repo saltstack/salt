@@ -23,7 +23,7 @@ Installation prerequisites
 
 - You will need the 'docker-py' python package in your python installation
   running salt. The version of docker-py should support `version 1.6 of docker
-  remote API. <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
+  remote API. <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 - For now, you need docker-py from sources:
 
     https://github.com/dotcloud/docker-py
@@ -470,13 +470,13 @@ def commit(container,
             author=author,
             conf=conf)
         found = False
-        for k in 'Id', 'id', 'ID':
+        for k in ('Id', 'id', 'ID'):
             if k in info:
                 found = True
-                id = info[k]
+                image_id = info[k]
         if not found:
             raise Exception('Invalid commit return')
-        image = _get_image_infos(id)['id']
+        image = _get_image_infos(image_id)['id']
         comment = 'Image {0} created from {1}'.format(image, container)
         valid(status, id=image, out=info, comment=comment)
     except Exception:
@@ -1408,11 +1408,11 @@ def build(path=None,
                                rm=rm,
                                nocache=nocache)
             if isinstance(ret, tuple):
-                id, out = ret[0], ret[1]
-                if id:
-                    valid(status, id=id, out=out, comment='Image built')
+                image_id, out = ret[0], ret[1]
+                if image_id:
+                    valid(status, id=image_id, out=out, comment='Image built')
                 else:
-                    invalid(status, id=id, out=out)
+                    invalid(status, id=image_id, out=out)
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),

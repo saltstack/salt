@@ -3,11 +3,12 @@ SaltStack Git Policy
 ====================
 
 The SaltStack team follows a git policy to maintain stability and consistency
-with the repository. The git policy has been developed to encourage
-contributions and make contributing to Salt as easy as possible. Code 
-contributors to SaltStack projects DO NOT NEED TO READ THIS DOCUMENT, because
-all contributions come into SaltStack via a single gateway to make it as
-easy as possible for contributors to give us code.
+with the repository.
+
+The git policy has been developed to encourage contributions and make contributing
+to Salt as easy as possible. Code contributors to SaltStack projects DO NOT NEED
+TO READ THIS DOCUMENT, because all contributions come into SaltStack via a single
+gateway to make it as easy as possible for contributors to give us code.
 
 The primary rule of git management in SaltStack is to make life easy on
 contributors and developers to send in code. Simplicity is always a goal!
@@ -15,8 +16,8 @@ contributors and developers to send in code. Simplicity is always a goal!
 New Code Entry
 ==============
 
-All new SaltStack code is posted to the `develop` branch, this is the single
-point of entry. The only exception here is when a bugfix to develop cannot be
+All new SaltStack code is posted to the `develop` branch, which is the single
+point of entry. The only exception is when a bugfix to develop cannot be
 cleanly merged into a release branch and the bugfix needs to be rewritten for
 the release branch.
 

@@ -316,10 +316,14 @@ class MinionBase(object):
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
         )
+        if os.path.exists(epub_sock_path):
+            os.unlink(epub_sock_path)
         epull_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pull.ipc'.format(id_hash)
         )
+        if os.path.exists(epull_sock_path):
+            os.unlink(epull_sock_path)
 
         self.epub_sock = self.context.socket(zmq.PUB)
 
@@ -374,18 +378,20 @@ class MinionBase(object):
                     # Let's stop at this stage
                     raise
 
-        # Securely create socket files
-        if self.opts.get('ipc_mode', '') != 'tcp':
-            mode = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-            for path in (epub_sock_path, epull_sock_path):
-                log.debug('Creating pull socket {0}'.format(path))
-                os.close(os.open(path, mode, 0600))
-
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
-        # Bind the event sockets
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
+
+        # Securely bind the event sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            old_umask = os.umask(0177)
+        try:
+            log.info('Starting pub socket on {0}'.format(epub_uri))
+            self.epub_sock.bind(epub_uri)
+            log.info('Starting pull socket on {0}'.format(epull_uri))
+            self.epull_sock.bind(epull_uri)
+        finally:
+            if self.opts.get('ipc_mode', '') != 'tcp':
+                os.umask(old_umask)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -497,6 +503,8 @@ class MultiMinion(MinionBase):
         '''
         self._prepare_minion_event_system()
 
+        self.poller.register(self.epull_sock, zmq.POLLIN)
+
         module_refresh = False
         pillar_refresh = False
 
@@ -514,8 +522,8 @@ class MultiMinion(MinionBase):
                 if not hasattr(minion, 'schedule'):
                     continue
                 loop_interval = self.process_schedule(minion, loop_interval)
-                break
-            if self.poller.poll(1):
+            socks = dict(self.poller.poll(1))
+            if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
                     while True:
                         package = self.epull_sock.recv(zmq.NOBLOCK)
@@ -791,7 +799,8 @@ class Minion(MinionBase):
             )
         else:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
+                target=target, args=(instance, self.opts, data),
+                name=data['jid']
             )
         process.start()
 
@@ -805,13 +814,13 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
+        fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
-            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             salt.utils.daemonize_if(opts)
-            sdata = {'pid': os.getpid()}
-            sdata.update(data)
-            with salt.utils.fopen(fn_, 'w+b') as fp_:
-                fp_.write(minion_instance.serial.dumps(sdata))
+        sdata = {'pid': os.getpid()}
+        sdata.update(data)
+        with salt.utils.fopen(fn_, 'w+b') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
         if function_name in minion_instance.functions:
@@ -1312,6 +1321,8 @@ class Minion(MinionBase):
                         self.epub_sock.send(package)
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)
+                    # Add an extra fallback in case a forked process leeks through
+                    multiprocessing.active_children()
 
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the

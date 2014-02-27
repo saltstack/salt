@@ -160,7 +160,7 @@ prone to errors.
 Virtual Machine generation applications are available for many platforms:
 
 vm-builder:
-  http://wiki.debian.org/VMBuilder
+  https://wiki.debian.org/VMBuilder
 
 Once virtual machines images are available the easiest way to make them available
 to Salt Virt is to place them in the Salt file server. Just copy an image into
@@ -186,7 +186,7 @@ Fedora Linux
 ~~~~~~~~~~~~
 
 Images for Fedora Linux can be found here:
-http://cloud.fedoraproject.org
+http://fedoraproject.org/en/get-fedora#clouds
 
 Ubuntu Linux
 ~~~~~~~~~~~~

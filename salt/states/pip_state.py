@@ -188,7 +188,7 @@ def installed(name,
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
 
-    .. _`virtualenv`: http://www.virtualenv.org
+    .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin

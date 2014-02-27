@@ -18,6 +18,7 @@ Mount any type of mountable filesystem with the mounted function:
 
 # Import python libs
 import os.path
+import re
 
 # Import salt libs
 from salt._compat import string_types
@@ -90,6 +91,21 @@ def mounted(name,
         real_device = os.path.realpath(device)
     else:
         real_device = device
+
+    # LVS devices have 2 names under /dev:
+    # /dev/mapper/vg--name-lv--name and /dev/vg-name/lv-name
+    # No matter what name is used for mounting,
+    # mount always displays the device as /dev/mapper/vg--name-lv--name
+    # Note the double-dash escaping.
+    # So, let's call that the canonical device name
+    # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
+    m = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
+    if m:
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in m.groupdict().iteritems())
+        mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
+        if os.path.exists(mapper_device):
+            real_device = mapper_device
+
     device_list = []
     if real_name in active:
         device_list.append(active[real_name]['device'])

@@ -464,6 +464,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
+            if 'BHYVE  BVXSDT' in output:
+                grains['virtual'] = 'bhyve'
             # Product Name: (oVirt) www.ovirt.org
             # Red Hat Community virtualization Project based on kvm
             elif 'Manufacturer: oVirt' in output:
@@ -744,6 +746,9 @@ _OS_FAMILY_MAP = {
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
+    'OpenIndiana': 'Solaris',
+    'OpenSolaris Development': 'Solaris',
+    'OpenSolaris': 'Solaris',
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
@@ -917,16 +922,20 @@ def os_data():
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
                 try:
-                    release_re = r'(Solaris|OpenIndiana(?: Development)?)' \
-                                 r'\s+(\d+ \d+\/\d+|oi_\S+)?'
-                    osname, osrelease = re.search(release_re,
-                                                  rel_data).groups()
+                    release_re = re.compile(
+                        r'((?:Open)?Solaris|OpenIndiana) (Development)?'
+                        r'\s*(\d+ \d+\/\d+|oi_\S+|snv_\S+)?'
+                    )
+                    osname, development, osrelease = \
+                        release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
                     grains['os'] = grains['osfullname'] = 'Solaris'
                     grains['osrelease'] = ''
                 else:
+                    if development is not None:
+                        osname = ''.join((osname, development))
                     grains['os'] = grains['osfullname'] = osname
                     grains['osrelease'] = osrelease
 

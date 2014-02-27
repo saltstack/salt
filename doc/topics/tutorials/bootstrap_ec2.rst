@@ -2,7 +2,7 @@
 Bootstrapping Salt on Linux EC2 with Cloud-Init
 ===============================================
 
-`Salt <http://saltstack.org>`_ is a great tool for remote execution and
+`Salt <http://www.saltstack.com/community/>`_ is a great tool for remote execution and
 configuration management, however you will still need to bootstrap the
 daemon when spinning up a new node. One option is to create and save a
 custom `AMI`_, but this creates another resource to maintain and document.
@@ -66,7 +66,7 @@ Additional Notes
 
 Sometime in the future the ppa will include and install an upstart file. In the
 meantime, you can use the bootstrap to `build one
-<https://gist.github.com/1617054>`_.
+<https://gist.github.com/rubic/1617054>`_.
 
 It may also be useful to set the node's role during this phase. One option
 would be saving the node's role to a file and then using a custom Grain to

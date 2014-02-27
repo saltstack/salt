@@ -465,7 +465,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas)
     if ver >= distutils.version.LooseVersion('9.1'):
-        replication_column = 'rolreplication'
+        replication_column = 'pg_roles.rolreplication'
     else:
         replication_column = 'NULL'
 
@@ -478,7 +478,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcreatedb as "can create databases", '
         'pg_roles.rolcatupdate as "can update system catalogs", '
         'pg_roles.rolcanlogin as "can login", '
-        'pg_roles.{0} as "replication", '
+        '{0} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables", '

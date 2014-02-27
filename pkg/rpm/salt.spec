@@ -12,7 +12,7 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.3
+%define _salttesting_ver 0.5.4
 
 Name: salt
 Version: %{salt_version}
@@ -199,6 +199,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -n salt-master
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt.1.*
+%doc %{_mandir}/man1/salt-cloud.1.*
 %doc %{_mandir}/man1/salt-cp.1.*
 %doc %{_mandir}/man1/salt-key.1.*
 %doc %{_mandir}/man1/salt-master.1.*
@@ -206,6 +207,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
 %{_bindir}/salt
+%{_bindir}/salt-cloud
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-master
@@ -318,6 +320,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Feb 20 2014 Erik Johnson <erik@saltstack.com> - 2014.1.0-1
+- Update to feature release 2014.1.0
+
 * Mon Jan 27 2014 Erik Johnson <erik@saltstack.com> - 0.17.5-1
 - Update to bugfix release 0.17.5
 

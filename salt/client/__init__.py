@@ -1589,10 +1589,16 @@ class Caller(object):
     ``'local'``. The same can be achived at the Python level by including that
     setting in a minion config file.
 
+    Instantiate a new Caller() instance using a file system path to the minion
+    config file:
+
     .. code-block:: python
 
         caller = salt.client.Caller('/path/to/custom/minion_config')
         caller.sminion.functions['grains.items']()
+
+    Instantiate a new Caller() instance using a dictionary of the minion
+    config:
 
     .. versionadded:: Helium
         Pass the minion config as a dictionary.
@@ -1604,7 +1610,7 @@ class Caller(object):
 
         opts = salt.config.minion_config('/etc/salt/minion')
         opts['file_client'] = 'local'
-        caller = salt.client.Caller(opts)
+        caller = salt.client.Caller(mopts=opts)
         caller.sminion.functions['grains.items']()
 
     '''
