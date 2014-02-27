@@ -623,9 +623,14 @@ def _get_template_texts(source_list=None,
         tmpctx = defaults if defaults else {}
         if context:
             tmpctx.update(context)
-        rndrd_templ_fn = __salt__['cp.get_template'](source, '',
-                                  template=template, env=__env__,
-                                  context=tmpctx, **kwargs)
+        rndrd_templ_fn = __salt__['cp.get_template'](
+            source,
+            '',
+            template=template,
+            env=__env__,
+            context=tmpctx,
+            **kwargs
+        )
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
@@ -777,17 +782,18 @@ def symlink(
             # Make a backup first
             if os.path.lexists(backupname):
                 if not force:
-                    return _error(ret,
-                                   ('File exists where the backup target {0} should go'
-                                    .format(backupname)))
+                    return _error(ret, ((
+                        'File exists where the backup target {0} should go'
+                    ).format(backupname)))
                 elif os.path.isfile(backupname):
                     os.remove(backupname)
                 elif os.path.isdir(backupname):
                     shutil.rmtree(backupname)
                 else:
-                    return _error(ret,
-                                  ('Something exists where the backup target {0} should go'
-                                   .format(backupname)))
+                    return _error(ret, ((
+                        'Something exists where the backup target {0}'
+                        'should go'
+                    ).format(backupname)))
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
@@ -802,9 +808,9 @@ def symlink(
                               ('File exists where the symlink {0} should be'
                                .format(name)))
             else:
-                return _error(ret,
-                              ('Directory exists where the symlink {0} should be'
-                               .format(name)))
+                return _error(ret, ((
+                    'Directory exists where the symlink {0} should be'
+                ).format(name)))
 
     if not os.path.exists(name):
         # The link is not present, make it
@@ -972,10 +978,10 @@ def managed(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line must
-        contain both the file name and the hash.  If no file name is matched,
-        the first hash encountered will be used, otherwise the most secure hash
-        with the correct source file name will be used.
+        The file can contain several checksums for several files. Each line
+        must contain both the file name and the hash.  If no file name is
+        matched, the first hash encountered will be used, otherwise the most
+        secure hash with the correct source file name will be used.
 
         Debian file type ``*.dsc`` is supported.
 
@@ -1766,7 +1772,9 @@ def recurse(name,
                     continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
-            _filenames = filenames
+            # This needs to use list() otherwise they reference
+            # the same list.
+            _filenames = list(filenames)
             for filename in _filenames:
                 if filename.startswith(lname):
                     log.debug('** skipping file ** {0}, it intersects a '
@@ -1787,6 +1795,7 @@ def recurse(name,
             merge_ret(os.path.join(name, srelpath), _ret)
             # Add the path to the keep set in case clean is set to True
             keep.add(os.path.join(name, srelpath))
+        vdir.update(keep)
         return filenames
 
     keep = set()
@@ -1851,11 +1860,16 @@ def recurse(name,
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
-                for link in symlinks:
+                islink = False
+                for link in symlinks.keys():
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
+                        islink = True
+                        break
+                if islink:
                     continue
+
             manage_directory(mdest)
             keep.add(mdest)
 
@@ -1931,22 +1945,23 @@ def replace(name,
     return ret
 
 
-def blockreplace(name,
-            marker_start='#-- start managed zone --',
-            marker_end='#-- end managed zone --',
-            content='',
-            append_if_not_found=False,
-            prepend_if_not_found=False,
-            backup='.bak',
-            show_changes=True):
+def blockreplace(
+        name,
+        marker_start='#-- start managed zone --',
+        marker_end='#-- end managed zone --',
+        content='',
+        append_if_not_found=False,
+        prepend_if_not_found=False,
+        backup='.bak',
+        show_changes=True):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
 
     A block of content delimited by comments can help you manage several lines
-    entries without worrying about old entries removal. This can help you maintaining
-    an un-managed file containing manual edits.
+    entries without worrying about old entries removal. This can help you
+    maintaining an un-managed file containing manual edits.
     Note: this function will store two copies of the file in-memory
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
@@ -1960,8 +1975,9 @@ def blockreplace(name,
         the content block. Note that the whole line containing this marker will
         be considered, so whitespaces or extra content before or after the
         marker is included in final output.
-        Note: you can use file.accumulated and target this state. All accumulated
-        data dictionaries content will be added as new lines in the content.
+        Note: you can use file.accumulated and target this state. All
+        accumulated data dictionaries content will be added as new lines in the
+        content.
     :param content: The content to be used between the two lines identified by
         marker_start and marker_stop.
     :param append_if_not_found: False by default, if markers are not found and
@@ -2024,8 +2040,8 @@ def blockreplace(name,
 
     if name in _ACCUMULATORS:
         accumulator = _ACCUMULATORS[name]
-        # if we have multiple accumulators for a file, only apply the one required
-        # at a time
+        # if we have multiple accumulators for a file, only apply the one
+        # required at a time
         deps = _ACCUMULATORS_DEPS.get(name, [])
         filtered = [a for a in deps if
                     __low__['__id__'] in deps[a] and a in accumulator]
@@ -2039,15 +2055,17 @@ def blockreplace(name,
                 else:
                     content += "\n" + line
 
-    changes = __salt__['file.blockreplace'](name,
-                                       marker_start,
-                                       marker_end,
-                                       content=content,
-                                       append_if_not_found=append_if_not_found,
-                                       prepend_if_not_found=prepend_if_not_found,
-                                       backup=backup,
-                                       dry_run=__opts__['test'],
-                                       show_changes=show_changes)
+    changes = __salt__['file.blockreplace'](
+        name,
+        marker_start,
+        marker_end,
+        content=content,
+        append_if_not_found=append_if_not_found,
+        prepend_if_not_found=prepend_if_not_found,
+        backup=backup,
+        dry_run=__opts__['test'],
+        show_changes=show_changes
+    )
 
     if changes:
         ret['changes'] = {'diff': changes}
@@ -3030,7 +3048,11 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
     if formatter == 'yaml':
-        contents = yaml.dump(dataset, default_flow_style=False, Dumper=OrderedDumper)
+        contents = yaml.dump(
+            dataset,
+            default_flow_style=False,
+            Dumper=OrderedDumper
+        )
     elif formatter == 'json':
         contents = json.dumps(dataset,
                               indent=2,
@@ -3040,11 +3062,11 @@ def serialize(name,
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
         contents = pprint.pformat(
-                json.loads(
-                    json.dumps(dataset),
-                    object_hook=salt.utils.decode_dict
-                    )
-                )
+            json.loads(
+                json.dumps(dataset),
+                object_hook=salt.utils.decode_dict
+            )
+        )
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
@@ -3152,9 +3174,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
             if __opts__['test']:
-                ret['comment'] = 'Character device {0} is set to be created'.format(
-                    name
-                )
+                ret['comment'] = (
+                    'Character device {0} is set to be created'
+                ).format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,
@@ -3199,9 +3221,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
             if __opts__['test']:
-                ret['comment'] = 'Block device {0} is set to be created'.format(
-                    name
-                )
+                ret['comment'] = (
+                    'Block device {0} is set to be created'
+                ).format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,
