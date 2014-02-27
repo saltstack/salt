@@ -13,10 +13,11 @@ from salt.minion import SMinion
 from salt.renderers.pyobjects import render as pyobjects_render
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, StateRegistry,
-                                  InvalidFunction, SaltObject)
+                                  SaltObject, InvalidFunction, DuplicateState)
 
 test_registry = StateRegistry()
 File = StateFactory('file', registry=test_registry)
+Service = StateFactory('service', registry=test_registry)
 
 pydmesg_expected = {
     'file.managed': [
@@ -115,6 +116,15 @@ class StateTests(TestCase):
             test_registry.states,
             OrderedDict()
         )
+
+    def test_duplicates(self):
+        def add_dup():
+            File.managed('dup', name='/dup', owner='root')
+
+        add_dup()
+        self.assertRaises(DuplicateState, add_dup)
+
+        Service.running('dup', name='dup-service')
 
 
 class RendererTests(TestCase):
