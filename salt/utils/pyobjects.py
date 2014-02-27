@@ -71,8 +71,8 @@ class StateRegistry(object):
                     id_,
                     state.full_func
                 ))
-            else:
-                attr[id_] = OrderedDict()
+        else:
+            attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
         if len(self.requisites) > 0:
