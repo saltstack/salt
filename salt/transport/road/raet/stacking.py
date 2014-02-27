@@ -89,11 +89,7 @@ class StackUdp(object):
         Search for remote device with matching name
         Return device if found Otherwise return None
         '''
-        for device in self.devices.values():
-            if device.name == name:
-                return device
-
-        return None
+        return self.devices.get(self.dids.get(name))
 
     def addRemoteDevice(self, device, did=None):
         '''
