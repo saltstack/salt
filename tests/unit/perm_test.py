@@ -7,14 +7,15 @@
     importing from the git repo.
 '''
 
-import logging
+# Import python libs
 import os
 import stat
 
+# Import salt testing libs
 from salttesting import TestCase
 
 INTEGRATION_TEST_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))  
+    os.path.normpath(os.path.abspath(__file__))
 )
 
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
@@ -49,9 +50,10 @@ EXEMPT_FILES = ['setup.py',
                 'post-update.sample',
                 'prepare-commit-msg.sample',
                 'applypatch-msg.sample',
-                'master.py',]
+                'master.py']
 
 EXEMPT_DIRS = ['tests', '.git', 'doc']
+
 
 class GitPermTestCase(TestCase):
     def test_perms(self):
@@ -62,7 +64,6 @@ class GitPermTestCase(TestCase):
                 fn_path = os.path.join(root, fn_)
                 fn_mode = stat.S_IMODE(os.stat(fn_path).st_mode)  # In octal! 420 == 0644
                 if fn_mode != 420 and fn_ not in EXEMPT_FILES:
-                    suspect_files.append(fn_)    
+                    suspect_files.append(fn_)
 
         self.assertEqual(suspect_files, [], 'Found file(s) with incorrect permissions: {0}'.format(suspect_files))
-
