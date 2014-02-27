@@ -2,7 +2,7 @@
 Salt Best Practices
 ===================
 
-Salt's extreme flexibility leads to many questions concerning the structure of 
+Salt's extreme flexibility leads to many questions concerning the structure of
 configuration files. 
 
 This document exists to clarify these points through examples and
@@ -81,12 +81,12 @@ Once again viewing how this would look in a top file:
         - vim.absent
 
 The usage of a clear top-level directory as well as properly named states
-reduces the overall complexity and leads a user to both understand what will be
-included at a glance and where it is located.
+reduces the overall complexity and leads a user to both understand what will
+be included at a glance and where it is located.
 
 In addition
-`Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_ should
-be used as often as possible.
+`Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_
+should be used as often as possible.
 
 .. note::
 
@@ -103,10 +103,11 @@ of the ``/srv/pillar`` directory, the pillars contained within
 should once again be focused on clear and concise data which users can easily
 review, modify and understand.
 
-The ``/srv/pillar/`` directory is primarily controlled by ``top.sls``. It should
-be noted that the pillar ``top.sls`` is not used as a location to declare variables
-and their values. The ``top.sls`` is used as a way to include other pillar files
-and organize the way they are matched based on environments or grains.
+The ``/srv/pillar/`` directory is primarily controlled by ``top.sls``. It
+should be noted that the pillar ``top.sls`` is not used as a location to
+declare variables and their values. The ``top.sls`` is used as a way to
+include other pillar files and organize the way they are matched based on
+environments or grains.
 
 An example ``top.sls`` may be as simple as the following:
 
@@ -144,11 +145,11 @@ for variable definitions.
 Each SLS file within the ``/srv/pillar/`` directory should correspond to the
 states which it matches. 
 
-This would mean that the apache pillar file should
-contain data relevant to apache. Structuring files in this way once again
-ensures modularity, and creates a consistent understanding throughout our Salt
-environment. Users can expect that pillar variables found in an Apache state
-will live inside of an Apache pillar:
+This would mean that the apache pillar file should contain data relevant to
+apache. Structuring files in this way once again ensures modularity, and
+creates a consistent understanding throughout our Salt environment. Users can
+expect that pillar variables found in an Apache state will live inside of an
+Apache pillar:
 
 /srv/salt/pillar/apache.sls
 
@@ -167,12 +168,12 @@ relates to the state it is associated with.
 Variable Flexibility
 --------------------
 
-Salt allows users to define variables in SLS files.
-When creating a state variables should provide users with as much flexibility
-as possible. This means that variables should be clearly defined and easy to
-manipulate, and that sane defaults should exist in the event a variable is not
-properly defined. Looking at several examples shows how these different items
-can lead to extensive flexibility.
+Salt allows users to define variables in SLS files. When creating a state
+variables should provide users with as much flexibility as possible. This
+means that variables should be clearly defined and easy to manipulate, and
+that sane defaults should exist in the event a variable is not properly
+defined. Looking at several examples shows how these different items can
+lead to extensive flexibility.
 
 Although it is possible to set variables locally, this is generally not
 preferred: 
@@ -263,17 +264,18 @@ is not very modular to one that is:
           - service: httpd
 
 The example above is probably the worst-case scenario when writing a state.
-There is a clear lack of focus by naming both the pkg/service, and managed file
-directly as the state ID. This would lead to changing multiple requires within
-this state, as well as others that may depend upon the state. 
+There is a clear lack of focus by naming both the pkg/service, and managed
+file directly as the state ID. This would lead to changing multiple requires
+within this state, as well as others that may depend upon the state.
 
-Imagine if a require was used for the ``httpd`` package in another state, and then suddenly
-it's a custom package. Now changes need to be made in multiple locations which
-increases the complexity and leads to a more error prone configuration. 
+Imagine if a require was used for the ``httpd`` package in another state, and
+then suddenly it's a custom package. Now changes need to be made in multiple
+locations which increases the complexity and leads to a more error prone
+configuration.
 
-There is also the issue of having the configuration file located in the init,  as a
-user would be unable to simply install the service and use the default conf
-file.
+There is also the issue of having the configuration file located in the init,
+as a user would be unable to simply install the service and use the default
+conf file.
 
 Our second revision begins to address the referencing by using ``- name``, as
 opposed to direct ID references:
@@ -435,11 +437,11 @@ to be broken into two states.
         - watch_in:
           - service: apache
 
-This new structure now allows users to choose whether they only wish to install
-the default Apache, or if they wish, overwrite the default package, service,
-configuration file location, or the configuration file itself. In addition to
-this the data has been broken between multiple files allowing for users to
-identify where they need to change the associated data.
+This new structure now allows users to choose whether they only wish to
+install the default Apache, or if they wish, overwrite the default package,
+service, configuration file location, or the configuration file itself. In
+addition to this the data has been broken between multiple files allowing for
+users to identify where they need to change the associated data.
 
 
 Storing Secure Data
@@ -481,8 +483,8 @@ accessible by the appropriate hosts:
           - sls: mysql.testerdb
 
 Many users would review this state and see that the password is there in plain
-text, which is quite problematic. It results in several issues which may not be
-immediately visible. 
+text, which is quite problematic. It results in several issues which may not
+be immediately visible. 
 
 The first of these issues is clear to most users -- the password being visible
 in this state. This  means that any minion will have a copy of this, and
