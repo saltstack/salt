@@ -15,6 +15,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
+    'help_': 'help',
     'reload_': 'reload'
 }
 
@@ -481,3 +482,26 @@ def disabled(name):
         return not _upstart_is_enabled(name)
     else:
         return not _sysv_is_enabled(name)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.help
+
+        salt '*' service.help disabled
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

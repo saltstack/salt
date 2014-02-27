@@ -18,7 +18,8 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'help_': 'help'
 }
 
 
@@ -657,3 +658,26 @@ def version(name, check_remote=False, source=None, pre_versions=False):
                 ret[key] = value
 
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.help
+
+        salt '*' chocolatey.help rm_alias
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

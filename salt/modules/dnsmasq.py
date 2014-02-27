@@ -12,6 +12,11 @@ import logging
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -157,3 +162,26 @@ def _parse_dnamasq(filename):
                     fileopts['unparsed'] = []
                 fileopts['unparsed'].append(line)
     return fileopts
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dnsmasq.help
+
+        salt '*' aliases.help get_config
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

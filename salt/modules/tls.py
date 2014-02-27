@@ -32,6 +32,11 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -741,3 +746,26 @@ if __name__ == '__main__':
             )
     create_ca_signed_cert('koji', 'test_system')
     create_pkcs12('koji', 'test_system', passphrase='test')
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.help
+
+        salt '*' tls.help create_pkcs12
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

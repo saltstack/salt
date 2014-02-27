@@ -10,6 +10,11 @@ import os
 import salt.utils
 import salt.utils.odict as odict
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 # pylint: disable=C0103
 def __get_hosts_filename():
@@ -229,3 +234,26 @@ def _write_hosts(hosts):
                 [l.strip() for l in lines if l.strip()]
             )
         )
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hosts.help
+
+        salt '*' hosts.help add_host
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

@@ -6,6 +6,11 @@ Support for eselect, Gentoo's configuration and management tool.
 # Import salt libs
 import salt.utils
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -93,3 +98,26 @@ def set_target(module, target):
         salt '*' eselect.set_target <module name> <target>
     '''
     return exec_action(module, 'set', target, state_only=True)
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' eselect.help
+
+        salt '*' eselect.help set_target
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
