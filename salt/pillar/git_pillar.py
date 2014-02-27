@@ -8,7 +8,10 @@ so:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: master git://gitserver/git-pillar.git
+      - git: master git://gitserver/git-pillar.git root=subdirectory
+
+The `root=` parameter is optional and used to set the subdirectory from where
+to look for Pillar files (such as ``top.sls``).
 
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
