@@ -28,7 +28,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if HAS_SALTCLOUD:
-        return True
+        return 'cloud'
     return False
 
 
