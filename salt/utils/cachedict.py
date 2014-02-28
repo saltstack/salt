@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 import time
+
 
 class CacheDict(dict):
     '''
     Subclass of dict that will lazily delete items past ttl
     '''
-    def __init__(self, ttl):
+    def __init__(self, ttl, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
         self._ttl = ttl
         self._key_cache_time = {}
 
@@ -29,7 +32,7 @@ class CacheDict(dict):
         '''
         self._key_cache_time[key] = time.time()
         dict.__setitem__(self, key, val)
-        
+
     def __contains__(self, key):
         self._enforce_ttl_key(key)
         return dict.__contains__(self, key)
