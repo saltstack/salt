@@ -70,6 +70,8 @@ def __virtual__():
     '''
     ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
     if not any([__virtualname__ in x for x in ext_pillar_sources]):
+        log.warning("External pillars with duplicate names: %s",
+                    __virtualname__)
         return False
     if not HAS_GIT:
         log.error('Git-based ext_pillar is enabled in configuration but '
