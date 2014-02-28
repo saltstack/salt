@@ -498,7 +498,10 @@ class MultiMinion(object):
                     minion['minion'].module_refresh()
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
-                minion['generator'].next()
+                try:
+                    minion['generator'].next()
+                except StopIteration:
+                    continue
 
 
 class Minion(object):
