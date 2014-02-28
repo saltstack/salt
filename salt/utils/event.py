@@ -598,6 +598,25 @@ class ReactWrap(object):
     def __init__(self, opts):
         self.opts = opts
 
+        # dict of name -> time
+        self.client_load_times = {}
+
+        # client objects
+        self.local = None
+        self.runner = None
+        self.wheel = None
+
+    def _stale_client(self, name):
+        '''
+        return if the client is stale, this is used to cache the client objects
+        so we don't have to rebuild these expensive objects on every event
+        '''
+        curr_time = time.time()
+        if curr_time - self.client_load_times.get(name, 0) > self.opts['reactor_refresh_interval']:
+            return True
+
+        return False
+
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
@@ -619,22 +638,28 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd_async(*args, **kwargs)
+        if not self.local or self._stale_client('local'):
+            self.client_load_times['local'] = time.time()
+            self.local = salt.client.LocalClient(self.opts['conf_file'])
+        return self.local.cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.low(fun, kwargs)
+        if not self.runner or self._stale_client('runner'):
+            self.client_load_times['runner'] = time.time()
+            self.runner = salt.runner.RunnerClient(self.opts)
+        return self.runner.low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(fun, **kwargs)
+        if not self.wheel or self._stale_client('wheel'):
+            self.client_load_times['wheel'] = time.time()
+            self.wheel = salt.wheel.Wheel(self.opts)
+        return self.wheel.call_func(fun, **kwargs)
 
 
 class StateFire(object):
