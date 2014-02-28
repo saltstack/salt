@@ -602,9 +602,9 @@ class ReactWrap(object):
         self.client_load_times = {}
 
         # client objects
-        self.local = None
-        self.runner = None
-        self.wheel = None
+        self._local = None
+        self._runner = None
+        self._wheel = None
 
     def _stale_client(self, name):
         '''
@@ -638,28 +638,28 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        if not self.local or self._stale_client('local'):
+        if not self._local or self._stale_client('local'):
             self.client_load_times['local'] = time.time()
-            self.local = salt.client.LocalClient(self.opts['conf_file'])
-        return self.local.cmd_async(*args, **kwargs)
+            self._local = salt.client.LocalClient(self.opts['conf_file'])
+        return self._local.cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        if not self.runner or self._stale_client('runner'):
+        if not self._runner or self._stale_client('runner'):
             self.client_load_times['runner'] = time.time()
-            self.runner = salt.runner.RunnerClient(self.opts)
-        return self.runner.low(fun, kwargs)
+            self._runner = salt.runner.RunnerClient(self.opts)
+        return self._runner.low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        if not self.wheel or self._stale_client('wheel'):
+        if not self._wheel or self._stale_client('wheel'):
             self.client_load_times['wheel'] = time.time()
-            self.wheel = salt.wheel.Wheel(self.opts)
-        return self.wheel.call_func(fun, **kwargs)
+            self._wheel = salt.wheel.Wheel(self.opts)
+        return self._wheel.call_func(fun, **kwargs)
 
 
 class StateFire(object):
