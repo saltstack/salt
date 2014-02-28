@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 # Don't shadow built-ins
 __func_alias__ = {
+    'help_': 'help',
     'set_': 'set'
 }
 
@@ -262,5 +263,28 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
         return conn.decr(key, delta)
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' memcached.help
+
+        salt '*' memcached.help decrement
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
 
 decr = decrement

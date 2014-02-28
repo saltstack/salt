@@ -9,6 +9,11 @@ import salt.utils
 # Define the module's virtual name
 __virtualname__ = 'group'
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 def __virtual__():
     '''
@@ -126,3 +131,26 @@ def getent(refresh=False):
 
     __context__['group.getent'] = ret2
     return ret2
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.help
+
+        salt '*' group.help getent
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

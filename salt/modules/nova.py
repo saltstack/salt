@@ -57,6 +57,7 @@ log = logging.getLogger(__name__)
 
 # Function alias to not shadow built-ins
 __func_alias__ = {
+    'help_': 'help',
     'list_': 'list'
 }
 
@@ -946,6 +947,30 @@ def _item_list(profile=None):
         #        'name': item.name,
         #    }
     return ret
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.help
+
+        salt '*' nova.help item_list
+    '''
+
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.

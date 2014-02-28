@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-A module to wrap archive calls
+a module to wrap archive calls
 
 .. versionadded:: 2014.1.0 (Hydrogen)
 '''
@@ -15,7 +15,8 @@ import salt.utils.decorators as decorators
 
 # Don't shadow built-in's.
 __func_alias__ = {
-    'zip_': 'zip'
+    'zip_': 'zip',
+    'help_': 'help'
 }
 
 
@@ -271,3 +272,26 @@ def unrar(rarfile, dest, excludes=None, template=None):
             cmd.extend(['-x', exclude])
     cmd.append(dest)
     return __salt__['cmd.run'](' '.join(cmd), template=template).splitlines()
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' archive.help
+
+        salt '*' archive.help tar
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

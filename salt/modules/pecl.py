@@ -11,6 +11,7 @@ import logging
 import salt.utils
 
 __func_alias__ = {
+    'help_': 'help',
     'list_': 'list'
 }
 
@@ -137,3 +138,26 @@ def list_():
             pecls[match.group(1)] = [match.group(2), match.group(3)]
 
     return pecls
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pecl.help
+
+        salt '*' pecl.help list
+    '''
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))

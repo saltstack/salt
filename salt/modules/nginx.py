@@ -7,6 +7,11 @@ import urllib2
 import salt.utils
 import salt.utils.decorators as decorators
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'help_': 'help'
+}
+
 
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
@@ -132,3 +137,27 @@ def status(url="http://127.0.0.1/status"):
         'writing': int(writing),
         'waiting': int(waiting),
     }
+
+
+def help_(cmd=None):
+    '''
+    Display help for module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nginx.help
+
+        salt '*' nginx.help status
+    '''
+
+    if '__virtualname__' in globals():
+        module_name = __virtualname__
+    else:
+        module_name = __name__.split('.')[-1]
+
+    if cmd is None:
+        return __salt__['sys.doc']('{0}' . format(module_name))
+    else:
+        return __salt__['sys.doc']('{0}.{1}' . format(module_name, cmd))
