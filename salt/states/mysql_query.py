@@ -93,7 +93,7 @@ def run(name,
 
     # Check if execution needed
     if output == 'grain':
-        if grain != None and key == None:
+        if grain is not None and key is None:
             if not overwrite and grain in __salt__['grains.ls']():
                 ret['comment'] = 'No execution needed. Grain ' + grain\
                                + ' already set'
@@ -103,7 +103,7 @@ def run(name,
                 ret['comment'] = 'Query would execute, storing result in '\
                                + 'grain: ' + grain
                 return ret
-        elif grain != None and key != None:
+        elif grain is not None:
             if grain in __salt__['grains.ls']():
                 grain_value = __salt__['grains.get'](grain)
             else:
@@ -150,11 +150,11 @@ def run(name,
     ret['comment'] = query_result
 
     if output == 'grain':
-        if grain != None and key == None:
+        if grain is not None and key is None:
             __salt__['grains.setval'](grain, query_result)
             ret['changes']['query'] = "Executed. Output into grain: "\
                                         + grain
-        elif grain != None and key != None:
+        elif grain is not None:
             if grain in __salt__['grains.ls']():
                 grain_value = __salt__['grains.get'](grain)
             else:
