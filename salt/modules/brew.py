@@ -29,7 +29,7 @@ def __virtual__():
 
 def _list_taps():
     '''
-    List currently
+    List currently installed brew taps
     '''
     cmd = 'brew tap'
     return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
