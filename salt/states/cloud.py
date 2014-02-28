@@ -47,7 +47,7 @@ def present(name, provider, **kwargs):
            'result': None,
            'comment': ''}
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-    prov = str(instance.keys()[0])
+    prov = str([a for a in instance][0])
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
         ret['comment'] = 'Instance {0} already exists in {1}'.format(name, prov)
