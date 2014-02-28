@@ -598,7 +598,7 @@ class ReactWrap(object):
     def __init__(self, opts):
         self.opts = opts
 
-        self.cachedict = salt.utils.cachedict.CacheDict(opts['reactor_refresh_interval'])
+        self.cachedict = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
     def run(self, low):
         '''
