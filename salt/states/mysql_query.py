@@ -99,7 +99,7 @@ def run(name,
                                + ' already set'
                 return ret
             elif __opts__['test']:
-                ret['result']  = None
+                ret['result'] = None
                 ret['comment'] = 'Query would execute, storing result in '\
                                + 'grain: ' + grain
                 return ret
@@ -113,7 +113,7 @@ def run(name,
                                + ':' + key + ' already set'
                 return ret
             elif __opts__['test']:
-                ret['result']  = None
+                ret['result'] = None
                 ret['comment'] = 'Query would execute, storing result in '\
                                + 'grain: ' + grain + ':' + key
                 return ret
@@ -128,12 +128,12 @@ def run(name,
                            + ' already set'
             return ret
         elif __opts__['test']:
-            ret['result']  = None
+            ret['result'] = None
             ret['comment'] = 'Query would execute, storing result in '\
                            + 'file: ' + output
             return ret
     elif __opts__['test']:
-        ret['result']  = None
+        ret['result'] = None
         ret['comment'] = 'Query would execute, not storing result'
 
     # The database is present, execute the query
