@@ -75,7 +75,13 @@ def __virtual__():
         log.error('Git-based ext_pillar is enabled in configuration but '
                   'could not be loaded, is GitPython installed?')
         return False
-    if not git.__version__ > '0.3.0':
+
+    # Minimum (exclusive) GitPython version
+    MIN_GITPYTHON_VERSION = '0.3.0'
+
+    if not git.__version__ > MIN_GITPYTHON_VERSION:
+        log.error("GitPython version must be greater than '%s': %s",
+                  MIN_GITPYTHON_VERSION, git.__version__)
         return False
     return __virtualname__
 
