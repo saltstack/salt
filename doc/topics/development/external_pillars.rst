@@ -131,6 +131,12 @@ installed.
         else:
             return False
 
+.. note::
+
+    If you are returning ``False`` from a ``__virtual__`` because some
+    prerequisite fails (such as checking version of an external library etc.),
+    make sure to log it. This can save hours of debugging for the next person
+    using the external pillar!
 
 ext_pillar
 ----------
