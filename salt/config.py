@@ -177,7 +177,7 @@ VALID_OPTS = {
     'minion_data_cache': bool,
     'publish_session': int,
     'reactor': list,
-    'reactor_refresh_interval': int
+    'reactor_refresh_interval': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
