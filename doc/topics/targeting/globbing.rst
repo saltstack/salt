@@ -1,12 +1,8 @@
+.. _targeting-glob:
+
 ==========================
 Matching the ``minion id``
 ==========================
-
-.. glossary::
-
-    minion id
-        A unique identifier for a given minion. By default the minion id is the
-        FQDN of that host but this can be overridden.
 
 Each minion needs a unique identifier. By default when a minion starts for the
 first time it chooses its :abbr:`FQDN (fully qualified domain name)` as that

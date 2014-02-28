@@ -1,3 +1,5 @@
+.. _salt-cloud:
+
 ==========
 Salt Cloud
 ==========

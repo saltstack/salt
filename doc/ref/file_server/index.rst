@@ -1,3 +1,5 @@
+.. _file-server:
+
 ================
 Salt File Server
 ================
