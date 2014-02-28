@@ -16,8 +16,8 @@ from salt.modules import brew
 # Global Variables
 brew.__salt__ = {}
 
-taps_string = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
-taps_list = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
+TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
+TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
 
 
 class BrewTestCase(TestCase):
@@ -29,11 +29,11 @@ class BrewTestCase(TestCase):
         '''
         Tests the return of the list of taps
         '''
-        mock_taps = MagicMock(return_value=taps_string)
+        mock_taps = MagicMock(return_value=TAPS_STRING)
         with patch.dict(brew.__salt__, {'cmd.run': mock_taps}):
-            self.assertEqual(brew._list_taps(), taps_list)
+            self.assertEqual(brew._list_taps(), TAPS_LIST)
 
-    @patch('salt.modules.brew._list_taps', MagicMock(return_value=taps_list))
+    @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap_installed(self):
         '''
         Tests if tap argument is already installed or not
@@ -49,7 +49,7 @@ class BrewTestCase(TestCase):
         with patch.dict(brew.__salt__, {'cmd.retcode': mock_failure}):
             self.assertFalse(brew._tap('homebrew/test'))
 
-    @patch('salt.modules.brew._list_taps', MagicMock(return_value=taps_list))
+    @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap(self):
         '''
         Tests adding unofficial Github repos to the list of brew taps
