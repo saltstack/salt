@@ -477,9 +477,8 @@ class Cloud(object):
                 })
         output = {}
         if not multiprocessing_data:
-            raise SaltCloudSystemExit(
-                'Invalid configuration, either no providers or '
-                'invalid configurationfile')
+            return output
+
         data_count = len(multiprocessing_data)
         pool = multiprocessing.Pool(data_count < 10 and data_count or 10,
                                     init_pool_worker)

@@ -24,7 +24,7 @@ def __virtual__():
     return 'cloud' if 'cloud.profile' in __salt__ else False
 
 
-def present(name, provider, **kwargs):
+def present(name, cloud_provider, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
     does not take a profile argument; rather, it takes the arguments that would
@@ -39,7 +39,7 @@ def present(name, provider, **kwargs):
     name
         The name of the instance to create
 
-    provider
+    cloud_provider
         The name of the cloud provider to use
     '''
     ret = {'name': name,
@@ -55,14 +55,14 @@ def present(name, provider, **kwargs):
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
-    info = __salt__['cloud.create'](provider, name, **kwargs)
+    info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
     if info and not 'Error' in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = ('Created instance {0} using provider {1}'
-                          'and the following options: {2}').format(
+                          ' and the following options: {2}').format(
             name,
-            provider,
+            cloud_provider,
             pprint.pformat(kwargs)
         )
     elif info and not 'Error' in info:
@@ -76,11 +76,10 @@ def present(name, provider, **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
-                          'using profile {1}').format(
-            name,
-            profile,
-        )
-    return ret
+                          ' using profile {1},'
+                          ' please check your configuration').format(name,
+                                                                     profile)
+        return ret
 
 
 def absent(name):
