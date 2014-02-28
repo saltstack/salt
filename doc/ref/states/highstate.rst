@@ -23,13 +23,12 @@ Configurable via :conf_master:`state_top`.
 
 .. seealso:: :doc:`A detailed description of the top file </ref/states/top>`
 
-.. _states-highstate-include-declaration:
+.. _include-declaration:
 
 Include declaration
 -------------------
 
-Defines a list of :term:`module reference` strings to include in this
-:term:`SLS`.
+Defines a list of :ref:`module-reference` strings to include in this ``SLS``.
 
 Occurs only in the top level of the highstate structure.
 
@@ -41,7 +40,7 @@ Example:
       - edit.vim
       - http.server
 
-.. _states-highstate-module-reference:
+.. _module-reference:
 
 Module reference
 ----------------
@@ -50,18 +49,17 @@ The name of a SLS module defined by a separate SLS file and residing on
 the Salt Master. A module named ``edit.vim`` is a reference to the SLS
 file ``salt://edit/vim.sls``.
 
-.. _states-highstate-id-declaration:
+.. _id-declaration:
 
 ID declaration
 --------------
 
-Defines an individual highstate component. Always references a value of
-a dictionary containing keys referencing :term:`state declarations
-<state declaration>` and :term:`requisite declarations <requisite
-declaration>`. Can be overridden by a :term:`name declaration` or a
-:term:`names declaration`.
+Defines an individual highstate component. Always references a value of a
+dictionary containing keys referencing :ref:`state-declaration` and
+:ref:`requisite-declaration`. Can be overridden by a :ref:`name-declaration` or
+a :ref:`names-declaration`.
 
-Occurs on the top level or under the :term:`extend declaration`.
+Occurs on the top level or under the :ref:`extend-declaration`.
 
 Must be unique across entire state tree. If the same ID declaration is
 used twice, only the first one matched will be used. All subsequent
@@ -69,23 +67,24 @@ ID declarations with the same name will be ignored.
 
 .. note:: Naming gotchas
 
-        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate summary output was
-        unpredictable. (It was fixed in versions 0.9.7 and above)
+        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate
+        summary output was unpredictable. (It was fixed in versions 0.9.7 and
+        above)
 
-.. _states-highstate-extend-declaration:
+.. _extend-declaration:
 
 Extend declaration
 ------------------
 
-Extends a :term:`name declaration` from an included ``SLS module``. The
-keys of the extend declaration always define existing :term:`ID
-declarations <ID declaration>` which have been defined in included
+Extends a :ref:`name-declaration` from an included ``SLS module``. The
+keys of the extend declaration always define existing :ref`ID declaration`
+which have been defined in included
 ``SLS modules``.
 
 Occurs only in the top level and defines a dictionary.
 
 Extend declarations are useful for adding-to or overriding parts of a
-:term:`state declaration` that is defined in another ``SLS`` file. In the
+:ref:`state-declaration` that is defined in another ``SLS`` file. In the
 following contrived example, the shown ``mywebsite.sls`` file is ``include``
 -ing and ``extend`` -ing the ``apache.sls`` module in order to add a ``watch``
 declaration that will restart Apache whenever the Apache configuration file,
@@ -114,48 +113,47 @@ declaration that will restart Apache whenever the Apache configuration file,
 
     :doc:`State Requisites </ref/states/requisites>`
 
-.. _states-highstate-state-declaration:
+.. _state-declaration:
 
 State declaration
 -----------------
 
-A list which contains one string defining the :term:`function
-declaration` and any number of :term:`function arg declaration`
-dictionaries.
+A list which contains one string defining the :ref:`function-declaration` and
+any number of :ref:`function-arg-declaration` dictionaries.
 
 Can, optionally, contain a number of additional components like the
-name override components — :term:`name <name declaration>` and
-:term:`names <names declaration>`. Can also contain :term:`requisite
-declarations <requisite declaration>`.
+name override components — :ref:`name <name-declaration>` and
+:ref:`names <names-declaration>`. Can also contain :ref:`requisite
+declarations <requisite-declaration>`.
 
-Occurs under an :term:`ID declaration`.
+Occurs under an :ref:`ID-declaration`.
 
-.. _states-highstate-requisite-declaration:
+.. _requisite-declaration:
 
 Requisite declaration
 ---------------------
 
-A list containing :term:`requisite references <requisite reference>`.
+A list containing :ref:`requisite references <requisite-reference>`.
 
 Used to build the action dependency tree. While Salt states are made to
 execute in a deterministic order, this order is managed by requiring
 and watching other Salt states.
 
-Occurs as a list component under a :term:`state declaration` or as a
-key under an :term:`ID declaration`.
+Occurs as a list component under a :ref:`state-declaration` or as a
+key under an :ref:`ID-declaration`.
 
-.. _states-highstate-requisite-reference:
+.. _requisite-reference:
 
 Requisite reference
 -------------------
 
 A single key dictionary. The key is the name of the referenced
-:term:`state declaration` and the value is the ID of the referenced
-:term:`ID declaration`.
+:ref:`state-declaration` and the value is the ID of the referenced
+:ref:`ID-declaration`.
 
-Occurs as a single index in a :term:`requisite declaration` list.
+Occurs as a single index in a :ref:`requisite-declaration` list.
 
-.. _states-highstate-function-declaration:
+.. _function-declaration:
 
 Function declaration
 --------------------
@@ -209,18 +207,18 @@ VALID:
       service:
         - running
 
-Occurs as the only index in the :term:`state declaration` list.
+Occurs as the only index in the :ref:`state-declaration` list.
 
-.. _states-highstate-function-arg-declaration:
+.. _function-arg-declaration:
 
 Function arg declaration
 ------------------------
 
 A single key dictionary referencing a Python type which is to be passed
-to the named :term:`function declaration` as a parameter. The type must
+to the named :ref:`function-declaration` as a parameter. The type must
 be the data type expected by the function.
 
-Occurs under a :term:`function declaration`.
+Occurs under a :ref:`function-declaration`.
 
 For example in the following state declaration ``user``, ``group``, and
 ``mode`` are passed as arguments to the :mod:`managed
@@ -234,13 +232,13 @@ For example in the following state declaration ``user``, ``group``, and
         - group: root
         - mode: 644
 
-.. _states-highstate-name-declaration:
+.. _name-declaration:
 
 Name declaration
 ----------------
 
-Overrides the ``name`` argument of a :term:`state declaration`. If
-``name`` is not specified the :term:`ID declaration` satisfies the
+Overrides the ``name`` argument of a :ref:`state-declaration`. If
+``name`` is not specified the :ref:`ID-declaration` satisfies the
 ``name`` argument.
 
 The name is always a single key dictionary referencing a string.
@@ -286,12 +284,12 @@ easier to specify ``mywebsite`` than to specify
         - watch:
           - file: mywebsite
 
-.. _states-highstate-names-declaration:
+.. _names-declaration:
 
 Names declaration
 -----------------
 
-Expands the contents of the containing :term:`state declaration` into
+Expands the contents of the containing :ref:`state-declaration` into
 multiple state declarations, each with its own name.
 
 For example, given the following state declaration:
