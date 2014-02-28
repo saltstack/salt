@@ -536,10 +536,16 @@ def run(name,
 
 
 def script(*args, **kw):
-    salt.utils.warn_until((0, 19),
-                          'The state \'docker.script\' is an alias of'
-                          ' \'docker.run\' and such, has been deprecated')
-    return run(*args, **kw)
+    '''
+    Placeholder function for a cmd.script alike.
+
+    .. note::
+
+        Not yet implemented.
+        Its implementation might be very similar from
+        :mod:`salt.states.dokcerio.run`
+    '''
+    raise NotImplementedError
 
 
 def running(name, container=None, port_bindings=None, binds=None,
