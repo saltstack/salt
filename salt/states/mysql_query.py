@@ -7,11 +7,12 @@ Execution of MySQL queries
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.
 
 The mysql_query module is used to execute queries on MySQL databases.
+Its output may be stored in a file or in a grain.
 
 .. code-block:: yaml
 
     query_id:
-      mysql_query.exec
+      mysql_query.run
         - database: my_database
         - query:    "SELECT * FROM table;"
         - output:   "/tmp/query_id.txt"
@@ -67,10 +68,11 @@ def run(name,
         grain to store the output (need output=grain)
 
     key:
-        the output is stored as a dictionnary in the specified grain
+        the specified grain will be treated as a dictionnary, the result
+        of this state will be stored under the specified key.
 
-    overwrite
-        The file will be overwritten if it already exists (default)
+    overwrite:
+        The file or grain will be overwritten if it already exists (default)
     '''
     ret = {'name': name,
            'changes': {},
