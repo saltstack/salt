@@ -65,7 +65,7 @@ def present(name, provider, **kwargs):
             provider,
             pprint.pformat(kwargs)
         )
-    elif 'Error' in info:
+    elif info and not 'Error' in info:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
                           'using profile {1}: {2}').format(
