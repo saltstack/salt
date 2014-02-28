@@ -16,10 +16,12 @@ import pipes
 import logging
 import tempfile
 import os
+import re
 
 #import salt libs
 import salt.utils
 #import subprocess
+import salt.utils.cloud
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -28,6 +30,18 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'list_': 'list'
 }
+
+
+def _ip_sort(ip):
+    '''Ip sorting'''
+    idx = '001'
+    if ip == '127.0.0.1':
+        idx = '200'
+    if ip == '::1':
+        idx = '201'
+    elif '::' in ip:
+        idx = '100'
+    return '{0}___{1}'.format(idx, ip)
 
 
 def __virtual__():
@@ -578,6 +592,24 @@ def set_parameter(name, parameter, value):
     else:
         return True
 
+def templates():
+    '''
+    Returns a list of existing templates
+
+    .. code-block:: bash
+
+        salt '*' lxc.templates
+    '''
+    templates = []
+    san = re.compile('^lxc-')
+    tdir = '/usr/share/lxc/templates'
+    if os.path.isdir(tdir):
+        templates.extend(
+            [san.sub('', a) for a in os.listdir(tdir)]
+        )
+    templates.sort()
+    return templates
+
 
 def info(name):
     '''
@@ -613,6 +645,16 @@ def info(name):
 
     ret['rootfs'] = next((i[1] for i in config if i[0] == 'lxc.rootfs'), None)
     ret['state'] = state(name)
+    ret['_ips'] = []
+    ret['public_ips'] = []
+    ret['private_ips'] = []
+    ret['public_ipv4_ips'] = []
+    ret['public_ipv6_ips'] = []
+    ret['private_ipv4_ips'] = []
+    ret['private_ipv6_ips'] = []
+    ret['ipv4_ips'] = []
+    ret['ipv6_ips'] = []
+    ret['size'] = None
 
     if ret['state'] == 'running':
         limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
@@ -622,7 +664,41 @@ def info(name):
         free = limit - usage
         ret['memory_limit'] = limit
         ret['memory_free'] = free
-
+        ret['size'] = __salt__['cmd.run'](
+            ('lxc-attach -n \'{0}\' -- '
+             'df /|tail -n1|awk \'{{print $2}}\'').format(name))
+        ipaddr = __salt__['cmd.run'](
+            'lxc-attach -n \'{0}\' -- ip addr show'.format(name))
+        for line in ipaddr.splitlines():
+            if 'inet' in line:
+                line = line.split()
+                ip_address = line[1].split('/')[0]
+                if not ip_address in ret['_ips']:
+                    ret['_ips'].append(ip_address)
+                    if '::' in ip_address:
+                        ret['ipv6_ips'].append(ip_address)
+                        if (
+                            ip_address == '::1'
+                            or ip_address.startswith('fe80')
+                        ):
+                            ret['private_ips'].append(ip_address)
+                            ret['private_ipv6_ips'].append(ip_address)
+                        else:
+                            ret['public_ips'].append(ip_address)
+                            ret['public_ipv6_ips'].append(ip_address)
+                    else:
+                        ret['ipv4_ips'].append(ip_address)
+                        if ip_address == '127.0.0.1':
+                            ret['private_ips'].append(ip_address)
+                            ret['private_ipv4_ips'].append(ip_address)
+                        elif salt.utils.cloud.is_public_ip(ip_address):
+                            ret['public_ips'].append(ip_address)
+                            ret['public_ipv4_ips'].append(ip_address)
+                        else:
+                            ret['private_ips'].append(ip_address)
+                            ret['private_ipv4_ips'].append(ip_address)
+    for k in [l for l in ret if l.endswith('_ips')]:
+        ret[k].sort(key=_ip_sort)
     return ret
 
 
