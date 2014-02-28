@@ -1463,12 +1463,15 @@ def option(value, default='', opts=None, pillar=None):
         opts = {}
     if pillar is None:
         pillar = {}
-    if value in opts:
-        return opts[value]
-    if value in pillar.get('master', {}):
-        return pillar['master'][value]
-    if value in pillar:
-        return pillar[value]
+    sources = (
+        (opts, value),
+        (pillar, 'master:{0}'.format(value)),
+        (pillar, value),
+    )
+    for source, val in sources:
+        out = traverse_dict(source, val, default)
+        if out is not default:
+            return out
     return default
 
 
