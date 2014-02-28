@@ -83,7 +83,7 @@ def _format_dict_key(args, plugin):
     return key_name
 
 
-def run(plugin, args='', key_name=None):
+def run(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run
 
@@ -118,7 +118,7 @@ def retcode(plugin, args='', key_name=None):
     return data
 
 
-def run_all(plugin, args='', key_name=None):
+def run_all(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run_all
     '''
