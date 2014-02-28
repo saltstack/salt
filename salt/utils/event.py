@@ -598,24 +598,7 @@ class ReactWrap(object):
     def __init__(self, opts):
         self.opts = opts
 
-        # dict of name -> time
-        self.client_load_times = {}
-
-        # client objects
-        self._local = None
-        self._runner = None
-        self._wheel = None
-
-    def _stale_client(self, name):
-        '''
-        return if the client is stale, this is used to cache the client objects
-        so we don't have to rebuild these expensive objects on every event
-        '''
-        curr_time = time.time()
-        if curr_time - self.client_load_times.get(name, 0) > self.opts['reactor_refresh_interval']:
-            return True
-
-        return False
+        self.cachedict = salt.utils.cachedict.CacheDict(opts['reactor_refresh_interval'])
 
     def run(self, low):
         '''
@@ -638,28 +621,25 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        if not self._local or self._stale_client('local'):
-            self.client_load_times['local'] = time.time()
-            self._local = salt.client.LocalClient(self.opts['conf_file'])
-        return self._local.cmd_async(*args, **kwargs)
+        if 'local' not in self.cachedict:
+            self.cachedict['local'] = salt.client.LocalClient(self.opts['conf_file'])
+        return self.cachedict['local'].cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        if not self._runner or self._stale_client('runner'):
-            self.client_load_times['runner'] = time.time()
-            self._runner = salt.runner.RunnerClient(self.opts)
-        return self._runner.low(fun, kwargs)
+        if 'runner' not in self.cachedict:
+            self.cachedict['runner'] = salt.runner.RunnerClient(self.opts)
+        return self.cachedict['runner'].low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        if not self._wheel or self._stale_client('wheel'):
-            self.client_load_times['wheel'] = time.time()
-            self._wheel = salt.wheel.Wheel(self.opts)
-        return self._wheel.call_func(fun, **kwargs)
+        if 'wheel' not in self.cachedict:
+            self.cachedict['wheel'] = salt.wheel.Wheel(self.opts)
+        return self.cachedict['wheel'].call_func(fun, **kwargs)
 
 
 class StateFire(object):
