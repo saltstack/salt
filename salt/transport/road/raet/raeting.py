@@ -113,6 +113,7 @@ DEFAULT_DST_HOST = '127.0.0.1'
 MAX_MESSAGE_SIZE = min(67107840, MAX_PACKET_SIZE * MAX_SEGMENT_COUNT) # assuming IPV6 capable equipment
 MAX_HEAD_SIZE = 255
 JSON_END = '\r\n\r\n'
+HEAD_END = '\n\n'
 
 VERSIONS = odict([('0.1', 0)])
 VERSION_NAMES = odict((v, k) for k, v in VERSIONS.iteritems())
@@ -294,5 +295,15 @@ class KeepError(RaetError):
        Usage:
             emsg = "Invalid device id '{0}'".format(did)
             raise raeting.KeepError(emsg)
+    '''
+    pass
+
+class YardError(RaetError):
+    '''
+       Exceptions in RAET device processing
+
+       Usage:
+            emsg = "Invalid device id '{0}'".format(did)
+            raise raeting.YardError(emsg)
     '''
     pass

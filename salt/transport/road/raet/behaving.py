@@ -43,7 +43,7 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting, packeting, stacking, devicing
+from . import raeting, packeting, devicing, yarding, stacking
 
 
 class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -102,8 +102,7 @@ class CloserStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
     def action(self, **kwa):
         '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
+        Close udp socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUdp):
             self.stack.value.serverUdp.close()
@@ -250,4 +249,72 @@ class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
             console.terse("\nReceived....\n{0}\n".format(msg))
 
 
+
+class StackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    StackUxdRaet initialize and run raet uxd stack
+
+    '''
+    Ioinits = odict(
+        inode="raet.uxd.stack.",
+        stack='stack',
+        txmsgs=odict(ipath='txmsgs', ival=deque()),
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),
+        local=odict(ipath='name', ival=odict(name='minion', yid=0)),)
+
+    def postinitio(self):
+        '''
+        Setup stack instance
+        '''
+        name = self.local.data.name
+        yid = self.local.data.yid
+        txMsgs = self.txmsgs.value
+        rxMsgs = self.rxmsgs.value
+
+        self.stack.value = stacking.StackUxd(
+                                       store=self.store,
+                                       name=name,
+                                       yid=yid,
+                                       txMsgs=txMsgs,
+                                       rxMsgs=rxMsgs, )
+
+    def action(self, **kwa):
+        '''
+        Service all the deques for the stack
+        '''
+        self.stack.value.serviceAll()
+
+class CloserStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    CloserStackUxdRaet closes stack server socket connection
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Close uxd socket
+        '''
+        if self.stack.value and isinstance(self.stack.value, stacking.StackUxd):
+            self.stack.value.serverUxd.close()
+
+class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    AddYardStackUxdRaet closes stack server socket connection
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack='stack',
+        yard='yard,')
+
+    def action(self, yid=None, **kwa):
+        '''
+        Adds new yard to stack with yid
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, stacking.StackUxd):
+            yard = yarding.Yard(stack=stack, yid=yid)
+            stack.addRemoteYard(yard)
+            self.yard.value = yard
 
