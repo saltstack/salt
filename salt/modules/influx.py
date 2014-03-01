@@ -381,13 +381,13 @@ def query(database, query, time_precision='s', chunked=False, user=None,
         The database to query
 
     query
-        Query to be exectuted
+        Query to be executed
 
     time_precision
         Time precision to use ('s', 'm', or 'u')
 
     chunked
-        Wether is chuncked or not
+        Whether is chunked or not
 
     user
         The user to connect as
