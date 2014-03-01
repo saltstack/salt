@@ -631,7 +631,8 @@ class Cloud(object):
                 if driver not in processed[alias]:
                     processed[alias][driver] = {}
                 processed[alias][driver][name] = ret_multip[name]
-                names.remove(name)
+                if name in names:
+                    names.remove(name)
 
         # not destroying in parallel
         else:
@@ -648,7 +649,8 @@ class Cloud(object):
                 if driver not in processed[alias]:
                     processed[alias][driver] = {}
                 processed[alias][driver][name] = ret
-                names.remove(name)
+                if name in names:
+                    names.remove(name)
 
         # now the processed data structure contains the output from either
         # the parallel or non-parallel destroy and we should finish up
