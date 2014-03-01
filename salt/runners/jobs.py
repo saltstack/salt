@@ -53,7 +53,7 @@ def active():
     return ret
 
 
-def lookup_jid(jid, ext_source=None):
+def lookup_jid(jid, ext_source=None, output=True):
     '''
     Return the printout from a previously executed job
 
@@ -84,7 +84,8 @@ def lookup_jid(jid, ext_source=None):
 
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
-        salt.output.display_output(
+        if output:
+            salt.output.display_output(
                 {mid: ret[mid]},
                 data.get('out', None),
                 __opts__)
