@@ -622,6 +622,7 @@ def set_parameter(name, parameter, value):
     else:
         return True
 
+
 def templates():
     '''
     Returns a list of existing templates
@@ -868,6 +869,46 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
         and not changes['removed']
     ):
         ret['changes'] = {}
+    return ret
+
+
+def set_dns(name, dnsservers=None, searchdomains=None):
+    '''Update container dns configuration
+    and possibly also resolvonf one.
+
+    .. code-block:: bash
+
+        salt-call -lall lxc.set_dns ubuntu ['8.8.8.8', '4.4.4.4']
+
+    '''
+    ret = {'result': False}
+    if not dnsservers:
+        dnsservers = ['8.8.8.8', '4.4.4.4']
+    if not searchdomains:
+        searchdomains = []
+    dns = ['nameserver {0}'.format(d) for d in dnsservers]
+    dns.extend(['search {0}'.format(d) for d in searchdomains])
+    dns = "\n".join(dns)
+    has_resolvconf = not int(
+        __salt__['cmd.run'](('lxc-attach -n \'{0}\' -- '
+                             '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
+                             'echo ${{?}}').format(name)))
+    if has_resolvconf:
+        cret = __salt__['cmd.run_all']((
+            'lxc-attach -n \'{0}\' -- '
+            'rm /etc/resolvconf/resolv.conf.d/base &&'
+            'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+            'tee /etc/resolvconf/resolv.conf.d/base'
+        ).format(name, dns))
+        if not cret['retcode']:
+            ret['result'] = True
+    cret = __salt__['cmd.run_all']((
+        'lxc-attach -n \'{0}\' -- rm /etc/resolv.conf &&'
+        'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+        'tee /etc/resolv.conf'
+    ).format(name, dns))
+    if not cret['retcode']:
+        ret['result'] = True
     return ret
 
 #
