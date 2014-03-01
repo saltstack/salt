@@ -595,8 +595,13 @@ class ReactWrap(object):
     '''
     Create a wrapper that executes low data for the reaction system
     '''
+    # class-wide cache of clients
+    client_cache = None
+
     def __init__(self, opts):
         self.opts = opts
+        if ReactWrap.client_cache is None:
+            ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
     def run(self, low):
         '''
@@ -619,22 +624,25 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd_async(*args, **kwargs)
+        if 'local' not in self.client_cache:
+            self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
+        return self.client_cache['local'].cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.low(fun, kwargs)
+        if 'runner' not in self.client_cache:
+            self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
+        return self.client_cache['runner'].low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(fun, **kwargs)
+        if 'wheel' not in self.client_cache:
+            self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
+        return self.client_cache['wheel'].call_func(fun, **kwargs)
 
 
 class StateFire(object):
