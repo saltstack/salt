@@ -1685,7 +1685,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
             
-            # parse the args and kwargs before sending to the minion
+            # parse the args and kwargs before sending to the publish interface
             self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
 
     def setup_config(self):
