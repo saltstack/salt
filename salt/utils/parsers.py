@@ -34,6 +34,7 @@ from salt._compat import string_types
 if not utils.is_windows():
     import salt.cloud.exceptions
 
+
 def parse_args_kwargs(args):
     '''
     Parse out the args and kwargs from an args string
@@ -49,7 +50,7 @@ def parse_args_kwargs(args):
                 _args.append(arg)
 
     return _args, _kwargs
-    
+
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -1682,11 +1683,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
+
+                # parse the args and kwargs before sending to the publish interface
+                self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
-            
-            # parse the args and kwargs before sending to the publish interface
-            self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
