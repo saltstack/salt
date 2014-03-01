@@ -1,0 +1,65 @@
+# Raet Test FloScript
+
+house master
+
+init .raet.uxd.stack.local to name "lord" lane "ash" yid 0
+init .raet.uxd.stack.dest to "yard1"
+
+framer bossuxdstack be active first start
+   frame start
+      do raet uxd stack per inode ".raet.uxd.stack"
+      exit
+         do raet uxd stack closer per inode ".raet.uxd.stack."
+      timeout 5
+
+   frame abort
+      bid stop all
+
+framer uxdreceiver be active first start
+   frame start
+      do raet uxd stack printer per inode ".raet.uxd.stack."
+
+framer setupuxdyard be active first start
+   frame start
+      enter
+         do raet uxd stack yard add to lane "ash" yid 1
+      timeout 1
+
+   frame send
+      enter
+         do raet uxd stack transmit to stuff "Lord Hello" \
+            per inode ".raet.uxd.stack."
+
+
+house serf
+
+init .raet.uxd.stack.local to name "serf" lane "ash" yid 1
+init .raet.uxd.stack.dest to "yard0"
+
+framer serfuxdstack be active first start
+   frame start
+      do raet uxd stack per inode ".raet.uxd.stack"
+      exit
+         do raet uxd stack closer per inode ".raet.uxd.stack."
+      timeout 5
+
+   frame abort
+      bid stop all
+
+framer uxdreceiver be active first start
+   frame start
+      do raet uxd stack printer per inode ".raet.uxd.stack."
+
+
+framer setupuxdyard be active first start
+   frame start
+      enter
+         do raet uxd stack yard add to lane "ash" yid 0
+      timeout 1
+
+   frame send
+      enter
+         do raet uxd stack transmit to stuff "Serf Hello" \
+            per inode ".raet.uxd.stack."
+
+
