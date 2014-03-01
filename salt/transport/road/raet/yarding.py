@@ -20,6 +20,8 @@ console = getConsole()
 
 YARD_UXD_DIR = os.path.join('/tmp', 'raet')
 
+
+
 class Yard(object):
     '''
     RAET protocol Yard
@@ -29,10 +31,10 @@ class Yard(object):
     def  __init__(self,
                   stack=None,
                   yid=None,
-                  name="",
-                  ha="",
+                  name='',
+                  ha='',
                   dirpath=YARD_UXD_DIR,
-                  prefix='yard'):
+                  prefix='lane'):
         '''
         Initialize instance
         '''
@@ -42,17 +44,43 @@ class Yard(object):
             Yard.Yid += 1
 
         self.yid = yid # yard ID
-        self.name = name or "{0}{1}".format(prefix, self.yid)
+        self.name = name or "yard{0}".format(self.yid)
         if " " in self.name:
             emsg = "Invalid Yard name '{0}'".format(self.name)
             raise raeting.YardError(emsg)
 
-        if self.stack:
-            stackname = self.stack.name
-        else:
-            stackname = stack
+        self.dirpath = dirpath
+        if " " in prefix:
+            emsg = "Invalid prefix '{0}'".format(prefix)
+            raise raeting.YardError(emsg)
+        self.prefix = prefix
 
-        self.ha = ha or os.path.join(dirpath, "{0}.uxd.{1}".format(
-                stackname, self.name))
+        if ha and Yard.nameFromHa(ha) != self.name:
+            emsg =  "Incompatible Yard name '{0}' and ha '{1}'".format(self.name, ha)
+            raise raeting.YardError(emsg)
+
+        self.ha = ha or os.path.join(dirpath, "{0}.{1}.uxd".format(prefix, self.name))
 
 
+    @staticmethod
+    def nameFromHa(ha):
+        '''
+        Extract and return the yard name from yard host address ha
+        '''
+        head, tail = os.path.split(ha)
+        if not tail:
+            emsg = "Invalid format for ha '{0}'. No file".format(ha)
+            raise  raeting.YardError(emsg)
+
+        root, ext = os.path.splitext(tail)
+
+        if ext != ".uxd":
+            emsg = "Invalid format for ha '{0}'. Ext not 'uxd'".format(ha)
+            raise  raeting.YardError(emsg)
+
+        lane, sep, name = root.rpartition('.')
+        if not sep:
+            emsg = "Invalid format for ha '{0}'. Not lane.name".format(ha)
+            raise  raeting.YardError(emsg)
+
+        return name

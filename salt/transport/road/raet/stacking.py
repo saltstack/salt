@@ -275,7 +275,7 @@ class StackUdp(object):
         Otherwise return None
         '''
         try:
-            raw, ra, da = self.udpRxes.popleft()
+            raw, sa, da = self.udpRxes.popleft()
         except IndexError:
             return None
 
@@ -294,7 +294,7 @@ class StackUdp(object):
             print emsg
             return None
 
-        sh, sp = ra
+        sh, sp = sa
         dh, dp = da
         packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
@@ -441,11 +441,13 @@ class StackUxd(object):
     '''
     Count = 0
     PackKind = raeting.bodyKinds.json
+    Accept = True # accept any uxd messages if True from yards not already in lanes
 
     def __init__(self,
                  name='',
                  version=raeting.VERSION,
                  store=None,
+                 lanename='lane',
                  yard=None,
                  yid=None,
                  yardname='',
@@ -455,6 +457,7 @@ class StackUxd(object):
                  uxdRxes = None,
                  uxdTxes = None,
                  lane=None,
+                 accept=None,
                  ):
         '''
         Setup StackUxd instance
@@ -462,21 +465,22 @@ class StackUxd(object):
         if not name:
             name = "stackUxd{0}".format(StackUxd.Count)
             StackUxd.Count += 1
-        if " " in name:
-            emsg = "Invalid Stack name '{0}'".format(name)
-            raise raeting.StackError(emsg)
         self.name = name
         self.version = version
         self.store = store or storing.Store(stamp=0.0)
         self.yards = odict() # remote uxd yards attached to this stack by name
         self.names = odict() # remote uxd yard names  by ha
-        self.yard = yard or yarding.Yard(stack=self, name=yardname, yid=yid, ha=ha)
+        self.yard = yard or yarding.Yard(stack=self,
+                                         name=yardname,
+                                         yid=yid,
+                                         ha=ha,
+                                         prefix=lanename)
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        #(msg, ddid) ddid=0 is broadcast
         self.uxdRxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received
         self.uxdTxes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
         self.lane = lane # or keeping.LaneKeep()
+        self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
         self.serverUxd = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUxd.reopen()  # open socket
         self.yard.ha = self.serverUxd.ha  # update device host address after open
@@ -674,16 +678,23 @@ class StackUxd(object):
         Otherwise return None
         '''
         try:
-            raw, ra, da = self.uxdRxes.popleft()
+            raw, sa, da = self.uxdRxes.popleft()
         except IndexError:
             return None
 
         console.verbose("{0} received raw message \n{1}\n".format(self.name, raw))
 
-        if ra not in self.names:
-            emsg = "Invalid destination ha = {0}. Dropping packet.".format(ra)
-            print emsg
-            return None
+        if sa not in self.names:
+            if not self.accept:
+                emsg = "Unaccepted source ha = {0}. Dropping packet.".format(sa)
+                print emsg
+                return None
+
+            name = yarding.Yard.nameFromHa(sa)
+            yard = yarding.Yard(stack=self,
+                                name=name,
+                                ha=sa)
+            self.addRemoteYard(yard)
 
         return self.parseUxdRx(raw) # deserialize
 
