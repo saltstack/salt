@@ -29,10 +29,27 @@ import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
+from salt._compat import string_types
 
 if not utils.is_windows():
     import salt.cloud.exceptions
 
+def parse_args_kwargs(args):
+    '''
+    Parse out the args and kwargs from an args string
+    '''
+    _args = []
+    _kwargs = {}
+    for arg in args:
+        if isinstance(arg, string_types):
+            arg_name, arg_value = salt.utils.parse_kwarg(arg)
+            if arg_name:
+                _kwargs[arg_name] = arg_value
+            else:
+                _args.append(arg)
+
+    return _args, _kwargs
+    
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -1667,6 +1684,9 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     self.config['arg'] = self.args[2:]
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
+            
+            # parse the args and kwargs before sending to the minion
+            self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
