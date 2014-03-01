@@ -83,8 +83,7 @@ class LocalMaster(ioflo.base.deeding.Deed):
     Abstract access to the core salt master api
     '''
     Ioinits = {'opts': '.salt.etc.opts',
-               'local_in': '.salt.net.local_in',
-               'local_out': '.salt.net.local_out'}
+               'rxmsgs': '.raet.udp.stack'}
 
     def __init__(self):
         ioflo.base.deeding.Deed.__init__(self)
@@ -93,19 +92,24 @@ class LocalMaster(ioflo.base.deeding.Deed):
         '''
         Set up required objects
         '''
-        self.remote = salt.daemons.masterapi.LocalFuncs(self.opts.value)
+        self.local = salt.daemons.masterapi.LocalFuncs(self.opts.value)
+        self.remote = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
 
     def action(self):
         '''
         Perform an action
         '''
-        if self.local_in.value:
-            exchange = self.local_in.value.pop()
+        while self.rxmsgs.value:
+            exchange = self.rxmsgs.value.pop(0)
             load = exchange.get('load')
             # If the load is invalid, just ignore the request
             if not 'cmd' in load:
                 return False
             if load['cmd'].startswith('__'):
                 return False
-            exchange['ret'] = getattr(self.local, load['cmd'])(load)
+            if hasattr(self.remote, load['cmd']):
+                exchange['ret'] = getattr(self.remote, load['cmd'])(load)
+            elif hasattr(self.local, load['cmd']):
+                exchange['ret'] = getattr(self.local, load['cmd'])(load)
+
             self.local_out.value.append(exchange)

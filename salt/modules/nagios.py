@@ -69,7 +69,7 @@ def _execute_pillar(pillar_name, run_type):
                 plugin = command
                 args = ''
             command_key = _format_dict_key(args, plugin)
-            data[group][command_key] = run_type(plugin, args, group)
+            data[group][command_key] = run_type(plugin, args)
     return data
 
 
@@ -83,7 +83,7 @@ def _format_dict_key(args, plugin):
     return key_name
 
 
-def run(plugin, args='', key_name=None):
+def run(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run
 
@@ -118,7 +118,7 @@ def retcode(plugin, args='', key_name=None):
     return data
 
 
-def run_all(plugin, args='', key_name=None):
+def run_all(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run_all
     '''

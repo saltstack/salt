@@ -1,3 +1,5 @@
+.. _renderers:
+
 =========
 Renderers
 =========
@@ -50,6 +52,7 @@ Below, the first line is a shebang that references the ``py`` renderer.
                 'python-mako': {'pkg': ['installed']}}
 
 
+.. _renderers-composing:
 
 Composing Renderers
 -------------------

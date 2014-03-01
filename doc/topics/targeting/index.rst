@@ -1,13 +1,12 @@
+.. _targeting:
+
 =================
 Targeting Minions
 =================
 
-.. glossary::
-
-    Targeting
-        Specifying which minions should run a command or execute a state by
-        matching against hostnames, or system information, or defined groups,
-        or even combinations thereof.
+Targeting minions is specifying which minions should run a command or execute a
+state by matching against hostnames, or system information, or defined groups,
+or even combinations thereof.
 
 For example the command ``salt web1 apache.signal restart`` to restart the
 Apache httpd server specifies the machine ``web1`` as the target and the

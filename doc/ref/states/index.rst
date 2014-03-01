@@ -44,20 +44,17 @@ an understanding of Salt states and how to write the states is needed as well.
 Salt SLS System
 ---------------
 
-.. glossary::
+The primary system used by the Salt state system is the SLS system. SLS stands
+for **S**\ a\ **L**\ t **S**\ tate.
 
-    SLS
-        The primary system used by the Salt state system is the SLS system. SLS
-        stands for **S**\ a\ **L**\ t **S**\ tate.
+The Salt States are files which contain the information about how to configure
+Salt minions. The states are laid out in a directory tree and can be written in
+many different formats.
 
-        The Salt States are files which contain the information about how to
-        configure Salt minions. The states are laid out in a directory tree and
-        can be written in many different formats.
-
-        The contents of the files and they way they are laid out is intended to
-        be as simple as possible while allowing for maximum flexibility. The
-        files are laid out in states and contains information about how the
-        minion needs to be configured.
+The contents of the files and they way they are laid out is intended to be as
+simple as possible while allowing for maximum flexibility. The files are laid
+out in states and contains information about how the minion needs to be
+configured.
 
 SLS File Layout
 ```````````````

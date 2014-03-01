@@ -1,3 +1,5 @@
+.. _states-top:
+
 ============
 The Top File
 ============
@@ -7,15 +9,14 @@ the state system. The top file creates a few general abstractions. First it
 maps what nodes should pull from which environments, next it defines which
 matches systems should draw from.
 
+.. _states-top-environments:
+
 Environments
 ============
 
-.. glossary::
-
-    Environment
-        A configuration that allows conceptually organizing state tree
-        directories. Environments can be made to be self-contained or state
-        trees can be made to bleed through environments.
+Environments allow conceptually organizing state tree directories. Environments
+can be made to be self-contained or state trees can be made to bleed through
+environments.
 
 .. note::
 

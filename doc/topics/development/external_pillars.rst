@@ -205,4 +205,4 @@ external pillar, add something like this to your master config:
 .. code-block:: yaml
 
     ext_pillar:
-      - cmd_json: "echo {'arg':'value'}"
+      - cmd_json: 'echo {\"arg\":\"value\"}'
