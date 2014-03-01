@@ -394,19 +394,40 @@ def clone(name,
                 'container could not be created: {0}'.format(ret['stderr'])}
 
 
-def list_():
+def list_(extra=False):
     '''
-    List defined containers (running, stopped, and frozen).
+    List defined containers classified by status.
+    Status can be running, stopped, and frozen.
+
+        extra
+            Also get per container specific info at once.
+            Warning: it will not return a collection of list
+            but a collection of mappings by status and then per
+            container name::
+
+                {'running': ['foo']} # normal mode
+                {'running': {'foo': {'info1': 'bar'}} # extra mode
+
 
     .. code-block:: bash
 
         salt '*' lxc.list
+        salt '*' lxc.list extra=True
     '''
     ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
-    stopped = []
-    frozen = []
-    running = []
+    if extra:
+        stopped = {}
+        frozen = {}
+        running = {}
+    else:
+        stopped = []
+        frozen = []
+        running = []
+
+    ret = {'running': running,
+           'stopped': stopped,
+           'frozen': frozen}
 
     for container in ctnrs:
         c_infos = __salt__['cmd.run'](
@@ -419,22 +440,31 @@ def list_():
             if stat[0] in ('State', 'state'):
                 c_state = stat[1].strip()
                 break
+        if extra:
+            try:
+                infos = __salt__['lxc.info'](container)
+            except Exception:
+                trace = traceback.format_exc()
+                infos = {'error': 'Error while getting extra infos',
+                         'comment': trace}
+            method = 'update'
+            value = {container: infos}
+        else:
+            method = 'append'
+            value = container
 
         if not c_state:
             continue
         if c_state == 'STOPPED':
-            stopped.append(container)
+            getattr(stopped, method)(value)
             continue
         if c_state == 'FROZEN':
-            frozen.append(container)
+            getattr(frozen, method)(value)
             continue
         if c_state == 'RUNNING':
-            running.append(container)
+            getattr(running, method)(value)
             continue
-
-    return {'running': running,
-            'stopped': stopped,
-            'frozen': frozen}
+    return ret
 
 
 def _change_state(cmd, name, expected):
@@ -768,7 +798,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                     if not row:
                         continue
                     for conf in row:
-                        filtered_lxc_conf.append((conf, row[conf]))
+                        filtered_lxc_conf.append((conf.strip(),
+                                                  row[conf].strip()))
                 ret['comment'] = 'lxc.conf is up to date'
                 lines = []
                 orig_config = fic.read()
@@ -778,11 +809,13 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                     else:
                         line = line.split('=')
                         index = line.pop(0)
-                        lines.append((index.strip(), '='.join(line)))
+                        val = (index.strip(), '='.join(line).strip())
+                        if not val in lines:
+                            lines.append(val)
                 for k, item in filtered_lxc_conf:
                     matched = False
                     for idx, line in enumerate(lines[:]):
-                        if line[0].startswith(k):
+                        if line[0] == k:
                             matched = True
                             lines[idx] = (k, item)
                             if '='.join(line[1:]).strip() != item.strip():
@@ -790,14 +823,18 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                                     ({line[0]: line[1:]}, {k: item}))
                                 break
                     if not matched:
-                        lines.append((k, item))
+                        if not (k, item) in lines:
+                            lines.append((k, item))
                         changes['added'].append({k: item})
                 dest_lxc_conf = []
                 # filter unset
                 if lxc_conf_unset:
                     for line in lines:
                         for opt in lxc_conf_unset:
-                            if not line[0].startswith(opt):
+                            if (
+                                not line[0].startswith(opt)
+                                and not line in dest_lxc_conf
+                            ):
                                 dest_lxc_conf.append(line)
                             else:
                                 changes['removed'].append(opt)
