@@ -240,8 +240,8 @@ The ``<branch>`` param is the branch containing the pillar SLS tree, and the
     ext_pillar:
       - git: master https://domain.com/pillar.git
 
-If you would like to use the pillars from a subdirectory of the GIT repository,
-you can set the ``root`` parameter:
+Use the ``root`` parameter to use pillars from a subdirectory of the GIT
+repository:
 
 .. code-block:: yaml
 
