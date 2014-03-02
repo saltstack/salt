@@ -4,7 +4,7 @@ znc - An advanced IRC bouncer
 
 .. versionadded:: Helium
 
-Provides an interace to basic ZNC functionality
+Provides an interface to basic ZNC functionality
 '''
 
 # Import python libs
@@ -78,7 +78,7 @@ def buildmod(*modules):
 
 def dumpconf():
     '''
-    Wite the active configuration state to config file
+    Write the active configuration state to config file
 
     CLI Example:
 

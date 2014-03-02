@@ -12,11 +12,10 @@ Management of dockers
 General notes
 -------------
 
-- As we use states, we don't want to pop continuously dockers, we will map each
-  container id  (or image) with a grain whenever it is relevant.
-- As a corollary, we will resolve for a container id either directly this
-  container id or try to find a container id matching something stocked in
-  grain
+- As we use states, we don't want to be continuously popping dockers, so we
+  will map each container id (or image) with a grain whenever it is relevant.
+- As a corollary, we will resolve a container id either directly by the id
+  or try to find a container id matching something stocked in grain.
 
 Installation prerequisites
 --------------------------
