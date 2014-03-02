@@ -2648,3 +2648,36 @@ def delete_keypair(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The create_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'volume_id' not in kwargs:
+        log.error('A volume id must be specified to create a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        # This number represents GiB
+        kwargs['description'] = 'pew'
+
+    params = {'Action': 'CreateSnapshot'}
+
+    if 'volume_id' in kwargs:
+        params['VolumeId'] = kwargs['volume_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+
+    return data
