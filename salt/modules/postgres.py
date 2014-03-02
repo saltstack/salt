@@ -1249,10 +1249,10 @@ def create_extension(name,
         else:
             args = []
             if schema and _EXTENSION_TO_MOVE in mtdata:
-                args.append('ALTER EXTENSION {0} SET SCHEMA {1};'.format(
+                args.append('ALTER EXTENSION "{0}" SET SCHEMA {1};'.format(
                     name, schema))
             if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
-                args.append('ALTER EXTENSION {0} UPDATE TO {1};'.format(
+                args.append('ALTER EXTENSION "{0}" UPDATE TO {1};'.format(
                     name, ext_version))
             cmd = ' '.join(args).strip()
         if cmd:
