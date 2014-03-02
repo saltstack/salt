@@ -53,12 +53,12 @@ class RAETChannel(Channel):
                 yid=self.opts['__ex_id'],
                 dirpath=self.opts['sock_dir'])
         self.router_yard = yarding.Yard(
-                yid=self.opts['__router_id'],
+                yid=0,
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemoteYard(self.router_yard)
         src = (self.opts['id'], self.stack.yard.name, None)
-        dst = (self.opts['id'], self.opts['__router_name'], None)
+        dst = (self.opts['id'], 'router', None)
         self.route = {'src': src, 'dst': dst}
 
     def send(self, load, tries, timeout):
