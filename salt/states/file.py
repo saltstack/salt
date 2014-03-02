@@ -2587,6 +2587,11 @@ def patch(name,
 
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
+    if not cached_source_path:
+        ret['comment'] = ('Unable to cache {0} from environment {1!r}'
+                          .format(source, __env__))
+        return ret
+
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
             source, cached_source_path
