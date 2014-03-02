@@ -42,7 +42,7 @@ class RAETChannel(Channel):
     '''
     def __init__(self, opts, **kwargs):
         self.opts = opts
-    
+
     def __prep_stack(self):
         '''
         Prepare the stack objects
