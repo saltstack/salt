@@ -1,6 +1,6 @@
-===================
-Salt Best Practices
-===================
+============================
+Salt :index:`Best Practices`
+============================
 
 Salt's extreme flexibility leads to many questions concerning the structure of
 configuration files. 
