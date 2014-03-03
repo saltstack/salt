@@ -205,8 +205,8 @@ def set_warndays(name, warndays):
 
 def set_date(name, date):
     '''
-    sets the value for the date the password was last changed to the epoch
-    (January 1, 1970). See man chage.
+    Sets the value for the date the password was last changed to days since the
+    epoch (January 1, 1970). See man chage.
 
     CLI Example:
 
