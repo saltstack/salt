@@ -524,19 +524,20 @@ class Client(object):
                 os.makedirs(destdir)
 
         if url_data.scheme == 's3':
-          try:
-              salt.utils.s3.query(method='GET',
-                                  bucket=url_data.netloc,
-                                  path=url_data.path[1:],
-                                  return_bin=False,
-                                  local_file=dest,
-                                  action=None,
-                                  key=self.opts.get('s3.key',None),
-                                  keyid=self.opts.get('s3.keyid',None),
-                                  service_url=self.opts.get('s3.service_url',None))
-              return dest
-          except Exception as ex:
-              raise MinionError('Could not fetch from {0}'.format(url))
+            try:
+                salt.utils.s3.query(method='GET',
+                                    bucket=url_data.netloc,
+                                    path=url_data.path[1:],
+                                    return_bin=False,
+                                    local_file=dest,
+                                    action=None,
+                                    key=self.opts.get('s3.key', None),
+                                    keyid=self.opts.get('s3.keyid', None),
+                                    service_url=self.opts.get('s3.service_url',
+                                                              None))
+                return dest
+            except Exception as ex:
+                raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
