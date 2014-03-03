@@ -243,7 +243,7 @@ def user_exists(
     users = user_list(database, user, password, host, port)
     if not isinstance(users, list):
         return False
-    return name in [u['username'] for u in users]
+    return name in [u['name'] for u in users]
 
 
 def user_create(name, passwd, database, user=None, password=None, host=None,
