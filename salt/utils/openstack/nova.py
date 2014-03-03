@@ -23,19 +23,19 @@ log = logging.getLogger(__name__)
 # Function alias to not shadow built-ins
 
 class SaltNova(object):
-    def __init__(self, user, password, tenant, auth_url, region_name=None)
+    def __init__(self, username, api_key, project_id, auth_url, region_name=None):
         '''
         Set up nova credentials
         '''
         if not HAS_NOVA:
-            return False
+            return None
 
         self.kwargs = {
-            'username': user,
-            'api_key': password,
-            'project_id': tenant,
+            'username': username,
+            'api_key': api_key,
+            'project_id': project_id,
             'auth_url': auth_url,
-            'region': region_name,
+            'region_name': region_name,
             'service_type': 'volume'
         }
 
