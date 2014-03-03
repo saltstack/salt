@@ -228,17 +228,25 @@ following to your master config file:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: <branch> <repo>
+      - git: <branch> <repo> [root=<gitroot>]
 
 
 The ``<branch>`` param is the branch containing the pillar SLS tree, and the
 ``<repo>`` param is the URI for the repository. The below example would add the
-``master`` branch of the specified repo as an external pillar source.
+``master`` branch of the specified repo as an external pillar source:
 
 .. code-block:: yaml
 
     ext_pillar:
       - git: master https://domain.com/pillar.git
+
+Use the ``root`` parameter to use pillars from a subdirectory of the GIT
+repository:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: master https://domain.com/pillar.git root=subdirectory
 
 More information on the git external pillar can be found :mod:`here
 <salt.pillar.git_pillar>`.

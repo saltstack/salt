@@ -49,6 +49,25 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 # - First format pass inserts salt version and delimiter
 # - Second pass at run-time and inserts optional "sudo" and command
 SSH_SHIM = '''/bin/sh << 'EOF'
+      which ls > /dev/null 2> /dev/null
+      wret=$?
+      if [ $wret -ne 0 ]
+      then
+         if [ $wret -eq 127 ]
+         then
+            echo "The following required Packages are missing: which" >&2
+         else
+            echo 'which command error' >&2
+         fi
+         exit $wret
+      fi
+
+      MISS_PKG=''
+      if [ ! $(which tar 2>/dev/null) ]
+      then
+         MISS_PKG="$MISS_PKG tar"
+      fi
+
       for py_candidate in \\
             python27      \\
             python2.7     \\
@@ -63,6 +82,12 @@ SSH_SHIM = '''/bin/sh << 'EOF'
                break
          fi
       done
+
+      if [ "$PYTHON" == "" ]
+      then
+         MISS_PKG="$MISS_PKG python"
+      fi
+
       SALT=/tmp/.salt/salt-call
       if [ {{2}} = 'md5' ]
       then
@@ -77,7 +102,21 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             fi
          done
       else
-         SUMCHECK={{2}}
+         if [ $(which {{2}} 2>/dev/null) ]
+         then
+            SUMCHECK={{2}}
+         fi
+      fi
+
+      if [ "$SUMCHECK" == "" ]
+      then
+         MISS_PKG="$MISS_PKG md5 or md5sum"
+      fi
+
+      if [ "$MISS_PKG" != "" ]
+      then
+            echo "The following required Packages are missing: $MISS_PKG" >&2
+            exit 127
       fi
 
       if [ $SUMCHECK = '/sbin/md5' ]
