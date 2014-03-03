@@ -18,7 +18,7 @@ raet.udp.stack.local
 raet.udp.stack.status
     joined allowed idle
 raet.udp.stack.destination
-    value ddid
+    value deid
 
 
 '''
@@ -57,7 +57,7 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         txmsgs=odict(ipath='txmsgs', ival=deque()),
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),
         local=odict(ipath='local', ival=odict(   name='minion',
-                                                 did=0,
+                                                 eid=0,
                                                  host='0.0.0.0',
                                                  port=raeting.RAET_PORT,
                                                  sigkey=None,
@@ -71,8 +71,8 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         prikey = self.local.data.prikey
         ha = (self.local.data.host, self.local.data.port)
         name = self.local.data.name
-        did = self.local.data.did
-        device = devicing.LocalDevice(  did=did,
+        eid = self.local.data.eid
+        estate = devicing.LocalEstate(  eid=eid,
                                         name=name,
                                         ha=ha,
                                         sigkey=sigkey,
@@ -80,7 +80,7 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
 
-        self.stack.value = stacking.StackUdp(device=device,
+        self.stack.value = stacking.StackUdp(estate=estate,
                                        store=self.store,
                                        name=name,
                                        txMsgs=txMsgs,
@@ -126,7 +126,7 @@ class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
 class JoinedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    Updates status with .joined of zeroth remote device (master)
+    Updates status with .joined of zeroth remote estate (master)
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -166,7 +166,7 @@ class AllowerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
 class AllowedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    Updates status with .allowed of zeroth remote device (master)
+    Updates status with .allowed of zeroth remote estate (master)
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -210,9 +210,9 @@ class IdledStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
 class MessengerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    Puts message on txMsgs deque sent to ddid
+    Puts message on txMsgs deque sent to deid
     Message is composed fields that are parameters to action method
-    and is sent to remote device ddid
+    and is sent to remote estate deid
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -227,8 +227,8 @@ class MessengerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
             msg = odict(kwa)
             stack = self.stack.value
             if stack and isinstance(stack, stacking.StackUdp):
-                ddid = self.destination.value
-                stack.txMsg(msg=msg, ddid=ddid)
+                deid = self.destination.value
+                stack.txMsg(msg=msg, deid=deid)
 
 
 class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -328,9 +328,9 @@ class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
 
 class TransmitStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    Puts message on txMsgs deque sent to ddid
+    Puts message on txMsgs deque sent to deid
     Message is composed fields that are parameters to action method
-    and is sent to remote device ddid
+    and is sent to remote estate deid
     '''
     Ioinits = odict(
         inode=".raet.uxd.stack.",

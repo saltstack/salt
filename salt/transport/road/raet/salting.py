@@ -18,7 +18,7 @@ raet.udp.stack.local
 raet.udp.stack.status
     joined allowed idle
 raet.udp.stack.destination
-    value ddid
+    value deid
 
 
 '''

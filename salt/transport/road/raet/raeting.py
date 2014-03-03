@@ -237,7 +237,7 @@ class RaetError(Exception):
     Exceptions in RAET Protocol processing
 
        usage:
-           emsg = "Invalid device id '{0}'".format(did)
+           emsg = "Invalid estate id '{0}'".format(eid)
            raise raeting.RaetError(emsg)
     '''
     def __init__(self, message=None):
@@ -253,17 +253,17 @@ class StackError(RaetError):
        Exceptions in RAET stack processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.StackError(emsg)
     '''
     pass
 
 class DeviceError(RaetError):
     '''
-       Exceptions in RAET device processing
+       Exceptions in RAET estate processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.DeviceError(emsg)
     '''
     pass
@@ -273,7 +273,7 @@ class TransactionError(RaetError):
        Exceptions in RAET transaction processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.TransactionError(emsg)
     '''
     pass
@@ -283,7 +283,7 @@ class PacketError(RaetError):
        Exceptions in RAET packet processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.PacketError(emsg)
     '''
     pass
@@ -293,17 +293,17 @@ class KeepError(RaetError):
        Exceptions in RAET keep processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.KeepError(emsg)
     '''
     pass
 
 class YardError(RaetError):
     '''
-       Exceptions in RAET device processing
+       Exceptions in RAET estate processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.YardError(emsg)
     '''
     pass

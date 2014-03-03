@@ -2,7 +2,7 @@
 
 house master
 
-init .raet.udp.stack.local to did 1 name "master" host "" port 7530
+init .raet.udp.stack.local to eid 1 name "master" host "" port 7530
 
 
 framer masterudpstack be active first start
@@ -23,7 +23,7 @@ framer receiver be active first start
 
 house minion1
 
-init .raet.udp.stack.local to did 0 name "minion1" host "" port 7531
+init .raet.udp.stack.local to eid 0 name "minion1" host "" port 7531
 
 
 framer minionudpstack be active first start

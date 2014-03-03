@@ -35,7 +35,7 @@ class Transaction(object):
     Timeout =  5.0 # default timeout
 
     def __init__(self, stack=None, kind=None, timeout=None, start=None,
-                 rdid=None, rmt=False, bcst=False, sid=None, tid=None,
+                 reid=None, rmt=False, bcst=False, sid=None, tid=None,
                  txData=None, txPacket=None, rxPacket=None):
         '''
         Setup Transaction instance
@@ -51,8 +51,8 @@ class Transaction(object):
         if start: #enables synchronized starts not just current time
             self.timer.restart(start=start)
 
-        # local device is the .stack.device
-        self.rdid = rdid  # remote device did
+        # local estate is the .stack.estate
+        self.reid = reid  # remote estate eid
 
         self.rmt = rmt
         self.bcst = bcst
@@ -69,20 +69,20 @@ class Transaction(object):
         '''
         Property is transaction tuple (rf, ld, rd, si, ti, bf,)
         '''
-        ld = self.stack.device.did
+        ld = self.stack.estate.eid
         if ld == 0: #bootstapping onto channel use ha
-            host = self.stack.device.host
+            host = self.stack.estate.host
             if host == '0.0.0.0':
                 host = '127.0.0.1'
-            ld = (host, self.stack.device.port)
-            #ld = self.stack.device.ha
-        rd = self.rdid
+            ld = (host, self.stack.estate.port)
+            #ld = self.stack.estate.ha
+        rd = self.reid
         if rd == 0:
-            host = self.stack.devices[self.rdid].host
+            host = self.stack.devices[self.reid].host
             if host == '0.0.0.0':
                 host =  '127.0.0.1'
-            rd = (host, self.stack.devices[self.rdid].port)
-            #rd = self.stack.devices[self.rdid].ha
+            rd = (host, self.stack.devices[self.reid].port)
+            #rd = self.stack.devices[self.reid].ha
         return ((self.rmt, ld, rd, self.sid, self.tid, self.bcst,))
 
     def process(self):
@@ -101,7 +101,7 @@ class Transaction(object):
         '''
         Queue tx duple on stack transmit queue
         '''
-        self.stack.txUdp(packet.packed, self.rdid)
+        self.stack.txUdp(packet.packed, self.reid)
         self.txPacket = packet
 
     def add(self, index=None):
@@ -174,14 +174,14 @@ class Joiner(Initiator):
         if mha is None:
             mha = ('127.0.0.1', raeting.RAET_PORT)
 
-        if self.rdid is None:
+        if self.reid is None:
             if not self.stack.devices: # no channel master so make one
-                master = devicing.RemoteDevice(did=0, ha=mha)
+                master = devicing.RemoteEstate(eid=0, ha=mha)
                 self.stack.addRemoteDevice(master)
 
-            self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
+            self.reid = self.stack.devices.values()[0].eid # zeroth is channel master
         self.sid = 0
-        self.tid = self.stack.devices[self.rdid].nextTid()
+        self.tid = self.stack.devices[self.reid].nextTid()
         self.prep()
         self.add(self.index)
 
@@ -201,12 +201,12 @@ class Joiner(Initiator):
         '''
         Prepare .txData
         '''
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
-                            dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port,
-                            sd=self.stack.device.did,
-                            dd=self.rdid,
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
+                            dh=self.stack.devices[self.reid].host,
+                            dp=self.stack.devices[self.reid].port,
+                            sd=self.stack.estate.eid,
+                            dd=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -219,13 +219,13 @@ class Joiner(Initiator):
         '''
         Send join request
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        body = odict([('name', self.stack.device.name),
-                      ('verhex', self.stack.device.signer.verhex),
-                      ('pubhex', self.stack.device.priver.pubhex)])
+        body = odict([('name', self.stack.estate.name),
+                      ('verhex', self.stack.estate.signer.verhex),
+                      ('pubhex', self.stack.estate.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.request,
                                     embody=body,
@@ -251,21 +251,21 @@ class Joiner(Initiator):
 
     def accept(self):
         '''
-        Perform acceptance in response to join response packt
+        Perform acceptance in response to join response packet
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        ldid = body.get('ldid')
-        if not ldid:
-            emsg = "Missing local device id in accept packet"
+        leid = body.get('leid')
+        if not leid:
+            emsg = "Missing local estate id in accept packet"
             raise raeting.TransactionError(emsg)
 
-        rdid = body.get('rdid')
-        if not rdid:
-            emsg = "Missing remote device id in accept packet"
+        reid = body.get('reid')
+        if not reid:
+            emsg = "Missing remote estate id in accept packet"
             raise raeting.TransactionError(emsg)
 
         name = body.get('name')
@@ -285,13 +285,13 @@ class Joiner(Initiator):
 
         index = self.index # save before we change it
 
-        self.stack.device.did = ldid
-        remote = self.stack.devices[self.rdid]
+        self.stack.estate.eid = leid
+        remote = self.stack.devices[self.reid]
         remote.verfer = nacling.Verifier(key=verhex)
         remote.pubber = nacling.Publican(key=pubhex)
-        if remote.did != rdid: #move remote device to new index
-            self.stack.moveRemoteDevice(old=remote.did, new=rdid)
-        if remote.name != name: # rename remote device to new name
+        if remote.eid != reid: #move remote estate to new index
+            self.stack.moveRemoteDevice(old=remote.eid, new=reid)
+        if remote.name != name: # rename remote estate to new name
             self.stack.renameRemoteDevice(old=remote.name, new=name)
         remote.joined = True #accepted
         remote.nextSid()
@@ -323,9 +323,9 @@ class Joinent(Correspondent):
         '''
         Prepare .txData
         '''
-        #since bootstrap transaction use the reversed sdid and ddid from packet
-        self.txData.update( sh=self.stack.device.host,
-                    sp=self.stack.device.port,
+        #since bootstrap transaction use the reversed seid and deid from packet
+        self.txData.update( sh=self.stack.estate.host,
+                    sp=self.stack.estate.port,
                     sd=self.rxPacket.data['dd'],
                     dd=self.rxPacket.data['sd'],
                     tk=self.kind,
@@ -339,7 +339,7 @@ class Joinent(Correspondent):
     def join(self):
         '''
         Process join packet
-        Perform pend operation of pending remote device being accepted onto channel
+        Perform pend operation of pending remote estate being accepted onto channel
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
@@ -366,18 +366,18 @@ class Joinent(Correspondent):
             if (name != remote.name or
                 verhex != remote.verfer.keyhex or
                 pubhex != remote.pubber.keyhex):
-                # nack join request another device at same address but different credentials
+                # nack join request another estate at same address but different credentials
                 # and return
                 pass
             # accept here and return
 
-        if name in self.stack.dids:
-            emsg = "Another device with name  already exists"
+        if name in self.stack.eids:
+            emsg = "Another estate with name  already exists"
             raise raeting.TransactionError(emsg)
 
 
 
-        remote = devicing.RemoteDevice( stack=self.stack,
+        remote = devicing.RemoteEstate( stack=self.stack,
                                         name=name,
                                         host=data['sh'],
                                         port=data['sp'],
@@ -386,7 +386,7 @@ class Joinent(Correspondent):
                                         rsid=self.sid,
                                         rtid=self.tid, )
         self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
-        self.rdid = remote.did # auto generated at instance creation above
+        self.reid = remote.eid # auto generated at instance creation above
 
         self.ackJoin()
 
@@ -394,13 +394,13 @@ class Joinent(Correspondent):
         '''
         Send ack to join request
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
         #since bootstrap transaction use updated self.rid
-        self.txData.update( dh=self.stack.devices[self.rdid].host,
-                            dp=self.stack.devices[self.rdid].port,)
+        self.txData.update( dh=self.stack.devices[self.reid].host,
+                            dp=self.stack.devices[self.reid].port,)
         body = odict()
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.ack,
@@ -419,17 +419,17 @@ class Joinent(Correspondent):
         '''
         Send accept response to join request
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
 
-        body = odict([ ('ldid', self.rdid),
-                       ('rdid', self.stack.device.did),
-                       ('name', self.stack.device.name),
-                       ('verhex', self.stack.device.signer.verhex),
-                       ('pubhex', self.stack.device.priver.pubhex)])
+        body = odict([ ('leid', self.reid),
+                       ('reid', self.stack.estate.eid),
+                       ('name', self.stack.estate.name),
+                       ('verhex', self.stack.estate.signer.verhex),
+                       ('pubhex', self.stack.estate.priver.pubhex)])
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.response,
                                     embody=body,
@@ -457,9 +457,9 @@ class Allower(Initiator):
         kwa['kind'] = raeting.trnsKinds.allow
         super(Allower, self).__init__(**kwa)
         self.oreo = None # cookie from correspondent needed until handshake completed
-        if self.rdid is None:
-            self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
-        remote = self.stack.devices[self.rdid]
+        if self.reid is None:
+            self.reid = self.stack.devices.values()[0].eid # zeroth is channel master
+        remote = self.stack.devices[self.reid]
         if not remote.joined:
             emsg = "Must be joined first"
             raise raeting.TransactionError(emsg)
@@ -485,13 +485,13 @@ class Allower(Initiator):
         '''
         Prepare .txData
         '''
-        remote = self.stack.devices[self.rdid]
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
+        remote = self.stack.devices[self.reid]
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.device.did,
-                            dd=self.rdid,
+                            sd=self.stack.estate.eid,
+                            dd=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -502,11 +502,11 @@ class Allower(Initiator):
         '''
         Send hello request
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
         plain = binascii.hexlify("".rjust(32, '\x00'))
         cipher, nonce = remote.privee.encrypt(plain, remote.pubber.key)
         body = raeting.HELLO_PACKER.pack(plain, remote.privee.pubraw, cipher, nonce)
@@ -542,17 +542,17 @@ class Allower(Initiator):
 
         cipher, nonce = raeting.COOKIE_PACKER.unpack(body)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
 
         msg = remote.privee.decrypt(cipher, nonce, remote.pubber.key)
         if len(msg) != raeting.COOKIESTUFF_PACKER.size:
             emsg = "Invalid length of cookie stuff"
             raise raeting.TransactionError(emsg)
 
-        shortraw, sdid, ddid, oreo = raeting.COOKIESTUFF_PACKER.unpack(msg)
+        shortraw, seid, deid, oreo = raeting.COOKIESTUFF_PACKER.unpack(msg)
 
-        if sdid != remote.did or ddid != self.stack.device.did:
-            emsg = "Invalid sdid or ddid fields in cookie stuff"
+        if seid != remote.eid or deid != self.stack.estate.eid:
+            emsg = "Invalid seid or deid fields in cookie stuff"
             raeting.TransactionError(emsg)
 
         self.oreo = binascii.hexlify(oreo)
@@ -564,18 +564,18 @@ class Allower(Initiator):
         '''
         Send initiate request to cookie response to hello request
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
 
-        vcipher, vnonce = self.stack.device.priver.encrypt(remote.privee.pubraw,
+        vcipher, vnonce = self.stack.estate.priver.encrypt(remote.privee.pubraw,
                                                 remote.pubber.key)
 
         fqdn = remote.fqdn.ljust(128, ' ')
 
-        stuff = raeting.INITIATESTUFF_PACKER.pack(self.stack.device.priver.pubraw,
+        stuff = raeting.INITIATESTUFF_PACKER.pack(self.stack.estate.priver.pubraw,
                                                   vcipher,
                                                   vnonce,
                                                   fqdn)
@@ -608,7 +608,7 @@ class Allower(Initiator):
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
-        self.stack.devices[self.rdid].allowed = True
+        self.stack.devices[self.reid].allowed = True
         self.remove()
 
 class Allowent(Correspondent):
@@ -621,11 +621,11 @@ class Allowent(Correspondent):
         Setup instance
         '''
         kwa['kind'] = raeting.trnsKinds.allow
-        if 'rdid' not  in kwa:
-            emsg = "Missing required keyword argumens: '{0}'".format('rdid')
+        if 'reid' not  in kwa:
+            emsg = "Missing required keyword argumens: '{0}'".format('reid')
             raise TypeError(emsg)
         super(Allowent, self).__init__(**kwa)
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
         if not remote.joined:
             emsg = "Must be joined first"
             raise raeting.TransactionError(emsg)
@@ -633,8 +633,8 @@ class Allowent(Correspondent):
         if not remote.validRsid(self.sid):
             emsg = "Stale sid '{0}' in packet".format(self.sid)
             raise raeting.TransactionError(emsg)
-        remote.rsid = self.sid #update last received rsid for device
-        remote.rtid = self.tid #update last received rtid for device
+        remote.rsid = self.sid #update last received rsid for estate
+        remote.rtid = self.tid #update last received rtid for estate
         self.oreo = None #keep locally generated oreo around for redos
         remote.refresh() # refresh short term keys and .allowed
         self.prep() # prepare .txData
@@ -656,13 +656,13 @@ class Allowent(Correspondent):
         '''
         Prepare .txData
         '''
-        remote = self.stack.devices[self.rdid]
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
+        remote = self.stack.devices[self.reid]
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.device.did,
-                            dd=self.rdid,
+                            sd=self.stack.estate.eid,
+                            dd=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -688,9 +688,9 @@ class Allowent(Correspondent):
 
         plain, shortraw, cipher, nonce = raeting.HELLO_PACKER.unpack(body)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
         remote.publee = nacling.Publican(key=shortraw)
-        msg = self.stack.device.priver.decrypt(cipher, nonce, remote.publee.key)
+        msg = self.stack.estate.priver.decrypt(cipher, nonce, remote.publee.key)
         if msg != plain :
             emsg = "Invalid plain not match decrypted cipher"
             raise raeting.TransactionError(emsg)
@@ -701,20 +701,20 @@ class Allowent(Correspondent):
         '''
         Send Cookie Packet
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.devices[self.rdid]
-        oreo = self.stack.device.priver.nonce()
+        remote = self.stack.devices[self.reid]
+        oreo = self.stack.estate.priver.nonce()
         self.oreo = binascii.hexlify(oreo)
 
         stuff = raeting.COOKIESTUFF_PACKER.pack(remote.privee.pubraw,
-                                                self.stack.device.did,
-                                                remote.did,
+                                                self.stack.estate.eid,
+                                                remote.eid,
                                                 oreo)
 
-        cipher, nonce = self.stack.device.priver.encrypt(stuff, remote.publee.key)
+        cipher, nonce = self.stack.estate.priver.encrypt(stuff, remote.publee.key)
         body = raeting.COOKIE_PACKER.pack(cipher, nonce)
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.cookie,
@@ -747,7 +747,7 @@ class Allowent(Correspondent):
 
         shortraw, oreo, cipher, nonce = raeting.INITIATE_PACKER.unpack(body)
 
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
 
         if shortraw != remote.publee.keyraw:
             emsg = "Mismatch of short term public key in initiate packet"
@@ -768,12 +768,12 @@ class Allowent(Correspondent):
             raise raeting.TransactionError(emsg)
 
         fqdn = fqdn.rstrip(' ')
-        if fqdn != self.stack.device.fqdn:
+        if fqdn != self.stack.estate.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff"
-            print emsg, fqdn, self.stack.device.fqdn
+            print emsg, fqdn, self.stack.estate.fqdn
             raise raeting.TransactionError(emsg)
 
-        vouch = self.stack.device.priver.decrypt(vcipher, vnonce, remote.pubber.key)
+        vouch = self.stack.estate.priver.decrypt(vcipher, vnonce, remote.pubber.key)
         if vouch != remote.publee.keyraw or vouch != shortraw:
             emsg = "Short term key vouch failed"
             raise raeting.TransactionError(emsg)
@@ -785,8 +785,8 @@ class Allowent(Correspondent):
         '''
         Send ack to initiate request
         '''
-        if self.rdid not in self.stack.devices:
-            msg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            msg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(msg)
 
         body = ""
@@ -809,7 +809,7 @@ class Allowent(Correspondent):
         '''
         Perform allowment
         '''
-        self.stack.devices[self.rdid].allowed = True
+        self.stack.devices[self.reid].allowed = True
         #self.remove()
         # keep around for 2 minutes to save cookie (self.oreo)
 
@@ -825,9 +825,9 @@ class Messenger(Initiator):
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
         self.segmentage = None # special packet to hold segments if any
-        if self.rdid is None:
-            self.rdid = self.stack.devices.values()[0].did # zeroth is channel master
-        remote = self.stack.devices[self.rdid]
+        if self.reid is None:
+            self.reid = self.stack.devices.values()[0].eid # zeroth is channel master
+        remote = self.stack.devices[self.reid]
         if not remote.allowed:
             emsg = "Must be allowed first"
             raise raeting.TransactionError(emsg)
@@ -850,13 +850,13 @@ class Messenger(Initiator):
         '''
         Prepare .txData
         '''
-        remote = self.stack.devices[self.rdid]
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
+        remote = self.stack.devices[self.reid]
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.device.did,
-                            dd=self.rdid,
+                            sd=self.stack.estate.eid,
+                            dd=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -867,8 +867,8 @@ class Messenger(Initiator):
         '''
         Send message
         '''
-        if self.rdid not in self.stack.devices:
-            emsg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
         if body is None:
@@ -907,12 +907,12 @@ class Messengent(Correspondent):
         Setup instance
         '''
         kwa['kind'] = raeting.trnsKinds.message
-        if 'rdid' not  in kwa:
-            emsg = "Missing required keyword argumens: '{0}'".format('rdid')
+        if 'reid' not  in kwa:
+            emsg = "Missing required keyword argumens: '{0}'".format('reid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
         self.segmentage = None # special packet to hold segments if any
-        remote = self.stack.devices[self.rdid]
+        remote = self.stack.devices[self.reid]
         if not remote.allowed:
             emsg = "Must be allowed first"
             raise raeting.TransactionError(emsg)
@@ -920,8 +920,8 @@ class Messengent(Correspondent):
         if not remote.validRsid(self.sid):
             emsg = "Stale sid '{0}' in packet".format(self.sid)
             raise raeting.TransactionError(emsg)
-        remote.rsid = self.sid #update last received rsid for device
-        remote.rtid = self.tid #update last received rtid for device
+        remote.rsid = self.sid #update last received rsid for estate
+        remote.rtid = self.tid #update last received rtid for estate
         self.prep() # prepare .txData
         self.add(self.index)
 
@@ -940,13 +940,13 @@ class Messengent(Correspondent):
         '''
         Prepare .txData
         '''
-        remote = self.stack.devices[self.rdid]
-        self.txData.update( sh=self.stack.device.host,
-                            sp=self.stack.device.port,
+        remote = self.stack.devices[self.reid]
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.device.did,
-                            dd=self.rdid,
+                            sd=self.stack.estate.eid,
+                            dd=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -982,8 +982,8 @@ class Messengent(Correspondent):
         '''
         Send ack to message
         '''
-        if self.rdid not in self.stack.devices:
-            msg = "Invalid remote destination device id '{0}'".format(self.rdid)
+        if self.reid not in self.stack.devices:
+            msg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(msg)
 
         body = odict()

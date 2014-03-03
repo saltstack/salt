@@ -464,7 +464,7 @@ class TxPacket(Packet):
         '''
         Return signature resulting from signing msg
         '''
-        return (self.stack.device.signer.signature(msg))
+        return (self.stack.estate.signer.signature(msg))
 
     def sign(self):
         '''

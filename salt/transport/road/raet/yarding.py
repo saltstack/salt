@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-devicing.py raet protocol device classes
+devicing.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611

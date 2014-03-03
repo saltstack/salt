@@ -2,7 +2,7 @@
 
 house minion1
 
-init .raet.udp.stack.local to did 0 name "minion1" host "" port 7531
+init .raet.udp.stack.local to eid 0 name "minion1" host "" port 7531
 
 
 framer minionudpstack be active first start
