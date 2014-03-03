@@ -1288,6 +1288,72 @@ class LocalClient(object):
             yield ret
             time.sleep(0.02)
 
+    def _prep_pub(self,
+                  tgt,
+                  fun,
+                  arg,
+                  expr_form,
+                  ret,
+                  jid,
+                  timeout,
+                  **kwargs):
+        '''
+        Set up the payload_kwargs to be sent down to the master
+        '''
+        if expr_form == 'nodegroup':
+            if tgt not in self.opts['nodegroups']:
+                conf_file = self.opts.get(
+                    'conf_file', 'the master config file'
+                )
+                raise SaltInvocationError(
+                    'Node group {0} unavailable in {1}'.format(
+                        tgt, conf_file
+                    )
+                )
+            tgt = salt.utils.minions.nodegroup_comp(tgt,
+                                                    self.opts['nodegroups'])
+            expr_form = 'compound'
+
+        # Convert a range expression to a list of nodes and change expression
+        # form to list
+        if expr_form == 'range' and HAS_RANGE:
+            tgt = self._convert_range_to_list(tgt)
+            expr_form = 'list'
+
+        # If an external job cache is specified add it to the ret list
+        if self.opts.get('ext_job_cache'):
+            if ret:
+                ret += ',{0}'.format(self.opts['ext_job_cache'])
+            else:
+                ret = self.opts['ext_job_cache']
+
+        # format the payload - make a function that does this in the payload
+        #   module
+
+        # Generate the standard keyword args to feed to format_payload
+        payload_kwargs = {'cmd': 'publish',
+                          'tgt': tgt,
+                          'fun': fun,
+                          'arg': arg,
+                          'key': self.key,
+                          'tgt_type': expr_form,
+                          'ret': ret,
+                          'jid': jid}
+
+        # if kwargs are passed, pack them.
+        if kwargs:
+            payload_kwargs['kwargs'] = kwargs
+
+        # If we have a salt user, add it to the payload
+        if self.salt_user:
+            payload_kwargs['user'] = self.salt_user
+
+        # If we're a syndication master, pass the timeout
+        if self.opts['order_masters']:
+            payload_kwargs['to'] = timeout
+
+        return payload_kwargs
+
     def pub(self,
             tgt,
             fun,
@@ -1323,61 +1389,15 @@ class LocalClient(object):
                                            'publish_pull.ipc')):
             return {'jid': '0', 'minions': []}
 
-        if expr_form == 'nodegroup':
-            if tgt not in self.opts['nodegroups']:
-                conf_file = self.opts.get(
-                    'conf_file', 'the master config file'
-                )
-                raise SaltInvocationError(
-                    'Node group {0} unavailable in {1}'.format(
-                        tgt, conf_file
-                    )
-                )
-            tgt = salt.utils.minions.nodegroup_comp(tgt,
-                                                    self.opts['nodegroups'])
-            expr_form = 'compound'
-
-        # Convert a range expression to a list of nodes and change expression
-        # form to list
-        if expr_form == 'range' and HAS_RANGE:
-            tgt = self._convert_range_to_list(tgt)
-            expr_form = 'list'
-
-        # If an external job cache is specified add it to the ret list
-        if self.opts.get('ext_job_cache'):
-            if ret:
-                ret += ',{0}'.format(self.opts['ext_job_cache'])
-            else:
-                ret = self.opts['ext_job_cache']
-
-        # format the payload - make a function that does this in the payload
-        #   module
-        # make the zmq client
-        # connect to the req server
-        # send!
-        # return what we get back
-
-        # Generate the standard keyword args to feed to format_payload
-        payload_kwargs = {'cmd': 'publish',
-                          'tgt': tgt,
-                          'fun': fun,
-                          'arg': arg,
-                          'key': self.key,
-                          'tgt_type': expr_form,
-                          'ret': ret,
-                          'jid': jid}
-
-        # if kwargs are passed, pack them.
-        if kwargs:
-            payload_kwargs['kwargs'] = kwargs
-
-        # If we have a salt user, add it to the payload
-        if self.salt_user:
-            payload_kwargs['user'] = self.salt_user
-
-        # If we're a syndication master, pass the timeout
-        if self.opts['order_masters']:
-            payload_kwargs['to'] = timeout
+        payload_kwargs = self._prep_pub(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                jid,
+                timeout,
+                **kwargs)
 
         # sreq = salt.payload.SREQ(
         #     #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
