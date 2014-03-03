@@ -5,11 +5,7 @@ lxc / Spin up and control LXC containers
 =========================================
 '''
 __docformat__ = 'restructuredtext en'
-import difflib
-import datetime
 import traceback
-import subprocess
-import pipes
 
 
 def absent(name):
