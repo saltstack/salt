@@ -216,3 +216,19 @@ def set_date(name, date):
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
     __salt__['cmd.run'](cmd)
+
+
+def set_expire(name, expire):
+    '''
+    Sets the value for the date the account expires as days since the epoch
+    (January 1, 1970). Using a value of -1 will clear expiration. See man
+    chage.
+
+    CLI Example:
+
+    .. code-block:: bash
+    
+        salt '*' shadow.set_expire username -1
+    '''
+    cmd = 'chage -E {0} {1}'.format(expire, name)
+    __salt__['cmd.run'](cmd)
