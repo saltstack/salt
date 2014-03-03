@@ -82,7 +82,7 @@ class Transaction(object):
             if host == '0.0.0.0':
                 host =  '127.0.0.1'
             rd = (host, self.stack.estates[self.reid].port)
-            #rd = self.stack.devices[self.reid].ha
+            #rd = self.stack.estates[self.reid].ha
         return ((self.rmt, ld, rd, self.sid, self.tid, self.bcst,))
 
     def process(self):
@@ -177,7 +177,7 @@ class Joiner(Initiator):
         if self.reid is None:
             if not self.stack.estates: # no channel master so make one
                 master = estating.RemoteEstate(eid=0, ha=mha)
-                self.stack.addRemoteDevice(master)
+                self.stack.addRemoteEstate(master)
 
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         self.sid = 0
@@ -290,9 +290,9 @@ class Joiner(Initiator):
         remote.verfer = nacling.Verifier(key=verhex)
         remote.pubber = nacling.Publican(key=pubhex)
         if remote.eid != reid: #move remote estate to new index
-            self.stack.moveRemoteDevice(old=remote.eid, new=reid)
+            self.stack.moveRemoteEstate(old=remote.eid, new=reid)
         if remote.name != name: # rename remote estate to new name
-            self.stack.renameRemoteDevice(old=remote.name, new=name)
+            self.stack.renameRemoteEstate(old=remote.name, new=name)
         remote.joined = True #accepted
         remote.nextSid()
         self.remove(index)
@@ -361,7 +361,7 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.fetchRemoteDeviceByHostPort(host=data['sh'], port=data['sp'])
+        remote = self.stack.fetchRemoteEstateByHostPort(host=data['sh'], port=data['sp'])
         if remote:
             if (name != remote.name or
                 verhex != remote.verfer.keyhex or
@@ -385,7 +385,7 @@ class Joinent(Correspondent):
                                         pubkey=pubhex,
                                         rsid=self.sid,
                                         rtid=self.tid, )
-        self.stack.addRemoteDevice(remote) #provisionally add .accepted is None
+        self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
         self.reid = remote.eid # auto generated at instance creation above
 
         self.ackJoin()

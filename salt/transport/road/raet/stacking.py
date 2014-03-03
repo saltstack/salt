@@ -63,7 +63,7 @@ class StackUdp(object):
         self.name = name
         self.version = version
         self.store = store or storing.Store(stamp=0.0)
-        self.estates = odict() # remote devices attached to this stack by eid
+        self.estates = odict() # remote estates attached to this stack by eid
         self.eids = odict() # reverse lookup eid by estate.name
          # local estate for this stack
         self.estate = estate or estating.LocalEstate(stack=self, eid=eid, ha=ha)
@@ -79,10 +79,10 @@ class StackUdp(object):
         self.serverUdp.reopen()  # open socket
         self.estate.ha = self.serverUdp.ha  # update estate host address after open
 
-        #self.road.dumpLocalDevice(self.estate)
-        #self.safe.dumpLocalDevice(self.estate)
+        #self.road.dumpLocalEstate(self.estate)
+        #self.safe.dumpLocalEstate(self.estate)
 
-    def fetchRemoteDeviceByHostPort(self, host, port):
+    def fetchRemoteEstateByHostPort(self, host, port):
         '''
         Search for remote estate with matching (host, port)
         Return estate if found Otherwise return None
@@ -93,31 +93,31 @@ class StackUdp(object):
 
         return None
 
-    def fetchRemoteDeviceByName(self, name):
+    def fetchRemoteEstateByName(self, name):
         '''
         Search for remote estate with matching name
         Return estate if found Otherwise return None
         '''
         return self.estates.get(self.eids.get(name))
 
-    def addRemoteDevice(self, estate, eid=None):
+    def addRemoteEstate(self, estate, eid=None):
         '''
-        Add a remote estate to .devices
+        Add a remote estate to .estates
         '''
         if eid is None:
             eid = estate.eid
 
         if eid in self.estates:
-            emsg = "Device with id '{0}' alreadys exists".format(eid)
+            emsg = "Estate with id '{0}' alreadys exists".format(eid)
             raise raeting.StackError(emsg)
         estate.stack = self
         self.estates[eid] = estate
         if estate.name in self.eids:
-            emsg = "Device with name '{0}' alreadys exists".format(estate.name)
+            emsg = "Estate with name '{0}' alreadys exists".format(estate.name)
             raise raeting.StackError(emsg)
         self.eids[estate.name] = estate.eid
 
-    def moveRemoteDevice(self, old, new):
+    def moveRemoteEstate(self, old, new):
         '''
         Move estate at key old eid to key new eid but keep same index
         '''
@@ -136,7 +136,7 @@ class StackUdp(object):
         del self.estates[old]
         self.estates.insert(index, estate.eid, estate)
 
-    def renameRemoteDevice(self, old, new):
+    def renameRemoteEstate(self, old, new):
         '''
         rename estate with old name to new name but keep same index
         '''
@@ -155,7 +155,7 @@ class StackUdp(object):
         del self.eids[old]
         self.eids.insert(index, estate.name, estate.eid)
 
-    def removeRemoteDevice(self, eid):
+    def removeRemoteEstate(self, eid):
         '''
         Remove estate at key eid
         '''
@@ -251,7 +251,7 @@ class StackUdp(object):
         '''
         Append duple (msg,deid) to .txMsgs deque
         If msg is not mapping then raises exception
-        If deid is None then it will default to the first entry in .devices
+        If deid is None then it will default to the first entry in .estates
         '''
         if not isinstance(msg, Mapping):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
@@ -504,7 +504,7 @@ class StackUxd(object):
             name = yard.name
 
         if name in self.yards or name == self.yard.name:
-            emsg = "Device with name '{0}' alreadys exists".format(name)
+            emsg = "Estate with name '{0}' alreadys exists".format(name)
             raise raeting.StackError(emsg)
         yard.stack = self
         self.yards[name] = yard

@@ -26,7 +26,7 @@ class Estate(object):
     def __init__(self, stack=None, eid=None, name="", sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
         '''
-        Setup Device instance
+        Setup Estate instance
         '''
         self.stack = stack  # Stack object that manages this estate
         if eid is None:
@@ -97,7 +97,7 @@ class LocalEstate(Estate):
     '''
     def __init__(self, sigkey=None, prikey=None, **kwa):
         '''
-        Setup Device instance
+        Setup Estate instance
 
         sigkey is either nacl SigningKey or hex encoded key
         prikey is either nacl PrivateKey or hex encoded key
@@ -114,7 +114,7 @@ class RemoteEstate(Estate):
     '''
     def __init__(self, verkey=None, pubkey=None, rsid=0, rtid=0, **kwa):
         '''
-        Setup Device instance
+        Setup Estate instance
 
         verkey is either nacl VerifyKey or raw or hex encoded key
         pubkey is either nacl PublicKey or raw or hex encoded key
