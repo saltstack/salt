@@ -42,6 +42,8 @@ class Yard(object):
         if yid is None:
             yid = Yard.Yid
             Yard.Yid += 1
+        elif yid == Yard.Yid:
+            Yard.Yid += 1
 
         #self.yid = yid # yard ID
         self.name = name or "yard{0}".format(yid)
