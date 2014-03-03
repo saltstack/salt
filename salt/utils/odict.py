@@ -291,7 +291,9 @@ except ImportError:
 #        ## end of http://code.activestate.com/recipes/576693/ }}}
 finally:
     class DefaultOrderedDict(OrderedDict):
-        'Dictionary that remembers insertion order and '
+        '''
+        Dictionary that remembers insertion order
+        '''
         def __init__(self, default_factory=None, *a, **kw):
             if (default_factory is not None and
                 not isinstance(default_factory, Callable)):
@@ -328,6 +330,7 @@ finally:
             import copy
             return type(self)(self.default_factory,
                               copy.deepcopy(self.items()))
+
         def __repr__(self):
             return 'DefaultOrderedDict(%s, %s)' % (self.default_factory,
                                             OrderedDict.__repr__(self))
