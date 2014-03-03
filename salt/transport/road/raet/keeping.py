@@ -21,7 +21,7 @@ from ioflo.base import aiding
 from . import raeting
 from . import nacling
 from . import packeting
-from . import devicing
+from . import estating
 from . import transacting
 
 from ioflo.base.consoling import getConsole

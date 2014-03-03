@@ -11,7 +11,7 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                     devicing, yarding, transacting, stacking)
+                                     estating, yarding, transacting, stacking)
 
 
 def testStackUdp():
@@ -36,14 +36,14 @@ def testStackUdp():
     minionPriKeyHex = privateer.keyhex
 
     #master stack
-    estate = devicing.LocalEstate(   eid=1,
+    estate = estating.LocalEstate(   eid=1,
                                      name='master',
                                      sigkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(estate=estate)
 
     #minion stack
-    estate = devicing.LocalEstate(   eid=0,
+    estate = estating.LocalEstate(   eid=0,
                                      name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
@@ -71,17 +71,17 @@ def testStackUdp():
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    for estate in stack0.devices.values():
+    for estate in stack0.estates.values():
         print "Remote Device {0} joined= {1}".format(estate.eid, estate.joined)
 
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    for estate in stack1.devices.values():
+    for estate in stack1.estates.values():
             print "Remote Device {0} joined= {1}".format(estate.eid, estate.joined)
 
 
@@ -117,17 +117,17 @@ def testStackUdp():
     stack1.serviceUdpRx()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    for estate in stack0.devices.values():
+    for estate in stack0.estates.values():
         print "Remote Device {0} allowed= {1}".format(estate.eid, estate.allowed)
 
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    for estate in stack1.devices.values():
+    for estate in stack1.estates.values():
             print "Remote Device {0} allowed= {1}".format(estate.eid, estate.allowed)
 
 
@@ -150,13 +150,13 @@ def testStackUdp():
     stack1.serviceUdpRx()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
@@ -180,13 +180,13 @@ def testStackUdp():
     stack0.serviceUdpRx()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
@@ -233,14 +233,14 @@ def testStackUdp():
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages".format(stack0.name)
     for msg in stack0.rxMsgs:
         print msg
     print
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:
@@ -275,14 +275,14 @@ def testStackUdp():
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} devices=\n{1}".format(stack0.name, stack0.estates)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages".format(stack0.name)
     for msg in stack0.rxMsgs:
         print msg
     print
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} devices=\n{1}".format(stack1.name, stack1.estates)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:

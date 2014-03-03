@@ -22,7 +22,7 @@ from ioflo.base import storing
 from . import raeting
 from . import nacling
 from . import packeting
-from . import devicing
+from . import estating
 from . import yarding
 from . import keeping
 from . import transacting
@@ -63,10 +63,10 @@ class StackUdp(object):
         self.name = name
         self.version = version
         self.store = store or storing.Store(stamp=0.0)
-        self.devices = odict() # remote devices attached to this stack by eid
+        self.estates = odict() # remote devices attached to this stack by eid
         self.eids = odict() # reverse lookup eid by estate.name
          # local estate for this stack
-        self.estate = estate or devicing.LocalEstate(stack=self, eid=eid, ha=ha)
+        self.estate = estate or estating.LocalEstate(stack=self, eid=eid, ha=ha)
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
@@ -87,7 +87,7 @@ class StackUdp(object):
         Search for remote estate with matching (host, port)
         Return estate if found Otherwise return None
         '''
-        for estate in self.devices.values():
+        for estate in self.estates.values():
             if estate.host == host and estate.port == port:
                 return estate
 
@@ -98,7 +98,7 @@ class StackUdp(object):
         Search for remote estate with matching name
         Return estate if found Otherwise return None
         '''
-        return self.devices.get(self.eids.get(name))
+        return self.estates.get(self.eids.get(name))
 
     def addRemoteDevice(self, estate, eid=None):
         '''
@@ -107,11 +107,11 @@ class StackUdp(object):
         if eid is None:
             eid = estate.eid
 
-        if eid in self.devices:
+        if eid in self.estates:
             emsg = "Device with id '{0}' alreadys exists".format(eid)
             raise raeting.StackError(emsg)
         estate.stack = self
-        self.devices[eid] = estate
+        self.estates[eid] = estate
         if estate.name in self.eids:
             emsg = "Device with name '{0}' alreadys exists".format(estate.name)
             raise raeting.StackError(emsg)
@@ -121,20 +121,20 @@ class StackUdp(object):
         '''
         Move estate at key old eid to key new eid but keep same index
         '''
-        if new in self.devices:
+        if new in self.estates:
             emsg = "Cannot move, '{0}' already exists".format(new)
             raise raeting.StackError(emsg)
 
-        if old not in self.devices:
+        if old not in self.estates:
             emsg = "Cannot move '{0}' does not exist".format(old)
             raise raeting.StackError(emsg)
 
-        estate = self.devices[old]
-        index = self.devices.keys().index(old)
+        estate = self.estates[old]
+        index = self.estates.keys().index(old)
         estate.eid = new
         self.eids[estate.name] = new
-        del self.devices[old]
-        self.devices.insert(index, estate.eid, estate)
+        del self.estates[old]
+        self.estates.insert(index, estate.eid, estate)
 
     def renameRemoteDevice(self, old, new):
         '''
@@ -149,7 +149,7 @@ class StackUdp(object):
             raise raeting.StackError(emsg)
 
         eid = self.eids[old]
-        estate = self.devices[eid]
+        estate = self.estates[eid]
         estate.name = new
         index = self.eids.keys().index(old)
         del self.eids[old]
@@ -159,12 +159,12 @@ class StackUdp(object):
         '''
         Remove estate at key eid
         '''
-        if eid not in self.devices:
+        if eid not in self.estates:
             emsg = "Cannot remove, '{0}' does not exist".format(eid)
             raise raeting.StackError(emsg)
 
-        estate = self.devices[eid]
-        del self.devices[eid]
+        estate = self.estates[eid]
+        del self.estates[eid]
         del self.eids[estate.name]
 
     def addTransaction(self, index, transaction):
@@ -242,10 +242,10 @@ class StackUdp(object):
         Where da is the ip destination (host,port) address associated with
         the estate with deid
         '''
-        if deid not in self.devices:
+        if deid not in self.estates:
             msg = "Invalid destination estate id '{0}'".format(deid)
             raise raeting.StackError(msg)
-        self.udpTxes.append((packed, self.devices[deid].ha))
+        self.udpTxes.append((packed, self.estates[deid].ha))
 
     def txMsg(self, msg, deid=None):
         '''

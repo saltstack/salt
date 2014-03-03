@@ -9,7 +9,7 @@ Tests to try out packeting. Potentially ephemeral
 from ioflo.base.odicting import odict
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                      devicing, transacting, stacking)
+                                      estating, transacting, stacking)
 
 
 def test():
@@ -58,24 +58,24 @@ def test():
     minionPubKeyHex = privateer.pubhex
 
     #master stack
-    estate = devicing.LocalEstate(eid=1,
+    estate = estating.LocalEstate(eid=1,
                                   sigkey=masterSignKeyHex,
                                   prikey=masterPriKeyHex)
     stack0 = stacking.StackUdp(estate=estate)
 
-    remote1 = devicing.RemoteEstate(  eid=2,
+    remote1 = estating.RemoteEstate(  eid=2,
                                      verkey=minionVerKeyHex,
                                      pubkey=minionPubKeyHex,)
     stack0.addRemoteDevice(remote1)
 
     #minion stack
-    estate = devicing.LocalEstate(   eid=2,
+    estate = estating.LocalEstate(   eid=2,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
     stack1 = stacking.StackUdp(estate=estate)
 
-    remote0 = devicing.RemoteEstate(  eid=1,
+    remote0 = estating.RemoteEstate(  eid=1,
                                      ha=('127.0.0.1', raeting.RAET_PORT),
                                      verkey=masterVerKeyHex,
                                      pubkey=masterPubKeyHex,)

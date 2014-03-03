@@ -480,7 +480,7 @@ class TxPacket(Packet):
         Return (cipher, nonce) duple resulting from encrypting message
         with short term keys
         '''
-        remote = self.stack.devices[self.data['dd']]
+        remote = self.stack.estates[self.data['dd']]
         return (remote.privee.encrypt(msg, remote.publee.key))
 
     def pack(self):
@@ -576,14 +576,14 @@ class RxPacket(Packet):
         '''
         Return result of verifying msg with signature
         '''
-        return (self.stack.devices[self.data['sd']].verfer.verify(signature, msg))
+        return (self.stack.estates[self.data['sd']].verfer.verify(signature, msg))
 
     def decrypt(self, cipher, nonce):
         '''
         Return msg resulting from decrypting cipher and nonce
         with short term keys
         '''
-        remote = self.stack.devices[self.data['sd']]
+        remote = self.stack.estates[self.data['sd']]
         return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
 
     def parse(self, packed=None):

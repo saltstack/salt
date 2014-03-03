@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-devicing.py raet protocol estate classes
+estating.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611
@@ -31,7 +31,7 @@ class Estate(object):
         self.stack = stack  # Stack object that manages this estate
         if eid is None:
             if self.stack:
-                while Estate.Did in self.stack.devices:
+                while Estate.Did in self.stack.estates:
                     Estate.Did += 1
                 eid = Estate.Did
             else:

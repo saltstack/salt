@@ -43,7 +43,7 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting, packeting, devicing, yarding, stacking
+from . import raeting, packeting, estating, yarding, stacking
 
 
 class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -72,7 +72,7 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         ha = (self.local.data.host, self.local.data.port)
         name = self.local.data.name
         eid = self.local.data.eid
-        estate = devicing.LocalEstate(  eid=eid,
+        estate = estating.LocalEstate(  eid=eid,
                                         name=name,
                                         ha=ha,
                                         sigkey=sigkey,
@@ -142,8 +142,8 @@ class JoinedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         stack = self.stack.value
         joined = False
         if stack and isinstance(stack, stacking.StackUdp):
-            if stack.devices:
-                joined = stack.devices.values()[0].joined
+            if stack.estates:
+                joined = stack.estates.values()[0].joined
         self.status.update(joined=joined)
 
 class AllowerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -182,8 +182,8 @@ class AllowedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         stack = self.stack.value
         allowed = False
         if stack and isinstance(stack, stacking.StackUdp):
-            if stack.devices:
-                allowed = stack.devices.values()[0].allowed
+            if stack.estates:
+                allowed = stack.estates.values()[0].allowed
         self.status.update(allowed=allowed)
 
 class IdledStackUdpRaet(deeding.Deed):  # pylint: disable=W0232

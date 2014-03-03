@@ -43,7 +43,7 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting, packeting, stacking, devicing
+from . import raeting, packeting, stacking, estating
 
 
 class JoinerStackUdpRaetSalt(deeding.Deed):  # pylint: disable=W0232

@@ -9,7 +9,7 @@ import os
 
 from ioflo.base.odicting import odict
 
-from salt.transport.road.raet import (raeting, nacling, devicing, keeping)
+from salt.transport.road.raet import (raeting, nacling, estating, keeping)
 
 
 def test():
@@ -32,16 +32,16 @@ def test():
     minionPubKeyHex = privateer.pubhex
 
     #master stack
-    estate = devicing.LocalEstate(eid=1,
+    estate = estating.LocalEstate(eid=1,
                                   sigkey=masterSignKeyHex,
                                   prikey=masterPriKeyHex)
 
-    remote0 = devicing.RemoteEstate(eid=2,
+    remote0 = estating.RemoteEstate(eid=2,
                                     ha=('127.0.0.1', 7532),
                                     verkey=minionVerKeyHex,
                                     pubkey=minionPubKeyHex,)
 
-    remote1 = devicing.RemoteEstate(eid=3,
+    remote1 = estating.RemoteEstate(eid=3,
                                     ha=('127.0.0.1', 7533),
                                     verkey=minionVerKeyHex,
                                     pubkey=minionPubKeyHex,)
