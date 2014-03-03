@@ -51,6 +51,8 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.openstack.nova as suon
+
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -100,7 +102,8 @@ def _auth(profile=None, service_type='compute'):
     }
     if region_name:
         kwargs['region_name'] = region_name
-    return client.Client(**kwargs)
+
+    return suon.SaltNova(**kwargs)
 
 
 def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
@@ -136,66 +139,8 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
         salt '*' nova.flavor_list
         salt '*' nova.image_list
     '''
-    nt_ks = _auth(profile)
-    response = nt_ks.servers.create(
-        name=name, flavor=flavor_id, image=image_id
-    )
-
-    start = time.time()
-    trycount = 0
-    while True:
-        trycount += 1
-        try:
-            return server_show(response.id, profile=profile)
-        except Exception as exc:
-            log.debug('Server information not yet available: {0}'.format(exc))
-            time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Timed out after {0} seconds '
-                          'while waiting for data'.format(timeout))
-                return False
-
-            log.debug(
-                'Retrying server_show() (try {0})'.format(trycount)
-            )
-
-
-def server_by_name(name, profile=None):
-    '''
-    .. versionadded:: Helium
-
-    Returns information about one server based on the name
-
-    name
-        name of the server
-
-    profile
-        profile to use
-
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nova.server_by_name test.example.com profile=openstack
-    '''
-    return server_list(profile=profile).get(name, {})
-
-
-def _volume_get(volume_id, profile=None):
-    '''
-    Get information about a volume by its id
-    '''
-    nt_ks = _auth(profile, service_type='volume')
-    volume = nt_ks.volumes.get(volume_id)
-    response = {'name': volume.display_name,
-                'size': volume.size,
-                'id': volume.id,
-                'description': volume.display_description,
-                'attachments': volume.attachments,
-                'status': volume.status
-                }
-    return response
+    conn = _auth(profile)
+    return conn.boot(name, flavor_id, image_id, timeout)
 
 
 def volume_list(search_opts=None, profile=None):
@@ -217,9 +162,8 @@ def volume_list(search_opts=None, profile=None):
                 profile=openstack
 
     '''
-    nt_ks = _auth(profile, service_type='volume')
-    volume = nt_ks.volumes.list(search_opts=search_opts)
-    return volume
+    conn = _auth(profile)
+    return conn.volume_list(search_opts=search_opts)
 
 
 def volume_show(name, profile=None):
@@ -239,25 +183,8 @@ def volume_show(name, profile=None):
         salt '*' nova.volume_show myblock profile=openstack
 
     '''
-    nt_ks = _auth(profile, service_type='volume')
-    volumes = volume_list(
-        search_opts={'display_name': name},
-        profile=profile
-    )
-    try:
-        volume = volumes[0]
-    except IndexError:
-        # volume doesn't exist
-        return False
-
-    response = {'name': volume.display_name,
-                'size': volume.size,
-                'id': volume.id,
-                'description': volume.display_description,
-                'attachments': volume.attachments,
-                'status': volume.status
-                }
-    return response
+    conn = _auth(profile)
+    return conn.volume_show(name)
 
 
 def volume_create(name, size=100, snapshot=None, voltype=None,
@@ -287,15 +214,13 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
         salt '*' nova.volume_create myblock size=300 profile=openstack
 
     '''
-    nt_ks = _auth(profile, service_type='volume')
-    response = nt_ks.volumes.create(
-        size=size,
-        display_name=name,
-        volume_type=voltype,
-        snapshot_id=snapshot
+    conn = _auth(profile)
+    return conn.volume_create(
+        name,
+        size,
+        snapshot,
+        voltype
     )
-
-    return _volume_get(response.id, profile=profile)
 
 
 def volume_delete(name, profile=None):
@@ -315,10 +240,8 @@ def volume_delete(name, profile=None):
         salt '*' nova.volume_delete myblock profile=openstack
 
     '''
-    nt_ks = _auth(profile, service_type='volume')
-    volume = volume_show(name, profile)
-    response = nt_ks.volumes.delete(volume['id'])
-    return response
+    conn = _auth(profile)
+    return conn.volume_delete(name)
 
 
 def volume_detach(name,
@@ -344,32 +267,12 @@ def volume_detach(name,
         salt '*' nova.volume_detach myblock profile=openstack
 
     '''
-    nt_ks = _auth(profile)
-    volume = volume_show(name, profile)
-    server = server_by_name(server_name, profile)
-    response = nt_ks.volumes.delete_server_volume(
-        server['id'],
-        volume['attachments'][0]['id']
+    conn = _auth(profile)
+    return conn.volume_detach(
+        name,
+        server_name,
+        timeout
     )
-    trycount = 0
-    start = time.time()
-    while True:
-        trycount += 1
-        try:
-            response = _volume_get(volume['id'], profile)
-            if response['status'] == 'available':
-                return response
-        except Exception as exc:
-            log.debug('Volume is detaching: {0}'.format(name))
-            time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Timed out after {0} seconds '
-                          'while waiting for data'.format(timeout))
-                return False
-
-            log.debug(
-                'Retrying volume_show() (try {0})'.format(trycount)
-            )
 
 
 def volume_attach(name,
@@ -401,33 +304,13 @@ def volume_attach(name,
                 device='/dev/xvdb' profile=openstack
 
     '''
-    nt_ks = _auth(profile)
-    volume = volume_show(name, profile)
-    server = server_by_name(server_name, profile)
-    response = nt_ks.volumes.create_server_volume(
-        server['id'],
-        volume['id'],
-        device=device
+    conn = _auth(profile)
+    return conn.volume_attach(
+        name,
+        server_name,
+        device,
+        timeout
     )
-    trycount = 0
-    start = time.time()
-    while True:
-        trycount += 1
-        try:
-            response = _volume_get(volume['id'], profile)
-            if response['status'] == 'in-use':
-                return response
-        except Exception as exc:
-            log.debug('Volume is attaching: {0}'.format(name))
-            time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Timed out after {0} seconds '
-                          'while waiting for data'.format(timeout))
-                return False
-
-            log.debug(
-                'Retrying volume_show() (try {0})'.format(trycount)
-            )
 
 
 def suspend(instance_id, profile=None):
@@ -444,9 +327,8 @@ def suspend(instance_id, profile=None):
         salt '*' nova.suspend 1138
 
     '''
-    nt_ks = _auth(profile)
-    response = nt_ks.servers.suspend(instance_id)
-    return True
+    conn = _auth(profile)
+    return conn.suspend(instance_id)
 
 
 def resume(instance_id, profile=None):
@@ -463,9 +345,8 @@ def resume(instance_id, profile=None):
         salt '*' nova.resume 1138
 
     '''
-    nt_ks = _auth(profile)
-    response = nt_ks.servers.resume(instance_id)
-    return True
+    conn = _auth(profile)
+    return conn.resume(instance_id)
 
 
 def lock(instance_id, profile=None):
@@ -482,9 +363,8 @@ def lock(instance_id, profile=None):
         salt '*' nova.lock 1138
 
     '''
-    nt_ks = _auth(profile)
-    response = nt_ks.servers.lock(instance_id)
-    return True
+    conn = _auth(profile)
+    return conn.lock(instance_id)
 
 
 def delete(instance_id, profile=None):
@@ -501,9 +381,8 @@ def delete(instance_id, profile=None):
         salt '*' nova.delete 1138
 
     '''
-    nt_ks = _auth(profile)
-    response = nt_ks.servers.delete(instance_id)
-    return True
+    conn = _auth(profile)
+    return conn.delete(instance_id)
 
 
 def flavor_list(profile=None):
@@ -516,24 +395,8 @@ def flavor_list(profile=None):
 
         salt '*' nova.flavor_list
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for flavor in nt_ks.flavors.list():
-        links = {}
-        for link in flavor.links:
-            links[link['rel']] = link['href']
-        ret[flavor.name] = {
-            'disk': flavor.disk,
-            'id': flavor.id,
-            'name': flavor.name,
-            'ram': flavor.ram,
-            'swap': flavor.swap,
-            'vcpus': flavor.vcpus,
-            'links': links,
-        }
-        if hasattr(flavor, 'rxtx_factor'):
-            ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
-    return ret
+    conn = _auth(profile)
+    return conn.flavor_list()
 
 
 def flavor_create(name,      # pylint: disable=C0103
@@ -563,15 +426,14 @@ def flavor_create(name,      # pylint: disable=C0103
 
         salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
     '''
-    nt_ks = _auth(profile)
-    nt_ks.flavors.create(
-        name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus
+    conn = _auth(profile)
+    return conn.flavor_create(
+        name,
+        id,
+        ram,
+        disk,
+        vcpus
     )
-    return {'name': name,
-            'id': id,
-            'ram': ram,
-            'disk': disk,
-            'vcpus': vcpus}
 
 
 def flavor_delete(id, profile=None):  # pylint: disable=C0103
@@ -584,9 +446,8 @@ def flavor_delete(id, profile=None):  # pylint: disable=C0103
 
         salt '*' nova.flavor_delete 7
     '''
-    nt_ks = _auth(profile)
-    nt_ks.flavors.delete(id)
-    return 'Flavor deleted: {0}'.format(id)
+    conn = _auth(profile)
+    return conn.flavor_delete(id)
 
 
 def keypair_list(profile=None):
@@ -599,15 +460,8 @@ def keypair_list(profile=None):
 
         salt '*' nova.keypair_list
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for keypair in nt_ks.keypairs.list():
-        ret[keypair.name] = {
-            'name': keypair.name,
-            'fingerprint': keypair.fingerprint,
-            'public_key': keypair.public_key,
-        }
-    return ret
+    conn = _auth(profile)
+    return conn.keypair_list()
 
 
 def keypair_add(name, pubfile=None, pubkey=None, profile=None):
@@ -621,15 +475,12 @@ def keypair_add(name, pubfile=None, pubkey=None, profile=None):
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa <key> myuser@mybox'
     '''
-    nt_ks = _auth(profile)
-    if pubfile:
-        ifile = salt.utils.fopen(pubfile, 'r')
-        pubkey = ifile.read()
-    if not pubkey:
-        return False
-    nt_ks.keypairs.create(name, public_key=pubkey)
-    ret = {'name': name, 'pubkey': pubkey}
-    return ret
+    conn = _auth(profile)
+    return conn.keypair_add(
+        name,
+        pubfile,
+        pubkey
+    )
 
 
 def keypair_delete(name, profile=None):
@@ -642,9 +493,8 @@ def keypair_delete(name, profile=None):
 
         salt '*' nova.keypair_delete mykey'
     '''
-    nt_ks = _auth(profile)
-    nt_ks.keypairs.delete(name)
-    return 'Keypair deleted: {0}'.format(name)
+    conn = _auth(profile)
+    return conn.keypair_delete(name)
 
 
 def image_list(name=None, profile=None):
@@ -659,29 +509,8 @@ def image_list(name=None, profile=None):
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for image in nt_ks.images.list():
-        links = {}
-        for link in image.links:
-            links[link['rel']] = link['href']
-        ret[image.name] = {
-            'name': image.name,
-            'id': image.id,
-            'status': image.status,
-            'progress': image.progress,
-            'created': image.created,
-            'updated': image.updated,
-            'metadata': image.metadata,
-            'links': links,
-        }
-        if hasattr(image, 'minDisk'):
-            ret[image.name]['minDisk'] = image.minDisk
-        if hasattr(image, 'minRam'):
-            ret[image.name]['minRam'] = image.minRam
-    if name:
-        return {name: ret[name]}
-    return ret
+    conn = _auth(profile)
+    return conn.image_list(name)
 
 
 def image_meta_set(id=None,
@@ -699,15 +528,12 @@ def image_meta_set(id=None,
                 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
-    nt_ks = _auth(profile)
-    if name:
-        for image in nt_ks.images.list():
-            if image.name == name:
-                id = image.id  # pylint: disable=C0103
-    if not id:
-        return {'Error': 'A valid image name or id was not specified'}
-    nt_ks.images.set_meta(id, kwargs)
-    return {id: kwargs}
+    conn = _auth(profile)
+    return conn.image_meta_set(
+        id,
+        name,
+        **kwargs
+    )
 
 
 def image_meta_delete(id=None,     # pylint: disable=C0103
@@ -726,16 +552,12 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
                 id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
-    nt_ks = _auth(profile)
-    if name:
-        for image in nt_ks.images.list():
-            if image.name == name:
-                id = image.id  # pylint: disable=C0103
-    pairs = keys.split(',')
-    if not id:
-        return {'Error': 'A valid image name or id was not specified'}
-    nt_ks.images.delete_meta(id, pairs)
-    return {id: 'Deleted: {0}'.format(pairs)}
+    conn = _auth(profile)
+    return conn.image_meta_data(
+        id,
+        name,
+        keys
+    )
 
 
 def list_(profile=None):
@@ -756,21 +578,8 @@ def server_list(profile=None):
 
         salt '*' nova.show
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for item in nt_ks.servers.list():
-        ret[item.name] = {
-            'id': item.id,
-            'name': item.name,
-            'status': item.status,
-            'accessIPv4': item.accessIPv4,
-            'accessIPv6': item.accessIPv6,
-            'flavor': {'id': item.flavor['id'],
-                       'links': item.flavor['links']},
-            'image': {'id': item.image['id'],
-                      'links': item.image['links']},
-            }
-    return ret
+    conn = _auth(profile)
+    return conn.server_list()
 
 
 def show(server_id, profile=None):
@@ -797,59 +606,8 @@ def server_list_detailed(profile=None):
 
         salt '*' nova.server_list_detailed
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for item in nt_ks.servers.list():
-        ret[item.name] = {
-            'OS-EXT-SRV-ATTR': {},
-            'OS-EXT-STS': {},
-            'accessIPv4': item.accessIPv4,
-            'accessIPv6': item.accessIPv6,
-            'addresses': item.addresses,
-            'config_drive': item.config_drive,
-            'created': item.created,
-            'flavor': {'id': item.flavor['id'],
-                       'links': item.flavor['links']},
-            'hostId': item.hostId,
-            'id': item.id,
-            'image': {'id': item.image['id'],
-                      'links': item.image['links']},
-            'key_name': item.key_name,
-            'links': item.links,
-            'metadata': item.metadata,
-            'name': item.name,
-            'progress': item.progress,
-            'status': item.status,
-            'tenant_id': item.tenant_id,
-            'updated': item.updated,
-            'user_id': item.user_id,
-        }
-        if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
-            ret[item.name]['OS-DCF'] = {
-                'diskConfig': item.__dict__['OS-DCF:diskConfig']
-            }
-        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = \
-                item.__dict__['OS-EXT-SRV-ATTR:host']
-        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = \
-                item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
-        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
-            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = \
-                item.__dict__['OS-EXT-SRV-ATTR:instance_name']
-        if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
-            ret[item.name]['OS-EXT-STS']['power_state'] = \
-                item.__dict__['OS-EXT-STS:power_state']
-        if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
-            ret[item.name]['OS-EXT-STS']['task_state'] = \
-                item.__dict__['OS-EXT-STS:task_state']
-        if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
-            ret[item.name]['OS-EXT-STS']['vm_state'] = \
-                item.__dict__['OS-EXT-STS:vm_state']
-        if hasattr(item.__dict__, 'security_groups'):
-            ret[item.name]['security_groups'] = \
-                item.__dict__['security_groups']
-    return ret
+    conn = _auth(profile)
+    return conn.server_list_detailed()
 
 
 def server_show(server_id, profile=None):
@@ -862,12 +620,8 @@ def server_show(server_id, profile=None):
 
         salt '*' nova.server_show <server_id>
     '''
-    ret = {}
-    servers = server_list_detailed(profile)
-    for server_name, server in servers.iteritems():
-        if str(server['id']) == server_id:
-            ret[server_name] = server
-    return ret
+    conn = _auth(profile)
+    return conn.server_show(server_id)
 
 
 def secgroup_create(name, description, profile=None):
@@ -880,10 +634,8 @@ def secgroup_create(name, description, profile=None):
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
-    nt_ks = _auth(profile)
-    nt_ks.security_groups.create(name, description)
-    ret = {'name': name, 'description': description}
-    return ret
+    conn = _auth(profile)
+    return conn.secgroup_create(name, description)
 
 
 def secgroup_delete(name, profile=None):
@@ -896,12 +648,8 @@ def secgroup_delete(name, profile=None):
 
         salt '*' nova.secgroup_delete mygroup
     '''
-    nt_ks = _auth(profile)
-    for item in nt_ks.security_groups.list():
-        if item.name == name:
-            nt_ks.security_groups.delete(item.id)
-            return {name: 'Deleted security group: {0}'.format(name)}
-    return 'Security group not found: {0}'.format(name)
+    conn = _auth(profile)
+    return conn.secgroup_delete(name)
 
 
 def secgroup_list(profile=None):
@@ -914,38 +662,9 @@ def secgroup_list(profile=None):
 
         salt '*' nova.secgroup_list
     '''
-    nt_ks = _auth(profile)
-    ret = {}
-    for item in nt_ks.security_groups.list():
-        ret[item.name] = {
-            'name': item.name,
-            'description': item.description,
-            'id': item.id,
-            'tenant_id': item.tenant_id,
-            'rules': item.rules,
-        }
-    return ret
+    conn = _auth(profile)
+    return conn.secgroup_list()
 
-
-def _item_list(profile=None):
-    '''
-    Template for writing list functions
-    Return a list of available items (nova items-list)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nova.item_list
-    '''
-    nt_ks = _auth(profile)
-    ret = []
-    for item in nt_ks.items.list():
-        ret.append(item.__dict__)
-        #ret[item.name] = {
-        #        'name': item.name,
-        #    }
-    return ret
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.
