@@ -1426,23 +1426,24 @@ def directory(name,
                                      'as a target for recursive ownership ' \
                                      'management'
 
-            for root, dirs, files in os.walk(name):
-                for fn_ in files:
-                    full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode)
-                for dir_ in dirs:
-                    full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode)
+            if 'mode' in recurse:
+                for root, dirs, files in os.walk(name):
+                    for fn_ in files:
+                        full = os.path.join(root, fn_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode)
+                    for dir_ in dirs:
+                        full = os.path.join(root, dir_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode)
 
     if clean:
         keep = _gen_keep_files(name, require)
