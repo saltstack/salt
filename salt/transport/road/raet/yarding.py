@@ -43,8 +43,8 @@ class Yard(object):
             yid = Yard.Yid
             Yard.Yid += 1
 
-        self.yid = yid # yard ID
-        self.name = name or "yard{0}".format(self.yid)
+        #self.yid = yid # yard ID
+        self.name = name or "yard{0}".format(yid)
         if " " in self.name:
             emsg = "Invalid Yard name '{0}'".format(self.name)
             raise raeting.YardError(emsg)
