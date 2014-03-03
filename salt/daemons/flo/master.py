@@ -47,7 +47,7 @@ def fileserver_update(self):
     salt.daemons.masterapi.fileserver_update(self.opts.value)
 
 
-class UXDRouter(ioflo.base.deeding.Deed):
+class UxdRouter(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of uxd connections
     '''
@@ -162,7 +162,7 @@ class RemoteMaster(ioflo.base.deeding.Deed):
             self.ret_out.value.append(exchange)
 
 
-class LocalMaster(ioflo.base.deeding.Deed):
+class LocalCmd(ioflo.base.deeding.Deed):
     '''
     Abstract access to the core salt master api
     '''
