@@ -19,7 +19,6 @@ import copy
 import site
 import fnmatch
 import logging
-import collections
 import traceback
 import datetime
 
@@ -36,7 +35,7 @@ from salt._compat import string_types
 from salt.utils.immutabletypes import ImmutableLazyProxy
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
-from salt.utils.odict import  OrderedDict, DefaultOrderedDict
+from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -1952,7 +1951,7 @@ class BaseHighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = DefaultOrderedDict(OrderedDict) 
+        top = DefaultOrderedDict(OrderedDict)
         for ctops in tops.values():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
