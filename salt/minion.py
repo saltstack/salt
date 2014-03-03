@@ -624,7 +624,8 @@ class Minion(MinionBase):
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
-            log.debug('I am {0} and I am not supposed to start any proxies.'.format(self.opts['id']))
+            log.debug('I am {0} and I am not supposed to start any proxies. '
+                      '(Likely not a problem)'.format(self.opts['id']))
 
     def _prep_mod_opts(self):
         '''
