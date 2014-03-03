@@ -38,8 +38,6 @@ class Yard(object):
         '''
         Initialize instance
         '''
-        if dirpath is None:
-            dirpath = YARD_UXD_DIR
         self.stack = stack
         if yid is None:
             yid = Yard.Yid
@@ -51,7 +49,10 @@ class Yard(object):
             emsg = "Invalid Yard name '{0}'".format(self.name)
             raise raeting.YardError(emsg)
 
+        if dirpath is None:
+            dirpath = YARD_UXD_DIR
         self.dirpath = dirpath
+
         if " " in prefix:
             emsg = "Invalid prefix '{0}'".format(prefix)
             raise raeting.YardError(emsg)
