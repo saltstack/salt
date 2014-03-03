@@ -220,6 +220,8 @@ def set_date(name, date):
 
 def set_expire(name, expire):
     '''
+    .. versionchanged:: Hydrogen
+
     Sets the value for the date the account expires as days since the epoch
     (January 1, 1970). Using a value of -1 will clear expiration. See man
     chage.
