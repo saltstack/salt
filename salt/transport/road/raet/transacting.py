@@ -71,10 +71,18 @@ class Transaction(object):
         '''
         ld = self.stack.device.did
         if ld == 0: #bootstapping onto channel use ha
-            ld = self.stack.device.ha
+            host = self.stack.device.host
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            ld = (host, self.stack.device.port)
+            #ld = self.stack.device.ha
         rd = self.rdid
         if rd == 0:
-            rd = self.stack.devices[self.rdid].ha
+            host = self.stack.devices[self.rdid].host
+            if host == '0.0.0.0':
+                host =  '127.0.0.1'
+            rd = (host, self.stack.devices[self.rdid].port)
+            #rd = self.stack.devices[self.rdid].ha
         return ((self.rmt, ld, rd, self.sid, self.tid, self.bcst,))
 
     def process(self):

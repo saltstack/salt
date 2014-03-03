@@ -448,10 +448,16 @@ class TxPacket(Packet):
         data = self.data
         ld = data['sd']
         if ld == 0:
-            ld = (data['sh'], data['sp'])
+            host = data['sh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            ld = (host, data['sp'])
         rd = data['dd']
         if rd == 0:
-            rd = (data['dh'], data['dp'])
+            host = data['dh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            rd = (host, data['dp'])
         return ((data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
 
     def signature(self, msg):
@@ -554,10 +560,16 @@ class RxPacket(Packet):
         data = self.data
         ld = data['dd']
         if ld == 0:
-            ld = (data['dh'], data['dp'])
+            host = data['dh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            ld = (host, data['dp'])
         rd = data['sd']
         if rd == 0:
-            rd = (data['sh'], data['sp'])
+            host = data['sh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            rd = (host, data['sp'])
         return ((not data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
 
     def verify(self, signature, msg):
