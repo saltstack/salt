@@ -18,7 +18,7 @@ from . import nacling
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-YARD_UXD_DIR = os.path.join('/tmp', '.raet')
+YARD_UXD_DIR = os.path.join('/tmp', 'raet')
 
 
 
