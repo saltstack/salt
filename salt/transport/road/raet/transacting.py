@@ -67,23 +67,23 @@ class Transaction(object):
     @property
     def index(self):
         '''
-        Property is transaction tuple (rf, ld, rd, si, ti, bf,)
+        Property is transaction tuple (rf, le, re, si, ti, bf,)
         '''
-        ld = self.stack.estate.eid
-        if ld == 0: #bootstapping onto channel use ha
+        le = self.stack.estate.eid
+        if le == 0: #bootstapping onto channel use ha
             host = self.stack.estate.host
             if host == '0.0.0.0':
                 host = '127.0.0.1'
-            ld = (host, self.stack.estate.port)
-            #ld = self.stack.estate.ha
-        rd = self.reid
-        if rd == 0:
+            le = (host, self.stack.estate.port)
+            #le = self.stack.estate.ha
+        re = self.reid
+        if re == 0:
             host = self.stack.estates[self.reid].host
             if host == '0.0.0.0':
                 host =  '127.0.0.1'
-            rd = (host, self.stack.estates[self.reid].port)
-            #rd = self.stack.estates[self.reid].ha
-        return ((self.rmt, ld, rd, self.sid, self.tid, self.bcst,))
+            re = (host, self.stack.estates[self.reid].port)
+            #re = self.stack.estates[self.reid].ha
+        return ((self.rmt, le, re, self.sid, self.tid, self.bcst,))
 
     def process(self):
         '''
@@ -205,8 +205,8 @@ class Joiner(Initiator):
                             sp=self.stack.estate.port,
                             dh=self.stack.estates[self.reid].host,
                             dp=self.stack.estates[self.reid].port,
-                            sd=self.stack.estate.eid,
-                            dd=self.reid,
+                            se=self.stack.estate.eid,
+                            de=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -326,8 +326,8 @@ class Joinent(Correspondent):
         #since bootstrap transaction use the reversed seid and deid from packet
         self.txData.update( sh=self.stack.estate.host,
                     sp=self.stack.estate.port,
-                    sd=self.rxPacket.data['dd'],
-                    dd=self.rxPacket.data['sd'],
+                    se=self.rxPacket.data['de'],
+                    de=self.rxPacket.data['se'],
                     tk=self.kind,
                     cf=self.rmt,
                     bf=self.bcst,
@@ -490,8 +490,8 @@ class Allower(Initiator):
                             sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.estate.eid,
-                            dd=self.reid,
+                            se=self.stack.estate.eid,
+                            de=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -661,8 +661,8 @@ class Allowent(Correspondent):
                             sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.estate.eid,
-                            dd=self.reid,
+                            se=self.stack.estate.eid,
+                            de=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -855,8 +855,8 @@ class Messenger(Initiator):
                             sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.estate.eid,
-                            dd=self.reid,
+                            se=self.stack.estate.eid,
+                            de=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
@@ -945,8 +945,8 @@ class Messengent(Correspondent):
                             sp=self.stack.estate.port,
                             dh=remote.host,
                             dp=remote.port,
-                            sd=self.stack.estate.eid,
-                            dd=self.reid,
+                            se=self.stack.estate.eid,
+                            de=self.reid,
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,

@@ -288,7 +288,7 @@ class StackUdp(object):
             print ex
             return None
 
-        deid = packet.data['dd']
+        deid = packet.data['de']
         if deid != 0 and self.estate.eid != 0 and deid != self.estate.eid:
             emsg = "Invalid destination eid = {0}. Dropping packet.".format(deid)
             print emsg
@@ -406,7 +406,7 @@ class StackUdp(object):
         '''
         data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
         allowent = transacting.Allowent(stack=self,
-                                        reid=packet.data['sd'],
+                                        reid=packet.data['se'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
@@ -427,7 +427,7 @@ class StackUdp(object):
         '''
         data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
         messengent = transacting.Messengent(stack=self,
-                                        reid=packet.data['sd'],
+                                        reid=packet.data['se'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,

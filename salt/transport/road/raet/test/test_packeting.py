@@ -84,7 +84,7 @@ def test():
     remote0.publee = nacling.Publican(key=remote1.privee.pubhex)
     remote1.publee = nacling.Publican(key=remote0.privee.pubhex)
 
-    data.update(sd=1, dd=2, bk=raeting.bodyKinds.raw, fk=raeting.footKinds.nacl)
+    data.update(se=1, de=2, bk=raeting.bodyKinds.raw, fk=raeting.footKinds.nacl)
     packet0 = packeting.TxPacket(stack=stack0, embody=stuff, data=data, )
     packet0.pack()
     print packet0.packed
@@ -121,7 +121,7 @@ def test():
 
     body = odict(stuff=stuff)
     print body
-    data.update(sd=1, dd=2, bk=raeting.bodyKinds.json, fk=raeting.footKinds.nacl)
+    data.update(se=1, de=2, bk=raeting.bodyKinds.json, fk=raeting.footKinds.nacl)
     packet0 = packeting.TxPacket(stack=stack0, embody=body, data=data, )
     packet0.pack()
     print packet0.packed
@@ -149,7 +149,7 @@ def test():
 
     body = odict(stuff=stuff)
     print body
-    data.update(sd=1, dd=2,
+    data.update(se=1, de=2,
                 bk=raeting.bodyKinds.json,
                 ck=raeting.coatKinds.nacl,
                 fk=raeting.footKinds.nacl)
