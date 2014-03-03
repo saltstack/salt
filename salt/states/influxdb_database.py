@@ -2,6 +2,11 @@
 '''
 Management of InfluxDB databases
 ================================
+
+(compatible with InfluxDB version 0.5+)
+
+.. versionadded:: Helium
+
 '''
 
 
