@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
+InfluxDB - A distributed time series database
+
 Module to provide InfluxDB compatibility to Salt
+(compatible with InfluxDB version 0.5+)
+
+.. versionadded:: Helium
 
 :depends:    - influxdb Python module
 
