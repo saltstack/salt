@@ -2,6 +2,8 @@
 Getting Started With Azure
 ==========================
 
+.. versionadded:: 2014.1.0
+
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. This document describes how to use Salt Cloud to
 create a virtual machine on Azure, with Salt installed.
