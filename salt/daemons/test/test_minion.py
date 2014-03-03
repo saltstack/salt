@@ -22,7 +22,9 @@ def test():
             ioflo_realtime=True,
             minion_floscript=filepath,
             ioflo_verbose=2,
-            raet_port=7531, )
+            raet_port=7531,
+            master_port=7530,
+            master='127.0.0.1', )
 
     minion = salt.daemons.flo.IofloMinion(opts=opts)
     minion.start()

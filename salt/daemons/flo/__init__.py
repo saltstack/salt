@@ -29,14 +29,14 @@ import ioflo.app.run
 
 def explode_opts(opts):
     '''
-    Explode the opts into a metadata object
+    Explode the opts into a preloads list
     '''
-    metadata = []
-    metadata = [('opts', '.salt.opts', dict(value=opts))]
+    preloads = []
+    preloads = [('.salt.opts', dict(value=opts))]
     for key, val in opts.items():
         ukey = key.replace('.', '_')
-        metadata.append((ukey, '.salt.etc.{0}'.format(ukey), dict(value=val)))
-    return metadata
+        preloads.append(('.salt.etc.{0}'.format(ukey), dict(value=val)))
+    return preloads
 
 
 class IofloMaster(object):
@@ -56,7 +56,7 @@ class IofloMaster(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = explode_opts(self.opts)
+        preloads = explode_opts(self.opts)
         ioflo.app.run.start(
                 name='master',
                 period=float(self.opts['ioflo_period']),
@@ -68,7 +68,8 @@ class IofloMaster(object):
                 password="",
                 mode=None,
                 houses=None,
-                metadata=metadata,
+                metas=None,
+                preloads=preloads,
                 verbose=int(self.opts['ioflo_verbose']),
                 )
 
@@ -90,7 +91,7 @@ class IofloMinion(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        metadata = explode_opts(self.opts)
+        preloads = explode_opts(self.opts)
 
         ioflo.app.run.start(
                 name=self.opts['id'],
@@ -103,6 +104,8 @@ class IofloMinion(object):
                 password="",
                 mode=None,
                 houses=None,
-                metadata=metadata,
+                metas=None,
+                preloads=preloads,
                 verbose=int(self.opts['ioflo_verbose']),
                 )
+    start = tune_in # alias

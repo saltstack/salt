@@ -15,7 +15,8 @@ from . import packeting
 from . import stacking
 from . import transacting
 from . import behaving
+from . import salting
 
 
 __all__ = ['raeting', 'nacling', 'devicing', 'yarding', 'keeping', 'packeting',
-           'stacking', 'transacting', 'behaving']
+           'stacking', 'transacting', 'behaving', 'salting']
