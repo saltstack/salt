@@ -18,6 +18,7 @@ brew.__salt__ = {}
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
+HOMEBREW_BIN = '/usr/local/bin/brew'
 
 
 class BrewTestCase(TestCase):
@@ -65,6 +66,30 @@ class BrewTestCase(TestCase):
         mock_path = MagicMock(return_value='/usr/local')
         with patch.dict(brew.__salt__, {'cmd.run': mock_path}):
             self.assertEqual(brew._homebrew_bin(), '/usr/local/bin/brew')
+
+    @patch('salt.modules.brew._homebrew_bin',
+           MagicMock(return_value=HOMEBREW_BIN))
+    def test_refresh_db_failure(self):
+        '''
+        Tests an update of homebrew package repository failure
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_failure = MagicMock(return_value=1)
+        with patch.dict(brew.__salt__, {'file.get_user': mock_user,
+                                        'cmd.retcode': mock_failure}):
+            self.assertFalse(brew.refresh_db())
+
+    @patch('salt.modules.brew._homebrew_bin',
+           MagicMock(return_value=HOMEBREW_BIN))
+    def test_refresh_db(self):
+        '''
+        Tests a successful update of homebrew package repository
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_success = MagicMock(return_value=0)
+        with patch.dict(brew.__salt__, {'file.get_user': mock_user,
+                                        'cmd.retcode': mock_success}):
+            self.assertTrue(brew.refresh_db())
 
 
 if __name__ == '__main__':
