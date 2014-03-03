@@ -76,7 +76,7 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None, service_type='compute'):
+def _auth(profile=None):
     '''
     Set up nova credentials
     '''
@@ -98,10 +98,8 @@ def _auth(profile=None, service_type='compute'):
         'api_key': password,
         'project_id': tenant,
         'auth_url': auth_url,
-        'service_type': service_type,
+        'region_name': region_name
     }
-    if region_name:
-        kwargs['region_name'] = region_name
 
     return suon.SaltNova(**kwargs)
 
@@ -664,6 +662,23 @@ def secgroup_list(profile=None):
     '''
     conn = _auth(profile)
     return conn.secgroup_list()
+
+
+def server_by_name(name, profile=None):
+    '''
+    Return information about a server 
+
+    name
+        Server Name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.server_by_name myserver profile=openstack
+    '''
+    conn = _auth(profile)
+    return conn.server_by_name(name)
 
 
 #The following is a list of functions that need to be incorporated in the
