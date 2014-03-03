@@ -458,6 +458,7 @@ class StackUxd(object):
                  uxdTxes = None,
                  lane=None,
                  accept=None,
+                 dirpath=None,
                  ):
         '''
         Setup StackUxd instance
@@ -474,7 +475,8 @@ class StackUxd(object):
                                          name=yardname,
                                          yid=yid,
                                          ha=ha,
-                                         prefix=lanename)
+                                         prefix=lanename,
+                                         dirpath=dirpath)
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
         self.uxdRxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received

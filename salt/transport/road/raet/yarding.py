@@ -18,7 +18,7 @@ from . import nacling
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-YARD_UXD_DIR = os.path.join('/tmp', 'raet')
+YARD_UXD_DIR = os.path.join('/tmp', '.raet')
 
 
 
@@ -33,11 +33,13 @@ class Yard(object):
                   yid=None,
                   name='',
                   ha='',
-                  dirpath=YARD_UXD_DIR,
+                  dirpath=None,
                   prefix='lane'):
         '''
         Initialize instance
         '''
+        if dirpath is None:
+            dirpath = YARD_UXD_DIR
         self.stack = stack
         if yid is None:
             yid = Yard.Yid

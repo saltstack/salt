@@ -3,8 +3,15 @@
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
 
+# Import Salt Libs
 import salt.payload
 import salt.auth
+try:
+    from salt.transport.road.raet import stacking
+    from salt.transport.road.raet import yarding
+except ImportError:
+    # Don't die on missing transport libs since only one transport is required
+    pass
 
 
 class Channel(object):
@@ -20,9 +27,51 @@ class Channel(object):
 
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
+        if ttype == 'raet':
+            return RAETChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for ZeroMQ")
+            raise Exception('Channels are only defined for ZeroMQ')
             # return NewKindOfChannel(opts, **kwargs)
+
+
+class RAETChannel(Channel):
+    '''
+    Build the communication framework to communicate over the local process
+    uxd socket and send messages forwarded to the master. then wait for the
+    relative return message.
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+
+    def __prep_stack(self):
+        '''
+        Prepare the stack objects
+        '''
+        self.stack = stacking.StackUxd(
+                name='ex{0}'.format(self.opts['__ex_id']),
+                lanename=self.opts['id'],
+                yid=self.opts['__ex_id'],
+                dirpath=self.opts['sock_dir'])
+        self.router_yard = yarding.Yard(
+                yid=0,
+                prefix=self.opts['id'],
+                dirpath=self.opts['sock_dir'])
+        self.stack.addRemoteYard(self.router_yard)
+        src = (self.opts['id'], self.stack.yard.name, None)
+        dst = (self.opts['id'], 'router', None)
+        self.route = {'src': src, 'dst': dst}
+
+    def send(self, load, tries, timeout):
+        '''
+        Send a message load and wait for a relative reply
+        '''
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg=msg)
+        while True:
+            self.stack.serviceAll()
+            if self.stack.rxMsgs:
+                for msg in self.stack.rxMsgs:
+                    return msg['load']
 
 
 class ZeroMQChannel(Channel):

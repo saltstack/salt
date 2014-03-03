@@ -2648,3 +2648,121 @@ def delete_keypair(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The create_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'volume_id' not in kwargs:
+        log.error('A volume_id must be specified to create a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = 'pew'
+
+    params = {'Action': 'CreateSnapshot'}
+
+    if 'volume_id' in kwargs:
+        params['VolumeId'] = kwargs['volume_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+def delete_snapshot(kwargs=None, call=None):
+    '''
+    Delete a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'snapshot_id' not in kwargs:
+        log.error('A snapshot_id must be specified to delete a snapshot.')
+        return False
+
+    params = {'Action': 'DeleteSnapshot'}
+
+    if 'snapshot_id' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot_id']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+def copy_snapshot(kwargs=None, call=None):
+    '''
+    Copy a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The copy_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'source_region' not in kwargs:
+        log.error('A source_region must be specified to copy a snapshot.')
+        return False
+
+    if 'source_snapshot_id' not in kwargs:
+        log.error('A source_snapshot_id must be specified to copy a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = ''
+
+    params = {'Action': 'CopySnapshot'}
+
+    if 'source_region' in kwargs:
+        params['SourceRegion'] = kwargs['source_region']
+
+    if 'source_snapshot_id' in kwargs:
+        params['SourceSnapshotId'] = kwargs['source_snapshot_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+def describe_snapshot(kwargs=None, call=None):
+    '''
+    Describe a snapshot
+    TODO: Add all of the filters.
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'snapshot_id' not in kwargs:
+        log.error('A snapshot_id must be specified to describe a snapshot.')
+        return False
+
+    params = {'Action': 'DescribeSnapshots'}
+
+    if 'snapshot_id' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot_id']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+

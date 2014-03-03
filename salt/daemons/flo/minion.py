@@ -20,6 +20,7 @@ import salt.daemons.masterapi
 import salt.utils.schedule
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
+from salt.transport.road.raet import yarding
 # Import ioflo libs
 import ioflo.base.deeding
 
@@ -45,8 +46,8 @@ class Router(ioflo.base.deeding.Deed):
     Route packaets from raet into minion proessing bins
     '''
     Ioinits = {'opts_store': '.salt.opts',
-               'raet_udp_in': '.raet.udp.in',
-               'raet_sock_out': '.raet.sock.out',
+               'udp_stack': '.raet.udp.stack.stack',
+               'uxd_stack': '.raet.uxd.stack.stack',
                'fun_in': '.salt.net.fun_in',
                }
 
@@ -57,6 +58,7 @@ class Router(ioflo.base.deeding.Deed):
         '''
         Map opts for convenience
         '''
+        # TODO: Setup RAET and UXD
         self.opts = self.opts_store.value
 
     def action(self):
@@ -64,9 +66,10 @@ class Router(ioflo.base.deeding.Deed):
         Empty the queues into process management queues
         '''
         # Start on the udp_in:
+        # TODO: Route UXD messages
         while True:
             try:
-                data = self.raet_udp_in.value.pop()
+                data = self.udp_stack.rxMsgs.value.pop()
                 # Check if the PID is not the default of 0 and pass directly to
                 # the raet socket handler
                 if data['dest'][1]:
@@ -313,7 +316,9 @@ class FunctionNix(ioflo.base.deeding.Deed):
                'returners': '.salt.loader.returners',
                'fun_ack': '.salt.net.fun_ack',
                'fun_in': '.salt.net.fun_in',
-               'master_ret': '.salt.net.master_out'}
+               'master_ret': '.salt.net.master_out',
+               'uxd_stack': '.raet.uxd.stack.stack',
+               'executors': '.salt.track.executors'}
 
     def __init__(self):
         ioflo.base.deeding.Deed.__init__(self)
@@ -328,6 +333,7 @@ class FunctionNix(ioflo.base.deeding.Deed):
                 self.modules.value)
         self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
         self.serial = salt.payload.Serial(self.opts)
+        self.executors.value = {}
 
     def action(self):
         '''
@@ -355,6 +361,12 @@ class FunctionNix(ioflo.base.deeding.Deed):
                     'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                     )
         log.debug('Command details {0}'.format(data))
+        ex_yard = yarding.Yard(
+                yid=data['jid'],
+                prefix=self.opts['id'],
+                dirpath=self.opts['sock_dir'])
+        self.uxd_stack.value.addRemoteYard(ex_yard)
+        self.executors[data['jid']] = {'yard': ex_yard}
         process = multiprocessing.Process(
                 target=self.proc_run,
                 args=(exchange)
@@ -368,6 +380,7 @@ class FunctionNix(ioflo.base.deeding.Deed):
         '''
         data = exchange['load']
         fn_ = os.path.join(self.proc_dir, data['jid'])
+        self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
         sdata = {'pid': os.getpid()}
         sdata.update(data)

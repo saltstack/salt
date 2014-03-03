@@ -5493,7 +5493,8 @@ be used for global configuration of minions.
 The pillar is built in a similar fashion as the state tree, it is comprised
 of sls files and has a top file, just like the state tree. The pillar is stored
 in a different location on the Salt master than the state tree. The default
-location for the pillar is in /srv/pillar.
+location for the pillar is in /srv/pillar. Putting the pillar in a subdirectory
+of the state tree will not work.
 .sp
 \fBNOTE:\fP
 .INDENT 0.0
@@ -10029,8 +10030,9 @@ pillar_roots:
 .UNINDENT
 .sp
 This example configuration declares that the base environment will be located
-in the \fB/srv/pillar\fP directory. The top file used matches the name of the top
-file used for States, and has the same structure:
+in the \fB/srv/pillar\fP directory. It must not be in a subdirectory of the
+state tree. The top file used matches the name of the top file used for States,
+and has the same structure:
 .sp
 \fB/srv/pillar/top.sls\fP
 .INDENT 0.0
@@ -93647,7 +93649,8 @@ When we are asked to update (regular interval) lets reap the cache
 # available to different minions based on minion grain filtering. The Salt
 # Pillar is laid out in the same fashion as the file server, with environments,
 # a top file and sls files. However, pillar data does not need to be in the
-# highstate format, and is generally just key/value pairs.
+# highstate format, and is generally just key/value pairs. The pillar_roots must
+# not be subdirectories of the file_roots.
 
 #pillar_roots:
 #  base:
