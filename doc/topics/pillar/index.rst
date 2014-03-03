@@ -38,8 +38,9 @@ is identical in behavior and function as :conf_master:`file_roots`:
         - /srv/pillar
 
 This example configuration declares that the base environment will be located
-in the ``/srv/pillar`` directory. The top file used matches the name of the top
-file used for States, and has the same structure:
+in the ``/srv/pillar`` directory. It must not be in a subdirectory of the
+state tree. The top file used matches the name of the top file used for States,
+and has the same structure:
 
 ``/srv/pillar/top.sls``
 

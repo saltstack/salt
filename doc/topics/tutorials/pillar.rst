@@ -67,7 +67,8 @@ The default location for the pillar is in /srv/pillar.
 .. note::
 
     The pillar location can be configured via the `pillar_roots` option inside
-    the master configuration file.
+    the master configuration file. It must not be in a subdirectory of the state
+    tree.
 
 To start setting up the pillar, the /srv/pillar directory needs to be present:
 

@@ -606,16 +606,16 @@ at the moment a single state fails
 ``state_verbose``
 -----------------
 
-Default: ``False``
+Default: ``True``
 
-state_verbose allows for the data returned from the minion to be more
-verbose. Normally only states that fail or states that have changes are
-returned, but setting state_verbose to ``True`` will return all states that
-were checked
+Controls the verbosity of state runs. By default, the results of all states are
+returned, but setting this value to ``False`` will cause salt to only display
+output for states which either failed, or succeeded without making any changes
+to the minion.
 
 .. code-block:: yaml
 
-    state_verbose: True
+    state_verbose: False
 
 .. conf_master:: state_output
 

@@ -7,7 +7,12 @@ stacking.py raet protocol stacking classes
 
 # Import python libs
 import socket
+import os
 from collections import deque,  Mapping
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -18,6 +23,7 @@ from . import raeting
 from . import nacling
 from . import packeting
 from . import devicing
+from . import yarding
 from . import keeping
 from . import transacting
 
@@ -52,7 +58,7 @@ class StackUdp(object):
         Setup StackUdp instance
         '''
         if not name:
-            name = "stack{0}".format(StackUdp.Count)
+            name = "stackUdp{0}".format(StackUdp.Count)
             StackUdp.Count += 1
         self.name = name
         self.version = version
@@ -69,7 +75,7 @@ class StackUdp(object):
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
         self.road = road or keeping.RoadKeep()
         self.safe = safe or keeping.SafeKeep()
-        self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha)
+        self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUdp.reopen()  # open socket
         self.device.ha = self.serverUdp.ha  # update device host address after open
 
@@ -204,6 +210,7 @@ class StackUdp(object):
         Service or Process:
            UDP Socket receive
            UdpRxes queue
+           process
            txMsgs queue
            udpTxes queue
            UDP Socket send
@@ -268,7 +275,7 @@ class StackUdp(object):
         Otherwise return None
         '''
         try:
-            raw, ra, da = self.udpRxes.popleft()
+            raw, sa, da = self.udpRxes.popleft()
         except IndexError:
             return None
 
@@ -287,7 +294,7 @@ class StackUdp(object):
             print emsg
             return None
 
-        sh, sp = ra
+        sh, sp = sa
         dh, dp = da
         packet.data.update(sh=sh, sp=sp, dh=dh, dp=dp)
 
@@ -426,4 +433,317 @@ class StackUdp(object):
                                         txData=data,
                                         rxPacket=packet)
         messengent.message()
+
+
+class StackUxd(object):
+    '''
+    RAET protocol UXD (unix domain) socket stack object
+    '''
+    Count = 0
+    PackKind = raeting.bodyKinds.json
+    Accept = True # accept any uxd messages if True from yards not already in lanes
+
+    def __init__(self,
+                 name='',
+                 version=raeting.VERSION,
+                 store=None,
+                 lanename='lane',
+                 yard=None,
+                 yid=None,
+                 yardname='',
+                 ha='',
+                 rxMsgs = None,
+                 txMsgs = None,
+                 uxdRxes = None,
+                 uxdTxes = None,
+                 lane=None,
+                 accept=None,
+                 dirpath=None,
+                 ):
+        '''
+        Setup StackUxd instance
+        '''
+        if not name:
+            name = "stackUxd{0}".format(StackUxd.Count)
+            StackUxd.Count += 1
+        self.name = name
+        self.version = version
+        self.store = store or storing.Store(stamp=0.0)
+        self.yards = odict() # remote uxd yards attached to this stack by name
+        self.names = odict() # remote uxd yard names  by ha
+        self.yard = yard or yarding.Yard(stack=self,
+                                         name=yardname,
+                                         yid=yid,
+                                         ha=ha,
+                                         prefix=lanename,
+                                         dirpath=dirpath)
+        self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
+        self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
+        self.uxdRxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received
+        self.uxdTxes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
+        self.lane = lane # or keeping.LaneKeep()
+        self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
+        self.serverUxd = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.serverUxd.reopen()  # open socket
+        self.yard.ha = self.serverUxd.ha  # update device host address after open
+
+        #self.lane.dumpLocalLane(self.yard)
+
+    def fetchRemoteYardByHa(self, ha):
+        '''
+        Search for remote yard with matching ha
+        Return yard if found Otherwise return None
+        '''
+        return self.yards.get(self.names.get(ha))
+
+    def addRemoteYard(self, yard, name=None):
+        '''
+        Add a remote yard to .yards
+        '''
+        if name is None:
+            name = yard.name
+
+        if name in self.yards or name == self.yard.name:
+            emsg = "Device with name '{0}' alreadys exists".format(name)
+            raise raeting.StackError(emsg)
+        yard.stack = self
+        self.yards[name] = yard
+        if yard.ha in self.names or yard.ha == self.yard.ha:
+            emsg = "Yard with ha '{0}' alreadys exists".format(yard.ha)
+            raise raeting.StackError(emsg)
+        self.names[yard.ha] = yard.name
+
+    def moveRemoteYard(self, old, new):
+        '''
+        Move yard at key old name to key new name but keep same index
+        '''
+        if new in self.yards:
+            emsg = "Cannot move, '{0}' already exists".format(new)
+            raise raeting.StackError(emsg)
+
+        if old not in self.yards:
+            emsg = "Cannot move '{0}' does not exist".format(old)
+            raise raeting.StackError(emsg)
+
+        yard = self.yards[old]
+        index = self.yards.keys().index(old)
+        yard.name = new
+        self.names[yard.ha] = new
+        del self.yards[old]
+        self.yards.insert(index, yard.name, yard)
+
+    def rehaRemoteYard(self, old, new):
+        '''
+        change device with old ha to new ha but keep same index
+        '''
+        if new in self.names:
+            emsg = "Cannot reha, '{0}' already exists".format(new)
+            raise raeting.StackError(emsg)
+
+        if old not in self.names:
+            emsg = "Cannot reha '{0}' does not exist".format(old)
+            raise raeting.StackError(emsg)
+
+        name = self.names[old]
+        yard = self.yards[name]
+        yard.ha = new
+        index = self.names.keys().index(old)
+        del self.names[old]
+        self.yards.insert(index, yard.ha, yard.name)
+
+    def removeRemoteYard(self, name):
+        '''
+        Remove yard at key name
+        '''
+        if name not in self.yards:
+            emsg = "Cannot remove, '{0}' does not exist".format(name)
+            raise raeting.StackError(emsg)
+
+        yard = self.yards[name]
+        del self.yards[name]
+        del self.names[yard.ha]
+
+    def serviceUxd(self):
+        '''
+        Service the UXD receive and transmit queues
+        '''
+        if self.serverUxd:
+            while True:
+                rx, ra = self.serverUxd.receive()  # if no data the duple is ('',None)
+                if not rx:  # no received data so break
+                    break
+                # triple = ( packet, source address, destination address)
+                self.uxdRxes.append((rx, ra, self.serverUxd.ha))
+
+            while self.uxdTxes:
+                tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
+                self.serverUxd.send(tx, ta)
+
+        return None
+
+    def serviceAll(self):
+        '''
+        Service or Process:
+           Uxd Socket receive
+           uxdRxes queue
+           txMsgs queue
+           uxdTxes queue
+           Uxd Socket send
+
+        '''
+        if self.serverUxd:
+            while True:
+                rx, ra = self.serverUxd.receive()  # if no data the duple is ('',None)
+                if not rx:  # no received data so break
+                    break
+                # triple = ( packet, source address, destination address)
+                self.uxdRxes.append((rx, ra, self.serverUxd.ha))
+
+            self.serviceUxdRx()
+
+            self.serviceTxMsg()
+
+            while self.uxdTxes:
+                tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
+                self.serverUxd.send(tx, ta)
+
+        return None
+
+    def txUxd(self, packed, name):
+        '''
+        Queue duple of (packed, da) on stack transmit queue
+        Where da is the ip destination address associated with
+        the device with name
+        If name is None then it will default to the first entry in .yards
+        '''
+        if name is None:
+            if not self.yards:
+                emsg = "No yard to send to"
+                raise raeting.StackError(emsg)
+            name = self.yards.values()[0].name
+        if name not in self.yards:
+            msg = "Invalid destination yard name '{0}'".format(name)
+            raise raeting.StackError(msg)
+        self.uxdTxes.append((packed, self.yards[name].ha))
+
+    def txMsg(self, msg, name=None):
+        '''
+        Append duple (msg, name) to .txMsgs deque
+        If msg is not mapping then raises exception
+        If name is None then txUxd will supply default
+        '''
+        if not isinstance(msg, Mapping):
+            emsg = "Invalid msg, not a mapping {0}".format(msg)
+            raise raeting.StackError(emsg)
+        self.txMsgs.append((msg, name))
+
+    transmit = txMsg # alias
+
+    def packUxdTx(self, body=None, name=None, kind=None):
+        '''
+        Pack serialize message body data
+        '''
+        if kind is None:
+            kind = self.PackKind
+
+        packed = ""
+        if kind not in [raeting.bodyKinds.json]:
+            emsg = "Invalid body pack kind '{0}'".format(kind)
+            raise raeting.StackError(emsg)
+
+        if kind == raeting.bodyKinds.json:
+            head = 'RAET\njson\n\n'
+            packed = "".join([head, json.dumps(body, separators=(',', ':'))])
+
+        if len(packed) > raeting.MAX_MESSAGE_SIZE:
+            emsg = "Message length of {0}, exceeds max of {1}".format(
+                     len(packed), raeting.MAX_MESSAGE_SIZE)
+            raise raeting.StackError(emsg)
+
+        return packed
+
+    def serviceTxMsg(self):
+        '''
+        Service .txMsgs queue of outgoing messages
+        '''
+        while self.txMsgs:
+            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
+            packed = self.packUxdTx(body)
+            console.verbose("{0} sending\n{1}\n".format(self.name, body))
+            self.txUxd(packed, name)
+
+    def fetchParseUxdRx(self):
+        '''
+        Fetch from UXD deque next message tuple
+        Parse raw message
+        Return body if no errors
+        Otherwise return None
+        '''
+        try:
+            raw, sa, da = self.uxdRxes.popleft()
+        except IndexError:
+            return None
+
+        console.verbose("{0} received raw message \n{1}\n".format(self.name, raw))
+
+        if sa not in self.names:
+            if not self.accept:
+                emsg = "Unaccepted source ha = {0}. Dropping packet.".format(sa)
+                print emsg
+                return None
+
+            name = yarding.Yard.nameFromHa(sa)
+            yard = yarding.Yard(stack=self,
+                                name=name,
+                                ha=sa)
+            self.addRemoteYard(yard)
+
+        return self.parseUxdRx(raw) # deserialize
+
+    def parseUxdRx(self, packed):
+        '''
+        Parse (deserialize message)
+        '''
+        body = None
+
+        if (not packed.startswith('RAET\n') or raeting.HEAD_END not in packed):
+            emsg = "Unrecognized packed body head"
+            raise raeting.StackError(emsg)
+
+        front, sep, back = packed.partition(raeting.HEAD_END)
+        code, sep, kind = front.partition('\n')
+        if kind not in [raeting.BODY_KIND_NAMES[raeting.bodyKinds.json]]:
+            emsg = "Unrecognized packed body kind '{0}'".format(kind)
+            raise raeting.StackError(emsg)
+
+        kind = raeting.BODY_KINDS[kind]
+        if kind == raeting.bodyKinds.json:
+            body = json.loads(back, object_pairs_hook=odict)
+            if not isinstance(body, Mapping):
+                emsg = "Message body not a mapping."
+                raise raeting.PacketError(emsg)
+
+        return body
+
+    def processUdpRx(self):
+        '''
+        Retrieve next message from stack receive queue if any and parse
+        '''
+        body = self.fetchParseUxdRx()
+        if not body:
+            return
+
+        console.verbose("{0} received message data\n{1}\n".format(self.name, body))
+
+        self.rxMsgs.append(body)
+
+    def serviceUxdRx(self):
+        '''
+        Process all messages in .uxdRxes deque
+        '''
+        while self.uxdRxes:
+            self.processUdpRx()
+
+
+
 

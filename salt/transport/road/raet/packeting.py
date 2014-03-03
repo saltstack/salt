@@ -89,10 +89,12 @@ class TxHead(Head):
                 emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_SIZE)
                 raise raeting.PacketError(emsg)
             data['hl'] = hl
-            pl = hl + self.packet.coat.size + data['fl']
-            if pl > raeting.MAX_PACKET_SIZE:
-                emsg = "Packet length of {0}, exceeds max of {1}".format(hl, MAX_PACKET_SIZE)
+
+            if self.packet.coat.size > raeting.MAX_MESSAGE_SIZE:
+                emsg = "Packet length of {0}, exceeds max of {1}".format(
+                         self.packet.coat.size, raeting.MAX_MESSAGE_SIZE)
                 raise raeting.PacketError(emsg)
+            pl = hl + self.packet.coat.size + data['fl']
             data['pl'] = pl
             #subsitute true length converted to 2 byte hex string
             packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
@@ -487,7 +489,7 @@ class TxPacket(Packet):
                                self.coat.packed,
                                self.foot.packed])
 
-        if self.size <= raeting.MAX_SEGMENT_SIZE:
+        if self.size <= raeting.MAX_PACKET_SIZE:
             self.sign()
         else:
             #print "****Segmentize**** packet size = {0}".format(self.size)
@@ -506,7 +508,7 @@ class TxPacket(Packet):
             extrasize = 32 # extra header size as a result of segmentation
 
         hotelsize = self.head.size + extrasize + self.foot.size
-        haulsize = raeting.MAX_SEGMENT_SIZE - hotelsize
+        haulsize = raeting.MAX_PACKET_SIZE - hotelsize
 
         segcount = (fullsize // haulsize) + (1 if fullsize % haulsize else 0)
         for i in range(segcount):

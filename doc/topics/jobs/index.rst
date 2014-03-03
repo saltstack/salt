@@ -1,14 +1,14 @@
-==============
-Job Management
-==============
+=======================
+:index:`Job Management`
+=======================
 
 .. versionadded:: 0.9.7
 
 Since Salt executes jobs running on many systems, Salt needs to be able to
 manage jobs running on many systems.
 
-The Minion proc System
-======================
+The :index:`Minion proc System`
+===============================
 
 Salt Minions maintain a *proc* directory in the Salt ``cachedir``. The *proc*
 directory maintains files named after the executed job ID. These files contain
@@ -88,8 +88,8 @@ that have already, or partially returned.
 
     # salt-run jobs.list_jobs
 
-Scheduling Jobs
-===============
+:index:`Scheduling Jobs`
+========================
 .. include:: schedule.rst
 
 .. toctree::

@@ -43,7 +43,7 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting, packeting, stacking, devicing
+from . import raeting, packeting, devicing, yarding, stacking
 
 
 class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -102,8 +102,7 @@ class CloserStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
     def action(self, **kwa):
         '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
+        Close udp socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUdp):
             self.stack.value.serverUdp.close()
@@ -251,3 +250,120 @@ class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
 
 
+class StackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    StackUxdRaet initialize and run raet uxd stack
+
+    '''
+    Ioinits = odict(
+        inode="raet.uxd.stack.",
+        stack='stack',
+        txmsgs=odict(ipath='txmsgs', ival=deque()),
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),
+        local=odict(ipath='local', ival=odict(name='minion',
+                                              yardname="",
+                                              yid=0,
+                                              ane="maple")),)
+
+    def postinitio(self):
+        '''
+        Setup stack instance
+        '''
+        name = self.local.data.name
+        yardname = self.local.data.yardname
+        yid = self.local.data.yid
+        lane = self.local.data.lane
+        txMsgs = self.txmsgs.value
+        rxMsgs = self.rxmsgs.value
+
+        self.stack.value = stacking.StackUxd(
+                                       store=self.store,
+                                       name=name,
+                                       yid=yid,
+                                       yardname=yardname,
+                                       lanename=lane,
+                                       txMsgs=txMsgs,
+                                       rxMsgs=rxMsgs, )
+
+    def action(self, **kwa):
+        '''
+        Service all the deques for the stack
+        '''
+        self.stack.value.serviceAll()
+
+class CloserStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    CloserStackUxdRaet closes stack server socket connection
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack='stack',)
+
+    def action(self, **kwa):
+        '''
+        Close uxd socket
+        '''
+        if self.stack.value and isinstance(self.stack.value, stacking.StackUxd):
+            self.stack.value.serverUxd.close()
+
+class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    AddYardStackUxdRaet closes stack server socket connection
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack='stack',
+        yard='yard',
+        local=odict(ipath='local', ival=odict(name='serf', yid=0, lane="maple")),)
+
+    def action(self, lane="lane", yid=None, **kwa):
+        '''
+        Adds new yard to stack on lane with yid
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, stacking.StackUxd):
+            yard = yarding.Yard(stack=stack, prefix=lane, yid=yid)
+            stack.addRemoteYard(yard)
+            self.yard.value = yard
+
+class TransmitStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Puts message on txMsgs deque sent to ddid
+    Message is composed fields that are parameters to action method
+    and is sent to remote device ddid
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack="stack",
+        dest="dest",)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        if kwa:
+            msg = odict(kwa)
+            stack = self.stack.value
+            if stack and isinstance(stack, stacking.StackUxd):
+                name = self.dest.value #destination yard name
+                stack.transmit(msg=msg, name=name)
+
+
+class PrinterStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
+    '''
+    Prints out messages on rxMsgs queue
+    '''
+    Ioinits = odict(
+        inode=".raet.uxd.stack.",
+        stack="stack",
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        rxMsgs = self.rxmsgs.value
+        stack = self.stack.value
+        while rxMsgs:
+            msg = rxMsgs.popleft()
+            console.terse("\n{0} Received....\n{1}\n".format(stack.name, msg))

@@ -621,30 +621,30 @@ class PostgresTestCase(TestCase):
         '''
         self.assertTrue(postgres.create_extension('foo'))
         self.assertTrue(re.match(
-            'CREATE EXTENSION IF NOT EXISTS foo ;',
+            'CREATE EXTENSION IF NOT EXISTS "foo" ;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertTrue(postgres.create_extension(
             'foo', schema='a', ext_version='b', from_version='c'))
         self.assertTrue(re.match(
-            'CREATE EXTENSION IF NOT EXISTS foo '
+            'CREATE EXTENSION IF NOT EXISTS "foo" '
             'WITH SCHEMA a VERSION b FROM c ;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertFalse(postgres.create_extension('foo'))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo SET SCHEMA b;'
-            ' ALTER EXTENSION foo UPDATE TO a;',
+            'ALTER EXTENSION "foo" SET SCHEMA b;'
+            ' ALTER EXTENSION "foo" UPDATE TO a;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo SET SCHEMA b;',
+            'ALTER EXTENSION "foo" SET SCHEMA b;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo UPDATE TO a;',
+            'ALTER EXTENSION "foo" UPDATE TO a;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertFalse(postgres.create_extension(
             'foo', ext_version='a', schema='b'))
