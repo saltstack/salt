@@ -27,11 +27,15 @@ class SaltNova(object):
         '''
         Set up nova credentials
         '''
+        if not HAS_NOVA:
+            return False
+
         self.kwargs = {
             'username': user,
             'api_key': password,
             'project_id': tenant,
             'auth_url': auth_url,
+            'region': region_name,
             'service_type': 'volume'
         }
 
