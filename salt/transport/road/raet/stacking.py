@@ -503,12 +503,12 @@ class StackUxd(object):
         if name is None:
             name = yard.name
 
-        if name in self.yards:
+        if name in self.yards or name == self.yard.name:
             emsg = "Device with name '{0}' alreadys exists".format(name)
             raise raeting.StackError(emsg)
         yard.stack = self
         self.yards[name] = yard
-        if yard.ha in self.names:
+        if yard.ha in self.names or yard.ha == self.yard.ha:
             emsg = "Yard with ha '{0}' alreadys exists".format(yard.ha)
             raise raeting.StackError(emsg)
         self.names[yard.ha] = yard.name
