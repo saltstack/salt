@@ -24,9 +24,12 @@ __func_alias__ = {
 
 
 def __virtual__():
-    if not salt.utils.which('lxc-version'):
-        return False
-    return 'lxc'
+    if salt.utils.which('lxc-autostart'):
+        return 'lxc'
+    elif salt.utils.which('lxc-version'):
+        log.warning('Support for lxc < 1.0 may be incomplete.')
+        return 'lxc'
+    return False
 
 
 def _lxc_profile(profile):
@@ -289,15 +292,18 @@ def list_():
     running = []
 
     for container in ctnrs:
-        c_infos = __salt__['cmd.run']('lxc-info -n {0}'.format(container))
-
+        c_infos = __salt__['cmd.run'](
+                'lxc-info -n {0}'.format(container)).splitlines()
+        log.debug(c_infos)
+        c_state = None
         for c_info in c_infos:
+            log.debug(c_info)
             stat = c_info.split(':')
-            if stat[0] == 'state':
+            if stat[0] in ('State', 'state'):
                 c_state = stat[1].strip()
                 break
 
-        if not len(c_state):
+        if not c_state:
             continue
         if c_state == 'STOPPED':
             stopped.append(container)
@@ -422,9 +428,14 @@ def state(name):
     if ret['retcode'] != 0:
         return False
     else:
-        lines = ret['stdout'].splitlines()
-        r = dict([l.split() for l in lines])
-        return r['state:'].lower()
+        c_infos = ret['stdout'].splitlines()
+        c_state = None
+        for c_info in c_infos:
+            stat = c_info.split(':')
+            if stat[0] in ('State', 'state'):
+                c_state = stat[1].strip().lower()
+                break
+        return c_state
 
 
 def get_parameter(name, parameter):
