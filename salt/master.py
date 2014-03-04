@@ -1238,7 +1238,7 @@ class AESFuncs(object):
                     self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
-            self.event.fire_event(load['data'], tag)
+            self.event.fire_event(load, tag)
         return True
 
     def _return(self, load):
