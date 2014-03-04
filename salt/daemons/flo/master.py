@@ -122,6 +122,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         self.stack.value.rxMsgs.clear()
         for event in self.events.value:
             self._fire_event(event)
+        self.events.value.clear()
         for ret in self.local_ret.value:
             self.stack.value.transmit(ret)
         self.local_ret.value.clear()
