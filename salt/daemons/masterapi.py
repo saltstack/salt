@@ -156,7 +156,8 @@ def fileserver_update(fileserver):
         fileserver.update()
     except Exception as exc:
         log.error(
-            'Exception {0} occurred in file server update'.format(exc)
+            'Exception {0} occurred in file server update'.format(exc),
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
 
 

@@ -786,8 +786,10 @@ def update():
                         if ref not in refs_post:
                             del repo[ref]
         except Exception as exc:
-            log.warning(
-                'Exception caught while fetching: {0}'.format(exc)
+            log.error(
+                'Exception {0} caught while fetching gitfs remote {1}'
+                .format(exc, repo_conf['uri']),
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
         try:
             os.remove(lk_fn)

@@ -286,7 +286,9 @@ def update():
             success = repo.pull()
         except Exception as exc:
             log.error(
-                'Exception caught while updating hgfs: {0}'.format(exc)
+                'Exception {0} caught while updating hgfs remote {1}'
+                .format(exc, repo_conf['uri']),
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
         else:
             newtip = repo.tip()
