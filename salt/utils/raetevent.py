@@ -45,7 +45,7 @@ class SaltEvent(object):
         self.stack.addRemoteYard(self.router_yard)
         route = {'dst': (None, self.router_yard.name, 'event_req'),
                  'src': (None, self.stack.yard.name, None)}
-        msg = {'route': route}
+        msg = {'route': route, 'load': {'yid': yid, 'dirpath': self.sock_dir}}
         self.stack.transmit(msg)
         self.stack.serviceAll()
 
