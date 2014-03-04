@@ -325,7 +325,7 @@ def _get_tree_gitpython(repo, short):
     '''
     Return a git.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    if short in envs():
+    if short == __opts__['gitfs_base'] or short in envs():
         for ref in repo.refs:
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
@@ -350,7 +350,7 @@ def _get_tree_pygit2(repo, short):
     '''
     Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    if short in envs():
+    if short == __opts__['gitfs_base'] or short in envs():
         for ref in repo.listall_references():
             _, rtype, rspec = ref.split('/', 2)
             if rtype in ('remotes', 'tags'):
@@ -378,7 +378,7 @@ def _get_tree_dulwich(repo, short):
     Return a dulwich.objects.Tree object if the branch/tag/SHA is found,
     otherwise None
     '''
-    if short in envs():
+    if short == __opts__['gitfs_base'] or short in envs():
         refs = repo.get_refs()
         # Sorting ensures we check heads (branches) before tags
         for ref in sorted(_dulwich_env_refs(refs)):
