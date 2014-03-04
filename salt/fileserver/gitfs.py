@@ -57,7 +57,6 @@ import os
 import re
 import shutil
 import subprocess
-import traceback
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
@@ -786,10 +785,11 @@ def update():
                     for ref in repo.get_refs():
                         if ref not in refs_post:
                             del repo[ref]
-        except Exception:
+        except Exception as exc:
             log.error(
-                'Exception caught while fetching:\n{0}'
-                .format(traceback.format_exc())
+                'Exception {0} caught while fetching gitfs remote {1}'
+                .format(exc, repo_conf['uri']),
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
         try:
             os.remove(lk_fn)
