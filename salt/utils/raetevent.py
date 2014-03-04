@@ -39,7 +39,7 @@ class SaltEvent(object):
                 lanename=self.node,
                 dirpath=self.sock_dir)
         self.router_yard = yarding.Yard(
-                prefix='com',
+                prefix='master',
                 yid=0,
                 dirpath=self.sock_dir)
         self.stack.addRemoteYard(self.router_yard)
