@@ -478,5 +478,5 @@ def testStackUxd():
 
 
 if __name__ == "__main__":
-    #testStackUdp()
+    testStackUdp()
     testStackUxd()
