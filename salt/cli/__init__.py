@@ -53,7 +53,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.setup_logfile_logger()
 
         try:
-            local = salt.client.LocalClient(self.get_config_file_path())
+            local = salt.client.get_local_client(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
