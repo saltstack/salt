@@ -41,7 +41,7 @@ class SaltEvent(object):
         self.router_yard = yarding.Yard(
                 prefix='com',
                 yid=0,
-                dirpath=self.opts['sock_dir'])
+                dirpath=self.sock_dir)
         self.stack.addRemoteYard(self.router_yard)
         route = {'dst': (None, self.router_yard.name, 'event_req'),
                  'src': (None, self.stack.yard.name, None)}
