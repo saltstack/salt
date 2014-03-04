@@ -30,6 +30,7 @@ import hashlib
 import logging
 import os
 import shutil
+import traceback
 from datetime import datetime
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
@@ -284,9 +285,10 @@ def update():
         curtip = repo.tip()
         try:
             success = repo.pull()
-        except Exception as exc:
+        except Exception:
             log.error(
-                'Exception caught while updating hgfs: {0}'.format(exc)
+                'Exception caught while updating hgfs:\n{0}'
+                .format(traceback.format_exc())
             )
         else:
             newtip = repo.tip()
