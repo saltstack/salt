@@ -108,6 +108,11 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             elif msg['route']['dst'][2] == 'event_req':
                 # Register the event interface
                 self._register_event_yard(msg)
+            elif msg['route']['dst'][2] == 'event_fire':
+                # Register the event interface
+                self.events.value.append(
+                        {'tag': msg['tag'],
+                         'data': msg['data']})
         except Exception:
             return
 
