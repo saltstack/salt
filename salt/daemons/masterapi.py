@@ -38,6 +38,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import traceback
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
@@ -154,9 +155,10 @@ def fileserver_update(fileserver):
                       'able to serve files to minions')
             raise SaltMasterError('No fileserver backends available')
         fileserver.update()
-    except Exception as exc:
+    except Exception:
         log.error(
-            'Exception {0} occurred in file server update'.format(exc)
+            'Exception occurred in file server update:\n{0}'
+            .format(traceback.format_exc())
         )
 
 
