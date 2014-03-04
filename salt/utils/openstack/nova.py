@@ -20,6 +20,9 @@ import salt.utils
 # Get logging started
 log = logging.getLogger(__name__)
 
+def check_nova():
+    return HAS_NOVA
+
 # Function alias to not shadow built-ins
 
 class SaltNova(object):
