@@ -498,10 +498,7 @@ class MultiMinion(object):
                     minion['minion'].module_refresh()
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
-                try:
-                    minion['generator'].next()
-                except StopIteration:
-                    continue
+                minion['generator'].next()
 
 
 class Minion(object):
@@ -1071,11 +1068,10 @@ class Minion(object):
         self._running = False
         exit(0)
 
-    # Main Minion Tune In
-    def tune_in(self):
+    def _pre_tune(self):
         '''
-        Lock onto the publisher. This is the main event loop for the minion
-        :rtype : None
+        Set the minion running flag and issue the appropriate warnings if
+        the minion cannot be started or is already running
         '''
         if self._running is None:
             self._running = True
@@ -1109,6 +1105,16 @@ class Minion(object):
                 ),
                 exc_info=err
             )
+
+
+    # Main Minion Tune In
+    def tune_in(self):
+        '''
+        Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
+        '''
+
+        self._pre_tune()
 
         # Properly exit if a SIGTERM is signalled
         signal.signal(signal.SIGTERM, self.clean_die)
@@ -1363,6 +1369,7 @@ class Minion(object):
         management of the event bus assuming that these are handled outside
         the tune_in sequence
         '''
+        self._pre_tune()
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
