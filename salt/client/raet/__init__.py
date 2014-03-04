@@ -13,6 +13,7 @@ from salt.transport.road.raet import stacking
 from salt.transport.road.raet import yarding
 import salt.config
 import salt.client
+import salt.utils
 import salt.syspaths as syspaths
 
 log = logging.getLogger(__name__)
@@ -48,10 +49,10 @@ class LocalClient(salt.client.LocalClient):
                 jid='',
                 timeout=5,
                 **kwargs)
-        stack = stacking.StackUxd(lanename='com', dirpath=self.opts['sock_dir'])
+        yid = salt.utils.gen_jid()
+        stack = stacking.StackUxd(yid=yid, lanename='com', dirpath=self.opts['sock_dir'])
         router_yard = yarding.Yard(
-                name='router',
-                lanename='com',
+                prefix='com',
                 yid=0,
                 dirpath=self.opts['sock_dir'])
         stack.addRemoteYard(router_yard)
@@ -60,7 +61,7 @@ class LocalClient(salt.client.LocalClient):
         stack.transmit(msg)
         stack.serviceAll()
         while True:
-            time.sleep(0.01)
+            time.sleep(0.001)
             stack.serviceAll()
             for msg in stack.rxMsgs:
                 return msg
