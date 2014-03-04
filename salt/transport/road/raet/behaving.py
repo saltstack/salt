@@ -262,8 +262,7 @@ class StackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),
         local=odict(ipath='local', ival=odict(name='minion',
                                               yardname="",
-                                              yid=0,
-                                              ane="maple")),)
+                                              lane="maple")),)
 
     def postinitio(self):
         '''
@@ -271,7 +270,6 @@ class StackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         '''
         name = self.local.data.name
         yardname = self.local.data.yardname
-        yid = self.local.data.yid
         lane = self.local.data.lane
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
@@ -279,7 +277,6 @@ class StackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         self.stack.value = stacking.StackUxd(
                                        store=self.store,
                                        name=name,
-                                       yid=yid,
                                        yardname=yardname,
                                        lanename=lane,
                                        txMsgs=txMsgs,
@@ -314,15 +311,15 @@ class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         inode=".raet.uxd.stack.",
         stack='stack',
         yard='yard',
-        local=odict(ipath='local', ival=odict(name='serf', yid=0, lane="maple")),)
+        local=odict(ipath='local', ival=odict(name=None, lane="maple")),)
 
-    def action(self, lane="lane", yid=None, **kwa):
+    def action(self, lane="lane", name=None, **kwa):
         '''
         Adds new yard to stack on lane with yid
         '''
         stack = self.stack.value
         if stack and isinstance(stack, stacking.StackUxd):
-            yard = yarding.Yard(stack=stack, prefix=lane, yid=yid)
+            yard = yarding.Yard(stack=stack, prefix=lane, name=name)
             stack.addRemoteYard(yard)
             self.yard.value = yard
 

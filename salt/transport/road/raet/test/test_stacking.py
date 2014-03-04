@@ -303,7 +303,7 @@ def testStackUxd():
 
     #serf stack
     #yard1 = yarding.Yard(name='serf', yid=1)
-    stack1 = stacking.StackUxd(yid=1)
+    stack1 = stacking.StackUxd()
 
     stack0.addRemoteYard(stack1.yard)
     stack1.addRemoteYard(stack0.yard)
@@ -399,10 +399,12 @@ def testStackUxd():
 
     estate = 'minion1'
     #lord stack yard0
-    stack0 = stacking.StackUxd(name='lord', lanename='cherry', yid=0)
+    stack0 = stacking.StackUxd(name='lord', lanename='cherry')
 
     #serf stack yard1
-    stack1 = stacking.StackUxd(name='serf', lanename='cherry', yid=1)
+    stack1 = stacking.StackUxd(name='serf', lanename='cherry')
+
+    print "Yid", yarding.Yard.Yid
 
     print "\n********* Attempt Auto Accept ************"
     #stack0.addRemoteYard(stack1.yard)
