@@ -14,9 +14,8 @@ framer masterudpstack be active first start
 
 framer uxdrouter be active first start
    frame start
-      do router uxd
-      #timeout 20
+      do raet udp stack printer per inode ".raet.udp.stack."
+      timeout 20
 
-framer localcmd be active first start
-   frame start
-      do cmd local
+   frame abort
+      bid stop all

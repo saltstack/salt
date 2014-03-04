@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+'''
+Test basic uxd stacking and yarding with multiprocesses
+'''
 import multiprocessing
 import time
 
@@ -5,6 +9,8 @@ from salt.transport.road.raet import stacking
 from salt.transport.road.raet import yarding
 
 ESTATE = 'minion1'
+
+
 def fudal():
     '''
     Make a single process raet uxd stack
@@ -29,6 +35,7 @@ def fudal():
     lord_stack.serviceAll()
     #print lord_stack.rxMsgs
 
+
 def lord(serfs=5):
     '''
     Make a lord that can spawn serfs
@@ -50,6 +57,7 @@ def lord(serfs=5):
         for msg in lord_stack.rxMsgs:
             print msg
         time.sleep(1)
+
 
 def serf(lord_name, lord_yid, id_, dirpath):
     '''

@@ -78,7 +78,7 @@ class Shell(object):
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
         known_hosts = self.opts.get('known_hosts_file')
-        if known_hosts:
+        if known_hosts and os.path.isfile(known_hosts):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
             options.append('Port={0}'.format(self.port))

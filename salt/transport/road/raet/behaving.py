@@ -117,8 +117,7 @@ class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
     def action(self, **kwa):
         '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
+
         '''
         stack = self.stack.value
         if stack and isinstance(stack, stacking.StackUdp):
