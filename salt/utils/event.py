@@ -100,6 +100,17 @@ TAGS = {
 }
 
 
+def get_event(node, sock_dir=None, transport='zeromq', **kwargs):
+    '''
+    Return an event object suitible for the named transport
+    '''
+    if transport == 'zeromq':
+        return SaltEvent(node, sock_dir, **kwargs)
+    elif transport == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.SaltEvent(node, sock_dir, **kwargs)
+
+
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
