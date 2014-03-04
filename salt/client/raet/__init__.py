@@ -56,7 +56,8 @@ class LocalClient(salt.client.LocalClient):
                 yid=0,
                 dirpath=self.opts['sock_dir'])
         stack.addRemoteYard(router_yard)
-        route = {'dst': (None, router_yard.name, 'local_cmd')}
+        route = {'dst': (None, router_yard.name, 'local_cmd'),
+                 'src': (None, stack.yard.name, None)}
         msg = {'route': route, 'load': payload_kwargs}
         stack.transmit(msg)
         stack.serviceAll()
@@ -64,4 +65,5 @@ class LocalClient(salt.client.LocalClient):
             time.sleep(0.001)
             stack.serviceAll()
             for msg in stack.rxMsgs:
+                print msg
                 return msg
