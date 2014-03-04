@@ -158,6 +158,7 @@ all interfaces are ignored unless specified.
 # Import python libs
 import difflib
 import salt.utils
+import salt.utils.network
 from salt.loader import _create_loader
 
 # Define the module's virtual name
@@ -280,10 +281,23 @@ def managed(name, type, enabled=True, **kwargs):
 
     # Bring up/shutdown interface
     try:
+        # Get Interface current status
+        interface_status = salt.utils.network.interfaces()[name].get('up')
         if enabled:
-            __salt__['ip.up'](name, type)
+            if interface_status:
+                if ret['changes']:
+                    # Interface should restart to validate if it's up
+                    __salt__['ip.down'](name, type)
+                    __salt__['ip.up'](name, type)
+                    ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
+                    return ret
+            else:
+                __salt__['ip.up'](name, type)
+                ret['changes']['status'] = 'Interface {0} is up'.format(name)
         else:
-            __salt__['ip.down'](name, type)
+            if interface_status:
+                __salt__['ip.down'](name, type)
+                ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
