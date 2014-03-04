@@ -656,7 +656,7 @@ def secgroup_list(profile=None):
 
 def server_by_name(name, profile=None):
     '''
-    Return information about a server 
+    Return information about a server
 
     name
         Server Name
