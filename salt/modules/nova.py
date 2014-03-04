@@ -38,11 +38,9 @@ Module for handling OpenStack Nova calls
 '''
 
 # Import python libs
-import time
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.openstack.nova as suon
 
 
