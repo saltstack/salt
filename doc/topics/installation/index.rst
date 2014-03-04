@@ -17,7 +17,7 @@ On most distributions, you can set up a **Salt Minion** with the bootstrap scrip
 
     curl -L http://bootstrap.saltstack.org | sudo sh
 
-or, to connect immediately to a running Salt Master: 
+or, to connect immediately to a running Salt Master:
 
 .. code-block:: bash
 
@@ -99,3 +99,15 @@ Optional Dependencies
 .. _`mako`: http://www.makotemplates.org/
 .. _`Cython`: http://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
+
+
+Upgrading Salt
+--------------
+
+When upgrading Salt, the master(s) should always be upgraded first.  Backwards
+compatibility for minions running newer versions of salt than their masters is
+not guaranteed.
+
+Whenever possible, backwards compatibility between new masters
+and old minions will be preserved.  Generally, the only exception to this
+policy is in case of a security vulnerability.
