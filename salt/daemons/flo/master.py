@@ -78,14 +78,10 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         register an incoming event request with the requesting yard id
         '''
-        try:
-            ev_yard = yarding.Yard(
-                    yid=msg['load']['yid'],
-                    prefix='master',
-                    dirpath=msg['load']['dirpath'])
-        except Exception:
-            return
-        self.stack.value.addRemoteYard(ev_yard)
+        ev_yard = yarding.Yard(
+                yid=msg['load']['yid'],
+                prefix='master',
+                dirpath=msg['load']['dirpath'])
         self.event_yards.value.add(ev_yard.name)
 
     def _fire_event(self, event):
