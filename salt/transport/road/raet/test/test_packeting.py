@@ -9,7 +9,7 @@ Tests to try out packeting. Potentially ephemeral
 from ioflo.base.odicting import odict
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                      devicing, transacting, stacking)
+                                      estating, transacting, stacking)
 
 
 def test():
@@ -58,33 +58,33 @@ def test():
     minionPubKeyHex = privateer.pubhex
 
     #master stack
-    device = devicing.LocalDevice(did=1,
+    estate = estating.LocalEstate(eid=1,
                                   sigkey=masterSignKeyHex,
                                   prikey=masterPriKeyHex)
-    stack0 = stacking.StackUdp(device=device)
+    stack0 = stacking.StackUdp(estate=estate)
 
-    remote1 = devicing.RemoteDevice(  did=2,
+    remote1 = estating.RemoteEstate(  eid=2,
                                      verkey=minionVerKeyHex,
                                      pubkey=minionPubKeyHex,)
-    stack0.addRemoteDevice(remote1)
+    stack0.addRemoteEstate(remote1)
 
     #minion stack
-    device = devicing.LocalDevice(   did=2,
+    estate = estating.LocalEstate(   eid=2,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(device=device)
+    stack1 = stacking.StackUdp(estate=estate)
 
-    remote0 = devicing.RemoteDevice(  did=1,
+    remote0 = estating.RemoteEstate(  eid=1,
                                      ha=('127.0.0.1', raeting.RAET_PORT),
                                      verkey=masterVerKeyHex,
                                      pubkey=masterPubKeyHex,)
-    stack1.addRemoteDevice(remote0)
+    stack1.addRemoteEstate(remote0)
 
     remote0.publee = nacling.Publican(key=remote1.privee.pubhex)
     remote1.publee = nacling.Publican(key=remote0.privee.pubhex)
 
-    data.update(sd=1, dd=2, bk=raeting.bodyKinds.raw, fk=raeting.footKinds.nacl)
+    data.update(se=1, de=2, bk=raeting.bodyKinds.raw, fk=raeting.footKinds.nacl)
     packet0 = packeting.TxPacket(stack=stack0, embody=stuff, data=data, )
     packet0.pack()
     print packet0.packed
@@ -121,7 +121,7 @@ def test():
 
     body = odict(stuff=stuff)
     print body
-    data.update(sd=1, dd=2, bk=raeting.bodyKinds.json, fk=raeting.footKinds.nacl)
+    data.update(se=1, de=2, bk=raeting.bodyKinds.json, fk=raeting.footKinds.nacl)
     packet0 = packeting.TxPacket(stack=stack0, embody=body, data=data, )
     packet0.pack()
     print packet0.packed
@@ -149,7 +149,7 @@ def test():
 
     body = odict(stuff=stuff)
     print body
-    data.update(sd=1, dd=2,
+    data.update(se=1, de=2,
                 bk=raeting.bodyKinds.json,
                 ck=raeting.coatKinds.nacl,
                 fk=raeting.footKinds.nacl)

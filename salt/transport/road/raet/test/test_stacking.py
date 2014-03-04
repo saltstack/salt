@@ -11,17 +11,17 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from salt.transport.road.raet import (raeting, nacling, packeting,
-                                     devicing, yarding, transacting, stacking)
+                                     estating, yarding, transacting, stacking)
 
 
 def testStackUdp():
     '''
     initially
-    master on port 7530 with did of 1
-    minion on port 7531 with did of 0
+    master on port 7530 with eid of 1
+    minion on port 7531 with eid of 0
     eventually
-    master did of 1
-    minion did of 2
+    master eid of 1
+    minion eid of 2
     '''
     console.reinit(verbosity=console.Wordage.concise)
 
@@ -36,19 +36,19 @@ def testStackUdp():
     minionPriKeyHex = privateer.keyhex
 
     #master stack
-    device = devicing.LocalDevice(   did=1,
+    estate = estating.LocalEstate(   eid=1,
                                      name='master',
                                      sigkey=masterSignKeyHex,
                                      prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(device=device)
+    stack0 = stacking.StackUdp(estate=estate)
 
     #minion stack
-    device = devicing.LocalDevice(   did=0,
+    estate = estating.LocalEstate(   eid=0,
                                      name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(device=device)
+    stack1 = stacking.StackUdp(estate=estate)
 
 
     print "\n********* Join Transaction **********"
@@ -70,19 +70,19 @@ def testStackUdp():
     stack1.serviceUdpRx()
 
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
-    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    for device in stack0.devices.values():
-        print "Remote Device {0} joined= {1}".format(device.did, device.joined)
+    for estate in stack0.estates.values():
+        print "Remote Estate {0} joined= {1}".format(estate.eid, estate.joined)
 
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
-    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    for device in stack1.devices.values():
-            print "Remote Device {0} joined= {1}".format(device.did, device.joined)
+    for estate in stack1.estates.values():
+            print "Remote Estate {0} joined= {1}".format(estate.eid, estate.joined)
 
 
     print "\n********* Allow Transaction **********"
@@ -116,24 +116,24 @@ def testStackUdp():
 
     stack1.serviceUdpRx()
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
-    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
-    for device in stack0.devices.values():
-        print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+    for estate in stack0.estates.values():
+        print "Remote Estate {0} allowed= {1}".format(estate.eid, estate.allowed)
 
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
-    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
-    for device in stack1.devices.values():
-            print "Remote Device {0} allowed= {1}".format(device.did, device.allowed)
+    for estate in stack1.estates.values():
+            print "Remote Estate {0} allowed= {1}".format(estate.eid, estate.allowed)
 
 
     print "\n********* Message Transaction Minion to Master **********"
     body = odict(what="This is a message to the master. How are you", extra="And some more.")
-    stack1.message(body=body, ddid=1)
+    stack1.message(body=body, deid=1)
 
     timer.restart()
     while not timer.expired:
@@ -149,21 +149,21 @@ def testStackUdp():
 
     stack1.serviceUdpRx()
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
-    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
-    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
     print "\n********* Message Transaction Master to Minion **********"
     body = odict(what="This is a message to the minion. Get to Work", extra="Fix the fence.")
-    stack0.message(body=body, ddid=2)
+    stack0.message(body=body, deid=2)
 
     timer.restart()
     while not timer.expired:
@@ -179,15 +179,15 @@ def testStackUdp():
 
     stack0.serviceUdpRx()
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
-    print "{0} dids=\n{1}".format(stack0.name, stack0.dids)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
+    print "{0} dids=\n{1}".format(stack0.name, stack0.eids)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages =\n{1}".format(stack0.name, stack0.rxMsgs)
 
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
-    print "{0} dids=\n{1}".format(stack1.name, stack1.dids)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
+    print "{0} dids=\n{1}".format(stack1.name, stack1.eids)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages =\n{1}".format(stack1.name, stack1.rxMsgs)
 
@@ -232,15 +232,15 @@ def testStackUdp():
     stack0.serviceUdpRx()
 
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages".format(stack0.name)
     for msg in stack0.rxMsgs:
         print msg
     print
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:
@@ -274,15 +274,15 @@ def testStackUdp():
         stack0.serviceAll()
 
 
-    print "{0} did={1}".format(stack0.name, stack0.device.did)
-    print "{0} devices=\n{1}".format(stack0.name, stack0.devices)
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
     print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
     print "{0} Received Messages".format(stack0.name)
     for msg in stack0.rxMsgs:
         print msg
     print
-    print "{0} did={1}".format(stack1.name, stack1.device.did)
-    print "{0} devices=\n{1}".format(stack1.name, stack1.devices)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
     print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:
@@ -303,7 +303,7 @@ def testStackUxd():
 
     #serf stack
     #yard1 = yarding.Yard(name='serf', yid=1)
-    stack1 = stacking.StackUxd(yid=1)
+    stack1 = stacking.StackUxd()
 
     stack0.addRemoteYard(stack1.yard)
     stack1.addRemoteYard(stack0.yard)
@@ -399,10 +399,12 @@ def testStackUxd():
 
     estate = 'minion1'
     #lord stack yard0
-    stack0 = stacking.StackUxd(name='lord', lanename='cherry', yid=0)
+    stack0 = stacking.StackUxd(name='lord', lanename='cherry')
 
     #serf stack yard1
-    stack1 = stacking.StackUxd(name='serf', lanename='cherry', yid=1)
+    stack1 = stacking.StackUxd(name='serf', lanename='cherry')
+
+    print "Yid", yarding.Yard.Yid
 
     print "\n********* Attempt Auto Accept ************"
     #stack0.addRemoteYard(stack1.yard)
@@ -476,5 +478,5 @@ def testStackUxd():
 
 
 if __name__ == "__main__":
-    #testStackUdp()
+    testStackUdp()
     testStackUxd()

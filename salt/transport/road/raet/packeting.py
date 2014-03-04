@@ -443,22 +443,28 @@ class TxPacket(Packet):
     @property
     def index(self):
         '''
-        Property is transaction tuple (rf, ld, rd, si, ti, bf,)
+        Property is transaction tuple (rf, le, re, si, ti, bf,)
         '''
         data = self.data
-        ld = data['sd']
-        if ld == 0:
-            ld = (data['sh'], data['sp'])
-        rd = data['dd']
-        if rd == 0:
-            rd = (data['dh'], data['dp'])
-        return ((data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
+        le = data['se']
+        if le == 0:
+            host = data['sh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            le = (host, data['sp'])
+        re = data['de']
+        if re == 0:
+            host = data['dh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            re = (host, data['dp'])
+        return ((data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
     def signature(self, msg):
         '''
         Return signature resulting from signing msg
         '''
-        return (self.stack.device.signer.signature(msg))
+        return (self.stack.estate.signer.signature(msg))
 
     def sign(self):
         '''
@@ -474,7 +480,7 @@ class TxPacket(Packet):
         Return (cipher, nonce) duple resulting from encrypting message
         with short term keys
         '''
-        remote = self.stack.devices[self.data['dd']]
+        remote = self.stack.estates[self.data['de']]
         return (remote.privee.encrypt(msg, remote.publee.key))
 
     def pack(self):
@@ -549,29 +555,35 @@ class RxPacket(Packet):
     @property
     def index(self):
         '''
-        Property is transaction tuple (rf, ld, rd, si, ti, bf,)
+        Property is transaction tuple (rf, le, re, si, ti, bf,)
         '''
         data = self.data
-        ld = data['dd']
-        if ld == 0:
-            ld = (data['dh'], data['dp'])
-        rd = data['sd']
-        if rd == 0:
-            rd = (data['sh'], data['sp'])
-        return ((not data['cf'], ld, rd, data['si'], data['ti'], data['bf']))
+        le = data['de']
+        if le == 0:
+            host = data['dh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            le = (host, data['dp'])
+        re = data['se']
+        if re == 0:
+            host = data['sh']
+            if host == '0.0.0.0':
+                host = '127.0.0.1'
+            re = (host, data['sp'])
+        return ((not data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
     def verify(self, signature, msg):
         '''
         Return result of verifying msg with signature
         '''
-        return (self.stack.devices[self.data['sd']].verfer.verify(signature, msg))
+        return (self.stack.estates[self.data['se']].verfer.verify(signature, msg))
 
     def decrypt(self, cipher, nonce):
         '''
         Return msg resulting from decrypting cipher and nonce
         with short term keys
         '''
-        remote = self.stack.devices[self.data['sd']]
+        remote = self.stack.estates[self.data['se']]
         return (remote.privee.decrypt(cipher, nonce, remote.publee.key))
 
     def parse(self, packed=None):

@@ -41,8 +41,8 @@ header data =
     hk: Header kind   (HeadKind) Default 0
     hl: Header length (HeadLen) Default 0
 
-    sd: Source Device ID (SDID)
-    dd: Destination Device ID (DDID)
+    se: Source Estate ID (SEID)
+    de: Destination Estate ID (DEID)
     cf: Correspondent Flag (CrdtFlag) Default 0
     bf: BroadCast Flag (BcstFlag)  Default 0
 
@@ -195,8 +195,8 @@ PACKET_DEFAULTS = odict([
                             ('pl', 0),
                             ('hk', 0),
                             ('hl', 0),
-                            ('sd', 0),
-                            ('dd', 0),
+                            ('se', 0),
+                            ('de', 0),
                             ('cf', False),
                             ('bf', False),
                             ('si', 0),
@@ -219,12 +219,12 @@ PACKET_DEFAULTS = odict([
 
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
-                 'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
+                 'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
                  'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
                  'bk', 'ck', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
-               'sd', 'dd', 'cf', 'bf', 'si', 'ti', 'tk',
+               'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
                'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
@@ -237,7 +237,7 @@ class RaetError(Exception):
     Exceptions in RAET Protocol processing
 
        usage:
-           emsg = "Invalid device id '{0}'".format(did)
+           emsg = "Invalid estate id '{0}'".format(eid)
            raise raeting.RaetError(emsg)
     '''
     def __init__(self, message=None):
@@ -253,18 +253,18 @@ class StackError(RaetError):
        Exceptions in RAET stack processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.StackError(emsg)
     '''
     pass
 
-class DeviceError(RaetError):
+class EstateError(RaetError):
     '''
-       Exceptions in RAET device processing
+       Exceptions in RAET estate processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
-            raise raeting.DeviceError(emsg)
+            emsg = "Invalid estate id '{0}'".format(eid)
+            raise raeting.EstateError(emsg)
     '''
     pass
 
@@ -273,7 +273,7 @@ class TransactionError(RaetError):
        Exceptions in RAET transaction processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.TransactionError(emsg)
     '''
     pass
@@ -283,7 +283,7 @@ class PacketError(RaetError):
        Exceptions in RAET packet processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.PacketError(emsg)
     '''
     pass
@@ -293,17 +293,17 @@ class KeepError(RaetError):
        Exceptions in RAET keep processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.KeepError(emsg)
     '''
     pass
 
 class YardError(RaetError):
     '''
-       Exceptions in RAET device processing
+       Exceptions in RAET estate processing
 
        Usage:
-            emsg = "Invalid device id '{0}'".format(did)
+            emsg = "Invalid estate id '{0}'".format(eid)
             raise raeting.YardError(emsg)
     '''
     pass

@@ -21,7 +21,7 @@ from ioflo.base import aiding
 from . import raeting
 from . import nacling
 from . import packeting
-from . import devicing
+from . import estating
 from . import transacting
 
 from ioflo.base.consoling import getConsole
@@ -30,12 +30,12 @@ console = getConsole()
 
 class Keep(object):
     '''
-    RAET protocol base class for device data persistence
+    RAET protocol base class for estate data persistence
     '''
-    def __init__(self, dirpath='', prefix='device', ext='json', **kwa):
+    def __init__(self, dirpath='', prefix='estate', ext='json', **kwa):
         '''
         Setup Keep instance
-        Create directories for saving associated device data files
+        Create directories for saving associated estate data files
             keep/
                 local/
                 remote/
@@ -90,13 +90,13 @@ class Keep(object):
 
     def dumpLocalData(self, data):
         '''
-        Dump the data from the local device
+        Dump the data from the local estate
         '''
         self.dump(data, self.localfilepath)
 
     def loadLocalData(self):
         '''
-        Load and Return the data from the local device
+        Load and Return the data from the local estate
         '''
         if not os.path.exists(self.localfilepath):
             return None
@@ -104,14 +104,14 @@ class Keep(object):
 
     def removeLocalData(self):
         '''
-        Load and Return the data from the local device
+        Load and Return the data from the local estate
         '''
         if os.path.exists(self.localfilepath):
             os.remove(self.localfilepath)
 
     def dumpRemoteData(self, data, uid):
         '''
-        Dump the data from the remote device to file named with uid
+        Dump the data from the remote estate to file named with uid
         '''
         filepath = os.path.join(self.remotedirpath,
                 "{0}.{1}.{2}".format(self.prefix, uid, self.ext))
@@ -120,14 +120,14 @@ class Keep(object):
 
     def dumpAllRemoteData(self, datadict):
         '''
-        Dump the data for each remote device data in the datadict keyed by uid
+        Dump the data for each remote estate data in the datadict keyed by uid
         '''
         for uid, data in datadict.items():
             self.dumpRemoteData(data, uid)
 
     def loadRemoteData(self, uid):
         '''
-        Load and Return the data from the remote device file named with uid
+        Load and Return the data from the remote estate file named with uid
         '''
         filepath = os.path.join(self.remotedirpath,
                         "{0}.{1}.{2}".format(self.prefix, uid, self.ext))
@@ -137,7 +137,7 @@ class Keep(object):
 
     def removeRemoteData(self, uid):
         '''
-        Load and Return the data from the remote device file named with uid
+        Load and Return the data from the remote estate file named with uid
         '''
         filepath = os.path.join(self.remotedirpath,
                         "{0}.{1}.{2}".format(self.prefix, uid, self.ext))
@@ -146,7 +146,7 @@ class Keep(object):
 
     def loadAllRemoteData(self):
         '''
-        Load and Return the data from the all the remote device files
+        Load and Return the data from the all the remote estate files
         '''
         data = odict()
         for filename in os.listdir(self.remotedirpath):
@@ -162,110 +162,110 @@ class Keep(object):
 
     def removeAllRemoteData(self):
         '''
-        Remove all the remote device files
+        Remove all the remote estate files
         '''
         for filename in os.listdir(self.remotedirpath):
             root, ext = os.path.splitext(filename)
             if ext != '.json' or not root.startswith(self.prefix):
                 continue
-            prefix, did = os.path.splitext(root)
-            did = did.lstrip('.')
-            if not did:
+            prefix, eid = os.path.splitext(root)
+            eid = eid.lstrip('.')
+            if not eid:
                 continue
             filepath = os.path.join(self.remotedirpath, filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
 
 
-    def dumpAllRemoteDevices(self, devices):
+    def dumpAllRemoteEstates(self, estates):
         '''
-        Dump the data from the remote device
+        Dump the data from the remote estate
         '''
-        for device in devices:
-            self.dumpRemoteDevice(device)
+        for estate in estates:
+            self.dumpRemoteEstate(estate)
 
-    def dumpLocalDevice(self, device):
+    def dumpLocalEstate(self, estate):
         '''
-        Dump the key data from the local device
+        Dump the key data from the local estate
         Override this in sub class to change data
         '''
         data = odict(
-                did=device.did,
-                name=device.name,)
+                eid=estate.eid,
+                name=estate.name,)
 
         self.dumpLocalData(data)
 
-    def dumpRemoteDevice(self, device):
+    def dumpRemoteEstate(self, estate):
         '''
-        Dump the data from the remote device
+        Dump the data from the remote estate
         Override this in sub class to change data and uid
         '''
-        uid = device.did
+        uid = estate.eid
         data = odict(
-                did=device.did,
-                name=device.name,)
+                eid=estate.eid,
+                name=estate.name,)
 
         self.dumpRemoteData(data, uid)
 
-    def loadRemoteDevice(self, device):
+    def loadRemoteEstate(self, estate):
         '''
-        Load and Return the data from the remote device file
+        Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = device.did
+        uid = estate.eid
         return (self.loadRemoteData(uid))
 
-    def removeRemoteDevice(self, device):
+    def removeRemoteEstate(self, estate):
         '''
-        Load and Return the data from the remote device file
+        Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = device.did
+        uid = estate.eid
         self.removeRemoteData(uid)
 
 class RoadKeep(Keep):
     '''
-    RAET protocol device road (channel) data persistence
+    RAET protocol estate road (channel) data persistence
     '''
-    def __init__(self, prefix='device', **kwa):
+    def __init__(self, prefix='estate', **kwa):
         '''
         Setup RoadKeep instance
         '''
         super(RoadKeep, self).__init__(prefix=prefix, **kwa)
 
-    def dumpLocalDevice(self, device):
+    def dumpLocalEstate(self, estate):
         '''
-        Dump the data from the local device
+        Dump the data from the local estate
         '''
         data = odict([
-                ('did', device.did),
-                ('name', device.name),
-                ('host', device.host),
-                ('port', device.port),
-                ('sid', device.sid)
+                ('eid', estate.eid),
+                ('name', estate.name),
+                ('host', estate.host),
+                ('port', estate.port),
+                ('sid', estate.sid)
                 ])
 
         self.dumpLocalData(data)
 
-    def dumpRemoteDevice(self, device):
+    def dumpRemoteEstate(self, estate):
         '''
-        Dump the data from the remote device
+        Dump the data from the remote estate
         '''
-        uid = device.did
+        uid = estate.eid
         data = odict([
-                ('did', device.did),
-                ('name', device.name),
-                ('host', device.host),
-                ('port', device.port),
-                ('sid', device.sid),
-                ('rsid', device.rsid),
+                ('eid', estate.eid),
+                ('name', estate.name),
+                ('host', estate.host),
+                ('port', estate.port),
+                ('sid', estate.sid),
+                ('rsid', estate.rsid),
                 ])
 
         self.dumpRemoteData(data, uid)
 
 class SafeKeep(Keep):
     '''
-    RAET protocol device safe (key) data persistence and status
+    RAET protocol estate safe (key) data persistence and status
     '''
     def __init__(self, prefix='key', **kwa):
         '''
@@ -282,52 +282,52 @@ class SafeKeep(Keep):
             os.makedirs(self.rejecteddirpath)
 
 
-    def dumpLocalDevice(self, device):
+    def dumpLocalEstate(self, estate):
         '''
-        Dump the key data from the local device
+        Dump the key data from the local estate
         '''
         data = odict([
-                ('did', device.did),
-                ('name', device.name),
-                ('sighex', device.signer.keyhex),
-                ('prihex', device.priver.keyhex),
+                ('eid', estate.eid),
+                ('name', estate.name),
+                ('sighex', estate.signer.keyhex),
+                ('prihex', estate.priver.keyhex),
                 ])
 
         self.dumpLocalData(data)
 
-    def dumpRemoteDevice(self, device):
+    def dumpRemoteEstate(self, estate):
         '''
-        Dump the data from the remote device
+        Dump the data from the remote estate
         '''
-        uid = device.name
+        uid = estate.name
         data = odict([
-                ('did', device.did),
-                ('name', device.name),
-                ('verhex', device.verfer.keyhex),
-                ('pubhex', device.pubber.keyhex),
+                ('eid', estate.eid),
+                ('name', estate.name),
+                ('verhex', estate.verfer.keyhex),
+                ('pubhex', estate.pubber.keyhex),
                 ])
 
         self.dumpRemoteData(data, uid)
 
-    def loadRemoteDevice(self, device):
+    def loadRemoteEstate(self, estate):
         '''
-        Load and Return the data from the remote device file
+        Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = device.name
+        uid = estate.name
         return (self.loadRemoteData(uid))
 
-    def removeRemoteDevice(self, device):
+    def removeRemoteEstate(self, estate):
         '''
-        Load and Return the data from the remote device file
+        Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = device.name
+        uid = estate.name
         self.removeRemoteData(uid)
 
-    def remoteAcceptStatus(self, device):
+    def remoteAcceptStatus(self, estate):
         '''
-        Evaluate acceptance status of device per its keys
+        Evaluate acceptance status of estate per its keys
         persist key data differentially based on status
         '''
         return (raeting.acceptance.accepted)

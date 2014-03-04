@@ -2,8 +2,8 @@
 
 house master
 
-init .raet.uxd.stack.local to name "lord" lane "ash" yid 0
-init .raet.uxd.stack.dest to "yard1"
+init .raet.uxd.stack.local to name "lord" lane "ash" yardname "lord"
+init .raet.uxd.stack.dest to "serf"
 
 framer bossuxdstack be active first start
    frame start
@@ -22,19 +22,19 @@ framer uxdreceiver be active first start
 framer setupuxdyard be active first start
    frame start
       enter
-         do raet uxd stack yard add to lane "ash" yid 1
+         do raet uxd stack yard add to lane "ash" name "serf"
       timeout 1
 
    frame send
       enter
-         do raet uxd stack transmit to stuff "Lord Hello" \
+         do raet uxd stack transmit to stuff "Lord says Hello" \
             per inode ".raet.uxd.stack."
 
 
 house serf
 
-init .raet.uxd.stack.local to name "serf" lane "ash" yid 1
-init .raet.uxd.stack.dest to "yard0"
+init .raet.uxd.stack.local to name "serf" lane "ash" yardname "serf"
+init .raet.uxd.stack.dest to "lord"
 
 framer serfuxdstack be active first start
    frame start
@@ -54,12 +54,12 @@ framer uxdreceiver be active first start
 framer setupuxdyard be active first start
    frame start
       enter
-         do raet uxd stack yard add to lane "ash" yid 0
+         do raet uxd stack yard add to lane "ash" name "lord"
       timeout 1
 
    frame send
       enter
-         do raet uxd stack transmit to stuff "Serf Hello" \
+         do raet uxd stack transmit to stuff "Serf says Hello" \
             per inode ".raet.uxd.stack."
 
 

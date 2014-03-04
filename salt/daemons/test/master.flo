@@ -3,6 +3,7 @@
 house master
 
 init .raet.udp.stack.local to eid 1 name "master" host "" port 7530
+init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 
 framer masterudpstack be active first start
@@ -11,10 +12,10 @@ framer masterudpstack be active first start
       exit
          do raet udp stack closer per inode ".raet.udp.stack."
 
-framer receiver be active first start
+framer uxdrouter be active first start
    frame start
       do raet udp stack printer per inode ".raet.udp.stack."
-      timeout 5
+      timeout 20
 
    frame abort
       bid stop all

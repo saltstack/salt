@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-devicing.py raet protocol device classes
+estating.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611
@@ -17,27 +17,27 @@ from . import nacling
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-class Device(object):
+class Estate(object):
     '''
-    RAET protocol endpoint device object
+    RAET protocol endpoint estate object
     '''
     Did = 2 # class attribute
 
-    def __init__(self, stack=None, did=None, name="", sid=0, tid=0,
+    def __init__(self, stack=None, eid=None, name="", sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
         '''
-        Setup Device instance
+        Setup Estate instance
         '''
-        self.stack = stack  # Stack object that manages this device
-        if did is None:
+        self.stack = stack  # Stack object that manages this estate
+        if eid is None:
             if self.stack:
-                while Device.Did in self.stack.devices:
-                    Device.Did += 1
-                did = Device.Did
+                while Estate.Did in self.stack.estates:
+                    Estate.Did += 1
+                eid = Estate.Did
             else:
-                did = 0
-        self.did = did # device ID
-        self.name = name or "device{0}".format(self.did)
+                eid = 0
+        self.eid = eid # estate ID
+        self.name = name or "estate{0}".format(self.eid)
 
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
@@ -90,38 +90,38 @@ class Device(object):
             self.tid = 1  # rollover to 1
         return self.tid
 
-class LocalDevice(Device):
+class LocalEstate(Estate):
     '''
-    RAET protocol endpoint local device object
+    RAET protocol endpoint local estate object
     Maintains signer for signing and privateer for encrypt/decript
     '''
     def __init__(self, sigkey=None, prikey=None, **kwa):
         '''
-        Setup Device instance
+        Setup Estate instance
 
         sigkey is either nacl SigningKey or hex encoded key
         prikey is either nacl PrivateKey or hex encoded key
         '''
-        super(LocalDevice, self).__init__(**kwa)
+        super(LocalEstate, self).__init__(**kwa)
         self.signer = nacling.Signer(sigkey)
         self.priver = nacling.Privateer(prikey) # Long term key
 
 
-class RemoteDevice(Device):
+class RemoteEstate(Estate):
     '''
-    RAET protocol endpoint remote device object
+    RAET protocol endpoint remote estate object
     Maintains verifier for verifying signatures and publican for encrypt/decript
     '''
     def __init__(self, verkey=None, pubkey=None, rsid=0, rtid=0, **kwa):
         '''
-        Setup Device instance
+        Setup Estate instance
 
         verkey is either nacl VerifyKey or raw or hex encoded key
         pubkey is either nacl PublicKey or raw or hex encoded key
         '''
         if 'host' not in kwa and 'ha' not in kwa:
             kwa['ha'] = ('127.0.0.1', raeting.RAET_TEST_PORT)
-        super(RemoteDevice, self).__init__(**kwa)
+        super(RemoteEstate, self).__init__(**kwa)
         self.joined = None
         self.allowed = None
         self.privee = nacling.Privateer() # short term key manager

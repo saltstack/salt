@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-devicing.py raet protocol device classes
+yarding.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611
@@ -41,6 +41,8 @@ class Yard(object):
         self.stack = stack
         if yid is None:
             yid = Yard.Yid
+            Yard.Yid += 1
+        elif yid == Yard.Yid:
             Yard.Yid += 1
 
         #self.yid = yid # yard ID

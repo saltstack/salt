@@ -22,7 +22,7 @@ from ioflo.base import storing
 from . import raeting
 from . import nacling
 from . import packeting
-from . import devicing
+from . import estating
 from . import yarding
 from . import keeping
 from . import transacting
@@ -44,8 +44,8 @@ class StackUdp(object):
                  name='',
                  version=raeting.VERSION,
                  store=None,
-                 device=None,
-                 did=None,
+                 estate=None,
+                 eid=None,
                  ha=("", raeting.RAET_PORT),
                  rxMsgs = None,
                  txMsgs = None,
@@ -63,109 +63,109 @@ class StackUdp(object):
         self.name = name
         self.version = version
         self.store = store or storing.Store(stamp=0.0)
-        self.devices = odict() # remote devices attached to this stack by did
-        self.dids = odict() # reverse lookup did by device.name
-         # local device for this stack
-        self.device = device or devicing.LocalDevice(stack=self, did=did, ha=ha)
+        self.estates = odict() # remote estates attached to this stack by eid
+        self.eids = odict() # reverse lookup eid by estate.name
+         # local estate for this stack
+        self.estate = estate or estating.LocalEstate(stack=self, eid=eid, ha=ha)
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        #(msg, ddid) ddid=0 is broadcast
+        #(msg, deid) deid=0 is broadcast
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
         self.road = road or keeping.RoadKeep()
         self.safe = safe or keeping.SafeKeep()
-        self.serverUdp = aiding.SocketUdpNb(ha=self.device.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.serverUdp = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUdp.reopen()  # open socket
-        self.device.ha = self.serverUdp.ha  # update device host address after open
+        self.estate.ha = self.serverUdp.ha  # update estate host address after open
 
-        #self.road.dumpLocalDevice(self.device)
-        #self.safe.dumpLocalDevice(self.device)
+        #self.road.dumpLocalEstate(self.estate)
+        #self.safe.dumpLocalEstate(self.estate)
 
-    def fetchRemoteDeviceByHostPort(self, host, port):
+    def fetchRemoteEstateByHostPort(self, host, port):
         '''
-        Search for remote device with matching (host, port)
-        Return device if found Otherwise return None
+        Search for remote estate with matching (host, port)
+        Return estate if found Otherwise return None
         '''
-        for device in self.devices.values():
-            if device.host == host and device.port == port:
-                return device
+        for estate in self.estates.values():
+            if estate.host == host and estate.port == port:
+                return estate
 
         return None
 
-    def fetchRemoteDeviceByName(self, name):
+    def fetchRemoteEstateByName(self, name):
         '''
-        Search for remote device with matching name
-        Return device if found Otherwise return None
+        Search for remote estate with matching name
+        Return estate if found Otherwise return None
         '''
-        return self.devices.get(self.dids.get(name))
+        return self.estates.get(self.eids.get(name))
 
-    def addRemoteDevice(self, device, did=None):
+    def addRemoteEstate(self, estate, eid=None):
         '''
-        Add a remote device to .devices
+        Add a remote estate to .estates
         '''
-        if did is None:
-            did = device.did
+        if eid is None:
+            eid = estate.eid
 
-        if did in self.devices:
-            emsg = "Device with id '{0}' alreadys exists".format(did)
+        if eid in self.estates:
+            emsg = "Estate with id '{0}' alreadys exists".format(eid)
             raise raeting.StackError(emsg)
-        device.stack = self
-        self.devices[did] = device
-        if device.name in self.dids:
-            emsg = "Device with name '{0}' alreadys exists".format(device.name)
+        estate.stack = self
+        self.estates[eid] = estate
+        if estate.name in self.eids:
+            emsg = "Estate with name '{0}' alreadys exists".format(estate.name)
             raise raeting.StackError(emsg)
-        self.dids[device.name] = device.did
+        self.eids[estate.name] = estate.eid
 
-    def moveRemoteDevice(self, old, new):
+    def moveRemoteEstate(self, old, new):
         '''
-        Move device at key old did to key new did but keep same index
+        Move estate at key old eid to key new eid but keep same index
         '''
-        if new in self.devices:
+        if new in self.estates:
             emsg = "Cannot move, '{0}' already exists".format(new)
             raise raeting.StackError(emsg)
 
-        if old not in self.devices:
+        if old not in self.estates:
             emsg = "Cannot move '{0}' does not exist".format(old)
             raise raeting.StackError(emsg)
 
-        device = self.devices[old]
-        index = self.devices.keys().index(old)
-        device.did = new
-        self.dids[device.name] = new
-        del self.devices[old]
-        self.devices.insert(index, device.did, device)
+        estate = self.estates[old]
+        index = self.estates.keys().index(old)
+        estate.eid = new
+        self.eids[estate.name] = new
+        del self.estates[old]
+        self.estates.insert(index, estate.eid, estate)
 
-    def renameRemoteDevice(self, old, new):
+    def renameRemoteEstate(self, old, new):
         '''
-        rename device with old name to new name but keep same index
+        rename estate with old name to new name but keep same index
         '''
-        if new in self.dids:
+        if new in self.eids:
             emsg = "Cannot rename, '{0}' already exists".format(new)
             raise raeting.StackError(emsg)
 
-        if old not in self.dids:
+        if old not in self.eids:
             emsg = "Cannot rename '{0}' does not exist".format(old)
             raise raeting.StackError(emsg)
 
-        did = self.dids[old]
-        device = self.devices[did]
-        device.name = new
-        index = self.dids.keys().index(old)
-        del self.dids[old]
-        self.dids.insert(index, device.name, device.did)
+        eid = self.eids[old]
+        estate = self.estates[eid]
+        estate.name = new
+        index = self.eids.keys().index(old)
+        del self.eids[old]
+        self.eids.insert(index, estate.name, estate.eid)
 
-    def removeRemoteDevice(self, did):
+    def removeRemoteEstate(self, eid):
         '''
-        Remove device at key did
+        Remove estate at key eid
         '''
-        if did not in self.devices:
-            emsg = "Cannot remove, '{0}' does not exist".format(did)
+        if eid not in self.estates:
+            emsg = "Cannot remove, '{0}' does not exist".format(eid)
             raise raeting.StackError(emsg)
 
-        device = self.devices[did]
-        del self.devices[did]
-        del self.dids[device.name]
+        estate = self.estates[eid]
+        del self.estates[eid]
+        del self.eids[estate.name]
 
     def addTransaction(self, index, transaction):
         '''
@@ -236,42 +236,42 @@ class StackUdp(object):
 
         return None
 
-    def txUdp(self, packed, ddid):
+    def txUdp(self, packed, deid):
         '''
         Queue duple of (packed, da) on stack transmit queue
         Where da is the ip destination (host,port) address associated with
-        the device with ddid
+        the estate with deid
         '''
-        if ddid not in self.devices:
-            msg = "Invalid destination device id '{0}'".format(ddid)
+        if deid not in self.estates:
+            msg = "Invalid destination estate id '{0}'".format(deid)
             raise raeting.StackError(msg)
-        self.udpTxes.append((packed, self.devices[ddid].ha))
+        self.udpTxes.append((packed, self.estates[deid].ha))
 
-    def txMsg(self, msg, ddid=None):
+    def txMsg(self, msg, deid=None):
         '''
-        Append duple (msg,ddid) to .txMsgs deque
+        Append duple (msg,deid) to .txMsgs deque
         If msg is not mapping then raises exception
-        If ddid is None then it will default to the first entry in .devices
+        If deid is None then it will default to the first entry in .estates
         '''
         if not isinstance(msg, Mapping):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
             raise raeting.StackError(emsg)
-        self.txMsgs.append((msg, ddid))
+        self.txMsgs.append((msg, deid))
 
     def serviceTxMsg(self):
         '''
         Service .udpTxMsgs queue of outgoint udp messages for message transactions
         '''
         while self.txMsgs:
-            body, ddid = self.txMsgs.popleft() # duple (body dict, destination did)
-            self.message(body, ddid)
+            body, deid = self.txMsgs.popleft() # duple (body dict, destination eid)
+            self.message(body, deid)
             console.verbose("{0} sending\n{1}\n".format(self.name, body))
 
     def fetchParseUdpRx(self):
         '''
         Fetch from UDP deque next packet tuple
         Parse packet
-        Return packet if verified and destination did matches
+        Return packet if verified and destination eid matches
         Otherwise return None
         '''
         try:
@@ -288,9 +288,9 @@ class StackUdp(object):
             print ex
             return None
 
-        ddid = packet.data['dd']
-        if ddid != 0 and self.device.did != 0 and ddid != self.device.did:
-            emsg = "Invalid destination did = {0}. Dropping packet.".format(ddid)
+        deid = packet.data['de']
+        if deid != 0 and self.estate.eid != 0 and deid != self.estate.eid:
+            emsg = "Invalid destination eid = {0}. Dropping packet.".format(deid)
             print emsg
             return None
 
@@ -388,16 +388,16 @@ class StackUdp(object):
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
-        joinent.join() #assigns .rdid here
+        joinent.join() #assigns .reid here
         # need to perform the check for accepted status somewhere
         #joinent.accept() now in joinent.process()
 
-    def allow(self, rdid=None):
+    def allow(self, reid=None):
         '''
         Initiate allow transaction
         '''
         data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
-        allower = transacting.Allower(stack=self, rdid=rdid, txData=data)
+        allower = transacting.Allower(stack=self, reid=reid, txData=data)
         allower.hello()
 
     def replyAllow(self, packet):
@@ -406,19 +406,19 @@ class StackUdp(object):
         '''
         data = odict(hk=self.Hk, bk=raeting.bodyKinds.raw, fk=self.Fk)
         allowent = transacting.Allowent(stack=self,
-                                        rdid=packet.data['sd'],
+                                        reid=packet.data['se'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
                                         rxPacket=packet)
         allowent.hello()
 
-    def message(self, body=None, ddid=None):
+    def message(self, body=None, deid=None):
         '''
         Initiate message transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
-        messenger = transacting.Messenger(stack=self, txData=data, rdid=ddid)
+        messenger = transacting.Messenger(stack=self, txData=data, reid=deid)
         messenger.message(body)
 
     def replyMessage(self, packet):
@@ -427,7 +427,7 @@ class StackUdp(object):
         '''
         data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
         messengent = transacting.Messengent(stack=self,
-                                        rdid=packet.data['sd'],
+                                        reid=packet.data['se'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,
@@ -485,7 +485,7 @@ class StackUxd(object):
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
         self.serverUxd = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUxd.reopen()  # open socket
-        self.yard.ha = self.serverUxd.ha  # update device host address after open
+        self.yard.ha = self.serverUxd.ha  # update estate host address after open
 
         #self.lane.dumpLocalLane(self.yard)
 
@@ -504,7 +504,7 @@ class StackUxd(object):
             name = yard.name
 
         if name in self.yards or name == self.yard.name:
-            emsg = "Device with name '{0}' alreadys exists".format(name)
+            emsg = "Estate with name '{0}' alreadys exists".format(name)
             raise raeting.StackError(emsg)
         yard.stack = self
         self.yards[name] = yard
@@ -534,7 +534,7 @@ class StackUxd(object):
 
     def rehaRemoteYard(self, old, new):
         '''
-        change device with old ha to new ha but keep same index
+        change yard with old ha to new ha but keep same index
         '''
         if new in self.names:
             emsg = "Cannot reha, '{0}' already exists".format(new)
@@ -613,7 +613,7 @@ class StackUxd(object):
         '''
         Queue duple of (packed, da) on stack transmit queue
         Where da is the ip destination address associated with
-        the device with name
+        the estate with name
         If name is None then it will default to the first entry in .yards
         '''
         if name is None:
