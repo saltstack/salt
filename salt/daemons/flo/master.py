@@ -47,7 +47,7 @@ def fileserver_update(self):
     salt.daemons.masterapi.fileserver_update(self.opts.value)
 
 
-class UxdRouter(ioflo.base.deeding.Deed):
+class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Routes the communication in and out of uxd connections
     '''
@@ -58,9 +58,6 @@ class UxdRouter(ioflo.base.deeding.Deed):
                'local_ret': '.salt.uxd.local_ret',
                'events': '.salt.uxd.events',
                'stack': '.salt.uxd.stack.stack'}
-
-    def __init__(self):
-        ioflo.base.deeding.Deed.__init__(self)
 
     def postioinit(self):
         '''
@@ -129,16 +126,13 @@ class UxdRouter(ioflo.base.deeding.Deed):
         self.stack.value.serviceAll()
 
 
-class RemoteMaster(ioflo.base.deeding.Deed):
+class RemoteMaster(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Abstract access to the core salt master api
     '''
     Ioinits = {'opts': '.salt.etc.opts',
                'ret_in': '.salt.net.ret_in',
                'ret_out': '.salt.net.ret_out'}
-
-    def __init__(self):
-        ioflo.base.deeding.Deed.__init__(self)
 
     def postioinit(self):
         '''
@@ -162,16 +156,13 @@ class RemoteMaster(ioflo.base.deeding.Deed):
             self.ret_out.value.append(exchange)
 
 
-class LocalCmd(ioflo.base.deeding.Deed):
+class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Abstract access to the core salt master api
     '''
     Ioinits = {'opts': '.salt.etc.opts',
                'local_cmd': '.salt.uxd.local_cmd',
                'local_ret': '.salt.uxd.local_ret'}
-
-    def __init__(self):
-        ioflo.base.deeding.Deed.__init__(self)
 
     def postioinit(self):
         '''
