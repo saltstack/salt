@@ -13,6 +13,7 @@ import os
 
 #import salt libs
 import salt.utils
+import subprocess
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -27,7 +28,14 @@ def __virtual__():
     if salt.utils.which('lxc-autostart'):
         return 'lxc'
     elif salt.utils.which('lxc-version'):
-        log.warning('Support for lxc < 1.0 may be incomplete.')
+        passed = False
+        try:
+            passed = subprocess.check_output(
+                'lxc-version').split(':')[1].strip() >= '1.0'
+        except Exception:
+            pass
+        if not passed:
+            log.warning('Support for lxc < 1.0 may be incomplete.')
         return 'lxc'
     return False
 
