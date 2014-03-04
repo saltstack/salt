@@ -108,4 +108,5 @@ class IofloMinion(object):
                 preloads=preloads,
                 verbose=int(self.opts['ioflo_verbose']),
                 )
-    start = tune_in # alias
+
+    start = tune_in  # alias
