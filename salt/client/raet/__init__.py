@@ -50,9 +50,12 @@ class LocalClient(salt.client.LocalClient):
                 timeout=5,
                 **kwargs)
         yid = salt.utils.gen_jid()
-        stack = stacking.StackUxd(yid=yid, lanename='com', dirpath=self.opts['sock_dir'])
+        stack = stacking.StackUxd(
+                yid=yid,
+                lanename='master',
+                dirpath=self.opts['sock_dir'])
         router_yard = yarding.Yard(
-                prefix='com',
+                prefix='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])
         stack.addRemoteYard(router_yard)

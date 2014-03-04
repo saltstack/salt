@@ -65,7 +65,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         self.stack.value = stacking.StackUxd(
                 name='router',
-                lanename='com',
+                lanename='master',
                 yid=0,
                 dirpath=self.opts.value['sock_dir'])
         self.event_yards.value = set()
@@ -81,7 +81,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         try:
             ev_yard = yarding.Yard(
                     yid=msg['load']['yid'],
-                    prefix='com',
+                    prefix='master',
                     dirpath=msg['load']['dirpath'])
         except Exception:
             return
