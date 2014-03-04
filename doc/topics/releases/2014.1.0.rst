@@ -275,3 +275,8 @@ candidate phase.
 - Fix compound commands (:issue:`9746`)
 - Add systemd notification when master is started
 - Many doc improvements
+
+.. note::
+
+    Minions running ``2014.1.0`` are currently incompatible with Masters running
+    ``0.17``.
