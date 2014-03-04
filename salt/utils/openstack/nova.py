@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
+Nova class
 '''
 
 # Import third party libs
@@ -26,7 +27,16 @@ def check_nova():
 # Function alias to not shadow built-ins
 
 class SaltNova(object):
-    def __init__(self, username, api_key, project_id, auth_url, region_name=None):
+    '''
+    Class for all novaclient functions
+    '''
+    def __init__(
+        self,
+        username,
+        api_key,
+        project_id,
+        auth_url,
+        region_name=None):
         '''
         Set up nova credentials
         '''
@@ -50,6 +60,9 @@ class SaltNova(object):
 
 
     def boot(self, name, flavor_id=0, image_id=0, timeout=300):
+        '''
+        Boot a cloud server.
+        '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.create(
             name=name, flavor=flavor_id, image=image_id
@@ -62,7 +75,9 @@ class SaltNova(object):
             try:
                 return self.server_show(response.id)
             except Exception as exc:
-                log.debug('Server information not yet available: {0}'.format(exc))
+                log.debug(
+                    'Server information not yet available: {0}'.format(exc)
+                )
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error('Timed out after {0} seconds '
@@ -74,9 +89,15 @@ class SaltNova(object):
                 )
 
     def server_by_name(self, name):
+        '''
+        Find a server by it's name
+        '''
         return self.server_list().get(name, {})
 
     def _volume_get(self, volume_id):
+        '''
+        Organize information about a volume from the volume_id
+        '''
         nt_ks = self.volume_conn
         volume = nt_ks.volumes.get(volume_id)
         response = {'name': volume.display_name,
@@ -89,11 +110,17 @@ class SaltNova(object):
         return response
 
     def volume_list(self, search_opts=None):
+        '''
+        List all block volumes
+        '''
         nt_ks = self.volume_conn
         volume = nt_ks.volumes.list(search_opts=search_opts)
         return volume
 
     def volume_show(self, name):
+        '''
+        Show one volume
+        '''
         nt_ks = self.volume_conn
         volumes = self.volume_list(
             search_opts={'display_name': name},
@@ -115,6 +142,9 @@ class SaltNova(object):
 
 
     def volume_create(self, name, size=100, snapshot=None, voltype=None):
+        '''
+        Create a block device
+        '''
         nt_ks = self.volume_conn
         response = nt_ks.volumes.create(
             size=size,
@@ -127,6 +157,9 @@ class SaltNova(object):
 
 
     def volume_delete(self, name):
+        '''
+        Delete a block device
+        '''
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
         response = nt_ks.volumes.delete(volume['id'])
@@ -137,6 +170,9 @@ class SaltNova(object):
                       name,
                       server_name,
                       timeout=300):
+        '''
+        Detach a block device
+        '''
         self.compute_conn
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
@@ -170,6 +206,9 @@ class SaltNova(object):
                       server_name,
                       device='/dev/xvdb',
                       timeout=300):
+        '''
+        Attach a block device
+        '''
         nt_ks = self.compute_conn
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
@@ -200,30 +239,45 @@ class SaltNova(object):
 
 
     def suspend(self, instance_id):
+        '''
+        Suspend a server
+        '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.suspend(instance_id)
         return True
 
 
     def resume(self, instance_id):
+        '''
+        Resume a server
+        '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.resume(instance_id)
         return True
 
 
     def lock(self, instance_id):
+        '''
+        Lock an instance
+        '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.lock(instance_id)
         return True
 
 
     def delete(self, instance_id):
+        '''
+        Delete a server
+        '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.delete(instance_id)
         return True
 
 
     def flavor_list(self):
+        '''
+        Return a list of available flavors (nova flavor-list)
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for flavor in nt_ks.flavors.list():
@@ -250,6 +304,9 @@ class SaltNova(object):
                       ram=0,
                       disk=0,
                       vcpus=1):
+        '''
+        Create a flavor
+        '''
         nt_ks = self.compute_conn
         nt_ks.flavors.create(
             name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus
@@ -262,12 +319,18 @@ class SaltNova(object):
 
 
     def flavor_delete(self, id):  # pylint: disable=C0103
+        '''
+        Delete a flavor
+        '''
         nt_ks = self.compute_conn
         nt_ks.flavors.delete(id)
         return 'Flavor deleted: {0}'.format(id)
 
 
     def keypair_list(self):
+        '''
+        List keypairs
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for keypair in nt_ks.keypairs.list():
@@ -280,6 +343,9 @@ class SaltNova(object):
 
 
     def keypair_add(self, name, pubfile=None, pubkey=None):
+        '''
+        Add a keypair
+        '''
         nt_ks = self.compute_conn
         if pubfile:
             ifile = salt.utils.fopen(pubfile, 'r')
@@ -292,12 +358,18 @@ class SaltNova(object):
 
 
     def keypair_delete(self, name):
+        '''
+        Delete a keypair
+        '''
         nt_ks = self.compute_conn
         nt_ks.keypairs.delete(name)
         return 'Keypair deleted: {0}'.format(name)
 
 
     def image_list(self, name=None):
+        '''
+        List server images
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for image in nt_ks.images.list():
@@ -327,6 +399,9 @@ class SaltNova(object):
                        id=None,
                        name=None,
                        **kwargs):  # pylint: disable=C0103
+        '''
+        Set image metadata
+        '''
         nt_ks = self.compute_conn
         if name:
             for image in nt_ks.images.list():
@@ -342,6 +417,9 @@ class SaltNova(object):
                           id=None,     # pylint: disable=C0103
                           name=None,
                           keys=None):
+        '''
+        Delete image metadata
+        '''
         nt_ks = self.compute_conn
         if name:
             for image in nt_ks.images.list():
@@ -354,6 +432,9 @@ class SaltNova(object):
         return {id: 'Deleted: {0}'.format(pairs)}
 
     def server_list(self):
+        '''
+        List servers
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
@@ -371,6 +452,9 @@ class SaltNova(object):
         return ret
 
     def server_list_detailed(self,):
+        '''
+        Detailed list of servers
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
@@ -427,6 +511,9 @@ class SaltNova(object):
 
 
     def server_show(self, server_id):
+        '''
+        Show details of one server
+        '''
         ret = {}
         servers = self.server_list_detailed()
         for server_name, server in servers.iteritems():
@@ -436,6 +523,9 @@ class SaltNova(object):
 
 
     def secgroup_create(self, name, description):
+        '''
+        Create a security group
+        '''
         nt_ks = self.compute_conn
         nt_ks.security_groups.create(name, description)
         ret = {'name': name, 'description': description}
@@ -443,6 +533,9 @@ class SaltNova(object):
 
 
     def secgroup_delete(self, name):
+        '''
+        Delete a security group
+        '''
         nt_ks = self.compute_conn
         for item in nt_ks.security_groups.list():
             if item.name == name:
@@ -452,6 +545,9 @@ class SaltNova(object):
 
 
     def secgroup_list(self):
+        '''
+        List security groups
+        '''
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.security_groups.list():
@@ -466,13 +562,13 @@ class SaltNova(object):
 
 
     def _item_list(self):
+        '''
+        List items
+        '''
         nt_ks = self.compute_conn
         ret = []
         for item in nt_ks.items.list():
             ret.append(item.__dict__)
-            #ret[item.name] = {
-            #        'name': item.name,
-            #    }
         return ret
 
 #The following is a list of functions that need to be incorporated in the
