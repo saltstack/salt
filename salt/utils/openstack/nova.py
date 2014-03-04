@@ -21,11 +21,12 @@ import salt.utils
 # Get logging started
 log = logging.getLogger(__name__)
 
+
 def check_nova():
     return HAS_NOVA
 
-# Function alias to not shadow built-ins
 
+# Function alias to not shadow built-ins
 class SaltNova(object):
     '''
     Class for all novaclient functions
@@ -36,7 +37,8 @@ class SaltNova(object):
         api_key,
         project_id,
         auth_url,
-        region_name=None):
+        region_name=None
+    ):
         '''
         Set up nova credentials
         '''
@@ -57,7 +59,6 @@ class SaltNova(object):
         self.kwargs['service_type'] = 'compute'
 
         self.compute_conn = client.Client(**self.kwargs)
-
 
     def boot(self, name, flavor_id=0, image_id=0, timeout=300):
         '''
@@ -140,7 +141,6 @@ class SaltNova(object):
                     }
         return response
 
-
     def volume_create(self, name, size=100, snapshot=None, voltype=None):
         '''
         Create a block device
@@ -155,7 +155,6 @@ class SaltNova(object):
 
         return self._volume_get(response.id)
 
-
     def volume_delete(self, name):
         '''
         Delete a block device
@@ -164,7 +163,6 @@ class SaltNova(object):
         volume = self.volume_show(name)
         response = nt_ks.volumes.delete(volume['id'])
         return response
-
 
     def volume_detach(self,
                       name,
@@ -199,7 +197,6 @@ class SaltNova(object):
                 log.debug(
                     'Retrying volume_show() (try {0})'.format(trycount)
                 )
-
 
     def volume_attach(self,
                       name,
@@ -237,7 +234,6 @@ class SaltNova(object):
                     'Retrying volume_show() (try {0})'.format(trycount)
                 )
 
-
     def suspend(self, instance_id):
         '''
         Suspend a server
@@ -245,7 +241,6 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         response = nt_ks.servers.suspend(instance_id)
         return True
-
 
     def resume(self, instance_id):
         '''
@@ -255,7 +250,6 @@ class SaltNova(object):
         response = nt_ks.servers.resume(instance_id)
         return True
 
-
     def lock(self, instance_id):
         '''
         Lock an instance
@@ -264,7 +258,6 @@ class SaltNova(object):
         response = nt_ks.servers.lock(instance_id)
         return True
 
-
     def delete(self, instance_id):
         '''
         Delete a server
@@ -272,7 +265,6 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         response = nt_ks.servers.delete(instance_id)
         return True
-
 
     def flavor_list(self):
         '''
@@ -297,7 +289,6 @@ class SaltNova(object):
                 ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
         return ret
 
-
     def flavor_create(self,
                       name,      # pylint: disable=C0103
                       id=0,      # pylint: disable=C0103
@@ -317,7 +308,6 @@ class SaltNova(object):
                 'disk': disk,
                 'vcpus': vcpus}
 
-
     def flavor_delete(self, id):  # pylint: disable=C0103
         '''
         Delete a flavor
@@ -325,7 +315,6 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         nt_ks.flavors.delete(id)
         return 'Flavor deleted: {0}'.format(id)
-
 
     def keypair_list(self):
         '''
@@ -341,7 +330,6 @@ class SaltNova(object):
             }
         return ret
 
-
     def keypair_add(self, name, pubfile=None, pubkey=None):
         '''
         Add a keypair
@@ -356,7 +344,6 @@ class SaltNova(object):
         ret = {'name': name, 'pubkey': pubkey}
         return ret
 
-
     def keypair_delete(self, name):
         '''
         Delete a keypair
@@ -364,7 +351,6 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         nt_ks.keypairs.delete(name)
         return 'Keypair deleted: {0}'.format(name)
-
 
     def image_list(self, name=None):
         '''
@@ -394,7 +380,6 @@ class SaltNova(object):
             return {name: ret[name]}
         return ret
 
-
     def image_meta_set(self,
                        id=None,
                        name=None,
@@ -411,7 +396,6 @@ class SaltNova(object):
             return {'Error': 'A valid image name or id was not specified'}
         nt_ks.images.set_meta(id, kwargs)
         return {id: kwargs}
-
 
     def image_meta_delete(self,
                           id=None,     # pylint: disable=C0103
@@ -509,7 +493,6 @@ class SaltNova(object):
                     item.__dict__['security_groups']
         return ret
 
-
     def server_show(self, server_id):
         '''
         Show details of one server
@@ -521,7 +504,6 @@ class SaltNova(object):
                 ret[server_name] = server
         return ret
 
-
     def secgroup_create(self, name, description):
         '''
         Create a security group
@@ -530,7 +512,6 @@ class SaltNova(object):
         nt_ks.security_groups.create(name, description)
         ret = {'name': name, 'description': description}
         return ret
-
 
     def secgroup_delete(self, name):
         '''
@@ -542,7 +523,6 @@ class SaltNova(object):
                 nt_ks.security_groups.delete(item.id)
                 return {name: 'Deleted security group: {0}'.format(name)}
         return 'Security group not found: {0}'.format(name)
-
 
     def secgroup_list(self):
         '''
@@ -559,7 +539,6 @@ class SaltNova(object):
                 'rules': item.rules,
             }
         return ret
-
 
     def _item_list(self):
         '''
