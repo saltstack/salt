@@ -17,7 +17,7 @@ On most distributions, you can set up a **Salt Minion** with the bootstrap scrip
 
     curl -L http://bootstrap.saltstack.org | sudo sh
 
-or, to connect immediately to a running Salt Master: 
+or, to connect immediately to a running Salt Master:
 
 .. code-block:: bash
 
