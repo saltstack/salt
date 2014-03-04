@@ -2149,7 +2149,6 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Force colored output'
         )
 
-
     def _mixin_after_parsed(self):
         if len(self.args) > 0:
             self.config['fun'] = self.args[0]
