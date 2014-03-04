@@ -753,11 +753,10 @@ class LocalFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key):
+    def __init__(self, opts, key):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.key = key
-        self.master_key = master_key
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
