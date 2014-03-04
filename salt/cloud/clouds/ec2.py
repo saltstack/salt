@@ -2680,6 +2680,7 @@ def create_snapshot(kwargs=None, call=None):
     data = query(params, return_root=True)
     return data
 
+
 def delete_snapshot(kwargs=None, call=None):
     '''
     Delete a snapshot
@@ -2703,6 +2704,7 @@ def delete_snapshot(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
 
 def copy_snapshot(kwargs=None, call=None):
     '''
@@ -2741,6 +2743,7 @@ def copy_snapshot(kwargs=None, call=None):
     data = query(params, return_root=True)
     return data
 
+
 def describe_snapshot(kwargs=None, call=None):
     '''
     Describe a snapshot
@@ -2765,4 +2768,3 @@ def describe_snapshot(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
-

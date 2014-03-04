@@ -171,10 +171,9 @@ class SaltNova(object):
         '''
         Detach a block device
         '''
-        self.compute_conn
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
-        response = nt_ks.volumes.delete_server_volume(
+        response = self.compute_conn.volumes.delete_server_volume(
             server['id'],
             volume['attachments'][0]['id']
         )
@@ -206,10 +205,9 @@ class SaltNova(object):
         '''
         Attach a block device
         '''
-        nt_ks = self.compute_conn
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
-        response = nt_ks.volumes.create_server_volume(
+        response = self.compute_conn.volumes.create_server_volume(
             server['id'],
             volume['id'],
             device=device
