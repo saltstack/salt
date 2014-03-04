@@ -314,6 +314,7 @@ def installed(
         skip_verify=False,
         skip_suggestions=False,
         pkgs=None,
+        names=None,
         sources=None,
         **kwargs):
     '''
@@ -362,7 +363,8 @@ def installed(
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
-        A list of packages to install from a software repository.
+        A list of packages to install from a software repository. Each package
+        will be installed individually by the package manager.
 
     Usage::
 
@@ -413,6 +415,61 @@ def installed(
                     - foo: '~'
                     - bar: '~>=1.2:slot::overlay[use,-otheruse]'
                     - baz
+
+    names
+        A list of packages to install from a software repository. All packages
+        listed under names will be installed via a single command.
+
+    Usage::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar
+              - baz
+
+    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
+    :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
+    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+    in the ``names`` argument. Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: 1.2.3-4
+              - baz
+
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
+    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
+    ``>`` operators for more control over what versions will be installed.
+    Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: '>=1.2.3-4'
+              - baz
+
+    ``NOTE:`` When using comparison operators, the expression must be enclosed
+    in quotes to avoid a YAML render error.
+
+    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
+    flag list and/or if the given packages should be in package.accept_keywords
+    file and/or the overlay from which you want the package to be installed.
+    Example::
+
+        mypkgs:
+            pkg.installed:
+                - names:
+                    - foo: '~'
+                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                    - baz
+
 
     sources
         A list of packages to install, along with the source URI or local path
