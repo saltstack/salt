@@ -2343,6 +2343,11 @@ def check_file_meta(
     .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+
+    .. note::
+
+        Supported hash types include sha512, sha384, sha256, sha224, sha1, and
+        md5.
     '''
     changes = {}
     if not source_sum:
