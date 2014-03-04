@@ -51,7 +51,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Routes the communication in and out of uxd connections
     '''
-    Ioinits = {'opts': '.salt.etc.opts',
+    Ioinits = {'opts': '.salt.opts',
                'event_yards': '.salt.uxd.yards.event',
                'com_yards': '.salt.uxd.yards.com',
                'local_cmd': '.salt.uxd.local_cmd',
@@ -59,7 +59,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                'events': '.salt.uxd.events',
                'stack': '.salt.uxd.stack.stack'}
 
-    def postioinit(self):
+    def postinitio(self):
         '''
         Set up required objects
         '''
@@ -130,11 +130,11 @@ class RemoteMaster(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Abstract access to the core salt master api
     '''
-    Ioinits = {'opts': '.salt.etc.opts',
+    Ioinits = {'opts': '.salt.opts',
                'ret_in': '.salt.net.ret_in',
                'ret_out': '.salt.net.ret_out'}
 
-    def postioinit(self):
+    def postinitio(self):
         '''
         Set up required objects
         '''
@@ -160,15 +160,16 @@ class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Abstract access to the core salt master api
     '''
-    Ioinits = {'opts': '.salt.etc.opts',
+    Ioinits = {'opts': '.salt.opts',
                'local_cmd': '.salt.uxd.local_cmd',
                'local_ret': '.salt.uxd.local_ret'}
 
-    def postioinit(self):
+    def postinitio(self):
         '''
         Set up required objects
         '''
-        self.local = salt.daemons.masterapi.LocalFuncs(self.opts.value)
+        self.access_keys = salt.daemons.masterapi.access_keys(self.opts.value)
+        self.local = salt.daemons.masterapi.LocalFuncs(self.opts.value, self.access_keys)
 
     def action(self):
         '''
