@@ -60,7 +60,7 @@ The package definition file should look similar to this example for Firefox:
 
 .. code-block:: yaml
 
-    firefox:
+    Firefox:
       17.0.1: 
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
         full_name: Mozilla Firefox 17.0.1 (x86 en-US) 
@@ -190,29 +190,37 @@ Now you can query the available version of Firefox using the Salt pkg module.
 
 .. code-block:: bash
 
-    salt '*' pkg.available_version firefox
+    salt '*' pkg.available_version Firefox
 
-    {'davewindows': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
+    {'Firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
                      '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
                      '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
 
 As you can see, there are three versions of Firefox available for installation.
+You can refer a software package by its ``name`` or its ``full_name`` surround 
+by single quotes. 
 
 .. code-block:: bash
 
-    salt '*' pkg.install firefox
+    salt '*' pkg.install 'Firefox'
 
 The above line will install the latest version of Firefox.
 
 .. code-block:: bash
 
-    salt '*' pkg.install firefox version=16.0.2
+    salt '*' pkg.install 'Firefox' version=16.0.2
 
 The above line will install version 16.0.2 of Firefox.
 
 If a different version of the package is already installed it will
 be replaced with the version in winrepo (only if the package itself supports
-live updating)
+live updating).
+
+You can also specify the full name:
+
+.. code-block:: bash
+
+    salt '*' pkg.install 'Mozilla Firefox 17.0.1 (x86 en-US)'
 
 
 Uninstall Windows Software
@@ -222,9 +230,9 @@ Uninstall software using the pkg module:
 
 .. code-block:: bash
 
-    salt '*' pkg.remove firefox
+    salt '*' pkg.remove 'Firefox'
 
-    salt '*' pkg.purge firefox
+    salt '*' pkg.purge 'Firefox'
 
 ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
 future ``pkg.purge`` may direct the installer to remove all configs and
