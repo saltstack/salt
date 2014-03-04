@@ -69,7 +69,7 @@ def _changes(name,
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
 
-    Updated in Hydrogen to include support for shadow attributes, all
+    Updated in Helium to include support for shadow attributes, all
     attributes supported as integers only.
     '''
 
@@ -255,7 +255,7 @@ def present(name,
         The user's home phone number (not supported in MacOS)
 
 
-    .. versionchanged:: Hydrogen
+    .. versionchanged:: Helium
        Shadow attribute support added.
 
     Shadow attributes support (currently Linux only):
