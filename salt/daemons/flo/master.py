@@ -103,9 +103,9 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         Send the message to the correct location
         '''
         try:
-            if msg['route']['src'][0] == 'router' and msg['route']['src'][2] == 'local_cmd':
-                self.local_cmd.append(msg)
-            elif msg['route']['src'][0] == 'router' and msg['route']['src'][2] == 'event_req':
+            if msg['route']['dst'][2] == 'local_cmd':
+                self.local_cmd.value.append(msg)
+            elif msg['route']['dst'][2] == 'event_req':
                 # Register the event interface
                 self._register_event_yard(msg)
         except Exception:
@@ -118,11 +118,13 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         self.stack.value.serviceAll()
         # Process inboud communication stack
         for msg in self.stack.value.rxMsgs:
-            self._process_msg(msg)
+            self._process_rxmsg(msg)
+        self.stack.value.rxMsgs.clear()
         for event in self.events.value:
             self._fire_event(event)
         for ret in self.local_ret.value:
             self.stack.value.transmit(ret)
+        self.local_ret.value.clear()
         self.stack.value.serviceAll()
 
 
@@ -162,7 +164,8 @@ class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Ioinits = {'opts': '.salt.opts',
                'local_cmd': '.salt.uxd.local_cmd',
-               'local_ret': '.salt.uxd.local_ret'}
+               'local_ret': '.salt.uxd.local_ret',
+               'stack': '.salt.uxd.stack.stack'}
 
     def postinitio(self):
         '''
@@ -186,6 +189,7 @@ class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             if hasattr(self.local, load['cmd']):
                 ret['return'] = getattr(self.local, load['cmd'])(load)
                 ret['route'] = {'src': ('router', self.stack.value.yard.name, None),
-                                'dst': cmd['route']('src')}
+                                'dst': cmd['route']['src']}
 
             self.local_ret.value.append(ret)
+        self.local_cmd.value.clear()
