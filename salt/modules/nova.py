@@ -37,14 +37,6 @@ Module for handling OpenStack Nova calls
         salt '*' nova.flavor_list profile=openstack1
 '''
 
-# Import third party libs
-HAS_NOVA = False
-try:
-    from novaclient.v1_1 import client
-    HAS_NOVA = True
-except ImportError:
-    pass
-
 # Import python libs
 import time
 import logging
@@ -68,9 +60,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    if HAS_NOVA:
-        return 'nova'
-    return False
+    return suon.check_nova()
 
 
 __opts__ = {}
