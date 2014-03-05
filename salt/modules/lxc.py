@@ -374,12 +374,14 @@ def clone(name,
         p = profile.pop(k, default)
         return kw or p
 
-    vgname = select('vgname')
+
+    backing = select('backing')
     size = select('size', '1G')
+
     if size:
         cmd += ' -L {0}'.format(size)
-    if vgname:
-        cmd += ' -v {0}'.format(vgname)
+    if backing:
+        cmd += ' -B {0}'.format(backing)
 
     ret = __salt__['cmd.run_all'](cmd)
     if ret['retcode'] == 0 and exists(name):
