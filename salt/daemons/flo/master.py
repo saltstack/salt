@@ -118,15 +118,12 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         self.stack.value.serviceAll()
         # Process inboud communication stack
-        for msg in self.stack.value.rxMsgs:
-            self._process_rxmsg(msg)
-        self.stack.value.rxMsgs.clear()
-        for event in self.events.value:
-            self._fire_event(event)
-        self.events.value.clear()
-        for ret in self.local_ret.value:
-            self.stack.value.transmit(ret)
-        self.local_ret.value.clear()
+        while self.stack.value.rxMsgs:
+            self._process_rxmsg(self.stack.value.rxMsgs.popleft())
+        while self.events.value:
+            self._fire_event(self.events.value.popleft())
+        while self.local_ret.value:
+            self.stack.value.transmit(self.local_ret.value.popleft())
         self.stack.value.serviceAll()
 
 
@@ -180,7 +177,8 @@ class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         Perform an action
         '''
-        for cmd in self.local_cmd.value:
+        while self.local_cmd.value:
+            cmd = self.local_cmd.value.popleft()
             ret = {}
             load = cmd.get('load')
             # If the load is invalid, just ignore the request
@@ -194,4 +192,3 @@ class LocalCmd(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                                 'dst': cmd['route']['src']}
 
             self.local_ret.value.append(ret)
-        self.local_cmd.value.clear()
