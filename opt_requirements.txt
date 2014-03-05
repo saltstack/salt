@@ -1,3 +1,4 @@
 mysql-python
 timelib
 yappi >= 0.8.2
+python-novaclient
