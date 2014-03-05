@@ -127,6 +127,8 @@ of the patch and a place for discussion.
 
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 
+.. _installing-for-development:
+
 Installing Salt for development
 -------------------------------
 
@@ -229,6 +231,12 @@ Install Salt (and dependencies) into the virtualenv:
 
     You can install needed dependencies on OS X using homebrew or macports.
     See :doc:`OS X Installation </topics/installation/osx>`
+
+.. warning:: Installing on RedHat-based Distros
+
+    If installing from pip (or from source using ``setup.py install``), be
+    advised that the ``yum-utils`` package is needed for Salt to manage
+    packages on RedHat-based systems.
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
