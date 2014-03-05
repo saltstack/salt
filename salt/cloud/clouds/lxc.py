@@ -285,6 +285,7 @@ last message: {comment}'''.format(**ret)
             del ret['changes']
         raise SaltCloudSystemExit(sret)
     log.info(sret)
+    return sret
 
 
 def destroy(vm_, call=None):
@@ -544,8 +545,8 @@ def create(vm_, call=None):
     # set dns servers
     changes['350_dns'] = 'DNS in place'
     ret['comment'] = changes['350_dns']
-    if dnsservers:
-        gid = 'lxc.{0}.initial_dns'.format(name, False)
+    gid = 'lxc.{0}.initial_dns'.format(name, False)
+    if dnsservers and not __grains__.get(gid):
         cret = _salt('lxc.set_dns',
                      name,
                      dnsservers=dnsservers)
@@ -588,6 +589,8 @@ def create(vm_, call=None):
             if 'Error' in sret:
                 ret['result'] = False
                 changes['400_salt'] = pformat(sret['Error'])
+            else:
+                changed = True
         ret['comment'] = changes['400_salt']
         _checkpoint(ret)
 
@@ -599,7 +602,12 @@ def create(vm_, call=None):
         ret['comment'] = changes['401_salt']
         _checkpoint(ret)
 
-    _checkpoint(ret)
+    sret = _checkpoint(ret)
+    if not ret['result']:
+        ret['Error'] = 'Error while creating {0}'.format(vm_['name'])
+    if not changed and ret['result']:
+        ret['changes'] = {}
+        ret['comment'] = '\n{0}'.format(sret)
     return ret
 
 
