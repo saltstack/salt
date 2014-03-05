@@ -394,7 +394,8 @@ def check_db(*names, **kwargs):
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
+            '{0} --pkgnarrow=all --all'.format(repo_arg),
+            query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
             try:
