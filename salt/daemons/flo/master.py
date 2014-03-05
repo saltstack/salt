@@ -92,7 +92,7 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             route = {'src': ('router', self.stack.value.yard.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
-            self.stack.value.transmit(msg)
+            self.stack.value.transmit(msg, y_name)
 
     def _process_rxmsg(self, msg):
         '''
@@ -123,7 +123,8 @@ class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         while self.events.value:
             self._fire_event(self.events.value.popleft())
         while self.local_ret.value:
-            self.stack.value.transmit(self.local_ret.value.popleft())
+            msg = self.local_ret.value.popleft()
+            self.stack.value.transmit(msg, msg['route']['dst'][1])
         self.stack.value.serviceAll()
 
 
