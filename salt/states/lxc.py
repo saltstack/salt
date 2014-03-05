@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 lxc / Spin up and control LXC containers
@@ -317,5 +316,3 @@ def cloned(name,
             ret['comment'] += 'Container cloned\n'
             changes['status'] = 'cloned'
     return ret
-
-# vim:set et sts=4 ts=4 tw=80:
