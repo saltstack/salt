@@ -46,7 +46,7 @@ class SaltEvent(object):
         route = {'dst': (None, self.router_yard.name, 'event_req'),
                  'src': (None, self.stack.yard.name, None)}
         msg = {'route': route, 'load': {'yid': yid, 'dirpath': self.sock_dir}}
-        self.stack.transmit(msg)
+        self.stack.transmit(msg, self.router_yard.name)
         self.stack.serviceAll()
 
     def subscribe(self, tag=None):
@@ -91,7 +91,8 @@ class SaltEvent(object):
         while True:
             self.stack.serviceAll()
             if self.stack.rxMsgs:
-                event = self.stack.rxMsgs.popleft()
+                msg = self.stack.rxMsgs.popleft()
+                event = msg.get('event', {})
                 if 'tag' not in event and 'data' not in event:
                     # Invalid event, how did this get here?
                     continue
