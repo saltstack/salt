@@ -229,7 +229,7 @@ def set_expire(name, expire):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' shadow.set_expire username -1
     '''
     cmd = 'chage -E {0} {1}'.format(expire, name)
