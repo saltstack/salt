@@ -14,6 +14,7 @@ ensure_in_syspath('../../')
 from salt.modules import brew
 
 # Global Variables
+brew.__context__ = {}
 brew.__salt__ = {}
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
@@ -26,6 +27,8 @@ class BrewTestCase(TestCase):
     TestCase for salt.modules.brew module
     '''
 
+    # '_list_taps' function tests: 1
+
     def test_list_taps(self):
         '''
         Tests the return of the list of taps
@@ -33,6 +36,8 @@ class BrewTestCase(TestCase):
         mock_taps = MagicMock(return_value=TAPS_STRING)
         with patch.dict(brew.__salt__, {'cmd.run': mock_taps}):
             self.assertEqual(brew._list_taps(), TAPS_LIST)
+
+    # '_tap' function tests: 3
 
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap_installed(self):
@@ -59,6 +64,8 @@ class BrewTestCase(TestCase):
         with patch.dict(brew.__salt__, {'cmd.retcode': mock_success}):
             self.assertTrue(brew._tap('homebrew/test'))
 
+    # '_homebrew_bin' function tests: 1
+
     def test_homebrew_bin(self):
         '''
         Tests the path to the homebrew binary
@@ -66,6 +73,39 @@ class BrewTestCase(TestCase):
         mock_path = MagicMock(return_value='/usr/local')
         with patch.dict(brew.__salt__, {'cmd.run': mock_path}):
             self.assertEqual(brew._homebrew_bin(), '/usr/local/bin/brew')
+
+    # 'list_pkgs' function tests: 2
+    # Only tested a few basics
+    # Full functionality should be tested in integration phase
+
+    def test_list_pkgs_removed(self):
+        '''
+        Tests removed implementation
+        '''
+        self.assertEqual(brew.list_pkgs(removed=True), {})
+
+    def test_list_pkgs_versions_list_true(self):
+        '''
+        Tests if pkg.list_pkgs is already in context and is a list
+        '''
+        mock_context = {'foo': ['bar']}
+        with patch.dict(brew.__context__, {'pkg.list_pkgs': mock_context}):
+            self.assertEqual(brew.list_pkgs(versions_as_list=True), mock_context)
+
+    # 'version' function tests: 1
+
+    def test_version(self):
+        '''
+        Tests version name returned
+        '''
+        mock_version = MagicMock(return_value='0.1.5')
+        with patch.dict(brew.__salt__, {'pkg_resource.version': mock_version}):
+            self.assertEqual(brew.version('foo'), '0.1.5')
+
+    # 'latest_version' function tests: 0
+    # It has not been fully implemented
+
+    # 'refresh_db' function tests: 2
 
     @patch('salt.modules.brew._homebrew_bin',
            MagicMock(return_value=HOMEBREW_BIN))
