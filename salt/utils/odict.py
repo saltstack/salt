@@ -329,7 +329,8 @@ class DefaultOrderedDict(OrderedDict):
         import copy
         return type(self)(self.default_factory,
                           copy.deepcopy(self.items()))
-    def __repr__(self):
+
+    def __repr__(self, _repr_running={}):  # pylint: disable=W0102
         return 'DefaultOrderedDict(%s, %s)' % (self.default_factory,
-                                               super(DefaultOrderedDict, 
+                                               super(DefaultOrderedDict,
                                                      self).__repr__())

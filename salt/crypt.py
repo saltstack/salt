@@ -393,7 +393,7 @@ class Auth(object):
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
                 if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
-                    _finger_fail(syndic_finger, m_pub_fn)
+                    self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get('master_finger', False):
                 if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
@@ -401,7 +401,7 @@ class Auth(object):
         auth['publish_port'] = payload['publish_port']
         return auth
 
-    def _finger_fail(finger, master_key):
+    def _finger_fail(self, finger, master_key):
         log.critical(
             'The specified fingerprint in the master configuration '
             'file:\n{0}\nDoes not match the authenticating master\'s '
