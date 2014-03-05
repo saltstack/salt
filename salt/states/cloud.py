@@ -34,7 +34,7 @@ def _valid(name, comment='', changes=None):
             'comment': comment}
 
 
-def present(name, cloud_provider, onlyif=None, unless=None):
+def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
     does not take a profile argument; rather, it takes the arguments that would
@@ -88,7 +88,7 @@ def present(name, cloud_provider, onlyif=None, unless=None):
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
-    info = __salt__['cloud.create'](cloud_provider, name)
+    info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
     if info and not 'Error' in info:
         ret['changes'] = info
         ret['result'] = True
@@ -96,6 +96,7 @@ def present(name, cloud_provider, onlyif=None, unless=None):
                           ' and the following options: {2}').format(
             name,
             cloud_provider,
+            pprint.pformat(kwargs)
         )
     elif info and not 'Error' in info:
         ret['result'] = False
