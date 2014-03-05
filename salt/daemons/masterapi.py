@@ -115,7 +115,7 @@ def access_keys(opts):
 
         if user not in users:
             try:
-                user = pwd.getpwnam(user)
+                user = pwd.getpwnam(user).pw_name
             except KeyError:
                 log.error('ACL user {0} is not available'.format(user))
                 continue
