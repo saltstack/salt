@@ -589,19 +589,34 @@ def _clean_pkglist(pkgs):
             pkgs[name] = stripped
 
 
-def list_pkgs(versions_as_list=False, removed=False, **kwargs):
+def list_pkgs(versions_as_list=False,
+              removed=False,
+              purge_desired=False,
+              **kwargs):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
 
-    If removed is ``True``, then only packages which have been removed (but not
-    purged) will be returned.
+    removed
+        If ``True``, then only packages which have been removed (but not
+        purged) will be returned.
+
+    purge_desired
+        If ``True``, then only packages which have been marked to be purged,
+        but can't be purged due to their status as dependencies for other
+        installed packages, will be returned. Note that these packages will
+        appear in installed
+
+        .. versionchanged:: 2014.1.1
+
+            Packages in this state now correctly show up in the output of this
+            function.
 
     External dependencies::
 
-        Virtual package resolution requires dctrl-tools.
-        Without dctrl-tools virtual packages will be reported as not installed.
+        Virtual package resolution requires dctrl-tools. Without dctrl-tools
+        virtual packages will be reported as not installed.
 
     CLI Example:
 
@@ -612,17 +627,20 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     removed = salt.utils.is_true(removed)
+    purge_desired = salt.utils.is_true(purge_desired)
 
     if 'pkg.list_pkgs' in __context__:
         if removed:
             ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs']['installed'])
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['purge_desired'])
+            if not purge_desired:
+                ret.update(__context__['pkg.list_pkgs']['installed'])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
         return ret
 
-    ret = {'installed': {}, 'removed': {}}
+    ret = {'installed': {}, 'removed': {}, 'purge_desired': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
@@ -651,6 +669,10 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
                 __salt__['pkg_resource.add_pkg'](ret['removed'],
                                                  name,
                                                  version_num)
+            elif 'purge' in linetype and status == 'installed':
+                __salt__['pkg_resource.add_pkg'](ret['purge_desired'],
+                                                 name,
+                                                 version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed and __salt__['cmd.has_exec']('grep-available'):
@@ -665,7 +687,7 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
 
-    for pkglist_type in ('installed', 'removed'):
+    for pkglist_type in ('installed', 'removed', 'purge_desired'):
         __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
         _clean_pkglist(ret[pkglist_type])
 
@@ -674,7 +696,9 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     if removed:
         ret = ret['removed']
     else:
-        ret = ret['installed']
+        ret = copy.deepcopy(__context__['pkg.list_pkgs']['purge_desired'])
+        if not purge_desired:
+            ret.update(__context__['pkg.list_pkgs']['installed'])
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -1564,8 +1588,12 @@ def _resolve_deps(name, pkgs, **kwargs):
         cmd.append('install')
         cmd.extend(missing_deps)
 
-        ret = __salt__['cmd.retcode'](cmd, env=kwargs.get('env'), python_shell=False,
-                output_loglevel='debug')
+        ret = __salt__['cmd.retcode'](
+            cmd,
+            env=kwargs.get('env'),
+            python_shell=False,
+            output_loglevel='debug'
+        )
 
         if ret != 0:
             raise CommandExecutionError(
