@@ -1157,6 +1157,16 @@ def path():
     #   path
 
     return {'path': os.environ['PATH'].strip()}
+    
+
+def environ():
+    '''
+    Returns the environment variables
+    '''
+    # Provides:
+    #   environ
+    
+    return {'environ': os.environ}
 
 
 def pythonversion():
