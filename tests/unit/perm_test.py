@@ -50,7 +50,8 @@ EXEMPT_FILES = ['setup.py',
                 'post-update.sample',
                 'prepare-commit-msg.sample',
                 'applypatch-msg.sample',
-                'master.py']
+                'master.py',
+                'build_shar.sh']
 
 EXEMPT_DIRS = ['tests', '.git', 'doc']
 
