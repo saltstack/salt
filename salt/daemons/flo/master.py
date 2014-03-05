@@ -126,7 +126,9 @@ class RouterMaster(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         for minion in self.udp_stack.value.eids:
             eid = self.udp_stack.value.eids.get(minion)
             if eid:
-                self.udp_stack.value.message(pub_msg['pub'], eid)
+                route = {'dst': (minion, None, 'fun')}
+                msg = {'route': route, 'pub': pub_msg['pub']}
+                self.udp_stack.value.message(msg, eid)
 
     def action(self):
         '''

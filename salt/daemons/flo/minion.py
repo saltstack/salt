@@ -10,6 +10,7 @@ import sys
 import types
 import traceback
 import multiprocessing
+from collections import deque
 
 # Import salt libs
 import salt.minion
@@ -61,6 +62,7 @@ class RouterMinion(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                 lanename=self.opts.value['id'],
                 yid=0,
                 dirpath=self.opts.value['sock_dir'])
+        self.fun_in.value = deque()
 
     def action(self):
         '''
@@ -70,10 +72,8 @@ class RouterMinion(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         # TODO: Route UXD messages
         while self.udp_stack.value.rxMsgs:
             print 'process udp'
-            data = self.udp_stack.rxMsgs.value.pop()
-            # Check if the PID is not the default of 0 and pass directly to
-            # the raet socket handler
-            if data['dst'][2] == 'fun':
+            data = self.udp_stack.value.rxMsgs.popleft()
+            if data['route']['dst'][2] == 'fun':
                 self.fun_in.value.append(data)
 
 
