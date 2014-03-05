@@ -125,7 +125,7 @@ def _changes(name,
             change['inactdays'] = inactdays
         if warndays is not 7 and lshad['warn'] != warndays:
             change['warndays'] = warndays
-        if exire is not -1 and lshad['expire'] != expire:
+        if expire is not -1 and lshad['expire'] != expire:
             change['expire'] = expire
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
