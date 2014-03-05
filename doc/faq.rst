@@ -163,11 +163,21 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
-As of release 0.17.1 backwards compatibility was broken (specifically for
-0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatibility
-as an important feature and plans to support it to the best of our ability to
-do so.
+This depends on the versions.  In general, it is recommended that Master and
+Minion versions match.
+
+When upgrading Salt, the master(s) should always be upgraded first.  Backwards
+compatibility for minions running newer versions of salt than their masters is
+not guaranteed.
+
+Whenever possible, backwards compatibility between new masters
+and old minions will be preserved.  Generally, the only exception to this
+policy is in case of a security vulnerability.
+
+Recent examples of backwards compatibility breakage include the 0.17.1 release
+(where all backwards compatibility was broken due to a security fix), and the
+2014.1.0 release (which retained compatibility between 2014.1.0 masters and
+0.17 minions, but broke compatibility for 2014.1.0 minions and older masters).
 
 Does Salt support backing up managed files?
 -------------------------------------------
