@@ -1700,7 +1700,7 @@ option then the master will log a warning message.
 
 
 Windows Software Repo Settings
-------------------------------
+==============================
 
 .. conf_master:: win_repo
 
