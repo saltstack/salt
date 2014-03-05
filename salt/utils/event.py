@@ -73,6 +73,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils
+import salt.utils.cache
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
