@@ -1257,14 +1257,12 @@ class Minion(MinionBase):
                 exc_info=err
             )
 
-
     # Main Minion Tune In
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         :rtype : None
         '''
-
         self._pre_tune()
 
         # Properly exit if a SIGTERM is signalled
