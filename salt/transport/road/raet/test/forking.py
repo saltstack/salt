@@ -54,8 +54,15 @@ def lord(serfs=5):
         lord_stack.serviceAll()
         print 'serviced lord stack'
         print lord_stack.rxMsgs
-        for msg in lord_stack.rxMsgs:
-            print msg
+        while lord_stack.rxMsgs:
+            rxmsg = lord_stack.rxMsgs.popleft()
+            print rxmsg
+            src = (ESTATE, lord_stack.yard.name, None)
+            dst = (ESTATE, rxmsg['route']['src'][1], None)
+            route = {'src': src, 'dst': dst}
+            msg = {'route': route, 'stuff': 'Master to Serf {0}, you stay'.format(rxmsg['route']['src'][1])}
+            lord_stack.transmit(msg)
+        print lord_stack.yards
         time.sleep(1)
 
 
@@ -78,6 +85,8 @@ def serf(lord_name, lord_yid, id_, dirpath):
         serf_stack.transmit(msg=msg)
         serf_stack.serviceAll()
         print 'serf messages transmitted'
+        while serf_stack.rxMsgs:
+            print serf_stack.rxMsgs.popleft()
         time.sleep(1)
 
 if __name__ == '__main__':
