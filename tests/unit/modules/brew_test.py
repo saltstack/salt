@@ -84,13 +84,14 @@ class BrewTestCase(TestCase):
         '''
         self.assertEqual(brew.list_pkgs(removed=True), {})
 
-    def test_list_pkgs_versions_list_true(self):
+    def test_list_pkgs_versions_true(self):
         '''
         Tests if pkg.list_pkgs is already in context and is a list
         '''
         mock_context = {'foo': ['bar']}
         with patch.dict(brew.__context__, {'pkg.list_pkgs': mock_context}):
-            self.assertEqual(brew.list_pkgs(versions_as_list=True), mock_context)
+            self.assertEqual(brew.list_pkgs(versions_as_list=True),
+                             mock_context)
 
     # 'version' function tests: 1
 
