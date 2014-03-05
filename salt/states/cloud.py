@@ -15,6 +15,7 @@ Use this minion to spin up a cloud instance:
 '''
 
 import pprint
+from salt._compat import string_types
 
 
 def __virtual__():
@@ -24,7 +25,16 @@ def __virtual__():
     return 'cloud' if 'cloud.profile' in __salt__ else False
 
 
-def present(name, cloud_provider, **kwargs):
+def _valid(name, comment='', changes=None):
+    if not changes:
+        changes = {}
+    return {'name': name,
+            'result': True,
+            'changes': changes,
+            'comment': comment}
+
+
+def present(name, cloud_provider, onlyif=None, unless=None):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
     does not take a profile argument; rather, it takes the arguments that would
@@ -41,21 +51,44 @@ def present(name, cloud_provider, **kwargs):
 
     cloud_provider
         The name of the cloud provider to use
+
+    onlyif
+        Do run the state only if is unless succeed
+
+    unless
+        Do not run the state at least unless succeed
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    instance = __salt__['cloud.action'](
+        fun='show_instance', names=[name])
+    retcode = __salt__['cmd.retcode']
     prov = str([a for a in instance][0])
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                return _valid(name, comment='onlyif execution failed')
+        elif isinstance(onlyif, string_types):
+            if retcode(onlyif) != 0:
+                return _valid(name, comment='onlyif execution failed')
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                return _valid(name, comment='unless execution succeeded')
+        elif isinstance(unless, string_types):
+            if retcode(unless) == 0:
+                return _valid(name, comment='unless execution succeeded')
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already exists in {1}'.format(name, prov)
+        ret['comment'] = 'Instance {0} already exists in {1}'.format(name,
+                                                                     prov)
         return ret
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
-    info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
+    info = __salt__['cloud.create'](cloud_provider, name)
     if info and not 'Error' in info:
         ret['changes'] = info
         ret['result'] = True
@@ -63,7 +96,6 @@ def present(name, cloud_provider, **kwargs):
                           ' and the following options: {2}').format(
             name,
             cloud_provider,
-            pprint.pformat(kwargs)
         )
     elif info and not 'Error' in info:
         ret['result'] = False
@@ -82,20 +114,29 @@ def present(name, cloud_provider, **kwargs):
         return ret
 
 
-def absent(name):
+def absent(name, onlyif=None, unless=None):
     '''
     Ensure that no instances with the specified names exist.
 
-    CAUTION: This is a destructive state, which will search all configured cloud
-    providers for the named instance, and destroy it.
+    CAUTION: This is a destructive state, which will search all
+    configured cloud providers for the named instance,
+    and destroy it.
 
     name
         The name of the instance to destroy
+
+    onlyif
+        Do run the state only if is unless succeed
+
+    unless
+        Do not run the state at least unless succeed
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
+    retcode = __salt__['cmd.retcode']
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     if not instance:
         ret['result'] = True
@@ -104,6 +145,20 @@ def absent(name):
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
         return ret
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                return _valid(name, comment='onlyif execution failed')
+        elif isinstance(onlyif, string_types):
+            if retcode(onlyif) != 0:
+                return _valid(name, comment='onlyif execution failed')
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                return _valid(name, comment='unless execution succeeded')
+        elif isinstance(unless, string_types):
+            if retcode(unless) == 0:
+                return _valid(name, comment='unless execution succeeded')
     info = __salt__['cloud.destroy'](name)
     if info and not 'Error' in info:
         ret['changes'] = info
@@ -123,7 +178,7 @@ def absent(name):
     return ret
 
 
-def profile(name, profile):
+def profile(name, profile, onlyif=None, unless=None, **kwargs):
     '''
     Create a single instance on a cloud provider, using a salt-cloud profile.
 
@@ -138,21 +193,47 @@ def profile(name, profile):
 
     profile
         The name of the cloud profile to use
+
+    onlyif
+        Do run the state only if is unless succeed
+
+    unless
+        Do not run the state at least unless succeed
+
+    kwargs
+        Any profile override or addition
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
+    retcode = __salt__['cmd.retcode']
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                return _valid(name, comment='onlyif execution failed')
+        elif isinstance(onlyif, string_types):
+            if retcode(onlyif) != 0:
+                return _valid(name, comment='onlyif execution failed')
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                return _valid(name, comment='unless execution succeeded')
+        elif isinstance(unless, string_types):
+            if retcode(unless) == 0:
+                return _valid(name, comment='unless execution succeeded')
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     prov = str(instance.keys()[0])
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already exists in {1}'.format(name, prov)
+        ret['comment'] = 'Instance {0} already exists in {1}'.format(
+            name, prov)
         return ret
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
-    info = __salt__['cloud.profile'](profile, name)
+    info = __salt__['cloud.profile'](profile, name, **kwargs)
     if info and not 'Error' in info:
         ret['changes'] = info
         ret['result'] = True
