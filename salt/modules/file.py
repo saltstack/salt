@@ -1870,7 +1870,7 @@ def path_exists_glob(path):
     Expansion allows usage of ? * and character ranges []. Tilde expansion
     is not supported. Returns True/False.
 
-    .. versionadded::
+    .. versionadded:: Hellium
 
     CLI Example:
 
@@ -1879,7 +1879,7 @@ def path_exists_glob(path):
         salt '*' file.path_exists_glob /etc/pam*/pass*
 
     '''
-    return True if len(glob(path)) > 0 else False
+    return True if glob(path) else False
 
 def restorecon(path, recursive=False):
     '''
