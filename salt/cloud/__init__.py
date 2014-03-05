@@ -251,15 +251,19 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults())
         return mapper.map_providers_parallel(query_type)
 
-    def profile(self, profile, names, **kwargs):
+    def profile(self, profile, names, vm_opts=None, **kwargs):
         '''
         Pass in a profile to create, names is a list of vm names to allocate
+
+            vm_opts is a spetial dict that will be per node options overrides
         '''
+        if not vm_opts:
+            vm_opts = {}
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.cloud.simple_types_filter(
-                mapper.run_profile(profile, names))
+                mapper.run_profile(profile, names, vm_opts=vm_opts))
 
     def destroy(self, names):
         '''
@@ -1055,7 +1059,7 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def run_profile(self, profile, names):
+    def run_profile(self, profile, names, vm_opts=None):
         '''
         Parse over the options passed on the command line and determine how to
         handle them
@@ -1066,6 +1070,8 @@ class Cloud(object):
             return {'Error': msg}
 
         ret = {}
+        if not vm_opts:
+            vm_opts = {}
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
@@ -1082,6 +1088,7 @@ class Cloud(object):
                 continue
 
             vm_ = profile_details.copy()
+            vm_.update(vm_opts)
             vm_['name'] = name
             if self.opts['parallel']:
                 process = multiprocessing.Process(
