@@ -14,7 +14,7 @@ framer masterudpstack be active first start
 
 framer uxdrouter be active first start
    frame start
-      do router uxd
+      do master router
       #timeout 20
 
 framer localcmd be active first start

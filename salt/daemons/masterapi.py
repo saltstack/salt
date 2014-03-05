@@ -1367,10 +1367,9 @@ class LocalFuncs(object):
             )
         log.debug('Published command details {0}'.format(pub_load))
 
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': load['jid'],
-                'minions': minions
-            }
-        }
+        return {'ret': {
+                    'jid': load['jid'],
+                    'minions': minions
+                    },
+                'pub': pub_load
+                }

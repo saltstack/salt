@@ -47,7 +47,7 @@ def fileserver_update(self):
     salt.daemons.masterapi.fileserver_update(self.opts.value)
 
 
-class UxdRouter(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+class RouterMaster(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Routes the communication in and out of uxd connections
     '''
