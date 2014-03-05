@@ -28,7 +28,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if HAS_SALTCLOUD:
-        return 'cloud'
+        return True
     return False
 
 
@@ -130,7 +130,7 @@ def select_query(query_type='list_nodes_select'):
     return query(query_type='list_nodes_select')
 
 
-def profile_(profile, names, vm_opts=None, **kwargs):
+def profile_(profile, names, vm_overrides=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
 
@@ -141,7 +141,7 @@ def profile_(profile, names, vm_opts=None, **kwargs):
         salt '*' cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
-    info = client.profile(profile, names, vm_opts=vm_opts, **kwargs)
+    info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
     return info
 
 

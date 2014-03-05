@@ -25,6 +25,7 @@ from salt.cloud.exceptions import SaltCloudSystemExit
 
 from salt.client import LocalClient
 from salt.runner import RunnerClient
+import salt.syspaths
 
 
 # Get logging started
@@ -60,13 +61,13 @@ def _get_grain_id(id_):
 
 
 def _minion_opts():
-    cfg = os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion')
+    cfg = os.environ.get('SALT_MINION_CONFIG', os.path.join(salt.syspaths.CONFIG_DIR, 'minion'))
     opts = config.minion_conf(cfg)
     return opts
 
 
 def _master_opts():
-    cfg = os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master')
+    cfg = os.environ.get('SALT_MINION_CONFIG', os.path.join(salt.syspaths.CONFIG_DIR, 'master'))
     opts = config.master_config(cfg)
     return opts
 
@@ -111,15 +112,15 @@ def _salt(fun, *args, **kw):
         laps = laps // __CACHED_FUNS[fun]
     try:
         sargs = json.dumps(args)
-    except Exception:
+    except TypeError:
         sargs = ''
     try:
         skw = json.dumps(kw)
-    except Exception:
+    except TypeError:
         skw = ''
     try:
         skwargs = json.dumps(kwargs)
-    except Exception:
+    except TypeError:
         skwargs = ''
     cache_key = (laps, target, fun, sargs, skw, skwargs)
     if not cache or (cache and (not cache_key in __CACHED_CALLS)):
@@ -152,25 +153,19 @@ def _salt(fun, *args, **kw):
         }.get(fun, '120'))
         while wait_for_res:
             wait_for_res -= 0.5
-            try:
-                cret = runner.cmd(
-                    'jobs.lookup_jid',
-                    [jid, {'__kwarg__': True, 'output': False}])
-                if target in cret:
-                    ret = cret[target]
-                    break
-                # spetial case, some answers may be crafted
-                # to handle the unresponsivness of a specific command
-                # which is also meaningfull, eg a minion not yet provisionned
-                if fun in ['test.ping'] and not wait_for_res:
-                    ret = {
-                        'test.ping': False,
-                    }.get(fun, False)
-            except Exception:
-                if wait_for_res:
-                    pass
-                else:
-                    raise
+            cret = runner.cmd(
+                'jobs.lookup_jid',
+                [jid, {'__kwarg__': True, 'output': False}])
+            if target in cret:
+                ret = cret[target]
+                break
+            # special case, some answers may be crafted
+            # to handle the unresponsivness of a specific command
+            # which is also meaningfull, eg a minion not yet provisionned
+            if fun in ['test.ping'] and not wait_for_res:
+                ret = {
+                    'test.ping': False,
+                }.get(fun, False)
             time.sleep(0.5)
         try:
             if 'is not available.' in ret:
@@ -178,7 +173,7 @@ def _salt(fun, *args, **kw):
                     'module/function {0} is not available'.format(fun))
         except SaltCloudSystemExit:
             raise
-        except Exception:
+        except TypeError:
             pass
         if cache:
             __CACHED_CALLS[cache_key] = ret
@@ -208,7 +203,7 @@ def list_nodes(conn=None, call=None):
         hide = True
     if not get_configured_provider():
         return
-    lxclist = _salt('lxc.list', **dict(extra=True))
+    lxclist = _salt('lxc.list', extra=True)
     nodes = {}
     for state, lxcs in lxclist.items():
         for lxcc, linfos in lxcs.items():
@@ -345,7 +340,7 @@ def create(vm_, call=None):
     minion = vm_['minion']
 
     from_container = vm_.get('from_container', None)
-    image = vm_.get('image', 'ubuntu')
+    image = vm_.get('image', None)
     vgname = vm_.get('vgname', None)
     backing = vm_.get('backing', None)
     snapshot = vm_.get('snapshot', False)
@@ -359,9 +354,9 @@ def create(vm_, call=None):
     bridge = vm_.get('bridge', 'lxcbr0')
     gateway = vm_.get('gateway', 'auto')
     size = vm_.get('size', '10G')
-    ssh_username = vm_.get('ssh_username', 'ubuntu')
+    ssh_username = vm_.get('ssh_username', 'user')
     sudo = vm_.get('sudo', True)
-    password = vm_.get('password', 'ubuntu')
+    password = vm_.get('password', 'user')
     lxc_conf_unset = vm_.get('lxc_conf_unset', [])
     lxc_conf = vm_.get('lxc_conf', [])
     stopped = vm_.get('stopped', False)
@@ -579,12 +574,9 @@ def create(vm_, call=None):
         # we ping for 1 minute
         skip = False
         if not created:
-            try:
-                ping = salt.utils.cloud.wait_for_fun(testping, timeout=10)
-                if ping == 'OK':
-                    skip = True
-            except Exception:
-                pass
+            ping = salt.utils.cloud.wait_for_fun(testping, timeout=10)
+            if ping == 'OK':
+                skip = True
 
         if not skip:
             minion['master_port'] = mopts.get('ret_port', '4506')
@@ -666,7 +658,7 @@ def get_configured_provider(vm_=None):
     # fallback if we have only __active_provider_name__
     if ((__opts__.get('destroy', False) and not data)
         or (not matched and __active_provider_name__)):
-        data =__opts__.get('providers',
+        data = __opts__.get('providers',
                            {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:

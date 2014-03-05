@@ -234,7 +234,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
-    info = __salt__['cloud.profile'](profile, name, vm_opts=kwargs)
+    info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs)
     if info and not 'Error' in info:
         ret['changes'] = info
         ret['result'] = True

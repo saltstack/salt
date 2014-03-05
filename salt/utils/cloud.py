@@ -46,7 +46,8 @@ from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudExecutionTimeout,
-    SaltCloudExecutionFailure
+    SaltCloudExecutionFailure,
+    SaltCloudPasswordError
 )
 
 # Import third party libs
@@ -1302,8 +1303,6 @@ def root_cmd(command, tty, sudo, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
-    class PasswordError(Exception):
-        pass
 
     try:
         password_retries = 15
@@ -1328,7 +1327,7 @@ def root_cmd(command, tty, sudo, **kwargs):
                             'Asking for password again. Wrong one provided???'
                         )
                         proc.terminate()
-                        raise PasswordError()
+                        raise SaltCloudPasswordError()
                     proc.sendline(kwargs['password'])
                     sent_password = True
 
@@ -1336,7 +1335,7 @@ def root_cmd(command, tty, sudo, **kwargs):
                 time.sleep(0.5)
 
             return proc.exitstatus
-        except PasswordError:
+        except SaltCloudPasswordError:
             if sudo and (password_retries > 0):
                 log.warning(
                     'Asking for password failed, retrying'
