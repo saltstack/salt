@@ -489,7 +489,7 @@ def _change_state(cmd, name, expected):
     return r
 
 
-def start(name):
+def start(name, restart=False):
     '''
     Start the named container.
 
@@ -497,7 +497,29 @@ def start(name):
 
         salt '*' lxc.start name
     '''
-    return _change_state('lxc-start -d', name, 'running')
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Started'}
+    try:
+        exists = __salt__['lxc.exists'](name)
+        if not exists:
+            return {'name': name,
+                    'result': False,
+                    'comment': 'Container does not exists'}
+        if restart:
+            __salt__['lxc.stop'](name)
+        ret.update(_change_state('lxc-start -d', name, 'running'))
+        infos = __salt__['lxc.info'](name)
+        ret['result'] = infos['state'] == 'running'
+        if ret['change']:
+            ret['changes']['started'] = 'started'
+    except Exception, ex:
+        trace = traceback.format_exc()
+        ret['result'] = False
+        ret['comment'] = 'Error in starting container'
+        ret['comment'] += '{0}\n{1}\n'.format(ex, trace)
+    return ret
 
 
 def stop(name):
@@ -508,7 +530,28 @@ def stop(name):
 
         salt '*' lxc.stop name
     '''
-    return _change_state('lxc-stop', name, 'stopped')
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Stopped'}
+    try:
+        exists = __salt__['lxc.exists'](name)
+        if not exists:
+            return {'name': name,
+                    'result': False,
+                    'changes': {},
+                    'comment': 'Container does not exists'}
+        ret.update(_change_state('lxc-stop', name, 'stopped'))
+        infos = __salt__['lxc.info'](name)
+        ret['result'] = infos['state'] == 'stopped'
+        if ret['change']:
+            ret['changes']['stopped'] = 'stopped'
+    except Exception, ex:
+        trace = traceback.format_exc()
+        ret['result'] = False
+        ret['comment'] = 'Error in stopping container'
+        ret['comment'] += '{0}\n{1}\n'.format(ex, trace)
+    return ret
 
 
 def freeze(name):
