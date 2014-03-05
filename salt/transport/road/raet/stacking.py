@@ -42,17 +42,19 @@ class StackUdp(object):
 
     def __init__(self,
                  name='',
+                 main=False,
                  version=raeting.VERSION,
                  store=None,
                  estate=None,
                  eid=None,
                  ha=("", raeting.RAET_PORT),
-                 rxMsgs = None,
-                 txMsgs = None,
-                 udpRxes = None,
-                 udpTxes = None,
-                 road = None,
-                 safe = None,
+                 rxMsgs=None,
+                 txMsgs=None,
+                 udpRxes=None,
+                 udpTxes=None,
+                 road=None,
+                 safe=None,
+                 dirpath=None,
                  ):
         '''
         Setup StackUdp instance
@@ -65,22 +67,30 @@ class StackUdp(object):
         self.store = store or storing.Store(stamp=0.0)
         self.estates = odict() # remote estates attached to this stack by eid
         self.eids = odict() # reverse lookup eid by estate.name
-         # local estate for this stack
-        self.estate = estate or estating.LocalEstate(stack=self, eid=eid, ha=ha)
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        #(msg, deid) deid=0 is broadcast
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
-        self.road = road or keeping.RoadKeep()
-        self.safe = safe or keeping.SafeKeep()
+
+        self.road = road or keeping.RoadKeep(dirpath=dirpath, stackname=self.name)
+        self.safe = safe or keeping.SafeKeep(dirpath=dirpath, stackname=self.name)
+        kept = self.loadLocal() # local estate from saved data
+        # local estate for this stack
+        self.estate = estate or kept or estating.LocalEstate(stack=self,
+                                                             eid=eid,
+                                                             main=main,
+                                                             ha=ha)
+        self.estate.stack = self
         self.serverUdp = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUdp.reopen()  # open socket
         self.estate.ha = self.serverUdp.ha  # update estate host address after open
+        self.dumpLocal() # save local estate data
 
-        #self.road.dumpLocalEstate(self.estate)
-        #self.safe.dumpLocalEstate(self.estate)
+        kepts = self.loadAllRemote() # remote estates from saved data
+        for kept in kepts:
+            self.addRemoteEstate(kept)
+        self.dumpAllRemote() # save remote estate data
 
     def fetchRemoteEstateByHostPort(self, host, port):
         '''
@@ -166,6 +176,109 @@ class StackUdp(object):
         estate = self.estates[eid]
         del self.estates[eid]
         del self.eids[estate.name]
+
+    def clearLocal(self):
+        '''
+        Clear local keeps
+        '''
+        self.road.clearLocalData()
+        self.safe.clearLocalData()
+
+    def clearRemote(self, estate):
+        '''
+        Clear remote keeps of estate
+        '''
+        self.road.clearRemoteEstate()
+        self.safe.clearRemoteEstate()
+
+    def clearAllRemote(self):
+        '''
+        Clear all remote keeps
+        '''
+        self.road.clearAllRemoteData()
+        self.safe.clearAllRemoteData()
+
+    def dumpLocal(self):
+        '''
+        Dump keeps of local estate
+        '''
+        self.road.dumpLocalEstate(self.estate)
+        self.safe.dumpLocalEstate(self.estate)
+
+    def dumpRemote(self, estate):
+        '''
+        Dump keeps of estate
+        '''
+        self.road.dumpRemoteEstate(estate)
+        self.safe.dumpRemoteEstate(estate)
+
+    def dumpRemoteByEid(self, eid):
+        '''
+        Dump keeps of estate given by eid
+        '''
+        estate = self.estates.get(eid)
+        if estate:
+            self.dumpRemote(estate)
+
+    def dumpAllRemote(self):
+        '''
+        Dump all remotes estates to keeps'''
+        self.road.dumpAllRemoteEstates(self.estates.values())
+        self.safe.dumpAllRemoteEstates(self.estates.values())
+
+    def loadLocal(self):
+        '''
+        Load and Return local estate if keeps found
+        '''
+        road = self.road.loadLocalData()
+        safe = self.safe.loadLocalData()
+        if not road or not safe:
+            return None
+        estate = estating.LocalEstate(stack=self,
+                                      eid=road['eid'],
+                                      name=road['name'],
+                                      main=road['main'],
+                                      host=road['host'],
+                                      port=road['port'],
+                                      sid=road['sid'],
+                                      sigkey=safe['sighex'],
+                                      prikey=safe['prihex'],)
+        return estate
+
+    def loadAllRemote(self):
+        '''
+        Load and Return list of remote estates
+        remote = estating.RemoteEstate( stack=self.stack,
+                                        name=name,
+                                        host=data['sh'],
+                                        port=data['sp'],
+                                        verkey=verhex,
+                                        pubkey=pubhex,
+                                        rsid=self.sid,
+                                        rtid=self.tid, )
+        self.stack.addRemoteEstate(remote)
+        '''
+        estates = []
+        roads = self.road.loadAllRemoteData()
+        safes = self.safe.loadAllRemoteData()
+        if not road or not safe:
+            return []
+        for key, road in roads.items():
+            if key not in safes.items():
+                continue
+            safe = safes[key]
+            estate = estating.RemoteEstate( stack=self,
+                                            eid=road['eid'],
+                                            name=road['name'],
+                                            main=road['main'],
+                                            host=road['host'],
+                                            port=road['port'],
+                                            sid=road['sid'],
+                                            rsid=road['rsid'],
+                                            verkey=safe['verhex'],
+                                            pubkey=safe['pubhex'],)
+            estates.append(estates)
+        return estates
 
     def addTransaction(self, index, transaction):
         '''

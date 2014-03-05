@@ -71,18 +71,18 @@ class Transaction(object):
         '''
         le = self.stack.estate.eid
         if le == 0: #bootstapping onto channel use ha
-            host = self.stack.estate.host
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            le = (host, self.stack.estate.port)
-            #le = self.stack.estate.ha
+            #host = self.stack.estate.host
+            #if host == '0.0.0.0':
+                #host = '127.0.0.1'
+            #le = (host, self.stack.estate.port)
+            le = self.stack.estate.ha
         re = self.reid
         if re == 0:
-            host = self.stack.estates[self.reid].host
-            if host == '0.0.0.0':
-                host =  '127.0.0.1'
-            re = (host, self.stack.estates[self.reid].port)
-            #re = self.stack.estates[self.reid].ha
+            #host = self.stack.estates[self.reid].host
+            #if host == '0.0.0.0':
+                #host =  '127.0.0.1'
+            #re = (host, self.stack.estates[self.reid].port)
+            re = self.stack.estates[self.reid].ha
         return ((self.rmt, le, re, self.sid, self.tid, self.bcst,))
 
     def process(self):

@@ -448,16 +448,16 @@ class TxPacket(Packet):
         data = self.data
         le = data['se']
         if le == 0:
-            host = data['sh']
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            le = (host, data['sp'])
+            #host = data['sh']
+            #if host == '0.0.0.0':
+                #host = '127.0.0.1'
+            le = (data['sh'], data['sp'])
         re = data['de']
         if re == 0:
-            host = data['dh']
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            re = (host, data['dp'])
+            #host = data['dh']
+            #if host == '0.0.0.0':
+                #host = '127.0.0.1'
+            re = (data['dh'], data['dp'])
         return ((data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
     def signature(self, msg):
@@ -560,16 +560,16 @@ class RxPacket(Packet):
         data = self.data
         le = data['de']
         if le == 0:
-            host = data['dh']
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            le = (host, data['dp'])
+            #host = data['dh']
+            #if host == '0.0.0.0':
+                #host = '127.0.0.1'
+            le = (data['dh'], data['dp'])
         re = data['se']
         if re == 0:
-            host = data['sh']
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            re = (host, data['sp'])
+            #host = data['sh']
+            #if host == '0.0.0.0':
+                #host = '127.0.0.1'
+            re = (data['sh'], data['sp'])
         return ((not data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
     def verify(self, signature, msg):
