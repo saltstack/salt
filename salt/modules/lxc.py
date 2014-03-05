@@ -63,7 +63,7 @@ def __virtual__():
         return 'lxc'
     return False
     '''
-    return 'lxc'
+    return True
 
 
 def _lxc_profile(profile):
@@ -374,7 +374,6 @@ def clone(name,
         p = profile.pop(k, default)
         return kw or p
 
-
     backing = select('backing')
     size = select('size', '1G')
 
@@ -668,7 +667,7 @@ def set_parameter(name, parameter, value):
         return True
 
 
-def templates():
+def templates(templates_dir='/usr/share/lxc/templates'):
     '''
     Returns a list of existing templates
 
@@ -678,10 +677,9 @@ def templates():
     '''
     templates = []
     san = re.compile('^lxc-')
-    tdir = '/usr/share/lxc/templates'
-    if os.path.isdir(tdir):
+    if os.path.isdir(templates_dir):
         templates.extend(
-            [san.sub('', a) for a in os.listdir(tdir)]
+            [san.sub('', a) for a in os.listdir(templates_dir)]
         )
     templates.sort()
     return templates
@@ -803,9 +801,9 @@ def set_pass(name, users, password):
             cmd += " /bin/true\""
             cret = __salt__['cmd.run_all'](cmd)
             if cret['retcode'] != 0:
-                raise Exception('Can\'t change passwords')
+                raise ValueError('Can\'t change passwords')
             ret['comment'] = 'Password updated for {0}'.format(users)
-        except Exception, ex:
+        except ValueError, ex:
             trace = traceback.format_exc()
             ret['result'] = False
             ret['comment'] = 'Error in setting base password\n'
@@ -837,77 +835,71 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
         ret['comment'] = (
             'Configuration does not exists: {0}'.format(lxc_conf_p))
     else:
-        try:
-            with open(lxc_conf_p, 'r') as fic:
-                filtered_lxc_conf = []
-                for row in lxc_conf:
-                    if not row:
-                        continue
-                    for conf in row:
-                        filtered_lxc_conf.append((conf.strip(),
-                                                  row[conf].strip()))
-                ret['comment'] = 'lxc.conf is up to date'
-                lines = []
-                orig_config = fic.read()
-                for line in orig_config.splitlines():
-                    if line.startswith('#') or not line.strip():
-                        lines.append([line, ''])
-                    else:
-                        line = line.split('=')
-                        index = line.pop(0)
-                        val = (index.strip(), '='.join(line).strip())
-                        if not val in lines:
-                            lines.append(val)
-                for k, item in filtered_lxc_conf:
-                    matched = False
-                    for idx, line in enumerate(lines[:]):
-                        if line[0] == k:
-                            matched = True
-                            lines[idx] = (k, item)
-                            if '='.join(line[1:]).strip() != item.strip():
-                                changes['edited'].append(
-                                    ({line[0]: line[1:]}, {k: item}))
-                                break
-                    if not matched:
-                        if not (k, item) in lines:
-                            lines.append((k, item))
-                        changes['added'].append({k: item})
-                dest_lxc_conf = []
-                # filter unset
-                if lxc_conf_unset:
-                    for line in lines:
-                        for opt in lxc_conf_unset:
-                            if (
-                                not line[0].startswith(opt)
-                                and not line in dest_lxc_conf
-                            ):
-                                dest_lxc_conf.append(line)
-                            else:
-                                changes['removed'].append(opt)
+        with open(lxc_conf_p, 'r') as fic:
+            filtered_lxc_conf = []
+            for row in lxc_conf:
+                if not row:
+                    continue
+                for conf in row:
+                    filtered_lxc_conf.append((conf.strip(),
+                                              row[conf].strip()))
+            ret['comment'] = 'lxc.conf is up to date'
+            lines = []
+            orig_config = fic.read()
+            for line in orig_config.splitlines():
+                if line.startswith('#') or not line.strip():
+                    lines.append([line, ''])
                 else:
-                    dest_lxc_conf = lines
-                conf = ''
-                for k, val in dest_lxc_conf:
-                    if not val:
-                        conf += '{0}\n'.format(k)
-                    else:
-                        conf += '{0} = {1}\n'.format(k.strip(), val.strip())
-                conf_changed = conf != orig_config
-                chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                if conf_changed:
-                    wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
-                    wfic.write(conf)
-                    wfic.close()
-                    wfic = open(lxc_conf_p, 'w')
-                    wfic.write(conf)
-                    wfic.close()
-                    ret['comment'] = 'Updated'
-                    ret['result'] = True
-        except Exception, ex:
-            trace = traceback.format_exc()
-            ret['result'] = False
-            ret['comment'] = 'Error in storing lxc configuration'
-            ret['comment'] += '{0}\n{1}\n'.format(ex, trace)
+                    line = line.split('=')
+                    index = line.pop(0)
+                    val = (index.strip(), '='.join(line).strip())
+                    if not val in lines:
+                        lines.append(val)
+            for k, item in filtered_lxc_conf:
+                matched = False
+                for idx, line in enumerate(lines[:]):
+                    if line[0] == k:
+                        matched = True
+                        lines[idx] = (k, item)
+                        if '='.join(line[1:]).strip() != item.strip():
+                            changes['edited'].append(
+                                ({line[0]: line[1:]}, {k: item}))
+                            break
+                if not matched:
+                    if not (k, item) in lines:
+                        lines.append((k, item))
+                    changes['added'].append({k: item})
+            dest_lxc_conf = []
+            # filter unset
+            if lxc_conf_unset:
+                for line in lines:
+                    for opt in lxc_conf_unset:
+                        if (
+                            not line[0].startswith(opt)
+                            and not line in dest_lxc_conf
+                        ):
+                            dest_lxc_conf.append(line)
+                        else:
+                            changes['removed'].append(opt)
+            else:
+                dest_lxc_conf = lines
+            conf = ''
+            for k, val in dest_lxc_conf:
+                if not val:
+                    conf += '{0}\n'.format(k)
+                else:
+                    conf += '{0} = {1}\n'.format(k.strip(), val.strip())
+            conf_changed = conf != orig_config
+            chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            if conf_changed:
+                wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
+                wfic.write(conf)
+                wfic.close()
+                wfic = open(lxc_conf_p, 'w')
+                wfic.write(conf)
+                wfic.close()
+                ret['comment'] = 'Updated'
+                ret['result'] = True
     if (
         not changes['added']
         and not changes['edited']
