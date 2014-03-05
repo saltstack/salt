@@ -35,6 +35,11 @@ There are a few things to keep in mind:
   recommended not to use 'return', which contains the entire return data
   structure (which can be very large). Also note that the subject is always
   unencrypted.
+
+  To use the SMTP returner, append '--return smtp' to the salt command. ex:
+
+    salt '*' test.ping --return smtp
+
 '''
 
 # Import python libs
