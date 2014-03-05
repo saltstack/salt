@@ -6,6 +6,9 @@ settings are listed below, along with sane defaults.
 couchdb.db:     'salt'
 couchdb.url:        'http://salt:5984/'
 
+  To use the couchdb returner, append '--return couchdb' to the salt command. ex:
+
+    salt '*' test.ping --return couchdb
 '''
 import logging
 import time
