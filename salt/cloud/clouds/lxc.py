@@ -428,11 +428,11 @@ def create(vm_, call=None):
                 'container could not be cloned: {0}, '
                 '{1} does not exists'.format(name, from_container))
         else:
-            nret = _salt('lxc.clone', name, **dict(orig=from_container,
-                                                   snapshot=snapshot,
-                                                   size=size,
-                                                   backing=backing,
-                                                   profile=profile))
+            nret = _salt('lxc.clone', name, orig=from_container,
+                                            snapshot=snapshot,
+                                            size=size,
+                                            backing=backing,
+                                            profile=profile)
             if nret.get('error', ''):
                 cret['result'] = False
                 cret['comment'] = '{0}\n{1}'.format(
@@ -444,13 +444,13 @@ def create(vm_, call=None):
                 cret['comment'] += 'Container cloned\n'
                 cret['changes']['status'] = 'cloned'
     elif method == 'create':
-        nret = _salt('lxc.create', name, **dict(template=image,
-                                                profile=profile,
-                                                fstype=fstype,
-                                                vgname=vgname,
-                                                size=size,
-                                                lvname=lvname,
-                                                backing=backing))
+        nret = _salt('lxc.create', name, template=image,
+                                         profile=profile,
+                                         fstype=fstype,
+                                         vgname=vgname,
+                                         size=size,
+                                         lvname=lvname,
+                                         backing=backing)
         if nret.get('error', ''):
             cret['result'] = False
             cret['comment'] = nret['error']
@@ -474,8 +474,8 @@ def create(vm_, call=None):
     cret['result'] = False
     cret = _salt('lxc.update_lxc_conf',
                  name,
-                 **dict(lxc_conf=lxc_conf,
-                        lxc_conf_unset=lxc_conf_unset))
+                 lxc_conf=lxc_conf,
+                 lxc_conf_unset=lxc_conf_unset)
     if not cret['result']:
         ret['result'] = False
         ret['comment'] = cret['comment']
@@ -488,7 +488,7 @@ def create(vm_, call=None):
     changes['200_start'] = 'started'
     ret['comment'] = changes['200_start']
     # reboot if conf has changed
-    cret = _salt('lxc.start', name, **dict(restart=changed))
+    cret = _salt('lxc.start', name, restart=changed)
     if not cret['result']:
         ret['result'] = False
         changes['200_start'] = cret['comment']
@@ -504,7 +504,7 @@ def create(vm_, call=None):
     if not __grains__.get(gid):
         cret = _salt('lxc.set_pass',
                      name,
-                     **dict(password=password, users=users))
+                     password=password, users=users)
         changes['250_password'] = 'Password updated'
         if not cret['result']:
             ret['result'] = False
@@ -548,7 +548,7 @@ def create(vm_, call=None):
         gid = 'lxc.{0}.initial_dns'.format(name, False)
         cret = _salt('lxc.set_dns',
                      name,
-                     **dict(dnsservers=dnsservers))
+                     dnsservers=dnsservers)
         changes['350_dns'] = 'DNS updated'
         ret['comment'] = changes['350_dns']
         if not cret['result']:
