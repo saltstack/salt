@@ -29,6 +29,7 @@ import stat
 import sys
 import tempfile
 import time
+from glob import glob
 
 try:
     import grp
@@ -1863,6 +1864,22 @@ def file_exists(path):
     '''
     return os.path.isfile(path)
 
+def path_exists_glob(path):
+    '''
+    Tests to see if path after expansion is a valid path (file or directory).
+    Expansion allows usage of ? * and character ranges []. Tilde expansion
+    is not supported. Returns True/False.
+
+    .. versionadded:: Hellium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.path_exists_glob /etc/pam*/pass*
+
+    '''
+    return True if glob(path) else False
 
 def restorecon(path, recursive=False):
     '''
