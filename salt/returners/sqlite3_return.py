@@ -43,6 +43,10 @@ Use the commands to create the sqlite3 database and tables::
       success TEXT NOT NULL
       );
     EOF
+
+  To use the sqlite returner, append '--return sqlite' to the salt command. ex:
+
+    salt '*' test.ping --return sqlite
 '''
 
 # Import python libs
