@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Check if we have peer access ?
     '''
-    return 'modjk_worker'
+    return True
 
 
 def _send_command(cmd,
