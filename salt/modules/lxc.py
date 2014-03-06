@@ -45,12 +45,16 @@ def _ip_sort(ip):
 
 
 def __virtual__():
+    if salt.utils.which('lxc-start'):
+        return True
     '''
     To speed up the whole thing, we decided to not use the
     subshell way and assume things are in place for lxc
     Discussion made by @kiorky and @thatch45
-    if salt.utils.which('lxc-autostart'):
-        return 'lxc'
+
+    lxc-version presence is not sufficient, in lxc1.0 alpha
+    (precise backports), we have it and it is sufficient
+    for the module to execute.
     elif salt.utils.which('lxc-version'):
         passed = False
         try:
@@ -63,7 +67,7 @@ def __virtual__():
         return 'lxc'
     return False
     '''
-    return True
+    return False
 
 
 def _lxc_profile(profile):

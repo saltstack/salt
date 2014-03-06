@@ -13,7 +13,6 @@ import glob
 import time
 import signal
 import logging
-from pprint import pprint
 import multiprocessing
 from itertools import groupby
 
