@@ -22,12 +22,15 @@ except they run on the server side.
 A runner is a Python module that contains functions, each public function is
 a runner that can be executed via the *salt-run* command.
 
-If a Python module named test.py is created in the runners directory and
+If a Python module named ``test.py`` is created in the runners directory and
 contains a function called ``foo`` then the function could be called with:
 
 .. code-block:: bash
 
     # salt-run test.foo
+
+To add your custom runners, put them in a directory and add it to
+:conf_master:`runner_dirs` in your master configuration file.
 
 Examples
 --------
