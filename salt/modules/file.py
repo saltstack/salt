@@ -1869,6 +1869,7 @@ def file_exists(path):
     '''
     return os.path.isfile(path)
 
+
 def path_exists_glob(path):
     '''
     Tests to see if path after expansion is a valid path (file or directory).
@@ -1885,6 +1886,7 @@ def path_exists_glob(path):
 
     '''
     return True if glob(path) else False
+
 
 def restorecon(path, recursive=False):
     '''
