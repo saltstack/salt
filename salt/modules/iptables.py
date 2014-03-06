@@ -522,6 +522,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
+    If the position specified is a negative number, then the insert will be
+        performed counting from the end of the list. For instance, a position
+        of -1 will insert the rule as the second to last rule. To insert a rule
+        in the last position, use the append function instead.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -540,6 +545,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Position needs to be specified or use append (-A)'
     if not rule:
         return 'Error: Rule needs to be specified'
+
+    if position < 0:
+        rules = get_rules(family='ipv4')
+        size = len(rules[table][chain]['rules'])
+        position = (size + position) + 1
 
     cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
