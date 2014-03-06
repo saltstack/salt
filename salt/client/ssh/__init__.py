@@ -37,7 +37,7 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 
 # This shim facilitates remote salt-call operations
-# - Explicitly invokes Bourne shell for universal compatibility
+# - Uses /bin/sh for maximum compatibility
 #
 # 1. Identify a suitable python
 # 2. Test for remote salt-call and version if present
@@ -49,21 +49,12 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 # - First format pass inserts salt version and delimiter
 # - Second pass at run-time and inserts optional "sudo" and command
 SSH_SHIM = '''/bin/sh << 'EOF'
-      which ls > /dev/null 2> /dev/null
-      wret=$?
-      if [ $wret -ne 0 ]
-      then
-         if [ $wret -eq 127 ]
-         then
-            echo "The following required Packages are missing: which" >&2
-         else
-            echo 'which command error' >&2
-         fi
-         exit $wret
-      fi
+      #!/bin/sh
 
-      MISS_PKG=''
-      if [ ! $(which tar 2>/dev/null) ]
+      MISS_PKG=""
+
+      command -v tar >/dev/null
+      if [ $? -ne 0 ]
       then
          MISS_PKG="$MISS_PKG tar"
       fi
@@ -76,61 +67,67 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             python2       \\
             python        ;
       do
-         if [ $(which $py_candidate 2>/dev/null) ]
+         command -v $py_candidate >/dev/null
+         if [ $? -eq 0 ]
          then
-               PYTHON=$(which $py_candidate)
+               PYTHON="$py_candidate"
                break
          fi
       done
 
-      if [ "$PYTHON" == "" ]
+      if [ -z "$PYTHON" ]
       then
          MISS_PKG="$MISS_PKG python"
       fi
 
-      SALT=/tmp/.salt/salt-call
-      if [ {{2}} = 'md5' ]
+      SALT="/tmp/.salt/salt-call"
+      if [ "{{2}}" = "md5" ]
       then
          for md5_candidate in \\
             md5sum            \\
-            md5               ;
+            md5               \\
+            csum              ;
          do
-            if [ $(which $md5_candidate 2>/dev/null) ]
+            command -v $md5_candidate >/dev/null
+            if [ $? -eq 0 ]
             then
-                SUMCHECK=$(which $md5_candidate)
+                SUMCHECK="$md5_candidate"
                 break
             fi
          done
       else
-         if [ $(which {{2}} 2>/dev/null) ]
+         if [ $(command -v "{{2}}" >/dev/null) ]
          then
-            SUMCHECK={{2}}
+            SUMCHECK="{{2}}"
          fi
       fi
 
-      if [ "$SUMCHECK" == "" ]
+      if [ -z "$SUMCHECK" ]
       then
-         MISS_PKG="$MISS_PKG md5 or md5sum"
+         MISS_PKG="$MISS_PKG md5sum/md5/csum"
       fi
 
-      if [ "$MISS_PKG" != "" ]
+      if [ -n "$MISS_PKG" ]
       then
             echo "The following required Packages are missing: $MISS_PKG" >&2
             exit 127
       fi
 
-      if [ $SUMCHECK = '/sbin/md5' ]
+      # MD5 check for systems with a BSD userland (includes OSX).
+      if [ "$SUMCHECK" = "md5" ]
       then
-         CUT_MARK=4
-      else
-         CUT_MARK=1
+         SUMCHECK="md5 -q"
+      # MD5 check for AIX systems.
+      elif [ "$SUMCHECK" = "csum" ]
+      then
+         SUMCHECK="csum -h MD5"
       fi
 
-      if [ -f $SALT ]
+      if [ -f "$SALT" ]
       then
-         if [ $(cat /tmp/.salt/version) != {0} ]
+         if [ "$(cat /tmp/.salt/version)" != "{0}" ]
          then
-            {{0}} rm -rf /tmp/.salt && install -m 0700 -d /tmp/.salt
+            {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
             if [ $? -ne 0 ]; then
                 exit 1
             fi
@@ -139,23 +136,29 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             exit 1
          fi
       else
-         PY_TOO_OLD=$($PYTHON -c 'import sys; print sys.hexversion < 0x02060000')
-         if [ $PY_TOO_OLD = 'True' ];
+         PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
+         if [ "$PY_TOO_OLD" = "True" ];
          then
             echo "Python too old" >&2
             exit 1
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f$CUT_MARK -d' ') = {{3}} ] && {{0}} tar opxzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             if [ "$($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ )" = "{{3}}" ]
+             then
+                 cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
+             else
+                 echo "Mismatched checksum for /tmp/.salt/salt-thin.tgz" >&2
+                 exit 1
+             fi
          else
-             install -m 0700 -d /tmp/.salt
+             mkdir -m 0700 -p /tmp/.salt
              echo "{1}"
              echo "deploy"
              exit 1
          fi
       fi
-      echo '{{4}}' > /tmp/.salt/minion
+      echo "{{4}}" > /tmp/.salt/minion
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
 EOF'''.format(salt.__version__, RSTR)
