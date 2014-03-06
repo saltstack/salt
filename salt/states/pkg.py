@@ -382,8 +382,8 @@ def installed(
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
-        A list of packages to install from a software repository. Each package
-        will be installed individually by the package manager.
+        A list of packages to install from a software repository. All packages
+        listed under ``pkgs`` will be installed via a single command.
 
     Usage::
 
@@ -436,8 +436,8 @@ def installed(
                     - baz
 
     names
-        A list of packages to install from a software repository. All packages
-        listed under names will be installed via a single command.
+        A list of packages to install from a software repository. Each package
+        will be installed individually by the package manager.
 
     Usage::
 
