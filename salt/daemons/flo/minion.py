@@ -187,6 +187,20 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
 
+    def _return_pub(self, ret):
+        '''
+        Send the return data back via the uxd socket
+        '''
+        ret_stack = stacking.StackUxd(
+                lanename=self.opts.value['id'],
+                yid=ret['jid'],
+                dirpath=self.opts.value['sock_dir'])
+        route = {'src': (self.opts.value['id'], ret_stack.yard.name, 'jid_ret'),
+                 'dst': ('master', None, 'return')}
+        msg = {'route': route, 'return': ret}
+        ret_stack.transmit(msg, 'yard0')
+        ret_stack.serviceAll()
+
     def action(self):
         '''
         Pull the queue for functions to execute
@@ -321,7 +335,7 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        #self._return_pub(ret)  # Needs attention
+        self._return_pub(ret)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):
