@@ -11,7 +11,11 @@ try:
     import simplejson as json
 except ImportError:
     import json
-import msgpack
+
+try:
+    import msgpack
+except ImportError:
+    mspack = None
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -193,9 +197,11 @@ class TxBody(Body):
                 self.packed = json.dumps(self.data, separators=(',', ':'))
         elif bk == raeting.bodyKinds.msgpack:
             if self.data:
+                if not msgpack:
+                    emsg = "Msgpack not installed."
+                    raise raeting.PacketError(emsg)
                 self.packed = msgpack.dumps(self.data)
-
-        if bk == raeting.bodyKinds.raw:
+        elif bk == raeting.bodyKinds.raw:
             self.packed = self.data # data is already formatted string
 
 class RxBody(Body):
@@ -223,10 +229,18 @@ class RxBody(Body):
                     emsg = "Packet body not a mapping."
                     raise raeting.PacketError(emsg)
                 self.data = kit
-
-        if bk == raeting.bodyKinds.raw:
+        elif bk == raeting.bodyKinds.msgpack:
+            if self.packed:
+                if not msgpack:
+                    emsg = "Msgpack not installed."
+                    raise raeting.PacketError(emsg)
+                kit = msgpack.loads(self.packed, object_pairs_hook=odict)
+                if not isinstance(kit, Mapping):
+                    emsg = "Packet body not a mapping."
+                    raise raeting.PacketError(emsg)
+                self.data = kit
+        elif bk == raeting.bodyKinds.raw:
             self.data = self.packed # return as string
-
         elif bk == raeting.bodyKinds.nada:
             pass
 

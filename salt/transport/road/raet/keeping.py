@@ -355,3 +355,14 @@ class SafeKeep(Keep):
         persist key data differentially based on status
         '''
         return (raeting.acceptance.accepted)
+
+def clearAllRoadSafe(dirpath):
+    '''
+    Convenience function to clear all road and safe keep data in dirpath
+    '''
+    road = RoadKeep(dirpath=dirpath)
+    road.clearLocalData()
+    road.clearAllRemoteData()
+    safe = SafeKeep(dirpath=dirpath)
+    safe.clearLocalData()
+    safe.clearAllRemoteData()

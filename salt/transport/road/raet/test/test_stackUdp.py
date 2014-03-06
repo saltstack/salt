@@ -16,7 +16,7 @@ from salt.transport.road.raet import (raeting, nacling, packeting, keeping,
                                      estating, yarding, transacting, stacking)
 
 
-def testStackUdp():
+def testStackUdp(bk=raeting.bodyKinds.json):
     '''
     initially
     master on port 7530 with eid of 1
@@ -27,7 +27,7 @@ def testStackUdp():
     '''
     console.reinit(verbosity=console.Wordage.concise)
 
-
+    stacking.StackUdp.Bk = bk  #set class body kind for serialization
 
     #master stack
     masterName = "master"
@@ -321,4 +321,5 @@ def testStackUdp():
 
 if __name__ == "__main__":
     testStackUdp()
+    testStackUdp(bk=raeting.bodyKinds.msgpack)
 
