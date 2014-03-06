@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load if the cloud module is available in __salt__
     '''
-    return 'cloud' if 'cloud.profile' in __salt__ else False
+    return 'cloud.profile' in __salt__
 
 
 def _check_name(name):
