@@ -74,6 +74,19 @@ class RouterMinion(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             data = self.udp_stack.value.rxMsgs.popleft()
             if data['route']['dst'][2] == 'fun':
                 self.fun_in.value.append(data)
+            if data['route']['dst'][1] is not None:
+                if data['route']['dst'][1] in self.uxd_stack.value.yards:
+                    self.uxd_stack.value.transmit(data, data['route']['dst'][1])
+        self.uxd_stack.value.serviceAll()
+        while self.uxd_stack.value.rxMsgs:
+            msg = self.uxd_stack.value.rxMsgs.popleft()
+            estate = msg['route']['dst'][0]
+            if estate is not None:
+                if estate != self.opts.value['id']:
+                    self.udp_stack.value.message(
+                            msg,
+                            self.udp_stack.value.eids[estate])
+
 
 
 class PillarLoad(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -191,10 +204,16 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         Send the return data back via the uxd socket
         '''
         ret_stack = stacking.StackUxd(
-                lanename=self.opts.value['id'],
+                lanename=self.opts['id'],
                 yid=ret['jid'],
-                dirpath=self.opts.value['sock_dir'])
-        route = {'src': (self.opts.value['id'], ret_stack.yard.name, 'jid_ret'),
+                dirpath=self.opts['sock_dir'])
+        main_yard = yarding.Yard(
+                yid=0,
+                prefix=self.opts['id'],
+                dirpath=self.opts['sock_dir']
+                )
+        ret_stack.addRemoteYard(main_yard)
+        route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
                  'dst': ('master', None, 'return')}
         msg = {'route': route, 'return': ret}
         ret_stack.transmit(msg, 'yard0')
