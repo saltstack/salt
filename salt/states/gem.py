@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load if gem module is available in __salt__
     '''
-    return 'gem' if 'gem.list' in __salt__ else False
+    return 'gem.list' in __salt__
 
 
 def installed(name,          # pylint: disable=C0103
