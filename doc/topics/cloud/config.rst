@@ -591,6 +591,39 @@ already set) in order to find the name of the location that you want to use.
 ``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile
 configuration.
 
+.. _config_lxc:
+
+lxc
+---
+
+The lxc driver is a new, experimental driver for installing Salt on
+newly provisionned (via saltcloud) lxc containers. It will in turn use saltify to install
+salt an rattach the lxc container as a new lxc minion.
+As soon as we can, we manage baremetal operation over SSH.
+You can also destroy those containers via this driver.
+
+.. code-block:: yaml
+
+    devhost10-lxc:
+      target: devhost10
+      provider: lxc
+
+And in the map file:
+
+.. code-block:: yaml
+
+    devhost10-lxc:
+      provider: devhost10-lxc
+      from_container: ubuntu
+      backing: lvm
+      sudo: True
+      size: 3g
+      ip: 10.0.3.9
+      minion:
+        master: 10.5.0.1
+        master_port: 4506
+      lxc_conf:
+        - lxc.utsname: superlxc
 
 .. _config_saltify:
 

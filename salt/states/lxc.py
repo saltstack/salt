@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 lxc / Spin up and control LXC containers
@@ -168,7 +167,7 @@ def set_pass(name, password=None, user=None, users=None):
         users = [users]
     if user and (not user in users):
         users.append(user)
-    cret = __salt__['lxc.set_pass'](name, users, password)
+    cret = __salt__['lxc.set_pass'](name, users=users, password=password)
     cret['changes'] = {}
     cret['name'] = name
     return cret
@@ -317,5 +316,3 @@ def cloned(name,
             ret['comment'] += 'Container cloned\n'
             changes['status'] = 'cloned'
     return ret
-
-# vim:set et sts=4 ts=4 tw=80:

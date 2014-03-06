@@ -46,7 +46,8 @@ from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudExecutionTimeout,
-    SaltCloudExecutionFailure
+    SaltCloudExecutionFailure,
+    SaltCloudPasswordError
 )
 
 # Import third party libs
@@ -688,7 +689,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
-                           display_ssh_output=display_ssh_output, gateway=gateway):
+                           display_ssh_output=display_ssh_output,
+                           gateway=gateway):
+
+            def remote_exists(path):
+                return not root_cmd('test -e \\"{0}\\"'.format(path),
+                                    tty, sudo, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -722,26 +728,36 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 root_cmd(subsys_command, tty, sudo, **kwargs)
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
 
-            root_cmd(
-                '[ ! -d {0} ] && (mkdir -p {0}; chmod 700 {0}) || '
-                'echo "Directory {0} already exists..."'.format(tmp_dir),
-                tty, sudo, **kwargs
-            )
+            if not remote_exists(tmp_dir):
+                ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
+                                ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant create temporary '
+                        'directory in {0} !'.format(tmp_dir)
+                    )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
                 if len(comps) > 0:
                     if len(comps) > 1 or comps[0] != 'tmp':
-                        root_cmd(
+                        ret = root_cmd(
                             'chown {0}. {1}'.format(username, tmp_dir),
                             tty, sudo, **kwargs
                         )
+                        if ret:
+                            raise SaltCloudSystemExit(
+                                'Cant set {0} ownership on {1}'.format(
+                                    username, tmp_dir))
 
             # Minion configuration
             if minion_pem:
                 scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
-                root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
-                         tty, sudo, **kwargs)
-
+                ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
@@ -770,8 +786,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Master configuration
             if master_pem:
                 scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
-                root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
-                         tty, sudo, **kwargs)
+                ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
                 scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
@@ -794,17 +813,24 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # XXX: We need to make these paths configurable
             preseed_minion_keys_tempdir = '{0}/preseed-minion-keys'.format(
-                                                                    tmp_dir)
+                tmp_dir)
             if preseed_minion_keys is not None:
                 # Create remote temp dir
-                root_cmd(
+                ret = root_cmd(
                     'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
                     tty, sudo, **kwargs
                 )
-                root_cmd(
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant create {0}'.format(preseed_minion_keys_tempdir))
+                ret = root_cmd(
                     'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
                     tty, sudo, **kwargs
                 )
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}'.format(
+                            preseed_minion_keys_tempdir))
                 if kwargs['username'] != 'root':
                     root_cmd(
                         'chown {0} "{1}"'.format(
@@ -822,17 +848,28 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                 if kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root "{0}"'.format(
+                        'chown -R root \\"{0}\\"'.format(
                             preseed_minion_keys_tempdir
                         ),
                         tty, sudo, **kwargs
                     )
+                    if ret:
+                        raise SaltCloudSystemExit(
+                            'Cant set owneship for {0}'.format(
+                                preseed_minion_keys_tempdir))
 
             # The actual deploy script
             if script:
+                # got strange escaping issues with sudoer, going onto a
+                # subshell fixes that
                 scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
-                root_cmd('chmod +x {0}/deploy.sh'.format(tmp_dir),
-                         tty, sudo, **kwargs)
+                ret = root_cmd(
+                    ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
+                     'exit $?').format(tmp_dir),
+                    tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -900,7 +937,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     deploy_command = '{0}/environ-deploy-wrapper.sh'.format(
                         tmp_dir,
                     )
-
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
@@ -1269,33 +1305,43 @@ def root_cmd(command, tty, sudo, **kwargs):
     log.debug('SSH command: {0!r}'.format(cmd))
 
     try:
-        proc = vt.Terminal(
-            cmd,
-            shell=True,
-            log_stdout=True,
-            log_stderr=True,
-            stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True)
-        )
+        password_retries = 15
+        stdout, stderr = None, None
+        try:
+            proc = vt.Terminal(
+                cmd,
+                shell=True,
+                log_stdout=True,
+                log_stderr=True,
+                stream_stdout=kwargs.get('display_ssh_output', True),
+                stream_stderr=kwargs.get('display_ssh_output', True)
+            )
 
-        sent_password = False
-        while proc.isalive():
-            stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
-                    # second time??? Wrong password?
-                    log.warning(
-                        'Asking for password again. Wrong one provided???'
-                    )
-                    proc.terminate()
-                    return 1
+            sent_password = False
+            while proc.isalive():
+                stdout, stderr = proc.recv()
+                if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                    if sent_password:
+                        # second time??? Wrong password?
+                        log.warning(
+                            'Asking for password again. Wrong one provided???'
+                        )
+                        proc.terminate()
+                        raise SaltCloudPasswordError()
+                    proc.sendline(kwargs['password'])
+                    sent_password = True
 
-                proc.sendline(kwargs['password'])
-                sent_password = True
+                # 0.0125 is really too fast on some systems
+                time.sleep(0.5)
 
-            time.sleep(0.025)
-
-        return proc.exitstatus
+            return proc.exitstatus
+        except SaltCloudPasswordError:
+            if sudo and (password_retries > 0):
+                log.warning(
+                    'Asking for password failed, retrying'
+                )
+            else:
+                return 1
     except vt.TerminalException as err:
         log.error(
             'Failed to execute command {0!r}: {1}\n'.format(
