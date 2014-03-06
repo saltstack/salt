@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing keyboards on Arch, Redhat, Debian, and Gentoo systems.
+Module for managing keyboards on supported POSIX-like systems such as
+Arch, Redhat, Debian, and Gentoo systems.
 '''
 
 # Import python libs
@@ -11,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on Arch, Redhat, Debian, and Gentoo
+    Only work on supported POSIX-like systems
     '''
     if __grains__['os_family'] in ('Arch', 'Redhat', 'Debian', 'Gentoo'):
         return 'keyboard'
