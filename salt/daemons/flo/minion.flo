@@ -49,10 +49,17 @@ framer bootstrap be active first join
             per inode ".raet.udp.stack."
       go next
 
-   frame idle
-      print Idling...
-      do raet udp stack idled per inode ".raet.udp.stack."
-      go abort if idled in .raet.udp.stack.status
+   frame loading
+      enter
+         do load modules
+      go next
+
+   frame router
+      do minion router
 
    frame abort
       bid stop all
+
+framer functionmanager be active first checkexec
+   frame checkexec
+      do nix function

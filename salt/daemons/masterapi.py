@@ -115,7 +115,7 @@ def access_keys(opts):
 
         if user not in users:
             try:
-                user = pwd.getpwnam(user)
+                user = pwd.getpwnam(user).pw_name
             except KeyError:
                 log.error('ACL user {0} is not available'.format(user))
                 continue
@@ -156,7 +156,8 @@ def fileserver_update(fileserver):
         fileserver.update()
     except Exception as exc:
         log.error(
-            'Exception {0} occurred in file server update'.format(exc)
+            'Exception {0} occurred in file server update'.format(exc),
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
 
 
@@ -753,11 +754,10 @@ class LocalFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key):
+    def __init__(self, opts, key):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.key = key
-        self.master_key = master_key
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
@@ -1367,10 +1367,9 @@ class LocalFuncs(object):
             )
         log.debug('Published command details {0}'.format(pub_load))
 
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': load['jid'],
-                'minions': minions
-            }
-        }
+        return {'ret': {
+                    'jid': load['jid'],
+                    'minions': minions
+                    },
+                'pub': pub_load
+                }

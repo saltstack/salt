@@ -1426,6 +1426,10 @@ def directory(name,
                                      'as a target for recursive ownership ' \
                                      'management'
 
+            if 'mode' not in recurse:
+                file_mode = None
+                dir_mode = None
+
             for root, dirs, files in os.walk(name):
                 for fn_ in files:
                     full = os.path.join(root, fn_)

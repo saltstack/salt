@@ -389,22 +389,31 @@ class Auth(object):
                 'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
             sys.exit(42)
-        if self.opts.get('master_finger', False):
-            if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
-                log.critical(
-                    'The specified fingerprint in the master configuration '
-                    'file:\n{0}\nDoes not match the authenticating master\'s '
-                    'key:\n{1}\nVerify that the configured fingerprint '
-                    'matches the fingerprint of the correct master and that '
-                    'this minion is not subject to a man in the middle attack'
-                    .format(
-                        self.opts['master_finger'],
-                        salt.utils.pem_finger(m_pub_fn)
-                    )
-                )
-                sys.exit(42)
+        if self.opts.get('syndic_master', False):  # Is syndic
+            syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
+            if syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                    self._finger_fail(syndic_finger, m_pub_fn)
+        else:
+            if self.opts.get('master_finger', False):
+                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                    self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         return auth
+
+    def _finger_fail(self, finger, master_key):
+        log.critical(
+            'The specified fingerprint in the master configuration '
+            'file:\n{0}\nDoes not match the authenticating master\'s '
+            'key:\n{1}\nVerify that the configured fingerprint '
+            'matches the fingerprint of the correct master and that '
+            'this minion is not subject to a man-in-the-middle attack.'
+            .format(
+                finger,
+                salt.utils.pem_finger(master_key)
+            )
+        )
+        sys.exit(42)
 
 
 class Crypticle(object):

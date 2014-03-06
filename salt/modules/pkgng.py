@@ -305,8 +305,9 @@ def list_pkgs(versions_as_list=False,
         salt '*' pkg.list_pkgs jail=<jail name or id>
         salt '*' pkg.list_pkgs chroot=/path/to/chroot
     '''
-    # 'removed' not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     versions_as_list = salt.utils.is_true(versions_as_list)

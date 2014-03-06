@@ -40,6 +40,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
 
@@ -97,6 +98,19 @@ def _fulfills_version_spec(versions, oper, desired_version):
     return False
 
 
+def _find_unpurge_targets(desired):
+    '''
+    Find packages which are marked to be purged but can't yet be removed
+    because they are dependencies for other installed packages. These are the
+    packages which will need to be 'unpurged' because they are part of
+    pkg.installed states. This really just applies to Debian-based Linuxes.
+    '''
+    return [
+        x for x in desired
+        if x in __salt__['pkg.list_pkgs'](purge_desired=True)
+    ]
+
+
 def _find_install_targets(name=None,
                           version=None,
                           pkgs=None,
@@ -128,7 +142,7 @@ def _find_install_targets(name=None,
                     'comment': 'Invalidly formatted {0!r} parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
-
+        to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.is_windows():
             pkginfo = _get_package_info(name)
@@ -141,23 +155,26 @@ def _find_install_targets(name=None,
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
         desired = {name: version}
+        to_unpurge = _find_unpurge_targets(desired)
 
         cver = cur_pkgs.get(name, [])
-        if version and version in cver:
-            # The package is installed and is the correct version
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': ('Version {0} of package {1!r} is already '
-                                'installed').format(version, name)}
+        if name not in to_unpurge:
+            if version and version in cver:
+                # The package is installed and is the correct version
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Version {0} of package {1!r} is already '
+                                   'installed'.format(version, name)}
 
-        # if cver is not an empty string, the package is already installed
-        elif cver and version is None:
-            # The package is installed
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'Package {0} is already installed'.format(name)}
+            # if cver is not an empty string, the package is already installed
+            elif cver and version is None:
+                # The package is installed
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Package {0} is already '
+                                   'installed'.format(name)}
 
     version_spec = False
     # Find out which packages will be targeted in the call to pkg.install
@@ -231,16 +248,18 @@ def _find_install_targets(name=None,
                     'result': False,
                     'comment': ' '.join(problems)}
 
-    if not targets:
+    if not any((targets, to_unpurge)):
         # All specified packages are installed
-        msg = 'All specified packages are already installed{0}.'.format(
-            ' and are at the desired version' if version_spec else '')
+        msg = (
+            'All specified packages are already installed{0}.'
+            .format(' and are at the desired version' if version_spec else '')
+        )
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': msg}
 
-    return desired, targets
+    return desired, targets, to_unpurge
 
 
 def _verify_install(desired, new_pkgs):
@@ -314,6 +333,7 @@ def installed(
         skip_verify=False,
         skip_suggestions=False,
         pkgs=None,
+        names=None,
         sources=None,
         **kwargs):
     '''
@@ -362,7 +382,8 @@ def installed(
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
-        A list of packages to install from a software repository.
+        A list of packages to install from a software repository. All packages
+        listed under ``pkgs`` will be installed via a single command.
 
     Usage::
 
@@ -414,6 +435,61 @@ def installed(
                     - bar: '~>=1.2:slot::overlay[use,-otheruse]'
                     - baz
 
+    names
+        A list of packages to install from a software repository. Each package
+        will be installed individually by the package manager.
+
+    Usage::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar
+              - baz
+
+    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
+    :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
+    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+    in the ``names`` argument. Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: 1.2.3-4
+              - baz
+
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
+    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
+    ``>`` operators for more control over what versions will be installed.
+    Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: '>=1.2.3-4'
+              - baz
+
+    ``NOTE:`` When using comparison operators, the expression must be enclosed
+    in quotes to avoid a YAML render error.
+
+    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
+    flag list and/or if the given packages should be in package.accept_keywords
+    file and/or the overlay from which you want the package to be installed.
+    Example::
+
+        mypkgs:
+            pkg.installed:
+                - names:
+                    - foo: '~'
+                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                    - baz
+
+
     sources
         A list of packages to install, along with the source URI or local path
         from which to install each package. In the example below, ``foo``,
@@ -437,7 +513,7 @@ def installed(
         or (os.path.isfile(rtag) and refresh is not False)
     )
 
-    if not isinstance(version, basestring) and version is not None:
+    if not isinstance(version, string_types) and version is not None:
         version = str(version)
 
     result = _find_install_targets(name, version, pkgs, sources,
@@ -445,10 +521,16 @@ def installed(
                                    skip_suggestions=skip_suggestions,
                                    **kwargs)
     try:
-        desired, targets = result
+        desired, targets, to_unpurge = result
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
         return result
+
+    if to_unpurge and 'lowpkg.unpurge' not in __salt__:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'lowpkg.unpurge not implemented'}
 
     # Remove any targets that are already installed, to avoid upgrading them
     if pkgs:
@@ -456,6 +538,7 @@ def installed(
     elif sources:
         sources = [x for x in sources if x.keys()[0] in targets]
 
+    comment = []
     if __opts__['test']:
         if targets:
             if sources:
@@ -463,45 +546,50 @@ def installed(
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
-            comment = 'The following packages are set to be ' \
-                      'installed/updated: {0}.'.format(summary)
-        else:
-            comment = ''
+            comment.append('The following packages are set to be '
+                           'installed/updated: {0}.'.format(summary))
+        if to_unpurge:
+            comment.append(
+                'The following packages will have their selection status '
+                'changed from \'purge\' to \'install\': {0}.'
+                .format(', '.join(to_unpurge))
+            )
         return {'name': name,
                 'changes': {},
                 'result': None,
-                'comment': comment}
+                'comment': ' '.join(comment)}
 
-    comment = []
-    try:
-        pkg_ret = __salt__['pkg.install'](name,
-                                          refresh=refresh,
-                                          version=version,
-                                          fromrepo=fromrepo,
-                                          skip_verify=skip_verify,
-                                          pkgs=pkgs,
-                                          sources=sources,
-                                          **kwargs)
+    changes = {'installed': {}}
+    if targets:
+        try:
+            pkg_ret = __salt__['pkg.install'](name,
+                                            refresh=refresh,
+                                            version=version,
+                                            fromrepo=fromrepo,
+                                            skip_verify=skip_verify,
+                                            pkgs=pkgs,
+                                            sources=sources,
+                                            **kwargs)
 
-        if os.path.isfile(rtag) and refresh:
-            os.remove(rtag)
-    except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while installing '
-                           'package(s): {0}'.format(exc)}
+            if os.path.isfile(rtag) and refresh:
+                os.remove(rtag)
+        except CommandExecutionError as exc:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while installing '
+                            'package(s): {0}'.format(exc)}
 
-    if isinstance(pkg_ret, dict):
-        changes = pkg_ret
-    elif isinstance(pkg_ret, basestring):
-        changes = {}
-        comment.append(pkg_ret)
-    else:
-        changes = {}
+        if isinstance(pkg_ret, dict):
+            changes['installed'].update(pkg_ret)
+        elif isinstance(pkg_ret, string_types):
+            comment.append(pkg_ret)
+
+    if to_unpurge:
+        changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
 
     if sources:
-        modified = [x for x in changes.keys() if x in targets]
+        modified = [x for x in changes['installed'].keys() if x in targets]
         not_modified = [x for x in desired if x not in targets]
         failed = [x for x in targets if x not in modified]
     else:
@@ -513,6 +601,11 @@ def installed(
             )
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok if x not in targets]
+
+    # If there was nothing unpurged, just set the changes dict to the contents
+    # of changes['installed'].
+    if not changes.get('purge_desired'):
+        changes = changes['installed']
 
     if modified:
         if sources:
@@ -646,9 +739,9 @@ def latest(
         os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
-    if isinstance(cur, basestring):
+    if isinstance(cur, string_types):
         cur = {desired_pkgs[0]: cur}
-    if isinstance(avail, basestring):
+    if isinstance(avail, string_types):
         avail = {desired_pkgs[0]: avail}
 
     targets = {}

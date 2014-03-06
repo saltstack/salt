@@ -24,6 +24,10 @@ Carbon settings may also be configured as::
         port: <carbon port>
         skip_on_error: True
         mode: (pickle|text)
+
+  To use the carbon returner, append '--return carbon' to the salt command. ex:
+
+    salt '*' test.ping --return carbon
 '''
 
 

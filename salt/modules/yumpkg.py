@@ -264,8 +264,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -394,7 +395,8 @@ def check_db(*names, **kwargs):
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '--pkgnarrow=all --all', query_format='%{NAME}_|-%{ARCH}'
+            '{0} --pkgnarrow=all --all'.format(repo_arg),
+            query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
             try:

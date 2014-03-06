@@ -11,6 +11,7 @@ try:
     import simplejson as json
 except ImportError:
     import json
+import msgpack
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -190,6 +191,9 @@ class TxBody(Body):
         if bk == raeting.bodyKinds.json:
             if self.data:
                 self.packed = json.dumps(self.data, separators=(',', ':'))
+        elif bk == raeting.bodyKinds.msgpack:
+            if self.data:
+                self.packed = msgpack.dumps(self.data)
 
         if bk == raeting.bodyKinds.raw:
             self.packed = self.data # data is already formatted string

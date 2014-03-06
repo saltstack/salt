@@ -17,6 +17,13 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmdmod
+
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet
+}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.dirname(salt.__file__)
@@ -1051,7 +1058,7 @@ class Loader(object):
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
-                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
                 with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)

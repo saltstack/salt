@@ -80,6 +80,10 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     '''
     servers = get_dns_servers(interface)
 
+    # Return False if could not find the interface
+    if servers is False:
+        return False
+
     # Return true if configured
     try:
         if servers[index - 1] == ip:

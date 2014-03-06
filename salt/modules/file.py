@@ -29,6 +29,7 @@ import stat
 import sys
 import tempfile
 import time
+from glob import glob
 
 try:
     import grp
@@ -964,11 +965,12 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
-    for line in fileinput.input(path,
-                                inplace=not dry_run,
-                                backup=False if dry_run else backup,
-                                bufsize=bufsize,
-                                mode='rb'):
+    fi_file = fileinput.input(path,
+                    inplace=not dry_run,
+                    backup=False if dry_run else backup,
+                    bufsize=bufsize,
+                    mode='rb')
+    for line in fi_file:
 
         if search_only:
             # Just search; bail as early as a match is found
@@ -989,6 +991,7 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+    fi_file.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1093,9 +1096,10 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
-    for line in fileinput.input(path,
-            inplace=False, backup=False,
-            bufsize=1, mode='rb'):
+    fi_file = fileinput.input(path,
+                inplace=False, backup=False,
+                bufsize=1, mode='rb')
+    for line in fi_file:
 
         result = line
 
@@ -1126,6 +1130,8 @@ def blockreplace(path,
             new_file.append(result)
     # end for. If we are here without block management we maybe have some problems,
     # or we need to initialise the marked block
+
+    fi_file.close()
 
     if in_block:
         # unterminated block => bad, always fail
@@ -1863,6 +1869,22 @@ def file_exists(path):
     '''
     return os.path.isfile(path)
 
+def path_exists_glob(path):
+    '''
+    Tests to see if path after expansion is a valid path (file or directory).
+    Expansion allows usage of ? * and character ranges []. Tilde expansion
+    is not supported. Returns True/False.
+
+    .. versionadded:: Hellium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.path_exists_glob /etc/pam*/pass*
+
+    '''
+    return True if glob(path) else False
 
 def restorecon(path, recursive=False):
     '''
@@ -2343,6 +2365,11 @@ def check_file_meta(
     .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+
+    .. note::
+
+        Supported hash types include sha512, sha384, sha256, sha224, sha1, and
+        md5.
     '''
     changes = {}
     if not source_sum:

@@ -1155,7 +1155,6 @@ def path():
     '''
     # Provides:
     #   path
-
     return {'path': os.environ['PATH'].strip()}
 
 

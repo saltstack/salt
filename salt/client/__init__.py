@@ -75,6 +75,27 @@ def condition_kwarg(arg, kwarg):
     return arg
 
 
+def get_local_client(
+        c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+        mopts=None):
+    '''
+    .. versionadded:: Helium
+
+    Read in the config and return the correct LocalClient object based on
+    the configured transport
+    '''
+    if mopts:
+        opts = mopts
+    else:
+        import salt.config
+        opts = salt.config.client_config(c_path)
+    if opts['transport'] == 'raet':
+        import salt.client.raet
+        return salt.client.raet.LocalClient(mopts=opts)
+    elif opts['transport'] == 'zeromq':
+        return LocalClient(mopts=opts)
+
+
 class LocalClient(object):
     '''
     The interface used by the :command:`salt` CLI tool on the Salt Master
@@ -112,7 +133,10 @@ class LocalClient(object):
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
-        self.event = salt.utils.event.LocalClientEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'])
 
     def __read_master_key(self):
         '''

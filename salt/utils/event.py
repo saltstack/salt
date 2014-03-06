@@ -73,6 +73,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils
+import salt.utils.cache
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -98,6 +99,17 @@ TAGS = {
     'cloud': 'cloud',  # prefix for all salt/cloud events
     'fileserver': 'fileserver',  # prefix for all salt/fileserver events
 }
+
+
+def get_event(node, sock_dir=None, transport='zeromq', **kwargs):
+    '''
+    Return an event object suitible for the named transport
+    '''
+    if transport == 'zeromq':
+        return SaltEvent(node, sock_dir, **kwargs)
+    elif transport == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.SaltEvent(node, sock_dir, **kwargs)
 
 
 def tagify(suffix='', prefix='', base=SALT):
