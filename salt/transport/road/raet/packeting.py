@@ -191,7 +191,7 @@ class TxBody(Body):
         if bk == raeting.bodyKinds.json:
             if self.data:
                 self.packed = json.dumps(self.data, separators=(',', ':'))
-        elif bk == raeting.bodykinds.msgpack:
+        elif bk == raeting.bodyKinds.msgpack:
             if self.data:
                 self.packed = msgpack.dumps(self.data)
 

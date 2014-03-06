@@ -126,7 +126,7 @@ HeadKind = namedtuple('HeadKind', HEAD_KINDS.keys())
 headKinds = HeadKind(**HEAD_KINDS)  # headKinds.json is '00'
 
 
-BODY_KINDS = odict([('nada', 0), ('json', 1), ('raw', 2), ('msgpck', 3),
+BODY_KINDS = odict([('nada', 0), ('json', 1), ('raw', 2), ('msgpack', 3),
                     ('unknown', 255)])
 BODY_KIND_NAMES = odict((v, k) for k, v in BODY_KINDS.iteritems())  # inverse map
 BodyKind = namedtuple('BodyKind', BODY_KINDS.keys())
