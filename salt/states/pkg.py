@@ -366,7 +366,6 @@ def installed(
         A list of packages to install from a software repository. All packages
         listed under names will be installed via a single command.
 
-
     Usage::
 
         mypkgs:
