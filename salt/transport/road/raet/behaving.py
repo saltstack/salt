@@ -56,7 +56,7 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         stack='stack',
         txmsgs=odict(ipath='txmsgs', ival=deque()),
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),
-        local=odict(ipath='local', ival=odict(   name='minion',
+        local=odict(ipath='local', ival=odict(   name='master',
                                                  eid=0,
                                                  host='0.0.0.0',
                                                  port=raeting.RAET_PORT,

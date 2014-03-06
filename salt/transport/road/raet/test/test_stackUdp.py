@@ -3,6 +3,8 @@
 Tests to try out stacking. Potentially ephemeral
 
 '''
+import os
+
 # pylint: skip-file
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import Timer
@@ -10,7 +12,7 @@ from ioflo.base.aiding import Timer
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from salt.transport.road.raet import (raeting, nacling, packeting,
+from salt.transport.road.raet import (raeting, nacling, packeting, keeping,
                                      estating, yarding, transacting, stacking)
 
 
@@ -25,31 +27,50 @@ def testStackUdp():
     '''
     console.reinit(verbosity=console.Wordage.concise)
 
+
+
+    #master stack
+    masterName = "master"
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
 
+    dirpathMaster = os.path.join(os.getcwd(), 'keep', masterName)
+    road = keeping.RoadKeep(dirpath=dirpathMaster)
+    road.clearLocalData()
+    road.clearAllRemoteData()
+    safe = keeping.SafeKeep(dirpath=dirpathMaster)
+    safe.clearLocalData()
+    safe.clearAllRemoteData()
+
+    estate = estating.LocalEstate(   eid=1,
+                                     name=masterName,
+                                     sigkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(estate=estate, main=True,  dirpath=dirpathMaster)
+
+    #minion stack
+    minionName = "minion1"
     signer = nacling.Signer()
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
 
-    #master stack
-    estate = estating.LocalEstate(   eid=1,
-                                     name='master',
-                                     sigkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate)
+    dirpathMinion = os.path.join(os.getcwd(), 'keep', minionName)
+    road = keeping.RoadKeep(dirpath=dirpathMinion)
+    road.clearLocalData()
+    road.clearAllRemoteData()
+    safe = keeping.SafeKeep(dirpath=dirpathMinion)
+    safe.clearLocalData()
+    safe.clearAllRemoteData()
 
-    #minion stack
     estate = estating.LocalEstate(   eid=0,
-                                     name='minion1',
+                                     name=minionName,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate)
-
+    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion)
 
     print "\n********* Join Transaction **********"
     stack1.join()
@@ -287,6 +308,14 @@ def testStackUdp():
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:
             print msg
+
+    stack0.serverUdp.close()
+    stack1.serverUdp.close()
+
+    stack0.clearLocal()
+    stack0.clearAllRemote()
+    stack1.clearLocal()
+    stack1.clearAllRemote()
 
 
 

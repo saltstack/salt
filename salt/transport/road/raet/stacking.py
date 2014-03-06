@@ -77,7 +77,7 @@ class StackUdp(object):
         self.safe = safe or keeping.SafeKeep(dirpath=dirpath, stackname=self.name)
         kept = self.loadLocal() # local estate from saved data
         # local estate for this stack
-        self.estate = estate or kept or estating.LocalEstate(stack=self,
+        self.estate = kept or estate or estating.LocalEstate(stack=self,
                                                              eid=eid,
                                                              main=main,
                                                              ha=ha)
@@ -99,6 +99,18 @@ class StackUdp(object):
         '''
         for estate in self.estates.values():
             if estate.host == host and estate.port == port:
+                return estate
+
+        return None
+
+    def fetchRemoteEstateByKeys(self, sighex, prihex):
+        '''
+        Search for remote estate with matching (name, sighex, prihex)
+        Return estate if found Otherwise return None
+        '''
+        for estate in self.estates.values():
+            if (estate.signer.keyhex == sighex or
+                estate.priver.keyhex == prihex):
                 return estate
 
         return None
@@ -261,23 +273,22 @@ class StackUdp(object):
         estates = []
         roads = self.road.loadAllRemoteData()
         safes = self.safe.loadAllRemoteData()
-        if not road or not safe:
+        if not roads or not safes:
             return []
         for key, road in roads.items():
-            if key not in safes.items():
+            if key not in safes:
                 continue
             safe = safes[key]
             estate = estating.RemoteEstate( stack=self,
                                             eid=road['eid'],
                                             name=road['name'],
-                                            main=road['main'],
                                             host=road['host'],
                                             port=road['port'],
                                             sid=road['sid'],
                                             rsid=road['rsid'],
                                             verkey=safe['verhex'],
                                             pubkey=safe['pubhex'],)
-            estates.append(estates)
+            estates.append(estate)
         return estates
 
     def addTransaction(self, index, transaction):
@@ -370,6 +381,8 @@ class StackUdp(object):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
             raise raeting.StackError(emsg)
         self.txMsgs.append((msg, deid))
+
+    transmit = txMsg
 
     def serviceTxMsg(self):
         '''

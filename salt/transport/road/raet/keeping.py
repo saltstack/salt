@@ -323,7 +323,7 @@ class SafeKeep(Keep):
         '''
         Dump the data from the remote estate
         '''
-        uid = estate.name
+        uid = estate.eid
         data = odict([
                 ('eid', estate.eid),
                 ('name', estate.name),
