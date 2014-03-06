@@ -49,9 +49,17 @@ framer bootstrap be active first join
             per inode ".raet.udp.stack."
       go next
 
+   frame loading
+      enter
+         do load modules
+      go next
+
    frame router
-      print Idling...
       do minion router
 
    frame abort
       bid stop all
+
+framer functionmanager be active first checkexec
+   frame checkexec
+      do nix function
