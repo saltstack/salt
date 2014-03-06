@@ -106,6 +106,21 @@ class BrewTestCase(TestCase):
     # 'latest_version' function tests: 0
     # It has not been fully implemented
 
+    # 'remove' function tests: 1
+    # Only tested a few basics
+    # Full functionality should be tested in integration phase
+
+    @patch('salt.modules.brew.list_pkgs',
+           MagicMock(return_value={'test': '0.1.5'}))
+    def test_remove(self):
+        '''
+        Tests if package to be removed exists
+        '''
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch.dict(brew.__salt__,
+                        {'pkg_resource.parse_targets': mock_params}):
+            self.assertEqual(brew.remove('foo'), {})
+
     # 'refresh_db' function tests: 2
 
     @patch('salt.modules.brew._homebrew_bin',
@@ -131,6 +146,19 @@ class BrewTestCase(TestCase):
         with patch.dict(brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.retcode': mock_success}):
             self.assertTrue(brew.refresh_db())
+
+    # 'install' function tests: 1
+    # Only tested a few basics
+    # Full functionality should be tested in integration phase
+
+    def test_install(self):
+        '''
+        Tests if package to be installed exists
+        '''
+        mock_params = MagicMock(return_value=[None, None])
+        with patch.dict(brew.__salt__,
+                        {'pkg_resource.parse_targets': mock_params}):
+            self.assertEqual(brew.install('name=foo'), {})
 
 
 if __name__ == '__main__':
