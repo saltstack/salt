@@ -14,6 +14,11 @@ try:
 except ImportError:
     import json
 
+try:
+    import msgpack
+except ImportError:
+    mspack = None
+
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
@@ -566,7 +571,7 @@ class StackUxd(object):
     RAET protocol UXD (unix domain) socket stack object
     '''
     Count = 0
-    PackKind = raeting.bodyKinds.json
+    Pk = raeting.packKinds.json # serialization pack kind of Uxd message
     Accept = True # accept any uxd messages if True from yards not already in lanes
 
     def __init__(self,
@@ -770,16 +775,23 @@ class StackUxd(object):
         Pack serialize message body data
         '''
         if kind is None:
-            kind = self.PackKind
+            kind = self.Pk
 
         packed = ""
-        if kind not in [raeting.bodyKinds.json]:
-            emsg = "Invalid body pack kind '{0}'".format(kind)
+        if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
+            emsg = "Invalid message pack kind '{0}'".format(kind)
             raise raeting.StackError(emsg)
 
-        if kind == raeting.bodyKinds.json:
+        if kind == raeting.packKinds.json:
             head = 'RAET\njson\n\n'
             packed = "".join([head, json.dumps(body, separators=(',', ':'))])
+
+        elif kind == raeting.packKinds.pack:
+            if not msgpack:
+                emsg = "Msgpack not installed."
+                raise raeting.StackError(emsg)
+            head = 'RAET\npack\n\n'
+            packed = "".join([head, msgpack.dumps(body)])
 
         if len(packed) > raeting.MAX_MESSAGE_SIZE:
             emsg = "Message length of {0}, exceeds max of {1}".format(
@@ -838,13 +850,22 @@ class StackUxd(object):
 
         front, sep, back = packed.partition(raeting.HEAD_END)
         code, sep, kind = front.partition('\n')
-        if kind not in [raeting.BODY_KIND_NAMES[raeting.bodyKinds.json]]:
-            emsg = "Unrecognized packed body kind '{0}'".format(kind)
+        if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
+                        raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
+            emsg = "Unrecognized message pack kind '{0}'".format(kind)
             raise raeting.StackError(emsg)
 
-        kind = raeting.BODY_KINDS[kind]
-        if kind == raeting.bodyKinds.json:
+        kind = raeting.PACK_KINDS[kind]
+        if kind == raeting.packKinds.json:
             body = json.loads(back, object_pairs_hook=odict)
+            if not isinstance(body, Mapping):
+                emsg = "Message body not a mapping."
+                raise raeting.PacketError(emsg)
+        elif kind == raeting.packKinds.pack:
+            if not msgpack:
+                emsg = "Msgpack not installed."
+                raise raeting.StackError(emsg)
+            body = msgpack.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
                 emsg = "Message body not a mapping."
                 raise raeting.PacketError(emsg)
