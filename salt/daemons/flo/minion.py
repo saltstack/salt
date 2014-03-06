@@ -172,7 +172,7 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                'fun_ack': '.salt.net.fun_ack',
                'fun_in': '.salt.net.fun_in',
                'master_ret': '.salt.net.master_out',
-               'uxd_stack': '.raet.uxd.stack.stack',
+               'uxd_stack': '.salt.uxd.stack.stack',
                'executors': '.salt.track.executors'}
 
     def postinitio(self):
@@ -195,6 +195,12 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             return
         exchange = self.fun_in.value.popleft()
         data = exchange.get('pub')
+        # convert top raw strings - take this out once raet is using msgpack
+        for key, val in data.items():
+            if isinstance(val, basestring):
+                data[str(key)] = str(val)
+            else:
+                data[str(key)] = val
         match = getattr(
                 self.matcher,
                 '{0}_match'.format(
@@ -203,7 +209,6 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                 )(data['tgt'])
         if not match:
             return
-        self.fun_ack.value.append(exchange)
         if 'user' in data:
             log.info(
                     'User {0[user]} Executing command {0[fun]} with jid '
@@ -218,10 +223,9 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
         self.uxd_stack.value.addRemoteYard(ex_yard)
-        self.executors[data['jid']] = {'yard': ex_yard}
         process = multiprocessing.Process(
                 target=self.proc_run,
-                args=(exchange)
+                kwargs={'exchange': exchange}
                 )
         process.start()  # Don't join this process! The process daemonizes
                          # itself and init will clean it up
@@ -230,7 +234,7 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         Execute the run in a dedicated process
         '''
-        data = exchange['load']
+        data = exchange['pub']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
@@ -317,7 +321,7 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(ret)  # Needs attention
+        #self._return_pub(ret)  # Needs attention
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):
