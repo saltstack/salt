@@ -47,26 +47,25 @@ def _ip_sort(ip):
 def __virtual__():
     if salt.utils.which('lxc-start'):
         return True
-    '''
-    To speed up the whole thing, we decided to not use the
-    subshell way and assume things are in place for lxc
-    Discussion made by @kiorky and @thatch45
+    # To speed up the whole thing, we decided to not use the
+    # subshell way and assume things are in place for lxc
+    # Discussion made by @kiorky and @thatch45
 
-    lxc-version presence is not sufficient, in lxc1.0 alpha
-    (precise backports), we have it and it is sufficient
-    for the module to execute.
-    elif salt.utils.which('lxc-version'):
-        passed = False
-        try:
-            passed = subprocess.check_output(
-                'lxc-version').split(':')[1].strip() >= '1.0'
-        except Exception:
-            pass
-        if not passed:
-            log.warning('Support for lxc < 1.0 may be incomplete.')
-        return 'lxc'
-    return False
-    '''
+    # lxc-version presence is not sufficient, in lxc1.0 alpha
+    # (precise backports), we have it and it is sufficient
+    # for the module to execute.
+    # elif salt.utils.which('lxc-version'):
+    #     passed = False
+    #     try:
+    #         passed = subprocess.check_output(
+    #             'lxc-version').split(':')[1].strip() >= '1.0'
+    #     except Exception:
+    #         pass
+    #     if not passed:
+    #         log.warning('Support for lxc < 1.0 may be incomplete.')
+    #     return 'lxc'
+    # return False
+    #
     return False
 
 
