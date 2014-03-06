@@ -23,6 +23,9 @@ Example:
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -30,10 +33,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_user'
-    if not __salt__['cmd.has_exec']('rabbitmqctl'):
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,
