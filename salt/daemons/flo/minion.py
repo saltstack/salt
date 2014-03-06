@@ -71,7 +71,6 @@ class RouterMinion(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         # Start on the udp_in:
         # TODO: Route UXD messages
         while self.udp_stack.value.rxMsgs:
-            print 'process udp'
             data = self.udp_stack.value.rxMsgs.popleft()
             if data['route']['dst'][2] == 'fun':
                 self.fun_in.value.append(data)
@@ -194,8 +193,8 @@ class FunctionNix(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if not self.fun_in.value:
             return
-        exchange = self.fun_in.value.pop()
-        data = exchange['load']
+        exchange = self.fun_in.value.popleft()
+        data = exchange.get('pub')
         match = getattr(
                 self.matcher,
                 '{0}_match'.format(
