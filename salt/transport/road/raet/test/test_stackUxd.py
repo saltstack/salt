@@ -14,13 +14,15 @@ from salt.transport.road.raet import (raeting, nacling, packeting,
                                      estating, yarding, transacting, stacking)
 
 
-def testStackUxd():
+def testStackUxd(kind=raeting.packKinds.json):
     '''
     initially
 
 
     '''
-    console.reinit(verbosity=console.Wordage.concise)
+    console.reinit(verbosity=console.Wordage.verbose)
+
+    stacking.StackUxd.Pk = kind
 
     #lord stack
     #yard0 = yarding.Yard(name='lord')
@@ -203,4 +205,5 @@ def testStackUxd():
 
 
 if __name__ == "__main__":
-    testStackUxd()
+    testStackUxd(raeting.packKinds.json)
+    testStackUxd(raeting.packKinds.pack)
