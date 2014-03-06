@@ -153,7 +153,7 @@ def __virtual__():
     Only load this module if the mysql libraries exist
     '''
     if HAS_MYSQLDB:
-        return 'mysql'
+        return True
     return False
 
 
