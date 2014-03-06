@@ -48,6 +48,8 @@ class KeyCLI(object):
                 'key',
                 self.opts
             )
+        elif status.startswith('all'):
+            self.list_all()
 
     def list_all(self):
         '''
