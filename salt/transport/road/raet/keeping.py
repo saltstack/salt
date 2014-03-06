@@ -32,16 +32,20 @@ class Keep(object):
     '''
     RAET protocol base class for estate data persistence
     '''
-    def __init__(self, dirpath='', prefix='estate', ext='json', **kwa):
+    def __init__(self, dirpath='', stackname='stack', prefix='estate', ext='json', **kwa):
         '''
         Setup Keep instance
         Create directories for saving associated estate data files
             keep/
-                local/
-                remote/
+                stackname/
+                    local/
+                        prefix.uid.ext
+                    remote/
+                        prefix.uid.ext
+                        prefix.uid.ext
         '''
         if not dirpath:
-            dirpath = "/tmp/raet/keep"
+            dirpath = os.path.join("/tmp/raet/keep", stackname)
         self.dirpath = os.path.abspath(dirpath)
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
@@ -102,7 +106,7 @@ class Keep(object):
             return None
         return (self.load(self.localfilepath))
 
-    def removeLocalData(self):
+    def clearLocalData(self):
         '''
         Load and Return the data from the local estate
         '''
@@ -135,7 +139,7 @@ class Keep(object):
             return None
         return (self.load(filepath))
 
-    def removeRemoteData(self, uid):
+    def clearRemoteData(self, uid):
         '''
         Load and Return the data from the remote estate file named with uid
         '''
@@ -160,7 +164,7 @@ class Keep(object):
             data[uid] = self.load(filepath)
         return data
 
-    def removeAllRemoteData(self):
+    def clearAllRemoteData(self):
         '''
         Remove all the remote estate files
         '''
@@ -176,10 +180,9 @@ class Keep(object):
             if os.path.exists(filepath):
                 os.remove(filepath)
 
-
     def dumpAllRemoteEstates(self, estates):
         '''
-        Dump the data from the remote estate
+        Dump the data from all the remote estates
         '''
         for estate in estates:
             self.dumpRemoteEstate(estate)
@@ -215,17 +218,25 @@ class Keep(object):
         uid = estate.eid
         return (self.loadRemoteData(uid))
 
-    def removeRemoteEstate(self, estate):
+    def clearRemoteEstate(self, estate):
         '''
         Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
         uid = estate.eid
-        self.removeRemoteData(uid)
+        self.clearRemoteData(uid)
 
 class RoadKeep(Keep):
     '''
     RAET protocol estate road (channel) data persistence
+
+    keep/
+        stackname/
+            local/
+                estate.eid.ext
+            remote/
+                estate.eid.ext
+                estate.eid.ext
     '''
     def __init__(self, prefix='estate', **kwa):
         '''
@@ -240,6 +251,7 @@ class RoadKeep(Keep):
         data = odict([
                 ('eid', estate.eid),
                 ('name', estate.name),
+                ('main', estate.main),
                 ('host', estate.host),
                 ('port', estate.port),
                 ('sid', estate.sid)
@@ -270,6 +282,18 @@ class SafeKeep(Keep):
     def __init__(self, prefix='key', **kwa):
         '''
         Setup SafeKeep instance
+
+        keep/
+            local/
+                key.eid.ext
+            remote/
+                key.eid.ext
+                key.eid.ext
+
+                pended/
+                    key.eid.ext
+                rejected/
+                    key.eid.ext
         '''
         super(SafeKeep, self).__init__(prefix=prefix, **kwa)
 
@@ -299,7 +323,7 @@ class SafeKeep(Keep):
         '''
         Dump the data from the remote estate
         '''
-        uid = estate.name
+        uid = estate.eid
         data = odict([
                 ('eid', estate.eid),
                 ('name', estate.name),
@@ -323,11 +347,22 @@ class SafeKeep(Keep):
         Override this in sub class to change uid
         '''
         uid = estate.name
-        self.removeRemoteData(uid)
+        self.clearRemoteData(uid)
 
-    def remoteAcceptStatus(self, estate):
+    def statusRemote(self, estate):
         '''
         Evaluate acceptance status of estate per its keys
         persist key data differentially based on status
         '''
         return (raeting.acceptance.accepted)
+
+def clearAllRoadSafe(dirpath):
+    '''
+    Convenience function to clear all road and safe keep data in dirpath
+    '''
+    road = RoadKeep(dirpath=dirpath)
+    road.clearLocalData()
+    road.clearAllRemoteData()
+    safe = SafeKeep(dirpath=dirpath)
+    safe.clearLocalData()
+    safe.clearAllRemoteData()

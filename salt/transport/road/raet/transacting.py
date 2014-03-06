@@ -71,18 +71,10 @@ class Transaction(object):
         '''
         le = self.stack.estate.eid
         if le == 0: #bootstapping onto channel use ha
-            host = self.stack.estate.host
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            le = (host, self.stack.estate.port)
-            #le = self.stack.estate.ha
+            le = self.stack.estate.ha
         re = self.reid
-        if re == 0:
-            host = self.stack.estates[self.reid].host
-            if host == '0.0.0.0':
-                host =  '127.0.0.1'
-            re = (host, self.stack.estates[self.reid].port)
-            #re = self.stack.estates[self.reid].ha
+        if re == 0: #bootstapping onto channel use ha
+            re = self.stack.estates[self.reid].ha
         return ((self.rmt, le, re, self.sid, self.tid, self.bcst,))
 
     def process(self):
@@ -93,7 +85,7 @@ class Transaction(object):
 
     def receive(self, packet):
         '''
-        Process received packet
+        Process received packet Subclasses should super call this
         '''
         self.rxPacket = packet
 
@@ -197,6 +189,14 @@ class Joiner(Initiator):
             elif packet.data['pk'] == raeting.pcktKinds.response:
                 self.accept()
 
+    def process(self):
+        '''
+        Perform time based processing of transaction
+        '''
+        # need keep sending join until accepted or timed out
+        #self.join()
+
+
     def prep(self):
         '''
         Prepare .txData
@@ -283,19 +283,56 @@ class Joiner(Initiator):
             emsg = "Missing remote crypt key in accept packet"
             raise raeting.TransactionError(emsg)
 
-        index = self.index # save before we change it
+        #index = self.index # save before we change it
 
         self.stack.estate.eid = leid
+        self.stack.dumpLocal()
+
         remote = self.stack.estates[self.reid]
-        remote.verfer = nacling.Verifier(key=verhex)
-        remote.pubber = nacling.Publican(key=pubhex)
+        if remote.verfer.keyhex != verhex:
+            remote.verfer = nacling.Verifier(key=verhex)
+        if remote.pubber.keyhex != pubhex:
+            remote.pubber = nacling.Publican(key=pubhex)
+
         if remote.eid != reid: #move remote estate to new index
             self.stack.moveRemoteEstate(old=remote.eid, new=reid)
         if remote.name != name: # rename remote estate to new name
             self.stack.renameRemoteEstate(old=remote.name, new=name)
+        self.reid = reid
+
+        # we are assuming for now that the joiner cannot talk peer to peer only
+        # to main estate otherwise we need to ensure unique eid, name, and ha on road
+
+        # Need to verify if remote keys are accepted here
+
         remote.joined = True #accepted
         remote.nextSid()
-        self.remove(index)
+        self.stack.dumpRemote(remote)
+        self.ackAccept() #need to ack before we remove as index as changed
+
+    def ackAccept(self):
+        '''
+        Send ack to accept response
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.ack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            print ex
+            self.remove(self.rxPacket.index)
+            return
+
+        self.transmit(packet)
+        self.remove(self.rxPacket.index) # since index changed
+
 
 class Joinent(Correspondent):
     '''
@@ -311,13 +348,25 @@ class Joinent(Correspondent):
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
 
+    def receive(self, packet):
+        """
+        Process received packet belonging to this transaction
+        """
+        super(Joinent, self).receive(packet) #  self.rxPacket = packet
+
+        if packet.data['tk'] == raeting.trnsKinds.join:
+            if packet.data['pk'] == raeting.pcktKinds.ack: #pended
+                self.joined()
+
     def process(self):
         '''
         Perform time based processing of transaction
 
         '''
-        # need to perform the check for accepted status somewhere
+        # need to perform the check for accepted status and then send accept
         self.accept()
+
+        # need to retry accept packet until get ackAccept transaction ends
 
     def prep(self):
         '''
@@ -340,6 +389,32 @@ class Joinent(Correspondent):
         '''
         Process join packet
         Perform pend operation of pending remote estate being accepted onto channel
+
+        Apply the rules to ensure no colliding estates on (host, port)
+        If matching name estate found then return
+        Rules:
+            Only one estate with given eid is allowed on road
+            Only one estate with given name is allowed on road.
+            Only one estate with given ha on road is allowed on road.
+
+            Are multiple estates with same keys but different name (ha) allowed?
+            Current logic ignores same keys or not
+
+        Since creating new estate assigns unique eid,
+        we are looking for preexisting estates with any eid.
+
+        Processing steps:
+        I) Search remote estates for matching name
+            A) Found remote
+                1) HA not match
+                    Search remotes for other matching HA but different name
+                    If found other delete
+                Reuse found remote to be updated and joined
+
+            B) Not found
+                Search remotes for other matching HA
+                If found delete for now
+                Create new remote and update
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
@@ -361,31 +436,37 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.fetchRemoteEstateByHostPort(host=data['sh'], port=data['sp'])
+        host = data['sh']
+        port = data['sp']
+        remote = self.stack.fetchRemoteEstateByName(name)
         if remote:
-            if (name != remote.name or
-                verhex != remote.verfer.keyhex or
-                pubhex != remote.pubber.keyhex):
-                # nack join request another estate at same address but different credentials
-                # and return
-                pass
-            # accept here and return
+            if not (host == remote.host and port == remote.port):
+                other = self.stack.fetchRemoteEstateByHostPort(host, port)
+                if other and other is not remote: #may need to terminate transactions
+                    self.stack.removeRemoteEstate(other.eid)
+                remote.host = host
+                remote.port = port
+            if remote.verfer.keyhex != verhex:
+                remote.verfer = nacling.Verifier(verhex)
+            if remote.pubber.keyhex != pubhex:
+                remote.pubber = nacling.Publican(pubhex)
+            remote.rsid = self.sid
+            remote.rtid = self.tid
+        else:
+            other = self.stack.fetchRemoteEstateByHostPort(host, port)
+            if other: #may need to terminate transactions
+                self.stack.removeRemoteEstate(other.eid)
+            remote = estating.RemoteEstate( stack=self.stack,
+                                            name=name,
+                                            host=host,
+                                            port=port,
+                                            verkey=verhex,
+                                            pubkey=pubhex,
+                                            rsid=self.sid,
+                                            rtid=self.tid, )
+            self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
 
-        if name in self.stack.eids:
-            emsg = "Another estate with name  already exists"
-            raise raeting.TransactionError(emsg)
-
-
-
-        remote = estating.RemoteEstate( stack=self.stack,
-                                        name=name,
-                                        host=data['sh'],
-                                        port=data['sp'],
-                                        verkey=verhex,
-                                        pubkey=pubhex,
-                                        rsid=self.sid,
-                                        rtid=self.tid, )
-        self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
+        self.stack.dumpRemote(remote)
         self.reid = remote.eid # auto generated at instance creation above
 
         self.ackJoin()
@@ -398,7 +479,7 @@ class Joinent(Correspondent):
             emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        #since bootstrap transaction use updated self.rid
+        #since bootstrap transaction use updated self.reid changed in self.join()
         self.txData.update( dh=self.stack.estates[self.reid].host,
                             dp=self.stack.estates[self.reid].port,)
         body = odict()
@@ -440,9 +521,17 @@ class Joinent(Correspondent):
             print ex
             self.remove(self.rxPacket.index)
             return
+
+        self.transmit(packet)
+
+    def joined(self):
+        '''
+        process ack to accept response
+        '''
+        remote = self.stack.estates[self.reid]
         remote.joined = True # accepted
         remote.nextSid()
-        self.transmit(packet)
+        self.stack.dumpRemote(remote)
         self.remove(self.rxPacket.index)
 
 class Allower(Initiator):
