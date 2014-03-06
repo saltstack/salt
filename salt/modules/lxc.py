@@ -3,6 +3,9 @@
 Control Linux Containers via Salt
 
 :depends: lxc package for distribution
+
+You need lxc >= 1.0 (even beta alpha)
+
 '''
 
 # Import python libs
@@ -13,6 +16,7 @@ import os
 
 #import salt libs
 import salt.utils
+#import subprocess
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -24,12 +28,25 @@ __func_alias__ = {
 
 
 def __virtual__():
+    '''
+    To speed up the whole thing, we decided to not use the
+    subshell way and assume things are in place for lxc
+    Discussion made by @kiorky and @thatch45
     if salt.utils.which('lxc-autostart'):
         return 'lxc'
     elif salt.utils.which('lxc-version'):
-        log.warning('Support for lxc < 1.0 may be incomplete.')
+        passed = False
+        try:
+            passed = subprocess.check_output(
+                'lxc-version').split(':')[1].strip() >= '1.0'
+        except Exception:
+            pass
+        if not passed:
+            log.warning('Support for lxc < 1.0 may be incomplete.')
         return 'lxc'
     return False
+    '''
+    return 'lxc'
 
 
 def _lxc_profile(profile):
