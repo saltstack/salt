@@ -21,7 +21,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'disk'
+    return True
 
 
 def _clean_flags(args, caller):
