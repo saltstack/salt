@@ -20,9 +20,9 @@ __func_alias__ = {
 
 def __virtual__():
     '''
-    Ensure correct name
+    Always load
     '''
-    return 'composer'
+    return True
 
 
 def _valid_composer(composer):
