@@ -60,6 +60,7 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 __grants__ = [
+    'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
     'CREATE',
