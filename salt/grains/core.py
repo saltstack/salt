@@ -1181,6 +1181,16 @@ def saltversion():
     return {'saltversion': __version__}
 
 
+def zmqversion():
+    '''
+    Return the zeromq version
+    '''
+    # Provides:
+    #   zmqversion
+    import zmq
+    return {'zmqversion': zmq.zmq_version()}
+
+
 def saltversioninfo():
     '''
     Return the version_info of salt
