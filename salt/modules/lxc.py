@@ -517,8 +517,8 @@ def start(name, restart=False):
            'result': True,
            'comment': 'Started'}
     try:
-        exists = __salt__['lxc.exists'](name)
-        if not exists:
+        does_exist = __salt__['lxc.exists'](name)
+        if not does_exist:
             return {'name': name,
                     'result': False,
                     'comment': 'Container does not exist'}
@@ -552,8 +552,8 @@ def stop(name):
            'result': True,
            'comment': 'Stopped'}
     try:
-        exists = __salt__['lxc.exists'](name)
-        if not exists:
+        does_exist = __salt__['lxc.exists'](name)
+        if not does_exist:
             return {'name': name,
                     'result': False,
                     'changes': {},
