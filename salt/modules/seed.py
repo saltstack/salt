@@ -98,8 +98,6 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
 
     if config is None:
         config = {}
-    elif isinstance(config, str):
-        config = yaml.load(config)
     if not 'master' in config:
         config['master'] = __opts__['master']
     if id_:
@@ -160,7 +158,6 @@ def _prep_bootstrap(mpt):
     # Apply the minion config
     # Copy script into tmp
     shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-    log.info(__salt__['cmd.run']('cat {0}'.format(os.path.join(mpt, 'tmp'))))
 
 
 def _install(mpt):
@@ -200,8 +197,9 @@ def _check_resolv(mpt):
 
 
 def _check_install(root):
-    cmd = 'if ! type salt-minion; then exit 1; fi'
-    return not _chroot_exec(root, cmd)
+    cmd = ('chroot {0} /bin/sh -c if ! type salt-minion; '
+           'then exit 1; fi').format(root)
+    return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
 
 
 def _chroot_exec(root, cmd):
