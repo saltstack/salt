@@ -180,6 +180,19 @@ The directory to store the pki authentication keys.
 
     pki_dir: /etc/salt/pki
 
+.. conf_master:: extension_modules
+
+``extension_modules``
+---------------------
+
+Directory for custom modules. This directory can contain subdirectories for
+each of Salt's module types such as "runners", "output", "wheel", "modules",
+"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+
+.. code-block:: yaml
+
+    extension_modules: srv/modules
+
 .. conf_master:: cachedir
 
 ``cachedir``

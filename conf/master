@@ -67,6 +67,11 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt/master
 
+# Directory for custom modules. This directory can contain subdirectories for
+# each of Salt's module types such as "runners", "output", "wheel", "modules",
+# "states", "returners", etc.
+#extension_modules: <no default>
+
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
 
