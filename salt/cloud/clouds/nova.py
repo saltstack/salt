@@ -95,10 +95,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.client
-try:
-    from salt.utils.decorators import memoize
-except ImportError:
-    from salt.utils import memoize
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -383,30 +379,6 @@ def create(vm_):
     )
 
     floating = []
-
-    if HAS014 and networks is not None:
-        for net in networks:
-            if 'fixed' in net:
-                kwargs['networks'] = [
-                    OpenStackNetwork(n, None, None, None) for n in net['fixed']
-                ]
-            elif 'floating' in net:
-                pool = OpenStack_1_1_FloatingIpPool(
-                    net['floating'], conn.connection
-                )
-                for idx in pool.list_floating_ips():
-                    if idx.node_id is None:
-                        floating.append(idx)
-                if not floating:
-                    # Note(pabelanger): We have no available floating IPs. For
-                    # now, we raise an execption and exit. A future enhancement
-                    # might be to allow salt-cloud to dynamically allociate new
-                    # address but that might be tricky to manage.
-                    raise SaltCloudSystemExit(
-                        "Floating pool '%s' has not more address available, "
-                        "please create some more or use a different pool." %
-                        net['floating']
-                    )
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
