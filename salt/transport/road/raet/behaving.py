@@ -25,6 +25,8 @@ raet.udp.stack.destination
 # pylint: skip-file
 # pylint: disable=W0611
 
+import os
+
 # Import Python libs
 from collections import deque
 try:
@@ -57,6 +59,9 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         txmsgs=odict(ipath='txmsgs', ival=deque()),
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),
         local=odict(ipath='local', ival=odict(   name='master',
+                                                 dirpath='raet/test/keep',
+                                                 main=False,
+                                                 auto=True,
                                                  eid=0,
                                                  host='0.0.0.0',
                                                  port=raeting.RAET_PORT,
@@ -69,8 +74,12 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         '''
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        ha = (self.local.data.host, self.local.data.port)
         name = self.local.data.name
+        dirpath = os.path.abspath(os.path.join(self.local.data.dirpath, name))
+        auto = self.local.data.auto
+        main = self.local.data.main
+        ha = (self.local.data.host, self.local.data.port)
+
         eid = self.local.data.eid
         estate = estating.LocalEstate(  eid=eid,
                                         name=name,
@@ -83,6 +92,9 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         self.stack.value = stacking.StackUdp(estate=estate,
                                        store=self.store,
                                        name=name,
+                                       auto=auto,
+                                       main=main,
+                                       dirpath=dirpath,
                                        txMsgs=txMsgs,
                                        rxMsgs=rxMsgs, )
 
