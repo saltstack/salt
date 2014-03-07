@@ -553,44 +553,6 @@ obtained from your cloud provider.
 profile configuration.
 
 
-IBM SmartCloud Enterprise
--------------------------
-
-In addition to a username and password, the IBM SCE module requires an SSH key,
-which is currently configured inside IBM's web interface. A location is also
-required to create instances, but not to query their cloud. This is important,
-because you need to use salt-cloud --list-locations (with the other options
-already set) in order to find the name of the location that you want to use.
-
-* Using the old format:
-
-.. code-block:: yaml
-
-  IBMSCE.user: myuser@mycorp.com
-  IBMSCE.password: mypass
-  IBMSCE.ssh_key_name: mykey
-  IBMSCE.ssh_key_file: '/etc/salt/ibm/mykey.pem'
-  IBMSCE.location: Raleigh
-
-
-
-* Using the new configuration format:
-
-.. code-block:: yaml
-
-    my-ibmsce-config:
-      user: myuser@mycorp.com
-      password: mypass
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/ibm/mykey.pem'
-      location: Raleigh
-      provider: ibmsce
-
-
-**NOTE**: With the new providers configuration syntax you would have
-``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile
-configuration.
-
 .. _config_lxc:
 
 lxc

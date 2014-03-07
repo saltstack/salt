@@ -720,14 +720,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            if provider == 'ibmsce':
-                subsys_command = (
-                    'sed -i "s/#Subsystem/Subsystem/" '
-                    '/etc/ssh/sshd_config'
-                )
-                root_cmd(subsys_command, tty, sudo, **kwargs)
-                root_cmd('service sshd restart', tty, sudo, **kwargs)
-
             if not remote_exists(tmp_dir):
                 ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
                                 ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
