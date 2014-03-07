@@ -707,14 +707,14 @@ def templates(templates_dir='/usr/share/lxc/templates'):
 
         salt '*' lxc.templates
     '''
-    templates = []
+    templates_list = []
     san = re.compile('^lxc-')
     if os.path.isdir(templates_dir):
-        templates.extend(
+        templates_list.extend(
             [san.sub('', a) for a in os.listdir(templates_dir)]
         )
-    templates.sort()
-    return templates
+    templates_list.sort()
+    return templates_list
 
 
 def info(name):
