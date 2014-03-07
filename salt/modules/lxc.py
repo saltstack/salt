@@ -157,6 +157,8 @@ def init(name,
     '''
     Initialize a new container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
@@ -231,6 +233,8 @@ def init(name,
 def create(name, config=None, profile=None, options=None, **kwargs):
     '''
     Create a new container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -332,6 +336,8 @@ def clone(name,
     '''
     Create a new container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion' lxc.clone name ARGS
@@ -353,6 +359,8 @@ def clone(name,
 
     profile
         A LXC profile (defined in config or pillar).
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -412,6 +420,7 @@ def list_(extra=False):
                 {'running': ['foo']} # normal mode
                 {'running': {'foo': {'info1': 'bar'}} # extra mode
 
+    CLI Example:
 
     .. code-block:: bash
 
@@ -497,6 +506,8 @@ def start(name, restart=False):
     '''
     Start the named container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.start name
@@ -530,6 +541,8 @@ def stop(name):
     '''
     Stop the named container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.stop name
@@ -562,6 +575,8 @@ def freeze(name):
     '''
     Freeze the named container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.freeze name
@@ -572,6 +587,8 @@ def freeze(name):
 def unfreeze(name):
     '''
     Unfreeze the named container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -584,6 +601,8 @@ def destroy(name, stop=True):
     '''
     Destroy the named container.
     WARNING: Destroys all data associated with the container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -598,6 +617,8 @@ def exists(name):
     '''
     Returns whether the named container exists.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.exists name
@@ -609,6 +630,8 @@ def exists(name):
 def state(name):
     '''
     Returns the state of a container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -636,6 +659,8 @@ def get_parameter(name, parameter):
     '''
     Returns the value of a cgroup parameter for a container.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.get_parameter name parameter
@@ -654,6 +679,8 @@ def get_parameter(name, parameter):
 def set_parameter(name, parameter, value):
     '''
     Set the value of a cgroup parameter for a container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -674,6 +701,8 @@ def templates(templates_dir='/usr/share/lxc/templates'):
     '''
     Returns a list of existing templates
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.templates
@@ -691,6 +720,8 @@ def templates(templates_dir='/usr/share/lxc/templates'):
 def info(name):
     '''
     Returns information about a container.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -782,6 +813,8 @@ def info(name):
 def set_pass(name, users, password):
     '''Set the password of one or more system users inside containers
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' lxc.set_pass root foo
@@ -819,6 +852,8 @@ def set_pass(name, users, password):
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     '''Edit LXC configuration options
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -915,6 +950,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 def set_dns(name, dnsservers=None, searchdomains=None):
     '''Update container dns configuration
     and possibly also resolvonf one.
+
+    CLI Example:
 
     .. code-block:: bash
 
