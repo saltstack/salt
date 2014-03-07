@@ -50,7 +50,8 @@ def _umount(mpt, ftype):
         __salt__['img.umount_image'](mpt)
 
 
-def apply_(path, id_=None, config=None, approve_key=True, install=True):
+def apply_(path, id_=None, config=None, approve_key=True, install=True,
+           prep_install=False):
     '''
     Seed a location (disk image, directory, or block device) with the
     minion config, approve the minion's key, and/or install salt-minion.
@@ -81,6 +82,9 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
 
     install
         Install salt-minion, if absent. Default: true.
+
+    prep_install
+        Prepare the bootstrap script, but don't run it. Default: false
     '''
     stats = __salt__['file.stats'](path, follow_symlinks=True)
     if not stats:
@@ -88,11 +92,14 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
     ftype = stats['type']
     path = stats['target']
     mpt = _mount(path, ftype)
+
     if not mpt:
         return '{0} could not be mounted'.format(path)
 
     if config is None:
         config = {}
+    elif isinstance(config, str):
+        config = yaml.load(config)
     if not 'master' in config:
         config['master'] = __opts__['master']
     if id_:
@@ -113,9 +120,8 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
         pubkey = fp_.read()
 
     if approve_key:
-        res = __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
-    res = _check_install(mpt)
-    if res:
+        __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
+    if _check_install(mpt):
         # salt-minion is already installed, just move the config and keys
         # into place
         log.info('salt-minion pre-installed on image, '
@@ -129,17 +135,32 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
                                          pki_dir.lstrip('/'),
                                          'minion.pub'))
         os.rename(tmp_config, os.path.join(mpt, 'etc/salt/minion'))
+        res = True
     elif install:
         log.info('attempting to install salt-minion to '
                  '{0}'.format(mpt))
         res = _install(mpt)
+    elif prep_install:
+        _prep_bootstrap(mpt)
+        log.info('{0} is ready for salt-minion installation'.format(mpt))
+        res = True
     else:
-        log.error('failed to configure salt-minion to '
-                  '{0}'.format(mpt))
+        log.warn('No useful action performed on '
+                 '{0}'.format(mpt))
         res = False
 
     _umount(mpt, ftype)
     return res
+
+
+def _prep_bootstrap(mpt):
+    # Verify that the boostrap script is downloaded
+    bs_ = __salt__['config.gather_bootstrap_script']()
+    log.info('bootstrap: {0}'.format(bs_))
+    # Apply the minion config
+    # Copy script into tmp
+    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
+    log.info(__salt__['cmd.run']('cat {0}'.format(os.path.join(mpt, 'tmp'))))
 
 
 def _install(mpt):
@@ -149,12 +170,7 @@ def _install(mpt):
     Return True if install is successful or already installed.
     '''
 
-    # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-    log.warn('bootstrap: {0}'.format(bs_))
-    # Apply the minion config
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
+    _prep_bootstrap(mpt)
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
