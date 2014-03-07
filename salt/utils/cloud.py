@@ -16,6 +16,7 @@ import multiprocessing
 import logging
 import pipes
 import json
+import copy
 import re
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -286,7 +287,7 @@ def bootstrap(vm_, opts):
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
     ssh_username = salt.config.get_cloud_config_value('ssh_username', vm_, opts)
-    deploy_script = script(vm_)
+    deploy_script = os_script(vm_)
     deploy_kwargs = {
         'host': vm_['ssh_host'],
         'username': ssh_username,

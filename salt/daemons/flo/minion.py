@@ -88,15 +88,6 @@ class RouterMinion(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                             self.udp_stack.value.eids[estate])
 
 
-
-class PillarLoad(ioflo.base.deeding.Deed):  # pylint: disable=W0232
-    '''
-    Load up the pillar in the data store
-    '''
-    Ioinits = {'opts_store': '.salt.opts',
-               'grains': '.salt.loader.grains'}
-
-
 class ModulesLoad(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Reload the minion modules

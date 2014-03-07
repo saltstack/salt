@@ -120,6 +120,7 @@ class Aggregate(object):
     """
     pass
 
+
 class Map(OrderedDict, Aggregate):
     """
     Map aggregation.

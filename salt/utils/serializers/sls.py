@@ -147,7 +147,6 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         raise DeserializationError(error)
     except Exception as error:
-        raise
         raise DeserializationError(error)
 
 
@@ -171,7 +170,7 @@ def serialize(obj, **options):
         raise SerializationError(error)
 
 
-class Loader(BaseLoader):
+class Loader(BaseLoader):  # pylint: disable=W0232
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
@@ -330,7 +329,7 @@ class SLSMap(OrderedDict):
     def __str__(self):
         return serialize(self, default_flow_style=True)
 
-    def __repr__(self):
+    def __repr__(self, _repr_running={}):
         return serialize(self, default_flow_style=True)
 
 
