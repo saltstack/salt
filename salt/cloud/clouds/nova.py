@@ -785,3 +785,50 @@ def list_nodes_select(call=None):
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full(), __opts__['query.selection'], call,
     )
+
+
+def volume_create(name, size=100, snapshot=None, voltype=None, provider=None):
+    '''
+    Create block storage device
+    '''
+    conn = get_conn()
+    log.debug(pprint.pformat(conn.volume_conn.volumes.list()))
+    return conn.volume_create(
+        name,
+        size,
+        snapshot,
+        voltype
+    )
+
+
+def volume_delete(name):
+    '''
+    Delete block storage device
+    '''
+    conn = get_conn()
+    return conn.volume_delete(name)
+
+
+def volume_detach(name, server_name):
+    '''
+    Detach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_detach(
+        name,
+        server_name,
+        timeout=300
+    )
+
+
+def volume_attach(name, server_name, device='/dev/xvdb'):
+    '''
+    Attach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_attach(
+        name,
+        server_name,
+        device,
+        timeout=300
+    )

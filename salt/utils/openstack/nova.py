@@ -151,6 +151,7 @@ class SaltNova(object):
         List all block volumes
         '''
         nt_ks = self.volume_conn
+        log.debug('VOLUME: {0}'.format(nt_ks))
         volume = nt_ks.volumes.list(search_opts=search_opts)
         return volume
 

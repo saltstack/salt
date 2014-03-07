@@ -14,6 +14,7 @@ import time
 import signal
 import logging
 import multiprocessing
+import pprint
 from itertools import groupby
 
 # Import salt.cloud libs
@@ -301,6 +302,36 @@ class CloudClient(object):
             vm_['profile'] = None
             ret[name] = salt.utils.cloud.simple_types_filter(
                 mapper.create(vm_))
+        return ret
+
+    def volume_create(self, provider, names, **kwargs):
+        '''
+        Create the named VMs, without using a profile
+
+        Example:
+
+        client.create(names=['myinstance'], provider='my-ec2-config',
+            kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
+                    'ssh_username': 'ec2-user', 'securitygroup': 'default',
+                    'delvol_on_destroy': True})
+        '''
+        mapper = salt.cloud.Map(self._opts_defaults())
+        providers = mapper.map_providers_parallel()
+        if provider in providers:
+            provider += ':{0}'.format(providers[provider].keys()[0])
+        else:
+            return False
+        if isinstance(names, str):
+            names = names.split(',')
+        ret = {}
+        for name in names:
+            vm_ = kwargs.copy()
+            vm_['name'] = name
+            vm_['provider'] = provider
+            vm_['profile'] = None
+            ret[name] = salt.utils.cloud.simple_types_filter(
+                mapper.volume_create(vm_)
+            )
         return ret
 
     def action(self, fun=None, cloudmap=None, names=None, provider=None,
@@ -1056,6 +1087,44 @@ class Cloud(object):
                 timeout=self.opts['timeout'] * 60
             )
             output['ret'] = action_out
+        return output
+
+    def volume_create(self, vm_, local_master=True):
+        '''
+        Create a single volume
+        '''
+        log.debug(pprint.pformat(vm_))
+        output = {}
+
+        alias, driver = vm_['provider'].split(':')
+        fun = '{0}.volume_create'.format(driver)
+        if fun not in self.clouds:
+            log.error(
+                'Creating {0[name]!r} using {0[provider]!r} as the provider '
+                'cannot complete since {1!r} is not available'.format(
+                    vm_,
+                    driver
+                )
+            )
+            return
+
+        try:
+            alias, driver = vm_['provider'].split(':')
+            func = '{0}.volume_create'.format(driver)
+            log.debug('Function: {0}'.format(func))
+            log.debug('VM: {0}'.format(pprint.pformat(vm_)))
+            with context.func_globals_inject(
+                                self.clouds[fun],
+                                __active_provider_name__=':'.join([alias,
+                                                                   driver])):
+                output = self.clouds[func](vm_)
+        except KeyError as exc:
+            log.exception(
+                'Failed to create VM {0}. Configuration value {1} needs '
+                'to be set'.format(
+                    vm_['name'], exc
+                )
+            )
         return output
 
     def run_profile(self, profile, names, vm_overrides=None):
