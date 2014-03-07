@@ -279,7 +279,9 @@ class SafeKeep(Keep):
     '''
     RAET protocol estate safe (key) data persistence and status
     '''
-    def __init__(self, prefix='key', **kwa):
+    Auto = False #auto accept
+
+    def __init__(self, prefix='key', auto=None, **kwa):
         '''
         Setup SafeKeep instance
 
@@ -296,15 +298,7 @@ class SafeKeep(Keep):
                     key.eid.ext
         '''
         super(SafeKeep, self).__init__(prefix=prefix, **kwa)
-
-        self.pendeddirpath = os.path.join(self.remotedirpath, 'pended')
-        if not os.path.exists(self.pendeddirpath):
-            os.makedirs(self.pendeddirpath)
-
-        self.rejecteddirpath = os.path.join(self.remotedirpath, 'rejected')
-        if not os.path.exists(self.rejecteddirpath):
-            os.makedirs(self.rejecteddirpath)
-
+        self.auto = auto if auto is not None else self.Auto
 
     def dumpLocalEstate(self, estate):
         '''
@@ -327,6 +321,7 @@ class SafeKeep(Keep):
         data = odict([
                 ('eid', estate.eid),
                 ('name', estate.name),
+                ('acceptance', estate.acceptance),
                 ('verhex', estate.verfer.keyhex),
                 ('pubhex', estate.pubber.keyhex),
                 ])
@@ -338,7 +333,7 @@ class SafeKeep(Keep):
         Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = estate.name
+        uid = estate.eid
         return (self.loadRemoteData(uid))
 
     def removeRemoteEstate(self, estate):
@@ -346,15 +341,89 @@ class SafeKeep(Keep):
         Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        uid = estate.name
+        uid = estate.eid
         self.clearRemoteData(uid)
 
-    def statusRemote(self, estate):
+    def statusRemoteEstate(self, estate, verhex=None, pubhex=None, main=True):
         '''
         Evaluate acceptance status of estate per its keys
         persist key data differentially based on status
         '''
-        return (raeting.acceptance.accepted)
+        data = self.loadRemoteEstate(estate)
+        status = data.get('acceptance') if data else None # pre-existing status
+
+        if main: #main estate logic
+            if self.auto:
+                status = raeting.acceptances.accepted
+            else:
+                if status is None:
+                    status = raeting.acceptances.pending
+
+                elif status == raeting.acceptances.accepted:
+                    if (  data and (
+                            (verhex and (verhex != data.get('verhex'))) or
+                            (pubhex and (pubhex != data.get('pubhex'))))):
+                        status = raeting.acceptances.rejected
+
+                elif status == raeting.acceptances.rejected:
+                    if (  data and (
+                            (verhex and (verhex != data.get('verhex'))) or
+                            (pubhex and (pubhex != data.get('pubhex'))))):
+                        status = raeting.acceptances.pending
+
+                else: # pre-existing was pending
+                    # waiting for external acceptance need to change
+                    # status = raeting.acceptances.accepted
+                    pass
+
+        else: #other estate logic
+            if status is None:
+                status = raeting.acceptances.accepted
+
+            elif status == raeting.acceptances.accepted:
+                if (  data and (
+                        (verhex and (verhex != data.get('verhex'))) or
+                        (pubhex and (pubhex != data.get('pubhex'))))):
+                    status = raeting.acceptances.rejected
+
+            elif status == raeting.acceptances.rejected:
+                if (  data and (
+                        (verhex and (verhex != data.get('verhex'))) or
+                        (pubhex and (pubhex != data.get('pubhex'))))):
+                    status = raeting.acceptances.accepted
+            else: # pre-existing was pending
+                    # no external acceptance allowd so reject
+                status = raeting.acceptances.rejected
+
+        if status != raeting.acceptances.rejected:
+            if (verhex and verhex != estate.verfer.keyhex):
+                estate.verfer = nacling.Verifier(verhex)
+            if (pubhex and pubhex != estate.pubber.keyhex):
+                estate.pubber = nacling.Publican(pubhex)
+        estate.acceptance = status
+        self.dumpRemoteEstate(estate)
+        return status
+
+    def rejectRemoteEstate(self, estate):
+        '''
+        Set acceptance status to rejected
+        '''
+        estate.acceptance = raeting.acceptances.rejected
+        self.dumpRemoteEstate(estate)
+
+    def pendRemoteEstate(self, estate):
+        '''
+        Set acceptance status to pending
+        '''
+        estate.acceptance = raeting.acceptances.pending
+        self.dumpRemoteEstate(estate)
+
+    def acceptRemoteEstate(self, estate):
+        '''
+        Set acceptance status to accepted
+        '''
+        estate.acceptance = raeting.acceptances.accepted
+        self.dumpRemoteEstate(estate)
 
 def clearAllRoadSafe(dirpath):
     '''

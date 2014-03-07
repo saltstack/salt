@@ -34,19 +34,7 @@ def test():
     masterSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
-
     dirpathMaster = os.path.join(os.getcwd(), 'keep', masterName)
-    road = keeping.RoadKeep(dirpath=dirpathMaster)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMaster)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
-    estate = estating.LocalEstate(   eid=1,
-                                     name=masterName,
-                                     sigkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, main=True,  dirpath=dirpathMaster)
 
     #minion0 stack
     minionName0 = "minion0"
@@ -54,20 +42,7 @@ def test():
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
-
     dirpathMinion0 = os.path.join(os.getcwd(), 'keep', minionName0)
-    road = keeping.RoadKeep(dirpath=dirpathMinion0)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMinion0)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
-    estate = estating.LocalEstate(   eid=0,
-                                     name=minionName0,
-                                     ha=("", raeting.RAET_TEST_PORT),
-                                     sigkey=minionSignKeyHex,
-                                     prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion0)
 
     #minion1 stack
     minionName1 = "minion1"
@@ -75,14 +50,29 @@ def test():
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
-
     dirpathMinion1 = os.path.join(os.getcwd(), 'keep', minionName1)
-    road = keeping.RoadKeep(dirpath=dirpathMinion1)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMinion1)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
+
+    keeping.clearAllRoadSafe(dirpathMaster)
+    keeping.clearAllRoadSafe(dirpathMinion0)
+    keeping.clearAllRoadSafe(dirpathMinion1)
+
+    estate = estating.LocalEstate(   eid=1,
+                                     name=masterName,
+                                     sigkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(estate=estate,
+                               auto=True,
+                               main=True,
+                               dirpath=dirpathMaster)
+
+    estate = estating.LocalEstate(   eid=0,
+                                     name=minionName0,
+                                     ha=("", raeting.RAET_TEST_PORT),
+                                     sigkey=minionSignKeyHex,
+                                     prikey=minionPriKeyHex,)
+    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion0)
+
+
     estate = estating.LocalEstate(   eid=0,
                                      name=minionName1,
                                      ha=("", 7532),
@@ -93,7 +83,7 @@ def test():
     print "\n********* Join Transaction **********"
     stack1.join()
     timer = Timer(duration=2)
-    timer.restart(duration=2)
+    timer.restart(duration=3)
     while not timer.expired:
         stack1.serviceAll()
         stack0.serviceAll()
@@ -181,7 +171,7 @@ def test():
     #print estate1.name, estate1.eid, estate1.sid, estate1.ha, estate1.signer, estate1.priver
 
     #master stack
-    stack0 = stacking.StackUdp(dirpath=dirpathMaster,  main=True)
+    stack0 = stacking.StackUdp(dirpath=dirpathMaster, auto=True,  main=True)
 
     #minion0 stack
     stack1 = stacking.StackUdp(dirpath=dirpathMinion0)
@@ -294,8 +284,8 @@ def test():
     stack1.serverUdp.close()
     stack2.serverUdp.close()
 
-    #stack0.clearLocal()
-    #stack0.clearAllRemote()
+    stack0.clearLocal()
+    stack0.clearAllRemote()
     stack1.clearLocal()
     stack1.clearAllRemote()
     stack2.clearLocal()

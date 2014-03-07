@@ -8,7 +8,8 @@ Tests to try out stacking. Potentially ephemeral
 import  os
 
 from ioflo.base.odicting import odict
-from ioflo.base.aiding import Timer
+from ioflo.base.aiding import Timer,  StoreTimer
+from ioflo.base import storing
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -28,25 +29,15 @@ def test():
     '''
     console.reinit(verbosity=console.Wordage.concise)
 
+    store = storing.Store(stamp=0.0)
+
     #master stack
     masterName = "master"
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
-
     dirpathMaster = os.path.join(os.getcwd(), 'keep', masterName)
-    road = keeping.RoadKeep(dirpath=dirpathMaster)
-    #road.clearLocalData()
-    #road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMaster)
-    #safe.clearLocalData()
-    #safe.clearAllRemoteData()
-    estate = estating.LocalEstate(   eid=1,
-                                     name=masterName,
-                                     sigkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, main=True,  dirpath=dirpathMaster)
 
     #minion0 stack
     minionName0 = "minion0"
@@ -54,20 +45,30 @@ def test():
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
-
     dirpathMinion0 = os.path.join(os.getcwd(), 'keep', minionName0)
-    road = keeping.RoadKeep(dirpath=dirpathMinion0)
-    #road.clearLocalData()
-    #road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMinion0)
-    #safe.clearLocalData()
-    #safe.clearAllRemoteData()
+
+    keeping.clearAllRoadSafe(dirpathMaster)
+    keeping.clearAllRoadSafe(dirpathMinion0)
+
+    estate = estating.LocalEstate(   eid=1,
+                                     name=masterName,
+                                     sigkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(estate=estate,
+                               store=store,
+                               auto=True,
+                               main=True,
+                               dirpath=dirpathMaster)
+
+
     estate = estating.LocalEstate(   eid=0,
                                      name=minionName0,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion0)
+    stack1 = stacking.StackUdp(estate=estate,
+                               store=store,
+                               dirpath=dirpathMinion0)
 
 
     print "\n********* Join Transaction **********"
@@ -88,6 +89,8 @@ def test():
     while not timer.expired:
         stack1.serviceAll()
         stack0.serviceAll()
+        store.advanceStamp(0.1)
+
     for estate in stack0.estates.values():
         print "Remote Estate {0} allowed= {1}".format(estate.eid, estate.allowed)
     for estate in stack1.estates.values():
