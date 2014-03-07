@@ -40,13 +40,13 @@ try:
     )
 except ImportError:
     # The installation time was not generated, let's define the default values
-    platform = sys.platform.lower()
-    if platform.startswith('win'):
+    __platform = sys.platform.lower()
+    if __platform.startswith('win'):
         ROOT_DIR = r'c:\salt' or '/'
         CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
     else:
         ROOT_DIR = '/'
-        if 'bsd' in platform:
+        if 'bsd' in __platform:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
         else:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
