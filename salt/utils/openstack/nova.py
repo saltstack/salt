@@ -152,8 +152,18 @@ class SaltNova(object):
         '''
         nt_ks = self.volume_conn
         log.debug('VOLUME: {0}'.format(nt_ks))
-        volume = nt_ks.volumes.list(search_opts=search_opts)
-        return volume
+        volumes = nt_ks.volumes.list(search_opts=search_opts)
+        response = {}
+        for volume in volumes:
+            response[volume.display_name] = {
+                'name': volume.display_name,
+                'size': volume.size,
+                'id': volume.id,
+                'description': volume.display_description,
+                'attachments': volume.attachments,
+                'status': volume.status
+            }
+        return response
 
     def volume_show(self, name):
         '''
