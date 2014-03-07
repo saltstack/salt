@@ -57,6 +57,9 @@ Package repositories can be managed with the pkgrepo state:
     once ``python-software-properties`` is installed.
 '''
 
+# Import python libs
+import sys
+
 # Import salt libs
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
