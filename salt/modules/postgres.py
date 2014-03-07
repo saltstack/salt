@@ -357,11 +357,11 @@ def db_create(name,
     with_args = {
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
-        'OWNER': owner and '"{0}"'.format(owner),
+        'OWNER': owner and '\'{0}\''.format(owner),
         'TEMPLATE': template,
-        'ENCODING': encoding and '{0!r}'.format(encoding),
-        'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
+        'ENCODING': encoding and '\'{0}\''.format(encoding),
+        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
+        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
         'TABLESPACE': tablespace,
     }
     with_chunks = []
@@ -648,7 +648,7 @@ def _role_cmd_args(name,
     ):
         skip_passwd = True
     if isinstance(rolepassword, basestring) and bool(rolepassword):
-        escaped_password = '{0!r}'.format(
+        escaped_password = '\'{0}\''.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
                                     encrypted=encrypted))

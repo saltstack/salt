@@ -108,18 +108,18 @@ def add(name,
     if not isinstance(gid, int):
         raise SaltInvocationError('gid must be an integer')
 
-    _dscl('/Users/{0} UniqueID {1!r}'.format(name, uid))
-    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(name, gid))
-    _dscl('/Users/{0} UserShell {1!r}'.format(name, shell))
-    _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(name, home))
-    _dscl('/Users/{0} RealName {1!r}'.format(name, fullname))
+    _dscl('/Users/{0} UniqueID \'{1}\''.format(name, uid))
+    _dscl('/Users/{0} PrimaryGroupID \'{1}\''.format(name, gid))
+    _dscl('/Users/{0} UserShell \'{1}\''.format(name, shell))
+    _dscl('/Users/{0} NFSHomeDirectory \'{1}\''.format(name, home))
+    _dscl('/Users/{0} RealName \'{1}\''.format(name, fullname))
 
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
         random.choice(string.letters + string.digits) for x in xrange(20)
     )
-    _dscl('/Users/{0} {1!r}'.format(name, randpass), ctype='passwd')
+    _dscl('/Users/{0} \'{1}\''.format(name, randpass), ctype='passwd')
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -189,7 +189,7 @@ def chuid(name, uid):
     if uid == pre_info['uid']:
         return True
     _dscl(
-        '/Users/{0} UniqueID {1!r} {2!r}'.format(name, pre_info['uid'], uid),
+        '/Users/{0} UniqueID \'{1}\' \'{2}\''.format(name, pre_info['uid'], uid),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -216,7 +216,7 @@ def chgid(name, gid):
     if gid == pre_info['gid']:
         return True
     _dscl(
-        '/Users/{0} PrimaryGroupID {1!r} {2!r}'.format(
+        '/Users/{0} PrimaryGroupID \'{1}\' \'{2}\''.format(
             name, pre_info['gid'], gid
         ),
         ctype='change'
@@ -243,7 +243,7 @@ def chshell(name, shell):
     if shell == pre_info['shell']:
         return True
     _dscl(
-        '/Users/{0} UserShell {1!r} {2!r}'.format(
+        '/Users/{0} UserShell \'{1}\' \'{2}\''.format(
             name, pre_info['shell'], shell
         ),
         ctype='change'
@@ -270,7 +270,7 @@ def chhome(name, home):
     if home == pre_info['home']:
         return True
     _dscl(
-        '/Users/{0} NFSHomeDirectory {1!r} {2!r}'.format(
+        '/Users/{0} NFSHomeDirectory \'{1}\' \'{2}\''.format(
             name, pre_info['home'], home
         ),
         ctype='change'
@@ -298,7 +298,7 @@ def chfullname(name, fullname):
     if fullname == pre_info['fullname']:
         return True
     _dscl(
-        '/Users/{0} RealName {1!r}'.format(name, fullname),
+        '/Users/{0} RealName \'{1}\''.format(name, fullname),
         # use a "create" command, because a "change" command would fail if
         # current fullname is an empty string. The "create" will just overwrite
         # this field.

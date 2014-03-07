@@ -62,9 +62,9 @@ def _pkg(jail=None, chroot=None):
     '''
     ret = 'pkg'
     if jail:
-        ret += ' -j {0!r}'.format(jail)
+        ret += ' -j \'{0}\''.format(jail)
     elif chroot:
-        ret += ' -c {0!r}'.format(chroot)
+        ret += ' -c \'{0}\''.format(chroot)
     return ret
 
 
@@ -477,7 +477,7 @@ def backup(file_name, jail=None, chroot=None):
             salt '*' pkg.backup /tmp/pkg chroot=/path/to/chroot
     '''
     res = __salt__['cmd.run'](
-        '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name),
+        '{0} backup -d \'{1}\''.format(_pkg(jail, chroot), file_name),
         output_loglevel='debug'
     )
     return res.split('...')[1]
@@ -517,7 +517,7 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
+        '{0} backup -r \'{0}\''.format(_pkg(jail, chroot), file_name),
         output_loglevel='debug'
     )
 
