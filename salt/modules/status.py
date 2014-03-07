@@ -180,7 +180,7 @@ def cpustats():
 
 def meminfo():
     '''
-    Return the CPU stats for this minion
+    Return the memory info for this minion
 
     CLI Example:
 
