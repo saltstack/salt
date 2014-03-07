@@ -988,4 +988,111 @@ def set_dns(name, dnsservers=None, searchdomains=None):
         ret['result'] = True
     return ret
 
-#
+
+def saltify(name, config=None, approve_key=True, install=True):
+    '''
+    Install and configure salt in a container.
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.saltify name [config=config_data] \\
+                [approve_key=(true|false)] [approve_key=(true|false)]
+
+    config
+        Minion configuration options. By default, the 'master' option is set to
+        the target host's 'master'.
+
+    approve_key
+        Request a pre-approval of the generated minion key. Requires
+        that the salt-master be configured to either auto-accept all keys or
+        expect a signing request from the target host. Default: true.
+
+    install
+        Whether to attempt a full installtion of salt-minion if needed.
+    '''
+
+    info = __salt__['lxc.info'](name)
+    if not info:
+        return None
+
+    __salt__['seed.apply'](info['rootfs'], id_=name, config=config,
+                           approve_key=approve_key, install=False,
+                           prep_install=True)
+
+    cmd = 'bash -c "if type salt-minion; then exit 0; '
+    if install:
+        cmd += 'else sh /tmp/bootstrap.sh -c /tmp; '
+    else:
+        cmd += 'else exit 1; '
+    cmd += 'fi"'
+    return not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
+
+
+def run_cmd(name, cmd, no_start=False, preserve_state=True,
+            stdout=True, stderr=False):
+    '''
+    Run a command inside the container.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' name command [no_start=(true|false)] \\
+                [preserve_state=(true|false)] [stdout=(true|alse)] \\
+                [stderr=(true|false)]
+
+    name
+        Name of the container on which to operate.
+
+    cmd
+        Command to run
+
+    no_start
+        If the container is not running, don't start it. Default: false.
+
+    preserve_state
+        After running the command, return the container to its previous
+        state. Default: true.
+
+    stdout:
+        Return stdout. Default: true
+
+    stderr:
+        Return stderr. Default: false
+
+    Note: If stderr and stdout are both false, the return code is returned. If
+    stderr and stdout are both true, the pid and return code are also returned.
+    '''
+    prior_state = __salt__['lxc.state'](name)
+    if not prior_state:
+        return None
+    res = {}
+    if prior_state == 'stopped':
+        if no_start:
+            return False
+        res = __salt__['lxc.start'](name)
+    elif prior_state == 'frozen':
+        if no_start:
+            return False
+        res = __salt__['lxc.unfreeze'](name)
+    if res.get('error'):
+        log.warn('Failed to run command: {0}'.format(res['error']))
+        return False
+
+    res = __salt__['cmd.run_all'](
+            'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+
+    if preserve_state:
+        if prior_state == 'stopped':
+            __salt__['lxc.stop'](name)
+        elif prior_state == 'frozen':
+            __salt__['lxc.freeze'](name)
+
+    if stdout and stderr:
+        return res
+    elif stdout:
+        return res['stdout']
+    elif stderr:
+        return res['stderr']
+    else:
+        return res['retcode']
