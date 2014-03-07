@@ -867,7 +867,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
     if not __salt__['lxc.exists'](name):
         ret['result'] = False
-        ret['comment'] = 'Container does not exists: {0}'.fomart(name)
+        ret['comment'] = 'Container does not exists: {0}'.format(name)
     elif not os.path.exists(lxc_conf_p):
         ret['result'] = False
         ret['comment'] = (
