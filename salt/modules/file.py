@@ -408,7 +408,7 @@ def check_hash(path, hash):
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5=<md5sum>
+        salt '*' file.check_hash /etc/fstab hash=md5=<md5sum>
     '''
     hash_parts = hash.split('=', 1)
     if len(hash_parts) != 2:
