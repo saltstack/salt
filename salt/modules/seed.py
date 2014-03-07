@@ -235,9 +235,12 @@ def _chroot_exec(root, cmd):
 def _chroot_pids(chroot):
     pids = []
     for root in glob.glob('/proc/[0-9]*/root'):
-        link = os.path.realpath(root)
-        if link.startswith(chroot):
-            pids.append(int(os.path.basename(
-                os.path.dirname(root)
-            )))
+        try:
+            link = os.path.realpath(root)
+            if link.startswith(chroot):
+                pids.append(int(os.path.basename(
+                    os.path.dirname(root)
+                )))
+        except OSError:
+            pass
     return pids
