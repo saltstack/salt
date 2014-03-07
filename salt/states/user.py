@@ -115,17 +115,17 @@ def _changes(name,
                     or lshad['passwd'] != default_hash and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
-        if date is not 0 and lshad['lstchg'] != date:
+        if date and date is not 0 and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays is not 0 and lshad['min'] != mindays:
+        if mindays and mindays is not 0 and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays is not 7 and lshad['warn'] != warndays:
+        if warndays and warndays is not 7 and lshad['warn'] != warndays:
             change['warndays'] = warndays
-        if expire is not -1 and lshad['expire'] != expire:
+        if expire and expire is not -1 and lshad['expire'] != expire:
             change['expire'] = expire
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
