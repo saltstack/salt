@@ -74,8 +74,8 @@ minion matches is defined; for now simply specify all hosts (``*``).
 Create an ``sls`` module
 ========================
 
-In the same directory as the :term:`top file`, create an empty file named
-``webserver.sls``, containing the following:
+In the same directory as the :ref:`top file <states-top>`, create a file
+named ``webserver.sls``, containing the following:
 
 .. code-block:: yaml
 
