@@ -502,6 +502,25 @@ def _change_state(cmd, name, expected):
     return r
 
 
+def _ensure_running(name, no_start=False):
+    prior_state = __salt__['lxc.state'](name)
+    if not prior_state:
+        return None
+    res = {}
+    if prior_state == 'stopped':
+        if no_start:
+            return False
+        res = __salt__['lxc.start'](name)
+    elif prior_state == 'frozen':
+        if no_start:
+            return False
+        res = __salt__['lxc.unfreeze'](name)
+    if res.get('error'):
+        log.warn('Failed to run command: {0}'.format(res['error']))
+        return False
+    return prior_state
+
+
 def start(name, restart=False):
     '''
     Start the named container.
@@ -1015,6 +1034,8 @@ def saltify(name, config=None, approve_key=True, install=True):
     if not info:
         return None
 
+    prior_state = _ensure_running(name)
+
     __salt__['seed.apply'](info['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
                            prep_install=True)
@@ -1025,7 +1046,13 @@ def saltify(name, config=None, approve_key=True, install=True):
     else:
         cmd += 'else exit 1; '
     cmd += 'fi"'
-    return not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
+    res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False,
+                                      no_start=True, preserve_state=False)
+    if prior_state == 'stopped':
+        __salt__['lxc.stop'](name)
+    elif prior_state == 'frozen':
+        __salt__['lxc.freeze'](name)
+    return res
 
 
 def run_cmd(name, cmd, no_start=False, preserve_state=True,
@@ -1063,21 +1090,9 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     Note: If stderr and stdout are both false, the return code is returned. If
     stderr and stdout are both true, the pid and return code are also returned.
     '''
-    prior_state = __salt__['lxc.state'](name)
+    prior_state = _ensure_running(name)
     if not prior_state:
-        return None
-    res = {}
-    if prior_state == 'stopped':
-        if no_start:
-            return False
-        res = __salt__['lxc.start'](name)
-    elif prior_state == 'frozen':
-        if no_start:
-            return False
-        res = __salt__['lxc.unfreeze'](name)
-    if res.get('error'):
-        log.warn('Failed to run command: {0}'.format(res['error']))
-        return False
+        return prior_state
 
     res = __salt__['cmd.run_all'](
             'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
