@@ -510,6 +510,16 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
 
+    def test_load_text_template(self):
+        loader = DictLoader({'foo': 'Foo!'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+
+        rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
+        self.assertEqual(rendered, u"Foo!")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_text "does not exists" as doc %}').render()
+
     def test_catalog(self):
         loader = DictLoader({
             'doc1': '{bar: "my god is blue"}',
