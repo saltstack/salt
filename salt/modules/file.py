@@ -1396,7 +1396,7 @@ def append(path, *args):
         try:
             ofile.seek(-1, os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL:
+            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
