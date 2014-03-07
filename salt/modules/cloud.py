@@ -130,7 +130,7 @@ def select_query(query_type='list_nodes_select'):
     return query(query_type='list_nodes_select')
 
 
-def profile_(profile, names, **kwargs):
+def profile_(profile, names, vm_overrides=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
 
@@ -141,7 +141,7 @@ def profile_(profile, names, **kwargs):
         salt '*' cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
-    info = client.profile(profile, names, **kwargs)
+    info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
     return info
 
 

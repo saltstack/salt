@@ -84,7 +84,6 @@ class PillarLoad(ioflo.base.deeding.Deed):  # pylint: disable=W0232
                'grains': '.salt.loader.grains'}
 
 
-
 class ModulesLoad(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Reload the minion modules

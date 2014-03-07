@@ -52,3 +52,9 @@ class SaltCloudExecutionFailure(SaltCloudException):
     '''
     Raised when too much failures have occurred while querying/waiting for data.
     '''
+
+
+class SaltCloudPasswordError(SaltCloudException):
+    '''
+    Raise when virtual terminal password input failed
+    '''

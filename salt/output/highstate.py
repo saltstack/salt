@@ -122,14 +122,20 @@ def _format_host(host, data):
             if comps[1] != comps[2]:
                 state_lines.insert(
                     3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+            try:
+               comment = ret['comment'].strip().replace(
+                   '\n',
+                   '\n' + ' ' * 14)
+            except AttributeError:
+               comment = ret['comment'].join(' ').replace(
+                   '\n',
+                   '\n' + ' ' * 13)
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,
                 'ret': ret,
+                'comment': comment,
                 # This nukes any trailing \n and indents the others.
-                'comment': ret['comment'].strip().replace(
-                    '\n',
-                    '\n' + ' ' * 14),
                 'colors': colors
             }
             hstrs.extend([sline.format(**svars) for sline in state_lines])

@@ -17,6 +17,7 @@ Getting Started
     Getting Started With GoGrid <gogrid>
     Getting Started With Google Compute Engine <gce>
     Getting Started With Joyent <joyent>
+    Getting Started With LXC <lxc>
     Getting Started With Linode <linode>
     Getting Started With OpenStack <openstack>
     Getting Started With Parallels <parallels>
