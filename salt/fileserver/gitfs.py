@@ -63,7 +63,7 @@ def _get_tree(repo, short):
     Return a git.Tree object if the branch/tag/SHA is found, otherwise False
     '''
     for ref in repo.refs:
-        if isinstance(ref, git.RemoteReference):
+        if isinstance(ref, (git.RemoteReference, git.TagReference)):
             parted = ref.name.partition('/')
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
