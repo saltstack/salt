@@ -405,12 +405,17 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sig=None, reload=False, full_restart=False):
+def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
     '''
     The service watcher, called to invoke the watch command.
 
     name
         The name of the init or rc script used to manage the service
+
+    sfun
+        The original function which triggered the mod_watch call
+        (`service.running`, for example).  Currently not used, but must be
+        supported for the future.
 
     sig
         The string to search for when looking for the service process with ps
