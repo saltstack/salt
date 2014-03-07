@@ -35,20 +35,7 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     masterSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
-
     dirpathMaster = os.path.join(os.getcwd(), 'keep', masterName)
-    road = keeping.RoadKeep(dirpath=dirpathMaster)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMaster)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
-
-    estate = estating.LocalEstate(   eid=1,
-                                     name=masterName,
-                                     sigkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, main=True,  dirpath=dirpathMaster)
 
     #minion stack
     minionName = "minion1"
@@ -56,14 +43,19 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
-
     dirpathMinion = os.path.join(os.getcwd(), 'keep', minionName)
-    road = keeping.RoadKeep(dirpath=dirpathMinion)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMinion)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
+
+    keeping.clearAllRoadSafe(dirpathMaster)
+    keeping.clearAllRoadSafe(dirpathMinion)
+
+    estate = estating.LocalEstate(   eid=1,
+                                     name=masterName,
+                                     sigkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(estate=estate,
+                               auto=True,
+                               main=True,
+                               dirpath=dirpathMaster)
 
     estate = estating.LocalEstate(   eid=0,
                                      name=minionName,

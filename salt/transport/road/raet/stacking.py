@@ -59,6 +59,7 @@ class StackUdp(object):
                  udpTxes=None,
                  road=None,
                  safe=None,
+                 auto=None,
                  dirpath=None,
                  ):
         '''
@@ -78,8 +79,11 @@ class StackUdp(object):
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
 
-        self.road = road or keeping.RoadKeep(dirpath=dirpath, stackname=self.name)
-        self.safe = safe or keeping.SafeKeep(dirpath=dirpath, stackname=self.name)
+        self.road = road or keeping.RoadKeep(dirpath=dirpath,
+                                             stackname=self.name)
+        self.safe = safe or keeping.SafeKeep(dirpath=dirpath,
+                                             stackname=self.name,
+                                             auto=auto)
         kept = self.loadLocal() # local estate from saved data
         # local estate for this stack
         self.estate = kept or estate or estating.LocalEstate(stack=self,
@@ -269,6 +273,7 @@ class StackUdp(object):
                                         name=name,
                                         host=data['sh'],
                                         port=data['sp'],
+                                        acceptance=acceptance,
                                         verkey=verhex,
                                         pubkey=pubhex,
                                         rsid=self.sid,
@@ -291,6 +296,7 @@ class StackUdp(object):
                                             port=road['port'],
                                             sid=road['sid'],
                                             rsid=road['rsid'],
+                                            acceptance=safe['acceptance'],
                                             verkey=safe['verhex'],
                                             pubkey=safe['pubhex'],)
             estates.append(estate)
