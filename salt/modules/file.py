@@ -29,7 +29,7 @@ import stat
 import sys
 import tempfile
 import time
-from glob import glob
+import glob
 
 try:
     import grp
@@ -1888,7 +1888,7 @@ def path_exists_glob(path):
         salt '*' file.path_exists_glob /etc/pam*/pass*
 
     '''
-    return True if glob(path) else False
+    return True if glob.glob(path) else False
 
 
 def restorecon(path, recursive=False):
