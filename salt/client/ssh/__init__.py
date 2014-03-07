@@ -48,7 +48,7 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 # Note there are two levels of formatting.
 # - First format pass inserts salt version and delimiter
 # - Second pass at run-time and inserts optional "sudo" and command
-SSH_SHIM = '''/bin/sh << 'EOF'
+SSH_SHIM = r'''/bin/sh << 'EOF'
       #!/bin/sh
 
       MISS_PKG=""
