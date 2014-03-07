@@ -372,7 +372,7 @@ def clone(name,
         return {'created': False, 'error': 'container already exists'}
     if not exists(orig):
         return {'created': False,
-                'error': 'original container does not exists'.format(orig)}
+                'error': 'original container does not exist'.format(orig)}
     if not snapshot:
         snapshot = ''
     else:
@@ -521,7 +521,7 @@ def start(name, restart=False):
         if not exists:
             return {'name': name,
                     'result': False,
-                    'comment': 'Container does not exists'}
+                    'comment': 'Container does not exist'}
         if restart:
             __salt__['lxc.stop'](name)
         ret.update(_change_state('lxc-start -d', name, 'running'))
@@ -557,7 +557,7 @@ def stop(name):
             return {'name': name,
                     'result': False,
                     'changes': {},
-                    'comment': 'Container does not exists'}
+                    'comment': 'Container does not exist'}
         ret.update(_change_state('lxc-stop', name, 'stopped'))
         infos = __salt__['lxc.info'](name)
         ret['result'] = infos['state'] == 'stopped'
@@ -867,11 +867,11 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
     if not __salt__['lxc.exists'](name):
         ret['result'] = False
-        ret['comment'] = 'Container does not exists: {0}'.format(name)
+        ret['comment'] = 'Container does not exist: {0}'.format(name)
     elif not os.path.exists(lxc_conf_p):
         ret['result'] = False
         ret['comment'] = (
-            'Configuration does not exists: {0}'.format(lxc_conf_p))
+            'Configuration does not exist: {0}'.format(lxc_conf_p))
     else:
         with open(lxc_conf_p, 'r') as fic:
             filtered_lxc_conf = []
