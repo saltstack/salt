@@ -31,6 +31,7 @@ class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
+
     def __init__(
         self,
         username,
@@ -60,21 +61,56 @@ class SaltNova(object):
 
         self.compute_conn = client.Client(**self.kwargs)
 
-    def boot(self, name, flavor_id=0, image_id=0, timeout=300):
+    def server_show_libcloud(self, uuid):
+        '''
+        Make output look like libcloud output for consistency
+        '''
+        server_info = self.server_show(uuid)
+        server = server_info.values()[0]
+        server_name = server_info.keys()[0]
+        ret = {
+            '_uuid': None,
+            'id': server['id'],
+            'image': server['image']['id'],
+            'size': server['flavor']['id'],
+            'name': server_name,
+            'state': server['status'],
+            'extra': {
+                'metadata': server['metadata'],
+                'access_ip': server['accessIPv4']
+            }
+        }
+
+        if 'addresses' in server and 'public' in server['addresses']:
+            ret['public_ips'] = [
+                ip['addr'] for ip in server['addresses']['public']
+            ]
+            ret['private_ips'] = [
+                ip['addr'] for ip in server['addresses']['private']
+            ]
+
+        if hasattr(self, 'password'):
+            ret['extra']['password'] = self.password
+
+        return ret
+
+    def boot(self, name, flavor_id=0, image_id=0, timeout=300, **kwargs):
         '''
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
         response = nt_ks.servers.create(
-            name=name, flavor=flavor_id, image=image_id
+            name=name, flavor=flavor_id, image=image_id, **kwargs
         )
+        self.uuid = response.id
+        self.password = response.adminPass
 
         start = time.time()
         trycount = 0
         while True:
             trycount += 1
             try:
-                return self.server_show(response.id)
+                return self.server_show_libcloud(self.uuid)
             except Exception as exc:
                 log.debug(
                     'Server information not yet available: {0}'.format(exc)
@@ -287,6 +323,8 @@ class SaltNova(object):
                 ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
         return ret
 
+    list_sizes = flavor_list
+
     def flavor_create(self,
                       name,      # pylint: disable=C0103
                       id=0,      # pylint: disable=C0103
@@ -378,6 +416,8 @@ class SaltNova(object):
             return {name: ret[name]}
         return ret
 
+    list_images = image_list
+
     def image_meta_set(self,
                        id=None,
                        name=None,
@@ -446,7 +486,6 @@ class SaltNova(object):
                 'accessIPv4': item.accessIPv4,
                 'accessIPv6': item.accessIPv6,
                 'addresses': item.addresses,
-                'config_drive': item.config_drive,
                 'created': item.created,
                 'flavor': {'id': item.flavor['id'],
                            'links': item.flavor['links']},
@@ -464,6 +503,7 @@ class SaltNova(object):
                 'updated': item.updated,
                 'user_id': item.user_id,
             }
+
             if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
                 ret[item.name]['OS-DCF'] = {
                     'diskConfig': item.__dict__['OS-DCF:diskConfig']
