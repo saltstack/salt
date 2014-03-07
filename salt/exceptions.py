@@ -6,9 +6,6 @@ This module is a central location for all salt exceptions
 # Import python libs
 import copy
 
-# Import salt libs
-import salt.utils
-
 
 class SaltException(Exception):
     '''
@@ -99,6 +96,8 @@ class SaltRenderError(SaltException):
         if trace:
             exc_str += '\n{0}\n'.format(trace)
         if self.line_num and self.buffer:
+
+            import salt.utils
             self.context = salt.utils.get_context(
                 self.buffer,
                 self.line_num,
