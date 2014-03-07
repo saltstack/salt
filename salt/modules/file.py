@@ -412,7 +412,10 @@ def check_hash(path, hash):
     '''
     hash_parts = hash.split(':', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {0!r}'.format(hash))
+        # Support "=" for backward compatibility.
+        hash_parts = hash.split('=', 1)
+        if len(hash_parts) != 2:
+          raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
