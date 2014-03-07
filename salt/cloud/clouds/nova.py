@@ -787,12 +787,11 @@ def list_nodes_select(call=None):
     )
 
 
-def volume_create(name, size=100, snapshot=None, voltype=None, provider=None):
+def volume_create(name, size=100, snapshot=None, voltype=None):
     '''
     Create block storage device
     '''
     conn = get_conn()
-    log.debug(pprint.pformat(conn.volume_conn.volumes.list()))
     return conn.volume_create(
         name,
         size,

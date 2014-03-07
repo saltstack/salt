@@ -1089,7 +1089,7 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def volume_create(self, vm_, local_master=True):
+    def volume_create(self, vm_):
         '''
         Create a single volume
         '''
@@ -1109,15 +1109,12 @@ class Cloud(object):
             return
 
         try:
-            alias, driver = vm_['provider'].split(':')
-            func = '{0}.volume_create'.format(driver)
-            log.debug('Function: {0}'.format(func))
+            log.debug('Function: {0}'.format(fun))
             log.debug('VM: {0}'.format(pprint.pformat(vm_)))
             with context.func_globals_inject(
                                 self.clouds[fun],
-                                __active_provider_name__=':'.join([alias,
-                                                                   driver])):
-                output = self.clouds[func](vm_)
+                                __active_provider_name__=vm_['provider']):
+                output = self.clouds[fun](vm_)
         except KeyError as exc:
             log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
