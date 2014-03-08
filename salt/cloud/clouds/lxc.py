@@ -427,7 +427,7 @@ def create(vm_, call=None):
             cret['result'] = False
             cret['comment'] = (
                 'container could not be cloned: {0}, '
-                '{1} does not exists'.format(name, from_container))
+                '{1} does not exist'.format(name, from_container))
         else:
             nret = _salt('lxc.clone', name, orig=from_container,
                                             snapshot=snapshot,
@@ -440,7 +440,7 @@ def create(vm_, call=None):
                     nret['error'], 'Container cloning error')
             else:
                 cret['result'] = (
-                    nret['cloned'] or 'already exists' in cret.get('comment',
+                    nret['cloned'] or 'already exist' in cret.get('comment',
                                                                    ''))
                 cret['comment'] += 'Container cloned\n'
                 cret['changes']['status'] = 'cloned'
@@ -458,7 +458,7 @@ def create(vm_, call=None):
         else:
             exists = (
                 nret['created']
-                or 'already exists' in nret.get('comment', ''))
+                or 'already exist' in nret.get('comment', ''))
             cret['comment'] += 'Container created\n'
             cret['changes']['status'] = 'Created'
     changes['100_creation'] = cret['comment']
