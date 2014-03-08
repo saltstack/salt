@@ -60,14 +60,22 @@ def _get_grain_id(id_):
     return 'salt.cloud.lxc.{0}.{1}'.format(infos['target'], id_)
 
 
-def _minion_opts():
-    cfg = os.environ.get('SALT_MINION_CONFIG', os.path.join(salt.syspaths.CONFIG_DIR, 'minion'))
+def _minion_opts(cfg='minion'):
+    if 'conf_file' in __opts__:
+        default_dir = os.path.dirname(__opts__['conf_file'])
+    else:
+        default_dir = salt.syspaths.CONFIG_DIR,
+    cfg = os.environ.get(
+        'SALT_MINION_CONFIG', os.path.join(default_dir, cfg))
     opts = config.minion_conf(cfg)
     return opts
 
 
-def _master_opts():
-    cfg = os.environ.get('SALT_MINION_CONFIG', os.path.join(salt.syspaths.CONFIG_DIR, 'master'))
+def _master_opts(cfg='master'):
+    cfg = os.environ.get(
+        'SALT_MASTER_CONFIG',
+        __opts__.get('conf_file',
+                     os.path.join(salt.syspaths.CONFIG_DIR, cfg)))
     opts = config.master_config(cfg)
     return opts
 
@@ -387,6 +395,13 @@ def create(vm_, call=None):
     script = vm_.get('script', None)
     script_args = vm_.get('script_args', None)
     users = vm_.get('users', None)
+    # some backends wont support some parameters
+    if backing not in ['lvm']:
+        lvname = vgname = None
+    if backing in ['dir', 'overlayfs']:
+        fstype = None
+        size = None
+        snapshot = False
     for k in ['password',
               'ssh_username']:
         vm_[k] = locals()[k]
@@ -451,29 +466,33 @@ def create(vm_, call=None):
                 'container could not be cloned: {0}, '
                 '{1} does not exist'.format(name, from_container))
         else:
-            nret = _salt('lxc.clone', name, orig=from_container,
-                                            snapshot=snapshot,
-                                            size=size,
-                                            backing=backing,
-                                            profile=profile)
+            nret = _salt('lxc.clone',
+                         name,
+                         orig=from_container,
+                         snapshot=snapshot,
+                         size=size,
+                         backing=backing,
+                         profile=profile)
             if nret.get('error', ''):
                 cret['result'] = False
                 cret['comment'] = '{0}\n{1}'.format(
                     nret['error'], 'Container cloning error')
             else:
                 cret['result'] = (
-                    nret['cloned'] or 'already exist' in cret.get('comment',
-                                                                   ''))
+                    nret['cloned']
+                    or 'already exist' in cret.get('comment', ''))
                 cret['comment'] += 'Container cloned\n'
                 cret['changes']['status'] = 'cloned'
     elif method == 'create':
-        nret = _salt('lxc.create', name, template=image,
-                                         profile=profile,
-                                         fstype=fstype,
-                                         vgname=vgname,
-                                         size=size,
-                                         lvname=lvname,
-                                         backing=backing)
+        nret = _salt('lxc.create',
+                     name,
+                     template=image,
+                     profile=profile,
+                     fstype=fstype,
+                     vgname=vgname,
+                     size=size,
+                     lvname=lvname,
+                     backing=backing)
         if nret.get('error', ''):
             cret['result'] = False
             cret['comment'] = nret['error']
