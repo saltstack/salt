@@ -83,7 +83,21 @@ def _runner():
 
 
 def _salt(fun, *args, **kw):
-    '''Execute a salt function on a specific minion'''
+    '''Execute a salt function on a specific minion
+
+    Special kwargs:
+
+            salt_target
+                target to exec things on
+            salt_timeout
+                timeout for jobs
+            salt_job_poll
+                poll interval to wait for job finish result
+    '''
+    try:
+        poll = kw.pop('salt_job_poll')
+    except KeyError:
+        poll = 0.1
     try:
         target = kw.pop('salt_target')
     except KeyError:
@@ -126,27 +140,35 @@ def _salt(fun, *args, **kw):
     if not cache or (cache and (not cache_key in __CACHED_CALLS)):
         conn = _client()
         runner = _runner()
-        jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **kwargs)
+        rkwargs = kwargs.copy()
+        rkwargs['timeout'] = timeout
+        jid = conn.cmd_async(tgt=target,
+                             fun=fun,
+                             arg=args,
+                             kwarg=kw,
+                             **rkwargs)
         cret = conn.cmd(tgt=target,
                         fun='saltutil.find_job',
                         arg=[jid],
                         timeout=10,
                         **kwargs)
         running = bool(cret.get(target, False))
-        itimeout = timeout
+        endto = time.time() + timeout
         while running:
-            timeout -= 2
-            cret = conn.cmd(tgt=target,
-                            fun='saltutil.find_job',
-                            arg=[jid],
-                            timeout=10,
-                            **kwargs)
+            rkwargs = {
+                'tgt': target,
+                'fun': 'saltutil.find_job',
+                'arg': [jid],
+                'timeout': 10
+            }
+            cret = conn.cmd(**rkwargs)
             running = bool(cret.get(target, False))
             if not running:
                 break
-            if running and not timeout:
-                raise Exception('Timeout {0} is elapsed'.format(itimeout))
-            time.sleep(2)
+            if running and (time.time() > endto):
+                raise Exception('Timeout {0}s for {1} is elapsed'.format(
+                    timeout, pformat(rkwargs)))
+            time.sleep(poll)
         # timeout for the master to return data about a specific job
         wait_for_res = float({
             'test.ping': '5',
