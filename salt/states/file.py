@@ -1597,6 +1597,13 @@ def recurse(name,
         'comment': {}  # { path: [comment, ...] }
     }
 
+    try:
+        source = source.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter must be a string'
+        return ret
+
     if 'mode' in kwargs:
         ret['result'] = False
         ret['comment'] = (
