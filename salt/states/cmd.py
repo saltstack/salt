@@ -32,6 +32,11 @@ Only run if the file specified by ``creates`` does not exist, in this case touch
       cmd.run:
         - creates: /tmp/foo
 
+.. note::
+
+    The ``creates`` option is only supported in releases greater than or
+    equal to 2014.1.0.
+
 Note that when executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
