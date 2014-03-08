@@ -329,7 +329,7 @@ class SLSMap(OrderedDict):
     def __str__(self):
         return serialize(self, default_flow_style=True)
 
-    def __repr__(self, _repr_running={}):
+    def __repr__(self, _repr_running=None):
         return serialize(self, default_flow_style=True)
 
 
