@@ -287,11 +287,11 @@ def bootstrap(vm_, opts):
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
     ssh_username = salt.config.get_cloud_config_value('ssh_username', vm_, opts)
-    deploy_script = os_script(vm_)
+    deploy_script_code = os_script(vm_)
     deploy_kwargs = {
         'host': vm_['ssh_host'],
         'username': ssh_username,
-        'script': deploy_script,
+        'script': deploy_script_code,
         'name': vm_['name'],
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
