@@ -95,7 +95,7 @@ class LocalEstate(Estate):
     RAET protocol endpoint local estate object
     Maintains signer for signing and privateer for encrypt/decript
     '''
-    def __init__(self, sigkey=None, prikey=None, **kwa):
+    def __init__(self, main=False, sigkey=None, prikey=None, **kwa):
         '''
         Setup Estate instance
 
@@ -103,6 +103,7 @@ class LocalEstate(Estate):
         prikey is either nacl PrivateKey or hex encoded key
         '''
         super(LocalEstate, self).__init__(**kwa)
+        self.main = True if main else False # main estate for road
         self.signer = nacling.Signer(sigkey)
         self.priver = nacling.Privateer(prikey) # Long term key
 
@@ -112,7 +113,7 @@ class RemoteEstate(Estate):
     RAET protocol endpoint remote estate object
     Maintains verifier for verifying signatures and publican for encrypt/decript
     '''
-    def __init__(self, verkey=None, pubkey=None, rsid=0, rtid=0, **kwa):
+    def __init__(self, verkey=None, pubkey=None, acceptance=None, rsid=0, rtid=0, **kwa):
         '''
         Setup Estate instance
 
@@ -124,6 +125,7 @@ class RemoteEstate(Estate):
         super(RemoteEstate, self).__init__(**kwa)
         self.joined = None
         self.allowed = None
+        self.acceptance = acceptance
         self.privee = nacling.Privateer() # short term key manager
         self.publee = nacling.Publican() # correspondent short term key  manager
         self.verfer = nacling.Verifier(verkey) # correspondent verify key manager

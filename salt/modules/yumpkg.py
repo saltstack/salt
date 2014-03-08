@@ -264,8 +264,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -388,8 +389,8 @@ def check_db(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
 
-    if 'avail' in __context__:
-        avail = __context__['avail']
+    if 'pkg._avail' in __context__:
+        avail = __context__['pkg._avail']
     else:
         # get list of available packages
         avail = []
@@ -406,7 +407,7 @@ def check_db(*names, **kwargs):
                 avail.append('.'.join((name, arch)))
             else:
                 avail.append(name)
-        __context__['avail'] = avail
+        __context__['pkg._avail'] = avail
 
     ret = {}
     for name in names:
@@ -716,7 +717,10 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def upgrade(refresh=True):
@@ -741,7 +745,10 @@ def upgrade(refresh=True):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -784,7 +791,10 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):

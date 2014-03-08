@@ -221,6 +221,12 @@ def _set_status(m,
 def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
     '''
     Return invalid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.invalid
     '''
     return _set_status(m, status=False, id=id, comment=comment, out=out)
 
@@ -228,6 +234,12 @@ def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
 def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
     '''
     Return valid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.valid
     '''
     return _set_status(m, status=True, id=id, comment=comment, out=out)
 

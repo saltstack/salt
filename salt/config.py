@@ -11,6 +11,7 @@ import socket
 import logging
 import urlparse
 from copy import deepcopy
+import time
 
 # import third party libs
 import yaml
@@ -434,7 +435,7 @@ DEFAULT_MASTER_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'enumerate_proxy_minions': False,
-    'gather_job_timeout': 2,
+    'gather_job_timeout': 5,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
     'ssh_passwd': '',
@@ -2044,8 +2045,11 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         )
     # If the token file exists, read and store the contained token
     if os.path.isfile(opts['token_file']):
-        with salt.utils.fopen(opts['token_file']) as fp_:
-            opts['token'] = fp_.read().strip()
+        # Make sure token is still valid
+        expire = opts.get('token_expire', 43200)
+        if os.stat(opts['token_file']).st_mtime + expire > time.mktime(time.localtime()):
+            with salt.utils.fopen(opts['token_file']) as fp_:
+                opts['token'] = fp_.read().strip()
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
     if opts['interface'] == '0.0.0.0':
         opts['interface'] = '127.0.0.1'

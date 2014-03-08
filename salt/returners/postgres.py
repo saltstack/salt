@@ -55,6 +55,10 @@ correctly::
     EOF
 
 Required python modules: psycopg2
+
+  To use the postgres returner, append '--return postgres' to the salt command. ex:
+
+    salt '*' test.ping --return postgres
 '''
 
 # Import python libs

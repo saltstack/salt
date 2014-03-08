@@ -44,10 +44,13 @@ class Transaction(object):
         self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['tk']
 
+
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
         self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
+
+        self.start = start # for synchronized starts that are not current time
         if start: #enables synchronized starts not just current time
             self.timer.restart(start=start)
 
@@ -71,18 +74,10 @@ class Transaction(object):
         '''
         le = self.stack.estate.eid
         if le == 0: #bootstapping onto channel use ha
-            host = self.stack.estate.host
-            if host == '0.0.0.0':
-                host = '127.0.0.1'
-            le = (host, self.stack.estate.port)
-            #le = self.stack.estate.ha
+            le = self.stack.estate.ha
         re = self.reid
-        if re == 0:
-            host = self.stack.estates[self.reid].host
-            if host == '0.0.0.0':
-                host =  '127.0.0.1'
-            re = (host, self.stack.estates[self.reid].port)
-            #re = self.stack.estates[self.reid].ha
+        if re == 0: #bootstapping onto channel use ha
+            re = self.stack.estates[self.reid].ha
         return ((self.rmt, le, re, self.sid, self.tid, self.bcst,))
 
     def process(self):
@@ -93,7 +88,7 @@ class Transaction(object):
 
     def receive(self, packet):
         '''
-        Process received packet
+        Process received packet Subclasses should super call this
         '''
         self.rxPacket = packet
 
@@ -192,10 +187,20 @@ class Joiner(Initiator):
         super(Joiner, self).receive(packet) #  self.rxPacket = packet
 
         if packet.data['tk'] == raeting.trnsKinds.join:
-            if packet.data['pk'] == raeting.pcktKinds.ack: #pended
-                self.pend()
+            if packet.data['pk'] == raeting.pcktKinds.ack: #pending
+                self.pend()  #set timer for redo
             elif packet.data['pk'] == raeting.pcktKinds.response:
                 self.accept()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: #rejected
+                self.rejected()
+
+    def process(self):
+        '''
+        Perform time based processing of transaction
+        '''
+        # need keep sending join until accepted or timed out
+        #self.join()
+
 
     def prep(self):
         '''
@@ -244,9 +249,6 @@ class Joiner(Initiator):
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
-        #data = self.rxPacket.data
-        #body = self.rxPacket.body.data
-        #set timer for redo
         pass
 
     def accept(self):
@@ -283,41 +285,153 @@ class Joiner(Initiator):
             emsg = "Missing remote crypt key in accept packet"
             raise raeting.TransactionError(emsg)
 
-        index = self.index # save before we change it
+        #index = self.index # save before we change it
 
         self.stack.estate.eid = leid
+        self.stack.dumpLocal()
+
         remote = self.stack.estates[self.reid]
-        remote.verfer = nacling.Verifier(key=verhex)
-        remote.pubber = nacling.Publican(key=pubhex)
+        #if remote.verfer.keyhex != verhex:
+            #remote.verfer = nacling.Verifier(key=verhex)
+        #if remote.pubber.keyhex != pubhex:
+            #remote.pubber = nacling.Publican(key=pubhex)
+
         if remote.eid != reid: #move remote estate to new index
             self.stack.moveRemoteEstate(old=remote.eid, new=reid)
         if remote.name != name: # rename remote estate to new name
             self.stack.renameRemoteEstate(old=remote.name, new=name)
-        remote.joined = True #accepted
-        remote.nextSid()
-        self.remove(index)
+        self.reid = reid
+
+        # we are assuming for now that the joiner cannot talk peer to peer only
+        # to main estate otherwise we need to ensure unique eid, name, and ha on road
+
+        # check if remote keys oF main estate are accepted here
+        status = self.stack.safe.statusRemoteEstate(remote,
+                                                    verhex=verhex,
+                                                    pubhex=pubhex,
+                                                    main=False)
+        if status == raeting.acceptances.rejected:
+            self.nackAccept()
+        else:
+            remote.joined = True #accepted
+            remote.nextSid()
+            self.ackAccept()
+        self.stack.dumpRemote(remote)
+
+    def rejected(self):
+        '''
+        Process nack to join packet
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove(self.rxPacket.index)
+
+    def ackAccept(self):
+        '''
+        Send ack to accept response
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.ack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            print ex
+            self.remove(self.rxPacket.index)
+            return
+
+        self.transmit(packet)
+        self.remove(self.rxPacket.index)
+
+    def nackAccept(self):
+        '''
+        Send nack to accept response
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            print ex
+            self.remove(self.rxPacket.index)
+            return
+
+        self.transmit(packet)
+        self.remove(self.rxPacket.index)
+
 
 class Joinent(Correspondent):
     '''
     RAET protocol Joinent transaction class, dual of Joiner
     '''
-    def __init__(self, **kwa):
+    RedoTimeout = 0.25
+
+    def __init__(self, redoTimeout=None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joinent, self).__init__(**kwa)
+        if redoTimeout is None:
+            redoTimeout = self.RedoTimeout
+        self.redoTimeout = redoTimeout
+        self.redoTimer = aiding.StoreTimer(self.stack.store, duration=0.0)
+
         self.prep()
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
+
+    def receive(self, packet):
+        """
+        Process received packet belonging to this transaction
+        """
+        super(Joinent, self).receive(packet) #  self.rxPacket = packet
+
+        if packet.data['tk'] == raeting.trnsKinds.join:
+            if packet.data['pk'] == raeting.pcktKinds.ack: #accepted by joiner
+                self.joined()
 
     def process(self):
         '''
         Perform time based processing of transaction
 
         '''
-        # need to perform the check for accepted status somewhere
-        self.accept()
+        # need to perform the check for accepted status and then send accept
+        if self.redoTimer.expired:
+            if (self.txPacket and
+                    self.txPacket.data['pk'] == raeting.pcktKinds.response):
+                duration = min(max(self.redoTimeout,
+                                   self.redoTimer.duration) * 2.0, 4.0)
+                self.redoTimer.restart(duration=duration)
+                self.transmit(self.txPacket) #redo
+                print "Redo Accept"
+            else:
+                remote = self.stack.estates[self.reid]
+                if remote:
+                    status = remote.acceptance
+                    if status == None or status == raeting.acceptances.pending:
+                        status = self.stack.safe.statusRemoteEstate(remote)
+
+                    if status == raeting.acceptances.accepted:
+                        if self.redoTimer.expired:
+                            duration = min(max(self.redoTimeout,
+                                       self.redoTimer.duration) * 2.0, 4.0)
+                            self.redoTimer.restart(duration=duration)
+                            self.accept()
+                            print "Do Accept"
 
     def prep(self):
         '''
@@ -339,7 +453,36 @@ class Joinent(Correspondent):
     def join(self):
         '''
         Process join packet
-        Perform pend operation of pending remote estate being accepted onto channel
+        Respond based on acceptance status of remote estate.
+
+
+
+        Rules for Colliding Estates
+        Apply the rules to ensure no colliding estates on (host, port)
+        If matching name estate found then return
+        Rules:
+            Only one estate with given eid is allowed on road
+            Only one estate with given name is allowed on road.
+            Only one estate with given ha on road is allowed on road.
+
+            Are multiple estates with same keys but different name (ha) allowed?
+            Current logic ignores same keys or not
+
+        Since creating new estate assigns unique eid,
+        we are looking for preexisting estates with any eid.
+
+        Processing steps:
+        I) Search remote estates for matching name
+            A) Found remote
+                1) HA not match
+                    Search remotes for other matching HA but different name
+                    If found other delete
+                Reuse found remote to be updated and joined
+
+            B) Not found
+                Search remotes for other matching HA
+                If found delete for now
+                Create new remote and update
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
@@ -361,34 +504,54 @@ class Joinent(Correspondent):
             emsg = "Missing remote crypt key in join packet"
             raise raeting.TransactionError(emsg)
 
-        remote = self.stack.fetchRemoteEstateByHostPort(host=data['sh'], port=data['sp'])
+        host = data['sh']
+        port = data['sp']
+        self.txData.update( dh=host, dp=port,) # responses use received host port
+
+        remote = self.stack.fetchRemoteEstateByName(name)
         if remote:
-            if (name != remote.name or
-                verhex != remote.verfer.keyhex or
-                pubhex != remote.pubber.keyhex):
-                # nack join request another estate at same address but different credentials
-                # and return
-                pass
-            # accept here and return
+            if not (host == remote.host and port == remote.port):
+                other = self.stack.fetchRemoteEstateByHostPort(host, port)
+                if other and other is not remote: #may need to terminate transactions
+                    self.stack.removeRemoteEstate(other.eid)
+                remote.host = host
+                remote.port = port
+            remote.rsid = self.sid
+            remote.rtid = self.tid
+            status = self.stack.safe.statusRemoteEstate(remote,
+                                                        verhex=verhex,
+                                                        pubhex=pubhex)
+        else:
+            other = self.stack.fetchRemoteEstateByHostPort(host, port)
+            if other: #may need to terminate transactions
+                self.stack.removeRemoteEstate(other.eid)
+            remote = estating.RemoteEstate( stack=self.stack,
+                                            name=name,
+                                            host=host,
+                                            port=port,
+                                            acceptance=None,
+                                            verkey=verhex,
+                                            pubkey=pubhex,
+                                            rsid=self.sid,
+                                            rtid=self.tid, )
+            self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
+            status = self.stack.safe.statusRemoteEstate(remote,
+                                                        verhex=verhex,
+                                                        pubhex=pubhex)
 
-        if name in self.stack.eids:
-            emsg = "Another estate with name  already exists"
-            raise raeting.TransactionError(emsg)
-
-
-
-        remote = estating.RemoteEstate( stack=self.stack,
-                                        name=name,
-                                        host=data['sh'],
-                                        port=data['sp'],
-                                        verkey=verhex,
-                                        pubkey=pubhex,
-                                        rsid=self.sid,
-                                        rtid=self.tid, )
-        self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
+        self.stack.dumpRemote(remote)
         self.reid = remote.eid # auto generated at instance creation above
 
-        self.ackJoin()
+        if status == None or status == raeting.acceptances.pending:
+            self.ackJoin()
+        elif status == raeting.acceptances.accepted:
+            duration = min(max(self.redoTimeout,
+                            self.redoTimer.duration) * 2.0, 4.0)
+            self.redoTimer.restart(duration=duration)
+            self.accept()
+            print "Do Accept Immediate"
+        else:
+            self.nackJoin()
 
     def ackJoin(self):
         '''
@@ -398,9 +561,9 @@ class Joinent(Correspondent):
             emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             raise raeting.TransactionError(emsg)
 
-        #since bootstrap transaction use updated self.rid
-        self.txData.update( dh=self.stack.estates[self.reid].host,
-                            dp=self.stack.estates[self.reid].port,)
+        #since bootstrap transaction use updated self.reid
+        #self.txData.update( dh=self.stack.estates[self.reid].host,
+                            #dp=self.stack.estates[self.reid].port,)
         body = odict()
         packet = packeting.TxPacket(stack=self.stack,
                                     kind=raeting.pcktKinds.ack,
@@ -440,10 +603,42 @@ class Joinent(Correspondent):
             print ex
             self.remove(self.rxPacket.index)
             return
+
+        self.transmit(packet)
+
+    def joined(self):
+        '''
+        process ack to accept response
+        '''
+        remote = self.stack.estates[self.reid]
         remote.joined = True # accepted
         remote.nextSid()
+        self.stack.dumpRemote(remote)
+        self.remove(self.rxPacket.index)
+
+    def nackJoin(self):
+        '''
+        Send nack to join request
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            print ex
+            self.remove(self.rxPacket.index)
+            return
+
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+
 
 class Allower(Initiator):
     '''

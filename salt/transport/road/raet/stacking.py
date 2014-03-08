@@ -14,6 +14,11 @@ try:
 except ImportError:
     import json
 
+try:
+    import msgpack
+except ImportError:
+    mspack = None
+
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
@@ -42,17 +47,20 @@ class StackUdp(object):
 
     def __init__(self,
                  name='',
+                 main=False,
                  version=raeting.VERSION,
                  store=None,
                  estate=None,
                  eid=None,
                  ha=("", raeting.RAET_PORT),
-                 rxMsgs = None,
-                 txMsgs = None,
-                 udpRxes = None,
-                 udpTxes = None,
-                 road = None,
-                 safe = None,
+                 rxMsgs=None,
+                 txMsgs=None,
+                 udpRxes=None,
+                 udpTxes=None,
+                 road=None,
+                 safe=None,
+                 auto=None,
+                 dirpath=None,
                  ):
         '''
         Setup StackUdp instance
@@ -65,22 +73,33 @@ class StackUdp(object):
         self.store = store or storing.Store(stamp=0.0)
         self.estates = odict() # remote estates attached to this stack by eid
         self.eids = odict() # reverse lookup eid by estate.name
-         # local estate for this stack
-        self.estate = estate or estating.LocalEstate(stack=self, eid=eid, ha=ha)
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        #(msg, deid) deid=0 is broadcast
         self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
         self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
-        self.road = road or keeping.RoadKeep()
-        self.safe = safe or keeping.SafeKeep()
+
+        self.road = road or keeping.RoadKeep(dirpath=dirpath,
+                                             stackname=self.name)
+        self.safe = safe or keeping.SafeKeep(dirpath=dirpath,
+                                             stackname=self.name,
+                                             auto=auto)
+        kept = self.loadLocal() # local estate from saved data
+        # local estate for this stack
+        self.estate = kept or estate or estating.LocalEstate(stack=self,
+                                                             eid=eid,
+                                                             main=main,
+                                                             ha=ha)
+        self.estate.stack = self
         self.serverUdp = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
         self.serverUdp.reopen()  # open socket
         self.estate.ha = self.serverUdp.ha  # update estate host address after open
+        self.dumpLocal() # save local estate data
 
-        #self.road.dumpLocalEstate(self.estate)
-        #self.safe.dumpLocalEstate(self.estate)
+        kepts = self.loadAllRemote() # remote estates from saved data
+        for kept in kepts:
+            self.addRemoteEstate(kept)
+        self.dumpAllRemote() # save remote estate data
 
     def fetchRemoteEstateByHostPort(self, host, port):
         '''
@@ -89,6 +108,18 @@ class StackUdp(object):
         '''
         for estate in self.estates.values():
             if estate.host == host and estate.port == port:
+                return estate
+
+        return None
+
+    def fetchRemoteEstateByKeys(self, sighex, prihex):
+        '''
+        Search for remote estate with matching (name, sighex, prihex)
+        Return estate if found Otherwise return None
+        '''
+        for estate in self.estates.values():
+            if (estate.signer.keyhex == sighex or
+                estate.priver.keyhex == prihex):
                 return estate
 
         return None
@@ -166,6 +197,110 @@ class StackUdp(object):
         estate = self.estates[eid]
         del self.estates[eid]
         del self.eids[estate.name]
+
+    def clearLocal(self):
+        '''
+        Clear local keeps
+        '''
+        self.road.clearLocalData()
+        self.safe.clearLocalData()
+
+    def clearRemote(self, estate):
+        '''
+        Clear remote keeps of estate
+        '''
+        self.road.clearRemoteEstate()
+        self.safe.clearRemoteEstate()
+
+    def clearAllRemote(self):
+        '''
+        Clear all remote keeps
+        '''
+        self.road.clearAllRemoteData()
+        self.safe.clearAllRemoteData()
+
+    def dumpLocal(self):
+        '''
+        Dump keeps of local estate
+        '''
+        self.road.dumpLocalEstate(self.estate)
+        self.safe.dumpLocalEstate(self.estate)
+
+    def dumpRemote(self, estate):
+        '''
+        Dump keeps of estate
+        '''
+        self.road.dumpRemoteEstate(estate)
+        self.safe.dumpRemoteEstate(estate)
+
+    def dumpRemoteByEid(self, eid):
+        '''
+        Dump keeps of estate given by eid
+        '''
+        estate = self.estates.get(eid)
+        if estate:
+            self.dumpRemote(estate)
+
+    def dumpAllRemote(self):
+        '''
+        Dump all remotes estates to keeps'''
+        self.road.dumpAllRemoteEstates(self.estates.values())
+        self.safe.dumpAllRemoteEstates(self.estates.values())
+
+    def loadLocal(self):
+        '''
+        Load and Return local estate if keeps found
+        '''
+        road = self.road.loadLocalData()
+        safe = self.safe.loadLocalData()
+        if not road or not safe:
+            return None
+        estate = estating.LocalEstate(stack=self,
+                                      eid=road['eid'],
+                                      name=road['name'],
+                                      main=road['main'],
+                                      host=road['host'],
+                                      port=road['port'],
+                                      sid=road['sid'],
+                                      sigkey=safe['sighex'],
+                                      prikey=safe['prihex'],)
+        return estate
+
+    def loadAllRemote(self):
+        '''
+        Load and Return list of remote estates
+        remote = estating.RemoteEstate( stack=self.stack,
+                                        name=name,
+                                        host=data['sh'],
+                                        port=data['sp'],
+                                        acceptance=acceptance,
+                                        verkey=verhex,
+                                        pubkey=pubhex,
+                                        rsid=self.sid,
+                                        rtid=self.tid, )
+        self.stack.addRemoteEstate(remote)
+        '''
+        estates = []
+        roads = self.road.loadAllRemoteData()
+        safes = self.safe.loadAllRemoteData()
+        if not roads or not safes:
+            return []
+        for key, road in roads.items():
+            if key not in safes:
+                continue
+            safe = safes[key]
+            estate = estating.RemoteEstate( stack=self,
+                                            eid=road['eid'],
+                                            name=road['name'],
+                                            host=road['host'],
+                                            port=road['port'],
+                                            sid=road['sid'],
+                                            rsid=road['rsid'],
+                                            acceptance=safe['acceptance'],
+                                            verkey=safe['verhex'],
+                                            pubkey=safe['pubhex'],)
+            estates.append(estate)
+        return estates
 
     def addTransaction(self, index, transaction):
         '''
@@ -257,6 +392,8 @@ class StackUdp(object):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
             raise raeting.StackError(emsg)
         self.txMsgs.append((msg, deid))
+
+    transmit = txMsg
 
     def serviceTxMsg(self):
         '''
@@ -440,7 +577,7 @@ class StackUxd(object):
     RAET protocol UXD (unix domain) socket stack object
     '''
     Count = 0
-    PackKind = raeting.bodyKinds.json
+    Pk = raeting.packKinds.json # serialization pack kind of Uxd message
     Accept = True # accept any uxd messages if True from yards not already in lanes
 
     def __init__(self,
@@ -644,16 +781,23 @@ class StackUxd(object):
         Pack serialize message body data
         '''
         if kind is None:
-            kind = self.PackKind
+            kind = self.Pk
 
         packed = ""
-        if kind not in [raeting.bodyKinds.json]:
-            emsg = "Invalid body pack kind '{0}'".format(kind)
+        if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
+            emsg = "Invalid message pack kind '{0}'".format(kind)
             raise raeting.StackError(emsg)
 
-        if kind == raeting.bodyKinds.json:
+        if kind == raeting.packKinds.json:
             head = 'RAET\njson\n\n'
             packed = "".join([head, json.dumps(body, separators=(',', ':'))])
+
+        elif kind == raeting.packKinds.pack:
+            if not msgpack:
+                emsg = "Msgpack not installed."
+                raise raeting.StackError(emsg)
+            head = 'RAET\npack\n\n'
+            packed = "".join([head, msgpack.dumps(body)])
 
         if len(packed) > raeting.MAX_MESSAGE_SIZE:
             emsg = "Message length of {0}, exceeds max of {1}".format(
@@ -712,13 +856,22 @@ class StackUxd(object):
 
         front, sep, back = packed.partition(raeting.HEAD_END)
         code, sep, kind = front.partition('\n')
-        if kind not in [raeting.BODY_KIND_NAMES[raeting.bodyKinds.json]]:
-            emsg = "Unrecognized packed body kind '{0}'".format(kind)
+        if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
+                        raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
+            emsg = "Unrecognized message pack kind '{0}'".format(kind)
             raise raeting.StackError(emsg)
 
-        kind = raeting.BODY_KINDS[kind]
-        if kind == raeting.bodyKinds.json:
+        kind = raeting.PACK_KINDS[kind]
+        if kind == raeting.packKinds.json:
             body = json.loads(back, object_pairs_hook=odict)
+            if not isinstance(body, Mapping):
+                emsg = "Message body not a mapping."
+                raise raeting.PacketError(emsg)
+        elif kind == raeting.packKinds.pack:
+            if not msgpack:
+                emsg = "Msgpack not installed."
+                raise raeting.StackError(emsg)
+            body = msgpack.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
                 emsg = "Message body not a mapping."
                 raise raeting.PacketError(emsg)
