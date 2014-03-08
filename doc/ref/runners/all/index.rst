@@ -20,6 +20,7 @@ Full list of runner modules
     network
     search
     state
+    survey
     thin
     virt
     winrepo
