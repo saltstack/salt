@@ -419,7 +419,7 @@ def create(vm_, call=None):
     cret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     exists = _salt('lxc.exists', name)
     if exists:
-        cret['comment'] = 'Container already exist'
+        cret['comment'] = 'Container already exists'
         cret['result'] = True
     elif method == 'clone':
         oexists = _salt('lxc.exists', from_container)
