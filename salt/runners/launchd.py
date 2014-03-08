@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Manage launchd plist files
+'''
+
 # Import python libs
 import os
 import sys
