@@ -143,6 +143,28 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary (in
+    other words, if the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in __ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch'):
+        return name[:-(len(arch) + 1)]
+    return name
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
