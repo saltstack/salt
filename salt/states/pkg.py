@@ -40,12 +40,14 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function as _namespaced_function
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
 
+_repack_pkgs = _namespaced_function(_repack_pkgs, globals())
+
 if salt.utils.is_windows():
-    from salt.utils import namespaced_function as _namespaced_function
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_latest_pkg_version
@@ -154,7 +156,8 @@ def _find_install_targets(name=None,
                                    'repository.'.format(name)}
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
-        desired = {name: version}
+        _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        desired = {_normalize_name(name): version}
         to_unpurge = _find_unpurge_targets(desired)
 
         cver = cur_pkgs.get(name, [])
