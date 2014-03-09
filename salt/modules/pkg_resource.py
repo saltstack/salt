@@ -144,9 +144,10 @@ def _repack_pkgs(pkgs):
     Repack packages specified using "pkgs" argument to pkg states into a single
     dictionary
     '''
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
     return dict(
         [
-            (str(x), str(y) if y is not None else y)
+            (_normalize_name(str(x)), str(y) if y is not None else y)
             for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
         ]
     )
@@ -166,6 +167,7 @@ def pack_sources(sources):
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
     if isinstance(sources, basestring):
         try:
             sources = yaml.safe_load(sources)
@@ -179,7 +181,8 @@ def pack_sources(sources):
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
-            ret.update(source)
+            key = next(iter(source))
+            ret[_normalize_name(key)] = source[key]
     return ret
 
 
