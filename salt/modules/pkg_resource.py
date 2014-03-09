@@ -287,7 +287,10 @@ def parse_targets(name=None,
         return [x[2] for x in srcinfo], 'file'
 
     elif name:
-        return dict([(x, None) for x in name.split(',')]), 'repository'
+        _normalize_name = \
+            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        return packed, 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')
