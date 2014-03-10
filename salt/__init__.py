@@ -93,6 +93,7 @@ class Master(parsers.MasterOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
@@ -195,6 +196,7 @@ class Minion(parsers.MinionOptionParser):
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
@@ -305,6 +307,7 @@ class ProxyMinion(parsers.MinionOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.config['proxy'] = proxydetails
@@ -392,6 +395,7 @@ class Syndic(parsers.SyndicOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
