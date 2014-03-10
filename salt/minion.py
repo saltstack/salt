@@ -740,6 +740,8 @@ class Minion(object):
                 name=data['jid']
             )
         process.start()
+        if not sys.platform.startswith('win'):
+            process.join()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
