@@ -37,8 +37,8 @@ def _get_client():
     Return a cloud client
     '''
     client = salt.cloud.CloudClient(
-            os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
-            )
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
     return client
 
 
@@ -206,7 +206,7 @@ def volume_list(provider):
     List block storage volumes
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt minionname cloud.volume_list my-nova

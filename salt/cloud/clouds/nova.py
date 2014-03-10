@@ -332,7 +332,10 @@ def destroy(name, conn=None, call=None):
         client = salt.client.LocalClient(__opts__['conf_file'])
         minions = client.cmd(name, 'mine.flush')
 
-    log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
+    log.info('Clearing Salt Mine: {0}, {1}'.format(
+        name,
+        flush_mine_on_destroy
+    ))
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.delete(node.id)
     if ret:

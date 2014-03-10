@@ -142,7 +142,6 @@ class SaltNova(object):
         '''
         return self.server_list().get(name, {})
 
-
     def server_by_name(self, name):
         '''
         Find a server by it's name
@@ -221,7 +220,7 @@ class SaltNova(object):
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
         response = nt_ks.volumes.delete(volume['id'])
-        return self.volume_show(name) 
+        return self.volume_show(name)
 
     def volume_detach(self,
                       name,
