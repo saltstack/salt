@@ -76,8 +76,8 @@ class StackUdp(object):
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        self.udpRxes = udpRxes if udpRxes is not None else deque() # udp packets received
-        self.udpTxes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
+        self.rxes = udpRxes if udpRxes is not None else deque() # udp packets received
+        self.txes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
 
         self.road = road or keeping.RoadKeep(dirpath=dirpath,
                                              stackname=self.name)
@@ -332,10 +332,10 @@ class StackUdp(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.udpRxes.append((rx, ra, self.server.ha))
+                self.rxes.append((rx, ra, self.server.ha))
 
-            while self.udpTxes:
-                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
+            while self.txes:
+                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
                 self.server.send(tx, ta)
 
         return None
@@ -357,7 +357,7 @@ class StackUdp(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.udpRxes.append((rx, ra, self.server.ha))
+                self.rxes.append((rx, ra, self.server.ha))
 
             self.serviceUdpRx()
 
@@ -365,8 +365,8 @@ class StackUdp(object):
 
             self.serviceTxMsg()
 
-            while self.udpTxes:
-                tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
+            while self.txes:
+                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
                 self.server.send(tx, ta)
 
         return None
@@ -380,7 +380,7 @@ class StackUdp(object):
         if deid not in self.estates:
             msg = "Invalid destination estate id '{0}'".format(deid)
             raise raeting.StackError(msg)
-        self.udpTxes.append((packed, self.estates[deid].ha))
+        self.txes.append((packed, self.estates[deid].ha))
 
     def txMsg(self, msg, deid=None):
         '''
@@ -412,7 +412,7 @@ class StackUdp(object):
         Otherwise return None
         '''
         try:
-            raw, sa, da = self.udpRxes.popleft()
+            raw, sa, da = self.rxes.popleft()
         except IndexError:
             return None
 
@@ -465,7 +465,7 @@ class StackUdp(object):
         '''
         Process all packets in .udpRxes deque
         '''
-        while self.udpRxes:
+        while self.rxes:
             self.processUdpRx()
 
     def reply(self, packet):
@@ -616,8 +616,8 @@ class StackUxd(object):
                                          dirpath=dirpath)
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        self.uxdRxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received
-        self.uxdTxes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
+        self.rxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received
+        self.txes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
         self.lane = lane # or keeping.LaneKeep()
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
         self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
@@ -710,10 +710,10 @@ class StackUxd(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.uxdRxes.append((rx, ra, self.server.ha))
+                self.rxes.append((rx, ra, self.server.ha))
 
-            while self.uxdTxes:
-                tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
+            while self.txes:
+                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
                 self.server.send(tx, ta)
 
         return None
@@ -734,14 +734,14 @@ class StackUxd(object):
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.uxdRxes.append((rx, ra, self.server.ha))
+                self.rxes.append((rx, ra, self.server.ha))
 
             self.serviceUxdRx()
 
             self.serviceTxMsg()
 
-            while self.uxdTxes:
-                tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
+            while self.txes:
+                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
                 self.server.send(tx, ta)
 
         return None
@@ -761,7 +761,7 @@ class StackUxd(object):
         if name not in self.yards:
             msg = "Invalid destination yard name '{0}'".format(name)
             raise raeting.StackError(msg)
-        self.uxdTxes.append((packed, self.yards[name].ha))
+        self.txes.append((packed, self.yards[name].ha))
 
     def txMsg(self, msg, name=None):
         '''
@@ -824,7 +824,7 @@ class StackUxd(object):
         Otherwise return None
         '''
         try:
-            raw, sa, da = self.uxdRxes.popleft()
+            raw, sa, da = self.rxes.popleft()
         except IndexError:
             return None
 
@@ -894,7 +894,7 @@ class StackUxd(object):
         '''
         Process all messages in .uxdRxes deque
         '''
-        while self.uxdRxes:
+        while self.rxes:
             self.processUdpRx()
 
 
