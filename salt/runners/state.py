@@ -50,7 +50,7 @@ def over(saltenv='base', os_fn=None):
     return overstate.over_run
 
 
-def sls(mods, saltenv='base', test=None, exclude=None):
+def sls(mods, saltenv='base', test=None, exclude=None, pillar=None):
     '''
     Execute a state run from the master, used as a powerful orchestration
     system.
@@ -64,7 +64,12 @@ def sls(mods, saltenv='base', test=None, exclude=None):
     '''
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
-    running = minion.functions['state.sls'](mods, saltenv, test, exclude)
+    running = minion.functions['state.sls'](
+            mods,
+            saltenv,
+            test,
+            exclude,
+            pillar=pillar)
     ret = {minion.opts['id']: running}
     salt.output.display_output(ret, 'highstate', opts=__opts__)
     return ret

@@ -33,7 +33,7 @@ def get(tgt, fun, tgt_type='glob'):
                 minion,
                 'mine.p')
         try:
-            with salt.utils.fopen(mine) as fp_:
+            with salt.utils.fopen(mine, 'rb') as fp_:
                 fdata = serial.load(fp_).get(fun)
                 if fdata:
                     ret[minion] = fdata

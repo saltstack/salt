@@ -15,6 +15,9 @@ to the minion config files::
     mongo.password: <MongoDB user password>
     mongo.port: 27017
 
+  To use the mongo returner, append '--return mongo' to the salt command. ex:
+
+    salt '*' test.ping --return mongo
 '''
 
 # Import python libs
