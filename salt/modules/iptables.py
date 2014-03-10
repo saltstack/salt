@@ -79,7 +79,7 @@ def version(family='ipv4'):
     return out[1]
 
 
-def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
+def build_rule(command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
     Build a well-formatted iptables rule based on kwargs. Long options must be
@@ -117,6 +117,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'target' in kwargs:
         kwargs['jump'] = kwargs['target']
         del kwargs['target']
+
+    table = kwargs.get('table', None)
+    chain = kwargs.get('chain', None)
 
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
         if ignore in kwargs:
