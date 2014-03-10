@@ -213,7 +213,7 @@ def volume_list(provider):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, action='list')
+    info = client.volume_action(provider, 'name', action='list')
     return info
 
 

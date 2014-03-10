@@ -831,3 +831,11 @@ def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
         device,
         timeout=300
     )
+
+
+def volume_list(**kwargs):
+    '''
+    Attach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_list()

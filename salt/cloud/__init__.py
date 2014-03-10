@@ -322,6 +322,7 @@ class CloudClient(object):
             return False
         if isinstance(names, str):
             names = names.split(',')
+
         ret = {}
         for name in names:
             volume_ = kwargs.copy()
