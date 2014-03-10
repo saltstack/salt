@@ -456,13 +456,17 @@ class SaltNova(object):
         nt_ks.images.delete_meta(id, pairs)
         return {id: 'Deleted: {0}'.format(pairs)}
 
-    def server_list(self):
+    def server_list(self, raw=False):
         '''
         List servers
         '''
         nt_ks = self.compute_conn
         ret = {}
-        for item in nt_ks.servers.list():
+        servers = nt_ks.servers.list()
+        if raw:
+            return servers
+
+        for item in servers:
             ret[item.name] = {
                 'id': item.id,
                 'name': item.name,
@@ -475,6 +479,12 @@ class SaltNova(object):
                           'links': item.image['links']},
                 }
         return ret
+
+    def list_nodes(self):
+        '''
+        List Servers
+        '''
+        return self.server_list(raw=True)
 
     def server_list_detailed(self,):
         '''
@@ -533,6 +543,8 @@ class SaltNova(object):
                 ret[item.name]['security_groups'] = \
                     item.__dict__['security_groups']
         return ret
+
+    list_nodes_full = server_list_detailed
 
     def server_show(self, server_id):
         '''
