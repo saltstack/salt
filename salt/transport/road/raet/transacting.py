@@ -285,16 +285,10 @@ class Joiner(Initiator):
             emsg = "Missing remote crypt key in accept packet"
             raise raeting.TransactionError(emsg)
 
-        #index = self.index # save before we change it
-
         self.stack.estate.eid = leid
         self.stack.dumpLocal()
 
         remote = self.stack.estates[self.reid]
-        #if remote.verfer.keyhex != verhex:
-            #remote.verfer = nacling.Verifier(key=verhex)
-        #if remote.pubber.keyhex != pubhex:
-            #remote.pubber = nacling.Publican(key=pubhex)
 
         if remote.eid != reid: #move remote estate to new index
             self.stack.moveRemoteEstate(old=remote.eid, new=reid)
@@ -305,7 +299,7 @@ class Joiner(Initiator):
         # we are assuming for now that the joiner cannot talk peer to peer only
         # to main estate otherwise we need to ensure unique eid, name, and ha on road
 
-        # check if remote keys oF main estate are accepted here
+        # check if remote keys of main estate are accepted here
         status = self.stack.safe.statusRemoteEstate(remote,
                                                     verhex=verhex,
                                                     pubhex=pubhex,
