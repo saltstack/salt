@@ -17,6 +17,8 @@ from collections import deque
 import salt.daemons.masterapi
 from salt.transport.road.raet import stacking
 from salt.transport.road.raet import yarding
+from salt.exceptions import (
+        CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
 # Import ioflo libs
 import ioflo.base.deeding
