@@ -19,7 +19,8 @@ def extracted(name,
               archive_format,
               tar_options=None,
               source_hash=None,
-              if_missing=None):
+              if_missing=None,
+              keep=False):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
@@ -83,8 +84,10 @@ def extracted(name,
 
     if if_missing is None:
         if_missing = name
-    if (__salt__['file.directory_exists'](if_missing) or
-        __salt__['file.file_exists'](if_missing)):
+    if (
+        __salt__['file.directory_exists'](if_missing)
+        or __salt__['file.file_exists'](if_missing)
+    ):
         ret['result'] = True
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
@@ -97,8 +100,8 @@ def extracted(name,
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(source,
-                                                                         name)
+                'Archive {0} would have been downloaded in cache'.format(
+                    source, name)
             return ret
 
         log.debug("Archive file %s is not in cache, download it", source)
@@ -134,7 +137,8 @@ def extracted(name,
 
     if archive_format in ('zip', 'rar'):
         log.debug("Extract %s in %s", filename, name)
-        files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
+        files = __salt__['archive.un{0}'.format(archive_format)](filename,
+                                                                 name)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
@@ -143,15 +147,21 @@ def extracted(name,
         else:
             # this is needed until merging PR 2651
             log.debug("Untar %s in %s", filename, name)
-            results = __salt__['cmd.run_all']('tar -x{0}f "{1}"'.format(tar_options,
-                                                                 filename),
-                                              cwd=name)
+            for opt in ['x', 'f']:
+                if not opt in tar_options:
+                    tar_options = '-{0} {1}'.format(opt, tar_options)
+            results = __salt__['cmd.run_all']('tar {0} "{1}"'.format(
+                tar_options, filename), cwd=name)
             if results['retcode'] != 0:
-                return results
+                ret['result'] = False
+                ret['changes'] = results
+                return ret
             if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
                 files = results['stderr']
             else:
                 files = results['stdout']
+            if not files:
+                files = 'no tar output so far'
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
@@ -159,7 +169,8 @@ def extracted(name,
             ret['changes']['directories_created'].append(if_missing)
         ret['changes']['extracted_files'] = files
         ret['comment'] = "{0} extracted in {1}".format(source, name)
-        os.unlink(filename)
+        if not keep:
+            os.unlink(filename)
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
