@@ -1275,6 +1275,10 @@ def simple_types_filter(datadict):
     Convert the data dictionary into simple types, ie, int, float, string,
     bool, etc.
     '''
+    if not isinstance(datadict, dict):
+        # This function is only supposed to work on dictionaries
+        return datadict
+
     simpletypes_keys = (str, unicode, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
     simpledict = {}
