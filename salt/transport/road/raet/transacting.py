@@ -207,7 +207,7 @@ class Joiner(Initiator):
                 self.remove(self.txPacket.index)
             else:
                 self.remove(self.index)
-            console.concise("Join timed out at {0}\n".format(self.stack.store.stamp))
+            console.concise("Joiner timed out at {0}\n".format(self.stack.store.stamp))
             return
 
         # need keep sending join until accepted or timed out
