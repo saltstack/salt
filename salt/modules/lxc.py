@@ -299,15 +299,18 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     if template:
         cmd += ' -t {0}'.format(template)
     if backing:
+        backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
-        if lvname:
-            cmd += ' --lvname {0}'.format(vgname)
-        if vgname:
-            cmd += ' --vgname {0}'.format(vgname)
-        if fstype:
-            cmd += ' --fstype {0}'.format(size)
-        if size:
-            cmd += ' --fssize {0}'.format(size)
+        if backing in ['lvm']:
+            if lvname:
+                cmd += ' --lvname {0}'.format(vgname)
+            if vgname:
+                cmd += ' --vgname {0}'.format(vgname)
+        if backing not in ['dir', 'overlayfs']:
+            if fstype:
+                cmd += ' --fstype {0}'.format(fstype)
+            if size:
+                cmd += ' --fssize {0}'.format(size)
     if profile:
         cmd += ' --'
         options = profile
