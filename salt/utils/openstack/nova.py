@@ -7,6 +7,7 @@ Nova class
 HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
+    import novaclient.auth_plugin
     HAS_NOVA = True
 except ImportError:
     pass
@@ -14,6 +15,10 @@ except ImportError:
 # Import python libs
 import time
 import logging
+import urllib2
+import json
+import os.path
+
 
 # Import salt libs
 import salt.utils
@@ -57,6 +62,23 @@ class NovaServer(object):
         return self.__dict__
 
 
+def sanatize_novaclient(kwargs):
+    variables = (
+        'username', 'api_key', 'project_id', 'auth_url', 'insecure',
+        'timeout', 'proxy_tenant_id', 'proxy_token', 'region_name',
+        'endpoint_type', 'extensions', 'service_type', 'service_name',
+        'volume_service_name', 'timings', 'bypass_url', 'os_cache',
+        'no_cache', 'http_log_debug', 'auth_system', 'auth_plugin',
+        'auth_token', 'cacert', 'tenant_id'
+    )
+    ret = {}
+    for var in kwargs.keys():
+        if var in variables:
+            ret[var] = kwargs[var]
+
+    return ret
+
+
 # Function alias to not shadow built-ins
 class SaltNova(object):
     '''
@@ -66,10 +88,12 @@ class SaltNova(object):
     def __init__(
         self,
         username,
-        api_key,
         project_id,
         auth_url,
-        region_name=None
+        password=None,
+        region_name=None,
+        os_auth_plugin=None,
+        **kwargs
     ):
         '''
         Set up nova credentials
@@ -77,19 +101,26 @@ class SaltNova(object):
         if not HAS_NOVA:
             return None
 
-        self.kwargs = {
-            'username': username,
-            'api_key': api_key,
-            'project_id': project_id,
-            'auth_url': auth_url,
-            'region_name': region_name,
-            'service_type': 'volume'
-        }
+        self.kwargs = kwargs.copy()
+        self.kwargs['username'] = username
+        self.kwargs['project_id'] = project_id
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['region_name'] = region_name
+        self.kwargs['service_type'] = 'volume'
+        if not os_auth_plugin is None:
+            novaclient.auth_plugin.discover_auth_systems()
+            auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
+            self.kwargs['auth_plugin'] = auth_plugin
+            self.kwargs['auth_system'] = os_auth_plugin
+
+        if not 'api_key' in self.kwargs.keys():
+            self.kwargs['api_key'] = password
+
+        self.kwargs = sanatize_novaclient(self.kwargs)
 
         self.volume_conn = client.Client(**self.kwargs)
 
         self.kwargs['service_type'] = 'compute'
-
         self.compute_conn = client.Client(**self.kwargs)
 
     def server_show_libcloud(self, uuid):
