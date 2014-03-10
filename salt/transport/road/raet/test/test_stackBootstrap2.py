@@ -81,7 +81,7 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     while stack1.transactions or stack0.transactions:
         stack1.serviceAll()
         stack0.serviceAll()
-        if store.stamp >= 0.5:
+        if store.stamp >= 0.3:
             for estate in stack0.estates.values():
                 if estate.acceptance == raeting.acceptances.pending:
                     stack0.safe.acceptRemoteEstate(estate)

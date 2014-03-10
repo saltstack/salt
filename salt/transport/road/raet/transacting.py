@@ -154,7 +154,11 @@ class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
     '''
-    def __init__(self, mha = None, **kwa):
+    RedoTimeoutMin = 1.0 # initial timeout
+    RedoTimeoutMax = 4.0 # max timeout
+
+
+    def __init__(self, mha = None, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup Transaction instance
         '''
@@ -163,6 +167,11 @@ class Joiner(Initiator):
 
         if mha is None:
             mha = ('127.0.0.1', raeting.RAET_PORT)
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
 
         if self.reid is None:
             if not self.stack.estates: # no channel master so make one
@@ -193,8 +202,25 @@ class Joiner(Initiator):
         '''
         Perform time based processing of transaction
         '''
+        if self.timeout > 0.0 and self.timer.expired:
+            if self.txPacket and self.txPacket.data['pk'] == raeting.pcktKinds.request:
+                self.remove(self.txPacket.index)
+            else:
+                self.remove(self.index)
+            console.concise("Join timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
         # need keep sending join until accepted or timed out
-        #self.join()
+        if self.redoTimer.expired:
+            if (self.txPacket and
+                    self.txPacket.data['pk'] == raeting.pcktKinds.request):
+                duration = min(
+                             max(self.redoTimeoutMin,
+                                   self.redoTimer.duration) * 2.0,
+                             self.redoTimeoutMin)
+                self.redoTimer.restart(duration=duration)
+                self.transmit(self.txPacket) #redo
+                console.concise("Joiner Redo Join at {0}\n".format(self.stack.store.stamp))
 
 
     def prep(self):
@@ -237,6 +263,7 @@ class Joiner(Initiator):
             self.remove()
             return
         self.transmit(packet)
+        console.concise("Joiner Do Join at {0}\n".format(self.stack.store.stamp))
 
     def pend(self):
         '''
@@ -305,6 +332,7 @@ class Joiner(Initiator):
             remote.joined = True #accepted
             remote.nextSid()
             self.ackAccept()
+
         self.stack.dumpRemote(remote)
 
     def rejected(self):
@@ -337,6 +365,7 @@ class Joiner(Initiator):
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+        console.concise("Joiner Do Accept at {0}\n".format(self.stack.store.stamp))
 
     def nackAccept(self):
         '''
@@ -360,23 +389,25 @@ class Joiner(Initiator):
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+        console.concise("Joiner Do Reject at {0}\n".format(self.stack.store.stamp))
 
 
 class Joinent(Correspondent):
     '''
     RAET protocol Joinent transaction class, dual of Joiner
     '''
-    RedoTimeout = 0.25
+    RedoTimeoutMin = 0.1 # initial timeout
+    RedoTimeoutMax = 2.0 # max timeout
 
-    def __init__(self, redoTimeout=None, **kwa):
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joinent, self).__init__(**kwa)
-        if redoTimeout is None:
-            redoTimeout = self.RedoTimeout
-        self.redoTimeout = redoTimeout
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
         self.redoTimer = aiding.StoreTimer(self.stack.store, duration=0.0)
 
         self.prep()
@@ -398,15 +429,24 @@ class Joinent(Correspondent):
         Perform time based processing of transaction
 
         '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.nackJoin()
+            console.concise("Joinent timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
         # need to perform the check for accepted status and then send accept
         if self.redoTimer.expired:
+            duration = min(
+                        max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                        self.redoTimeoutMax)
+            self.redoTimer.restart(duration=duration)
+
             if (self.txPacket and
                     self.txPacket.data['pk'] == raeting.pcktKinds.response):
-                duration = min(max(self.redoTimeout,
-                                   self.redoTimer.duration) * 2.0, 4.0)
-                self.redoTimer.restart(duration=duration)
+
                 self.transmit(self.txPacket) #redo
-                print "Redo Accept"
+                console.concise("Joinent Redo Accept at {0}\n".format(self.stack.store.stamp))
             else:
                 remote = self.stack.estates[self.reid]
                 if remote:
@@ -415,12 +455,8 @@ class Joinent(Correspondent):
                         status = self.stack.safe.statusRemoteEstate(remote)
 
                     if status == raeting.acceptances.accepted:
-                        if self.redoTimer.expired:
-                            duration = min(max(self.redoTimeout,
-                                       self.redoTimer.duration) * 2.0, 4.0)
-                            self.redoTimer.restart(duration=duration)
-                            self.accept()
-                            print "Do Accept"
+                        self.accept()
+
 
     def prep(self):
         '''
@@ -534,11 +570,12 @@ class Joinent(Correspondent):
         if status == None or status == raeting.acceptances.pending:
             self.ackJoin()
         elif status == raeting.acceptances.accepted:
-            duration = min(max(self.redoTimeout,
-                            self.redoTimer.duration) * 2.0, 4.0)
+            duration = min(
+                         max(self.redoTimeoutMin,
+                            self.redoTimer.duration) * 2.0,
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             self.accept()
-            print "Do Accept Immediate"
         else:
             self.nackJoin()
 
@@ -566,6 +603,7 @@ class Joinent(Correspondent):
             return
 
         self.transmit(packet)
+        console.concise("Joinent Pending Accept at {0}\n".format(self.stack.store.stamp))
 
     def accept(self):
         '''
@@ -594,6 +632,7 @@ class Joinent(Correspondent):
             return
 
         self.transmit(packet)
+        console.concise("Joinent Do Accept at {0}\n".format(self.stack.store.stamp))
 
     def joined(self):
         '''
@@ -627,6 +666,7 @@ class Joinent(Correspondent):
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+        console.concise("Joinent Reject at {0}\n".format(self.stack.store.stamp))
 
 
 class Allower(Initiator):
