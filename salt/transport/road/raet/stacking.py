@@ -526,8 +526,6 @@ class StackUdp(object):
                                         txData=data,
                                         rxPacket=packet)
         joinent.join() #assigns .reid here
-        # need to perform the check for accepted status somewhere
-        #joinent.accept() now in joinent.process()
 
     def allow(self, reid=None):
         '''
