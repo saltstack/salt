@@ -27,7 +27,7 @@ def check_nova():
 
 
 class NovaServer(object):
-    def __init__(self, name, server):
+    def __init__(self, name, server, password=None):
         '''
         Make output look like libcloud output for consistency
         '''
@@ -50,8 +50,11 @@ class NovaServer(object):
                 ip['addr'] for ip in server['addresses']['private']
             ]
 
-        if hasattr(server, 'password'):
-            self.extra['password'] = server.password
+        if password:
+            self.extra['password'] = password
+
+    def __str__(self):
+        return self.__dict__
 
 
 # Function alias to not shadow built-ins
@@ -96,7 +99,9 @@ class SaltNova(object):
         server_info = self.server_show(uuid)
         server = server_info.values()[0]
         server_name = server_info.keys()[0]
-        ret = NovaServer(server_name, server)
+        if not hasattr(self, 'password'):
+            self.password = None
+        ret = NovaServer(server_name, server, self.password)
 
         return ret
 
@@ -131,11 +136,20 @@ class SaltNova(object):
                     'Retrying server_show() (try {0})'.format(trycount)
                 )
 
+    def show_instance(self, name):
+        '''
+        Find a server by it's name (libcloud)
+        '''
+        return self.server_list().get(name, {})
+
+
     def server_by_name(self, name):
         '''
         Find a server by it's name
         '''
-        return self.server_list().get(name, {})
+        return self.server_show_libcloud(
+            self.server_list().get(name, {}).get('id', '')
+        )
 
     def _volume_get(self, volume_id):
         '''
@@ -219,7 +233,7 @@ class SaltNova(object):
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.delete_server_volume(
-            server['id'],
+            server.id,
             volume['attachments'][0]['id']
         )
         trycount = 0
@@ -253,7 +267,7 @@ class SaltNova(object):
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
-            server['id'],
+            server.id,
             volume['id'],
             device=device
         )
@@ -486,7 +500,7 @@ class SaltNova(object):
         '''
         List Servers
         '''
-        ret = []
+        ret = {}
         servers = self.server_list()
         for server in servers.keys():
             ret.append(self.server_show_libcloud(servers[server]['id']))
@@ -550,8 +564,6 @@ class SaltNova(object):
                 ret[item.name]['security_groups'] = \
                     item.__dict__['security_groups']
         return ret
-
-    list_nodes_full = server_list_detailed
 
     def server_show(self, server_id):
         '''

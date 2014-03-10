@@ -273,7 +273,8 @@ class CloudClient(object):
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.cloud.simple_types_filter(
-                mapper.destroy(names))
+                mapper.destroy(names)
+        )
 
     def create(self, provider, names, **kwargs):
         '''
@@ -1198,6 +1199,7 @@ class Cloud(object):
                 if not names:
                     break
                 fun = '{0}.{1}'.format(driver, self.opts['action'])
+                log.debug('WARNING: {0}'.format(fun))
                 if fun not in self.clouds:
                     log.info(
                         '\'{0}()\' is not available. Not actioning...'.format(

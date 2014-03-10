@@ -329,7 +329,7 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     volumes = __salt__['cloud.volume_list'](provider=provider)
     instance = __salt__['cloud.action'](
         fun='show_instance',
-        names=[server_name]
+        names=server_name
     )
 
     if name in volumes.keys() and volumes[name]['attachments']:
@@ -362,7 +362,7 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     if response:
         ret['result'] = True
         ret['comment'] = 'Volume {0} was created'.format(name)
-        ret['changes'] = {'old': volume[name], 'new': response}
+        ret['changes'] = {'old': volumes[name], 'new': response}
     else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to attach.'.format(name)
