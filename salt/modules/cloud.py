@@ -214,7 +214,7 @@ def volume_list(provider):
     '''
     client = _get_client()
     info = client.volume_action(provider, 'name', action='list')
-    return info
+    return info['name']
 
 
 def volume_delete(provider, names, **kwargs):

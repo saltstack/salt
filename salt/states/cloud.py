@@ -288,9 +288,9 @@ def volume_exists(name, provider=None, **kwargs):
     if not ret['result']:
         return ret
 
-    volume = __salt__['cloud.volume_list'](provider=provider)[name]
+    volumes = __salt__['cloud.volume_list'](provider=provider)
 
-    if volume:
+    if name in volumes.keys():
         ret['comment'] = 'Volume exists: {0}'.format(name)
         ret['result'] = True
         return ret
@@ -300,8 +300,8 @@ def volume_exists(name, provider=None, **kwargs):
         return ret
 
     response = __salt__['cloud.volume_create'](
-        name=name,
-        profile=profile,
+        names=name,
+        provider=provider,
         **kwargs
     )
     if response:
@@ -326,16 +326,25 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     if not ret['result']:
         return ret
 
-    volume = __salt__['cloud.volume_list'](provider=provider)[name]
-    server = __salt__['cloud.action'](
-        action='list_nodes',
-        provider=provider
-    )[server_name]
+    volumes = __salt__['cloud.volume_list'](provider=provider)
+    instance = __salt__['cloud.action'](
+        fun='show_instance',
+        names=[server_name]
+    )
 
-    if volume and volume['attachments']:
+    if name in volumes.keys() and volumes[name]['attachments']:
+        volume = volumes[name]
         ret['comment'] = ('Volume {name} is already'
-                          'attached: {attachments}').format(**volume)
+                          'attached: {attachments}').format(**volumes[name])
         ret['result'] = True
+        return ret
+    elif not name in volumes.keys():
+        ret['comment'] = 'Volume {0} does not exist'.format(name)
+        ret['result'] = False
+        return ret
+    elif not instance:
+        ret['comment'] = 'Server {0} does not exist'.format(server_name)
+        ret['result'] = False
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Volume {0} will be will be attached.'.format(
@@ -343,25 +352,17 @@ def volume_attached(name, server_name, provider=None, **kwargs):
         )
         ret['result'] = None
         return ret
-    elif not volume:
-        ret['comment'] = 'Volume {0} does not exist'.format(name)
-        ret['result'] = False
-        return ret
-    elif not server:
-        ret['comment'] = 'Server {0} does not exist'.format(server_name)
-        ret['result'] = False
-        return ret
 
     response = __salt__['cloud.volume_attach'](
-        name,
         provider=provider,
+        names=name,
         server_name=server_name,
         **kwargs
     )
     if response:
         ret['result'] = True
         ret['comment'] = 'Volume {0} was created'.format(name)
-        ret['changes'] = {'old': volume, 'new': response}
+        ret['changes'] = {'old': volume[name], 'new': response}
     else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to attach.'.format(name)

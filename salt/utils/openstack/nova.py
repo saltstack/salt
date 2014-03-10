@@ -26,7 +26,7 @@ def check_nova():
     return HAS_NOVA
 
 
-class NovaServers(object):
+class NovaServer(object):
     def __init__(self, name, server):
         '''
         Make output look like libcloud output for consistency
@@ -489,7 +489,7 @@ class SaltNova(object):
         ret = []
         servers = self.server_list()
         for server in servers.keys():
-            ret.append(server_show_libcloud(servers[server]['id']))
+            ret.append(self.server_show_libcloud(servers[server]['id']))
 
         return ret
 
