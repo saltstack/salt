@@ -1011,14 +1011,14 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return ret
 
 
-def saltify(name, config=None, approve_key=True, install=True):
+def bootstrap(name, config=None, approve_key=True, install=True):
     '''
     Install and configure salt in a container.
 
     .. code-block:: bash
 
-        salt 'minion' lxc.saltify name [config=config_data] \\
-                [approve_key=(true|false)] [approve_key=(true|false)]
+        salt 'minion' lxc.bootstrap name [config=config_data] \\
+                [approve_key=(true|false)] [install=(true|false)]
 
     config
         Minion configuration options. By default, the 'master' option is set to
