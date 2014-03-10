@@ -280,7 +280,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
     return ret
 
 
-def volume_exists(name, provider=None, **kwargs):
+def volume_present(name, provider=None, **kwargs):
     '''
     Check that a block volume exists.
     '''
