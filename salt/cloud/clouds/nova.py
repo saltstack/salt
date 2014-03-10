@@ -787,7 +787,7 @@ def list_nodes_select(call=None):
     )
 
 
-def volume_create(name, size=100, snapshot=None, voltype=None):
+def volume_create(name, size=100, snapshot=None, voltype=None, **kwargs):
     '''
     Create block storage device
     '''
@@ -800,7 +800,7 @@ def volume_create(name, size=100, snapshot=None, voltype=None):
     )
 
 
-def volume_delete(name):
+def volume_delete(name, **kwargs):
     '''
     Delete block storage device
     '''
@@ -808,7 +808,7 @@ def volume_delete(name):
     return conn.volume_delete(name)
 
 
-def volume_detach(name, server_name):
+def volume_detach(name, server_name, **kwargs):
     '''
     Detach block volume
     '''
@@ -820,7 +820,7 @@ def volume_detach(name, server_name):
     )
 
 
-def volume_attach(name, server_name, device='/dev/xvdb'):
+def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
     '''
     Attach block volume
     '''

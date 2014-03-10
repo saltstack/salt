@@ -304,16 +304,14 @@ class CloudClient(object):
                 mapper.create(vm_))
         return ret
 
-    def volume_create(self, provider, names, **kwargs):
+    def volume_action(self, provider, names, action, **kwargs):
         '''
-        Create the named VMs, without using a profile
+        Perform actions with block storage devices
 
         Example:
 
-        client.create(names=['myinstance'], provider='my-ec2-config',
-            kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
-                    'ssh_username': 'ec2-user', 'securitygroup': 'default',
-                    'delvol_on_destroy': True})
+        client.volume(names=['myblock'], action='create', provider='my-nova',
+            kwargs={'voltype': 'SSD', 'size': 1000})
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
@@ -329,8 +327,9 @@ class CloudClient(object):
             vm_['name'] = name
             vm_['provider'] = provider
             vm_['profile'] = None
+            vm_['action'] = action
             ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.volume_create(vm_)
+                mapper.volumes(vm_)
             )
         return ret
 
@@ -1089,15 +1088,15 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def volume_create(self, vm_):
+    def volumes(self, vm_):
         '''
-        Create a single volume
+        Volume actions
         '''
         log.debug(pprint.pformat(vm_))
         output = {}
 
         alias, driver = vm_['provider'].split(':')
-        fun = '{0}.volume_create'.format(driver)
+        fun = '{0}.volume_{1}'.format(driver, vm_['action'])
         if fun not in self.clouds:
             log.error(
                 'Creating {0[name]!r} using {0[provider]!r} as the provider '
@@ -1114,7 +1113,7 @@ class Cloud(object):
             with context.func_globals_inject(
                                 self.clouds[fun],
                                 __active_provider_name__=vm_['provider']):
-                output = self.clouds[fun](vm_)
+                output = self.clouds[fun](**vm_)
         except KeyError as exc:
             log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
