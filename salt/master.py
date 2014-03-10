@@ -167,7 +167,7 @@ class Master(SMaster):
                     loc = parts[1]
                 except IndexError:
                     log.critical(
-                        'Unable to extract exttermal pillar data: {0}'
+                        'Unable to extract external pillar data: {0}'
                         .format(opts_dict['git'])
                     )
                 else:
