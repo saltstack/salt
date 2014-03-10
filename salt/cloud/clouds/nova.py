@@ -192,6 +192,19 @@ def get_image(conn, vm_):
     )
 
 
+def show_instance(name, call=None, **kwargs):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    return conn.show_instance(name)
+
+
 def get_size(conn, vm_):
     '''
     Return the VM's size object
@@ -283,6 +296,66 @@ def managedcloud(vm_):
     )
 
 
+def destroy(name, conn=None, call=None):
+    '''
+    Delete a single VM
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+    )
+
+    if not conn:
+        conn = get_conn()   # pylint: disable=E0602
+
+    node = conn.server_by_name(name)
+    profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
+    if node is None:
+        log.error('Unable to find the VM {0}'.format(name))
+    profile = None
+    if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
+        profile = node.extra['metadata']['profile']
+    flush_mine_on_destroy = False
+    if profile is not None and profile in profiles:
+        if 'flush_mine_on_destroy' in profiles[profile]:
+            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if flush_mine_on_destroy:
+        log.info('Clearing Salt Mine: {0}'.format(name))
+        client = salt.client.LocalClient(__opts__['conf_file'])
+        minions = client.cmd(name, 'mine.flush')
+
+    log.info('Clearing Salt Mine: {0}, {1}'.format(
+        name,
+        flush_mine_on_destroy
+    ))
+    log.info('Destroying VM: {0}'.format(name))
+    ret = conn.delete(node.id)
+    if ret:
+        log.info('Destroyed VM: {0}'.format(name))
+        # Fire destroy action
+        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroyed instance',
+            'salt/cloud/{0}/destroyed'.format(name),
+            {'name': name},
+        )
+        if __opts__['delete_sshkeys'] is True:
+            salt.utils.cloud.remove_sshkey(node.public_ips[0])
+        return True
+
+    log.error('Failed to Destroy VM: {0}'.format(name))
+    return False
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -350,7 +423,7 @@ def create(vm_):
         )
         return False
 
-    kwargs['ex_keyname'] = config.get_cloud_config_value(
+    kwargs['key_name'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
 
@@ -380,6 +453,14 @@ def create(vm_):
 
     floating = []
 
+    files = config.get_cloud_config_value(
+        'files', vm_, __opts__, search_global=False
+    )
+    if files:
+        kwargs['files'] = {}
+        for src_path in files:
+            with salt.utils.fopen(files[src_path], 'r') as fp_:
+                kwargs['files'][src_path] = fp_.read()
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
@@ -418,7 +499,7 @@ def create(vm_):
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
                     pprint.pformat(
-                        nodelist[vm_['name']]
+                        nodelist[vm_['name']].__dict__
                     )
                 )
             )
@@ -433,7 +514,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
+        running = nodelist[vm_['name']].state == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -450,8 +531,8 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']]['id']
-            )['extra']
+                nodelist[vm_['name']].id
+            ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
 
@@ -461,7 +542,7 @@ def create(vm_):
 
         if floating:
             try:
-                name = data['name']
+                name = data.name
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
@@ -477,8 +558,8 @@ def create(vm_):
                 pass
 
         result = []
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = nodelist[vm_['name']].private_ips
+        public = nodelist[vm_['name']].public_ips
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -488,33 +569,33 @@ def create(vm_):
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warn('{0} is a public IP'.format(private_ip))
-                    data['public_ips'].append(private_ip)
+                    data.public_ips.append(private_ip)
                     log.warn(
                         (
                             'Public IP address was not ready when we last'
                             ' checked.  Appending public IP address now.'
                         )
                     )
-                    public = data['public_ips']
+                    public = data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_cidr(vm_, private_ip)
-                    if private_ip not in data['private_ips'] and not ignore_ip:
+                    if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
         if rackconnect(vm_) is True:
             if ssh_interface(vm_) != 'private_ips':
-                data['public_ips'] = access_ip
+                data.public_ips = access_ip
                 return data
 
         if result:
             log.debug('result = {0}'.format(result))
-            data['private_ips'] = result
+            data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
                 return data
 
         if public:
-            data['public_ips'] = public
+            data.public_ips = public
             if ssh_interface(vm_) != 'private_ips':
                 return data
 
@@ -539,11 +620,11 @@ def create(vm_):
     log.debug('VM is now running')
 
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = preferred_ip(vm_, data['private_ips'])
+        ip_address = preferred_ip(vm_, data.private_ips)
     elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        ip_address = data['public_ips']
+        ip_address = data.public_ips
     else:
-        ip_address = preferred_ip(vm_, data['public_ips'])
+        ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
     if not ip_address:
@@ -604,8 +685,8 @@ def create(vm_):
         log.debug(
             'Using {0} as SSH key file'.format(key_filename)
         )
-    elif 'password' in data['extra']:
-        deploy_kwargs['password'] = data['extra']['password']
+    elif 'password' in data.extra:
+        deploy_kwargs['password'] = data.extra['password']
         log.debug('Logging into SSH using password')
 
     ret = {}
@@ -676,10 +757,10 @@ def create(vm_):
                 )
             )
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
-    if 'password' in data['extra']:
-        del data['extra']['password']
+    if 'password' in data.extra:
+        del data.extra['password']
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -727,7 +808,7 @@ def avail_sizes():
     return conn.flavor_list()
 
 
-def list_nodes(call=None):
+def list_nodes(call=None, **kwargs):
     '''
     Return a list of the VMs that in this location
     '''
@@ -755,7 +836,7 @@ def list_nodes(call=None):
     return ret
 
 
-def list_nodes_full(call=None):
+def list_nodes_full(call=None, **kwargs):
     '''
     Return a list of the VMs that in this location
     '''
@@ -774,7 +855,9 @@ def list_nodes_full(call=None):
     if not server_list:
         return {}
     for server in server_list.keys():
-        ret[server] = conn.server_show_libcloud(server_list[server]['id'])
+        ret[server] = conn.server_show_libcloud(
+            server_list[server]['id']
+        )
     return ret
 
 
@@ -785,3 +868,57 @@ def list_nodes_select(call=None):
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full(), __opts__['query.selection'], call,
     )
+
+
+def volume_create(name, size=100, snapshot=None, voltype=None, **kwargs):
+    '''
+    Create block storage device
+    '''
+    conn = get_conn()
+    return conn.volume_create(
+        name,
+        size,
+        snapshot,
+        voltype
+    )
+
+
+def volume_delete(name, **kwargs):
+    '''
+    Delete block storage device
+    '''
+    conn = get_conn()
+    return conn.volume_delete(name)
+
+
+def volume_detach(name, server_name, **kwargs):
+    '''
+    Detach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_detach(
+        name,
+        server_name,
+        timeout=300
+    )
+
+
+def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
+    '''
+    Attach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_attach(
+        name,
+        server_name,
+        device,
+        timeout=300
+    )
+
+
+def volume_list(**kwargs):
+    '''
+    Attach block volume
+    '''
+    conn = get_conn()
+    return conn.volume_list()
