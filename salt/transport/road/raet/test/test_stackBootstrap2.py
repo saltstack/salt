@@ -81,7 +81,7 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     while stack1.transactions or stack0.transactions:
         stack1.serviceAll()
         stack0.serviceAll()
-        if store.stamp >= 0.5:
+        if store.stamp >= 0.3:
             for estate in stack0.estates.values():
                 if estate.acceptance == raeting.acceptances.pending:
                     stack0.safe.acceptRemoteEstate(estate)
@@ -117,8 +117,8 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     print stack1.safe.loadAllRemoteData()
     print
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     if postClearMaster:
         keeping.clearAllRoadSafe(masterDirpath)

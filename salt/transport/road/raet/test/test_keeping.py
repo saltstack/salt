@@ -59,12 +59,12 @@ def test():
                                     prikey=masterPriKeyHex,)
     stack0 = stacking.StackUdp(estate=estate, dirpath=masterDirpath)
 
-    stack0.addRemoteEstate(estating.RemoteEstate(eid=2,
+    stack0.addRemote(estating.RemoteEstate(eid=2,
                                     ha=('127.0.0.1', 7532),
                                     verkey=m1VerKeyHex,
                                     pubkey=m1PubKeyHex,))
 
-    stack0.addRemoteEstate(estating.RemoteEstate(eid=3,
+    stack0.addRemote(estating.RemoteEstate(eid=3,
                                     ha=('127.0.0.1', 7533),
                                     verkey=m2VerKeyHex,
                                     pubkey=m2PubKeyHex,))
@@ -79,12 +79,12 @@ def test():
     stack1 = stacking.StackUdp(estate=estate, dirpath=m1Dirpath)
 
 
-    stack1.addRemoteEstate(estating.RemoteEstate(eid=1,
+    stack1.addRemote(estating.RemoteEstate(eid=1,
                                     ha=('127.0.0.1', 7532),
                                     verkey=masterVerKeyHex,
                                     pubkey=masterPubKeyHex,))
 
-    stack1.addRemoteEstate(estating.RemoteEstate(eid=4,
+    stack1.addRemote(estating.RemoteEstate(eid=4,
                                     ha=('127.0.0.1', 7534),
                                     verkey=m3VerKeyHex,
                                     pubkey=m3PubKeyHex,))
@@ -115,8 +115,8 @@ def test():
     print stack1.safe.loadLocalData()
     print stack1.safe.loadAllRemoteData()
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     #master stack
     dirpath = os.path.join(os.getcwd(), 'keep', 'master')

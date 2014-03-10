@@ -84,7 +84,7 @@ def test( bk = raeting.bodyKinds.json):
                                      ha=("127.0.0.1", raeting.RAET_TEST_PORT),
                                      verkey=minionVerKeyHex,
                                      pubkey=minionPubKeyHex,)
-    stack0.addRemoteEstate(remote1)
+    stack0.addRemote(remote1)
 
 
     estate = estating.LocalEstate(   eid=2,
@@ -99,7 +99,7 @@ def test( bk = raeting.bodyKinds.json):
                                      ha=('127.0.0.1', raeting.RAET_PORT),
                                      verkey=masterVerKeyHex,
                                      pubkey=masterPubKeyHex,)
-    stack1.addRemoteEstate(remote0)
+    stack1.addRemote(remote0)
 
     remote0.publee = nacling.Publican(key=remote1.privee.pubhex)
     remote1.publee = nacling.Publican(key=remote0.privee.pubhex)
