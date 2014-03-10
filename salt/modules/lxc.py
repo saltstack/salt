@@ -200,7 +200,7 @@ def init(name,
         If salt-minion is not already installed, install it. Default: true
 
     config
-        Optional config paramers. By default, the id is set to the name of the
+        Optional config parameters. By default, the id is set to the name of the
         container.
     '''
     nicp = _nic_profile(nic)
@@ -967,7 +967,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 
 def set_dns(name, dnsservers=None, searchdomains=None):
-    '''Update container dns configuration
+    '''Update container DNS configuration
     and possibly also resolvonf one.
 
     CLI Example:
@@ -1027,7 +1027,7 @@ def saltify(name, config=None, approve_key=True, install=True):
         expect a signing request from the target host. Default: true.
 
     install
-        Whether to attempt a full installtion of salt-minion if needed.
+        Whether to attempt a full installation of salt-minion if needed.
     '''
 
     info = __salt__['lxc.info'](name)
