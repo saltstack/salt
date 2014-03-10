@@ -34,7 +34,7 @@ class Transaction(object):
     '''
     Timeout =  5.0 # default timeout
 
-    def __init__(self, stack=None, kind=None, timeout=None, start=None,
+    def __init__(self, stack=None, kind=None, timeout=None,
                  reid=None, rmt=False, bcst=False, sid=None, tid=None,
                  txData=None, txPacket=None, rxPacket=None):
         '''
@@ -44,15 +44,10 @@ class Transaction(object):
         self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['tk']
 
-
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
         self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
-
-        self.start = start # for synchronized starts that are not current time
-        if start: #enables synchronized starts not just current time
-            self.timer.restart(start=start)
 
         # local estate is the .stack.estate
         self.reid = reid  # remote estate eid
