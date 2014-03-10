@@ -439,7 +439,7 @@ def running():
     return ret
 
 
-def find_job(jid):
+def find_job(jid, **kwargs):
     '''
     Return the data for a specific job id
 
