@@ -55,8 +55,8 @@ class StackUdp(object):
                  ha=("", raeting.RAET_PORT),
                  rxMsgs=None,
                  txMsgs=None,
-                 udpRxes=None,
-                 udpTxes=None,
+                 rxes=None,
+                 txes=None,
                  road=None,
                  safe=None,
                  auto=None,
@@ -76,8 +76,8 @@ class StackUdp(object):
         self.transactions = odict() #transactions
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        self.rxes = udpRxes if udpRxes is not None else deque() # udp packets received
-        self.txes = udpTxes if udpTxes is not None else deque() # udp packet to transmit
+        self.rxes = rxes if rxes is not None else deque() # udp packets received
+        self.txes = txes if txes is not None else deque() # udp packet to transmit
 
         self.road = road or keeping.RoadKeep(dirpath=dirpath,
                                              stackname=self.name)
@@ -344,10 +344,10 @@ class StackUdp(object):
         '''
         Service or Process:
            UDP Socket receive
-           UdpRxes queue
+           rxes queue
            process
            txMsgs queue
-           udpTxes queue
+           txes queue
            UDP Socket send
 
         '''
@@ -591,8 +591,8 @@ class StackUxd(object):
                  ha='',
                  rxMsgs = None,
                  txMsgs = None,
-                 uxdRxes = None,
-                 uxdTxes = None,
+                 rxes = None,
+                 txes = None,
                  lane=None,
                  accept=None,
                  dirpath=None,
@@ -616,8 +616,8 @@ class StackUxd(object):
                                          dirpath=dirpath)
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
-        self.rxes = uxdRxes if uxdRxes is not None else deque() # uxd packets received
-        self.txes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
+        self.rxes = rxes if rxes is not None else deque() # uxd packets received
+        self.txes = txes if txes is not None else deque() # uxd packets to transmit
         self.lane = lane # or keeping.LaneKeep()
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
         self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
@@ -722,9 +722,9 @@ class StackUxd(object):
         '''
         Service or Process:
            Uxd Socket receive
-           uxdRxes queue
+           rxes queue
            txMsgs queue
-           uxdTxes queue
+           txes queue
            Uxd Socket send
 
         '''
