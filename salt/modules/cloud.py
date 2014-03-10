@@ -201,6 +201,22 @@ def create(provider, names, **kwargs):
     return info
 
 
+def volume_list(provider):
+    '''
+    List block storage volumes
+
+    CLI Example:
+    
+    .. code-block:: bash
+
+        salt minionname cloud.volume_list my-nova
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, action='list')
+    return info
+
+
 def volume_delete(provider, names, **kwargs):
     '''
     Delete volume
@@ -209,7 +225,7 @@ def volume_delete(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_delete myblock
+        salt minionname cloud.volume_delete my-nova myblock
 
     '''
     client = _get_client()
@@ -225,7 +241,8 @@ def volume_create(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_create mynova myblock size=100 voltype=SSD
+        salt minionname cloud.volume_create my-nova myblock size=100 \
+                voltype=SSD
 
     '''
     client = _get_client()
@@ -241,7 +258,8 @@ def volume_attach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_attach myblock server_name=myserver \
+        salt minionname cloud.volume_attach my-nova myblock \
+                server_name=myserver \
                 device='/dev/xvdf'
 
     '''
@@ -258,7 +276,8 @@ def volume_detach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_detach myblock server_name=myserver
+        salt minionname cloud.volume_detach my-nova myblock \
+                server_name=myserver
 
     '''
     client = _get_client()

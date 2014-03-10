@@ -727,7 +727,7 @@ def avail_sizes():
     return conn.flavor_list()
 
 
-def list_nodes(call=None):
+def list_nodes(call=None, **kwargs):
     '''
     Return a list of the VMs that in this location
     '''
