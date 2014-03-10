@@ -143,6 +143,28 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary (in
+    other words, if the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in __ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch'):
+        return name[:-(len(arch) + 1)]
+    return name
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -389,8 +411,8 @@ def check_db(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
 
-    if 'avail' in __context__:
-        avail = __context__['avail']
+    if 'pkg._avail' in __context__:
+        avail = __context__['pkg._avail']
     else:
         # get list of available packages
         avail = []
@@ -407,7 +429,7 @@ def check_db(*names, **kwargs):
                 avail.append('.'.join((name, arch)))
             else:
                 avail.append(name)
-        __context__['avail'] = avail
+        __context__['pkg._avail'] = avail
 
     ret = {}
     for name in names:
@@ -717,7 +739,10 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def upgrade(refresh=True):
@@ -742,7 +767,10 @@ def upgrade(refresh=True):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -785,7 +813,10 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):

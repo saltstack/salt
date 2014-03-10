@@ -200,7 +200,7 @@ def init(name,
         If salt-minion is not already installed, install it. Default: true
 
     config
-        Optional config paramers. By default, the id is set to the name of the
+        Optional config parameters. By default, the id is set to the name of the
         container.
     '''
     nicp = _nic_profile(nic)
@@ -299,15 +299,18 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     if template:
         cmd += ' -t {0}'.format(template)
     if backing:
+        backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
-        if lvname:
-            cmd += ' --lvname {0}'.format(vgname)
-        if vgname:
-            cmd += ' --vgname {0}'.format(vgname)
-        if fstype:
-            cmd += ' --fstype {0}'.format(size)
-        if size:
-            cmd += ' --fssize {0}'.format(size)
+        if backing in ['lvm']:
+            if lvname:
+                cmd += ' --lvname {0}'.format(vgname)
+            if vgname:
+                cmd += ' --vgname {0}'.format(vgname)
+        if backing not in ['dir', 'overlayfs']:
+            if fstype:
+                cmd += ' --fstype {0}'.format(fstype)
+            if size:
+                cmd += ' --fssize {0}'.format(size)
     if profile:
         cmd += ' --'
         options = profile
@@ -372,7 +375,7 @@ def clone(name,
         return {'created': False, 'error': 'container already exists'}
     if not exists(orig):
         return {'created': False,
-                'error': 'original container does not exists'.format(orig)}
+                'error': 'original container does not exist'.format(orig)}
     if not snapshot:
         snapshot = ''
     else:
@@ -502,6 +505,25 @@ def _change_state(cmd, name, expected):
     return r
 
 
+def _ensure_running(name, no_start=False):
+    prior_state = __salt__['lxc.state'](name)
+    if not prior_state:
+        return None
+    res = {}
+    if prior_state == 'stopped':
+        if no_start:
+            return False
+        res = __salt__['lxc.start'](name)
+    elif prior_state == 'frozen':
+        if no_start:
+            return False
+        res = __salt__['lxc.unfreeze'](name)
+    if res.get('error'):
+        log.warn('Failed to run command: {0}'.format(res['error']))
+        return False
+    return prior_state
+
+
 def start(name, restart=False):
     '''
     Start the named container.
@@ -517,11 +539,11 @@ def start(name, restart=False):
            'result': True,
            'comment': 'Started'}
     try:
-        exists = __salt__['lxc.exists'](name)
-        if not exists:
+        does_exist = __salt__['lxc.exists'](name)
+        if not does_exist:
             return {'name': name,
                     'result': False,
-                    'comment': 'Container does not exists'}
+                    'comment': 'Container does not exist'}
         if restart:
             __salt__['lxc.stop'](name)
         ret.update(_change_state('lxc-start -d', name, 'running'))
@@ -552,12 +574,12 @@ def stop(name):
            'result': True,
            'comment': 'Stopped'}
     try:
-        exists = __salt__['lxc.exists'](name)
-        if not exists:
+        does_exist = __salt__['lxc.exists'](name)
+        if not does_exist:
             return {'name': name,
                     'result': False,
                     'changes': {},
-                    'comment': 'Container does not exists'}
+                    'comment': 'Container does not exist'}
         ret.update(_change_state('lxc-stop', name, 'stopped'))
         infos = __salt__['lxc.info'](name)
         ret['result'] = infos['state'] == 'stopped'
@@ -707,14 +729,14 @@ def templates(templates_dir='/usr/share/lxc/templates'):
 
         salt '*' lxc.templates
     '''
-    templates = []
+    templates_list = []
     san = re.compile('^lxc-')
     if os.path.isdir(templates_dir):
-        templates.extend(
+        templates_list.extend(
             [san.sub('', a) for a in os.listdir(templates_dir)]
         )
-    templates.sort()
-    return templates
+    templates_list.sort()
+    return templates_list
 
 
 def info(name):
@@ -867,11 +889,11 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
     if not __salt__['lxc.exists'](name):
         ret['result'] = False
-        ret['comment'] = 'Container does not exists: {0}'.fomart(name)
+        ret['comment'] = 'Container does not exist: {0}'.format(name)
     elif not os.path.exists(lxc_conf_p):
         ret['result'] = False
         ret['comment'] = (
-            'Configuration does not exists: {0}'.format(lxc_conf_p))
+            'Configuration does not exist: {0}'.format(lxc_conf_p))
     else:
         with open(lxc_conf_p, 'r') as fic:
             filtered_lxc_conf = []
@@ -948,7 +970,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 
 def set_dns(name, dnsservers=None, searchdomains=None):
-    '''Update container dns configuration
+    '''Update container DNS configuration
     and possibly also resolvonf one.
 
     CLI Example:
@@ -988,4 +1010,107 @@ def set_dns(name, dnsservers=None, searchdomains=None):
         ret['result'] = True
     return ret
 
-#
+
+def bootstrap(name, config=None, approve_key=True, install=True):
+    '''
+    Install and configure salt in a container.
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.bootstrap name [config=config_data] \\
+                [approve_key=(true|false)] [install=(true|false)]
+
+    config
+        Minion configuration options. By default, the 'master' option is set to
+        the target host's 'master'.
+
+    approve_key
+        Request a pre-approval of the generated minion key. Requires
+        that the salt-master be configured to either auto-accept all keys or
+        expect a signing request from the target host. Default: true.
+
+    install
+        Whether to attempt a full installation of salt-minion if needed.
+    '''
+
+    infos = __salt__['lxc.info'](name)
+    if not infos:
+        return None
+
+    prior_state = _ensure_running(name)
+
+    __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
+                           approve_key=approve_key, install=False,
+                           prep_install=True)
+
+    cmd = 'bash -c "if type salt-minion; then exit 0; '
+    if install:
+        cmd += 'else sh /tmp/bootstrap.sh -c /tmp; '
+    else:
+        cmd += 'else exit 1; '
+    cmd += 'fi"'
+    res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False,
+                                      no_start=True, preserve_state=False)
+    if prior_state == 'stopped':
+        __salt__['lxc.stop'](name)
+    elif prior_state == 'frozen':
+        __salt__['lxc.freeze'](name)
+    return res
+
+
+def run_cmd(name, cmd, no_start=False, preserve_state=True,
+            stdout=True, stderr=False):
+    '''
+    Run a command inside the container.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' name command [no_start=(true|false)] \\
+                [preserve_state=(true|false)] [stdout=(true|alse)] \\
+                [stderr=(true|false)]
+
+    name
+        Name of the container on which to operate.
+
+    cmd
+        Command to run
+
+    no_start
+        If the container is not running, don't start it. Default: false.
+
+    preserve_state
+        After running the command, return the container to its previous
+        state. Default: true.
+
+    stdout:
+        Return stdout. Default: true
+
+    stderr:
+        Return stderr. Default: false
+
+    Note: If stderr and stdout are both false, the return code is returned. If
+    stderr and stdout are both true, the pid and return code are also returned.
+    '''
+    prior_state = _ensure_running(name)
+    if not prior_state:
+        return prior_state
+
+    res = __salt__['cmd.run_all'](
+            'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+
+    if preserve_state:
+        if prior_state == 'stopped':
+            __salt__['lxc.stop'](name)
+        elif prior_state == 'frozen':
+            __salt__['lxc.freeze'](name)
+
+    if stdout and stderr:
+        return res
+    elif stdout:
+        return res['stdout']
+    elif stderr:
+        return res['stderr']
+    else:
+        return res['retcode']

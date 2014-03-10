@@ -26,6 +26,37 @@ def check_nova():
     return HAS_NOVA
 
 
+class NovaServer(object):
+    def __init__(self, name, server, password=None):
+        '''
+        Make output look like libcloud output for consistency
+        '''
+        self.name = name
+        self.id = server['id']
+        self.image = server['image']['id']
+        self.size = server['flavor']['id']
+        self.state = server['status']
+        self._uuid = None
+        self.extra = {
+            'metadata': server['metadata'],
+            'access_ip': server['accessIPv4']
+        }
+
+        if 'addresses' in server and 'public' in server['addresses']:
+            self.public_ips = [
+                ip['addr'] for ip in server['addresses']['public']
+            ]
+            self.private_ips = [
+                ip['addr'] for ip in server['addresses']['private']
+            ]
+
+        if password:
+            self.extra['password'] = password
+
+    def __str__(self):
+        return self.__dict__
+
+
 # Function alias to not shadow built-ins
 class SaltNova(object):
     '''
@@ -68,29 +99,9 @@ class SaltNova(object):
         server_info = self.server_show(uuid)
         server = server_info.values()[0]
         server_name = server_info.keys()[0]
-        ret = {
-            '_uuid': None,
-            'id': server['id'],
-            'image': server['image']['id'],
-            'size': server['flavor']['id'],
-            'name': server_name,
-            'state': server['status'],
-            'extra': {
-                'metadata': server['metadata'],
-                'access_ip': server['accessIPv4']
-            }
-        }
-
-        if 'addresses' in server and 'public' in server['addresses']:
-            ret['public_ips'] = [
-                ip['addr'] for ip in server['addresses']['public']
-            ]
-            ret['private_ips'] = [
-                ip['addr'] for ip in server['addresses']['private']
-            ]
-
-        if hasattr(self, 'password'):
-            ret['extra']['password'] = self.password
+        if not hasattr(self, 'password'):
+            self.password = None
+        ret = NovaServer(server_name, server, self.password)
 
         return ret
 
@@ -125,11 +136,19 @@ class SaltNova(object):
                     'Retrying server_show() (try {0})'.format(trycount)
                 )
 
+    def show_instance(self, name):
+        '''
+        Find a server by it's name (libcloud)
+        '''
+        return self.server_list().get(name, {})
+
     def server_by_name(self, name):
         '''
         Find a server by it's name
         '''
-        return self.server_list().get(name, {})
+        return self.server_show_libcloud(
+            self.server_list().get(name, {}).get('id', '')
+        )
 
     def _volume_get(self, volume_id):
         '''
@@ -151,8 +170,18 @@ class SaltNova(object):
         List all block volumes
         '''
         nt_ks = self.volume_conn
-        volume = nt_ks.volumes.list(search_opts=search_opts)
-        return volume
+        volumes = nt_ks.volumes.list(search_opts=search_opts)
+        response = {}
+        for volume in volumes:
+            response[volume.display_name] = {
+                'name': volume.display_name,
+                'size': volume.size,
+                'id': volume.id,
+                'description': volume.display_description,
+                'attachments': volume.attachments,
+                'status': volume.status
+            }
+        return response
 
     def volume_show(self, name):
         '''
@@ -163,19 +192,12 @@ class SaltNova(object):
             search_opts={'display_name': name},
         )
         try:
-            volume = volumes[0]
-        except IndexError:
+            volume = volumes[name]
+        except KeyError:
             # volume doesn't exist
-            return False
+            return {'name': name, 'status': 'deleted'}
 
-        response = {'name': volume.display_name,
-                    'size': volume.size,
-                    'id': volume.id,
-                    'description': volume.display_description,
-                    'attachments': volume.attachments,
-                    'status': volume.status
-                    }
-        return response
+        return volume
 
     def volume_create(self, name, size=100, snapshot=None, voltype=None):
         '''
@@ -198,7 +220,7 @@ class SaltNova(object):
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
         response = nt_ks.volumes.delete(volume['id'])
-        return response
+        return self.volume_show(name)
 
     def volume_detach(self,
                       name,
@@ -210,7 +232,7 @@ class SaltNova(object):
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.delete_server_volume(
-            server['id'],
+            server.id,
             volume['attachments'][0]['id']
         )
         trycount = 0
@@ -244,7 +266,7 @@ class SaltNova(object):
         volume = self.volume_show(name)
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
-            server['id'],
+            server.id,
             volume['id'],
             device=device
         )
@@ -471,6 +493,17 @@ class SaltNova(object):
                 'image': {'id': item.image['id'],
                           'links': item.image['links']},
                 }
+        return ret
+
+    def list_nodes(self):
+        '''
+        List Servers
+        '''
+        ret = {}
+        servers = self.server_list()
+        for server in servers.keys():
+            ret.append(self.server_show_libcloud(servers[server]['id']))
+
         return ret
 
     def server_list_detailed(self,):

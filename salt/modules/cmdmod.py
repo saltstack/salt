@@ -1124,7 +1124,7 @@ def has_exec(cmd):
 
         salt '*' cmd.has_exec cat
     '''
-    return bool(which(cmd))
+    return which(cmd) is not None
 
 
 def exec_code(lang, code, cwd=None):

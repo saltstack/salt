@@ -123,13 +123,13 @@ def _format_host(host, data):
                 state_lines.insert(
                     3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
             try:
-               comment = ret['comment'].strip().replace(
-                   '\n',
-                   '\n' + ' ' * 14)
+                comment = ret['comment'].strip().replace(
+                    '\n',
+                    '\n' + ' ' * 14)
             except AttributeError:
-               comment = ret['comment'].join(' ').replace(
-                   '\n',
-                   '\n' + ' ' * 13)
+                comment = ret['comment'].join(' ').replace(
+                    '\n',
+                    '\n' + ' ' * 13)
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,

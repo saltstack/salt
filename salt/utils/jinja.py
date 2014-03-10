@@ -263,15 +263,13 @@ class SerializerExtension(Extension, object):
     Import tags
     ~~~~~~~~~~~
 
-    You can also import template and decode them automatically.
-
-    Syntaxe are {% import_yaml [TEMPLATE_NAME] as [VARIABLE] %}
-    and {% import_json [TEMPLATE_NAME] as [VARIABLE] %}
+    External files can be imported and made available as a Jinja variable.
 
     .. code-block:: jinja
 
-        {% import_yaml "state2.sls" as state2 %}
-        {% import_json "state3.sls" as state3 %}
+        {% import_yaml "myfile.yml" as myfile %}
+        {% import_json "defaults.json" as defaults %}
+        {% import_text "completeworksofshakespeare.txt" as poems %}
 
     Catalog
     ~~~~~~~
@@ -298,7 +296,8 @@ class SerializerExtension(Extension, object):
 
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json'])
+    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
+        'load_text', 'import_text'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -307,7 +306,8 @@ class SerializerExtension(Extension, object):
             'json': self.format_json,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
-            'load_json': self.load_json
+            'load_json': self.load_json,
+            'load_text': self.load_text,
         })
 
         if self.environment.finalize is None:
@@ -360,12 +360,20 @@ class SerializerExtension(Extension, object):
             raise TemplateRuntimeError(
                     'Unable to load json from {0}'.format(value))
 
+    def load_text(self, value):
+        if isinstance(value, TemplateModule):
+            value = str(value)
+
+        return value
+
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':
             return self.parse_yaml(parser)
         elif parser.stream.current.value == 'import_json':
             return self.parse_json(parser)
-        elif parser.stream.current.value in ('load_yaml', 'load_json'):
+        elif parser.stream.current.value == 'import_text':
+            return self.parse_text(parser)
+        elif parser.stream.current.value in ('load_yaml', 'load_json', 'load_text'):
             return self.parse_load(parser)
 
         parser.fail('Unknown format ' + parser.stream.current.value,
@@ -442,6 +450,27 @@ class SerializerExtension(Extension, object):
                 nodes.Filter(
                     nodes.Name(target, 'load').set_lineno(lineno),
                     'load_json',
+                    [],
+                    [],
+                    None,
+                    None
+                )
+                .set_lineno(lineno)
+            ).set_lineno(lineno)
+        ]
+
+    def parse_text(self, parser):
+        import_node = parser.parse_import()
+        target = import_node.target
+        lineno = import_node.lineno
+
+        return [
+            import_node,
+            nodes.Assign(
+                nodes.Name(target, 'store').set_lineno(lineno),
+                nodes.Filter(
+                    nodes.Name(target, 'load').set_lineno(lineno),
+                    'load_text',
                     [],
                     [],
                     None,
