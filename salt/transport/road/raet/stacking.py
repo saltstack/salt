@@ -98,10 +98,10 @@ class StackUdp(object):
 
         kepts = self.loadAllRemote() # remote estates from saved data
         for kept in kepts:
-            self.addRemoteEstate(kept)
+            self.addRemote(kept)
         self.dumpAllRemote() # save remote estate data
 
-    def fetchRemoteEstateByHostPort(self, host, port):
+    def fetchRemoteByHostPort(self, host, port):
         '''
         Search for remote estate with matching (host, port)
         Return estate if found Otherwise return None
@@ -112,7 +112,7 @@ class StackUdp(object):
 
         return None
 
-    def fetchRemoteEstateByKeys(self, sighex, prihex):
+    def fetchRemoteByKeys(self, sighex, prihex):
         '''
         Search for remote estate with matching (name, sighex, prihex)
         Return estate if found Otherwise return None
@@ -124,14 +124,14 @@ class StackUdp(object):
 
         return None
 
-    def fetchRemoteEstateByName(self, name):
+    def fetchRemoteByName(self, name):
         '''
         Search for remote estate with matching name
         Return estate if found Otherwise return None
         '''
         return self.estates.get(self.eids.get(name))
 
-    def addRemoteEstate(self, estate, eid=None):
+    def addRemote(self, estate, eid=None):
         '''
         Add a remote estate to .estates
         '''
@@ -148,7 +148,7 @@ class StackUdp(object):
             raise raeting.StackError(emsg)
         self.eids[estate.name] = estate.eid
 
-    def moveRemoteEstate(self, old, new):
+    def moveRemote(self, old, new):
         '''
         Move estate at key old eid to key new eid but keep same index
         '''
@@ -167,7 +167,7 @@ class StackUdp(object):
         del self.estates[old]
         self.estates.insert(index, estate.eid, estate)
 
-    def renameRemoteEstate(self, old, new):
+    def renameRemote(self, old, new):
         '''
         rename estate with old name to new name but keep same index
         '''
@@ -186,7 +186,7 @@ class StackUdp(object):
         del self.eids[old]
         self.eids.insert(index, estate.name, estate.eid)
 
-    def removeRemoteEstate(self, eid):
+    def removeRemote(self, eid):
         '''
         Remove estate at key eid
         '''

@@ -65,7 +65,7 @@ class Transaction(object):
 
         self.txData = txData or odict() # data used to prepare last txPacket
         self.txPacket = txPacket  # last tx packet needed for retries
-        self.rxPacket = rxPacket  # last rx packet
+        self.rxPacket = rxPacket  # last rx packet needed for index
 
     @property
     def index(self):
@@ -172,7 +172,7 @@ class Joiner(Initiator):
         if self.reid is None:
             if not self.stack.estates: # no channel master so make one
                 master = estating.RemoteEstate(eid=0, ha=mha)
-                self.stack.addRemoteEstate(master)
+                self.stack.addRemote(master)
 
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         self.sid = 0
@@ -291,9 +291,9 @@ class Joiner(Initiator):
         remote = self.stack.estates[self.reid]
 
         if remote.eid != reid: #move remote estate to new index
-            self.stack.moveRemoteEstate(old=remote.eid, new=reid)
+            self.stack.moveRemote(old=remote.eid, new=reid)
         if remote.name != name: # rename remote estate to new name
-            self.stack.renameRemoteEstate(old=remote.name, new=name)
+            self.stack.renameRemote(old=remote.name, new=name)
         self.reid = reid
 
         # we are assuming for now that the joiner cannot talk peer to peer only
@@ -502,12 +502,12 @@ class Joinent(Correspondent):
         port = data['sp']
         self.txData.update( dh=host, dp=port,) # responses use received host port
 
-        remote = self.stack.fetchRemoteEstateByName(name)
+        remote = self.stack.fetchRemoteByName(name)
         if remote:
             if not (host == remote.host and port == remote.port):
-                other = self.stack.fetchRemoteEstateByHostPort(host, port)
+                other = self.stack.fetchRemoteByHostPort(host, port)
                 if other and other is not remote: #may need to terminate transactions
-                    self.stack.removeRemoteEstate(other.eid)
+                    self.stack.removeRemote(other.eid)
                 remote.host = host
                 remote.port = port
             remote.rsid = self.sid
@@ -516,7 +516,7 @@ class Joinent(Correspondent):
                                                         verhex=verhex,
                                                         pubhex=pubhex)
         else:
-            other = self.stack.fetchRemoteEstateByHostPort(host, port)
+            other = self.stack.fetchRemoteByHostPort(host, port)
             if other: #may need to terminate transactions
                 self.stack.removeRemoteEstate(other.eid)
             remote = estating.RemoteEstate( stack=self.stack,
@@ -528,7 +528,7 @@ class Joinent(Correspondent):
                                             pubkey=pubhex,
                                             rsid=self.sid,
                                             rtid=self.tid, )
-            self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
+            self.stack.addRemote(remote) #provisionally add .accepted is None
             status = self.stack.safe.statusRemoteEstate(remote,
                                                         verhex=verhex,
                                                         pubhex=pubhex)
