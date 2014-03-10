@@ -76,7 +76,7 @@ def serialize(obj, **options):
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232
-    """Overwrites Loader as not for polute legacy Loader"""
+    """Overwrites Loader as not for pollute legacy Loader"""
     pass
 
 Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
@@ -95,7 +95,7 @@ Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
-    """Overwrites Dumper as not for polute legacy Dumper"""
+    """Overwrites Dumper as not for pollute legacy Dumper"""
     pass
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
