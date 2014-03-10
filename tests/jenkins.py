@@ -318,7 +318,7 @@ def run(opts):
     # Do we need extra setup?
     if opts.salt_url != SALT_GIT_URL:
         cmds = (
-            'salt -t 100 {vm_name} git.remote_set /testing name={0!r} url={1!r}'.format(
+            'salt -t 100 {vm_name} git.remote_set /testing name=\'{0}\' url=\'{1}\''.format(
                 'upstream',
                 SALT_GIT_URL,
                 vm_name=vm_name

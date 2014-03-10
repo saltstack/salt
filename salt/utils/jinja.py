@@ -143,10 +143,10 @@ class PrintableDict(OrderedDict):
         for key, value in self.items():
             if isinstance(value, string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
+                output.append('\'{0}\': \'{1}\''.format(key, value))
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
+                output.append('\'{0}\': {1!s}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
     def __repr__(self):  # pylint: disable=W0221

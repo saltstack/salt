@@ -314,7 +314,7 @@ def install(pkgs=None,
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.append('--requirement={0}'.format(treq or requirement))
 
     if use_wheel:
         min_version = '1.4'
@@ -339,7 +339,7 @@ def install(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.append('--proxy={0}'.format(proxy))
 
     if timeout:
         try:
@@ -372,14 +372,14 @@ def install(pkgs=None,
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(index_url)
             )
-        cmd.append('--index-url={0!r}'.format(index_url))
+        cmd.append('--index-url={0}'.format(index_url))
 
     if extra_index_url:
         if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
-        cmd.append('--extra-index-url={0!r}'.format(extra_index_url))
+        cmd.append('--extra-index-url={0}'.format(extra_index_url))
 
     if no_index:
         cmd.append('--no-index')
@@ -453,14 +453,14 @@ def install(pkgs=None,
             global_options = [go.strip() for go in global_options.split(',')]
 
         for opt in global_options:
-            cmd.append('--global-option={0!r}'.format(opt))
+            cmd.append('--global-option={0}'.format(opt))
 
     if install_options:
         if isinstance(install_options, string_types):
             install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
-            cmd.append('--install-option={0!r}'.format(opt))
+            cmd.append('--install-option={0}'.format(opt))
 
     if pkgs:
         if isinstance(pkgs, string_types):
@@ -471,7 +471,7 @@ def install(pkgs=None,
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
         cmd.extend(
-            ['{0!r}'.format(p.replace(';', ',')) for p in pkgs]
+            ['{0}'.format(p.replace(';', ',')) for p in pkgs]
         )
 
     if editable:
@@ -630,7 +630,7 @@ def uninstall(pkgs=None,
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.append('--requirement={0}'.format(treq or requirement))
 
     if log:
         try:
@@ -642,7 +642,7 @@ def uninstall(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.append('--proxy={0}'.format(proxy))
 
     if timeout:
         try:

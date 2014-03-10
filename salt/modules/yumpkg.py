@@ -130,16 +130,16 @@ def _get_repo_options(**kwargs):
     repo_arg = ''
     if fromrepo:
         log.info('Restricting to repo {0!r}'.format(fromrepo))
-        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r}'
+        repo_arg = ('--disablerepo=\'{0}\' --enablerepo=\'{1}\''
                     .format('*', fromrepo))
     else:
         repo_arg = ''
         if disablerepo:
             log.info('Disabling repo {0!r}'.format(disablerepo))
-            repo_arg += '--disablerepo={0!r} '.format(disablerepo)
+            repo_arg += '--disablerepo=\'{0}\''.format(disablerepo)
         if enablerepo:
             log.info('Enabling repo {0!r}'.format(enablerepo))
-            repo_arg += '--enablerepo={0!r} '.format(enablerepo)
+            repo_arg += '--enablerepo=\'{0}\''.format(enablerepo)
     return repo_arg
 
 
@@ -435,7 +435,7 @@ def check_db(*names, **kwargs):
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
+            repoquery_cmd = repoquery_base + ' \'{0}\''.format(name)
             provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
             if provides:
                 for pkg in provides:
@@ -930,7 +930,7 @@ def group_info(name):
         'default packages': [],
         'description': ''
     }
-    cmd_template = 'repoquery --group --grouppkgs={0} --list {1!r}'
+    cmd_template = 'repoquery --group --grouppkgs={0} --list \'{1}\''
 
     cmd = cmd_template.format('all', name)
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
@@ -954,7 +954,7 @@ def group_info(name):
     # considered to be conditional packages.
     ret['conditional packages'] = sorted(all_pkgs)
 
-    cmd = 'repoquery --group --info {0!r}'.format(name)
+    cmd = 'repoquery --group --info \'{0}\''.format(name)
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()

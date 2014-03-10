@@ -36,7 +36,7 @@ def _parse_pkg_meta(path):
                          'certainly a bug.')
             return '', ''
         pkginfo = __salt__['cmd.run_stdout'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(
+            'rpm -qp --queryformat \'{0}\' \'{1}\''.format(
                 # Binary packages have no REPOID, replace this so the rpm
                 # command does not fail with "invalid tag" error
                 __QUERYFORMAT.replace('%{REPOID}', 'binarypkg'),
@@ -51,7 +51,7 @@ def _parse_pkg_meta(path):
 
     def parse_rpm_suse(path):
         pkginfo = __salt__['cmd.run_stdout'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(
+            'rpm -qp --queryformat \'{0}\' \'{1}\''.format(
                 r'%{NAME}_|-%{VERSION}_|-%{RELEASE}\n',
                 path
             )

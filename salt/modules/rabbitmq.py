@@ -126,7 +126,7 @@ def add_user(name, password=None, runas=None):
             string.ascii_uppercase + string.digits) for x in range(15))
 
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1!r}'.format(name, password),
+        'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
 
     if clear_pw:
@@ -172,7 +172,7 @@ def change_password(name, password, runas=None):
         salt '*' rabbitmq.change_password rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1!r}'.format(name, password),
+        'rabbitmqctl change_password {0} \'{1}\''.format(name, password),
         runas=runas)
     msg = 'Password Changed'
 

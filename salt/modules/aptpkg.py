@@ -1442,7 +1442,7 @@ def get_selections(pattern=None, state=None):
     ret = {}
     cmd = 'dpkg --get-selections'
     if pattern:
-        cmd += ' {0!r}'.format(pattern)
+        cmd += ' \'{0}\''.format(pattern)
     else:
         cmd += ' "*"'
     stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
