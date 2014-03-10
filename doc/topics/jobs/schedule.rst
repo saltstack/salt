@@ -1,8 +1,6 @@
-================
-Salt Scheduling
-================
 
-In Salt versions greater than 0.12.0, the scheduling system allows incremental 
+
+In Salt versions greater than 0.12.0, the scheduling system allows incremental
 executions on minions or the master. The schedule system exposes the execution 
 of any execution function on minions or any runner on the master.
 

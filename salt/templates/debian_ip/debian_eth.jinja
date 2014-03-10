@@ -12,8 +12,8 @@ iface {{name}} {{interface.inet_type}} {{interface.proto}}
 {%endif%}{% if interface.mtu %}    mtu {{interface.mtu}}
 {%endif%}{% if interface.dns %}    dns-nameservers {%for item in interface.dns %}{{item}} {%endfor%}
 {%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    {{item}} {{interface.bonding[item]}}
-{%endfor%}{%endif%}{% if interface.bridgeing %}{%for item in interface.bridgeing_keys %}    {{item}} {{interface.bridgeing[item]}}
+{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    bond_{{item}} {{interface.bonding[item]}}
+{%endfor%}{%endif%}{% if interface.bridgeing %}{%for item in interface.bridgeing_keys %}    bridge_{{item}} {{interface.bridgeing[item]}}
 {%endfor%}{%endif%}{% if interface.up_cmds %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
 {%endfor-%}
 {%endif%}{% if interface.down_cmds %}{% for cmd in interface.down_cmds %}    down {{ cmd }}

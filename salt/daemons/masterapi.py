@@ -115,7 +115,7 @@ def access_keys(opts):
 
         if user not in users:
             try:
-                user = pwd.getpwnam(user)
+                user = pwd.getpwnam(user).pw_name
             except KeyError:
                 log.error('ACL user {0} is not available'.format(user))
                 continue
@@ -156,7 +156,8 @@ def fileserver_update(fileserver):
         fileserver.update()
     except Exception as exc:
         log.error(
-            'Exception {0} occurred in file server update'.format(exc)
+            'Exception {0} occurred in file server update'.format(exc),
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
 
 
@@ -286,7 +287,7 @@ class RemoteFuncs(object):
                     minion,
                     'mine.p')
             try:
-                with salt.utils.fopen(mine) as fp_:
+                with salt.utils.fopen(mine, 'rb') as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
@@ -307,12 +308,12 @@ class RemoteFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
                 if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         new = self.serial.load(fp_)
                     if isinstance(new, dict):
                         new.update(load['data'])
                         load['data'] = new
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
@@ -329,11 +330,11 @@ class RemoteFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         mine_data = self.serial.load(fp_)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+') as fp_:
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError:
                     return False
@@ -418,7 +419,7 @@ class RemoteFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
@@ -500,7 +501,7 @@ class RemoteFuncs(object):
             # Use atomic open here to avoid the file being read before it's
             # completely written to. Refs #1935
             salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+'
+                os.path.join(hn_dir, 'return.p'), 'w+b'
             )
         )
         if 'out' in load:
@@ -509,7 +510,7 @@ class RemoteFuncs(object):
                 # Use atomic open here to avoid the file being read before
                 # it's completely written to. Refs #1935
                 salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+'
+                    os.path.join(hn_dir, 'out.p'), 'w+b'
                 )
             )
 
@@ -530,7 +531,7 @@ class RemoteFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
@@ -753,11 +754,10 @@ class LocalFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key):
+    def __init__(self, opts, key):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.key = key
-        self.master_key = master_key
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
@@ -1304,12 +1304,12 @@ class LocalFuncs(object):
         # Save the invocation information
         self.serial.dump(
                 load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
                 )
         # save the minions to a cache so we can see in the UI
         self.serial.dump(
                 minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
                 )
         if self.opts['ext_job_cache']:
             try:
@@ -1367,10 +1367,9 @@ class LocalFuncs(object):
             )
         log.debug('Published command details {0}'.format(pub_load))
 
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': load['jid'],
-                'minions': minions
-            }
-        }
+        return {'ret': {
+                    'jid': load['jid'],
+                    'minions': minions
+                    },
+                'pub': pub_load
+                }

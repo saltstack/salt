@@ -26,7 +26,7 @@ from collections import namedtuple
 
 # Import 3rd-party libs
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -251,6 +251,14 @@ class UtilsTestCase(TestCase):
         self.assertTrue(utils.test_mode(test=True))
         self.assertTrue(utils.test_mode(Test=True))
         self.assertTrue(utils.test_mode(tEsT=True))
+
+    def test_option(self):
+        test_two_level_dict = {'foo': {'bar': 'baz'}}
+
+        self.assertDictEqual({'not_found': 'nope'}, utils.option('foo:bar', {'not_found': 'nope'}))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, opts=test_two_level_dict))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
 
     def test_parse_docstring(self):
         test_keystone_str = '''Management of Keystone users

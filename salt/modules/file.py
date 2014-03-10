@@ -29,6 +29,7 @@ import stat
 import sys
 import tempfile
 import time
+import glob
 
 try:
     import grp
@@ -138,7 +139,7 @@ def gid_to_group(gid):
 
     try:
         return grp.getgrgid(gid).gr_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
@@ -204,7 +205,7 @@ def uid_to_user(uid):
     '''
     try:
         return pwd.getpwuid(uid).pw_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
@@ -400,18 +401,21 @@ def check_hash(path, hash):
     path
         A file path
     hash
-        A string in the form <hash_type>=<hash_value>. For example:
-        ``md5=e138491e9d5b97023cea823fe17bac22``
+        A string in the form <hash_type>:<hash_value>. For example:
+        ``md5:e138491e9d5b97023cea823fe17bac22``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5=<md5sum>
+        salt '*' file.check_hash /etc/fstab md5:<md5sum>
     '''
-    hash_parts = hash.split('=', 1)
+    hash_parts = hash.split(':', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {0!r}'.format(hash))
+        # Support "=" for backward compatibility.
+        hash_parts = hash.split('=', 1)
+        if len(hash_parts) != 2:
+            raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -964,11 +968,12 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
-    for line in fileinput.input(path,
-                                inplace=not dry_run,
-                                backup=False if dry_run else backup,
-                                bufsize=bufsize,
-                                mode='rb'):
+    fi_file = fileinput.input(path,
+                    inplace=not dry_run,
+                    backup=False if dry_run else backup,
+                    bufsize=bufsize,
+                    mode='rb')
+    for line in fi_file:
 
         if search_only:
             # Just search; bail as early as a match is found
@@ -989,6 +994,7 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+    fi_file.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1093,9 +1099,10 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
-    for line in fileinput.input(path,
-            inplace=False, backup=False,
-            bufsize=1, mode='rb'):
+    fi_file = fileinput.input(path,
+                inplace=False, backup=False,
+                bufsize=1, mode='rb')
+    for line in fi_file:
 
         result = line
 
@@ -1126,6 +1133,8 @@ def blockreplace(path,
             new_file.append(result)
     # end for. If we are here without block management we maybe have some problems,
     # or we need to initialise the marked block
+
+    fi_file.close()
 
     if in_block:
         # unterminated block => bad, always fail
@@ -1387,7 +1396,7 @@ def append(path, *args):
         try:
             ofile.seek(-1, os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL:
+            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
@@ -1862,6 +1871,24 @@ def file_exists(path):
 
     '''
     return os.path.isfile(path)
+
+
+def path_exists_glob(path):
+    '''
+    Tests to see if path after expansion is a valid path (file or directory).
+    Expansion allows usage of ? * and character ranges []. Tilde expansion
+    is not supported. Returns True/False.
+
+    .. versionadded:: Hellium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.path_exists_glob /etc/pam*/pass*
+
+    '''
+    return True if glob.glob(path) else False
 
 
 def restorecon(path, recursive=False):
@@ -2343,6 +2370,11 @@ def check_file_meta(
     .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+
+    .. note::
+
+        Supported hash types include sha512, sha384, sha256, sha224, sha1, and
+        md5.
     '''
     changes = {}
     if not source_sum:
@@ -2635,7 +2667,8 @@ def manage_file(name,
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group,
+                             mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')

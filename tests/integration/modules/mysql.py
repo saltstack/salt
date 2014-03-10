@@ -3,8 +3,6 @@
 # Import python libs
 import logging
 
-from salttesting.mock import patch
-
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (
@@ -15,14 +13,13 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 from salt.modules import mysql as mysqlmod
 
 log = logging.getLogger(__name__)
 
 NO_MYSQL = False
 try:
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except Exception:
     NO_MYSQL = True
 
@@ -33,7 +30,7 @@ except Exception:
     'MySQL integration tests.'
 )
 class MysqlModuleDbTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+                        integration.SaltReturnAssertsMixIn):
     '''
     Module testing database creation on a real MySQL Server.
     '''

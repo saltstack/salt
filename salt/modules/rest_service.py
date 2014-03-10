@@ -4,19 +4,18 @@ Service support for the REST example
 '''
 
 # Import python libs
-import glob
 import logging
-import os
-import stat
-
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['rest_sample']
 # Define the module's virtual name
 __virtualname__ = 'service'
+
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
 
 
 def __virtual__():
@@ -86,7 +85,7 @@ def status(name):
     return __opts__['proxyobject'].service_status(name)
 
 
-def list():
+def list_():
     '''
     List services.
 

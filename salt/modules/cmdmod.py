@@ -418,6 +418,7 @@ def _run(cmd,
     except TimedProcTimeoutError as exc:
         ret['stdout'] = str(exc)
         ret['stderr'] = ''
+        ret['retcode'] = None
         ret['pid'] = proc.process.pid
         # ok return code for timeouts?
         ret['retcode'] = 1
@@ -580,7 +581,7 @@ def run(cmd,
         jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
         if os.path.isfile(jid_file):
             serial = salt.payload.Serial(__opts__)
-            with salt.utils.fopen(jid_file) as fn_:
+            with salt.utils.fopen(jid_file, 'rb') as fn_:
                 jid_dict = serial.load(fn_)
 
             if 'child_pids' in jid_dict:
@@ -588,7 +589,7 @@ def run(cmd,
             else:
                 jid_dict['child_pids'] = [ret['pid']]
             # Rewrite file
-            with salt.utils.fopen(jid_file, 'w+') as fn_:
+            with salt.utils.fopen(jid_file, 'w+b') as fn_:
                 fn_.write(serial.dumps(jid_dict))
 
     lvl = _check_loglevel(output_loglevel, quiet)
@@ -679,6 +680,8 @@ def run_stdout(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
 
 
@@ -757,6 +760,8 @@ def run_stderr(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
 
 
@@ -835,6 +840,8 @@ def run_all(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
 
 
@@ -1117,7 +1124,7 @@ def has_exec(cmd):
 
         salt '*' cmd.has_exec cat
     '''
-    return bool(which(cmd))
+    return which(cmd) is not None
 
 
 def exec_code(lang, code, cwd=None):

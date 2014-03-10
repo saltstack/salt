@@ -71,6 +71,9 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['pki_dir'], 'minions'),
                         os.path.join(self.config['pki_dir'], 'minions_pre'),
                         os.path.join(self.config['pki_dir'], 'minions_denied'),
+                        os.path.join(self.config['pki_dir'], 'accepted'),
+                        os.path.join(self.config['pki_dir'], 'pending'),
+                        os.path.join(self.config['pki_dir'], 'rejected'),
                         os.path.join(self.config['pki_dir'],
                                      'minions_rejected'),
                         self.config['cachedir'],
@@ -90,21 +93,27 @@ class Master(parsers.MasterOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
         logger.info('Setting up the Salt Master')
 
-        if not verify_socket(self.config['interface'],
-                             self.config['publish_port'],
-                             self.config['ret_port']):
-            self.exit(4, 'The ports are not available to bind\n')
-        self.config['interface'] = ip_bracket(self.config['interface'])
-        migrations.migrate_paths(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            if not verify_socket(self.config['interface'],
+                                 self.config['publish_port'],
+                                 self.config['ret_port']):
+                self.exit(4, 'The ports are not available to bind\n')
+            self.config['interface'] = ip_bracket(self.config['interface'])
+            migrations.migrate_paths(self.config)
 
-        # Late import so logging works correctly
-        import salt.master
-        self.master = salt.master.Master(self.config)
+            # Late import so logging works correctly
+            import salt.master
+            self.master = salt.master.Master(self.config)
+        else:
+            # Add a udp port check here
+            import salt.daemons.flo
+            self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
 
@@ -183,8 +192,11 @@ class Minion(parsers.MinionOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0077)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
@@ -194,18 +206,22 @@ class Minion(parsers.MinionOptionParser):
             )
         )
         migrations.migrate_paths(self.config)
-        # Late import so logging works correctly
-        import salt.minion
-        # If the minion key has not been accepted, then Salt enters a loop
-        # waiting for it, if we daemonize later then the minion could halt
-        # the boot process waiting for a key to be accepted on the master.
-        # This is the latest safe place to daemonize
-        self.daemonize_if_required()
-        self.set_pidfile()
-        if isinstance(self.config.get('master'), list):
-            self.minion = salt.minion.MultiMinion(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            # Late import so logging works correctly
+            import salt.minion
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion could halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
+            self.daemonize_if_required()
+            self.set_pidfile()
+            if isinstance(self.config.get('master'), list):
+                self.minion = salt.minion.MultiMinion(self.config)
+            else:
+                self.minion = salt.minion.Minion(self.config)
         else:
-            self.minion = salt.minion.Minion(self.config)
+            import salt.daemons.flo
+            self.minion = salt.daemons.flo.IofloMinion(self.config)
 
     def start(self):
         '''
@@ -291,6 +307,7 @@ class ProxyMinion(parsers.MinionOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.config['proxy'] = proxydetails
@@ -378,6 +395,7 @@ class Syndic(parsers.SyndicOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()

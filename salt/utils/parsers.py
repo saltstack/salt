@@ -29,9 +29,27 @@ import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
+from salt._compat import string_types
 
 if not utils.is_windows():
     import salt.cloud.exceptions
+
+
+def parse_args_kwargs(args):
+    '''
+    Parse out the args and kwargs from an args string
+    '''
+    _args = []
+    _kwargs = {}
+    for arg in args:
+        if isinstance(arg, string_types):
+            arg_name, arg_value = salt.utils.parse_kwarg(arg)
+            if arg_name:
+                _kwargs[arg_name] = arg_value
+            else:
+                _args.append(arg)
+
+    return _args, _kwargs
 
 
 def _sorted(mixins_or_funcs):
@@ -1662,12 +1680,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.')
+                else:
+                    self.config['fun'] = self.args[1]
+                    self.config['arg'] = self.args[2:]
+
+                # parse the args and kwargs before sending to the publish interface
+                self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
-
-            else:
-                self.config['fun'] = self.args[1]
-                self.config['arg'] = self.args[2:]
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
@@ -1733,7 +1753,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 0.18.0
+        # XXX: Remove '--key-logfile' support in 2014.1.0
         utils.warn_until(
             'Hydrogen',
             'Remove \'--key-logfile\' support',
@@ -1914,7 +1934,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Filter accepted list arguments as soon as possible
         if not self.options.list:
             return
-        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej')):
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'all')):
             self.error(
                 '{0!r} is not a valid argument to \'--list\''.format(
                     self.options.list
@@ -1934,8 +1954,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def process_key_logfile(self):
         if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 0.18.0
-            # In < 0.18.0 error out
+            # XXX: Remove '--key-logfile' support in 2014.1.0
+            # In < 2014.1.0 error out
             utils.warn_until(
                 'Hydrogen',
                 'Remove \'--key-logfile\' support',
@@ -2111,6 +2131,23 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'runner.function to see documentation on only that runner '
                   'or function.')
         )
+        group = self.output_options_group = optparse.OptionGroup(
+            self, 'Output Options', 'Configure your preferred output format'
+        )
+        self.add_option_group(group)
+
+        group.add_option(
+            '--no-color', '--no-colour',
+            default=False,
+            action='store_true',
+            help='Disable all colored output'
+        )
+        group.add_option(
+            '--force-color', '--force-colour',
+            default=False,
+            action='store_true',
+            help='Force colored output'
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) > 0:
@@ -2151,16 +2188,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
-            '--priv',
-            dest='ssh_priv',
-            help=('Ssh private key file'))
-        self.add_option(
             '--roster',
             dest='roster',
             default='',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
-                  'used. Default is the flat file roster.'))
+                  'used. Default is the flat file roster.')
+        )
         self.add_option(
             '--roster-file',
             dest='roster_file',
@@ -2168,7 +2202,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('define an alternative location for the default roster '
                   'file location. The default roster file is called roster '
                   'and is found in the same directory as the master config '
-                  'file.'))
+                  'file.')
+        )
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
@@ -2177,7 +2212,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Force a refresh of the master side data cache of the '
                   'target\'s data. This is needed if a target\'s grains have '
                   'been changed and the auto refresh timeframe has not been '
-                  'reached.'))
+                  'reached.')
+        )
         self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
@@ -2186,35 +2222,50 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is %default')
-        self.add_option(
-            '-i',
-            '--ignore-host-keys',
-            dest='ignore_host_keys',
-            default=False,
-            action='store_true',
-            help='By default ssh host keys are honored and connections will '
-                 'ask for approval')
+                 'faster communication should be, default is %default'
+        )
         self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
         )
-        self.add_option(
+
+        auth_group = optparse.OptionGroup(
+            self, 'Authentication Options',
+            'Parameters affecting authentication'
+        )
+        auth_group.add_option(
+            '--priv',
+            dest='ssh_priv',
+            help='Ssh private key file'
+        )
+        auth_group.add_option(
+            '-i',
+            '--ignore-host-keys',
+            dest='ignore_host_keys',
+            default=False,
+            action='store_true',
+            help='By default ssh host keys are honored and connections will '
+                 'ask for approval'
+        )
+        auth_group.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
             help='Set the default password to attempt to use when '
-                 'authenticating')
-        self.add_option(
+                 'authenticating'
+        )
+        auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
             action='store_true',
             help='Set this flag to atempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
-                 'initial deployment of keys very fast and easy')
+                 'initial deployment of keys very fast and easy'
+        )
+        self.add_option_group(auth_group)
 
     def _mixin_after_parsed(self):
         if not self.args:
@@ -2260,6 +2311,15 @@ class SaltCloudParser(OptionParser,
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
         self.exit()
+
+    def parse_args(self, args=None, values=None):
+        try:
+            # Late import in order not to break setup
+            from salt.cloud import libcloudfuncs
+            libcloudfuncs.check_libcloud_version()
+        except ImportError as exc:
+            self.error(exc)
+        return super(SaltCloudParser, self).parse_args(args, values)
 
     def _mixin_after_parsed(self):
         if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:

@@ -182,7 +182,7 @@ Continue learning
 
 The best way to continue learning about Salt States is to read through the
 :doc:`reference documentation </ref/states/index>` and to look through examples
-of existing :term:`state trees <state tree>`. Many pre-configured state trees
+of existing state trees. Many pre-configured state trees
 can be found on Github in the `saltstack-formulas`_ collection of repositories.
 
 .. _`saltstack-formulas`: https://github.com/saltstack-formulas

@@ -15,6 +15,8 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
+import json
+import copy
 import re
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -36,6 +38,7 @@ import salt.utils.event
 from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import salt cloud libs
 import salt.cloud
@@ -44,7 +47,8 @@ from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudExecutionTimeout,
-    SaltCloudExecutionFailure
+    SaltCloudExecutionFailure,
+    SaltCloudPasswordError
 )
 
 # Import third party libs
@@ -243,9 +247,156 @@ def salt_config_to_yaml(configuration, line_break='\n'):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.safe_dump(configuration,
-                          line_break=line_break,
-                          default_flow_style=False)
+    return yaml.dump(configuration,
+                     line_break=line_break,
+                     default_flow_style=False,
+                     Dumper=SafeOrderedDumper)
+
+
+def bootstrap(vm_, opts):
+    '''
+    This is the primary entry point for logging into any system (POSIX or
+    Windows) to install Salt. It will make the decision on its own as to which
+    deploy function to call.
+    '''
+    if salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
+        return {
+            'Error': {
+                'No Deploy': '\'deploy\' is not enabled. Not deploying.'
+            }
+        }
+    key_filename = salt.config.get_cloud_config_value(
+        'key_filename', vm_, opts, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_keyfile {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    if key_filename is None and salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
+
+    ret = {}
+
+    log.info('Provisioning existing machine {0}'.format(vm_['name']))
+
+    ssh_username = salt.config.get_cloud_config_value('ssh_username', vm_, opts)
+    deploy_script_code = os_script(vm_)
+    deploy_kwargs = {
+        'host': vm_['ssh_host'],
+        'username': ssh_username,
+        'script': deploy_script_code,
+        'name': vm_['name'],
+        'tmp_dir': salt.config.get_cloud_config_value(
+            'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
+        ),
+        'deploy_command': salt.config.get_cloud_config_value(
+            'deploy_command', vm_, opts,
+            default='/tmp/.saltcloud/deploy.sh',
+        ),
+        'start_action': opts['start_action'],
+        'parallel': opts['parallel'],
+        'sock_dir': opts['sock_dir'],
+        'conf_file': opts['conf_file'],
+        'minion_pem': vm_['priv_key'],
+        'minion_pub': vm_['pub_key'],
+        'keep_tmp': opts['keep_tmp'],
+        'sudo': salt.config.get_cloud_config_value(
+            'sudo', vm_, opts, default=(ssh_username != 'root')
+        ),
+        'sudo_password': salt.config.get_cloud_config_value(
+            'sudo_password', vm_, opts, default=None
+        ),
+        'tty': salt.config.get_cloud_config_value(
+            'tty', vm_, opts, default=True
+        ),
+        'password': salt.config.get_cloud_config_value(
+            'password', vm_, opts, search_global=False
+        ),
+        'key_filename': key_filename,
+        'script_args': salt.config.get_cloud_config_value(
+            'script_args', vm_, opts
+        ),
+        'script_env': salt.config.get_cloud_config_value(
+            'script_env', vm_, opts
+        ),
+        'minion_conf': salt.utils.cloud.minion_config(opts, vm_),
+        'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+        'display_ssh_output': salt.config.get_cloud_config_value(
+            'display_ssh_output', vm_, opts, default=True
+        )
+    }
+
+    # Deploy salt-master files, if necessary
+    if salt.config.get_cloud_config_value('make_master', vm_, opts) is True:
+        deploy_kwargs['make_master'] = True
+        deploy_kwargs['master_pub'] = vm_['master_pub']
+        deploy_kwargs['master_pem'] = vm_['master_pem']
+        master_conf = salt.utils.cloud.master_config(opts, vm_)
+        deploy_kwargs['master_conf'] = master_conf
+
+        if master_conf.get('syndic_master', None):
+            deploy_kwargs['make_syndic'] = True
+
+    deploy_kwargs['make_minion'] = salt.config.get_cloud_config_value(
+        'make_minion', vm_, opts, default=True
+    )
+
+    win_installer = salt.config.get_cloud_config_value(
+        'win_installer', vm_, opts
+    )
+    if win_installer:
+        deploy_kwargs['win_installer'] = win_installer
+        minion = salt.utils.cloud.minion_config(opts, vm_)
+        deploy_kwargs['master'] = minion['master']
+        deploy_kwargs['username'] = salt.config.get_cloud_config_value(
+            'win_username', vm_, opts, default='Administrator'
+        )
+        deploy_kwargs['password'] = salt.config.get_cloud_config_value(
+            'win_password', vm_, opts, default=''
+        )
+
+    # Store what was used to the deploy the VM
+    event_kwargs = copy.deepcopy(deploy_kwargs)
+    del event_kwargs['minion_pem']
+    del event_kwargs['minion_pub']
+    del event_kwargs['sudo_password']
+    if 'password' in event_kwargs:
+        del event_kwargs['password']
+    ret['deploy_kwargs'] = event_kwargs
+
+    fire_event(
+        'event',
+        'executing deploy script',
+        'salt/cloud/{0}/deploying'.format(vm_['name']),
+        {'kwargs': event_kwargs},
+    )
+
+    deployed = False
+    if win_installer:
+        deployed = deploy_windows(**deploy_kwargs)
+    else:
+        deployed = deploy_script(**deploy_kwargs)
+
+    if deployed:
+        ret['deployed'] = deployed
+        log.info('Salt installed on {0}'.format(vm_['name']))
+        return ret
+
+    log.error('Failed to start Salt on host {0}'.format(vm_['name']))
+    return {
+        'Error': {
+            'Not Deployed': 'Failed to start Salt on host {0}'.format(
+                vm_['name']
+            )
+        }
+    }
 
 
 def wait_for_fun(fun, timeout=900, **kwargs):
@@ -424,6 +575,43 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
+def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None):
+    '''
+    Wait until winexe connection can be established.
+    '''
+    start = time.time()
+    log.debug(
+        'Attempting winexe connection to host {0} on port {1}'.format(
+            host, port
+        )
+    )
+    creds = '-U {0}%{1} //{2}'.format(
+            username, password, host)
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            # Shell out to winexe to check %TEMP%
+            ret_code = win_cmd('winexe {0} "sc query winexesvc"'.format(creds))
+            if ret_code == 0:
+                log.debug('winexe connected...')
+                return True
+            log.debug('Return code was {0}'.format(ret_code))
+            time.sleep(1)
+        except socket.error as exc:
+            log.debug('Caught exception in wait_for_winexesvc: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('winexe connection timed out: {0}'.format(timeout))
+                return False
+            log.debug(
+                'Retrying winexe connection to host {0} on port {1} '
+                '(try {2})'.format(
+                    host, port, trycount
+                )
+            )
+
+
 def validate_windows_cred(host, username='Administrator', password=None):
     '''
     Check if the windows credentials are valid
@@ -509,7 +697,10 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
     '''
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
-    if wait_for_port(host=host, port=port, timeout=port_timeout * 60):
+    if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
+                wait_for_winexesvc(host=host, port=port,
+                             username=username, password=password,
+                             timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
@@ -645,7 +836,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
-                           display_ssh_output=display_ssh_output, gateway=gateway):
+                           display_ssh_output=display_ssh_output,
+                           gateway=gateway):
+
+            def remote_exists(path):
+                return not root_cmd('test -e \\"{0}\\"'.format(path),
+                                    tty, sudo, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -671,34 +867,36 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            if provider == 'ibmsce':
-                subsys_command = (
-                    'sed -i "s/#Subsystem/Subsystem/" '
-                    '/etc/ssh/sshd_config'
-                )
-                root_cmd(subsys_command, tty, sudo, **kwargs)
-                root_cmd('service sshd restart', tty, sudo, **kwargs)
-
-            root_cmd(
-                '[ ! -d {0} ] && (mkdir -p {0}; chmod 700 {0}) || '
-                'echo "Directory {0} already exists..."'.format(tmp_dir),
-                tty, sudo, **kwargs
-            )
+            if not remote_exists(tmp_dir):
+                ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
+                                ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant create temporary '
+                        'directory in {0} !'.format(tmp_dir)
+                    )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
                 if len(comps) > 0:
                     if len(comps) > 1 or comps[0] != 'tmp':
-                        root_cmd(
+                        ret = root_cmd(
                             'chown {0}. {1}'.format(username, tmp_dir),
                             tty, sudo, **kwargs
                         )
+                        if ret:
+                            raise SaltCloudSystemExit(
+                                'Cant set {0} ownership on {1}'.format(
+                                    username, tmp_dir))
 
             # Minion configuration
             if minion_pem:
                 scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
-                root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
-                         tty, sudo, **kwargs)
-
+                ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
@@ -727,8 +925,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Master configuration
             if master_pem:
                 scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
-                root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
-                         tty, sudo, **kwargs)
+                ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
+                               tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
                 scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
@@ -751,17 +952,24 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # XXX: We need to make these paths configurable
             preseed_minion_keys_tempdir = '{0}/preseed-minion-keys'.format(
-                                                                    tmp_dir)
+                tmp_dir)
             if preseed_minion_keys is not None:
                 # Create remote temp dir
-                root_cmd(
+                ret = root_cmd(
                     'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
                     tty, sudo, **kwargs
                 )
-                root_cmd(
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant create {0}'.format(preseed_minion_keys_tempdir))
+                ret = root_cmd(
                     'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
                     tty, sudo, **kwargs
                 )
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}'.format(
+                            preseed_minion_keys_tempdir))
                 if kwargs['username'] != 'root':
                     root_cmd(
                         'chown {0} "{1}"'.format(
@@ -779,17 +987,28 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                 if kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root "{0}"'.format(
+                        'chown -R root \\"{0}\\"'.format(
                             preseed_minion_keys_tempdir
                         ),
                         tty, sudo, **kwargs
                     )
+                    if ret:
+                        raise SaltCloudSystemExit(
+                            'Cant set owneship for {0}'.format(
+                                preseed_minion_keys_tempdir))
 
             # The actual deploy script
             if script:
+                # got strange escaping issues with sudoer, going onto a
+                # subshell fixes that
                 scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
-                root_cmd('chmod +x {0}/deploy.sh'.format(tmp_dir),
-                         tty, sudo, **kwargs)
+                ret = root_cmd(
+                    ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
+                     'exit $?').format(tmp_dir),
+                    tty, sudo, **kwargs)
+                if ret:
+                    raise SaltCloudSystemExit(
+                        'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -857,7 +1076,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     deploy_command = '{0}/environ-deploy-wrapper.sh'.format(
                         tmp_dir,
                     )
-
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
@@ -1226,33 +1444,43 @@ def root_cmd(command, tty, sudo, **kwargs):
     log.debug('SSH command: {0!r}'.format(cmd))
 
     try:
-        proc = vt.Terminal(
-            cmd,
-            shell=True,
-            log_stdout=True,
-            log_stderr=True,
-            stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True)
-        )
+        password_retries = 15
+        stdout, stderr = None, None
+        try:
+            proc = vt.Terminal(
+                cmd,
+                shell=True,
+                log_stdout=True,
+                log_stderr=True,
+                stream_stdout=kwargs.get('display_ssh_output', True),
+                stream_stderr=kwargs.get('display_ssh_output', True)
+            )
 
-        sent_password = False
-        while proc.isalive():
-            stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
-                    # second time??? Wrong password?
-                    log.warning(
-                        'Asking for password again. Wrong one provided???'
-                    )
-                    proc.terminate()
-                    return 1
+            sent_password = False
+            while proc.isalive():
+                stdout, stderr = proc.recv()
+                if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                    if sent_password:
+                        # second time??? Wrong password?
+                        log.warning(
+                            'Asking for password again. Wrong one provided???'
+                        )
+                        proc.terminate()
+                        raise SaltCloudPasswordError()
+                    proc.sendline(kwargs['password'])
+                    sent_password = True
 
-                proc.sendline(kwargs['password'])
-                sent_password = True
+                # 0.0125 is really too fast on some systems
+                time.sleep(0.5)
 
-            time.sleep(0.025)
-
-        return proc.exitstatus
+            return proc.exitstatus
+        except SaltCloudPasswordError:
+            if sudo and (password_retries > 0):
+                log.warning(
+                    'Asking for password failed, retrying'
+                )
+            else:
+                return 1
     except vt.TerminalException as err:
         log.error(
             'Failed to execute command {0!r}: {1}\n'.format(
@@ -1440,6 +1668,10 @@ def simple_types_filter(datadict):
     Convert the data dictionary into simple types, ie, int, float, string,
     bool, etc.
     '''
+    if not isinstance(datadict, dict):
+        # This function is only supposed to work on dictionaries
+        return datadict
+
     simpletypes_keys = (str, unicode, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
     simpledict = {}
@@ -1484,7 +1716,135 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
-def salt_cloud_force_ascii(exc):
+def init_cachedir(base=None):
+    '''
+    Initialize the cachedir needed for Salt Cloud to keep track of minions
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+    needed_dirs = (base,
+                   os.path.join(base, 'requested'),
+                   os.path.join(base, 'active'))
+    for dir_ in needed_dirs:
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+        os.chmod(base, 0755)
+
+
+def request_minion_cachedir(
+        minion_id,
+        fingerprint='',
+        pubkey=None,
+        provider=None,
+        base=None,
+    ):
+    '''
+    Creates an entry in the requested/ cachedir. This means that Salt Cloud has
+    made a request to a cloud provider to create an instance, but it has not
+    yet verified that the instance properly exists.
+
+    If the fingerprint is unknown, a raw pubkey can be passed in, and a
+    fingerprint will be calculated. If both are empty, then the fingerprint
+    will be set to None.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    if not fingerprint:
+        if pubkey is not None:
+            fingerprint = salt.utils.pem_finger(key=pubkey)
+
+    init_cachedir(base)
+
+    data = {
+        'minion_id': minion_id,
+        'fingerprint': fingerprint,
+        'provider': provider,
+    }
+
+    fname = '{0}.json'.format(minion_id)
+    path = os.path.join(base, 'requested', fname)
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(data, fh_)
+
+
+def change_minion_cachedir(
+        minion_id,
+        cachedir,
+        data=None,
+        base=None,
+    ):
+    '''
+    Changes the info inside a minion's cachedir entry. The type of cachedir
+    must be specified (i.e., 'requested' or 'active'). A dict is also passed in
+    which contains the data to be changed.
+
+    Example:
+
+        change_minion_cachedir(
+            'myminion',
+            'requested',
+            {'fingerprint': '26:5c:8c:de:be:fe:89:c0:02:ed:27:65:0e:bb:be:60'},
+        )
+    '''
+    if not isinstance(data, dict):
+        return False
+
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
+    path = os.path.join(base, cachedir, fname)
+
+    with salt.utils.fopen(path, 'r') as fh_:
+        cache_data = json.load(fh_)
+
+    cache_data.update(data)
+
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(cache_data, fh_)
+
+
+def activate_minion_cachedir(minion_id, base=None):
+    '''
+    Moves a minion from the requested/ cachedir into the active/ cachedir. This
+    means that Salt Cloud has verified that a requested instance properly
+    exists, and should be expected to exist from here on out.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
+    src = os.path.join(base, 'requested', fname)
+    dst = os.path.join(base, 'active')
+    shutil.move(src, dst)
+
+
+def delete_minion_cachedir(minion_id, base=None):
+    '''
+    Deletes a minion's entry from the cloud cachedir. It will search through
+    all cachedirs to find the minion's cache file.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    fname = '{0}.json'.format(minion_id)
+    for cachedir in ('requested', 'active'):
+        path = os.path.join(base, cachedir, fname)
+        if os.path.exists(path):
+            os.remove(path)
+
+
+def _salt_cloud_force_ascii(exc):
+    '''
+    Helper method to try its best to convert any Unicode text into ASCII
+    without stack tracing since salt internally does not handle Unicode strings
+
+    This method is not supposed to be used directly. Once
+    `py:module: salt.utils.cloud` is imported this method register's with
+    python's codecs module for proper automatic conversion in case of encoding
+    errors.
+    '''
     if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
@@ -1499,4 +1859,4 @@ def salt_cloud_force_ascii(exc):
     # There's nothing else we can do, raise the exception
     raise exc
 
-codecs.register_error('salt-cloud-force-ascii', salt_cloud_force_ascii)
+codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)

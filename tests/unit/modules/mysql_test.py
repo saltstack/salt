@@ -21,7 +21,7 @@ from salt.modules import mysql
 
 NO_MYSQL = False
 try:
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except Exception:
     NO_MYSQL = True
 

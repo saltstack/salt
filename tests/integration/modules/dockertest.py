@@ -6,9 +6,7 @@ Tests for integration with Docker's Python library
 __author__ = 'cro'
 
 # Import python libs
-import sys
 import string
-import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, requires_salt_modules

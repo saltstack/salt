@@ -236,6 +236,45 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
+def optimize_providers(providers):
+    '''
+    Return an optimized list of providers.
+
+    We want to reduce the duplication of querying
+    the same region.
+
+    If a provider is using the same credentials for the same region
+    the same data will be returned for each provider, thus causing
+    un-wanted duplicate data and API calls to EC2.
+
+    '''
+    tmp_providers = {}
+    optimized_providers = {}
+
+    for name, data in providers.iteritems():
+        if 'location' not in data:
+            data['location'] = DEFAULT_LOCATION
+
+        if data['location'] not in tmp_providers:
+            tmp_providers[data['location']] = {}
+
+        creds = (data['id'], data['key'])
+        if creds not in tmp_providers[data['location']]:
+            tmp_providers[data['location']][creds] = {'name': name,
+                                                      'data': data,
+                                                      }
+
+    for location, tmp_data in tmp_providers.iteritems():
+        for creds, data in tmp_data.iteritems():
+            _id, _key = creds
+            _name = data['name']
+            _data = data['data']
+            if _name not in optimized_providers:
+                optimized_providers[_name] = _data
+
+    return optimized_providers
+
+
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
 
@@ -2606,6 +2645,126 @@ def delete_keypair(kwargs=None, call=None):
 
     params = {'Action': 'DeleteKeyPair',
               'KeyName.1': kwargs['keyname']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The create_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'volume_id' not in kwargs:
+        log.error('A volume_id must be specified to create a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = 'pew'
+
+    params = {'Action': 'CreateSnapshot'}
+
+    if 'volume_id' in kwargs:
+        params['VolumeId'] = kwargs['volume_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def delete_snapshot(kwargs=None, call=None):
+    '''
+    Delete a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'snapshot_id' not in kwargs:
+        log.error('A snapshot_id must be specified to delete a snapshot.')
+        return False
+
+    params = {'Action': 'DeleteSnapshot'}
+
+    if 'snapshot_id' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot_id']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def copy_snapshot(kwargs=None, call=None):
+    '''
+    Copy a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The copy_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'source_region' not in kwargs:
+        log.error('A source_region must be specified to copy a snapshot.')
+        return False
+
+    if 'source_snapshot_id' not in kwargs:
+        log.error('A source_snapshot_id must be specified to copy a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = ''
+
+    params = {'Action': 'CopySnapshot'}
+
+    if 'source_region' in kwargs:
+        params['SourceRegion'] = kwargs['source_region']
+
+    if 'source_snapshot_id' in kwargs:
+        params['SourceSnapshotId'] = kwargs['source_snapshot_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def describe_snapshot(kwargs=None, call=None):
+    '''
+    Describe a snapshot
+    TODO: Add all of the filters.
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'snapshot_id' not in kwargs:
+        log.error('A snapshot_id must be specified to describe a snapshot.')
+        return False
+
+    params = {'Action': 'DescribeSnapshots'}
+
+    if 'snapshot_id' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot_id']
+
+    log.debug(params)
 
     data = query(params, return_root=True)
     return data

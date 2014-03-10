@@ -214,11 +214,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         try:
             print_header(
-                'Setting up Salt daemons to execute tests',
+                ' * Setting up Salt daemons to execute tests',
                 top=False, width=getattr(self.options, 'output_columns', PNUM)
             )
         except TypeError:
-            print_header('Setting up Salt daemons to execute tests', top=False)
+            print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
         if not any([self.options.client, self.options.module,

@@ -1,7 +1,14 @@
-======================================
-Release notes and upgrade instructions
-======================================
+=============
+Release notes
+=============
 
+.. releasestree::
+    :maxdepth: 1
+
+    2014.1.0
+
+Archive
+================
 .. releasestree::
     :maxdepth: 1
     :glob:

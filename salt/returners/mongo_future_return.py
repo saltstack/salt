@@ -18,6 +18,9 @@ to the minion config files::
 This mongo returner is being developed to replace the default mongodb returner
 in the future and should not be considered API stable yet.
 
+  To use the mongo returner, append '--return mongo' to the salt command. ex:
+
+    salt '*' test.ping --return mongo
 '''
 
 # Import python libs

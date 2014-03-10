@@ -73,6 +73,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils
+import salt.utils.cache
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -98,6 +99,17 @@ TAGS = {
     'cloud': 'cloud',  # prefix for all salt/cloud events
     'fileserver': 'fileserver',  # prefix for all salt/fileserver events
 }
+
+
+def get_event(node, sock_dir=None, transport='zeromq', **kwargs):
+    '''
+    Return an event object suitible for the named transport
+    '''
+    if transport == 'zeromq':
+        return SaltEvent(node, sock_dir, **kwargs)
+    elif transport == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.SaltEvent(node, sock_dir, **kwargs)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -252,25 +264,35 @@ class SaltEvent(object):
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
-            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-            else:
+            # convert to milliseconds
+            socks = dict(self.poller.poll(wait * 1000))
+            if socks.get(self.sub) != zmq.POLLIN:
                 continue
-            mtag, data = self.unpack(raw, self.serial)
 
-            ret = {'data': data,
-                    'tag': mtag}
+            try:
+                ret = self.get_event_noblock()
+            except zmq.ZMQError as ex:
+                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                    continue
+                else:
+                    raise
 
-            if not mtag.startswith(tag):  # tag not match
+            if not ret['tag'].startswith(tag):  # tag not match
                 self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 
             if full:
                 return ret
-            return data
+            return ret['data']
         return None
+
+    def get_event_noblock(self):
+        '''Get the raw event without blocking or any other niceties
+        '''
+        raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
 
     def iter_events(self, tag='', full=False):
         '''
@@ -301,7 +323,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
-        data['_stamp'] = datetime.datetime.now().isoformat('_')
+        data['_stamp'] = datetime.datetime.now().isoformat()
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
@@ -434,29 +456,27 @@ class EventPublisher(Process):
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
+        salt.utils.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
-        # Start the master event publisher
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        pub_mode = 448
-        if self.opts.get('client_acl') or self.opts.get('external_auth'):
-            pub_mode = 511
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pub.ipc'),
-                pub_mode
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pull.ipc'),
-                448
-                )
+        salt.utils.check_ipc_path_max_len(epull_uri)
 
+        # Start the master event publisher
+        old_umask = os.umask(0177)
+        try:
+            self.epull_sock.bind(epull_uri)
+            self.epub_sock.bind(epub_uri)
+            if self.opts.get('client_acl') or self.opts.get('external_auth'):
+                os.chmod(
+                        os.path.join(self.opts['sock_dir'],
+                            'master_event_pub.ipc'),
+                        0666
+                        )
+        finally:
+            os.umask(old_umask)
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
@@ -587,8 +607,13 @@ class ReactWrap(object):
     '''
     Create a wrapper that executes low data for the reaction system
     '''
+    # class-wide cache of clients
+    client_cache = None
+
     def __init__(self, opts):
         self.opts = opts
+        if ReactWrap.client_cache is None:
+            ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
     def run(self, low):
         '''
@@ -611,22 +636,25 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd_async(*args, **kwargs)
+        if 'local' not in self.client_cache:
+            self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
+        return self.client_cache['local'].cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.low(fun, kwargs)
+        if 'runner' not in self.client_cache:
+            self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
+        return self.client_cache['runner'].low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(fun, **kwargs)
+        if 'wheel' not in self.client_cache:
+            self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
+        return self.client_cache['wheel'].call_func(fun, **kwargs)
 
 
 class StateFire(object):

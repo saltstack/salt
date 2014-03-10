@@ -18,6 +18,7 @@ Mount any type of mountable filesystem with the mounted function:
 
 # Import python libs
 import os.path
+import re
 
 # Import salt libs
 from salt._compat import string_types
@@ -90,6 +91,21 @@ def mounted(name,
         real_device = os.path.realpath(device)
     else:
         real_device = device
+
+    # LVS devices have 2 names under /dev:
+    # /dev/mapper/vg--name-lv--name and /dev/vg-name/lv-name
+    # No matter what name is used for mounting,
+    # mount always displays the device as /dev/mapper/vg--name-lv--name
+    # Note the double-dash escaping.
+    # So, let's call that the canonical device name
+    # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
+    m = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
+    if m:
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in m.groupdict().iteritems())
+        mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
+        if os.path.exists(mapper_device):
+            real_device = mapper_device
+
     device_list = []
     if real_name in active:
         device_list.append(active[real_name]['device'])
@@ -229,7 +245,8 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and fstab_data['none']['fstype'] != 'swap':
+            if fstab_data['none']['device'] == name and \
+               fstab_data['none']['fstype'] != 'swap':
                 return ret
 
         # present, new, change, bad config
@@ -304,25 +321,22 @@ def unmounted(name,
             ret['changes']['umount'] = True
 
     if persist:
-        if __opts__['test']:
-            fstab_data = __salt__['mount.fstab'](config)
-            if name in fstab_data:
+        fstab_data = __salt__['mount.fstab'](config)
+        if name not in fstab_data:
+            ret['comment'] += '. fstab entry not found'
+        else:
+            if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is unmounted but needs to '
                                   'be purged from {1} to be made '
                                   'persistent').format(name, config)
                 return ret
-
-        if ret['changes'].get('umount', False):
-            out = __salt__['mount.rm_fstab'](name, config)
-        else:
-            out = 'bad mount'
-
-        if out is True:
-            ret['changes']['persist'] = 'purged'
-            return ret
-        if out == 'bad mount':
-            ret['result'] = False
-            ret['comment'] += '. Unfortunately the mount could not be purged'
+            else:
+                out = __salt__['mount.rm_fstab'](name, config)
+                if out is not True:
+                    ret['result'] = False
+                    ret['comment'] += '. Failed to persist purge'
+                else:
+                    ret['changes']['persist'] = 'purged'
 
     return ret

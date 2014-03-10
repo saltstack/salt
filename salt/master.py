@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import fnmatch
 import signal
 import shutil
 import stat
@@ -61,6 +60,13 @@ try:
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
+
+try:
+    import systemd.daemon
+    HAS_PYTHON_SYSTEMD = True
+except ImportError:
+    HAS_PYTHON_SYSTEMD = False
+
 
 log = logging.getLogger(__name__)
 
@@ -155,8 +161,42 @@ class Master(SMaster):
         pillargitfs = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                br, loc = opts_dict['git'].strip().split()
-                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
+                    )
+                else:
+                    pillargitfs.append(
+                        git_pillar.GitPillar(
+                            br,
+                            loc,
+                            self.opts
+                        )
+                    )
+
+        # Clear remote fileserver backend env cache so it gets recreated during
+        # the first loop_interval
+        for backend in ('git', 'hg', 'svn'):
+            if backend in self.opts['fileserver_backend']:
+                env_cache = os.path.join(
+                    self.opts['cachedir'],
+                    '{0}fs'.format(backend),
+                    'envs.p'
+                )
+                if os.path.isfile(env_cache):
+                    log.debug('Clearing {0}fs env cache'.format(backend))
+                    try:
+                        os.remove(env_cache)
+                    except (IOError, OSError) as exc:
+                        log.critical(
+                            'Unable to clear env cache file {0}: {1}'
+                            .format(env_cache, exc)
+                        )
 
         old_present = set()
         while True:
@@ -268,9 +308,7 @@ class Master(SMaster):
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
-                'are:\n{0}'.format(
-                    ' '.join(self.opts['fileserver_backend'])
-                )
+                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
             )
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
@@ -286,7 +324,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user \'{0}\''.format(getpass.getuser())
+            'salt-master is starting as user {0!r}'.format(getpass.getuser())
         )
 
         enable_sigusr1_handler()
@@ -386,15 +424,19 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         )
+        salt.utils.check_ipc_path_max_len(pull_uri)
+
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
-        pull_sock.bind(pull_uri)
-        # Restrict access to the socket
-        os.chmod(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'),
-            448
-        )
+
+        # Securely create socket
+        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+        old_umask = os.umask(0177)
+        try:
+            pull_sock.bind(pull_uri)
+        finally:
+            os.umask(old_umask)
 
         try:
             while True:
@@ -467,6 +509,13 @@ class ReqServer(object):
             proc.start()
 
         self.workers.bind(self.w_uri)
+
+        try:
+            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
+                systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon wasn't started by systemd
+            pass
 
         while True:
             try:
@@ -941,7 +990,7 @@ class AESFuncs(object):
                     minion,
                     'mine.p')
             try:
-                with salt.utils.fopen(mine) as fp_:
+                with salt.utils.fopen(mine, 'rb') as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
@@ -983,12 +1032,12 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
                 if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         new = self.serial.load(fp_)
                     if isinstance(new, dict):
                         new.update(load['data'])
                         load['data'] = new
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
@@ -1026,11 +1075,11 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         mine_data = self.serial.load(fp_)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+') as fp_:
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError:
                     return False
@@ -1159,7 +1208,7 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
@@ -1216,15 +1265,21 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        new_loadp = False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
+            # The minion is returning a standalone job, request a jobid
+            load['arg'] = load.get('arg', load.get('fun_args', []))
+            load['tgt_type'] = 'glob'
+            load['tgt'] = load['id']
             load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                load.get('nocache', False))
+            new_loadp = load.get('nocache', True) and True
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(
+            load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
             fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
@@ -1233,12 +1288,17 @@ class AESFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+            load['jid'],
+            self.opts['cachedir'],
+            self.opts['hash_type']
+        )
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
+        if new_loadp:
+            with salt.utils.fopen(
+                os.path.join(jid_dir, '.load.p'), 'w+b'
+            ) as fp_:
+                self.serial.dump(load, fp_)
         hn_dir = os.path.join(jid_dir, load['id'])
         try:
             os.mkdir(hn_dir)
@@ -1265,7 +1325,7 @@ class AESFuncs(object):
             # Use atomic open here to avoid the file being read before it's
             # completely written to. Refs #1935
             salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+'
+                os.path.join(hn_dir, 'return.p'), 'w+b'
             )
         )
         if 'out' in load:
@@ -1274,7 +1334,7 @@ class AESFuncs(object):
                 # Use atomic open here to avoid the file being read before
                 # it's completely written to. Refs #1935
                 salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+'
+                    os.path.join(hn_dir, 'out.p'), 'w+b'
                 )
             )
 
@@ -1297,11 +1357,11 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            with salt.utils.fopen(wtag, 'w+') as fp_:
+            with salt.utils.fopen(wtag, 'w+b') as fp_:
                 fp_.write('')
         except (IOError, OSError):
             log.error(
@@ -1702,24 +1762,11 @@ class ClearFuncs(object):
         with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
-
                 if line.startswith('#'):
                     continue
-
-                if line == keyid:
-                    return True
-                if fnmatch.fnmatch(keyid, line):
-                    return True
-                try:
-                    if re.match(r'\A{0}\Z'.format(line), keyid):
+                else:
+                    if salt.utils.expr_match(keyid, line):
                         return True
-                except re.error:
-                    log.warn(
-                        '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(line, signing_file)
-                    )
-                    continue
-
         return False
 
     def __check_autoreject(self, keyid):
@@ -2536,12 +2583,12 @@ class ClearFuncs(object):
         # Save the invocation information
         self.serial.dump(
                 clear_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
                 )
         # save the minions to a cache so we can see in the UI
         self.serial.dump(
                 minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
                 )
         if self.opts['ext_job_cache']:
             try:

@@ -9,7 +9,7 @@ import os
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, DEFAULT, MagicMock
+from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../')
 
 # Import Salt libs

@@ -160,4 +160,4 @@ For SLE 11 SP2 run the following as root:
     zypper refresh
     zypper install salt salt-minion salt-master
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.

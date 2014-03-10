@@ -361,17 +361,15 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        import integration
-        integration.SYNDIC = None
-        self.sub_minion_process.terminate()
+        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        self.minion_process.terminate()
+        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        self.master_process.terminate()
+        salt.master.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
-        self.syndic_process.terminate()
+        salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
         self.syndic_process.join()
-        self.smaster_process.terminate()
+        salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
         self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
@@ -819,10 +817,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             # This is the supposed return format for state calls
             return ret
 
-        log.debug(
-            'The {0!r} call did not return a dictionary! '
-            'Returned: {1}'.format(func, ret)
-        )
         if isinstance(ret, list):
             jids = []
             # These are usually errors
@@ -841,15 +835,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 jids.append(jid)
 
                 job_data = self.run_function(
-                    '--out yaml saltutil.find_job', [jid]
+                    'saltutil.find_job', [jid]
                 )
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
-                    'Job details:\n{0}\n'
-                    'Killing Job Returned: {1}'.format(job_data, job_kill)
+                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                        job_data, job_kill
+                    )
                 )
-                ret.append('[TEST SUITE ENFORCED]\n{1}\n'
+                ret.append('[TEST SUITE ENFORCED]{0}'
                            '[/TEST SUITE ENFORCED]'.format(msg))
         return ret
 

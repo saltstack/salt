@@ -33,6 +33,7 @@ Full list of builtin state modules
     group
     hg
     host
+    htpasswd
     iptables
     keyboard
     keystone

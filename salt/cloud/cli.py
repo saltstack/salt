@@ -30,25 +30,16 @@ from salt.utils.verify import check_user, verify_env, verify_files
 # Import salt.cloud libs
 import salt.cloud
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
-try:
-    from salt.cloud.libcloudfuncs import libcloud_version
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
 
 log = logging.getLogger(__name__)
 
 
 class SaltCloud(parsers.SaltCloudParser):
+
     def run(self):
         '''
         Execute the salt-cloud command line
         '''
-        if HAS_LIBCLOUD is False:
-            self.error('salt-cloud requires >= libcloud 0.11.4')
-
-        libcloud_version()
-
         # Parse shell arguments
         self.parse_args()
 
@@ -246,7 +237,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
-                    self.config.get('names', ())
+                    self.config.get('names', ()),
+                    profile=self.options.profile
                 )
 
             if not matching:

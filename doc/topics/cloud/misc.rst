@@ -57,7 +57,7 @@ Setting up New Salt Masters
 It has become increasingly common for users to set up multi-hierarchal
 infrastructures using Salt Cloud. This sometimes involves setting up an
 instance to be a master in addition to a minion. With that in mind, you can
-now law down master configuration on a machine by specifying master options
+now lay down master configuration on a machine by specifying master options
 in the profile or map file.
 
 .. code-block:: yaml

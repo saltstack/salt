@@ -55,6 +55,10 @@ Use the following mysql database schema::
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 Required python modules: MySQLdb
+
+  To use the mysql returner, append '--return mysql' to the salt command. ex:
+
+    salt '*' test.ping --return mysql
 '''
 
 # Import python libs

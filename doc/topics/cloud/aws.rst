@@ -424,7 +424,7 @@ Tags can be set once an instance has been launched.
             tag2: value
 
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
-.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/spot-instances/
+.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
 
 Modify EC2 Tags
 ===============
@@ -547,11 +547,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `Debian`__
 
-.. __: http://wiki.debian.org/Cloud/AmazonEC2Image
-
-* `Gentoo`__
-
-.. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
+.. __: https://wiki.debian.org/Cloud/AmazonEC2Image
 
 * `OmniOS`__
 
@@ -559,7 +555,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `All Images on Amazon`__
 
-.. __: https://aws.amazon.com/amis
+.. __: https://aws.amazon.com/marketplace
 
 
 show_image

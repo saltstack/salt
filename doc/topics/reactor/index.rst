@@ -1,5 +1,9 @@
 .. _reactor:
 
+.. index:: Reactor
+    single: Reactor; events
+    see: events; Reactor
+
 ==============
 Reactor System
 ==============

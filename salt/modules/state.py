@@ -77,7 +77,7 @@ def _wait(jid):
         states = _prior_running_states(jid)
 
 
-def running():
+def running(concurrent=False):
     '''
     Return a dict of state return data if a state function is already running.
     This function is used to prevent multiple state calls from being run at
@@ -90,6 +90,8 @@ def running():
         salt '*' state.running
     '''
     ret = []
+    if concurrent:
+        return ret
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
         err = (
@@ -224,6 +226,8 @@ def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
@@ -232,6 +236,8 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -280,12 +286,12 @@ def highstate(test=None, queue=False, **kwargs):
 
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
-    cumask = os.umask(191)
+    cumask = os.umask(077)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
-        with salt.utils.fopen(cache_file, 'w+') as fp_:
+        with salt.utils.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.highstate" cache file {0}'
@@ -304,11 +310,19 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        concurrent=False,
         **kwargs):
     '''
     Execute a set list of state modules from an environment. The default
     environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
     to specify a different environment
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    concurrent:
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
+        Do not use this flag for performance optimization.
 
     CLI Example:
 
@@ -316,6 +330,8 @@ def sls(mods,
 
         salt '*' state.sls core,edit.vim dev
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -329,7 +345,7 @@ def sls(mods,
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
-        conflict = running()
+        conflict = running(concurrent)
         if conflict:
             __context__['retcode'] = 1
             return conflict
@@ -360,7 +376,7 @@ def sls(mods,
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
-            with salt.utils.fopen(cfn, 'r') as fp_:
+            with salt.utils.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_)
 
@@ -388,12 +404,12 @@ def sls(mods,
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(191)
+    cumask = os.umask(077)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
-        with salt.utils.fopen(cache_file, 'w+') as fp_:
+        with salt.utils.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
@@ -405,7 +421,7 @@ def sls(mods,
     # value from before this function was run.
     __opts__['test'] = orig_test
     try:
-        with salt.utils.fopen(cfn, 'w+') as fp_:
+        with salt.utils.fopen(cfn, 'w+b') as fp_:
             try:
                 serial.dump(high_, fp_)
             except TypeError:
@@ -413,7 +429,7 @@ def sls(mods,
                 pass
     except (IOError, OSError):
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
-        log.error(msg.format(fp_))
+        log.error(msg.format(cfn))
     return ret
 
 

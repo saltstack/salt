@@ -191,7 +191,7 @@ def chain_absent(name, table='filter', family='ipv4'):
                               .format(name, table, family))
         else:
             ret['result'] = False
-            ret['comment'] = ('Failed to delete {0} chain in {1} table: {2} for {2}'
+            ret['comment'] = ('Failed to delete {0} chain in {1} table: {2} for {3}'
                               .format(name, table, command.strip(), family))
     else:
         ret['result'] = False
@@ -237,7 +237,7 @@ def append(name, family='ipv4', **kwargs):
                                   rule,
                                   family) is True:
         ret['result'] = True
-        ret['comment'] = 'iptables rule for {0} already set ({1}) for {1}'.format(
+        ret['comment'] = 'iptables rule for {0} already set ({1}) for {2}'.format(
             name,
             command.strip(),
             family)
@@ -296,7 +296,7 @@ def insert(name, family='ipv4', **kwargs):
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
-    rule = __salt__['iptables.build_rule'](family, **kwargs)
+    rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='I', **kwargs)
     if __salt__['iptables.check'](kwargs['table'],
                                   kwargs['chain'],
@@ -325,7 +325,7 @@ def insert(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['iptables.save'](filename=None, family=family)
                 ret['comment'] = ('Set and Saved iptables rule for {0} to: '
-                                  '{1} for {2}'.format(name, command.strip()), family)
+                                  '{1} for {2}').format(name, command.strip(), family)
         return ret
     else:
         ret['result'] = False
@@ -397,7 +397,7 @@ def delete(name, family='ipv4', **kwargs):
     if not result:
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Delete iptables rule for {1} {1}'.format(
+        ret['comment'] = 'Delete iptables rule for {0} {1}'.format(
             name,
             command.strip())
         if 'save' in kwargs:
@@ -450,11 +450,19 @@ def set_policy(name, family='ipv4', **kwargs):
             family):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Set default policy for {0} to {1} family {2]'.format(
+        ret['comment'] = 'Set default policy for {0} to {1} family {2}'.format(
             kwargs['chain'],
             kwargs['policy'],
             family
         )
+        if 'save' in kwargs:
+            if kwargs['save']:
+                __salt__['iptables.save'](filename=None, family=family)
+                ret['comment'] = 'Set and Saved default policy for {0} to {1} family {2}'.format(
+                    kwargs['chain'],
+                    kwargs['policy'],
+                    family
+                )
         return ret
     else:
         ret['result'] = False
@@ -481,13 +489,16 @@ def flush(name, family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
+    if not 'table' in kwargs:
+        kwargs['table'] = 'filter'
+
     if not 'chain' in kwargs:
         kwargs['chain'] = ''
 
     if not __salt__['iptables.flush'](kwargs['table'], kwargs['chain'], family):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Flush iptables rules in {0} table {1} chain {2] family'.format(
+        ret['comment'] = 'Flush iptables rules in {0} table {1} chain {2} family'.format(
             kwargs['table'],
             kwargs['chain'],
             family

@@ -28,9 +28,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, eg. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return 'ip6tables'
+        return salt.utils.which('ip6tables')
     else:
-        return 'iptables'
+        return salt.utils.which('iptables')
 
 
 def _conf(family='ipv4'):
@@ -191,6 +191,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'to-destination' in kwargs:
         after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
         del kwargs['to-destination']
+
+    if 'reject-with' in kwargs:
+        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
+        del kwargs['reject-with']
 
     for item in kwargs:
         if len(item) == 1:
@@ -518,6 +522,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
+    If the position specified is a negative number, then the insert will be
+        performed counting from the end of the list. For instance, a position
+        of -1 will insert the rule as the second to last rule. To insert a rule
+        in the last position, use the append function instead.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -536,6 +545,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Position needs to be specified or use append (-A)'
     if not rule:
         return 'Error: Rule needs to be specified'
+
+    if position < 0:
+        rules = get_rules(family='ipv4')
+        size = len(rules[table][chain]['rules'])
+        position = (size + position) + 1
 
     cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
@@ -881,7 +895,10 @@ def _parser():
     add_arg('--string', dest='string', action='append')
     add_arg('--hex-string', dest='hex-string', action='append')
     ## tcp
-    add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    if sys.version.startswith('2.6'):
+        add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    else:
+        add_arg('--tcp-flags', dest='tcp-flags', action='append', nargs='*')
     add_arg('--syn', dest='syn', action='append')
     add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss

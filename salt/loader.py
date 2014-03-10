@@ -17,6 +17,13 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmdmod
+
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet
+}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.dirname(salt.__file__)
@@ -268,15 +275,17 @@ def ssh_wrapper(opts, functions=None):
     return load.gen_functions(pack)
 
 
-def render(opts, functions):
+def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
     load = _create_loader(
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+            'value': functions}]
+    if states:
+        pack.append({'name': '__states__', 'value': states})
     rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
@@ -1006,7 +1015,7 @@ class Loader(object):
                     self.opts.get('refresh_grains_cache', False):
                     log.debug('Retrieving grains from cache')
                     try:
-                        with salt.utils.fopen(cfn, 'r') as fp_:
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
                             cached_grains = self.serial.load(fp_)
                         return cached_grains
                     except (IOError, OSError):
@@ -1045,12 +1054,12 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(191)
+            cumask = os.umask(077)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
-                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-                with salt.utils.fopen(cfn, 'w+') as fp_:
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)
                     except TypeError:

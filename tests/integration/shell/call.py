@@ -12,6 +12,7 @@
 # Import python libs
 import os
 import sys
+import re
 import shutil
 import yaml
 from datetime import datetime
@@ -76,6 +77,59 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             shutil.move(dst, src)
         self.assertIn(expected_comment, ''.join(stdout))
         self.assertNotEqual(0, retcode)
+
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_return(self):
+        config_dir = '/tmp/salttest'
+        minion_config_file = os.path.join(config_dir, 'minion')
+        minion_config = {
+            'id': 'minion_test_issue_2731',
+            'master': 'localhost',
+            'master_port': 64506,
+            'root_dir': '/tmp/salttest',
+            'pki_dir': 'pki',
+            'cachedir': 'cachedir',
+            'sock_dir': 'minion_sock',
+            'open_mode': True,
+            'log_file': '/tmp/salttest/minion_test_issue_2731',
+            'log_level': 'quiet',
+            'log_level_logfile': 'info'
+        }
+
+        # Remove existing logfile
+        if os.path.isfile('/tmp/salttest/minion_test_issue_2731'):
+            os.unlink('/tmp/salttest/minion_test_issue_2731')
+
+        # Let's first test with a master running
+        open(minion_config_file, 'w').write(
+            yaml.dump(minion_config, default_flow_style=False)
+        )
+        out = self.run_call('-c {0} cmd.run "echo returnTOmaster"'.format(
+            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))
+        jobs = [a for a in self.run_run('-c {0} jobs.list_jobs'.format(
+            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))]
+
+        self.assertTrue(True in ['returnTOmaster' in j for j in jobs])
+        # lookback jid
+        first_match = [(i, j)
+                       for i, j in enumerate(jobs)
+                       if 'returnTOmaster' in j][0]
+        jid, idx = None, first_match[0]
+        while idx > 0:
+            jid = re.match("('|\")([0-9]+)('|\"):", jobs[idx])
+            if jid:
+                jid = jid.group(2)
+                break
+            idx -= 1
+        assert idx > 0
+        assert jid
+        master_out = [
+            a for a in self.run_run('-c {0} jobs.lookup_jid {1}'.format(
+                os.path.join(integration.INTEGRATION_TEST_DIR,
+                             'files',
+                             'conf'),
+                jid))]
+        self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):

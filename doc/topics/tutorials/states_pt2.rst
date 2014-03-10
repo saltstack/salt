@@ -14,8 +14,8 @@ file to have requirements, and use even more Salt States.
 Call multiple States
 ====================
 
-You can specify multiple :term:`state declarations <state declaration>` under
-an :term:`ID declaration`. For example, a quick modification to our
+You can specify multiple :ref:`state-declaration` under an
+:ref:`id-declaration`. For example, a quick modification to our
 ``webserver.sls`` to also start Apache if it is not running:
 
 .. code-block:: yaml
@@ -84,25 +84,25 @@ installed and running. Include the following at the bottom of your
         - require:                              # requisite declaration
           - pkg: apache                         # requisite reference
 
-**line 9** is the :term:`ID declaration`. In this example it is the
-location we want to install our custom HTML file. (**Note:** the default
-location that Apache serves may differ from the above on your OS or distro.
-``/srv/www`` could also be a likely place to look.)
+**line 9** is the :ref:`id-declaration`. In this example it is the location we
+want to install our custom HTML file. (**Note:** the default location that
+Apache serves may differ from the above on your OS or distro. ``/srv/www``
+could also be a likely place to look.)
 
-**Line 10** the :term:`state declaration`. This example uses the Salt :mod:`file
+**Line 10** the :ref:`state-declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
-**Line 11** is the :term:`function declaration`. The :func:`managed function
+**Line 11** is the :ref:`function-declaration`. The :func:`managed function
 <salt.states.file.managed>` will download a file from the master and install it
 in the location specified.
 
-**Line 12** is a :term:`function arg declaration` which, in this example, passes
+**Line 12** is a :ref:`function-arg-declaration` which, in this example, passes
 the ``source`` argument to the :func:`managed function
 <salt.states.file.managed>`.
 
-**Line 13** is a :term:`requisite declaration`.
+**Line 13** is a :ref:`requisite-declaration`.
 
-**Line 14** is a :term:`requisite reference` which refers to a state and an ID.
+**Line 14** is a :ref:`requisite-reference` which refers to a state and an ID.
 In this example, it is referring to the ``ID declaration`` from our example in
 :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
@@ -131,10 +131,10 @@ Verify that Apache is now serving your custom HTML.
 
 .. admonition:: ``require`` vs. ``watch``
 
-    There are two :term:`requisite declarations <requisite declaration>`,
-    “require” and “watch”. Not every state supports “watch”. The :mod:`service
-    state <salt.states.service>` does support “watch” and will restart a
-    service based on the watch condition.
+    There are two :ref:`requisite-declaration`, “require” and “watch”. Not
+    every state supports “watch”. The :mod:`service state
+    <salt.states.service>` does support “watch” and will restart a service
+    based on the watch condition.
 
     For example, if you use Salt to install an Apache virtual host
     configuration file and want to restart Apache whenever that file is changed
@@ -159,8 +159,8 @@ Verify that Apache is now serving your custom HTML.
               - pkg: apache
 
     If the pkg and service names differ on your OS or distro of choice you can
-    specify each one separately using a :term:`name declaration` which
-    explained in :doc:`Part 3 <states_pt3>`.
+    specify each one separately using a :ref:`name-declaration` which explained
+    in :doc:`Part 3 <states_pt3>`.
 
 Next steps
 ==========
