@@ -75,15 +75,20 @@ def _auth(profile=None):
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
         region_name = credentials.get('keystone.region_name', None)
+        api_key = credentials.get('keystone.api_key', None)
+        os_auth_system = credentials.get('keystone.os_auth_system', None)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
         region_name = __salt__['config.option']('keystone.region_name')
+        api_key = __salt__['config.option']('keystone.api_key')
+        os_auth_system = __salt__['config.option']('keystone.os_auth_system')
     kwargs = {
         'username': user,
-        'api_key': password,
+        'password': password,
+        'api_key': api_key,
         'project_id': tenant,
         'auth_url': auth_url,
         'region_name': region_name
