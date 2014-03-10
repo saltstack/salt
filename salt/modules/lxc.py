@@ -1030,13 +1030,13 @@ def saltify(name, config=None, approve_key=True, install=True):
         Whether to attempt a full installtion of salt-minion if needed.
     '''
 
-    info = __salt__['lxc.info'](name)
-    if not info:
+    infos = __salt__['lxc.info'](name)
+    if not infos:
         return None
 
     prior_state = _ensure_running(name)
 
-    __salt__['seed.apply'](info['rootfs'], id_=name, config=config,
+    __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
                            prep_install=True)
 
