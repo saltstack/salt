@@ -310,8 +310,9 @@ class CloudClient(object):
 
         Example:
 
-        client.volume(names=['myblock'], action='create', provider='my-nova',
-            kwargs={'voltype': 'SSD', 'size': 1000})
+        client.volume_action(names=['myblock'], action='create',
+            provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+        )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
@@ -323,13 +324,13 @@ class CloudClient(object):
             names = names.split(',')
         ret = {}
         for name in names:
-            vm_ = kwargs.copy()
-            vm_['name'] = name
-            vm_['provider'] = provider
-            vm_['profile'] = None
-            vm_['action'] = action
+            volume_ = kwargs.copy()
+            volume_['name'] = name
+            volume_['provider'] = provider
+            volume_['profile'] = None
+            volume_['action'] = action
             ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.volumes(vm_)
+                mapper.volumes(volume_)
             )
         return ret
 
@@ -1088,38 +1089,36 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def volumes(self, vm_):
+    def volumes(self, volume_):
         '''
         Volume actions
         '''
-        log.debug(pprint.pformat(vm_))
         output = {}
 
-        alias, driver = vm_['provider'].split(':')
-        fun = '{0}.volume_{1}'.format(driver, vm_['action'])
+        alias, driver = volume_['provider'].split(':')
+        fun = '{0}.volume_{1}'.format(driver, volume_['action'])
         if fun not in self.clouds:
             log.error(
                 'Creating {0[name]!r} using {0[provider]!r} as the provider '
                 'cannot complete since {1!r} is not available'.format(
-                    vm_,
+                    volume_,
                     driver
                 )
             )
             return
 
         try:
-            log.debug('Function: {0}'.format(fun))
-            log.debug('VM: {0}'.format(pprint.pformat(vm_)))
             with context.func_globals_inject(
                                 self.clouds[fun],
-                                __active_provider_name__=vm_['provider']):
-                output = self.clouds[fun](**vm_)
+                                __active_provider_name__=volume_['provider']):
+                output = self.clouds[fun](**volume_)
         except KeyError as exc:
             log.exception(
-                'Failed to create VM {0}. Configuration value {1} needs '
-                'to be set'.format(
-                    vm_['name'], exc
-                )
+                (
+                    'Failed to perform {0[provider]}.volume_{0[action]} '
+                    'on {0[name]}. '
+                    'Configuration value {1} needs to be set'
+                ).format(volume_, exc)
             )
         return output
 
