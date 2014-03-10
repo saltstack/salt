@@ -28,9 +28,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, eg. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return 'ip6tables'
+        return salt.utils.which('ip6tables')
     else:
-        return 'iptables'
+        return salt.utils.which('iptables')
 
 
 def _conf(family='ipv4'):
