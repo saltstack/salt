@@ -1357,11 +1357,23 @@ class Webhook(object):
         }, tag)
         return {'success': ret}
 
-class Stats(cpstats.StatsPage):
+
+class Stats(object):
     '''
     Expose cherrypy stats via cpstats StatsPage class
     '''
-    pass
+    exposed = True
+
+    _cp_config = {
+        'tools.hypermedia_out.on': True,
+    }
+
+    def GET(self):
+        if hasattr(logging, 'statistics'):
+            return cpstats.extrapolate_statistics(logging.statistics)
+
+        return {}
+
 
 class App(object):
     exposed = True
@@ -1414,10 +1426,8 @@ class API(object):
 
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
+
                 'tools.cpstats.on': self.apiopts.get('collect_stats', False),
-            },
-            '/stats': {
-                'request.dispatch': cherrypy.dispatch.Dispatcher(),
             },
         }
 
