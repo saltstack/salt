@@ -174,19 +174,12 @@ class SaltNova(object):
             search_opts={'display_name': name},
         )
         try:
-            volume = volumes[0]
-        except IndexError:
+            volume = volumes[name]
+        except KeyError:
             # volume doesn't exist
-            return False
+            return {'name': name, 'status': 'deleted'}
 
-        response = {'name': volume.display_name,
-                    'size': volume.size,
-                    'id': volume.id,
-                    'description': volume.display_description,
-                    'attachments': volume.attachments,
-                    'status': volume.status
-                    }
-        return response
+        return volume
 
     def volume_create(self, name, size=100, snapshot=None, voltype=None):
         '''
@@ -209,7 +202,7 @@ class SaltNova(object):
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
         response = nt_ks.volumes.delete(volume['id'])
-        return response
+        return self.volume_show(name) 
 
     def volume_detach(self,
                       name,
