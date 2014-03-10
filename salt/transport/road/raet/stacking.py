@@ -91,9 +91,9 @@ class StackUdp(object):
                                                              main=main,
                                                              ha=ha)
         self.estate.stack = self
-        self.serverUdp = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
-        self.serverUdp.reopen()  # open socket
-        self.estate.ha = self.serverUdp.ha  # update estate host address after open
+        self.server = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.server.reopen()  # open socket
+        self.estate.ha = self.server.ha  # update estate host address after open
         self.dumpLocal() # save local estate data
 
         kepts = self.loadAllRemote() # remote estates from saved data
@@ -326,17 +326,17 @@ class StackUdp(object):
         '''
         Service the UDP receive and transmit queues
         '''
-        if self.serverUdp:
+        if self.server:
             while True:
-                rx, ra = self.serverUdp.receive()  # if no data the duple is ('',None)
+                rx, ra = self.server.receive()  # if no data the duple is ('',None)
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.udpRxes.append((rx, ra, self.serverUdp.ha))
+                self.udpRxes.append((rx, ra, self.server.ha))
 
             while self.udpTxes:
                 tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
-                self.serverUdp.send(tx, ta)
+                self.server.send(tx, ta)
 
         return None
 
@@ -351,13 +351,13 @@ class StackUdp(object):
            UDP Socket send
 
         '''
-        if self.serverUdp:
+        if self.server:
             while True:
-                rx, ra = self.serverUdp.receive()  # if no data the duple is ('',None)
+                rx, ra = self.server.receive()  # if no data the duple is ('',None)
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.udpRxes.append((rx, ra, self.serverUdp.ha))
+                self.udpRxes.append((rx, ra, self.server.ha))
 
             self.serviceUdpRx()
 
@@ -367,7 +367,7 @@ class StackUdp(object):
 
             while self.udpTxes:
                 tx, ta = self.udpTxes.popleft()  # duple = (packet, destination address)
-                self.serverUdp.send(tx, ta)
+                self.server.send(tx, ta)
 
         return None
 
@@ -620,9 +620,9 @@ class StackUxd(object):
         self.uxdTxes = uxdTxes if uxdTxes is not None else deque() # uxd packets to transmit
         self.lane = lane # or keeping.LaneKeep()
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
-        self.serverUxd = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
-        self.serverUxd.reopen()  # open socket
-        self.yard.ha = self.serverUxd.ha  # update estate host address after open
+        self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.server.reopen()  # open socket
+        self.yard.ha = self.server.ha  # update estate host address after open
 
         #self.lane.dumpLocalLane(self.yard)
 
@@ -704,17 +704,17 @@ class StackUxd(object):
         '''
         Service the UXD receive and transmit queues
         '''
-        if self.serverUxd:
+        if self.server:
             while True:
-                rx, ra = self.serverUxd.receive()  # if no data the duple is ('',None)
+                rx, ra = self.server.receive()  # if no data the duple is ('',None)
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.uxdRxes.append((rx, ra, self.serverUxd.ha))
+                self.uxdRxes.append((rx, ra, self.server.ha))
 
             while self.uxdTxes:
                 tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
-                self.serverUxd.send(tx, ta)
+                self.server.send(tx, ta)
 
         return None
 
@@ -728,13 +728,13 @@ class StackUxd(object):
            Uxd Socket send
 
         '''
-        if self.serverUxd:
+        if self.server:
             while True:
-                rx, ra = self.serverUxd.receive()  # if no data the duple is ('',None)
+                rx, ra = self.server.receive()  # if no data the duple is ('',None)
                 if not rx:  # no received data so break
                     break
                 # triple = ( packet, source address, destination address)
-                self.uxdRxes.append((rx, ra, self.serverUxd.ha))
+                self.uxdRxes.append((rx, ra, self.server.ha))
 
             self.serviceUxdRx()
 
@@ -742,7 +742,7 @@ class StackUxd(object):
 
             while self.uxdTxes:
                 tx, ta = self.uxdTxes.popleft()  # duple = (packet, destination address)
-                self.serverUxd.send(tx, ta)
+                self.server.send(tx, ta)
 
         return None
 

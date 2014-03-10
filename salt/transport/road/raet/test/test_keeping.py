@@ -115,8 +115,8 @@ def test():
     print stack1.safe.loadLocalData()
     print stack1.safe.loadAllRemoteData()
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     #master stack
     dirpath = os.path.join(os.getcwd(), 'keep', 'master')

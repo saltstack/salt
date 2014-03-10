@@ -161,9 +161,9 @@ def test():
     print stack1.safe.loadAllRemoteData()
     print
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
-    stack2.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
+    stack2.server.close()
 
     #estate0 = stack0.loadLocal()
     #print estate0.name, estate0.eid, estate0.sid, estate0.ha, estate0.signer, estate0.priver
@@ -280,9 +280,9 @@ def test():
     print "{0} estates=\n{1}".format(stack2.name, stack2.estates)
     print "{0} transactions=\n{1}".format(stack2.name, stack2.transactions)
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
-    stack2.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
+    stack2.server.close()
 
     stack0.clearLocal()
     stack0.clearAllRemote()

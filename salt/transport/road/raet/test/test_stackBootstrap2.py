@@ -117,8 +117,8 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     print stack1.safe.loadAllRemoteData()
     print
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     if postClearMaster:
         keeping.clearAllRoadSafe(masterDirpath)

@@ -117,7 +117,7 @@ class CloserStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         Close udp socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUdp):
-            self.stack.value.serverUdp.close()
+            self.stack.value.server.close()
 
 class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
@@ -312,7 +312,7 @@ class CloserStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         Close uxd socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUxd):
-            self.stack.value.serverUxd.close()
+            self.stack.value.server.close()
 
 class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
     '''
