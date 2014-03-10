@@ -230,6 +230,8 @@ following to your master config file:
     ext_pillar:
       - git: <branch> <repo> [root=<gitroot>]
 
+.. versionchanged:: Helium
+    The optional ``root`` parameter will be added.
 
 The ``<branch>`` param is the branch containing the pillar SLS tree, and the
 ``<repo>`` param is the URI for the repository. The below example would add the
