@@ -453,6 +453,14 @@ def create(vm_):
 
     floating = []
 
+    files = config.get_cloud_config_value(
+        'files', vm_, __opts__, search_global=False
+    )
+    if files:
+        kwargs['files'] = {}
+        for src_path in files:
+            with salt.utils.fopen(files[src_path], 'r') as fp_:
+                kwargs['files'][src_path] = fp_.read()
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
