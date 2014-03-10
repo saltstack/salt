@@ -567,8 +567,10 @@ class Cloud(object):
                 # because amazon returns all instances in a region, not
                 # avaliabilty zone.
                 if profile:
-                    if alias not in
-                    self.opts['profiles'][profile]['provider'].split(':')[0]:
+                    if alias not in \
+                        self.opts['profiles'][profile]['provider'].split(
+                            ':'
+                            )[0]:
                         continue
 
                 for vm_name, details in vms.iteritems():
@@ -1445,11 +1447,11 @@ class Map(Cloud):
         for alias, drivers in query_map.iteritems():
             for driver, vms in drivers.iteritems():
                 for vm_name, vm_details in vms.iteritems():
-                    if (vm_details != 'Absent') and
-                    (
-                        vm_details['state'].lower() in
-                        matching_states[action]
-                    ):
+                    if (vm_details != 'Absent') and \
+                        (
+                            vm_details['state'].lower() in
+                            matching_states[action]
+                            ):
                         vm_names.append(vm_name)
         return vm_names
 
