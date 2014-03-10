@@ -26,6 +26,34 @@ def check_nova():
     return HAS_NOVA
 
 
+class NovaServers(object):
+    def __init__(self, name, server):
+        '''
+        Make output look like libcloud output for consistency
+        '''
+        self.name = name
+        self.id = server['id']
+        self.image = server['image']['id']
+        self.size = server['flavor']['id']
+        self.state = server['status']
+        self._uuid = None
+        self.extra = {
+            'metadata': server['metadata'],
+            'access_ip': server['accessIPv4']
+        }
+
+        if 'addresses' in server and 'public' in server['addresses']:
+            self.public_ips = [
+                ip['addr'] for ip in server['addresses']['public']
+            ]
+            self.private_ips = [
+                ip['addr'] for ip in server['addresses']['private']
+            ]
+
+        if hasattr(server, 'password'):
+            self.extra['password'] = server.password
+
+
 # Function alias to not shadow built-ins
 class SaltNova(object):
     '''
@@ -68,29 +96,7 @@ class SaltNova(object):
         server_info = self.server_show(uuid)
         server = server_info.values()[0]
         server_name = server_info.keys()[0]
-        ret = {
-            '_uuid': None,
-            'id': server['id'],
-            'image': server['image']['id'],
-            'size': server['flavor']['id'],
-            'name': server_name,
-            'state': server['status'],
-            'extra': {
-                'metadata': server['metadata'],
-                'access_ip': server['accessIPv4']
-            }
-        }
-
-        if 'addresses' in server and 'public' in server['addresses']:
-            ret['public_ips'] = [
-                ip['addr'] for ip in server['addresses']['public']
-            ]
-            ret['private_ips'] = [
-                ip['addr'] for ip in server['addresses']['private']
-            ]
-
-        if hasattr(self, 'password'):
-            ret['extra']['password'] = self.password
+        ret = NovaServer(server_name, server)
 
         return ret
 
@@ -456,17 +462,13 @@ class SaltNova(object):
         nt_ks.images.delete_meta(id, pairs)
         return {id: 'Deleted: {0}'.format(pairs)}
 
-    def server_list(self, raw=False):
+    def server_list(self):
         '''
         List servers
         '''
         nt_ks = self.compute_conn
         ret = {}
-        servers = nt_ks.servers.list()
-        if raw:
-            return servers
-
-        for item in servers:
+        for item in nt_ks.servers.list():
             ret[item.name] = {
                 'id': item.id,
                 'name': item.name,
@@ -484,7 +486,12 @@ class SaltNova(object):
         '''
         List Servers
         '''
-        return self.server_list(raw=True)
+        ret = []
+        servers = self.server_list()
+        for server in servers.keys():
+            ret.append(server_show_libcloud(servers[server]['id']))
+
+        return ret
 
     def server_list_detailed(self,):
         '''

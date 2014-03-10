@@ -461,7 +461,7 @@ def create(vm_):
 
         if floating:
             try:
-                name = data['name']
+                name = data.name
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
@@ -488,33 +488,33 @@ def create(vm_):
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warn('{0} is a public IP'.format(private_ip))
-                    data['public_ips'].append(private_ip)
+                    data.public_ips.append(private_ip)
                     log.warn(
                         (
                             'Public IP address was not ready when we last'
                             ' checked.  Appending public IP address now.'
                         )
                     )
-                    public = data['public_ips']
+                    public = data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_cidr(vm_, private_ip)
-                    if private_ip not in data['private_ips'] and not ignore_ip:
+                    if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
         if rackconnect(vm_) is True:
             if ssh_interface(vm_) != 'private_ips':
-                data['public_ips'] = access_ip
+                data.public_ips = access_ip
                 return data
 
         if result:
             log.debug('result = {0}'.format(result))
-            data['private_ips'] = result
+            data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
                 return data
 
         if public:
-            data['public_ips'] = public
+            data.public_ips = public
             if ssh_interface(vm_) != 'private_ips':
                 return data
 
@@ -539,11 +539,11 @@ def create(vm_):
     log.debug('VM is now running')
 
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = preferred_ip(vm_, data['private_ips'])
+        ip_address = preferred_ip(vm_, data.private_ips)
     elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        ip_address = data['public_ips']
+        ip_address = data.public_ips
     else:
-        ip_address = preferred_ip(vm_, data['public_ips'])
+        ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
     if not ip_address:
@@ -604,8 +604,8 @@ def create(vm_):
         log.debug(
             'Using {0} as SSH key file'.format(key_filename)
         )
-    elif 'password' in data['extra']:
-        deploy_kwargs['password'] = data['extra']['password']
+    elif 'password' in data.extra:
+        deploy_kwargs['password'] = data.extra['password']
         log.debug('Logging into SSH using password')
 
     ret = {}
@@ -678,8 +678,8 @@ def create(vm_):
 
     ret.update(data)
 
-    if 'password' in data['extra']:
-        del data['extra']['password']
+    if 'password' in data.extra:
+        del data.extra['password']
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(

@@ -16,6 +16,7 @@ Use this minion to spin up a cloud instance:
 
 import pprint
 from salt._compat import string_types
+import salt.utils.cloud as suc
 
 
 def __virtual__():
