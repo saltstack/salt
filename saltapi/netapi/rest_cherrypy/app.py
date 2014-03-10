@@ -183,6 +183,7 @@ import textwrap
 
 # Import third-party libs
 import cherrypy
+from cherrypy.lib import cpstats
 import yaml
 
 # Import Salt libs
@@ -1356,6 +1357,11 @@ class Webhook(object):
         }, tag)
         return {'success': ret}
 
+class Stats(cpstats.StatsPage):
+    '''
+    Expose cherrypy stats via cpstats StatsPage class
+    '''
+    pass
 
 class App(object):
     exposed = True
@@ -1377,6 +1383,7 @@ class API(object):
         'jobs': Jobs,
         'events': Events,
         'hook': Webhook,
+        'stats': Stats,
     }
 
     def __init__(self):
@@ -1407,6 +1414,10 @@ class API(object):
 
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
+            },
+            '/stats': {
+                'request.dispatch': cherrypy.dispatch.Dispatcher(),
+                'tools.cpstats.on': self.apiopts.get('collect_stats', False),
             },
         }
 
