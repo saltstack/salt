@@ -43,6 +43,12 @@ A REST API for Salt
 
         .. versionchanged:: 0.8.4
             Previous versions defaulted to ``5`` connections.
+    collect_stats : False
+        Collect and report statistics about the CherryPy server
+
+        .. versionadded:: 0.8.4
+
+        Reports are available via the :py:class:`Stats` URL.
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``

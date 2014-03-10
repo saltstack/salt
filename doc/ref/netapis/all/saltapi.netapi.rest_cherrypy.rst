@@ -36,3 +36,6 @@ REST URI Reference
 
 .. autoclass:: Webhook
     :members: POST
+
+.. autoclass:: Stats
+    :members: GET
