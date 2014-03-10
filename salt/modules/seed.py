@@ -84,7 +84,9 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         Install salt-minion, if absent. Default: true.
 
     prep_install
-        Prepare the bootstrap script, but don't run it. Default: false
+        Prepare the bootstrap script, but don't run it. The files needed for
+        installation (bootstrap.py, config, and keys) will be placed in /tmp
+        on the target path/device. Default: false
     '''
     stats = __salt__['file.stats'](path, follow_symlinks=True)
     if not stats:
