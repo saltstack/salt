@@ -96,6 +96,7 @@ class SaltNova(object):
         '''
         Make output look like libcloud output for consistency
         '''
+        log.debug('serverinfo: {0}'.format(uuid))
         server_info = self.server_show(uuid)
         server = server_info.values()[0]
         server_name = server_info.keys()[0]
@@ -230,9 +231,11 @@ class SaltNova(object):
         Detach a block device
         '''
         volume = self.volume_show(name)
-        server = self.server_by_name(server_name)
+        server = self.server_list().get(name, {}).get('id', '')
+        if not server:
+            return False
         response = self.compute_conn.volumes.delete_server_volume(
-            server.id,
+            server,
             volume['attachments'][0]['id']
         )
         trycount = 0
