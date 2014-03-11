@@ -17,6 +17,9 @@ opts['ioflo_realtime']
 opts['ioflo_verbose']
 '''
 
+# Import python libs
+import multiprocessing
+
 # Import modules
 from . import core
 
@@ -47,6 +50,40 @@ class IofloMaster(object):
         Assign self.opts
         '''
         self.opts = opts
+        self.preloads = explode_opts(self.opts)
+
+    def _make_workers(self):
+        '''
+        Spin up a process for each worker thread
+        '''
+        for ind in range(int(self.opts['worker_threads'])):
+            proc = multiprocessing.Process(
+                    target=self._worker, kwargs={'yid': ind + 1}
+                    )
+            proc.start()
+
+    def _worker(self, yid):
+        '''
+        Spin up a worker, do this in s multiprocess
+        '''
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        self.preloads.append('.salt.yid', yid)
+        ioflo.app.run.start(
+                name='worker{0}'.format(yid),
+                period=float(self.opts['ioflo_period']),
+                stamp=0.0,
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['worker_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metas=None,
+                preloads=self.preloads,
+                verbose=int(self.opts['ioflo_verbose']),
+                )
+
 
     def start(self):
         '''
@@ -55,7 +92,6 @@ class IofloMaster(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        preloads = explode_opts(self.opts)
         ioflo.app.run.start(
                 name='master',
                 period=float(self.opts['ioflo_period']),
@@ -68,7 +104,7 @@ class IofloMaster(object):
                 mode=None,
                 houses=None,
                 metas=None,
-                preloads=preloads,
+                preloads=self.preloads,
                 verbose=int(self.opts['ioflo_verbose']),
                 )
 
