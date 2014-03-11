@@ -256,7 +256,7 @@ def _check_and_install_rbenv(ret, user=None):
 
     ret = _check_rbenv(ret, user)
     if ret['result'] is False:
-        if  __salt__['rbenv.install'](user):
+        if __salt__['rbenv.install'](user):
             ret['result'] = True
             ret['comment'] = 'Rbenv installed'
         else:
