@@ -101,6 +101,14 @@ Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
 
+Configuring Salt SSH
+====================
+
+Salt SSH takes its configuration from a master configuration file. Normally, this
+file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+configuration file named ``master``.
+
 Running Salt SSH as non-root user
 =================================
 
