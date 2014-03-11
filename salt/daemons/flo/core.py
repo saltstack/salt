@@ -193,11 +193,9 @@ class Router(ioflo.base.deeding.Deed):
                'fun': '.salt.local.fun',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'workers': '.salt.track.workers',
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
-
-    def postinitio(self):
-        self.next_worker  # pylint: disable=W0104
 
     def _process_udp_rxmsg(self, msg):
         '''
