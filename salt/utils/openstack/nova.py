@@ -400,7 +400,7 @@ class SaltNova(object):
         Delete a flavor
         '''
         nt_ks = self.compute_conn
-        nt_ks.flavors.delete(flvaor_id)
+        nt_ks.flavors.delete(flavor_id)
         return 'Flavor deleted: {0}'.format(flavor_id)
 
     def keypair_list(self):
