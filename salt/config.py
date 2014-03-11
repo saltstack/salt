@@ -444,6 +444,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_timeout': 60,
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
+    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
