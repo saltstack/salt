@@ -553,13 +553,9 @@ class LowDataAdapter(object):
             predicate=inspect.ismethod) if not name.startswith('__')]
         clients.remove('run') # run method calls client interfaces
 
-        # Grab a list of output formats
-        formats = [ctype for ctype, _ in ct_out_map]
-
         return {
             'return': "Welcome",
             'clients': clients,
-            'output': formats,
         }
 
     def POST(self, **kwargs):
