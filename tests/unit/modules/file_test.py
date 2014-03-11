@@ -212,6 +212,40 @@ class FileBlockReplaceTestCase(TestCase):
                           + "\n" + new_content
                           + "\n" + '#-- END BLOCK 2', fp.read())
 
+    def test_replace_append_newline_at_eof(self):
+        '''
+        Check that file.blockreplace works consistently on files with and
+        without newlines at end of file.
+        '''
+        base = 'bar'
+        args = {
+                'marker_start': '#start',
+                'marker_end': '#stop',
+                'content': 'baz',
+                'append_if_not_found': True,
+        }
+        block = '{marker_start}\n{content}\n{marker_end}\n'.format(**args)
+        expected = base + '\n' + block
+        # File ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base + '\n')
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # File not ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base)
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), block)
+
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
 
