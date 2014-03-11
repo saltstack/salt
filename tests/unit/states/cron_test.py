@@ -135,13 +135,12 @@ class CronTestCase(TestCase):
             user='root')
         self.assertEqual(
             get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 2 * * * foo\n'
-            '# SALT_CRON_IDENTIFIER:2\n'
-            '* 2 * * * foo\n'
-            '# SALT_CRON_IDENTIFIER:NO ID SET\n'
-            '* 2 * * * foo')
+            ('# Lines below here are managed by Salt, do not edit\n'
+             '# SALT_CRON_IDENTIFIER:1\n'
+             '* 2 * * * foo\n'
+             '# SALT_CRON_IDENTIFIER:2\n'
+             '* 2 * * * foo\n'
+             '* 2 * * * foo'))
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
