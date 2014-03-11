@@ -352,8 +352,8 @@ def destroy(name, conn=None, call=None):
             flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
-        client = salt.client.LocalClient(__opts__['conf_file'])
-        minions = client.cmd(name, 'mine.flush')
+        salt_client = salt.client.LocalClient(__opts__['conf_file'])
+        minions = salt_client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(
         name,
