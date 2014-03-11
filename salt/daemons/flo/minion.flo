@@ -56,11 +56,15 @@ framer bootstrap be active first join
       go next
 
    frame router
-      do minion router
+      do router
 
    frame abort
       bid stop all
 
+framer eventing be active first event
+   frame event
+      do eventer
+
 framer functionmanager be active first checkexec
    frame checkexec
-      do nix function
+      do nix executor
