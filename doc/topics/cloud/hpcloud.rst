@@ -51,7 +51,9 @@ Compute Region
 ==============
 
 Originally, HP Cloud, in its OpenStack Essex version (1.0), had 3
-availability zones in one region, US West, which each behaved as a region should. 
+availability zones in one region, US West (region-a.geo-1), which 
+each behaved each as a region.  
+
 This has since changed, and the current OpenStack Grizzly version of 
 HP Cloud (1.1) now has simplified this and now has two regions to choose from:
 
@@ -89,7 +91,7 @@ profile configuration file is stored in the following location:
 
 Some important things about the example above:
 
-* The ``image`` parameter can use either the image name or image ID which you can obtain by running in the example below (this case AE1):
+* The ``image`` parameter can use either the image name or image ID which you can obtain by running in the example below (this case US East):
 
 .. code-block:: bash 
 
@@ -113,7 +115,7 @@ To instantiate a machine based on this profile (example):
 
 
 After several minutes, this will create an instance named ubuntu_instance_1
-running in HP Cloud in the AE1 region and will set up the minion and then 
+running in HP Cloud in the US East region and will set up the minion and then 
 return information about the instance once completed.
 
 Once the instance has been created with salt-minion installed, connectivity to 

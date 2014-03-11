@@ -57,7 +57,7 @@ def __virtual__():
     Only load this module if the psql bin exists
     '''
     if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
-        return 'postgres'
+        return True
     return False
 
 

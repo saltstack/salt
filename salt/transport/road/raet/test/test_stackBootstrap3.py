@@ -117,6 +117,35 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     print stack1.safe.loadAllRemoteData()
     print
 
+
+    print "\n********* Allow Transaction **********"
+    if not stack1.estates.values()[0].joined:
+        return
+    stack1.allow()
+    #timer = StoreTimer(store=store, duration=3.0)
+    while stack1.transactions or stack0.transactions:
+        stack1.serviceAll()
+        stack0.serviceAll()
+        store.advanceStamp(0.1)
+
+    for estate in stack0.estates.values():
+        print "Remote Estate {0} allowed= {1}".format(estate.eid, estate.allowed)
+    for estate in stack1.estates.values():
+        print "Remote Estate {0} allowed= {1}".format(estate.eid, estate.allowed)
+
+
+    print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
+    print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
+    print "{0} transactions=\n{1}".format(stack0.name, stack0.transactions)
+    print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
+    print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
+    print "{0} transactions=\n{1}".format(stack1.name, stack1.transactions)
+
+    while stack1.transactions or stack0.transactions:
+        stack1.serviceAll()
+        stack0.serviceAll()
+        store.advanceStamp(0.1)
+
     stack0.server.close()
     stack1.server.close()
 

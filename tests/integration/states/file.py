@@ -925,6 +925,59 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
+    def __test_issue_11003_immutable_lazy_proxy_sum(self):
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
+        testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
+        sls_template = [
+            'test-acc1:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            bar',
+            'test-acc2:',
+            '  file.accumulated:',
+            '    - watch_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            baz',
+            'final:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start salt managed zoneend -- PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end salt managed zoneend --"',
+            '    - content: \'\'',
+            '    - append_if_not_found: True',
+            '    - show_changes: True'
+        ]
+
+        open(template_path, 'w').write(
+                '\n'.join(sls_template).format(testcase_filedest))
+        try:
+            ret = self.run_function('state.sls', mods='issue-11003')
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
+            self.assertEqual(
+                ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                 'foo',
+                 '',
+                 '#-- end salt managed zonestart --',
+                 '#',
+                 '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+                 'bar',
+                 '',
+                 '#-- end salt managed zoneend --',
+                 ''],
+                open(testcase_filedest).read().split('\n')
+            )
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
+
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 chararacters on the sls

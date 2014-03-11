@@ -836,12 +836,26 @@ class Loader(object):
                                     )
                                 continue
 
-                            if virtual is not True and module_name != virtual:
-                                # If __virtual__ returned True the module will
-                                # be loaded with the same name, if it returned
-                                # other value than `True`, it should be a new
-                                # name for the module.
-                                # Update the module name with the new name
+                            # At this point, __virtual__ did not return a
+                            # boolean value, let's check for deprecated usage
+                            # or module renames
+                            if virtual is not True and module_name == virtual:
+                                # The module was not renamed, it should
+                                # have returned True instead
+                                salt.utils.warn_until(
+                                    'Helium',
+                                    'The {0!r} module is NOT renaming itself '
+                                    'and is returning a string. In this case '
+                                    'the __virtual__() function should simply '
+                                    'return `True`. This usage will become an '
+                                    'error in Salt Helium'.format(
+                                        mod.__name__,
+                                    )
+                                )
+
+                            elif virtual is not True and module_name != virtual:
+                                # The module is renaming itself. Updating the
+                                # module name with the new name
                                 log.debug(
                                     'Loaded {0} as virtual {1}'.format(
                                         module_name, virtual
@@ -862,10 +876,31 @@ class Loader(object):
                                             virtual
                                         )
                                     )
-                                module_name = virtual
 
-                            elif virtual and hasattr(mod, '__virtualname__'):
-                                module_name = mod.__virtualname__
+                                # Get the module's virtual name
+                                virtualname = getattr(
+                                    mod, '__virtualname__', virtual
+                                )
+
+                                if virtualname != virtual:
+                                    # The __virtualname__ attribute does not
+                                    # match what's being returned by the
+                                    # __virtual__() function. This should be
+                                    # considered an error.
+                                    log.error(
+                                        'The module {0!r} is showing some bad '
+                                        'usage. It\'s __virtualname__ '
+                                        'attribute is set to {1!r} yet the '
+                                        '__virtual__() function is returning '
+                                        '{2!r}. These values should '
+                                        'match!'.format(
+                                            mod.__name__,
+                                            virtualname,
+                                            virtual
+                                        )
+                                    )
+
+                                module_name = virtualname
 
                 except KeyError:
                     # Key errors come out of the virtual function when passing

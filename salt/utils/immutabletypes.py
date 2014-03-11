@@ -56,6 +56,9 @@ class ImmutableList(collections.Sequence):
     def __add__(self, other):
         return self.__obj + other
 
+    def __radd__(self, other):
+        return other + self.__obj
+
     def __getitem__(self, key):
         return ImmutableLazyProxy(self.__obj[key])
 

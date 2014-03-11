@@ -16,7 +16,7 @@ def __virtual__():
     Only available on systems with Riak installed.
     '''
     if salt.utils.which('riak'):
-        return 'riak'
+        return True
     return False
 
 

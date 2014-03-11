@@ -372,8 +372,7 @@ class SafeKeep(Keep):
                         status = raeting.acceptances.pending
 
                 else: # pre-existing was pending
-                    # waiting for external acceptance need to change
-                    # status = raeting.acceptances.accepted
+                    # waiting for external acceptance
                     pass
 
         else: #other estate logic

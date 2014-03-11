@@ -28,10 +28,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_vhost'
-    if not __salt__['cmd.has_exec']('rabbitmqctl'):
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,

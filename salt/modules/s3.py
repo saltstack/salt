@@ -46,7 +46,7 @@ def __virtual__():
     '''
     Should work on any modern Python installation
     '''
-    return 's3'
+    return True
 
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,

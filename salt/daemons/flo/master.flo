@@ -12,11 +12,26 @@ framer masterudpstack be active first start
       exit
          do raet udp stack closer per inode ".raet.udp.stack."
 
+framer inbound be active first start
+   frame start
+      do rx
+
 framer uxdrouter be active first start
    frame start
-      do master router
-      #timeout 20
+      do router
+
+framer events be active first start
+   frame start
+      do eventer
+
+framer publish be active first start
+   frame start
+      do publisher
 
 framer localcmd be active first start
    frame start
       do cmd local
+
+framer outbound be active first start
+   frame start
+      do tx

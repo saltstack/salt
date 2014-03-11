@@ -20,7 +20,7 @@ def testStackUxd(kind=raeting.packKinds.json):
 
 
     '''
-    console.reinit(verbosity=console.Wordage.verbose)
+    console.reinit(verbosity=console.Wordage.concise)
 
     stacking.StackUxd.Pk = kind
 
@@ -202,7 +202,8 @@ def testStackUxd(kind=raeting.packKinds.json):
     print "{0} yards=\n{1}".format(stack1.name, stack1.yards)
     print "{0} names=\n{1}".format(stack1.name, stack1.names)
 
-
+    stack0.server.close()
+    stack1.server.close()
 
 if __name__ == "__main__":
     testStackUxd(raeting.packKinds.json)

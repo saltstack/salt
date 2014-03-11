@@ -20,9 +20,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-# Define the module's virtual name
-__virtualname__ = 'ps'
-
 
 def __virtual__():
     if not HAS_PSUTIL:
@@ -36,7 +33,7 @@ def __virtual__():
     # most distributions have already moved to later versions (for example,
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
-        return __virtualname__
+        return True
     return False
 
 

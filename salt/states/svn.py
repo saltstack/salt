@@ -27,9 +27,7 @@ def __virtual__():
     '''
     Only load if svn is available
     '''
-    if __salt__['cmd.has_exec']('svn'):
-        return 'svn'
-    return False
+    return __salt__['cmd.has_exec']('svn')
 
 
 def latest(name,
