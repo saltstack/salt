@@ -49,7 +49,7 @@ def __virtual__():
     '''
     Only load if the mysql module is available
     '''
-    return 'mysql_grants' if 'mysql.grant_exists' in __salt__ else False
+    return 'mysql.grant_exists' in __salt__
 
 
 def _get_mysql_error():
