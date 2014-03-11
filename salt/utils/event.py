@@ -38,7 +38,7 @@ When the tag is exactly 20 characters no padded is done.
 The get_event method intelligently figures out if the tag is longer than 20 characters.
 
 
-The convention for namespacing is to use dot characters "." as the name space delimeter.
+The convention for namespacing is to use dot characters "." as the name space delimiter.
 The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
@@ -84,8 +84,8 @@ SUB_EVENT = set([
             'state.sls',
             ])
 
-TAGEND = '\n\n'  # long tag delimeter
-TAGPARTER = '/'  # name spaced tag delimeter
+TAGEND = '\n\n'  # long tag delimiter
+TAGPARTER = '/'  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -115,7 +115,7 @@ def get_event(node, sock_dir=None, transport='zeromq', **kwargs):
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
-    from joinning with the TABPART character the base, prefix and suffix
+    from joining with the TABPART character the base, prefix and suffix
 
     If string prefix is a valid key in TAGS Then use the value of key prefix
     Else use prefix string
@@ -221,7 +221,7 @@ class SaltEvent(object):
         '''
         self.push = self.context.socket(zmq.PUSH)
         try:
-            # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
+            # bug in 0MQ default send timeout of -1 (infinite) is not infinite
             self.push.setsockopt(zmq.SNDTIMEO, timeout)
         except AttributeError:
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
@@ -306,7 +306,7 @@ class SaltEvent(object):
 
     def fire_event(self, data, tag, timeout=1000):
         '''
-        Send a single event into the publisher with paylod dict "data" and event
+        Send a single event into the publisher with payload dict "data" and event
         identifier "tag"
 
         Supports new style long tags.
