@@ -86,15 +86,18 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    ret = {}
     cmd = 'brew list --versions'
+    ret = {}
     out = __salt__['cmd.run'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         try:
-            name, version_num = line.split(' ')[0:2]
+            name_and_versions = line.split(' ')
+            name = name_and_versions[0]
+            installed_versions = name_and_versions[1:]
+            newest_version = sorted(installed_versions, cmp=salt.utils.version_cmp).pop()
         except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
