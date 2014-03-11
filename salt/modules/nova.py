@@ -389,7 +389,7 @@ def flavor_list(profile=None):
 
 
 def flavor_create(name,      # pylint: disable=C0103
-                  id=0,      # pylint: disable=C0103
+                  flavor_id=0,      # pylint: disable=C0103
                   ram=0,
                   disk=0,
                   vcpus=1,
@@ -400,7 +400,7 @@ def flavor_create(name,      # pylint: disable=C0103
 
     name
         Name of the new flavor (must be first)
-    id
+    flavor_id
         Unique integer ID for the new flavor
     ram
         Memory size in MB
@@ -413,19 +413,20 @@ def flavor_create(name,      # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
+        salt '*' nova.flavor_create myflavor flavor_id=6 \
+                ram=4096 disk=10 vcpus=1
     '''
     conn = _auth(profile)
     return conn.flavor_create(
         name,
-        id,
+        flavor_id,
         ram,
         disk,
         vcpus
     )
 
 
-def flavor_delete(id, profile=None):  # pylint: disable=C0103
+def flavor_delete(flavor_id, profile=None):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -436,7 +437,7 @@ def flavor_delete(id, profile=None):  # pylint: disable=C0103
         salt '*' nova.flavor_delete 7
     '''
     conn = _auth(profile)
-    return conn.flavor_delete(id)
+    return conn.flavor_delete(flavor_id)
 
 
 def keypair_list(profile=None):
@@ -502,7 +503,7 @@ def image_list(name=None, profile=None):
     return conn.image_list(name)
 
 
-def image_meta_set(id=None,
+def image_meta_set(image_id=None,
                    name=None,
                    profile=None,
                    **kwargs):  # pylint: disable=C0103
@@ -513,19 +514,19 @@ def image_meta_set(id=None,
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
+        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
                 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
     conn = _auth(profile)
     return conn.image_meta_set(
-        id,
+        image_id,
         name,
         **kwargs
     )
 
 
-def image_meta_delete(id=None,     # pylint: disable=C0103
+def image_meta_delete(image_id=None,     # pylint: disable=C0103
                       name=None,
                       keys=None,
                       profile=None):
@@ -538,12 +539,12 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
     .. code-block:: bash
 
         salt '*' nova.image_meta_delete \
-                id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+                6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     conn = _auth(profile)
-    return conn.image_meta_data(
-        id,
+    return conn.image_meta_delete(
+        image_id,
         name,
         keys
     )
