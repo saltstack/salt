@@ -67,7 +67,7 @@ def _minion_opts(cfg='minion'):
         default_dir = salt.syspaths.CONFIG_DIR,
     cfg = os.environ.get(
         'SALT_MINION_CONFIG', os.path.join(default_dir, cfg))
-    opts = config.minion_conf(cfg)
+    opts = config.minion_config(cfg)
     return opts
 
 
