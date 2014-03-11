@@ -108,7 +108,10 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'django_orm'
+    '''
+    Always load
+    '''
+    return True
 
 
 def ext_pillar(minion_id,

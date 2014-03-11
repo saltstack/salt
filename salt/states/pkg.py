@@ -76,7 +76,7 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     '''
-    return 'pkg' if 'pkg.install' in __salt__ else False
+    return 'pkg.install' in __salt__
 
 
 def __gen_rtag():
@@ -357,7 +357,9 @@ def installed(
         Skip the GPG verification check for the package to be installed
 
     skip_suggestions
-        Force strict package naming. Disable lookup of package alternatives
+        Force strict package naming. Disables lookup of package alternatives.
+
+        .. versionadded:: 2014.1.1
 
     version
         Install a specific version of a package. This option is ignored if

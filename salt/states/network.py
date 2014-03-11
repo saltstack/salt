@@ -161,9 +161,6 @@ import salt.utils
 import salt.utils.network
 from salt.loader import _create_loader
 
-# Define the module's virtual name
-__virtualname__ = 'network'
-
 # Set up logging
 import logging
 log = logging.getLogger(__name__)
@@ -175,7 +172,7 @@ def __virtual__():
     module available.
     '''
     if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
-        return __virtualname__
+        return True
     return False
 
 

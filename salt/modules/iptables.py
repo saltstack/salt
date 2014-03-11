@@ -19,7 +19,7 @@ def __virtual__():
     Only load the module if iptables is installed
     '''
     if salt.utils.which('iptables'):
-        return 'iptables'
+        return True
     return False
 
 
@@ -28,9 +28,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, eg. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return 'ip6tables'
+        return salt.utils.which('ip6tables')
     else:
-        return 'iptables'
+        return salt.utils.which('iptables')
 
 
 def _conf(family='ipv4'):

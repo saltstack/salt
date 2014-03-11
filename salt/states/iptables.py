@@ -110,7 +110,7 @@ def __virtual__():
     '''
     Only load if the locale module is available in __salt__
     '''
-    return 'iptables' if 'iptables.version' in __salt__ else False
+    return 'iptables.version' in __salt__
 
 
 def chain_present(name, table='filter', family='ipv4'):
@@ -325,7 +325,7 @@ def insert(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['iptables.save'](filename=None, family=family)
                 ret['comment'] = ('Set and Saved iptables rule for {0} to: '
-                                  '{1} for {2}'.format(name, command.strip(), family))
+                                  '{1} for {2}').format(name, command.strip(), family)
         return ret
     else:
         ret['result'] = False

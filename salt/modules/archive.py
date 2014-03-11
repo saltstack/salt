@@ -24,7 +24,7 @@ def __virtual__():
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
         return False
-    return 'archive'
+    return True
 
 
 @decorators.which('tar')

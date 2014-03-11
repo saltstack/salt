@@ -20,7 +20,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'timezone'
+    return True
 
 
 def get_zone():

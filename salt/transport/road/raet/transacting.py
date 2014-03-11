@@ -34,7 +34,7 @@ class Transaction(object):
     '''
     Timeout =  5.0 # default timeout
 
-    def __init__(self, stack=None, kind=None, timeout=None, start=None,
+    def __init__(self, stack=None, kind=None, timeout=None,
                  reid=None, rmt=False, bcst=False, sid=None, tid=None,
                  txData=None, txPacket=None, rxPacket=None):
         '''
@@ -44,15 +44,10 @@ class Transaction(object):
         self.stack = stack
         self.kind = kind or raeting.PACKET_DEFAULTS['tk']
 
-
         if timeout is None:
             timeout = self.Timeout
         self.timeout = timeout
         self.timer = aiding.StoreTimer(self.stack.store, duration=self.timeout)
-
-        self.start = start # for synchronized starts that are not current time
-        if start: #enables synchronized starts not just current time
-            self.timer.restart(start=start)
 
         # local estate is the .stack.estate
         self.reid = reid  # remote estate eid
@@ -65,7 +60,7 @@ class Transaction(object):
 
         self.txData = txData or odict() # data used to prepare last txPacket
         self.txPacket = txPacket  # last tx packet needed for retries
-        self.rxPacket = rxPacket  # last rx packet
+        self.rxPacket = rxPacket  # last rx packet needed for index
 
     @property
     def index(self):
@@ -159,7 +154,11 @@ class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
     '''
-    def __init__(self, mha = None, **kwa):
+    RedoTimeoutMin = 1.0 # initial timeout
+    RedoTimeoutMax = 4.0 # max timeout
+
+
+    def __init__(self, mha = None, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup Transaction instance
         '''
@@ -169,10 +168,15 @@ class Joiner(Initiator):
         if mha is None:
             mha = ('127.0.0.1', raeting.RAET_PORT)
 
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
+
         if self.reid is None:
             if not self.stack.estates: # no channel master so make one
                 master = estating.RemoteEstate(eid=0, ha=mha)
-                self.stack.addRemoteEstate(master)
+                self.stack.addRemote(master)
 
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         self.sid = 0
@@ -198,8 +202,25 @@ class Joiner(Initiator):
         '''
         Perform time based processing of transaction
         '''
+        if self.timeout > 0.0 and self.timer.expired:
+            if self.txPacket and self.txPacket.data['pk'] == raeting.pcktKinds.request:
+                self.remove(self.txPacket.index) #index changes after accept
+            else:
+                self.remove(self.index) # in case never send txPacket
+            console.concise("Joiner timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
         # need keep sending join until accepted or timed out
-        #self.join()
+        if self.redoTimer.expired:
+            duration = min(
+                        max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                        self.redoTimeoutMin)
+            self.redoTimer.restart(duration=duration)
+            if (self.txPacket and
+                    self.txPacket.data['pk'] == raeting.pcktKinds.request):
+                self.transmit(self.txPacket) #redo
+                console.concise("Joiner Redo Join at {0}\n".format(self.stack.store.stamp))
 
 
     def prep(self):
@@ -242,6 +263,7 @@ class Joiner(Initiator):
             self.remove()
             return
         self.transmit(packet)
+        console.concise("Joiner Do Join at {0}\n".format(self.stack.store.stamp))
 
     def pend(self):
         '''
@@ -285,27 +307,21 @@ class Joiner(Initiator):
             emsg = "Missing remote crypt key in accept packet"
             raise raeting.TransactionError(emsg)
 
-        #index = self.index # save before we change it
-
         self.stack.estate.eid = leid
         self.stack.dumpLocal()
 
         remote = self.stack.estates[self.reid]
-        #if remote.verfer.keyhex != verhex:
-            #remote.verfer = nacling.Verifier(key=verhex)
-        #if remote.pubber.keyhex != pubhex:
-            #remote.pubber = nacling.Publican(key=pubhex)
 
         if remote.eid != reid: #move remote estate to new index
-            self.stack.moveRemoteEstate(old=remote.eid, new=reid)
+            self.stack.moveRemote(old=remote.eid, new=reid)
         if remote.name != name: # rename remote estate to new name
-            self.stack.renameRemoteEstate(old=remote.name, new=name)
+            self.stack.renameRemote(old=remote.name, new=name)
         self.reid = reid
 
         # we are assuming for now that the joiner cannot talk peer to peer only
         # to main estate otherwise we need to ensure unique eid, name, and ha on road
 
-        # check if remote keys oF main estate are accepted here
+        # check if remote keys of main estate are accepted here
         status = self.stack.safe.statusRemoteEstate(remote,
                                                     verhex=verhex,
                                                     pubhex=pubhex,
@@ -316,6 +332,7 @@ class Joiner(Initiator):
             remote.joined = True #accepted
             remote.nextSid()
             self.ackAccept()
+
         self.stack.dumpRemote(remote)
 
     def rejected(self):
@@ -324,7 +341,7 @@ class Joiner(Initiator):
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
-        self.remove(self.rxPacket.index)
+        self.remove(self.txPacket.index)
 
     def ackAccept(self):
         '''
@@ -343,11 +360,12 @@ class Joiner(Initiator):
             packet.pack()
         except raeting.PacketError as ex:
             print ex
-            self.remove(self.rxPacket.index)
+            self.remove(self.txPacket.index)
             return
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+        console.concise("Joiner Do Accept at {0}\n".format(self.stack.store.stamp))
 
     def nackAccept(self):
         '''
@@ -366,28 +384,30 @@ class Joiner(Initiator):
             packet.pack()
         except raeting.PacketError as ex:
             print ex
-            self.remove(self.rxPacket.index)
+            self.remove(self.txPacket.index)
             return
 
         self.transmit(packet)
-        self.remove(self.rxPacket.index)
+        self.remove(self.txPacket.index)
+        console.concise("Joiner Do Reject at {0}\n".format(self.stack.store.stamp))
 
 
 class Joinent(Correspondent):
     '''
     RAET protocol Joinent transaction class, dual of Joiner
     '''
-    RedoTimeout = 0.25
+    RedoTimeoutMin = 0.1 # initial timeout
+    RedoTimeoutMax = 2.0 # max timeout
 
-    def __init__(self, redoTimeout=None, **kwa):
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup Transaction instance
         '''
         kwa['kind'] = raeting.trnsKinds.join
         super(Joinent, self).__init__(**kwa)
-        if redoTimeout is None:
-            redoTimeout = self.RedoTimeout
-        self.redoTimeout = redoTimeout
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
         self.redoTimer = aiding.StoreTimer(self.stack.store, duration=0.0)
 
         self.prep()
@@ -409,15 +429,24 @@ class Joinent(Correspondent):
         Perform time based processing of transaction
 
         '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.nackJoin()
+            console.concise("Joinent timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
         # need to perform the check for accepted status and then send accept
         if self.redoTimer.expired:
+            duration = min(
+                        max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                        self.redoTimeoutMax)
+            self.redoTimer.restart(duration=duration)
+
             if (self.txPacket and
                     self.txPacket.data['pk'] == raeting.pcktKinds.response):
-                duration = min(max(self.redoTimeout,
-                                   self.redoTimer.duration) * 2.0, 4.0)
-                self.redoTimer.restart(duration=duration)
+
                 self.transmit(self.txPacket) #redo
-                print "Redo Accept"
+                console.concise("Joinent Redo Accept at {0}\n".format(self.stack.store.stamp))
             else:
                 remote = self.stack.estates[self.reid]
                 if remote:
@@ -426,12 +455,8 @@ class Joinent(Correspondent):
                         status = self.stack.safe.statusRemoteEstate(remote)
 
                     if status == raeting.acceptances.accepted:
-                        if self.redoTimer.expired:
-                            duration = min(max(self.redoTimeout,
-                                       self.redoTimer.duration) * 2.0, 4.0)
-                            self.redoTimer.restart(duration=duration)
-                            self.accept()
-                            print "Do Accept"
+                        self.accept()
+
 
     def prep(self):
         '''
@@ -508,12 +533,12 @@ class Joinent(Correspondent):
         port = data['sp']
         self.txData.update( dh=host, dp=port,) # responses use received host port
 
-        remote = self.stack.fetchRemoteEstateByName(name)
+        remote = self.stack.fetchRemoteByName(name)
         if remote:
             if not (host == remote.host and port == remote.port):
-                other = self.stack.fetchRemoteEstateByHostPort(host, port)
+                other = self.stack.fetchRemoteByHostPort(host, port)
                 if other and other is not remote: #may need to terminate transactions
-                    self.stack.removeRemoteEstate(other.eid)
+                    self.stack.removeRemote(other.eid)
                 remote.host = host
                 remote.port = port
             remote.rsid = self.sid
@@ -522,7 +547,7 @@ class Joinent(Correspondent):
                                                         verhex=verhex,
                                                         pubhex=pubhex)
         else:
-            other = self.stack.fetchRemoteEstateByHostPort(host, port)
+            other = self.stack.fetchRemoteByHostPort(host, port)
             if other: #may need to terminate transactions
                 self.stack.removeRemoteEstate(other.eid)
             remote = estating.RemoteEstate( stack=self.stack,
@@ -534,7 +559,7 @@ class Joinent(Correspondent):
                                             pubkey=pubhex,
                                             rsid=self.sid,
                                             rtid=self.tid, )
-            self.stack.addRemoteEstate(remote) #provisionally add .accepted is None
+            self.stack.addRemote(remote) #provisionally add .accepted is None
             status = self.stack.safe.statusRemoteEstate(remote,
                                                         verhex=verhex,
                                                         pubhex=pubhex)
@@ -545,11 +570,12 @@ class Joinent(Correspondent):
         if status == None or status == raeting.acceptances.pending:
             self.ackJoin()
         elif status == raeting.acceptances.accepted:
-            duration = min(max(self.redoTimeout,
-                            self.redoTimer.duration) * 2.0, 4.0)
+            duration = min(
+                         max(self.redoTimeoutMin,
+                            self.redoTimer.duration) * 2.0,
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             self.accept()
-            print "Do Accept Immediate"
         else:
             self.nackJoin()
 
@@ -577,6 +603,7 @@ class Joinent(Correspondent):
             return
 
         self.transmit(packet)
+        console.concise("Joinent Pending Accept at {0}\n".format(self.stack.store.stamp))
 
     def accept(self):
         '''
@@ -605,6 +632,7 @@ class Joinent(Correspondent):
             return
 
         self.transmit(packet)
+        console.concise("Joinent Do Accept at {0}\n".format(self.stack.store.stamp))
 
     def joined(self):
         '''
@@ -638,6 +666,7 @@ class Joinent(Correspondent):
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
+        console.concise("Joinent Reject at {0}\n".format(self.stack.store.stamp))
 
 
 class Allower(Initiator):
@@ -645,13 +674,23 @@ class Allower(Initiator):
     RAET protocol Allower Initiator class Dual of Allowent
     CurveCP handshake
     '''
-    def __init__(self, **kwa):
+    Timeout = 2.0
+    RedoTimeoutMin = 0.25 # initial timeout
+    RedoTimeoutMax = 1.0 # max timeout
+
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup instance
         '''
         kwa['kind'] = raeting.trnsKinds.allow
         super(Allower, self).__init__(**kwa)
         self.oreo = None # cookie from correspondent needed until handshake completed
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
+
         if self.reid is None:
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         remote = self.stack.estates[self.reid]
@@ -675,6 +714,36 @@ class Allower(Initiator):
                 self.cookie()
             elif packet.data['pk'] == raeting.pcktKinds.ack:
                 self.allow()
+
+    def process(self):
+        '''
+        Perform time based processing of transaction
+        '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.remove()
+            console.concise("Allower timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
+        # need keep sending join until accepted or timed out
+        if self.redoTimer.expired:
+            duration = min(
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                         self.redoTimeoutMin)
+            self.redoTimer.restart(duration=duration)
+            if self.txPacket:
+                if self.txPacket.data['pk'] == raeting.pcktKinds.hello:
+                    self.transmit(self.txPacket) # redo
+                    console.concise("Allower Redo Hello at {0}\n".format(self.stack.store.stamp))
+
+                if self.txPacket.data['pk'] == raeting.pcktKinds.initiate:
+                    self.transmit(self.txPacket) # redo
+                    console.concise("Allower Redo Initiate at {0}\n".format(self.stack.store.stamp))
+
+                if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
+                    self.transmit(self.txPacket) # redo
+                    console.concise("Allower Redo Ack Final at {0}\n".format(self.stack.store.stamp))
+
 
     def prep(self):
         '''
@@ -717,6 +786,7 @@ class Allower(Initiator):
             self.remove()
             return
         self.transmit(packet)
+        console.concise("Allower Do Hello at {0}\n".format(self.stack.store.stamp))
 
     def cookie(self):
         '''
@@ -795,6 +865,7 @@ class Allower(Initiator):
             return
 
         self.transmit(packet)
+        console.concise("Allower Do Initiate at {0}\n".format(self.stack.store.stamp))
 
     def allow(self):
         '''
@@ -804,6 +875,32 @@ class Allower(Initiator):
         if not self.stack.parseInner(self.rxPacket):
             return
         self.stack.estates[self.reid].allowed = True
+        self.ackFinal()
+        #self.remove()
+
+    def ackFinal(self):
+        '''
+        Send ack to ack Initiate to terminate transaction
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = ""
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.ack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            print ex
+            self.remove()
+            return
+
+        self.transmit(packet)
+        console.concise("Allower Ack Final at {0}\n".format(self.stack.store.stamp))
+
         self.remove()
 
 class Allowent(Correspondent):
@@ -811,7 +908,11 @@ class Allowent(Correspondent):
     RAET protocol Allowent Correspondent class Dual of Allower
     CurveCP handshake
     '''
-    def __init__(self, **kwa):
+    Timeout = 2.0
+    RedoTimeoutMin = 0.25 # initial timeout
+    RedoTimeoutMax = 1.0 # max timeout
+
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup instance
         '''
@@ -820,6 +921,12 @@ class Allowent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('reid')
             raise TypeError(emsg)
         super(Allowent, self).__init__(**kwa)
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
+
         remote = self.stack.estates[self.reid]
         if not remote.joined:
             emsg = "Must be joined first"
@@ -846,6 +953,35 @@ class Allowent(Correspondent):
                 self.hello()
             elif packet.data['pk'] == raeting.pcktKinds.initiate:
                 self.initiate()
+            elif packet.data['pk'] == raeting.pcktKinds.ack:
+                self.final()
+
+    def process(self):
+        '''
+        Perform time based processing of transaction
+
+        '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.nack()
+            console.concise("Allowent timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
+        # need to perform the check for accepted status and then send accept
+        if self.redoTimer.expired:
+            duration = min(
+                        max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                        self.redoTimeoutMax)
+            self.redoTimer.restart(duration=duration)
+
+            if self.txPacket:
+                if self.txPacket.data['pk'] == raeting.pcktKinds.cookie:
+                    self.transmit(self.txPacket) #redo
+                    console.concise("Allowent Redo Cookie at {0}\n".format(self.stack.store.stamp))
+
+                if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
+                    self.transmit(self.txPacket) #redo
+                    console.concise("Allowent Redo Ack at {0}\n".format(self.stack.store.stamp))
 
     def prep(self):
         '''
@@ -918,10 +1054,11 @@ class Allowent(Correspondent):
         try:
             packet.pack()
         except raeting.PacketError as ex:
-            print ex
+            console.terse("{0}\n".format(ex))
             self.remove()
             return
         self.transmit(packet)
+        console.concise("Allowent Do Cookie at {0}\n".format(self.stack.store.stamp))
 
     def initiate(self):
         '''
@@ -965,7 +1102,6 @@ class Allowent(Correspondent):
         fqdn = fqdn.rstrip(' ')
         if fqdn != self.stack.estate.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff"
-            print emsg, fqdn, self.stack.estate.fqdn
             raise raeting.TransactionError(emsg)
 
         vouch = self.stack.estate.priver.decrypt(vcipher, vnonce, remote.pubber.key)
@@ -992,11 +1128,12 @@ class Allowent(Correspondent):
         try:
             packet.pack()
         except raeting.PacketError as ex:
-            print ex
+            console.terse("{0}\n".format(ex))
             self.remove()
             return
 
         self.transmit(packet)
+        console.concise("Allowent Do Ack at {0}\n".format(self.stack.store.stamp))
 
         self.allow()
 
@@ -1005,8 +1142,38 @@ class Allowent(Correspondent):
         Perform allowment
         '''
         self.stack.estates[self.reid].allowed = True
-        #self.remove()
-        # keep around for 2 minutes to save cookie (self.oreo)
+
+    def final(self):
+        '''
+        Process ackFinal packet
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove()
+
+    def nack(self):
+        '''
+        Send nack to terminate allower transaction
+        '''
+        if self.reid not in self.stack.estates:
+            emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
+            raise raeting.TransactionError(emsg)
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            console.terse("{0}\n".format(ex))
+            self.remove()
+            return
+
+        self.transmit(packet)
+        self.remove()
+        console.concise("Allowent Reject at {0}\n".format(self.stack.store.stamp))
 
 class Messenger(Initiator):
     '''
