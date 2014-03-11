@@ -403,7 +403,7 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     return ret
 
 
-def volume_detached(name, server_name, provider=None, **kwargs):
+def volume_detached(name, server_name=None, provider=None, **kwargs):
     '''
     Check if a block volume is attached.
     '''
@@ -411,15 +411,16 @@ def volume_detached(name, server_name, provider=None, **kwargs):
     if not ret['result']:
         return ret
 
-    ret = _check_name(server_name)
-    if not ret['result']:
-        return ret
+    if not server_name is None:
+        ret = _check_name(server_name)
+        if not ret['result']:
+            return ret
 
     volumes = __salt__['cloud.volume_list'](provider=provider)
-    instance = __salt__['cloud.action'](
-        fun='show_instance',
-        names=server_name
-    )
+    if server_name:
+        instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    else:
+        instance=None
 
     if name in volumes.keys() and not volumes[name]['attachments']:
         volume = volumes[name]
@@ -432,7 +433,7 @@ def volume_detached(name, server_name, provider=None, **kwargs):
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = False
         return ret
-    elif not instance:
+    elif not instance and not server_name is None:
         ret['comment'] = 'Server {0} does not exist'.format(server_name)
         ret['result'] = False
         return ret

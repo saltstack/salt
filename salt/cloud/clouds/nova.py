@@ -215,7 +215,7 @@ def get_image(conn, vm_):
     )
 
 
-def show_instance(name, call=None, **kwargs):
+def show_instance(name, call=None):
     '''
     Show the details from the provider concerning an instance
     '''
@@ -914,14 +914,13 @@ def volume_delete(name, **kwargs):
     return conn.volume_delete(name)
 
 
-def volume_detach(name, server_name, **kwargs):
+def volume_detach(name, **kwargs):
     '''
     Detach block volume
     '''
     conn = get_conn()
     return conn.volume_detach(
         name,
-        server_name,
         timeout=300
     )
 

@@ -223,11 +223,11 @@ class SaltNova(object):
         volumes = self.volume_list(
             search_opts={'display_name': name},
         )
-        try:
-            volume = volumes[name]
-        except KeyError:
-            # volume doesn't exist
-            return {'name': name, 'status': 'deleted'}
+        volume = volumes[name]
+#        except Exception as esc:
+#            # volume doesn't exist
+#            log.error(esc.strerror)
+#            return {'name': name, 'status': 'deleted'}
 
         return volume
 
@@ -251,22 +251,22 @@ class SaltNova(object):
         '''
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
+        if volume['status'] == 'deleted':
+            return volume
         response = nt_ks.volumes.delete(volume['id'])
         return self.volume_show(name)
 
     def volume_detach(self,
                       name,
-                      server_name,
                       timeout=300):
         '''
         Detach a block device
         '''
         volume = self.volume_show(name)
-        server = self.server_list().get(name, {}).get('id', '')
-        if not server:
-            return False
+        if not volume['attachments']:
+            return True
         response = self.compute_conn.volumes.delete_server_volume(
-            server,
+            volume['attachments'][0]['server_id'],
             volume['attachments'][0]['id']
         )
         trycount = 0
