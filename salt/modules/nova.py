@@ -236,7 +236,6 @@ def volume_delete(name, profile=None):
 
 
 def volume_detach(name,
-                  server_name,
                   profile=None,
                   timeout=300):
     '''
@@ -261,7 +260,6 @@ def volume_detach(name,
     conn = _auth(profile)
     return conn.volume_detach(
         name,
-        server_name,
         timeout
     )
 

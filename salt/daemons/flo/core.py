@@ -197,7 +197,7 @@ class Router(ioflo.base.deeding.Deed):
                'udp_stack': '.raet.udp.stack.stack'}
 
     def postinitio(self):
-        self.next_worker 
+        self.next_worker  # pylint: disable=W0104
 
     def _process_udp_rxmsg(self, msg):
         '''

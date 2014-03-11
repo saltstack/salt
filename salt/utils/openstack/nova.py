@@ -15,10 +15,6 @@ except ImportError:
 # Import python libs
 import time
 import logging
-import urllib2
-import json
-import os.path
-
 
 # Import salt libs
 import salt.utils
@@ -127,7 +123,6 @@ class SaltNova(object):
         '''
         Make output look like libcloud output for consistency
         '''
-        log.debug('serverinfo: {0}'.format(uuid))
         server_info = self.server_show(uuid)
         server = server_info.values()[0]
         server_name = server_info.keys()[0]

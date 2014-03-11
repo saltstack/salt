@@ -420,7 +420,7 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
     if server_name:
         instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     else:
-        instance=None
+        instance = None
 
     if name in volumes.keys() and not volumes[name]['attachments']:
         volume = volumes[name]
