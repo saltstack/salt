@@ -1,5 +1,4 @@
 import os
-import re
 import tempfile
 
 from salttesting import TestCase
@@ -79,7 +78,8 @@ empty_option=
             }
         })
         self.assertEqual(result['changes'], {
-            'SectionB': {'test3': {'after': 'new value 3B', 'before': 'value 3B'},
+            'SectionB': {'test3': {'after': 'new value 3B',
+                                   'before': 'value 3B'},
                          'test_set_option': {'after': 'test_set_value',
                                              'before': None}
             },
@@ -102,7 +102,8 @@ empty_option=
         })
         with open(self.tfile.name, 'rb') as fp:
             file_content = fp.read()
-        self.assertIn('\nempty_option=\n', file_content, 'empty_option was not preserved')
+        self.assertIn('\nempty_option=\n', file_content,
+                      'empty_option was not preserved')
 
     def test_empty_lines_preserved_after_edit(self):
         ini.set_option(self.tfile.name, {
@@ -110,5 +111,7 @@ empty_option=
         })
         with open(self.tfile.name, 'rb') as fp:
             file_content = fp.read()
-        self.assertIn('test2=value 2\n\n[SectionB]\n', file_content, 'first empty line was not preserved')
-        self.assertIn('test3=new value 3B\n\n[SectionC]\n', file_content, 'second empty line was not preserved')
+        self.assertIn('test2=value 2\n\n[SectionB]\n', file_content,
+                      'first empty line was not preserved')
+        self.assertIn('test3=new value 3B\n\n[SectionC]\n', file_content,
+                      'second empty line was not preserved')
