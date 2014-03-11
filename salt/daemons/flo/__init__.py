@@ -18,10 +18,9 @@ opts['ioflo_verbose']
 '''
 
 # Import modules
-from . import master
-from . import minion
+from . import core
 
-__all__ = ['master', 'minion']
+__all__ = ['core']
 
 # Import ioflo libs
 import ioflo.app.run
