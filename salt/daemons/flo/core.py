@@ -11,6 +11,7 @@ import types
 import logging
 import multiprocessing
 import traceback
+import itertools
 from collections import deque
 
 # Import salt libs
@@ -121,6 +122,7 @@ class Setup(ioflo.base.deeding.Deed):
                'fun': '.salt.local.fun',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'workers': '.salt.track.workers',
                'uxd_stack': '.salt.uxd.stack.stack'}
 
     def postinitio(self):
@@ -138,6 +140,10 @@ class Setup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.publish.value = deque()
+        worker_seed = []
+        for ind in range(self.opts.value['worker_threads']):
+            worker_seed.append('yard{0}'.format(ind + 1))
+        self.workers.value = itertools.cycle(worker_seed)
 
 
 class Rx(ioflo.base.deeding.Deed):
@@ -190,6 +196,9 @@ class Router(ioflo.base.deeding.Deed):
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
 
+    def postinitio(self):
+        self.next_worker 
+
     def _process_udp_rxmsg(self, msg):
         '''
         Send to the right queue
@@ -219,8 +228,9 @@ class Router(ioflo.base.deeding.Deed):
             # Refuse local commands over the wire
             log.error('Received local command remotely! Ignoring: {0}'.format(msg))
             return
-        l_stack = getattr(self, d_share)
-        l_stack.value.append(msg)
+        if d_share == 'remote_cmd':
+            # Send it to a remote worker
+            self.uxd_stack.value.transmit(msg, next(self.workers.value))
 
     def _process_uxd_rxmsg(self, msg):
         '''
@@ -251,8 +261,8 @@ class Router(ioflo.base.deeding.Deed):
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
             return
-        l_stack = getattr(self, d_share)
-        l_stack.value.append(msg)
+        if d_share == 'local_cmd':
+            self.uxd_stack.value.transmit(msg, next(self.workers.value))
 
     def action(self):
         '''
