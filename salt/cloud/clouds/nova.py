@@ -109,6 +109,7 @@ from salt.utils.openstack import nova
 HASNOVA = False
 try:
     from novaclient.v1_1 import client  # pylint: disable=W0611
+    import novaclient.exceptions
     HASNOVA = True
 except ImportError:
     pass
@@ -143,8 +144,6 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
@@ -210,9 +209,16 @@ def get_image(conn, vm_):
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
-    raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
-    )
+    try:
+        image = conn.image_show(vm_image)
+        return image['id']
+    except novaclient.exceptions.NotFound as exc:
+        raise SaltCloudNotFound(
+            'The specified image, {0!r}, could not be found: {1}'.format(
+                vm_image,
+                exc.message
+            )
+        )
 
 
 def show_instance(name, call=None):

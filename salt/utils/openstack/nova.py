@@ -439,6 +439,32 @@ class SaltNova(object):
         nt_ks.keypairs.delete(name)
         return 'Keypair deleted: {0}'.format(name)
 
+    def image_show(self, image_id):
+        '''
+        Show image details and metadata
+        '''
+        nt_ks = self.compute_conn
+        image = nt_ks.images.get(image_id)
+        links = {}
+        for link in image.links:
+            links[link['rel']] = link['href']
+        ret = {
+            'name': image.name,
+            'id': image.id,
+            'status': image.status,
+            'progress': image.progress,
+            'created': image.created,
+            'updated': image.updated,
+            'metadata': image.metadata,
+            'links': links,
+        }
+        if hasattr(image, 'minDisk'):
+            ret['minDisk'] = image.minDisk
+        if hasattr(image, 'minRam'):
+            ret['minRam'] = image.minRam
+
+        return ret
+
     def image_list(self, name=None):
         '''
         List server images
