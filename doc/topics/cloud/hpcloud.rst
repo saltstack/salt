@@ -51,14 +51,16 @@ Compute Region
 ==============
 
 Originally, HP Cloud, in its OpenStack Essex version (1.0), had 3
-availability zones in one region, AW2, which each behaved as a region should. 
+availability zones in one region, US West (region-a.geo-1), which 
+each behaved each as a region.  
+
 This has since changed, and the current OpenStack Grizzly version of 
 HP Cloud (1.1) now has simplified this and now has two regions to choose from:
 
 .. code-block:: bash
 
-    region-a.geo-1 -> AW2/US West 
-    region-b.geo-1 -> AE1/US East
+    region-a.geo-1 -> US West 
+    region-b.geo-1 -> US East
 
 Authentication
 ==============
@@ -67,8 +69,7 @@ The ``user`` is the same user as is used to log into the HP Cloud management
 UI. The ``tenant`` can be found in the upper left under "Project/Region/Scope". 
 It is often named the same as ``user`` albeit with a ``-project1`` appended.
 The ``password`` is of course what you created your account with. The management
-UI also has other information such as being able to select US East or US West 
-(AE1 or AW2). 
+UI also has other information such as being able to select US East or US West.
 
 The profile shown below is a know working profile for an Ubuntu instance. The
 profile configuration file is stored in the following location:
@@ -90,7 +91,7 @@ profile configuration file is stored in the following location:
 
 Some important things about the example above:
 
-* The ``image`` parameter can use either the image name or image ID which you can obtain by running in the example below (this case AE1):
+* The ``image`` parameter can use either the image name or image ID which you can obtain by running in the example below (this case US East):
 
 .. code-block:: bash 
 
@@ -114,7 +115,7 @@ To instantiate a machine based on this profile (example):
 
 
 After several minutes, this will create an instance named ubuntu_instance_1
-running in HP Cloud in the AE1 region and will set up the minion and then 
+running in HP Cloud in the US East region and will set up the minion and then 
 return information about the instance once completed.
 
 Once the instance has been created with salt-minion installed, connectivity to 
