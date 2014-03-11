@@ -349,3 +349,39 @@ def upgrade_available(pkg):
         salt '*' pkg.upgrade_available <package name>
     '''
     return pkg in list_upgrades()
+
+
+def upgrade(refresh=True):
+    '''
+    Upgrade outdated, unpinned brews.
+
+    refresh
+        Fetch the newest version of Homebrew and all formulae from GitHub before installing.
+
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
+                       'new': '<new-version>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade
+    '''
+    old = list_pkgs()
+
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
+    cmd = 'brew upgrade'
+    user = __salt__['file.get_user'](_homebrew_bin())
+    __salt__['cmd.run'](
+        cmd,
+        runas=user if user != __opts__['user'] else __opts__['user'],
+        output_loglevel='debug'
+    )
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)
