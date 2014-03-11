@@ -114,10 +114,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    if HAS_PAM:
-        return 'pam'
-    else:
-        return False
+    return HAS_PAM
 
 
 def authenticate(username, password, service='login'):

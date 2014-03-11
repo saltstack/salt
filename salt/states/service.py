@@ -48,7 +48,7 @@ def __virtual__():
     Only make these states available if a service provider has been detected or
     assigned for this minion
     '''
-    return 'service' if 'service.start' in __salt__ else False
+    return 'service.start' in __salt__
 
 
 def _enabled_used_error(ret):

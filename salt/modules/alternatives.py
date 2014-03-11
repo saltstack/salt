@@ -30,7 +30,7 @@ def __virtual__():
     Only if alternatives dir is available
     '''
     if os.path.isdir('/etc/alternatives'):
-        return 'alternatives'
+        return True
     return False
 
 

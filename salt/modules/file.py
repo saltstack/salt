@@ -64,7 +64,7 @@ def __virtual__():
     # win_file takes care of windows
     if salt.utils.is_windows():
         return False
-    return 'file'
+    return True
 
 
 def __clean_tmp(sfn):

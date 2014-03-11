@@ -15,9 +15,8 @@ def __virtual__():
     Only work on supported POSIX-like systems
     '''
     if __grains__['os_family'] in ('Arch', 'Redhat', 'Debian', 'Gentoo'):
-        return 'keyboard'
-    else:
-        return False
+        return True
+    return False
 
 
 def get_sys():

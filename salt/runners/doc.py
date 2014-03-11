@@ -14,7 +14,10 @@ import salt.wheel
 
 
 def __virtual__():
-    return 'doc'
+    '''
+    Always load
+    '''
+    return True
 
 
 def runner():

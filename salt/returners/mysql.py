@@ -80,7 +80,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not HAS_MYSQL:
         return False
-    return 'mysql'
+    return True
 
 
 def _get_options():
