@@ -27,12 +27,12 @@ class MacUserModuleTest(integration.ModuleCase):
     Integration tests for the mac_user module
     '''
 
-    def setup(self):
+    def setUp(self):
         '''
         Sets up test requirements
         '''
         super(MacUserModuleTest, self).setUp()
-        os_grain = self.run_funtion('grains.item', ['kernel'])
+        os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in ('Darwin'):
             self.skipTest(
                 'Test not applicable to \'{kernel}\' kernel'.format(
@@ -52,20 +52,29 @@ class MacUserModuleTest(integration.ModuleCase):
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
-    def test_mac_users_add(self):
+    def test_mac_users_add(self, grains=None):
         '''
         Tests the add function
         '''
         user_name = self.__random_string()
+        self.user = user_name
 
         try:
-            self.run_function('mac_user.add', [user_name, True, True])
-            user_info = self.run_function('mac_user.info', [user_name])
-            self.assertIn(user_name, user_info['name'])
+            self.run_function('user.add', [user_name])
+            user_info = self.run_function('user.info', [user_name])
+            self.assertEqual(user_name, user_info['name'])
         except CommandExecutionError:
-            self.run_function('mac_user.delete', [user_name, True, True])
+            self.run_function('user.delete', [user_name])
             raise
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def tearDown(self, grains=None):
+        '''
+        Clean up after tests
+        '''
+        self.run_function('user.delete', [self.user])
 
 if __name__ == '__main__':
     from integration import run_tests
