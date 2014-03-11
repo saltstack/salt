@@ -64,6 +64,55 @@ class FileReplaceTestCase(TestCase):
         with open(self.tfile.name, 'rb') as fp:
             self.assertIn('Salticus', fp.read())
 
+    def test_replace_append_if_not_found(self):
+        '''
+        Check that file.replace append_if_not_found works
+        '''
+        args = {
+                'pattern': '#*baz=(?P<value>.*)',
+                'repl': 'baz=\\g<value>',
+                'append_if_not_found': True,
+        }
+        base = 'foo=1\nbar=2'
+        expected = '{base}\n{repl}\n'.format(base=base, **args)
+        # File ending with a newline, no match
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base + '\n')
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # File not ending with a newline, no match
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), args['repl'] + '\n')
+        # Using not_found_content, rather than repl
+        with tempfile.NamedTemporaryFile() as tfile:
+            args['not_found_content'] = 'baz=3'
+            expected = '{base}\n{not_found_content}\n'.format(base=base, **args)
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # not appending if matches
+        with tempfile.NamedTemporaryFile() as tfile:
+            base = 'foo=1\n#baz=42\nbar=2\n'
+            expected = 'foo=1\nbaz=42\nbar=2\n'
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+
     def test_backup(self):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
