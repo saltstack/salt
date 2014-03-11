@@ -47,6 +47,7 @@ MOCK_MODULES = [
     'cheroot',
     'cheroot.wsgi',
     'cherrypy',
+    'cherrypy.lib',
     'cherrypy.wsgiserver',
     'cherrypy.wsgiserver.ssl_builtin',
 
