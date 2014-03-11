@@ -542,7 +542,7 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     conn = _auth(profile)
-    return conn.image_meta_data(
+    return conn.image_meta_delete(
         id,
         name,
         keys
