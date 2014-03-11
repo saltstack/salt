@@ -84,7 +84,6 @@ class IofloMaster(object):
                 verbose=int(self.opts['ioflo_verbose']),
                 )
 
-
     def start(self):
         '''
         Start up ioflo

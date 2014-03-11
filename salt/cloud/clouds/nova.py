@@ -62,11 +62,32 @@ examples could be set up in the cloud configuration at
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
 
+Note: For api use, you will need an auth plugin.  The base novaclient does not
+support apikeys, but some providers such as rackspace have extended keystone to
+accept them
+
 .. code-block:: yaml
 
     my-openstack-config:
       # Ignore IP addresses on this network for bootstrap
       ignore_cidr: 192.168.50.0/24
+
+    my-nova:
+      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
+      compute_region: IAD
+      user: myusername
+      password: mypassword
+      tenant: <userid>
+      provider: nova
+
+    my-api:
+      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
+      compute_region: IAD
+      user: myusername
+      api_key: <api_key>
+      os_auth_plugin: rackspace
+      tenant: <userid>
+      provider: nova
 
 '''
 # pylint: disable=E0102
@@ -162,13 +183,15 @@ def get_conn():
     '''
     vm_ = get_configured_provider()
 
-    kwargs = {
-        'username': vm_['user'],
-        'api_key': vm_['password'],
-        'project_id': vm_['tenant'],
-        'auth_url': vm_['identity_url'],
-        'region_name': vm_['compute_region']
-    }
+    kwargs = vm_.copy()
+
+    kwargs['username'] = vm_['user']
+    kwargs['project_id'] = vm_['tenant']
+    kwargs['auth_url'] = vm_['identity_url']
+    kwargs['region_name'] = vm_['compute_region']
+
+    if 'password' in vm_:
+        kwargs['password'] = vm_['password']
 
     return nova.SaltNova(**kwargs)
 
@@ -192,7 +215,7 @@ def get_image(conn, vm_):
     )
 
 
-def show_instance(name, call=None, **kwargs):
+def show_instance(name, call=None):
     '''
     Show the details from the provider concerning an instance
     '''
@@ -891,14 +914,13 @@ def volume_delete(name, **kwargs):
     return conn.volume_delete(name)
 
 
-def volume_detach(name, server_name, **kwargs):
+def volume_detach(name, **kwargs):
     '''
     Detach block volume
     '''
     conn = get_conn()
     return conn.volume_detach(
         name,
-        server_name,
         timeout=300
     )
 
