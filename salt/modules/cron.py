@@ -46,13 +46,27 @@ def _cron_matched(cron, cmd, identifier=None):
     cid = _cron_id(cron)
     if cid:
         eidentifier = _encode(identifier)
+
+        # If commands match and identifier not set,
+        # set current identifier as identifier
+
         if (
             cron.get('cmd', None) == cmd
             and cid == SALT_CRON_NO_IDENTIFIER
             and identifier
         ):
             cid = eidentifier
-        id_matched = eidentifier == cid
+
+        # If the identifiers are the same, the set
+        # id_matched true, but make sure we aren't
+        # comparing the default identifiers
+        
+        if ( 
+            eidentifier != SALT_CRON_NO_IDENTIFIER
+            and cid != SALT_CRON_NO_IDENTIFIER
+        ):
+            id_matched = eidentifier == cid
+
     if (
         ((id_matched is None) and cmd == cron.get('cmd', None))
         or id_matched
