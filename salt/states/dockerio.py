@@ -220,15 +220,15 @@ def pulled(name, force=False, *args, **kwargs):
     force
         Pull even if the image is already pulled
     '''
-    ins = __salt__['docker.inspect_image']
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
-    previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt__['docker.pull']
-    returned = func(name)
+    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    pull = __salt__['docker.pull']
+    returned = pull(name)
     if previous_id != returned['id']:
         changes = {name: True}
     else:
@@ -255,15 +255,15 @@ def built(name,
         or filesystem path to the dockerfile
 
     '''
-    ins = __salt__['docker.inspect_image']
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
-                name, iinfos['out']['id']))
-    previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt__['docker.build']
+                name, image_infos['out']['id']))
+    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    build = __salt__['docker.build']
     kw = dict(tag=name,
               path=path,
               quiet=quiet,
@@ -271,7 +271,7 @@ def built(name,
               rm=rm,
               timeout=timeout,
               )
-    returned = func(**kw)
+    returned = build(**kw)
     if previous_id != returned['id']:
         changes = {name: True}
     else:
