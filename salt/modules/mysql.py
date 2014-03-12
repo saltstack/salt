@@ -212,7 +212,7 @@ def _connect(**kwargs):
         '''
         Add key to connargs, only if name exists in our kwargs or,
         if get_opts is true, as mysql.<name> in __opts__ or __pillar__
-        
+
         If get_opts is true, evaluate in said order - kwargs, opts
         then pillar. To avoid collision with other functions,
         kwargs-based connection arguments are prefixed with 'connection_'
