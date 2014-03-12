@@ -1008,7 +1008,6 @@ class RaetKey(Key):
 
         return data
 
-
     def read_remote(self, minion_id, status='accepted'):
         '''
         Read in a remote key of status

@@ -43,11 +43,10 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-import salt.opts
 
-#from salt.key import RaetKey
+from salt.key import RaetKey
 
-from . import raeting, packeting, keeping, stacking, estating
+from . import raeting, nacling, packeting, keeping, stacking, estating
 
 
 class JoinerStackUdpRaetSalt(deeding.Deed):  # pylint: disable=W0232
@@ -74,132 +73,151 @@ class JoinerStackUdpRaetSalt(deeding.Deed):  # pylint: disable=W0232
 
 
 
-#class SaltSafeKeep(keeping.SafeKeep):
-    #'''
-    #RAET protocol estate safe (key) data persistence and status
-    #'''
-    #Auto = False #auto accept
+class SaltSafe(object):
+    '''
+    RAET protocol estate safe (key) data persistence and status
+    '''
+    Auto = False #auto accept
 
-    #def __init__(self, opts=None, **kwa):
-        #'''
-        #Setup SaltSafeKeep instance
+    def __init__(self, opts=None, **kwa):
+        '''
+        Setup SaltSafe instance
 
-        #'''
-        #super(SaltSafeKeep, self).__init__( **kwa)
-        #if opts is None:
-            #opts = salt.opts
-        #self.saltRaetKey = RaetKey(opts)
+        '''
+        if opts is None:
+            opts = {}
+        self.saltRaetKey = RaetKey(opts)
 
-    #def loadLocalData(self):
-        #'''
-        #Load and Return the data from the local estate
-        #'''
-        #keydata = self.saltRaetKey.read_local()
-        #if not keydata:
-            #return None
-        #data = odict()
+    def loadLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        data = self.saltRaetKey.read_local()
+        if not data:
+            return None
+        return (odict(sighex=data['sign'], prihex=data['priv']))
 
-        #sigkey=safe['sighex'],
-        #prikey=safe['prihex']
+    def clearLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        pass
 
-    #def loadAllRemoteData(self):
-        #'''
-        #Load and Return the data from the all the remote estate files
-        #'''
-        #data = odict()
+    def loadAllRemoteData(self):
+        '''
+        Load and Return the data from the all the remote estate files
+        '''
+        data = odict()
 
-        ##data[uid] = self.load(filepath)
-        #return data
+        for status, mids in self.saltRaetKey.list_keys().items():
+            for mid in mids:
+                keydata = self.saltRaetKey.read_remote(mid, status)
+                if keydata:
+                    rdata = odict()
+                    rdata['eid'] = keydata['device_id']
+                    rdata['name'] = keydata['minion_id']
+                    rdata['acceptance'] = raeting.ACCEPTANCES[status]
+                    rdata['verhex'] = keydata['verify']
+                    rdata['pubhex'] = keydata['pub']
+                    data[rdata['eid']] = rdata
 
+        return data
 
-    #def dumpLocalEstate(self, estate):
-        #'''
-        #Dump the key data from the local estate
-        #'''
-        #data = odict([
-                #('eid', estate.eid),
-                #('name', estate.name),
-                #('sighex', estate.signer.keyhex),
-                #('prihex', estate.priver.keyhex),
-                #])
+    def clearAllRemoteData(self):
+        '''
+        Remove all the remote estate files
+        '''
+        self.saltRaetKey.delete_all()
 
-        ##self.dumpLocalData(data)
+    def dumpLocalEstate(self, estate):
+        '''
+        Dump the key data from the local estate
+        '''
+        self.saltRaetKey.write_local(estate.priver.keyhex, estate.signer.keyhex)
 
-        #self.saltRaetKey.write_local(estate.priver.keyhex, estate.signer.keyhex)
+    def dumpRemoteEstate(self, estate):
+        '''
+        Dump the data from the remote estate
+        '''
+        pass
 
-    #def dumpRemoteEstate(self, estate):
-        #'''
-        #Dump the data from the remote estate
-        #'''
-        #uid = estate.eid
-        #data = odict([
-                #('eid', estate.eid),
-                #('name', estate.name),
-                #('acceptance', estate.acceptance),
-                #('verhex', estate.verfer.keyhex),
-                #('pubhex', estate.pubber.keyhex),
-                #])
-
-        ##self.dumpRemoteData(data, uid)
-
-    #def loadRemoteEstate(self, estate):
-        #'''
-        #Load and Return the data from the remote estate file
-        #Override this in sub class to change uid
-        #'''
-        #mid = estate.eid
+    def dumpAllRemoteEstates(self, estates):
+        '''
+        Dump the data from all the remote estates
+        '''
+        for estate in estates:
+            self.dumpRemoteEstate(estate)
 
 
-        #return
+    def loadRemoteEstate(self, estate, status='accepted'):
+        '''
+        Load and Return the data from the remote estate file
+        Override this in sub class to change uid
+        '''
+        mid = estate.name
+        keydata = self.saltRaetKey.read_remote(mid, status)
+        if not keydata:
+            return None
 
-    #def removeRemoteEstate(self, estate):
-        #'''
-        #Load and Return the data from the remote estate file
-        #Override this in sub class to change uid
-        #'''
-        #uid = estate.eid
-        ##self.clearRemoteData(uid)
+        data = odict()
+        data['eid'] = keydata['device_id']
+        data['name'] = keydata['minion_id']
+        data['acceptance'] = raeting.ACCEPTANCES[status]
+        data['verhex'] = keydata['verify']
+        data['pubhex'] = keydata['pub']
 
-    #def statusRemoteEstate(self, estate, verhex=None, pubhex=None, main=True):
-        #'''
-        #Evaluate acceptance status of estate per its keys
-        #persist key data differentially based on status
-        #'''
-        #data = self.loadRemoteEstate(estate)
-        #status = data.get('acceptance') if data else None # pre-existing status
+        return data
 
-        #if main: #main estate logic
-            #pass
+    def clearRemoteEstate(self, estate):
+        '''
+        Clear the remote estate file
+        Override this in sub class to change uid
+        '''
+        mid = estate.eid
+        self.saltRaetKey.delete_key(mid)
 
-        #else: #other estate logic
-            #pass
+    def statusRemoteEstate(self, estate, verhex, pubhex, main=True):
+        '''
+        Evaluate acceptance status of estate per its keys
+        persist key data differentially based on status
+        '''
+        status = raeting.ACCEPTANCES[self.saltRaetKey.status(estate.name,
+                                                             estate.eid,
+                                                             pubhex,
+                                                             verhex)]
 
-        #if status != raeting.acceptances.rejected:
-            #if (verhex and verhex != estate.verfer.keyhex):
-                #estate.verfer = nacling.Verifier(verhex)
-            #if (pubhex and pubhex != estate.pubber.keyhex):
-                #estate.pubber = nacling.Publican(pubhex)
-        #estate.acceptance = status
-        #self.dumpRemoteEstate(estate)
-        #return status
+        if status != raeting.acceptances.rejected:
+            if (verhex and verhex != estate.verfer.keyhex):
+                estate.verfer = nacling.Verifier(verhex)
+            if (pubhex and pubhex != estate.pubber.keyhex):
+                estate.pubber = nacling.Publican(pubhex)
+        estate.acceptance = status
+        return status
 
-    #def rejectRemoteEstate(self, estate):
-        #'''
-        #Set acceptance status to rejected
-        #'''
-        #estate.acceptance = raeting.acceptances.rejected
-        ##self.dumpRemoteEstate(estate)
+    def rejectRemoteEstate(self, estate):
+        '''
+        Set acceptance status to rejected
+        '''
+        estate.acceptance = raeting.acceptances.rejected
+        mid = estate.name
+        self.saltRaetKey.reject(match=mid, include_accepted=True)
 
-    #def pendRemoteEstate(self, estate):
-        #'''
-        #Set acceptance status to pending
-        #'''
-        #estate.acceptance = raeting.acceptances.pending
-        ##self.dumpRemoteEstate(estate)
+    def acceptRemoteEstate(self, estate):
+        '''
+        Set acceptance status to accepted
+        '''
+        estate.acceptance = raeting.acceptances.accepted
+        mid = estate.name
+        self.saltRaetKey.accept(match=mid, include_rejected=True)
 
-    #def acceptRemoteEstate(self, estate):
-        #'''
-        #Set acceptance status to accepted
-        #'''
-        #estate.acceptance = raeting.acceptances.accepted
-        ##self.dumpRemoteEstate(estate)
+
+def clearAllRoadSafe(dirpath, opts):
+    '''
+    Convenience function to clear all road and safe keep data in dirpath
+    '''
+    road = keeping.RoadKeep(dirpath=dirpath)
+    road.clearLocalData()
+    road.clearAllRemoteData()
+    safe = SaltSafe(opts=opts)
+    safe.clearLocalData()
+    safe.clearAllRemoteData()
