@@ -230,7 +230,8 @@ def pulled(name, force=False, *args, **kwargs):
     pull = __salt__['docker.pull']
     returned = pull(name)
     if previous_id != returned['id']:
-        changes = {name: True}
+        changes = {name: {'old': previous_id,
+                          'new': returned['id']}}
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
@@ -273,7 +274,8 @@ def built(name,
               )
     returned = build(**kw)
     if previous_id != returned['id']:
-        changes = {name: True}
+        changes = {name: {'old': previous_id,
+                          'new': returned['id']}}
     else:
         changes = {}
     return _ret_status(exec_status=returned,
