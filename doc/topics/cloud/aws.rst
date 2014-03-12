@@ -216,6 +216,34 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+      # optionally add tags to profile:
+      tag: {'Environment': 'production', 'Role': 'database'}
+      # force grains to sync after install
+      sync_after_install: grains
+
+    base_ec2_vpc:
+      provider: my-ec2-southeast-public-ips
+      image: ami-a73264ce
+      size: m1.xlarge
+      ssh_username: ec2-user
+      script:  /etc/salt/cloud.deploy.d/user_data.sh
+      network_interfaces:
+        - DeviceIndex: 0
+          PrivateIpAddresses:
+            - Primary: True
+          #auto assign public ip (not EIP)
+          AssociatePublicIpAddress: True
+          SubnetId: subnet-813d4bbf
+          SecurityGroupId:
+            - sg-750af413
+      volumes:
+        - { size: 10, device: /dev/sdf }
+        - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
+        - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+      del_root_vol_on_destroy: True
+      del_all_vol_on_destroy: True
+      tag: {'Environment': 'production', 'Role': 'database'}
+      sync_after_install: grains
 
 
 The profile can now be realized with a salt command:
