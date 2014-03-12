@@ -176,7 +176,7 @@ HELLO_PACKER = struct.Struct('<64s32s80s24s') #curvecp hello packet body endow t
 COOKIESTUFF_PACKER = struct.Struct('<32sLL24s')
 COOKIE_PACKER = struct.Struct('<80s24s')
 INITIATESTUFF_PACKER = struct.Struct('<32s48s24s128s')
-INITIATE_PACKER = struct.Struct('32s24s248s24s')
+INITIATE_PACKER = struct.Struct('<32s24s248s24s')
 
 ACCEPTANCES = odict([('pending', 0), ('accepted', 1), ('rejected', 2),])
 ACCEPTANCE_NAMES = odict((v, k) for k, v in ACCEPTANCES.iteritems())  # inverse map
