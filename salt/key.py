@@ -708,7 +708,7 @@ class RaetKey(Key):
         Return a dict of local keys
         '''
         ret = {'local': []}
-        fn_ = os.path.join(self.opts['pki_dir'], 'master.key')
+        fn_ = os.path.join(self.opts['pki_dir'], 'local.key')
         if os.path.isfile(fn_):
             ret['local'].append(fn_)
         return ret
@@ -981,7 +981,7 @@ class RaetKey(Key):
 
     def finger_all(self):
         '''
-        Return fingerprins for all keys
+        Return fingerprints for all keys
         '''
         ret = {}
         for status, keys in self.list_keys().items():
@@ -994,11 +994,26 @@ class RaetKey(Key):
                 ret[status][key] = self._get_key_finger(path)
         return ret
 
-    def read_remote(self, minion_id):
+    def read_all_remote(self):
         '''
-        Read in a remote accepted key
+        Return a dict of all remote key data
         '''
-        path = os.path.join(self.opts['pki_dir'], 'accepted', minion_id)
+        data = {}
+        for status, mids in self.list_keys().items():
+            for mid in mids:
+                keydata = self.read_remote(mid, status)
+                if keydata:
+                    keydata['acceptance'] = status
+                    data[keydata['device_id']] = keydata
+
+        return data
+
+
+    def read_remote(self, minion_id, status='accepted'):
+        '''
+        Read in a remote key of status
+        '''
+        path = os.path.join(self.opts['pki_dir'], status, minion_id)
         if not os.path.isfile(path):
             return {}
         with salt.utils.fopen(path, 'rb') as fp_:
