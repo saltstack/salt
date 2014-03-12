@@ -67,7 +67,7 @@ def _minion_opts(cfg='minion'):
         default_dir = salt.syspaths.CONFIG_DIR,
     cfg = os.environ.get(
         'SALT_MINION_CONFIG', os.path.join(default_dir, cfg))
-    opts = config.minion_conf(cfg)
+    opts = config.minion_config(cfg)
     return opts
 
 
@@ -220,16 +220,16 @@ def list_nodes(conn=None, call=None):
     hide = False
     names = __opts__.get('names', [])
     profile = __opts__.get('profile', [])
-    destroy = __opts__.get('destroy', False)
+    destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
     for opt in ['full_query', 'select_query', 'query']:
         if __opts__.get(opt, False):
             call = 'full'
-    if destroy:
+    if destroy_opt:
         call = 'full'
     if action and not call:
         call = 'action'
-    if profile and names and not destroy:
+    if profile and names and not destroy_opt:
         hide = True
     if not get_configured_provider():
         return
@@ -247,7 +247,7 @@ def list_nodes(conn=None, call=None):
             }
             # in creation mode, we need to go inside the create method
             # so we hide the running vm from being seen as already installed
-            # do not also mask half configured nodes which are explictly asked
+            # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
             if (
                 (call in ['full'] or not hide)
@@ -320,9 +320,9 @@ last message: {comment}'''.format(**ret)
 
 def destroy(vm_, call=None):
     '''Destroy a lxc container'''
-    destroy = __opts__.get('destroy', False)
+    destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
-    if action != 'destroy' and not destroy:
+    if action != 'destroy' and not destroy_opt:
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'

@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Only load if the locale module is available in __salt__
     '''
-    return 'locale' if 'locale.get_locale' in __salt__ else False
+    return 'locale.get_locale' in __salt__
 
 
 def system(name):

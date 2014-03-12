@@ -700,6 +700,7 @@ class LocalClient(object):
                                                 pub_data['minions'],
                                                 timeout,
                                                 tgt,
+                                                expr_form,
                                                 **kwargs):
                 yield fn_ret
 

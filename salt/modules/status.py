@@ -21,7 +21,7 @@ __opts__ = {}
 def __virtual__():
     if salt.utils.is_windows():
         return False
-    return 'status'
+    return True
 
 
 def _number(text):

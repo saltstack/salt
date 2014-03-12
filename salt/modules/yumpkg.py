@@ -225,7 +225,8 @@ def latest_version(*names, **kwargs):
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} --pkgnarrow=available {1}'.format(repo_arg, ' '.join(names))
+        '{0} --pkgnarrow=available --plugins {1}'
+        .format(repo_arg, ' '.join(names))
     )
 
     for name in names:
@@ -356,7 +357,7 @@ def list_repo_pkgs(*args, **kwargs):
 
     ret = {}
     for repo in repos:
-        repoquery_cmd = '--all --repoid="{0}"'.format(repo)
+        repoquery_cmd = '--all --repoid="{0}" --plugins'.format(repo)
         for arg in args:
             repoquery_cmd += ' "{0}"'.format(arg)
         all_pkgs = _repoquery_pkginfo(repoquery_cmd)
@@ -382,7 +383,9 @@ def list_upgrades(refresh=True, **kwargs):
         refresh_db()
 
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery_pkginfo('{0} --all --pkgnarrow=updates'.format(repo_arg))
+    updates = _repoquery_pkginfo(
+        '{0} --all --pkgnarrow=updates --plugins'.format(repo_arg)
+    )
     return dict([(x.name, x.version) for x in updates])
 
 
@@ -409,7 +412,8 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
     '''
     repo_arg = _get_repo_options(**kwargs)
-    repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
+    repoquery_base = \
+        '{0} --all --quiet --whatprovides --plugins'.format(repo_arg)
 
     if 'pkg._avail' in __context__:
         avail = __context__['pkg._avail']
@@ -417,7 +421,7 @@ def check_db(*names, **kwargs):
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '{0} --pkgnarrow=all --all'.format(repo_arg),
+            '{0} --pkgnarrow=all --all --plugins'.format(repo_arg),
             query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
@@ -435,7 +439,7 @@ def check_db(*names, **kwargs):
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
+            repoquery_cmd = repoquery_base + ' {0}'.format(name)
             provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
             if provides:
                 for pkg in provides:

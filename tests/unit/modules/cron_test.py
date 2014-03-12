@@ -170,7 +170,6 @@ class CronTestCase(TestCase):
             self.assertEqual(
                 c1,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '# SALT_CRON_IDENTIFIER:NO ID SET\n'
                 '* * * * * ls'
             )
             cron.set_job(
@@ -188,7 +187,7 @@ class CronTestCase(TestCase):
             self.assertEqual(
                 c2,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '# foo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls'
+                '# foo\n* * * * * ls'
             )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
@@ -249,6 +248,233 @@ class CronTestCase(TestCase):
                 '# foo SALT_CRON_IDENTIFIER:bbar\n'
                 '* * * * * ls'
             )
+
+    @patch('salt.modules.cron._write_cron_lines',
+           new=MagicMock(side_effect=write_crontab))
+    def test__issue10959(self):
+        '''
+        handle multi old style crontabs
+        https://github.com/saltstack/salt/issues/10959
+        '''
+        with patch(
+            'salt.modules.cron.raw_cron',
+            new=MagicMock(side_effect=get_crontab)
+        ):
+            set_crontab(
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                # as managed per salt, the last lines will be merged together !
+                '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                '* * * * * samecmd\n'
+                '* * * * * otheridcmd\n'
+                '* * * * * otheridcmd\n'
+                '# SALT_CRON_IDENTIFIER:NO ID SET\n0 * * * * samecmd1\n'
+                '1 * * * * samecmd1\n'
+                '0 * * * * otheridcmd1\n'
+                '1 * * * * otheridcmd1\n'
+                # special case here, none id managed line with same command
+                # as a later id managed line will become managed
+                '# SALT_CRON_IDENTIFIER:1\n0 * * * * otheridcmd1\n'
+                '# SALT_CRON_IDENTIFIER:2\n0 * * * * otheridcmd1\n'
+            )
+            crons1 = cron.list_tab('root')
+            # the filtering is done on save, we reflect in listing
+            # the same that we have in a file, no matter what we
+            # have
+            self.assertEqual(crons1, {
+                'crons': [
+                    {'cmd': 'ls', 'comment': 'uoo', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'too', 'comment': 'uuoo', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'zoo', 'comment': 'uuuoo', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'yoo', 'comment': '', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'xoo', 'comment': '', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'samecmd', 'comment': '', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'samecmd', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'otheridcmd', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'otheridcmd', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '*', 'month': '*'},
+                    {'cmd': 'samecmd1', 'comment': '', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
+                     'minute': '0', 'month': '*'},
+                    {'cmd': 'samecmd1', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '1', 'month': '*'},
+                    {'cmd': 'otheridcmd1', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '0', 'month': '*'},
+                    {'cmd': 'otheridcmd1', 'comment': None, 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': None,
+                     'minute': '1', 'month': '*'},
+                    {'cmd': 'otheridcmd1', 'comment': '', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': '1',
+                     'minute': '0', 'month': '*'},
+                    {'cmd': 'otheridcmd1',
+                     'comment': '', 'daymonth': '*', 'dayweek': '*',
+                     'hour': '*', 'identifier': '2', 'minute': '0',
+                     'month': '*'}
+                ],
+                'env': [],
+                'pre': [],
+                'special': []})
+            # so yood so far, no problem for now, trying to save the
+            # multilines without id crons now
+            inc_tests = [
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n'
+                 '0 * * * * samecmd1'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n1 * * * * samecmd1'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n1 * * * * samecmd1\n'
+                 '0 * * * * otheridcmd1'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n1 * * * * samecmd1\n'
+                 '1 * * * * otheridcmd1'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n1 * * * * samecmd1\n'
+                 '# SALT_CRON_IDENTIFIER:1\n0 * * * * otheridcmd1'),
+                #
+                ('# Lines below here are managed by Salt, do not edit\n'
+                 '# uoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * ls\n'
+                 '# uuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * too\n'
+                 '# uuuoo SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * zoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * yoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * xoo\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n* * * * * samecmd\n'
+                 '* * * * * otheridcmd\n'
+                 '# SALT_CRON_IDENTIFIER:NO ID SET\n1 * * * * samecmd1\n'
+                 '# SALT_CRON_IDENTIFIER:1\n0 * * * * otheridcmd1\n'
+                 '# SALT_CRON_IDENTIFIER:2\n0 * * * * otheridcmd1')
+            ]
+            set_crontab('')
+            for idx, cr in enumerate(crons1['crons']):
+                cron.set_job('root', **cr)
+                self.assertEqual(
+                    get_crontab(),
+                    inc_tests[idx], (
+                        "idx {0}\n '{1}'\n != \n'{2}'\n\n\n"
+                        "{1!r} != {2!r}"
+                    ).format(
+                        idx, get_crontab(), inc_tests[idx]))
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=[
@@ -389,4 +615,7 @@ class PsTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests([PsTestCase, CronTestCase], needs_daemon=False)
+    run_tests([
+        PsTestCase,
+        CronTestCase
+    ], needs_daemon=False)

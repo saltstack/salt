@@ -464,7 +464,7 @@ def file(name,
     # If the source is a list then find which file exists
     source, source_hash = __salt__['file.source_list'](source,
                                                        source_hash,
-                                                       env)
+                                                       __env__)
 
     # Gather the source file from the server
     try:
@@ -476,7 +476,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             context,
             defaults,
             **kwargs
@@ -503,7 +503,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             backup
         )
     except Exception as exc:

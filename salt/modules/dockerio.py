@@ -1424,11 +1424,15 @@ def build(path=None,
                     valid(status, id=image_id, out=out, comment='Image built')
                 else:
                     invalid(status, id=image_id, out=out)
+            else:
+                raise NotImplementedError(
+                    'Unknown response type for build() {0!r}'.format(ret))
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
-            return status
+    else:
+        invalid(status, comment='`path` or `fileobj` must be given')
     return status
 
 

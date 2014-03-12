@@ -19,7 +19,7 @@ def __virtual__():
     Only load the module if iptables is installed
     '''
     if salt.utils.which('iptables'):
-        return 'iptables'
+        return True
     return False
 
 
