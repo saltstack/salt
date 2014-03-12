@@ -116,15 +116,6 @@ def __virtual__():
 INVALID_RESPONSE = 'We did not get an acceptable answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
-#Use a proxy mapping to allow queries & updates after the initial grain load
-MAPPING_CACHE = {}
-FN_CACHE = {}
-
-
-def __salt(fn):
-    if not fn in FN_CACHE:
-        FN_CACHE[fn] = __salt__[fn]
-    return FN_CACHE[fn]
 
 
 def _ret_status(exec_status=None,
@@ -230,14 +221,14 @@ def pulled(name, force=False, *args, **kwargs):
     force
         Pull even if the image is already pulled
     '''
-    ins = __salt('docker.inspect_image')
+    ins = __salt__['docker.inspect_image']
     iinfos = ins(name)
     if iinfos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
     previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt('docker.pull')
+    func = __salt__['docker.pull']
     returned = func(name)
     if previous_id != returned['id']:
         changes = {name: True}
@@ -265,7 +256,7 @@ def built(name,
         or filesystem path to the dockerfile
 
     '''
-    ins = __salt('docker.inspect_image')
+    ins = __salt__['docker.inspect_image']
     iinfos = ins(name)
     if iinfos['status'] and not force:
         return _valid(
@@ -273,7 +264,7 @@ def built(name,
             comment='Image already built: {0}, id: {1}'.format(
                 name, iinfos['out']['id']))
     previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt('docker.build')
+    func = __salt__['docker.build']
     kw = dict(tag=name,
               path=path,
               quiet=quiet,
@@ -336,9 +327,9 @@ def installed(name,
         This command does not verify that the named container
         is running the specified image.
     '''
-    ins_image = __salt('docker.inspect_image')
-    ins_container = __salt('docker.inspect_container')
-    create = __salt('docker.create_container')
+    ins_image = __salt__['docker.inspect_image']
+    ins_container = __salt__['docker.inspect_container']
+    create = __salt__['docker.create_container']
     iinfos = ins_image(image)
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
@@ -417,7 +408,7 @@ def absent(name):
         # destroy if we found meat to do
         if is_running:
             __salt__['docker.stop'](cid)
-            is_running = __salt('docker.is_running')(cid)
+            is_running = __salt__['docker.is_running'](cid)
             if is_running:
                 return _invalid(
                     comment=('Container {!r}'
@@ -441,7 +432,7 @@ def present(name):
     name:
         container id
     '''
-    ins_container = __salt('docker.inspect_container')
+    ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
@@ -588,7 +579,7 @@ def running(name, container=None, port_bindings=None, binds=None,
                     HostIp: ""
                     HostPort: "5000"
     '''
-    is_running = __salt('docker.is_running')(container)
+    is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
             comment='Container {!r} is started'.format(container))
