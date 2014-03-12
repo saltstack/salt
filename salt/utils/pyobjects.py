@@ -5,6 +5,8 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
+from collections import namedtuple
+
 from salt.utils.odict import OrderedDict
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
@@ -23,9 +25,9 @@ class InvalidFunction(StateException):
 
 
 class StateRegistry(object):
-    """
+    '''
     The StateRegistry holds all of the states that have been created.
-    """
+    '''
     def __init__(self):
         self.empty()
 
@@ -40,8 +42,8 @@ class StateRegistry(object):
 
     def salt_data(self):
         states = OrderedDict([
-            (id_, state())
-            for id_, state in self.states.iteritems()
+            (id_, states_)
+            for id_, states_ in self.states.iteritems()
         ])
 
         if self.includes:
@@ -49,8 +51,8 @@ class StateRegistry(object):
 
         if self.extends:
             states['extend'] = OrderedDict([
-                (id_, state())
-                for id_, state in self.extends.iteritems()
+                (id_, states_)
+                for id_, states_ in self.extends.iteritems()
             ])
 
         self.empty()
@@ -64,7 +66,13 @@ class StateRegistry(object):
             attr = self.states
 
         if id_ in attr:
-            raise DuplicateState("A state with id '%s' already exists" % id_)
+            if state.full_func in attr[id_]:
+                raise DuplicateState("A state with id '%s', type '%s' exists" % (
+                    id_,
+                    state.full_func
+                ))
+        else:
+            attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
         if len(self.requisites) > 0:
@@ -73,7 +81,7 @@ class StateRegistry(object):
                     state.kwargs[req.requisite] = []
                 state.kwargs[req.requisite].append(req())
 
-        attr[id_] = state
+        attr[id_].update(state())
 
     def extend(self, id_, state):
         self.add(id_, state, extend=True)
@@ -111,7 +119,7 @@ class StateRequisite(object):
 
 
 class StateFactory(object):
-    """
+    '''
     The StateFactory is used to generate new States through a natural syntax
 
     It is used by initializing it with the name of the salt module::
@@ -124,11 +132,13 @@ class StateFactory(object):
         File.managed('/path/', owner='root', group='root')
 
     The kwargs are passed through to the State object
-    """
-    def __init__(self, module, registry, valid_funcs=[]):
+    '''
+    def __init__(self, module, registry, valid_funcs=None):
         self.module = module
-        self.valid_funcs = valid_funcs
         self.registry = registry
+        if valid_funcs is None:
+            valid_funcs = []
+        self.valid_funcs = valid_funcs
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
@@ -146,16 +156,16 @@ class StateFactory(object):
         return make_state
 
     def __call__(self, id_, requisite='require'):
-        """
+        '''
         When an object is called it is being used as a requisite
-        """
+        '''
         # return the correct data structure for the requisite
         return StateRequisite(requisite, self.module, id_,
                               registry=self.registry)
 
 
 class State(object):
-    """
+    '''
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
@@ -164,7 +174,7 @@ class State(object):
 
     The registry is where the state should be stored. It is optional and will
     use the default registry if not specified.
-    """
+    '''
 
     def __init__(self, id_, module, func, registry, **kwargs):
         self.id_ = id_
@@ -226,3 +236,36 @@ class State(object):
 
     def __exit__(self, type, value, traceback):
         self.registry.pop_requisite()
+
+
+class SaltObject(object):
+    '''
+    Object based interface to the functions in __salt__
+
+    .. code-block:: python
+       :linenos:
+        Salt = SaltObject(__salt__)
+        Salt.cmd.run(bar)
+    '''
+    def __init__(self, salt):
+        _mods = {}
+        for full_func in salt:
+            mod, func = full_func.split('.')
+
+            if mod not in _mods:
+                _mods[mod] = {}
+            _mods[mod][func] = salt[full_func]
+
+        # now transform using namedtuples
+        self.mods = {}
+        for mod in _mods:
+            mod_object = namedtuple('%sModule' % mod.capitalize(),
+                                    _mods[mod].keys())
+
+            self.mods[mod] = mod_object(**_mods[mod])
+
+    def __getattr__(self, mod):
+        if mod not in self.mods:
+            raise AttributeError
+
+        return self.mods[mod]
