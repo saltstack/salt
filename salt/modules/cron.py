@@ -19,6 +19,8 @@ SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
 def _encode(string):
     if isinstance(string, unicode):
         string = string.encode('utf-8')
+    elif not string:
+        string = ''
     return "{0}".format(string)
 
 
@@ -45,14 +47,31 @@ def _cron_matched(cron, cmd, identifier=None):
     ret, id_matched = False, None
     cid = _cron_id(cron)
     if cid:
+        if not identifier:
+            identifier = SALT_CRON_NO_IDENTIFIER
         eidentifier = _encode(identifier)
+        # old style second round
+        # after saving crontab, we must check that if
+        # we have not the same command, but the default id
+        # to not set that as a match
         if (
-            cron.get('cmd', None) == cmd
+            cron.get('cmd', None) != cmd
             and cid == SALT_CRON_NO_IDENTIFIER
-            and identifier
+            and eidentifier == SALT_CRON_NO_IDENTIFIER
         ):
-            cid = eidentifier
-        id_matched = eidentifier == cid
+            id_matched = False
+        else:
+            # on saving, be sure not to overwrite a cron
+            # with specific identifier but also track
+            # crons where command is the same
+            # but with the default if that we gonna overwrite
+            if (
+                cron.get('cmd', None) == cmd
+                and cid == SALT_CRON_NO_IDENTIFIER
+                and identifier
+            ):
+                cid = eidentifier
+            id_matched = eidentifier == cid
     if (
         ((id_matched is None) and cmd == cron.get('cmd', None))
         or id_matched
@@ -393,6 +412,11 @@ def set_job(user,
                     ):
                         if identifier:
                             cid = identifier
+                        if (
+                            cid == SALT_CRON_NO_IDENTIFIER
+                            and cron['identifier'] is None
+                        ):
+                            cid = None
                         cron['identifier'] = cid
                 if not cid or (
                     cid and not _needs_change(cid, identifier)

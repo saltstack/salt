@@ -22,8 +22,9 @@ import multiprocessing
 
 # Import modules
 from . import core
+from . import worker
 
-__all__ = ['core']
+__all__ = ['core', 'worker']
 
 # Import ioflo libs
 import ioflo.app.run
@@ -67,7 +68,7 @@ class IofloMaster(object):
         Spin up a worker, do this in s multiprocess
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        self.preloads.append('.salt.yid', yid)
+        self.preloads.append(('.salt.yid', dict(value=yid)))
         ioflo.app.run.start(
                 name='worker{0}'.format(yid),
                 period=float(self.opts['ioflo_period']),
@@ -84,13 +85,13 @@ class IofloMaster(object):
                 verbose=int(self.opts['ioflo_verbose']),
                 )
 
-
     def start(self):
         '''
         Start up ioflo
 
         port = self.opts['raet_port']
         '''
+        self._make_workers()
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
         ioflo.app.run.start(
                 name='master',

@@ -140,10 +140,11 @@ class Setup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.publish.value = deque()
-        worker_seed = []
-        for ind in range(self.opts.value['worker_threads']):
-            worker_seed.append('yard{0}'.format(ind + 1))
-        self.workers.value = itertools.cycle(worker_seed)
+        if self.opts.value.get('worker_threads'):
+            worker_seed = []
+            for ind in range(self.opts.value['worker_threads']):
+                worker_seed.append('yard{0}'.format(ind + 1))
+            self.workers.value = itertools.cycle(worker_seed)
 
 
 class Rx(ioflo.base.deeding.Deed):
@@ -193,11 +194,9 @@ class Router(ioflo.base.deeding.Deed):
                'fun': '.salt.local.fun',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'workers': '.salt.track.workers',
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
-
-    def postinitio(self):
-        self.next_worker 
 
     def _process_udp_rxmsg(self, msg):
         '''

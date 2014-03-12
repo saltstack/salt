@@ -19,7 +19,7 @@ def __virtual__():
     Only load if svn is installed
     '''
     if utils.which('svn'):
-        return 'svn'
+        return True
     return False
 
 

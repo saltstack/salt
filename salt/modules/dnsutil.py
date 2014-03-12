@@ -18,7 +18,7 @@ def __virtual__():
     Generic, should work on any platform (including Windows). Functionality
     which requires dependencies outside of Python do not belong in this module.
     '''
-    return 'dnsutil'
+    return True
 
 
 def parse_hosts(hostsfile='/etc/hosts', hosts=None):

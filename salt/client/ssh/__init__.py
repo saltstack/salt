@@ -59,12 +59,12 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
          MISS_PKG="$MISS_PKG tar"
       fi
 
-      for py_candidate in \\
-            python27      \\
-            python2.7     \\
-            python26      \\
-            python2.6     \\
-            python2       \\
+      for py_candidate in \
+            python27      \
+            python2.7     \
+            python26      \
+            python2.6     \
+            python2       \
             python        ;
       do
          command -v $py_candidate >/dev/null
@@ -83,9 +83,9 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
       SALT="/tmp/.salt/salt-call"
       if [ "{{2}}" = "md5" ]
       then
-         for md5_candidate in \\
-            md5sum            \\
-            md5               \\
+         for md5_candidate in \
+            md5sum            \
+            md5               \
             csum              ;
          do
             command -v $md5_candidate >/dev/null

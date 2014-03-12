@@ -15,7 +15,7 @@ import salt.utils
 
 
 def __virtual__():
-    return 'shadow' if __grains__.get('kernel', '') == 'Linux' else False
+    return __grains__.get('kernel', '') == 'Linux'
 
 
 def default_hash():

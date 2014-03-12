@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if not all((utils.which('git'), HAS_PIPES)):
         return False
-    return 'git'
+    return True
 
 
 def _git_ssh_helper(identity):

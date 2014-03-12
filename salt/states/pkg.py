@@ -76,7 +76,7 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     '''
-    return 'pkg' if 'pkg.install' in __salt__ else False
+    return 'pkg.install' in __salt__
 
 
 def __gen_rtag():

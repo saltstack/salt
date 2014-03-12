@@ -14,7 +14,7 @@ Ensure a process matching a given pattern is absent.
 
 
 def __virtual__():
-    return 'process' if 'ps.pkill' in __salt__ else False
+    return 'ps.pkill' in __salt__
 
 
 def absent(name):

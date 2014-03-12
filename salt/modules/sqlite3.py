@@ -16,7 +16,7 @@ except ImportError:
 def __virtual__():
     if not HAS_SQLITE3:
         return False
-    return 'sqlite3'
+    return True
 
 
 def _connect(db=None):

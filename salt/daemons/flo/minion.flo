@@ -65,10 +65,6 @@ framer bootstrap be active first join
    frame abort
       bid stop all
 
-framer inbound be active first start
-   frame start
-      do rx
-
 framer eventing be active first event
    frame event
       do eventer
