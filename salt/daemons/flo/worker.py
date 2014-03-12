@@ -20,7 +20,7 @@ class RouterWorker(ioflo.base.deeding.Deed):
             'yid': '.salt.yid'
             }
 
-    def postioinit(self):
+    def postinitio(self):
         '''
         Set up the uxd stack
         '''

@@ -4,4 +4,4 @@ house worker
 
 framer uxdrouter be active first start
    frame start
-      do router
+      do worker router
