@@ -1018,11 +1018,11 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     .. code-block:: bash
 
         salt 'minion' lxc.bootstrap name [config=config_data] \\
-                [approve_key=(true|false)] [install=(true|false)]
+                [approve_key=(True|False)] [install=(True|False)]
 
     config
-        Minion configuration options. By default, the 'master' option is set to
-        the target host's 'master'.
+        Minion configuration options. By default, the ``master`` option is set
+        to the target host's master.
 
     approve_key
         Request a pre-approval of the generated minion key. Requires
@@ -1037,7 +1037,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     if not infos:
         return None
 
-    prior_state = _ensure_running(name)
+    prior_state = _ensure_running(name, no_start=no_start)
 
     __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
@@ -1078,22 +1078,22 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         Command to run
 
     no_start
-        If the container is not running, don't start it. Default: false.
+        If the container is not running, don't start it. Default: ``False``
 
     preserve_state
         After running the command, return the container to its previous
         state. Default: true.
 
     stdout:
-        Return stdout. Default: true
+        Return stdout. Default: ``True``
 
     stderr:
-        Return stderr. Default: false
+        Return stderr. Default: ``False``
 
     Note: If stderr and stdout are both false, the return code is returned. If
     stderr and stdout are both true, the pid and return code are also returned.
     '''
-    prior_state = _ensure_running(name)
+    prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
         return prior_state
 
