@@ -77,6 +77,9 @@ class Shell(object):
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        known_hosts = self.opts.get('known_hosts_file')
+        if known_hosts and os.path.isfile(known_hosts):
+            options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
             options.append('Port={0}'.format(self.port))
         if self.priv:
@@ -162,7 +165,7 @@ class Shell(object):
         '''
         Execute ssh-copy-id to plant the id file on the target
         '''
-        stdout, stderr = self._run_cmd(self._copy_id_str_old())
+        _, stderr, _ = self._run_cmd(self._copy_id_str_old())
         if stderr.startswith('Usage'):
             self._run_cmd(self._copy_id_str_new())
 
@@ -208,9 +211,9 @@ class Shell(object):
             )
 
             data = proc.communicate()
-            return data
+            return data[0], data[1], proc.returncode
         except Exception:
-            return ('local', 'Unknown Error')
+            return ('local', 'Unknown Error', None)
 
     def _run_nb_cmd(self, cmd):
         '''
@@ -227,13 +230,14 @@ class Shell(object):
                 time.sleep(0.1)
                 out = proc.recv()
                 err = proc.recv_err()
+                rcode = proc.returncode
                 if out is None and err is None:
                     break
                 if err:
                     err = self.get_error(err)
-                yield out, err
+                yield out, err, rcode
         except Exception:
-            yield ('', 'Unknown Error')
+            yield ('', 'Unknown Error', None)
 
     def exec_nb_cmd(self, cmd):
         '''
@@ -241,6 +245,7 @@ class Shell(object):
         '''
         r_out = []
         r_err = []
+        rcode = None
         cmd = self._cmd_str(cmd)
 
         logmsg = 'Executing non-blocking command: {0}'.format(cmd)
@@ -248,13 +253,13 @@ class Shell(object):
             logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
         log.debug(logmsg)
 
-        for out, err in self._run_nb_cmd(cmd):
+        for out, err, rcode in self._run_nb_cmd(cmd):
             if out is not None:
                 r_out.append(out)
             if err is not None:
                 r_err.append(err)
-            yield None, None
-        yield ''.join(r_out), ''.join(r_err)
+            yield None, None, None
+        yield ''.join(r_out), ''.join(r_err), rcode
 
     def exec_cmd(self, cmd):
         '''

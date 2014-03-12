@@ -119,9 +119,18 @@ def prep_trans_tar(opts, chunks, file_refs):
     trans_tar = salt.utils.mkstemp()
     file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
+    sync_refs = [
+            ['salt://_modules'],
+            ['salt://_states'],
+            ['salt://_grains'],
+            ['salt://_renderers'],
+            ['salt://_returners'],
+            ['salt://_outputters'],
+            ]
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     for saltenv in file_refs:
+        file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
         if not os.path.isdir(env_root):
             os.makedirs(env_root)
