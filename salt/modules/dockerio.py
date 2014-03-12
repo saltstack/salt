@@ -1433,7 +1433,6 @@ def build(path=None,
                     comment='Unexpected error while building an image')
     else:
         invalid(status, comment='`path` or `fileobj` must be given')
-            return status
     return status
 
 
