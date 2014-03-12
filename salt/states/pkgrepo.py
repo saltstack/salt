@@ -69,7 +69,7 @@ def __virtual__():
     '''
     Only load if modifying repos is available for this package type
     '''
-    return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
+    return 'pkg.mod_repo' in __salt__
 
 
 def managed(name, **kwargs):

@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_user' if (
-        'postgres.user_exists' in __salt__
-    ) else False
+    return 'postgres.user_exists' in __salt__
 
 
 def present(name,
