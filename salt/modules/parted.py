@@ -16,6 +16,7 @@ reference the man page for ``sfdisk(8)``.
 
 # Import python libs
 import os
+import stat
 import string
 import logging
 
@@ -696,3 +697,22 @@ def toggle(device, partition, flag):
     cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
+
+
+def exists(device=''):
+    '''
+    partition.exists device
+
+    Check to see if the partition exists
+
+    .. code-block:: bash
+
+        salt '*' partition.exists /dev/sdb1
+    '''
+    if os.path.exists(device):
+        dev = os.stat(device).st_mode
+
+        if stat.S_ISBLK(dev):
+            return True
+
+    return False
