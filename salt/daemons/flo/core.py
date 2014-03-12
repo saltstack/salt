@@ -140,10 +140,11 @@ class Setup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.publish.value = deque()
-        worker_seed = []
-        for ind in range(self.opts.value['worker_threads']):
-            worker_seed.append('yard{0}'.format(ind + 1))
-        self.workers.value = itertools.cycle(worker_seed)
+        if self.opts.value.get('worker_threads'):
+            worker_seed = []
+            for ind in range(self.opts.value['worker_threads']):
+                worker_seed.append('yard{0}'.format(ind + 1))
+            self.workers.value = itertools.cycle(worker_seed)
 
 
 class Rx(ioflo.base.deeding.Deed):
