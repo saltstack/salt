@@ -842,16 +842,17 @@ class Loader(object):
                             if virtual is not True and module_name == virtual:
                                 # The module was not renamed, it should
                                 # have returned True instead
-                                salt.utils.warn_until(
-                                    'Helium',
-                                    'The {0!r} module is NOT renaming itself '
-                                    'and is returning a string. In this case '
-                                    'the __virtual__() function should simply '
-                                    'return `True`. This usage will become an '
-                                    'error in Salt Helium'.format(
-                                        mod.__name__,
-                                    )
-                                )
+                                #salt.utils.warn_until(
+                                #    'Helium',
+                                #    'The {0!r} module is NOT renaming itself '
+                                #    'and is returning a string. In this case '
+                                #    'the __virtual__() function should simply '
+                                #    'return `True`. This usage will become an '
+                                #    'error in Salt Helium'.format(
+                                #        mod.__name__,
+                                #    )
+                                #)
+                                pass
 
                             elif virtual is not True and module_name != virtual:
                                 # The module is renaming itself. Updating the
