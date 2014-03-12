@@ -28,10 +28,6 @@ framer publish be active first start
    frame start
       do publisher
 
-framer localcmd be active first start
-   frame start
-      do cmd local
-
 framer outbound be active first start
    frame start
       do tx
