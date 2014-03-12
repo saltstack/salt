@@ -925,7 +925,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-    def __test_issue_11003_immutable_lazy_proxy_sum(self):
+    def test_issue_11003_immutable_lazy_proxy_sum(self):
         template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
         testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
         sls_template = [
