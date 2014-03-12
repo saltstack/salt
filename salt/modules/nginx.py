@@ -21,7 +21,7 @@ def __virtual__():
     Only load the module if nginx is installed
     '''
     if __detect_os():
-        return 'nginx'
+        return True
     return False
 
 
