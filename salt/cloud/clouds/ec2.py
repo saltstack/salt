@@ -2768,17 +2768,17 @@ def describe_snapshots(kwargs=None, call=None):
     if 'snapshot_ids' in kwargs:
         snapshot_ids = kwargs['snapshot_ids'].split(',')
         for snapshot_index, snapshot_id in enumerate(snapshot_ids):
-            params['SnapshotId.{}'.format(snapshot_index)] = snapshot_id
+            params['SnapshotId.{0}'.format(snapshot_index)] = snapshot_id
 
     if 'owner' in kwargs:
         owners = kwargs['owner'].split(',')
         for owner_index, owner in enumerate(owners):
-            params['Owner.{}'.format(owner_index)] = owner
+            params['Owner.{0}'.format(owner_index)] = owner
 
     if 'restorable_by' in kwargs:
         restorable_bys = kwargs['restorable_by'].split(',')
         for restorable_by_index, restorable_by in enumerate(restorable_bys):
-            params['RestorableBy.{}'.format(restorable_by_index)] = restorable_by
+            params['RestorableBy.{0}'.format(restorable_by_index)] = restorable_by
 
     log.debug(params)
 
