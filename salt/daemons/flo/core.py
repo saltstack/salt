@@ -130,6 +130,7 @@ class Setup(ioflo.base.deeding.Deed):
         Set up required objects and queues
         '''
         self.uxd_stack.value = stacking.StackUxd(
+                name='yard',
                 lanename=self.opts.value['id'],
                 yid=0,
                 dirpath=self.opts.value['sock_dir'])
