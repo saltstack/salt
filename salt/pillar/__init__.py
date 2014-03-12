@@ -488,14 +488,15 @@ class Pillar(object):
                             )
         return pillar
 
-    def compile_pillar(self):
+    def compile_pillar(self, ext=True):
         '''
         Render the pillar data and return
         '''
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        self.ext_pillar(pillar)
+        if ext:
+            self.ext_pillar(pillar)
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
