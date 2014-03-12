@@ -57,7 +57,7 @@ class IofloMaster(object):
         '''
         Spin up a process for each worker thread
         '''
-        for ind in range(int(1)):
+        for ind in range(int(self.opts['worker_threads'])):
             proc = multiprocessing.Process(
                     target=self._worker, kwargs={'yid': ind + 1}
                     )
