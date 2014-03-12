@@ -702,6 +702,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         __context__['retcode'] = 1
         return err
 
+    st_._mod_init(kwargs)
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
