@@ -698,6 +698,7 @@ def toggle(device, partition, flag):
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
+
 def exists(device=''):
     '''
     partition.exists device
