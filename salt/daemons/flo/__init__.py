@@ -26,6 +26,9 @@ from . import worker
 
 __all__ = ['core', 'worker']
 
+# Import salt libs
+import salt.daemons.masterapi
+
 # Import ioflo libs
 import ioflo.app.run
 
@@ -52,6 +55,7 @@ class IofloMaster(object):
         '''
         self.opts = opts
         self.preloads = explode_opts(self.opts)
+        self.access_keys = salt.daemons.masterapi.access_keys(self.opts.value)
 
     def _make_workers(self):
         '''
@@ -69,6 +73,8 @@ class IofloMaster(object):
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
         self.preloads.append(('.salt.yid', dict(value=yid)))
+        self.preloads.append(
+                ('.salt.access_keys', dict(value=self.access_keys)))
         ioflo.app.run.start(
                 name='worker{0}'.format(yid),
                 period=float(self.opts['ioflo_period']),

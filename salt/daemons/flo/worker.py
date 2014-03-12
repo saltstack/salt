@@ -17,7 +17,8 @@ class RouterWorker(ioflo.base.deeding.Deed):
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
-            'yid': '.salt.yid'
+            'yid': '.salt.yid',
+            'access_keys': '.salt.access_keys',
             }
 
     def postinitio(self):
@@ -34,10 +35,9 @@ class RouterWorker(ioflo.base.deeding.Deed):
                 dirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.addRemoteYard(manor_yard)
         self.remote = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
-        self.access_keys = salt.daemons.masterapi.access_keys(self.opts.value)
         self.local = salt.daemons.masterapi.LocalFuncs(
                 self.opts.value,
-                self.access_keys)
+                self.access_keys.value)
 
     def action(self):
         '''
