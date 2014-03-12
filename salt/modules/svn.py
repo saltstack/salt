@@ -441,6 +441,7 @@ def export(cwd,
              user=None,
              username=None,
              password=None,
+             revision='HEAD',
              *opts):
     '''
     Create an unversioned copy of a tree.
@@ -475,4 +476,6 @@ def export(cwd,
     opts += (remote,)
     if target:
         opts += (target,)
+    revision_args = '-r'
+    opts += (revision_args, str(revision),)
     return _run_svn('export', cwd, user, username, password, opts)
