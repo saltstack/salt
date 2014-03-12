@@ -164,8 +164,8 @@ def init(name,
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
-                [nic_opts=nic_opts] [start=(true|false)] \\
-                [seed=(true|false)] [install=(true|false)] \\
+                [nic_opts=nic_opts] [start=(True|False)] \\
+                [seed=(True|False)] [install=(True|False)] \\
                 [config=minion_config]
 
     name
@@ -194,10 +194,10 @@ def init(name,
         Start the newly created container.
 
     seed
-        Seed the container with the minion config. Default: true
+        Seed the container with the minion config. Default: ``True``
 
     install
-        If salt-minion is not already installed, install it. Default: true
+        If salt-minion is not already installed, install it. Default: ``True``
 
     config
         Optional config parameters. By default, the id is set to the name of the
@@ -628,7 +628,7 @@ def destroy(name, stop=True):
 
     .. code-block:: bash
 
-        salt '*' lxc.destroy name [stop=(true|false)]
+        salt '*' lxc.destroy name [stop=(True|False)]
     '''
     if stop:
         _change_state('lxc-stop', name, 'stopped')
@@ -1027,7 +1027,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     approve_key
         Request a pre-approval of the generated minion key. Requires
         that the salt-master be configured to either auto-accept all keys or
-        expect a signing request from the target host. Default: true.
+        expect a signing request from the target host. Default: ``True``
 
     install
         Whether to attempt a full installation of salt-minion if needed.
@@ -1037,7 +1037,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     if not infos:
         return None
 
-    prior_state = _ensure_running(name, no_start=no_start)
+    prior_state = _ensure_running(name)
 
     __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
@@ -1067,9 +1067,9 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
 
     .. code-block:: bash
 
-        salt 'minion' name command [no_start=(true|false)] \\
-                [preserve_state=(true|false)] [stdout=(true|alse)] \\
-                [stderr=(true|false)]
+        salt 'minion' name command [no_start=(True|False)] \\
+                [preserve_state=(True|False)] [stdout=(True|False)] \\
+                [stderr=(True|False)]
 
     name
         Name of the container on which to operate.
@@ -1082,7 +1082,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
 
     preserve_state
         After running the command, return the container to its previous
-        state. Default: true.
+        state. Default: ``True``
 
     stdout:
         Return stdout. Default: ``True``
@@ -1090,8 +1090,11 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     stderr:
         Return stderr. Default: ``False``
 
-    Note: If stderr and stdout are both false, the return code is returned. If
-    stderr and stdout are both true, the pid and return code are also returned.
+    .. note::
+
+        If stderr and stdout are both ``False``, the return code is returned.
+        If stderr and stdout are both ``True``, the pid and return code are
+        also returned.
     '''
     prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
