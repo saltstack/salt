@@ -201,7 +201,7 @@ def file_hash(load, fnd):
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-        except os.error:  # Can't use Python select() because we need Windows support
+        except (os.error, IOError):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
             try:
