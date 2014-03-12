@@ -34,6 +34,7 @@ class SaltEvent(object):
 
     def __prep_stack(self):
         yid = salt.utils.gen_jid()
+        self.connected = False
         self.stack = stacking.StackUxd(
                 yid=yid,
                 lanename=self.node,
@@ -46,8 +47,7 @@ class SaltEvent(object):
         route = {'dst': (None, self.router_yard.name, 'event_req'),
                  'src': (None, self.stack.yard.name, None)}
         msg = {'route': route, 'load': {'yid': yid, 'dirpath': self.sock_dir}}
-        self.stack.transmit(msg, self.router_yard.name)
-        self.stack.serviceAll()
+        self.connect_pub()
 
     def subscribe(self, tag=None):
         '''
@@ -65,12 +65,19 @@ class SaltEvent(object):
         '''
         Establish the publish connection
         '''
-        return
+        if not self.connected:
+            try:
+                self.stack.transmit(msg, self.router_yard.name)
+                self.stack.serviceAll()
+                self.connected = True
+            except Exception:
+                pass
 
     def connect_pull(self, timeout=1000):
         '''
         Included for compat with zeromq events, not required
         '''
+        return
 
     @classmethod
     def unpack(cls, raw, serial=None):
@@ -87,6 +94,7 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
+        self.connect_pub()
         start = time.time()
         while True:
             self.stack.serviceAll()
@@ -110,6 +118,7 @@ class SaltEvent(object):
         '''
         Get the raw event without blocking or any other niceties
         '''
+        self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             event = self.stack.rxMsgs.popleft()
@@ -133,6 +142,7 @@ class SaltEvent(object):
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
         '''
+        self.connect_pub()
         # Timeout is retained for compat with zeromq events
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
