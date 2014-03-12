@@ -705,6 +705,8 @@ def exists(device=''):
 
     Check to see if the partition exists
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' partition.exists /dev/sdb1
