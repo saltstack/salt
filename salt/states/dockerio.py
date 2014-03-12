@@ -179,8 +179,7 @@ def mod_watch(name, sfun=None, *args, **kw):
                                     name=name)
         installed_status = installed(name=name, **kw)
         result = installed_status['result'] and remove_status['result']
-        comment = '\n'.join((remove_status['comment'],
-                             installed_status['comment']))
+        comment = remove_status['comment']
         status = _ret_status(installed_status, name=name,
                              result=result,
                              changes={name: result},
