@@ -51,13 +51,6 @@ framer bootstrap be active first join
       print Allowed
       go next
 
-   frame message
-      print Messaging...
-      enter
-         do raet udp stack messenger to contents "Minion 1 Hello" code 15 \
-            per inode ".raet.udp.stack."
-      go next
-
    frame loading
       enter
          do load modules
