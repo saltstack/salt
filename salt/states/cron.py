@@ -24,9 +24,9 @@ parameters used by Salt to define the various timing values for a cron job:
     the cron job is for another user, it is necessary to specify that user with
     the ``user`` parameter.
 
-When making changes to an existing cron job, the name declaration is the
-parameter used to uniquely identify the job, so if an existing cron that looks
-like this:
+A long time ago (before 2014.2), when making changes to an existing cron job,
+the name declaration is the parameter used to uniquely identify the job,
+so if an existing cron that looks like this:
 
 .. code-block:: yaml
 
@@ -48,7 +48,33 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+The current behavior is still relying on that mechanism, but you can also
+specify an identifier to identify your crontabs:
+.. versionadded:: 2014.2
+.. code-block:: yaml
+
+    date > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 7
+        - hour: 2
+
+And, some months later, you modify it:
+.. versionadded:: 2014.2
+.. code-block:: yaml
+
+    superscript > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 3
+        - hour: 4
+
+The old **date > /tmp/crontest** will be replaced by
+**superscript > /tmp/crontest**.
+
+Additionally, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
@@ -92,7 +118,11 @@ import os
 # Import salt libs
 import salt._compat
 import salt.utils
-from salt.modules.cron import _needs_change
+from salt.modules.cron import (
+    _needs_change,
+    _cron_matched,
+    SALT_CRON_NO_IDENTIFIER
+)
 
 
 def _check_cron(user,
@@ -102,7 +132,8 @@ def _check_cron(user,
                 daymonth=None,
                 month=None,
                 dayweek=None,
-                comment=None):
+                comment=None,
+                identifier=None):
     '''
     Return the changes
     '''
@@ -118,11 +149,28 @@ def _check_cron(user,
         dayweek = str(dayweek).lower()
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
-        if cmd == cron['cmd']:
+        if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
                      (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                return 'update'
+            return 'present'
+    return 'absent'
+
+
+def _check_cron_env(user,
+                    name,
+                    value=None):
+    '''
+    Return the environment changes
+    '''
+    if value is None:
+        value = ""  # Matching value set in salt.modules.cron._render_tab
+    lst = __salt__['cron.list_tab'](user)
+    for env in lst['env']:
+        if name == env['name']:
+            if value != env['value']:
                 return 'update'
             return 'present'
     return 'absent'
@@ -158,7 +206,8 @@ def present(name,
             daymonth='*',
             month='*',
             dayweek='*',
-            comment=None):
+            comment=None,
+            identifier=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -170,7 +219,7 @@ def present(name,
         The command that should be executed by the cron job.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
 
     minute
@@ -192,21 +241,28 @@ def present(name,
 
     comment
         User comment to be added on line previous the cron job
+
+    identifier
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
     if __opts__['test']:
         status = _check_cron(user,
-                             name,
-                             minute,
-                             hour,
-                             daymonth,
-                             month,
-                             dayweek,
-                             comment)
+                             cmd=name,
+                             minute=minute,
+                             hour=hour,
+                             daymonth=daymonth,
+                             month=month,
+                             dayweek=dayweek,
+                             comment=comment,
+                             identifier=identifier)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -224,7 +280,8 @@ def present(name,
                                     month=month,
                                     dayweek=dayweek,
                                     cmd=name,
-                                    comment=comment)
+                                    comment=comment,
+                                    identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -246,6 +303,7 @@ def present(name,
 
 def absent(name,
            user='root',
+           identifier=None,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -255,14 +313,20 @@ def absent(name,
         The command that should be absent in the user crontab.
 
     user
-        The name of the user who's crontab needs to be modified, defaults to
+        The name of the user whose crontab needs to be modified, defaults to
         the root user
+
+    identifier
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -278,7 +342,7 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user, name)
+    data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
@@ -400,7 +464,7 @@ def file(name,
     # If the source is a list then find which file exists
     source, source_hash = __salt__['file.source_list'](source,
                                                        source_hash,
-                                                       env)
+                                                       __env__)
 
     # Gather the source file from the server
     try:
@@ -412,7 +476,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             context,
             defaults,
             **kwargs
@@ -439,7 +503,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             backup
         )
     except Exception as exc:
@@ -462,4 +526,102 @@ def file(name,
         ret['result'] = False
 
     os.unlink(cron_path)
+    return ret
+
+
+def env_present(name,
+                value=None,
+                user='root'):
+    '''
+    Verifies that the specified environment variable is present in the crontab
+    for the specified user.
+
+    name
+        The name of the environment variable to set in the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+
+    value
+        The value to set for the given environment variable
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+    if __opts__['test']:
+        status = _check_cron_env(user, name, value=value)
+        ret['result'] = None
+        if status == 'absent':
+            ret['comment'] = 'Cron env {0} is set to be added'.format(name)
+        elif status == 'present':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} already present'.format(name)
+        elif status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be updated'.format(name)
+        return ret
+
+    data = __salt__['cron.set_env'](user, name, value=value)
+    if data == 'present':
+        ret['comment'] = 'Cron env {0} already present'.format(name)
+        return ret
+
+    if data == 'new':
+        ret['comment'] = 'Cron env {0} added to {1}\'s crontab'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+
+    if data == 'updated':
+        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'
+                      .format(name, user, data))
+    ret['result'] = False
+    return ret
+
+
+def env_absent(name,
+               user='root'):
+    '''
+    Verifies that the specified environment variable is absent from the crontab
+    for the specified user
+
+    name
+        The name of the environment variable to remove from the user crontab
+
+    user
+        The name of the user whose crontab needs to be modified, defaults to
+        the root user
+    '''
+
+    name = ' '.join(name.strip().split())
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    if __opts__['test']:
+        status = _check_cron_env(user, name)
+        ret['result'] = None
+        if status == 'absent':
+            ret['result'] = True
+            ret['comment'] = 'Cron env {0} is absent'.format(name)
+        elif status == 'present' or status == 'update':
+            ret['comment'] = 'Cron env {0} is set to be removed'.format(name)
+        return ret
+
+    data = __salt__['cron.rm_env'](user, name)
+    if data == 'absent':
+        ret['comment'] = "Cron env {0} already absent".format(name)
+        return ret
+    if data == 'removed':
+        ret['comment'] = ("Cron env {0} removed from {1}'s crontab"
+                          .format(name, user))
+        ret['changes'] = {user: name}
+        return ret
+    ret['comment'] = ("Cron env {0} for user {1} failed to commit with error {2}"
+                      .format(name, user, data))
+    ret['result'] = False
     return ret
