@@ -55,7 +55,7 @@ class IofloMaster(object):
         '''
         self.opts = opts
         self.preloads = explode_opts(self.opts)
-        self.access_keys = salt.daemons.masterapi.access_keys(self.opts.value)
+        self.access_keys = salt.daemons.masterapi.access_keys(self.opts)
 
     def _make_workers(self):
         '''
