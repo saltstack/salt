@@ -5,7 +5,8 @@ Tests to try out stacking. Potentially ephemeral
 '''
 # pylint: skip-file
 
-import  os
+import os
+import stat
 
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import Timer, StoreTimer
@@ -15,7 +16,8 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from salt.transport.road.raet import (raeting, nacling, packeting, keeping,
-                                     estating, yarding, transacting, stacking)
+                                     estating, yarding, transacting, stacking,
+                                     salting)
 
 
 def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, postClearMinion=False):
@@ -28,6 +30,82 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     minion eid of 2
     '''
     console.reinit(verbosity=console.Wordage.concise)
+
+    pkiDirpath = os.path.join(os.getcwd(), 'keyo', 'master', 'pki')
+    if not os.path.exists(pkiDirpath):
+            os.makedirs(pkiDirpath)
+
+    acceptedDirpath = os.path.join(pkiDirpath, 'accepted')
+    if not os.path.exists(acceptedDirpath):
+        os.makedirs(acceptedDirpath)
+
+    pendingDirpath = os.path.join(pkiDirpath, 'pending')
+    if not os.path.exists(pendingDirpath):
+        os.makedirs(pendingDirpath)
+
+    rejectedDirpath = os.path.join(pkiDirpath, 'rejected')
+    if not os.path.exists(rejectedDirpath):
+        os.makedirs(rejectedDirpath)
+
+    localFilepath = os.path.join(pkiDirpath, 'local.key')
+    if os.path.exists(localFilepath):
+        mode = os.stat(localFilepath).st_mode
+        print mode
+        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
+
+
+    cacheDirpath = os.path.join(os.getcwd(), 'cache', 'master')
+    sockDirpath = os.path.join('/tmp/raet', 'sock', 'master')
+
+    masterOpts = dict(
+                pki_dir=pkiDirpath,
+                sock_dir=sockDirpath,
+                cachedir=cacheDirpath,
+                open_mode=False,
+                auto_accept=False,
+                )
+
+    masterSafe = salting.SaltSafe(opts=masterOpts)
+    print masterSafe.loadLocalData()
+    print masterSafe.loadAllRemoteData()
+
+    pkiDirpath = os.path.join(os.getcwd(), 'keyo', 'minion', 'pki')
+    if not os.path.exists(pkiDirpath):
+            os.makedirs(pkiDirpath)
+
+    acceptedDirpath = os.path.join(pkiDirpath, 'accepted')
+    if not os.path.exists(acceptedDirpath):
+        os.makedirs(acceptedDirpath)
+
+    pendingDirpath = os.path.join(pkiDirpath, 'pending')
+    if not os.path.exists(pendingDirpath):
+        os.makedirs(pendingDirpath)
+
+    rejectedDirpath = os.path.join(pkiDirpath, 'rejected')
+    if not os.path.exists(rejectedDirpath):
+        os.makedirs(rejectedDirpath)
+
+    localFilepath = os.path.join(pkiDirpath, 'local.key')
+    if os.path.exists(localFilepath):
+        mode = os.stat(localFilepath).st_mode
+        print mode
+        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
+
+
+    cacheDirpath = os.path.join(os.getcwd(), 'cache', 'minion')
+    sockDirpath = os.path.join('/tmp/raet', 'sock', 'minion')
+
+    minionOpts = dict(
+                pki_dir=pkiDirpath,
+                sock_dir=sockDirpath,
+                cachedir=cacheDirpath,
+                open_mode=False,
+                auto_accept=True,
+                )
+
+    minionSafe = salting.SaltSafe(opts=minionOpts)
+    print minionSafe.loadLocalData()
+    print minionSafe.loadAllRemoteData()
 
     store = storing.Store(stamp=0.0)
 
@@ -48,9 +126,9 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     m0Dirpath = os.path.join(os.getcwd(), 'keep', minionName0)
 
     if preClearMaster:
-        keeping.clearAllRoadSafe(masterDirpath)
+        salting.clearAllRoadSafe(masterDirpath, masterOpts)
     if preClearMinion:
-        keeping.clearAllRoadSafe(m0Dirpath)
+        salting.clearAllRoadSafe(m0Dirpath, minionOpts)
 
 
     estate = estating.LocalEstate(  eid=1,
@@ -61,7 +139,8 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
                                estate=estate,
                                store=store,
                                main=True,
-                               dirpath=masterDirpath)
+                               dirpath=masterDirpath,
+                               safe=masterSafe, )
 
 
     estate = estating.LocalEstate(  eid=0,
@@ -72,7 +151,12 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     stack1 = stacking.StackUdp(name=minionName0,
                                estate=estate,
                                store=store,
-                               dirpath=m0Dirpath)
+                               dirpath=m0Dirpath,
+                               safe=minionSafe, )
+
+    print stack0.safe.loadLocalData()
+    print stack1.safe.loadLocalData()
+
 
 
     print "\n********* Join Transaction **********"
@@ -121,9 +205,9 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
     stack1.server.close()
 
     if postClearMaster:
-        keeping.clearAllRoadSafe(masterDirpath)
+        salting.clearAllRoadSafe(masterDirpath, masterOpts)
     if postClearMinion:
-        keeping.clearAllRoadSafe(m0Dirpath)
+        salting.clearAllRoadSafe(m0Dirpath, minionOpts)
 
 
 
