@@ -33,10 +33,10 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
-        yid = salt.utils.gen_jid()
+        self.yid = salt.utils.gen_jid()
         self.connected = False
         self.stack = stacking.StackUxd(
-                yid=yid,
+                yid=self.yid,
                 lanename=self.node,
                 dirpath=self.sock_dir)
         self.router_yard = yarding.Yard(
@@ -44,9 +44,6 @@ class SaltEvent(object):
                 yid=0,
                 dirpath=self.sock_dir)
         self.stack.addRemoteYard(self.router_yard)
-        route = {'dst': (None, self.router_yard.name, 'event_req'),
-                 'src': (None, self.stack.yard.name, None)}
-        msg = {'route': route, 'load': {'yid': yid, 'dirpath': self.sock_dir}}
         self.connect_pub()
 
     def subscribe(self, tag=None):
@@ -67,6 +64,11 @@ class SaltEvent(object):
         '''
         if not self.connected:
             try:
+                route = {'dst': (None, self.router_yard.name, 'event_req'),
+                         'src': (None, self.stack.yard.name, None)}
+                msg = {
+                        'route': route,
+                        'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
                 self.stack.transmit(msg, self.router_yard.name)
                 self.stack.serviceAll()
                 self.connected = True
