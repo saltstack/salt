@@ -276,7 +276,9 @@ def built(name,
         changes = {name: True}
     else:
         changes = {}
-    return _ret_status(returned, name, changes=changes)
+    return _ret_status(exec_status=returned,
+                       name=name,
+                       changes=changes)
 
 
 def installed(name,
