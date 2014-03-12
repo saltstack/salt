@@ -1108,7 +1108,6 @@ class Minion(object):
                 exc_info=err
             )
 
-
     # Main Minion Tune In
     def tune_in(self):
         '''
