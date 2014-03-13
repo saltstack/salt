@@ -10,13 +10,24 @@ class IniManageTestCase(TestCase):
 
     TEST_FILE_CONTENT = '''\
 # Comment on the first line
+
+# First main option
+option1=main1
+
+# Second main option
+option2=main2
+
+
 [main]
 # Another comment
 test1=value 1
+
 test2=value 2
 
 [SectionB]
 test1=value 1B
+
+# Blank line should be above
 test3 = value 3B
 
 [SectionC]
@@ -112,7 +123,36 @@ empty_option=
         })
         with open(self.tfile.name, 'rb') as fp:
             file_content = fp.read()
-        self.assertIn('test2=value 2\n\n[SectionB]\n', file_content,
-                      'first empty line was not preserved')
-        self.assertIn('test3=new value 3B\n\n[SectionC]\n', file_content,
-                      'second empty line was not preserved')
+        self.assertEqual('''\
+# Comment on the first line
+
+# First main option
+option1=main1
+
+# Second main option
+option2=main2
+
+
+[main]
+# Another comment
+test1=value 1
+
+test2=value 2
+
+[SectionB]
+test1=value 1B
+
+# Blank line should be above
+test3=new value 3B
+
+[SectionC]
+# The following option is empty
+empty_option=
+
+''', file_content)
+
+    def test_empty_lines_preserved_after_multiple_edits(self):
+        ini.set_option(self.tfile.name, {
+            'SectionB': {'test3': 'this value will be edited two times'},
+        })
+        self.test_empty_lines_preserved_after_edit()
