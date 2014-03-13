@@ -65,15 +65,11 @@ class Master(parsers.MasterOptionParser):
 
         try:
             if self.config['verify_env']:
-                verify_env(
-                    [
+                v_dirs = [
                         self.config['pki_dir'],
                         os.path.join(self.config['pki_dir'], 'minions'),
                         os.path.join(self.config['pki_dir'], 'minions_pre'),
                         os.path.join(self.config['pki_dir'], 'minions_denied'),
-                        os.path.join(self.config['pki_dir'], 'accepted'),
-                        os.path.join(self.config['pki_dir'], 'pending'),
-                        os.path.join(self.config['pki_dir'], 'rejected'),
                         os.path.join(self.config['pki_dir'],
                                      'minions_rejected'),
                         self.config['cachedir'],
@@ -81,7 +77,13 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
                         self.config['token_dir'],
-                    ],
+                    ]
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                verify_env(
+                    v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
@@ -175,14 +177,19 @@ class Minion(parsers.MinionOptionParser):
                     confd = os.path.join(
                         os.path.dirname(self.config['conf_file']), 'minion.d'
                     )
-                verify_env(
-                    [
+                v_dirs = [
                         self.config['pki_dir'],
                         self.config['cachedir'],
                         self.config['sock_dir'],
                         self.config['extension_modules'],
                         confd,
-                    ],
+                    ]
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                verify_env(
+                    v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
