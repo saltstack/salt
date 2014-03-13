@@ -11,3 +11,5 @@ https://github.com/terminalmage/djangocon2013-sls
 https://github.com/jesusaurus/hpcs-salt-state
 
 https://github.com/gravyboat/hungryadmin-sls
+
+https://github.com/wunki/django-salted

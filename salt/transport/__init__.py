@@ -9,6 +9,7 @@ import salt.auth
 try:
     from salt.transport.road.raet import stacking
     from salt.transport.road.raet import yarding
+    from salt.transport.road.raet import raeting
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
@@ -52,6 +53,7 @@ class RAETChannel(Channel):
                 lanename=self.opts['id'],
                 yid=self.opts['__ex_id'],
                 dirpath=self.opts['sock_dir'])
+        self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.Yard(
                 yid=0,
                 prefix=self.opts['id'],

@@ -220,8 +220,7 @@ class Keep(object):
 
     def clearRemoteEstate(self, estate):
         '''
-        Load and Return the data from the remote estate file
-        Override this in sub class to change uid
+        Clear the remote estate file
         '''
         uid = estate.eid
         self.clearRemoteData(uid)
@@ -336,15 +335,7 @@ class SafeKeep(Keep):
         uid = estate.eid
         return (self.loadRemoteData(uid))
 
-    def removeRemoteEstate(self, estate):
-        '''
-        Load and Return the data from the remote estate file
-        Override this in sub class to change uid
-        '''
-        uid = estate.eid
-        self.clearRemoteData(uid)
-
-    def statusRemoteEstate(self, estate, verhex=None, pubhex=None, main=True):
+    def statusRemoteEstate(self, estate, verhex, pubhex, main=True):
         '''
         Evaluate acceptance status of estate per its keys
         persist key data differentially based on status
@@ -360,15 +351,15 @@ class SafeKeep(Keep):
                     status = raeting.acceptances.pending
 
                 elif status == raeting.acceptances.accepted:
-                    if (  data and (
-                            (verhex and (verhex != data.get('verhex'))) or
-                            (pubhex and (pubhex != data.get('pubhex'))))):
+                    if (data and (
+                            (verhex != data.get('verhex')) or
+                            (pubhex != data.get('pubhex')) )):
                         status = raeting.acceptances.rejected
 
                 elif status == raeting.acceptances.rejected:
-                    if (  data and (
-                            (verhex and (verhex != data.get('verhex'))) or
-                            (pubhex and (pubhex != data.get('pubhex'))))):
+                    if (data and (
+                            (verhex != data.get('verhex')) or
+                            (pubhex != data.get('pubhex')) )):
                         status = raeting.acceptances.pending
 
                 else: # pre-existing was pending
@@ -381,18 +372,17 @@ class SafeKeep(Keep):
 
             elif status == raeting.acceptances.accepted:
                 if (  data and (
-                        (verhex and (verhex != data.get('verhex'))) or
-                        (pubhex and (pubhex != data.get('pubhex'))))):
+                        (verhex != data.get('verhex')) or
+                        (pubhex != data.get('pubhex')) )):
                     status = raeting.acceptances.rejected
 
             elif status == raeting.acceptances.rejected:
                 if (  data and (
-                        (verhex and (verhex != data.get('verhex'))) or
-                        (pubhex and (pubhex != data.get('pubhex'))))):
+                        (verhex != data.get('verhex')) or
+                        (pubhex != data.get('pubhex')) )):
                     status = raeting.acceptances.accepted
             else: # pre-existing was pending
-                    # no external acceptance allowd so reject
-                status = raeting.acceptances.rejected
+                status = raeting.acceptances.accepted
 
         if status != raeting.acceptances.rejected:
             if (verhex and verhex != estate.verfer.keyhex):

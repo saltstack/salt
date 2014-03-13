@@ -7,9 +7,13 @@ init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 init name in .raet.udp.stack.local from value in .salt.etc.id
 
 
-framer minionudpstack be active first start
+framer minionudpstack be active first setup
+   frame setup
+      enter
+         do setup
+      go start
    frame start
-      do raet udp stack per inode ".raet.udp.stack"
+      do salt raet udp stack per inode ".raet.udp.stack"
       exit
          do raet udp stack closer per inode ".raet.udp.stack."
 
@@ -47,13 +51,6 @@ framer bootstrap be active first join
       print Allowed
       go next
 
-   frame message
-      print Messaging...
-      enter
-         do raet udp stack messenger to contents "Minion 1 Hello" code 15 \
-            per inode ".raet.udp.stack."
-      go next
-
    frame loading
       enter
          do load modules
@@ -64,10 +61,6 @@ framer bootstrap be active first join
 
    frame abort
       bid stop all
-
-framer inbound be active first start
-   frame start
-      do rx
 
 framer eventing be active first event
    frame event

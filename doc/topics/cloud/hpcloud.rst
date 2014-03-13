@@ -4,7 +4,7 @@ Getting Started With HP Cloud
 
 HP Cloud is a major public cloud platform and uses the libcloud 
 `openstack` driver. The current version of OpenStack that HP Cloud
-uses is Grizzly. When an instance is booted, it must have a 
+uses is Havana. When an instance is booted, it must have a 
 floating IP added to it in order to connect to it and further below 
 you will see an example that adds context to this statement.
 
@@ -54,7 +54,7 @@ Originally, HP Cloud, in its OpenStack Essex version (1.0), had 3
 availability zones in one region, US West (region-a.geo-1), which 
 each behaved each as a region.  
 
-This has since changed, and the current OpenStack Grizzly version of 
+This has since changed, and the current OpenStack Havana version of 
 HP Cloud (1.1) now has simplified this and now has two regions to choose from:
 
 .. code-block:: bash
