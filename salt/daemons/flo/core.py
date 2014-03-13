@@ -297,7 +297,6 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
-        print msg
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
