@@ -311,6 +311,8 @@ class Router(ioflo.base.deeding.Deed):
             eid = self.udp_stack.value.eids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
+        if d_share == 'pub_ret':
+            self.publish.value.append(msg)
         if d_yard is None:
             pass
         elif d_yard != self.uxd_stack.value.yard.name:
@@ -394,11 +396,12 @@ class Publisher(ioflo.base.deeding.Deed):
         '''
         Publish the message out to the targeted minions
         '''
+        pub_data = pub_msg['return']
         for minion in self.udp_stack.value.eids:
             eid = self.udp_stack.value.eids.get(minion)
             if eid:
                 route = {'dst': (minion, None, 'fun')}
-                msg = {'route': route, 'pub': pub_msg['pub']}
+                msg = {'route': route, 'pub': pub_data['pub']}
                 self.udp_stack.value.message(msg, eid)
 
     def action(self):

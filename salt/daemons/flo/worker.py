@@ -67,9 +67,13 @@ class RouterWorker(ioflo.base.deeding.Deed):
                     ret['return'] = getattr(self.remote, cmd)(msg['load'])
                 elif hasattr(self.local, cmd):
                     ret['return'] = getattr(self.local, cmd)(msg['load'])
+                if cmd == 'publish':
+                    r_share = 'pub_ret'
+                else:
+                    r_share = 'ret'
                 ret['route'] = {
                         'src': (self.opts.value['id'], self.yid.value, None),
-                        'dst': (msg['route']['src'][0], msg['route']['src'][1], 'ret')
+                        'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
                 self.uxd_stack.value.transmit(ret, 'yard0')
                 self.uxd_stack.value.serviceAll()
