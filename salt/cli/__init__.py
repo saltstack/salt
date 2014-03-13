@@ -59,7 +59,27 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.batch:
-            batch = salt.cli.batch.Batch(self.config)
+            eauth = {}
+            if 'token' in self.config:
+                eauth['token'] = self.config['token']
+
+            # If using eauth and a token hasn't already been loaded into
+            # kwargs, prompt the user to enter auth credentials
+            if not 'token' in eauth and self.options.eauth:
+                resolver = salt.auth.Resolver(self.config)
+                res = resolver.cli(self.options.eauth)
+                if self.options.mktoken and res:
+                    tok = resolver.token_cli(
+                            self.options.eauth,
+                            res
+                            )
+                    if tok:
+                        eauth['token'] = tok.get('token', '')
+                if not res:
+                    sys.exit(2)
+                eauth.update(res)
+                eauth['eauth'] = self.options.eauth
+            batch = salt.cli.batch.Batch(self.config, eauth)
             # Printing the output is already taken care of in run() itself
             for res in batch.run():
                 pass
