@@ -418,19 +418,19 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def mkpart(device, part_type, start, end):
+def mkpart(device, part_type, fs_type, start, end):
     '''
-    partition.mkpart device part_type start end
+    partition.mkpart device part_type fs_type start end
 
-    Make a part_type partition, beginning at start and ending at end
-    (by default in megabytes).  part_type should be one of "primary",
-    "logical", or "extended".
+    Make a part_type partition for filesystem fs_type, beginning at start and
+        ending at end (by default in megabytes).  part_type should be one of
+        "primary", "logical", or "extended".
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' partition.mkpart /dev/sda primary 0 639
+        salt '*' partition.mkpart /dev/sda primary fat32 0 639
     '''
     dev = device.replace('/dev/', '')
     if dev not in os.listdir('/dev'):
@@ -443,11 +443,17 @@ def mkpart(device, part_type, start, end):
             'Invalid part_type passed to partition.mkpart'
         )
 
+    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
+        raise CommandExecutionError(
+            'Invalid fs_type passed to partition.mkpart'
+        )
+
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
-    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
-        device, part_type, start, end
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+        device, part_type, fs_type, start, end
     )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -481,7 +487,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
         )
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
+                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpartfs'
         )
