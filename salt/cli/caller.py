@@ -25,6 +25,7 @@ from salt.exceptions import (
     SaltClientError,
     CommandNotFoundError,
     CommandExecutionError,
+    SaltInvocationError,
 )
 
 
@@ -139,10 +140,13 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
-        ret = self.call()
-        salt.output.display_output(
-                {'local': ret.get('return', {})},
-                ret.get('out', 'nested'),
-                self.opts)
-        if self.opts.get('retcode_passthrough', False):
-            sys.exit(ret['retcode'])
+        try:
+            ret = self.call()
+            salt.output.display_output(
+                    {'local': ret.get('return', {})},
+                    ret.get('out', 'nested'),
+                    self.opts)
+            if self.opts.get('retcode_passthrough', False):
+                sys.exit(ret['retcode'])
+        except SaltInvocationError as err:
+            raise SystemExit(err)
