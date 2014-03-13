@@ -233,6 +233,7 @@ import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.yamldumper import OrderedDumper
+from salt.utils.immutabletypes import ImmutableList
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -2940,8 +2941,10 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __low__.get('require_in', [])
-    watch_in = __low__.get('watch_in', [])
+    require_in = __low__.get('require_in',
+                             ImmutableList([]))
+    watch_in = __low__.get('watch_in',
+                           ImmutableList([]))
     deps = []
     map(deps.append, require_in + watch_in)
     if not filter(lambda x: 'file' in x, deps):
