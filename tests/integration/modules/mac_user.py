@@ -32,8 +32,8 @@ def __random_string(size=6):
     )
 
 # Create user strings for tests
-add_user = __random_string()
-del_user = __random_string()
+ADD_USER = __random_string()
+DEL_USER = __random_string()
 
 
 class MacUserModuleTest(integration.ModuleCase):
@@ -62,11 +62,11 @@ class MacUserModuleTest(integration.ModuleCase):
         Tests the add function
         '''
         try:
-            self.run_function('user.add', [add_user])
-            user_info = self.run_function('user.info', [add_user])
-            self.assertEqual(add_user, user_info['name'])
+            self.run_function('user.add', [ADD_USER])
+            user_info = self.run_function('user.info', [ADD_USER])
+            self.assertEqual(ADD_USER, user_info['name'])
         except CommandExecutionError:
-            self.run_function('user.delete', [add_user])
+            self.run_function('user.delete', [ADD_USER])
             raise
 
     @destructiveTest
@@ -78,12 +78,12 @@ class MacUserModuleTest(integration.ModuleCase):
         '''
 
         # Create a user to delete - If unsuccessful, skip the test
-        if self.run_function('user.add', [del_user]) is not True:
+        if self.run_function('user.add', [DEL_USER]) is not True:
             self.skipTest('Failed to create a user to delete')
 
         try:
             # Now try to delete the added user
-            ret = self.run_function('user.delete', [del_user])
+            ret = self.run_function('user.delete', [DEL_USER])
             self.assertTrue(ret)
         except CommandExecutionError:
             raise
@@ -97,14 +97,14 @@ class MacUserModuleTest(integration.ModuleCase):
         '''
 
         # Delete add_user
-        add_info =  self.run_function('user.info', [add_user])
+        add_info =  self.run_function('user.info', [ADD_USER])
         if add_info:
-            self.run_function('user.delete', [add_user])
+            self.run_function('user.delete', [ADD_USER])
 
         # Delete del_user if something failed
-        del_info = self.run_function('user.info', [del_user])
+        del_info = self.run_function('user.info', [DEL_USER])
         if del_info:
-            self.run_function('user.delete', [del_user])
+            self.run_function('user.delete', [DEL_USER])
 
 
 if __name__ == '__main__':
