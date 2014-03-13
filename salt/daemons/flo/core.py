@@ -270,7 +270,7 @@ class Router(ioflo.base.deeding.Deed):
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
-        if d_estate != self.udp_stack.value.estate:
+        if d_estate != self.udp_stack.value.estate.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
