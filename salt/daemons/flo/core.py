@@ -237,6 +237,7 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
+        print msg
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
@@ -251,7 +252,9 @@ class Router(ioflo.base.deeding.Deed):
             eid = self.udp_stack.value.eids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
-        if d_yard is not None:
+        if d_yard is None:
+            pass
+        elif d_yard != self.uxd_stack.value.yard.name:
             # Meant for another yard, send it off!
             if d_yard in self.uxd_stack.value.yards:
                 self.uxd_stack.value.transmit(msg, d_yard)
