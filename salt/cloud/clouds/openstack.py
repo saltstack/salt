@@ -442,16 +442,16 @@ def create(vm_):
                             'pool.'.format(net['floating'])
                         )
         else:
-           pool = OpenStack_1_1_FloatingIpPool(
-               '', conn.connection
-           )
-           for idx in pool.list_floating_ips():
-               if idx.node_id is None:
-                   floating.append(idx)
+            pool = OpenStack_1_1_FloatingIpPool(
+                    '', conn.connection
+                    )
+            for idx in pool.list_floating_ips():
+                if idx.node_id is None:
+                    floating.append(idx)
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
-    )
+        )
     if files:
         kwargs['ex_files'] = {}
         for src_path in files:
