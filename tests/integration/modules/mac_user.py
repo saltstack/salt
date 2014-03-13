@@ -21,6 +21,20 @@ ensure_in_syspath('../../')
 import integration
 from salt.exceptions import CommandExecutionError
 
+# Define External functions
+def __random_string(size=6):
+    '''
+    Generates a random username
+    '''
+    return 'RS-' + ''.join(
+        random.choice(string.ascii_uppercase + string.digits)
+        for x in range(size)
+    )
+
+# Create user strings for tests
+add_user = __random_string()
+del_user = __random_string()
+
 
 class MacUserModuleTest(integration.ModuleCase):
     '''
@@ -40,41 +54,58 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
-    def __random_string(self, size=6):
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_user_add(self, grains=None):
         '''
-        Generates a random username
+        Tests the add function
         '''
-        return 'RS-' + ''.join(
-            random.choice(string.ascii_uppercase + string.digits)
-            for x in range(size)
-        )
+        try:
+            self.run_function('user.add', [add_user])
+            user_info = self.run_function('user.info', [add_user])
+            self.assertEqual(add_user, user_info['name'])
+        except CommandExecutionError:
+            self.run_function('user.delete', [add_user])
+            raise
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
-    def test_mac_users_add(self, grains=None):
+    def test_mac_user_delete(self, grains=None):
         '''
-        Tests the add function
+        Tests the delete function
         '''
-        user_name = self.__random_string()
-        self.user = user_name
+
+        # Create a user to delete - If unsuccessful, skip the test
+        if self.run_function('user.add', [del_user]) is not True:
+            self.skipTest('Failed to create a user to delete')
 
         try:
-            self.run_function('user.add', [user_name])
-            user_info = self.run_function('user.info', [user_name])
-            self.assertEqual(user_name, user_info['name'])
+            # Now try to delete the added user
+            ret = self.run_function('user.delete', [del_user])
+            self.assertTrue(ret)
         except CommandExecutionError:
-            self.run_function('user.delete', [user_name])
             raise
 
-    @destructiveTest
+    # @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def tearDown(self, grains=None):
         '''
         Clean up after tests
         '''
-        self.run_function('user.delete', [self.user])
+
+        # Delete add_user
+        add_info =  self.run_function('user.info', [add_user])
+        if add_info:
+            self.run_function('user.delete', [add_user])
+
+        # Delete del_user if something failed
+        del_info = self.run_function('user.info', [del_user])
+        if del_info:
+            self.run_function('user.delete', [del_user])
+
 
 if __name__ == '__main__':
     from integration import run_tests
