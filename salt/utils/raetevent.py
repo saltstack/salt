@@ -17,6 +17,7 @@ import salt.state
 import salt.utils.event
 from salt.transport.road.raet import stacking
 from salt.transport.road.raet import yarding
+from salt.transport.road.raet import raeting
 log = logging.getLogger(__name__)
 
 
@@ -39,6 +40,7 @@ class SaltEvent(object):
                 yid=self.yid,
                 lanename=self.node,
                 dirpath=self.sock_dir)
+        self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.Yard(
                 prefix='master',
                 yid=0,

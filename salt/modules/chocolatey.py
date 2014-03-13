@@ -129,6 +129,7 @@ def bootstrap(force=False):
         '-Command "iex ((new-object net.webclient).'
         'DownloadString(\'https://chocolatey.org/install.ps1\'))" '
         '&& SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin'
+        .format(ps_path)
     )
 
     if result['retcode'] != 0:

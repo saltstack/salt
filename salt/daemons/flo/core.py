@@ -17,7 +17,10 @@ from collections import deque
 # Import salt libs
 import salt.daemons.masterapi
 from salt.transport.road.raet import stacking
+from salt.transport.road.raet import estating
+from salt.transport.road.raet import raeting
 from salt.transport.road.raet import yarding
+from salt.transport.road.raet import salting
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
@@ -39,6 +42,62 @@ try:
 except ImportError:
     pass
 log = logging.getLogger(__name__)
+
+
+class StackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Initialize and run raet udp stack for Salt
+    '''
+    Ioinits = dict(
+            inode='raet.udp.stack.',
+            stack='stack',
+            opts='.salt.opts',
+            txmsgs=dict(ipath='txmsgs', ival=deque()),
+            rxmsgs=dict(ipath='rxmsgs', ival=deque()),
+            local=dict(ipath='local', ival=dict(name='master',
+                                            dirpath='raet/test/keep',
+                                            main=False,
+                                            auto=True,
+                                            eid=0,
+                                            host='0.0.0.0',
+                                            port=raeting.RAET_PORT,
+                                            sigkey=None,
+                                            prikey=None)),)
+
+    def postinitio(self):
+        '''
+        Setup stack instance
+        '''
+        sigkey = self.local.data.sigkey
+        prikey = self.local.data.prikey
+        name = self.local.data.name
+        dirpath = os.path.abspath(os.path.join(self.local.data.dirpath, name))
+        auto = self.local.data.auto
+        main = self.local.data.main
+        ha = (self.local.data.host, self.local.data.port)
+
+        eid = self.local.data.eid
+        estate = estating.LocalEstate(
+                eid=eid,
+                name=name,
+                ha=ha,
+                sigkey=sigkey,
+                prikey=prikey)
+        txMsgs = self.txmsgs.value
+        rxMsgs = self.rxmsgs.value
+        safe = salting.SaltSafe(opts=self.opts.value)
+
+        self.stack.value = stacking.StackUdp(
+                estate=estate,
+                store=self.store,
+                name=name,
+                auto=auto,
+                main=main,
+                dirpath=dirpath,
+                safe=safe,
+                txMsgs=txMsgs,
+                rxMsgs=rxMsgs)
+        self.stack.value.Bk = raeting.bodyKinds.msgpack
 
 
 class ModulesLoad(ioflo.base.deeding.Deed):
@@ -130,9 +189,11 @@ class Setup(ioflo.base.deeding.Deed):
         Set up required objects and queues
         '''
         self.uxd_stack.value = stacking.StackUxd(
+                name='yard',
                 lanename=self.opts.value['id'],
                 yid=0,
                 dirpath=self.opts.value['sock_dir'])
+        self.uxd_stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
         self.remote_cmd.value = deque()
@@ -250,7 +311,9 @@ class Router(ioflo.base.deeding.Deed):
             eid = self.udp_stack.value.eids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
-        if d_yard is not None:
+        if d_yard is None:
+            pass
+        elif d_yard != self.uxd_stack.value.yard.name:
             # Meant for another yard, send it off!
             if d_yard in self.uxd_stack.value.yards:
                 self.uxd_stack.value.transmit(msg, d_yard)
@@ -380,6 +443,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 dirpath=self.opts['sock_dir'])
+        ret_stack.Pk = raeting.packKinds.pack
         main_yard = yarding.Yard(
                 yid=0,
                 prefix=self.opts['id'],

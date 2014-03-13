@@ -25,7 +25,7 @@ def __virtual__():
     cur_os = __grains__['kernel']
     for _os in supported_os:
         if cur_os == _os and salt.utils.which(supported_os[cur_os]):
-            return 'bridge'
+            return True
     return False
 
 
