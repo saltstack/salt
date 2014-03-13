@@ -447,15 +447,16 @@ class Joinent(Correspondent):
 
                 self.transmit(self.txPacket) #redo
                 console.concise("Joinent Redo Accept at {0}\n".format(self.stack.store.stamp))
-            else:
+            else: #check to see if status has changed to accept
                 remote = self.stack.estates[self.reid]
                 if remote:
-                    status = remote.acceptance
-                    if status == None or status == raeting.acceptances.pending:
-                        status = self.stack.safe.statusRemoteEstate(remote)
-
-                    if status == raeting.acceptances.accepted:
-                        self.accept()
+                    data = self.stack.safe.loadRemoteEstate(remote)
+                    if data:
+                        status = self.stack.safe.statusRemoteEstate(remote,
+                                                                    data['verhex'],
+                                                                    data['pubhex'])
+                        if status == raeting.acceptances.accepted:
+                            self.accept()
 
 
     def prep(self):
@@ -549,7 +550,7 @@ class Joinent(Correspondent):
         else:
             other = self.stack.fetchRemoteByHostPort(host, port)
             if other: #may need to terminate transactions
-                self.stack.removeRemoteEstate(other.eid)
+                self.stack.removeRemote(other.eid)
             remote = estating.RemoteEstate( stack=self.stack,
                                             name=name,
                                             host=host,

@@ -1577,7 +1577,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     '''
     missing_deps = []
     for pkg_file in pkgs:
-        deb = apt.debfile.DebPackage(filename=pkg_file)
+        deb = apt.debfile.DebPackage(filename=pkg_file, cache=apt.Cache())
         if deb.check():
             missing_deps.extend(deb.missing_deps)
 
