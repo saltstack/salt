@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 import integration
 from salt.exceptions import CommandExecutionError
 
-# Define External functions
+
 def __random_string(size=6):
     '''
     Generates a random username
@@ -97,7 +97,7 @@ class MacUserModuleTest(integration.ModuleCase):
         '''
 
         # Delete add_user
-        add_info =  self.run_function('user.info', [ADD_USER])
+        add_info = self.run_function('user.info', [ADD_USER])
         if add_info:
             self.run_function('user.delete', [ADD_USER])
 
