@@ -120,9 +120,7 @@ uncomment and modify the following lines:
     You cannot use the root user for pam login; it will fail to authenticate.
 
 Halite uses the runner manage.present to get the status of minions, so runner
-permissions are required. As you can see in this example, the root user has
-been configured. If you aren't running Halite as the root user, you'll need
-to modify this value. For example:
+permissions are required. For example:
 
 .. code-block:: yaml
 
