@@ -13,7 +13,7 @@ framer minionudpstack be active first setup
          do setup
       go start
    frame start
-      do raet udp stack per inode ".raet.udp.stack"
+      do salt raet udp stack per inode ".raet.udp.stack"
       exit
          do raet udp stack closer per inode ".raet.udp.stack."
 
