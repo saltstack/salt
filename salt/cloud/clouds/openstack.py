@@ -417,29 +417,37 @@ def create(vm_):
 
     floating = []
 
-    if HAS014 and networks is not None:
-        for net in networks:
-            if 'fixed' in net:
-                kwargs['networks'] = [
-                    OpenStackNetwork(n, None, None, None) for n in net['fixed']
-                ]
-            elif 'floating' in net:
-                pool = OpenStack_1_1_FloatingIpPool(
-                    net['floating'], conn.connection
-                )
-                for idx in pool.list_floating_ips():
-                    if idx.node_id is None:
-                        floating.append(idx)
-                if not floating:
-                    # Note(pabelanger): We have no available floating IPs. For
-                    # now, we raise an exception and exit. A future enhancement
-                    # might be to allow salt-cloud to dynamically allocate new
-                    # address but that might be tricky to manage.
-                    raise SaltCloudSystemExit(
-                        'Floating pool {0!r} has not more address available, '
-                        'please create some more or use a different '
-                        'pool.'.format(net['floating'])
+    if HAS014:
+        if networks is not None:
+            for net in networks:
+                if 'fixed' in net:
+                    kwargs['networks'] = [
+                        OpenStackNetwork(n, None, None, None) for n in net['fixed']
+                    ]
+                elif 'floating' in net:
+                    pool = OpenStack_1_1_FloatingIpPool(
+                        net['floating'], conn.connection
                     )
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                    if not floating:
+                        # Note(pabelanger): We have no available floating IPs. For
+                        # now, we raise an exception and exit. A future enhancement
+                        # might be to allow salt-cloud to dynamically allocate new
+                        # address but that might be tricky to manage.
+                        raise SaltCloudSystemExit(
+                            'Floating pool {0!r} has not more address available, '
+                            'please create some more or use a different '
+                            'pool.'.format(net['floating'])
+                        )
+        else:
+           pool = OpenStack_1_1_FloatingIpPool(
+               '', conn.connection
+           )
+           for idx in pool.list_floating_ips():
+               if idx.node_id is None:
+                   floating.append(idx)
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
