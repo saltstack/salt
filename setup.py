@@ -465,7 +465,8 @@ SETUP_KWARGS = {'name': NAME,
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
-                                    'virt/*.jinja'
+                                    'virt/*.jinja',
+                                    'git/*'
                                     ],
                                  'salt.daemons.flo': [
                                     '*.flo'
@@ -620,7 +621,6 @@ else:
         SETUP_KWARGS['scripts'].extend([
             'scripts/salt',
             'scripts/salt-cloud',
-            'scripts/salt-git-ssh',
             'scripts/salt-key',
             'scripts/salt-master',
             'scripts/salt-run',
