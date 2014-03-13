@@ -8,6 +8,7 @@ The core bahaviuors ued by minion and master
 import salt.daemons.masterapi
 from salt.transport.road.raet import stacking
 from salt.transport.road.raet import yarding
+from salt.transport.road.raet import raeting
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -29,6 +30,7 @@ class RouterWorker(ioflo.base.deeding.Deed):
                 lanename=self.opts.value['id'],
                 yid=self.yid.value,
                 dirpath=self.opts.value['sock_dir'])
+        self.uxd_stack.value.Pk = raeting.packKinds.pack
         manor_yard = yarding.Yard(
                 yid=0,
                 prefix=self.opts.value['id'],
