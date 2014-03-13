@@ -91,13 +91,17 @@ class CkMinions(object):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.ip_addrs = salt.utils.network.ip_addrs()
+        if self.opts['transport'] == 'zeromq':
+            self.acc = 'minions'
+        else:
+            self.acc = 'accepted'
 
     def _check_glob_minions(self, expr):
         '''
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
         ret = set(glob.glob(expr))
         try:
             os.chdir(cwd)
@@ -115,7 +119,7 @@ class CkMinions(object):
         if isinstance(expr, str):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
+        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
             if fn_ in expr:
                 if fn_ not in ret:
                     ret.append(fn_)
@@ -126,7 +130,7 @@ class CkMinions(object):
         Return the minions found by looking via regular expressions
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
         reg = re.compile(expr)
         ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
         os.chdir(cwd)
@@ -137,7 +141,7 @@ class CkMinions(object):
         Return the minions found by looking via grains
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -161,7 +165,7 @@ class CkMinions(object):
         Return the minions found by looking via grains with PCRE
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -186,7 +190,7 @@ class CkMinions(object):
         Return the minions found by looking via pillar
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -210,7 +214,7 @@ class CkMinions(object):
         Return the minions found by looking via ipcidr
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -259,7 +263,7 @@ class CkMinions(object):
                 'module most likely not installed)'
             )
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -291,7 +295,7 @@ class CkMinions(object):
         Return the minions found by looking via compound matcher
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
@@ -421,7 +425,7 @@ class CkMinions(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
 
     def check_minions(self, expr, expr_form='glob'):
         '''
