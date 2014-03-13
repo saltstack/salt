@@ -26,8 +26,14 @@ class KeyCLI(object):
         self.opts = opts
         if self.opts['transport'] == 'zeromq':
             self.key = Key(opts)
+            self.acc = 'minions'
+            self.pend = 'minions_pre'
+            self.rej = 'minions_rejected'
         else:
             self.key = RaetKey(opts)
+            self.acc = 'accepted'
+            self.pend = 'pending'
+            self.rej = 'rejected'
 
     def list_status(self, status):
         '''
@@ -36,19 +42,19 @@ class KeyCLI(object):
         keys = self.key.list_keys()
         if status.startswith('acc'):
             salt.output.display_output(
-                {'minions': keys['minions']},
+                {'minions': keys[self.acc]},
                 'key',
                 self.opts
             )
         elif status.startswith(('pre', 'un')):
             salt.output.display_output(
-                {'minions_pre': keys['minions_pre']},
+                {'minions_pre': keys[self.pend]},
                 'key',
                 self.opts
             )
         elif status.startswith('rej'):
             salt.output.display_output(
-                {'minions_rejected': keys['minions_rejected']},
+                {'minions_rejected': keys[self.rej]},
                 'key',
                 self.opts
             )
@@ -80,10 +86,13 @@ class KeyCLI(object):
 
         matches = self.key.name_match(match)
         keys = {}
-        if 'minions_pre' in matches:
-            keys['minions_pre'] = matches['minions_pre']
-        if include_rejected and bool(matches.get('minions_rejected')):
-            keys['minions_rejected'] = matches['minions_rejected']
+        print(matches)
+        print(self.pend)
+        if self.pend in matches:
+            keys[self.pend] = matches[self.pend]
+            print(keys)
+        if include_rejected and bool(matches.get(self.rej)):
+            keys[self.rej] = matches[self.rej]
         if not keys:
             msg = (
                 'The key glob {0!r} does not match any unaccepted {1}keys.'
@@ -135,7 +144,7 @@ class KeyCLI(object):
         '''
         def _print_deleted(matches, after_match):
             deleted = []
-            for keydir in ('minions', 'minions_pre', 'minions_rejected'):
+            for keydir in (self.acc, self.pend, self.rej):
                 deleted.extend(list(
                     set(matches.get(keydir, [])).difference(
                         set(after_match.get(keydir, []))
@@ -188,10 +197,10 @@ class KeyCLI(object):
         Reject the matched keys
         '''
         def _print_rejected(matches, after_match):
-            if 'minions_rejected' in after_match:
+            if self.rej in after_match:
                 rejected = sorted(
-                    set(after_match['minions_rejected']).difference(
-                        set(matches.get('minions_rejected', []))
+                    set(after_match[self.rej]).difference(
+                        set(matches.get(self.rej, []))
                     )
                 )
                 for key in rejected:
@@ -199,10 +208,10 @@ class KeyCLI(object):
 
         matches = self.key.name_match(match)
         keys = {}
-        if 'minions_pre' in matches:
-            keys['minions_pre'] = matches['minions_pre']
-        if include_accepted and bool(matches.get('minions')):
-            keys['minions'] = matches['minions']
+        if self.pend in matches:
+            keys[self.pend] = matches[self.pend]
+        if include_accepted and bool(matches.get(self.acc)):
+            keys[self.acc] = matches[self.acc]
         if not keys:
             msg = 'The key glob {0!r} does not match any {1} keys.'.format(
                 match,
