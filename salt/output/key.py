@@ -15,19 +15,27 @@ def output(data):
     print the structure.
     '''
     color = salt.utils.get_colors(__opts__.get('color'))
+    if __opts__['transport'] == 'zeromq':
+        acc = 'minions'
+        pend = 'minions_pre'
+        rej = 'minions_rejected'
+    else:
+        acc = 'accepted'
+        pend = 'pending'
+        rej = 'rejected'
 
-    cmap = {'minions_pre': color['RED'],
-            'minions': color['GREEN'],
-            'minions_rejected': color['BLUE'],
+    cmap = {pend: color['RED'],
+            acc: color['GREEN'],
+            rej: color['BLUE'],
             'local': color['PURPLE']}
 
-    trans = {'minions_pre': '{0}Unaccepted Keys:{1}'.format(
+    trans = {pend: '{0}Unaccepted Keys:{1}'.format(
                                 color['LIGHT_RED'],
                                 color['ENDC']),
-             'minions': '{0}Accepted Keys:{1}'.format(
+             acc: '{0}Accepted Keys:{1}'.format(
                                 color['LIGHT_GREEN'],
                                 color['ENDC']),
-             'minions_rejected': '{0}Rejected Keys:{1}'.format(
+             rej: '{0}Rejected Keys:{1}'.format(
                                 color['LIGHT_BLUE'],
                                 color['ENDC']),
              'local': '{0}Local Keys:{1}'.format(
