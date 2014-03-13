@@ -20,6 +20,7 @@ from salt.transport.road.raet import stacking
 from salt.transport.road.raet import estating
 from salt.transport.road.raet import raeting
 from salt.transport.road.raet import yarding
+from salt.transport.road.raet import salting
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
@@ -50,6 +51,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
     Ioinits = dict(
             inode='raet.udp.stack.',
             stack='stack',
+            opts='.salt.opts',
             txmsgs=dict(ipath='txmsgs', ival=deque()),
             rxmsgs=dict(ipath='rxmsgs', ival=deque()),
             local=dict(ipath='local', ival=dict(name='master',
@@ -83,6 +85,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
                 prikey=prikey)
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
+        safe = salting.SaltSafe(opts=self.opts.value)
 
         self.stack.value = stacking.StackUdp(
                 estate=estate,
@@ -91,6 +94,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
                 auto=auto,
                 main=main,
                 dirpath=dirpath,
+                safe=safe,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
