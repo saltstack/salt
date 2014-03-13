@@ -166,7 +166,7 @@ def file_hash(load, fnd):
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
-                    try :
+                    try:
                         os.unlink(cache_path)
                     except os.error:
                         pass
@@ -178,7 +178,7 @@ def file_hash(load, fnd):
         except (os.error, IOError):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
-            try :
+            try:
                 os.unlink(cache_path)
             except os.error:
                 pass
