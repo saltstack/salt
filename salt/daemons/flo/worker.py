@@ -57,7 +57,7 @@ class RouterWorker(ioflo.base.deeding.Deed):
         while self.uxd_stack.value.rxMsgs:
             msg = self.uxd_stack.value.rxMsgs.popleft()
             if 'load' in msg:
-                cmd = msg['load'].get['cmd']
+                cmd = msg['load'].get('cmd')
                 if not cmd:
                     continue
                 elif cmd.startswith('__'):
