@@ -512,6 +512,7 @@ def installed(
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
     '''
+    kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
     refresh = bool(
         salt.utils.is_true(refresh)
