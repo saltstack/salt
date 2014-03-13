@@ -247,6 +247,9 @@ class Tx(ioflo.base.deeding.Deed):
 class Router(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of uxd connections
+
+    This is the initial static salt router, we want to create a dynamic
+    router that takes a map that defines where packets are send
     '''
     Ioinits = {'opts': '.salt.opts',
                'local_cmd': '.salt.local.local_cmd',
@@ -291,6 +294,8 @@ class Router(ioflo.base.deeding.Deed):
         if d_share == 'remote_cmd':
             # Send it to a remote worker
             self.uxd_stack.value.transmit(msg, next(self.workers.value))
+        if d_share == 'fun':
+            self.fun.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg):
         '''
