@@ -418,7 +418,7 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def mkpart(device, part_type, fs_type, start, end):
+def mkpart(device, part_type, fs_type=None, start=None, end=None):
     '''
     partition.mkpart device part_type fs_type start end
 
@@ -426,12 +426,18 @@ def mkpart(device, part_type, fs_type, start, end):
         ending at end (by default in megabytes).  part_type should be one of
         "primary", "logical", or "extended".
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
+        salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
+    if not start or not end:
+        raise CommandExecutionError(
+            'partition.mkpart requires a start and an end'
+        )
+
     dev = device.replace('/dev/', '')
     if dev not in os.listdir('/dev'):
         raise CommandExecutionError(
@@ -452,9 +458,15 @@ def mkpart(device, part_type, fs_type, start, end):
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
-    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-        device, part_type, fs_type, start, end
-    )
+    if fs_type:
+        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+            device, part_type, fs_type, start, end
+        )
+    else:
+        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
+            device, part_type, start, end
+        )
+
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
