@@ -36,7 +36,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
 
     if identity:
         env = {
-            'GIT_SSH': os.path.join(salt.utils.templates.TEMPLATE_DIRNAME,
+            'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
                                     'ssh-id-wrapper'),
             'GIT_IDENTITY': identity
         }
