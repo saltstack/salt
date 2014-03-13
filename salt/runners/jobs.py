@@ -181,7 +181,7 @@ def print_job(job_id):
 
 
 def _format_job_instance(job):
-    return {'Function': job['fun'],
+    return {'Function': job.get('fun', 'unknown-function'),
             'Arguments': list(job.get('arg', [])),
             'Target': job['tgt'],
             'Target-type': job.get('tgt_type', []),
