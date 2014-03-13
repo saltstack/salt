@@ -21,7 +21,7 @@ class Batch(object):
     def __init__(self, opts, quiet=False):
         self.opts = opts
         self.quiet = quiet
-        self.local = salt.client.LocalClient(opts['conf_file'])
+        self.local = salt.client.get_local_client(opts['conf_file'])
         self.minions = self.__gather_minions()
 
     def __gather_minions(self):
