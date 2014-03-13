@@ -2941,12 +2941,9 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __low__.get('require_in',
-                             ImmutableList([]))
-    watch_in = __low__.get('watch_in',
-                           ImmutableList([]))
-    deps = []
-    map(deps.append, require_in + watch_in)
+    require_in = __low__.get('require_in', [])
+    watch_in = __low__.get('watch_in', [])
+    deps = require_in + watch_in
     if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(

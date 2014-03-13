@@ -53,16 +53,11 @@ class ImmutableList(collections.Sequence):
     def __iter__(self):
         return iter(self.__obj)
 
-    def _get_raw(self, other):
-        if isinstance(other, ImmutableLazyProxy):
-            other = other.__obj
-        return other
-
     def __add__(self, other):
-        return self.__obj + self._get_raw(other)
+        return self.__obj + other
 
     def __radd__(self, other):
-        return self._get_raw(other) + self.__obj
+        return other + self.__obj
 
     def __getitem__(self, key):
         return ImmutableLazyProxy(self.__obj[key])
