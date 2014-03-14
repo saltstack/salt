@@ -8,6 +8,7 @@ stacking.py raet protocol stacking classes
 # Import python libs
 import socket
 import os
+import errno
 from collections import deque,  Mapping
 try:
     import simplejson as json
@@ -885,7 +886,7 @@ class StackUxd(object):
             name = self.yards.values()[0].name
         if name not in self.yards:
             msg = "Invalid destination yard name '{0}'".format(name)
-            console.terse(emsg + '\n')
+            console.terse(msg + '\n')
             self.incStat("invalid_destination_yard")
             return
             #raise raeting.StackError(msg)
