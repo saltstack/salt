@@ -8,6 +8,8 @@ stacking.py raet protocol stacking classes
 # Import python libs
 import socket
 import os
+import errno
+
 from collections import deque,  Mapping
 try:
     import simplejson as json
