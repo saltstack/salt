@@ -27,12 +27,6 @@ from . import estating
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-def statNameFromClass(instance):
-    '''
-    Return the stat name key from instance class name
-    '''
-    return ("{0}_transaction_failure".format(instance.__class__.__name__.lower()))
-
 
 class Transaction(object):
     '''
@@ -101,7 +95,7 @@ class Transaction(object):
             self.stack.txUdp(packet.packed, self.reid)
         except raeting.StackError as ex:
             console.terse(ex + '\n')
-            self.stack.incStat(self.statNameFromClass())
+            self.stack.incStat(self.statKey())
             self.remove(packet.index)
             return
         self.txPacket = packet
@@ -121,6 +115,12 @@ class Transaction(object):
         if not index:
             index = self.index
         self.stack.removeTransaction(index, transaction=self)
+
+    def statKey(self):
+        '''
+        Return the stat name key from class name
+        '''
+        return ("{0}_transaction_failure".format(self.__class__.__name__.lower()))
 
 class Initiator(Transaction):
     '''
@@ -192,7 +192,7 @@ class Joiner(Initiator):
                     self.stack.addRemote(master)
                 except raeting.StackError as ex:
                     console.terse(ex + '\n')
-                    self.stack.incStat(self.statNameFromClass())
+                    self.stack.incStat(self.statKey())
                     return
 
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
@@ -266,7 +266,7 @@ class Joiner(Initiator):
             emsg = "Invalid remote destination estate id '{0}'".format(self.reid)
             #raise raeting.TransactionError(emsg)
             console.terse(emsg + '\n')
-            self.stack.incStat(self.statNameFromClass())
+            self.stack.incStat(self.statKey())
             self.remove()
             return
 
@@ -359,7 +359,7 @@ class Joiner(Initiator):
                 self.stack.moveRemote(old=remote.eid, new=reid)
             except raeting.StackError as ex:
                 console.terse(ex + '\n')
-                self.stack.incStat(self.statNameFromClass())
+                self.stack.incStat(self.statKey())
                 self.remove(self.txPacket.index)
                 return
         if remote.name != name: # rename remote estate to new name
@@ -367,7 +367,7 @@ class Joiner(Initiator):
                 self.stack.renameRemote(old=remote.name, new=name)
             except raeting.StackError as ex:
                 console.terse(ex + '\n')
-                self.stack.incStat(self.statNameFromClass())
+                self.stack.incStat(self.statKey())
                 self.remove(self.txPacket.index)
                 return
 
@@ -397,6 +397,8 @@ class Joiner(Initiator):
         if not self.stack.parseInner(self.rxPacket):
             return
         self.remove(self.txPacket.index)
+        console.terse("Joiner Rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
     def ackAccept(self):
         '''
@@ -426,6 +428,7 @@ class Joiner(Initiator):
         self.transmit(packet)
         self.remove(self.rxPacket.index)
         console.concise("Joiner Do Accept at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("join_initiate_complete")
 
     def nackAccept(self):
         '''
@@ -454,7 +457,8 @@ class Joiner(Initiator):
 
         self.transmit(packet)
         self.remove(self.txPacket.index)
-        console.concise("Joiner Do Reject at {0}\n".format(self.stack.store.stamp))
+        console.terse("Joiner Do Reject at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
 
 class Joinent(Correspondent):
@@ -620,7 +624,7 @@ class Joinent(Correspondent):
                         self.stack.removeRemote(other.eid)
                     except raeting.StackError as ex:
                         console.terse(ex + '\n')
-                        self.stack.incStat(self.statNameFromClass())
+                        self.stack.incStat(self.statKey())
                         self.remove(self.rxPacket.index)
                         return
                 remote.host = host
@@ -637,7 +641,7 @@ class Joinent(Correspondent):
                     self.stack.removeRemote(other.eid)
                 except raeting.StackError as ex:
                     console.terse(ex + '\n')
-                    self.stack.incStat(self.statNameFromClass())
+                    self.stack.incStat(self.statKey())
                     self.remove(self.rxPacket.index)
                     return
 
@@ -654,7 +658,7 @@ class Joinent(Correspondent):
                 self.stack.addRemote(remote) #provisionally add .accepted is None
             except raeting.StackError as ex:
                 console.terse(ex + '\n')
-                self.stack.incStat(self.statNameFromClass())
+                self.stack.incStat(self.statKey())
                 self.remove(self.rxPacket.index)
                 return
             status = self.stack.safe.statusRemoteEstate(remote,
@@ -675,6 +679,9 @@ class Joinent(Correspondent):
             self.accept()
         else:
             self.nackJoin()
+            emsg = "Estate {0} eid {1} keys rejected\n".format(
+                            remote.name, remote.eid)
+            console.terse(emsg)
 
     def ackJoin(self):
         '''
@@ -751,6 +758,8 @@ class Joinent(Correspondent):
         self.stack.dumpRemote(remote)
         self.remove(self.rxPacket.index)
 
+        self.stack.incStat("join_correspond_complete")
+
     def nackJoin(self):
         '''
         Send nack to join request
@@ -778,7 +787,8 @@ class Joinent(Correspondent):
 
         self.transmit(packet)
         self.remove(self.rxPacket.index)
-        console.concise("Joinent Reject at {0}\n".format(self.stack.store.stamp))
+        console.terse("Joinent Reject at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
 
 class Allower(Initiator):
