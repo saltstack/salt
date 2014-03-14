@@ -7,7 +7,6 @@ Manage users with the useradd command
 import re
 
 try:
-    import grp
     import pwd
 except ImportError:
     pass

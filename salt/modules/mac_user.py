@@ -5,7 +5,6 @@ Manage users on Mac OS 10.7+
 
 # Import python libs
 try:
-    import grp
     import pwd
 except ImportError:
     pass

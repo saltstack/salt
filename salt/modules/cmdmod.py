@@ -74,7 +74,7 @@ def _chugid(runas):
         gid = __salt__['group.info'](group_name)['gid']
         if (gid not in supgroups_seen
            and not supgroups_seen.add(gid)):
-                supgroups.append(gid)
+            supgroups.append(gid)
 
     # No logging can happen on this function
     #
