@@ -32,7 +32,6 @@ States
     states_pt3
     states_pt4
     states_pt5
-    states_ordering
 
 Advanced Topics
 ================
@@ -44,7 +43,6 @@ Advanced Topics
     esky
     multimaster
     preseed_key
-    bootstrap_ec2
     salt_bootstrap
     gitfs
     walkthrough_macosx
