@@ -42,7 +42,7 @@ class SaltEvent(object):
                 dirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.Yard(
-                prefix='master',
+                prefix=self.node,
                 yid=0,
                 dirpath=self.sock_dir)
         self.stack.addRemoteYard(self.router_yard)
