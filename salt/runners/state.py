@@ -119,6 +119,8 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
     '''
     Watch Salt's event bus and block until the given tag is matched
 
+    .. versionadded:: Helium
+
     This is useful for taking some simple action after an event is fired via
     the CLI without having to use Salt's Reactor.
 
@@ -149,8 +151,6 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
             echo $tag
             echo $data | jq -colour-output .
         done
-
-        wait
 
     Enable debug logging to see ignored events.
     '''
