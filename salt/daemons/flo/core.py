@@ -378,6 +378,7 @@ class Eventer(ioflo.base.deeding.Deed):
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg, y_name)
+            self.uxd_stack.value.serviceAll()
 
     def action(self):
         '''
