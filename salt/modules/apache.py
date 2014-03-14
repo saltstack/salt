@@ -190,11 +190,19 @@ def vhosts():
             if comps[0] == 'default':
                 ret[namevhost]['default'] = {}
                 ret[namevhost]['default']['vhost'] = comps[2]
-                ret[namevhost]['default']['conf'] = re.sub(r'\(|\)', '', comps[3])
+                ret[namevhost]['default']['conf'] = re.sub(
+                    r'\(|\)',
+                    '',
+                    comps[3]
+                )
             if comps[0] == 'port':
                 ret[namevhost][comps[3]] = {}
                 ret[namevhost][comps[3]]['vhost'] = comps[3]
-                ret[namevhost][comps[3]]['conf'] = re.sub(r'\(|\)', '', comps[4])
+                ret[namevhost][comps[3]]['conf'] = re.sub(
+                    r'\(|\)',
+                    '',
+                    comps[4]
+                )
                 ret[namevhost][comps[3]]['port'] = comps[1]
     return ret
 
@@ -315,11 +323,26 @@ def server_status(profile='default'):
     }
 
     # Get configuration from pillar
-    url = __salt__['config.get']('apache.server-status:{0}:url'.format(profile), 'http://localhost/server-status')
-    user = __salt__['config.get']('apache.server-status:{0}:user'.format(profile), '')
-    passwd = __salt__['config.get']('apache.server-status:{0}:pass'.format(profile), '')
-    realm = __salt__['config.get']('apache.server-status:{0}:realm'.format(profile), '')
-    timeout = __salt__['config.get']('apache.server-status:{0}:timeout'.format(profile), 5)
+    url = __salt__['config.get'](
+        'apache.server-status:{0}:url'.format(profile),
+        'http://localhost/server-status'
+    )
+    user = __salt__['config.get'](
+        'apache.server-status:{0}:user'.format(profile),
+        ''
+    )
+    passwd = __salt__['config.get'](
+        'apache.server-status:{0}:pass'.format(profile),
+        ''
+    )
+    realm = __salt__['config.get'](
+        'apache.server-status:{0}:realm'.format(profile),
+        ''
+    )
+    timeout = __salt__['config.get'](
+        'apache.server-status:{0}:timeout'.format(profile),
+        5
+    )
 
     # create authentication handler if configuration exists
     if user and passwd:
@@ -365,7 +388,11 @@ def _parse_config(config, slot=None):
     elif isinstance(config, list):
         print('{0} {1}'.format(str(slot), ' '.join(config)), file=ret, end='')
     elif isinstance(config, dict):
-        print('<{0} {1}>'.format(slot, _parse_config(config['this'])), file=ret)
+        print('<{0} {1}>'.format(
+            slot,
+            _parse_config(config['this'])),
+            file=ret
+        )
         del config['this']
         for key, value in config.items():
             if isinstance(value, str):
@@ -378,6 +405,7 @@ def _parse_config(config, slot=None):
 
     ret.seek(0)
     return ret.read()
+
 
 def config(name, config):
     '''
@@ -392,7 +420,8 @@ def config(name, config):
     Config is meant to be an ordered dict of all of the apache configs.
 
     .. code-block:: bash
-        salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
+        salt '*' apache.config /etc/httpd/conf.d/ports.conf \
+                config="[{'Listen': '22'}]"
 
     '''
 
