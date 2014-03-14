@@ -778,7 +778,10 @@ def version_cmp(pkg1, pkg2):
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
-            if __salt__['cmd.retcode'](cmd, output_loglevel='debug') == 0:
+            retcode = __salt__['cmd.retcode'](
+                cmd, output_loglevel='debug', ignore_retcode=True
+            )
+            if retcode == 0:
                 return ret
     except Exception as exc:
         log.error(exc)
