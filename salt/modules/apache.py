@@ -407,7 +407,7 @@ def _parse_config(config, slot=None):
     return ret.read()
 
 
-def config(name, config):
+def config(name, config, edit=True):
     '''
     Create VirtualHost configuration files
 
@@ -427,7 +427,8 @@ def config(name, config):
 
     for entry in config:
         key = entry.keys()[0]
-        with open(name, 'w') as configfile:
-            configs = _parse_config(entry[key], key)
-            configfile.write(configs + '\n')
-    return True
+        configs = _parse_config(entry[key], key)
+        if edit:
+            with open(name, 'w') as configfile:
+                configfile.write(configs)
+    return configs

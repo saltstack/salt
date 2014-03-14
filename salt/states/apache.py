@@ -33,11 +33,13 @@ the above word between angle brackets (<>).
             AllowOverrides: All
 '''
 
+from __future__ import with_statement, print_function
+
 # Import python libs
 import os.path
 
 # Import salt libs
-import salt.cloud.utils
+import salt.utils.cloud
 
 
 def __virtual__():
@@ -49,7 +51,7 @@ def _check_name(name):
            'changes': {},
            'result': None,
            'comment': ''}
-    if suc.check_name(name, 'a-zA-Z0-9._-/<>'):
+    if salt.utils.cloud.check_name(name, ' a-zA-Z0-9.,_/\[\]\(\)\<\>\'*+:-'):
         ret['comment'] = 'Invalid characters in name.'
         ret['result'] = False
         return ret
@@ -58,21 +60,29 @@ def _check_name(name):
         return ret
 
 
-def config(name, config, force=False):
+def configfile(name, config):
     ret = _check_name(str(config))
+    configs = __salt__['apache.config'](name, config, edit=False)
+    current_configs = ''
+    if os.path.exists(name):
+        with open(name) as configfile:
+            current_configs = configfile.read()
 
-    if os.path.exists(name) and not force:
+    if configs == current_configs.strip():
         ret['result'] = True
-        ret['comment'] = 'Configuration file exists.'
+        ret['comment'] = 'Configuration is up to date.'
+        return ret
     elif __opts__['test']:
         ret['comment'] = 'Configuration will update.'
         ret['result'] = None
         return ret
 
     try:
+        with open(name, 'w') as configfile:
+            print(configs, file=configfile)
         ret['changes'] = {
-            'old': None,
-            'new': __salt__['apache.config'](name, config)
+            'old': current_configs,
+            'new': configs
         }
         ret['result'] = True
         ret['comment'] = 'Successfully created configuration.'
