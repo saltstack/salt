@@ -687,7 +687,7 @@ class StackUxd(object):
 
         #self.lane.dumpLocalLane(self.yard)
 
-    def fetchRemoteYardByHa(self, ha):
+    def fetchRemoteByHa(self, ha):
         '''
         Search for remote yard with matching ha
         Return yard if found Otherwise return None
@@ -711,7 +711,7 @@ class StackUxd(object):
             raise raeting.StackError(emsg)
         self.names[yard.ha] = yard.name
 
-    def moveRemoteYard(self, old, new):
+    def moveRemote(self, old, new):
         '''
         Move yard at key old name to key new name but keep same index
         '''
@@ -730,7 +730,7 @@ class StackUxd(object):
         del self.yards[old]
         self.yards.insert(index, yard.name, yard)
 
-    def rehaRemoteYard(self, old, new):
+    def rehaRemote(self, old, new):
         '''
         change yard with old ha to new ha but keep same index
         '''
@@ -749,7 +749,7 @@ class StackUxd(object):
         del self.names[old]
         self.yards.insert(index, yard.ha, yard.name)
 
-    def removeRemoteYard(self, name):
+    def removeRemote(self, name):
         '''
         Remove yard at key name
         '''
@@ -791,9 +791,9 @@ class StackUxd(object):
         '''
         self.stats[key] = value
 
-    def serviceUxd(self):
+    def serviceUxdRx(self):
         '''
-        Service the UXD receive and transmit queues
+        Service the Uxd recieves and fill the .rxes deque
         '''
         if self.server:
             while True:
@@ -803,9 +803,51 @@ class StackUxd(object):
                 # triple = ( packet, source address, destination address)
                 self.rxes.append((rx, ra, self.server.ha))
 
+    def serviceRxes(self):
+        '''
+        Process all messages in .uxdRxes deque
+        '''
+        while self.rxes:
+            self.processUdpRx()
+
+    def serviceTxes(self):
+        '''
+        Service the .txes deque to send Uxd messages
+        '''
+        if self.server:
             while self.txes:
                 tx, ta = self.txes.popleft()  # duple = (packet, destination address)
-                self.server.send(tx, ta)
+                try:
+                    self.server.send(tx, ta)
+                except socket.error as ex:
+                    if ex.errno == errno.ECONNREFUSED:
+                        console.terse("socket.error = {0}\n".format(ex))
+                        self.incStat("stale_transmit_yard")
+                        yard = self.fetchRemoteByHa(ta)
+                        if yard:
+                            self.removeRemote(yard.name)
+                            console.terse("Reaped yard {0}\n".format(yard.name))
+                    else:
+                        console.terse("socket.error = {0}\n".format(ex))
+                        raise
+
+    def serviceTxMsgs(self):
+        '''
+        Service .txMsgs queue of outgoing messages
+        '''
+        while self.txMsgs:
+            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
+            packed = self.packUxdTx(body)
+            if packed:
+                console.verbose("{0} sending\n{1}\n".format(self.name, body))
+                self.txUxd(packed, name)
+
+    def serviceUxd(self):
+        '''
+        Service the UXD receive and transmit queues
+        '''
+        self.serviceUxdRx()
+        self.serviceTxes()
 
         return None
 
@@ -819,21 +861,10 @@ class StackUxd(object):
            Uxd Socket send
 
         '''
-        if self.server:
-            while True:
-                rx, ra = self.server.receive()  # if no data the duple is ('',None)
-                if not rx:  # no received data so break
-                    break
-                # triple = ( packet, source address, destination address)
-                self.rxes.append((rx, ra, self.server.ha))
-
-            self.serviceUxdRx()
-
-            self.serviceTxMsg()
-
-            while self.txes:
-                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
-                self.server.send(tx, ta)
+        self.serviceUxdRx()
+        self.serviceRxes()
+        self.serviceTxMsgs()
+        self.serviceTxes()
 
         return None
 
@@ -914,16 +945,6 @@ class StackUxd(object):
 
         return packed
 
-    def serviceTxMsg(self):
-        '''
-        Service .txMsgs queue of outgoing messages
-        '''
-        while self.txMsgs:
-            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
-            packed = self.packUxdTx(body)
-            if packed:
-                console.verbose("{0} sending\n{1}\n".format(self.name, body))
-                self.txUxd(packed, name)
 
     def fetchParseUxdRx(self):
         '''
@@ -1027,14 +1048,6 @@ class StackUxd(object):
         console.verbose("{0} received message data\n{1}\n".format(self.name, body))
 
         self.rxMsgs.append(body)
-
-    def serviceUxdRx(self):
-        '''
-        Process all messages in .uxdRxes deque
-        '''
-        while self.rxes:
-            self.processUdpRx()
-
 
 
 
