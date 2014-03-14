@@ -31,7 +31,7 @@ class Channel(object):
         if ttype == 'raet':
             return RAETChannel(opts, **kwargs)
         else:
-            raise Exception('Channels are only defined for ZeroMQ')
+            raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
 
