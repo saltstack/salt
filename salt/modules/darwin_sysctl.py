@@ -47,9 +47,9 @@ def show():
     )
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     comps = ['']
-    for line in out:
+    for line in out.splitlines():
         # This might need to be converted to a regex, and more, as sysctl output
         # can for some reason contain entries such as:
         #
