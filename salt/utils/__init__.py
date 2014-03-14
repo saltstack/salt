@@ -11,6 +11,7 @@ import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
+import grp
 import hashlib
 import imp
 import inspect
@@ -18,6 +19,7 @@ import json
 import logging
 import os
 import pprint
+import pwd
 import random
 import re
 import shlex
@@ -2094,3 +2096,77 @@ def repack_dictlist(data):
                 return {}
             ret.update(element)
     return ret
+
+def get_group_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group names of which the user
+    is a member.
+    '''
+    group_names = None
+    if not isinstance(user, string_types):
+        raise Exception
+    if hasattr(os, 'getgrouplist'):
+        # Try os.getgrouplist, available in python >= 3.3
+        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        try:
+            group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+            log.trace('os.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
+        except:
+            pass
+    else:
+        # Try pysss.getgrouplist
+        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        try:
+            import pysss
+            group_names = list(pysss.getgrouplist(user))
+            log.trace('pysss.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
+        except:
+            pass
+    if group_names is None:
+        # Fall back to generic code
+        # Include the user's default group to behave like
+        # os.getgrouplist() and pysss.getgrouplist() do
+        log.trace('Trying generic group list for {0!r}'.format(user))
+        group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            if default_group not in group_names:
+                group_names.append(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+        log.trace('Generic group list for user {0!r}: {1!r}'.format(user, group_names))
+    if include_default is False:
+        # Historically, saltstack code for getting group lists did not
+        # include the default group. Some things may only want
+        # supplemental groups, so include_default=False omits the users
+        # default group.
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            group_names.remove(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    return sorted(group_names)
+
+
+def get_group_dict(user=None, include_default=True):
+    '''
+    Returns a dict of all of the system groups as keys, and group ids
+    as values, of which the user is a member.
+    E.g: {'staff': 501, 'sudo': 27}
+    '''
+    group_dict = {}
+    group_names = get_group_list(user, include_default=include_default)
+    for group in group_names:
+        group_dict.update({group: grp.getgrnam(group).gr_gid})
+    return group_dict
+
+
+def get_gid_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group IDs of which the user
+    is a member.
+    '''
+    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    return gid_list
