@@ -205,7 +205,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     for item in after_jump:
         rule += item
 
-    if full is True:
+    if full in ['True', 'true']:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:
