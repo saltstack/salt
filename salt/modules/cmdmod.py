@@ -517,6 +517,7 @@ def run(cmd,
         quiet=False,
         timeout=None,
         reset_system_locale=True,
+        ignore_retcode=False,
         saltenv='base',
         **kwargs):
     '''
@@ -573,7 +574,7 @@ def run(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -599,6 +600,7 @@ def run_stdout(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -648,7 +650,7 @@ def run_stdout(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -677,6 +679,7 @@ def run_stderr(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -726,7 +729,7 @@ def run_stderr(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -755,6 +758,7 @@ def run_all(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -804,7 +808,7 @@ def run_all(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -832,6 +836,7 @@ def retcode(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -881,7 +886,7 @@ def retcode(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
