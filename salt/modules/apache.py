@@ -8,10 +8,14 @@ deb_apache.py, but will still load under the ``apache`` namespace when a
 Debian-based system is detected.
 '''
 
+# Python3 generators
+from __future__ import generators, print_function, with_statement
+
 # Import python libs
 import re
 import logging
 import urllib2
+import cStringIO
 
 # Import salt libs
 import salt.utils
@@ -349,3 +353,52 @@ def server_status(profile='default'):
 
     # return the good stuff
     return ret
+
+
+def _parse_config(config, slot=None):
+    ret = cStringIO.StringIO()
+    if isinstance(config, str):
+        if slot:
+            print('{0} {1}'.format(slot, config), file=ret, end='')
+        else:
+            print('{0}'.format(config), file=ret, end='')
+    elif isinstance(config, list):
+        print('{0} {1}'.format(str(slot), ' '.join(config)), file=ret, end='')
+    elif isinstance(config, dict):
+        print('<{0} {1}>'.format(slot, _parse_config(config['this'])), file=ret)
+        del config['this']
+        for key, value in config.items():
+            if isinstance(value, str):
+                print('{0} {1}'.format(key, value), file=ret)
+            elif isinstance(value, list):
+                print('{0} {1}'.format(key, ' '.join(value)), file=ret)
+            elif isinstance(value, dict):
+                print(_parse_config(value, key), file=ret)
+        print('</{0}>'.format(slot), file=ret, end='')
+
+    ret.seek(0)
+    return ret.read()
+
+def config(name, config):
+    '''
+    Create VirtualHost configuration files
+
+    name
+        File for the virtual host
+    config
+        VirtualHost configurations
+
+    Note: This function is not meant to be used from the command line.
+    Config is meant to be an ordered dict of all of the apache configs.
+
+    .. code-block:: bash
+        salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
+
+    '''
+
+    for entry in config:
+        key = entry.keys()[0]
+        with open(name, 'w') as configfile:
+            configs = _parse_config(entry[key], key)
+            configfile.write(configs + '\n')
+    return True
