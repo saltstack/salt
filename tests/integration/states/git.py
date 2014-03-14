@@ -42,7 +42,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -60,7 +60,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://youSpelledGithubWrong.com/saltstack/salt.git',
+                name='https://youSpelledGithubWrong.com/saltstack/salt-test-repo.git',
                 rev='develop',
                 target=name,
                 submodules=True
@@ -80,7 +80,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -101,7 +101,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 unless='test -e {0}'.format(name),
@@ -116,13 +116,11 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest with numeric revision
         '''
-        # We should actually clone a smaller repository, salt's repo is getting
-        # pretty big
         name = os.path.join(integration.TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev=0.11,
                 target=name,
                 submodules=True,
