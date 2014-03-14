@@ -65,10 +65,10 @@ class Caller(object):
             sys.exit(-1)
         try:
             sdata = {
-                    'fun': fun,
-                    'pid': os.getpid(),
-                    'jid': ret['jid'],
-                    'tgt': 'salt-call'}
+                'fun': fun,
+                'pid': os.getpid(),
+                'jid': ret['jid'],
+                'tgt': 'salt-call'}
             args, kwargs = salt.minion.parse_args_and_kwargs(
                 self.minion.functions[fun], self.opts['arg'], data=sdata)
             try:
@@ -78,15 +78,23 @@ class Caller(object):
                 # Don't require msgpack with local
                 pass
             except IOError:
-                sys.stderr.write('Cannot write to process directory. Do you have permissions to write to {0} ?\n'.format(proc_fn))
+                sys.stderr.write(
+                    'Cannot write to process directory. '
+                    'Do you have permissions to '
+                    'write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
             try:
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
-                sys.stderr.write(('Passed invalid arguments: {0}\n').format(exc))
+                trace = traceback.format_exc()
+                sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
+                active_level = LOG_LEVELS.get(
+                    self.opts['log_level'].lower(), logging.ERROR)
+                if active_level <= logging.DEBUG:
+                    sys.stderr.write(trace)
                 sys.exit(1)
-            ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                    'retcode', 0)
+            ret['retcode'] = sys.modules[
+                func.__module__].__context__.get('retcode', 0)
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
