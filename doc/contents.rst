@@ -21,6 +21,7 @@ Salt Table of Contents
     topics/windows/index
     topics/cloud/index
     topics/virt/index
+    topics/yaml/index
     topics/master_tops/index
     topics/ssh/*
     ref/index
