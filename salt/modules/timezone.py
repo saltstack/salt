@@ -193,7 +193,7 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
+        out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'
