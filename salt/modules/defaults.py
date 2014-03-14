@@ -118,7 +118,7 @@ def get(key, default=''):
 
     defaults = _load(pillar_name, defaults_path)
 
-    value = __salt__['pillar.get']("%s:%s" % (pillar_name, key), None)
+    value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
 
     if value is None:
         value = salt.utils.traverse_dict(defaults, key, None)
