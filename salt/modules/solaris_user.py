@@ -5,7 +5,6 @@ Manage users with the useradd command
 
 # Import python libs
 try:
-    import grp
     import pwd
 except ImportError:
     pass
