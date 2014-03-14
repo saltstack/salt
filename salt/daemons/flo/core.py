@@ -289,14 +289,14 @@ class Router(ioflo.base.deeding.Deed):
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
             return
-        if d_share == 'local_cmd':
+        elif d_share == 'local_cmd':
             # Refuse local commands over the wire
             log.error('Received local command remotely! Ignoring: {0}'.format(msg))
             return
-        if d_share == 'remote_cmd':
+        elif d_share == 'remote_cmd':
             # Send it to a remote worker
             self.uxd_stack.value.transmit(msg, next(self.workers.value))
-        if d_share == 'fun':
+        elif d_share == 'fun':
             self.fun.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg):
@@ -332,8 +332,12 @@ class Router(ioflo.base.deeding.Deed):
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
             return
-        if d_share == 'local_cmd':
+        elif d_share == 'local_cmd':
             self.uxd_stack.value.transmit(msg, next(self.workers.value))
+        elif d_share == 'event_req':
+            self.event_req.value.append(msg)
+        elif d_share == 'event_fire':
+            self.event.value.append(msg)
 
     def action(self):
         '''
@@ -370,7 +374,7 @@ class Eventer(ioflo.base.deeding.Deed):
         Fire an event to all subscribed yards
         '''
         for y_name in self.event_yards.value:
-            route = {'src': ('router', self.stack.value.yard.name, None),
+            route = {'src': ('router', self.uxd_stack.value.yard.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg, y_name)
