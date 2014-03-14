@@ -363,11 +363,7 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         register an incoming event request with the requesting yard id
         '''
-        ev_yard = yarding.Yard(
-                yid=msg['load']['yid'],
-                prefix='master',
-                dirpath=msg['load']['dirpath'])
-        self.event_yards.value.add(ev_yard.name)
+        self.event_yards.value.add(msg['route']['src'][1])
 
     def _fire_event(self, event):
         '''
