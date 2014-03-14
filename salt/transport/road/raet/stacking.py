@@ -61,6 +61,7 @@ class StackUdp(object):
                  safe=None,
                  auto=None,
                  dirpath=None,
+                 stats=None,
                  ):
         '''
         Setup StackUdp instance
@@ -78,6 +79,8 @@ class StackUdp(object):
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
         self.rxes = rxes if rxes is not None else deque() # udp packets received
         self.txes = txes if txes is not None else deque() # udp packet to transmit
+        self.stats = stats if stats is not None else odict() # udp statistics
+        self.statTimer = aiding.StoreTimer(self.store)
 
         self.road = road or keeping.RoadKeep(dirpath=dirpath,
                                              stackname=self.name)
@@ -139,12 +142,12 @@ class StackUdp(object):
             eid = estate.eid
 
         if eid in self.estates:
-            emsg = "Estate with id '{0}' alreadys exists".format(eid)
+            emsg = "Cannot add id '{0}' estate alreadys exists".format(eid)
             raise raeting.StackError(emsg)
         estate.stack = self
         self.estates[eid] = estate
         if estate.name in self.eids:
-            emsg = "Estate with name '{0}' alreadys exists".format(estate.name)
+            emsg = "Cannot add name '{0}' estate alreadys exists".format(estate.name)
             raise raeting.StackError(emsg)
         self.eids[estate.name] = estate.eid
 
@@ -153,11 +156,11 @@ class StackUdp(object):
         Move estate at key old eid to key new eid but keep same index
         '''
         if new in self.estates:
-            emsg = "Cannot move, '{0}' already exists".format(new)
+            emsg = "Cannot move, '{0}' estate already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.estates:
-            emsg = "Cannot move '{0}' does not exist".format(old)
+            emsg = "Cannot move '{0}' estate does not exist".format(old)
             raise raeting.StackError(emsg)
 
         estate = self.estates[old]
@@ -172,11 +175,11 @@ class StackUdp(object):
         rename estate with old name to new name but keep same index
         '''
         if new in self.eids:
-            emsg = "Cannot rename, '{0}' already exists".format(new)
+            emsg = "Cannot rename, '{0}' estate already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.eids:
-            emsg = "Cannot rename '{0}' does not exist".format(old)
+            emsg = "Cannot rename '{0}' estate does not exist".format(old)
             raise raeting.StackError(emsg)
 
         eid = self.eids[old]
@@ -191,7 +194,7 @@ class StackUdp(object):
         Remove estate at key eid
         '''
         if eid not in self.estates:
-            emsg = "Cannot remove, '{0}' does not exist".format(eid)
+            emsg = "Cannot remove, '{0}' estate does not exist".format(eid)
             raise raeting.StackError(emsg)
 
         estate = self.estates[eid]
@@ -322,6 +325,36 @@ class StackUdp(object):
             else:
                 del self.transactions[index]
 
+    def clearStats(self):
+        '''
+        Set all the stat counters to zero and reset the timer
+        '''
+        for key, value in self.stats.items():
+            self.stats[key] = 0
+        self.statTimer.restart()
+
+    def clearStat(self, key):
+        '''
+        Set the specified state counter to zero
+        '''
+        if key in self.stats:
+            self.stats[key] = 0
+
+    def incStat(self, key, delta=1):
+        '''
+        Increment stat key counter by delta
+        '''
+        if key in self.stats:
+            self.stats[key] += delta
+        else:
+            self.stats[key] = delta
+
+    def updateStat(self, key, value):
+        '''
+        Set stat key to value
+        '''
+        self.stats[key] = value
+
     def serviceUdp(self):
         '''
         Service the UDP receive and transmit queues
@@ -422,7 +455,8 @@ class StackUdp(object):
         try:
             packet.parseOuter()
         except raeting.PacketError as ex:
-            print ex
+            console.terse(ex + '\n')
+            self.incStat('parsing_outer_error')
             return None
 
         deid = packet.data['de']
@@ -455,7 +489,9 @@ class StackUdp(object):
             return
 
         if packet.data['cf']: #correspondent to stale transaction so drop
-            print "{0} Stale Transaction, dropping ...".format(self.name)
+            emsg = "{0} Stale Transaction, dropping ...".format(self.name)
+            console.terse(emsg + '\n')
+            self.incStat('stale_correspondent_attempt')
             # Should send abort nack to drop transaction on other side
             return
 
@@ -503,7 +539,8 @@ class StackUdp(object):
             packet.parseInner()
             console.verbose("{0} received packet body\n{1}\n".format(self.name, packet.body.data))
         except raeting.PacketError as ex:
-            print ex
+            console.terse(ex + '\n')
+            self.incStat('parsing_inner_error')
             return None
         return packet
 
@@ -569,6 +606,25 @@ class StackUdp(object):
                                         rxPacket=packet)
         messengent.message()
 
+    def nackStale(self, packet):
+        '''
+        Send nack to stale correspondent packet
+        '''
+        body = odict()
+        txData = packet.data
+        ha = (packet.data['sh'], packet.data['sp'])
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            console.terse(ex + '\n')
+            self.incStat("packing_error")
+            return
+
+        self.txes.append((packet.packed, ha))
 
 class StackUxd(object):
     '''
@@ -639,12 +695,12 @@ class StackUxd(object):
             name = yard.name
 
         if name in self.yards or name == self.yard.name:
-            emsg = "Estate with name '{0}' alreadys exists".format(name)
+            emsg = "Cannot add '{0}' yard alreadys exists".format(name)
             raise raeting.StackError(emsg)
         yard.stack = self
         self.yards[name] = yard
         if yard.ha in self.names or yard.ha == self.yard.ha:
-            emsg = "Yard with ha '{0}' alreadys exists".format(yard.ha)
+            emsg = "Cannot add ha '{0}' yard alreadys exists".format(yard.ha)
             raise raeting.StackError(emsg)
         self.names[yard.ha] = yard.name
 
@@ -653,11 +709,11 @@ class StackUxd(object):
         Move yard at key old name to key new name but keep same index
         '''
         if new in self.yards:
-            emsg = "Cannot move, '{0}' already exists".format(new)
+            emsg = "Cannot move, '{0}' yard already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.yards:
-            emsg = "Cannot move '{0}' does not exist".format(old)
+            emsg = "Cannot move '{0}' yard does not exist".format(old)
             raise raeting.StackError(emsg)
 
         yard = self.yards[old]
@@ -672,11 +728,11 @@ class StackUxd(object):
         change yard with old ha to new ha but keep same index
         '''
         if new in self.names:
-            emsg = "Cannot reha, '{0}' already exists".format(new)
+            emsg = "Cannot reha, '{0}' yard already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.names:
-            emsg = "Cannot reha '{0}' does not exist".format(old)
+            emsg = "Cannot reha '{0}' yard does not exist".format(old)
             raise raeting.StackError(emsg)
 
         name = self.names[old]
@@ -691,7 +747,7 @@ class StackUxd(object):
         Remove yard at key name
         '''
         if name not in self.yards:
-            emsg = "Cannot remove, '{0}' does not exist".format(name)
+            emsg = "Cannot remove, '{0}' yard does not exist".format(name)
             raise raeting.StackError(emsg)
 
         yard = self.yards[name]
