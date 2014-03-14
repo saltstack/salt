@@ -273,7 +273,9 @@ class Router(ioflo.base.deeding.Deed):
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
-        if d_estate != self.udp_stack.value.estate.name:
+        if d_estate is None:
+            pass
+        elif d_estate != self.udp_stack.value.estate.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
@@ -405,7 +407,9 @@ class Publisher(ioflo.base.deeding.Deed):
         for minion in self.udp_stack.value.eids:
             eid = self.udp_stack.value.eids.get(minion)
             if eid:
-                route = {'dst': (minion, None, 'fun')}
+                route = {
+                        'dst': (minion, None, 'fun'),
+                        'src': (self.udp_stack.value.estate.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
                 self.udp_stack.value.message(msg, eid)
 
@@ -443,7 +447,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
 
-    def _return_pub(self, ret):
+    def _return_pub(self, msg, ret):
         '''
         Send the return data back via the uxd socket
         '''
@@ -459,8 +463,10 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 )
         ret_stack.addRemoteYard(main_yard)
         route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
-                 'dst': ('master', None, 'return')}
-        msg = {'route': route, 'return': ret}
+                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+        ret['cmd'] = '_return'
+        ret['id'] = self.opts['id']
+        msg = {'route': route, 'load': ret}
         ret_stack.transmit(msg, 'yard0')
         ret_stack.serviceAll()
 
@@ -591,7 +597,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(ret)
+        self._return_pub(exchange, ret)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):
