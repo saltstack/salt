@@ -9,6 +9,7 @@ stacking.py raet protocol stacking classes
 import socket
 import os
 import errno
+
 from collections import deque,  Mapping
 try:
     import simplejson as json
@@ -816,6 +817,7 @@ class StackUxd(object):
         Service the .txes deque to send Uxd messages
         '''
         if self.server:
+            laters = deque()
             while self.txes:
                 tx, ta = self.txes.popleft()  # duple = (packet, destination address)
                 try:
@@ -828,9 +830,15 @@ class StackUxd(object):
                         if yard:
                             self.removeRemote(yard.name)
                             console.terse("Reaped yard {0}\n".format(yard.name))
+                    elif ex.errno == errno.EAGAIN or ex.errno == errno.EWOULDBLOCK:
+                        #busy with last message save it for later
+                        self.laters.append((tx, ta))
                     else:
                         console.terse("socket.error = {0}\n".format(ex))
                         raise
+            while laters:
+                self.txes.append(self.laters.popleft())
+
 
     def serviceTxMsgs(self):
         '''
