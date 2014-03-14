@@ -2,14 +2,16 @@
 '''
 Support for htpasswd module
 
+.. versionadded:: Helium
+
 .. code-block:: yaml
 
     username:
-        webutil.user_exists:
-            - password: secr3t
-            - htpasswd_file: /etc/nginx/htpasswd
-            - options: d
-            - force: true
+      webutil.user_exists:
+        - password: secr3t
+        - htpasswd_file: /etc/nginx/htpasswd
+        - options: d
+        - force: true
 
 '''
 import salt.utils
