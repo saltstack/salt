@@ -13,6 +13,8 @@ import salt.output
 
 def over(saltenv='base', os_fn=None):
     '''
+    .. versionadded:: 0.11.0
+
     Execute an overstate sequence to orchestrate the executing of states
     over a group of systems
 
@@ -50,8 +52,10 @@ def over(saltenv='base', os_fn=None):
     return overstate.over_run
 
 
-def sls(mods, saltenv='base', test=None, exclude=None):
+def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     '''
+    .. versionadded:: 0.17.0
+
     Execute a state run from the master, used as a powerful orchestration
     system.
 
@@ -59,8 +63,12 @@ def sls(mods, saltenv='base', test=None, exclude=None):
 
     .. code-block:: bash
 
-        salt-run state.sls webserver
-        salt-run state.sls webserver saltenv=dev test=True
+        salt-run state.orchestrate webserver
+        salt-run state.orchestrate webserver saltenv=dev test=True
+
+    .. versionchanged:: 2014.1.1
+
+        Runner renamed from ``state.sls`` to ``state.orchestrate``
     '''
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
@@ -69,10 +77,16 @@ def sls(mods, saltenv='base', test=None, exclude=None):
     salt.output.display_output(ret, 'highstate', opts=__opts__)
     return ret
 
+# Aliases for orchestrate runner
+orch = orchestrate
+sls = orchestrate
+
 
 def show_stages(saltenv='base', os_fn=None):
     '''
-    Display the stage data to be executed
+    .. versionadded:: 0.11.0
+
+    Display the OverState's stage data
 
     CLI Examples:
 
