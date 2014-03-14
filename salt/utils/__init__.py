@@ -2097,6 +2097,7 @@ def repack_dictlist(data):
             ret.update(element)
     return ret
 
+
 def get_group_list(user=None, include_default=True):
     '''
     Returns a list of all of the system group names of which the user
@@ -2111,7 +2112,7 @@ def get_group_list(user=None, include_default=True):
         try:
             group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
             log.trace('os.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
-        except:
+        except Exception:
             pass
     else:
         # Try pysss.getgrouplist
@@ -2120,7 +2121,7 @@ def get_group_list(user=None, include_default=True):
             import pysss
             group_names = list(pysss.getgrouplist(user))
             log.trace('pysss.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
-        except:
+        except Exception:
             pass
     if group_names is None:
         # Fall back to generic code
