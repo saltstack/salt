@@ -52,7 +52,7 @@ def _check_name(name):
            'result': None,
            'comment': ''}
     if salt.utils.cloud.check_name(
-        name, ' a-zA-Z0-9.,_/\[\]\(\)\<\>\'*+:-' # pylint: disable=W1401
+        name, ' a-zA-Z0-9.,_/\[\]\(\)\<\>\'*+:-'  # pylint: disable=W1401
     ):
         ret['comment'] = 'Invalid characters in name.'
         ret['result'] = False
