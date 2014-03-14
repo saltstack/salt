@@ -536,7 +536,7 @@
 #
 # mine_get:
 #   foo.example.com:
-#     - network.inetrfaces
+#     - network.interfaces
 #   web.*:
 #     - network.*
 #     - disk.*
