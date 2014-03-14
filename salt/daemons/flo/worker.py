@@ -67,7 +67,7 @@ class RouterWorker(ioflo.base.deeding.Deed):
                     ret['return'] = getattr(self.remote, cmd)(msg['load'])
                 elif hasattr(self.local, cmd):
                     ret['return'] = getattr(self.local, cmd)(msg['load'])
-                if cmd == 'publish':
+                if cmd == 'publish' and 'pub' in ret['return']:
                     r_share = 'pub_ret'
                 else:
                     r_share = 'ret'

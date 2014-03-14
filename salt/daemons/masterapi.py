@@ -168,7 +168,9 @@ class RemoteFuncs(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                self.opts['sock_dir'],
+                self.opts['transport'])
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
