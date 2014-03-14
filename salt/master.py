@@ -1774,13 +1774,12 @@ class ClearFuncs(object):
             return True
 
         # After we've ascertained we're not on windows
-        import grp
         try:
             user = self.opts['user']
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+            groups = salt.utils.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '

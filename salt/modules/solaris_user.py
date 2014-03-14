@@ -434,20 +434,4 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    ugrp = set()
-    # Add the primary user's group
-    ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
-
-    # If we already grabbed the group list, it's overkill to grab it again
-    if 'user.getgrall' in __context__:
-        groups = __context__['user.getgrall']
-    else:
-        groups = grp.getgrall()
-        __context__['user.getgrall'] = groups
-
-    # Now, all other groups the user belongs to
-    for group in groups:
-        if name in group.gr_mem:
-            ugrp.add(group.gr_name)
-
-    return sorted(list(ugrp))
+    return salt.utils.get_group_list(name)
