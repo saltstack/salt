@@ -31,7 +31,7 @@ the above word between angle brackets (<>).
             Options:
               - +Indexes
               - FollowSymlinks
-            AllowOverrides: All
+            AllowOverride: All
 '''
 
 from __future__ import with_statement, print_function
