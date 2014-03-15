@@ -13,7 +13,7 @@ framer masterudpstack be active first setup
       go spawnworkers
    frame spawnworkers
       enter
-         do worker fork
+         do fork worker
       go start
    frame start
       do salt raet udp stack per inode ".raet.udp.stack"

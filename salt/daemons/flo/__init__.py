@@ -34,7 +34,6 @@ def explode_opts(opts):
     '''
     Explode the opts into a preloads list
     '''
-    preloads = []
     preloads = [('.salt.opts', dict(value=opts))]
     for key, val in opts.items():
         ukey = key.replace('.', '_')
