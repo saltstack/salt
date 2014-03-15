@@ -96,6 +96,7 @@ class SetupWorker(ioflo.base.deeding.Deed):
         self.uxd_stack.value.transmit(init, 'yard0')
         self.uxd_stack.value.serviceAll()
 
+
 class RouterWorker(ioflo.base.deeding.Deed):
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
@@ -103,7 +104,6 @@ class RouterWorker(ioflo.base.deeding.Deed):
             'yid': '.salt.yid',
             'access_keys': '.salt.access_keys',
             }
-
 
     def action(self):
         '''
