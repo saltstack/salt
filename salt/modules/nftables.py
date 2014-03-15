@@ -9,6 +9,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import (
     CommandExecutionError
 )
@@ -76,6 +77,174 @@ def version():
     return out[1]
 
 
+def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
+               **kwargs):
+    '''
+    Build a well-formatted iptables rule based on kwargs. Long options must be
+    used (`--jump` instead of `-j`) because they will have the `--` added to
+    them. A `table` and `chain` are not required, unless `full` is True.
+
+    If `full` is `True`, then `table`, `chain` and `command` are required.
+    `command` may be specified as either a short option ('I') or a long option
+    (`--insert`). This will return the iptables command, exactly as it would
+    be used from the command line.
+
+    If a position is required (as with `-I` or `-D`), it may be specified as
+    `position`. This will only be useful if `full` is True.
+
+    If `connstate` is passed in, it will automatically be changed to `state`.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' iptables.build_rule match=state \\
+            connstate=RELATED,ESTABLISHED jump=ACCEPT
+        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
+            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+
+        IPv6:
+        salt '*' iptables.build_rule match=state \\
+            connstate=RELATED,ESTABLISHED jump=ACCEPT \\
+            family=ipv6
+        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
+            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            family=ipv6
+
+    '''
+    if 'target' in kwargs:
+        kwargs['jump'] = kwargs['target']
+        del kwargs['target']
+
+    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
+        if ignore in kwargs:
+            del kwargs[ignore]
+
+    rule = ''
+    proto = ''
+
+    nft_family = _NFTABLES_FAMILIES[family]
+
+    if 'if' in kwargs:
+        rule += 'meta iifname {0} '.format(kwargs['if'])
+        del kwargs['if']
+
+    if 'of' in kwargs:
+        rule += 'meta oifname {0} '.format(kwargs['of'])
+        del kwargs['of']
+
+    if 'proto' in kwargs:
+        #rule += '-p {0} '.format(kwargs['proto'])
+        proto = kwargs['proto']
+
+    if 'state' in kwargs:
+        del kwargs['state']
+
+    if 'connstate' in kwargs:
+        rule += 'ct state {{ {0}}} '.format(kwargs['connstate'])
+        del kwargs['connstate']
+
+    if 'dport' in kwargs:
+        kwargs['dport'] = str(kwargs['dport'])
+        if ':' in kwargs['dport']:
+            kwargs['dport'] = kwargs['dport'].replace(':', '-')
+        rule += 'dport {{ {0}}} '.format(kwargs['dport'])
+        del kwargs['dport']
+
+    if 'sport' in kwargs:
+        kwargs['sport'] = str(kwargs['sport'])
+        if ':' in kwargs['sport']:
+            kwargs['sport'] = kwargs['sport'].replace(':', '-')
+        rule += 'sport {{ {0}}} '.format(kwargs['sport'])
+        del kwargs['sport']
+
+    if 'dports' in kwargs:
+        # nftables reverse sorts the ports from
+        # high to low, create rule like this
+        # so that the check will work
+        _dports = kwargs['dports'].split(',')
+        _dports = [int(x) for x in _dports]
+        _dports.sort(reverse=True)
+        kwargs['dports'] = ', '.join(str(x) for x in _dports)
+
+        rule += 'dport {{ {0}}} '.format(kwargs['dports'])
+        del kwargs['dports']
+
+    if 'sports' in kwargs:
+        # nftables reverse sorts the ports from
+        # high to low, create rule like this
+        # so that the check will work
+        _sports = kwargs['sports'].split(',')
+        _sports = [int(x) for x in _sports]
+        _sports.sort(reverse=True)
+        kwargs['sports'] = ', '.join(str(x) for x in _sports)
+
+        rule += 'sport {{ {0} }} '.format(kwargs['sports'])
+        del kwargs['sports']
+
+    # Jumps should appear last, except for any arguments that are passed to
+    # jumps, which of course need to follow.
+    after_jump = []
+
+    if 'jump' in kwargs:
+        after_jump.append('{0} '.format(kwargs['jump']))
+        del kwargs['jump']
+
+    if 'j' in kwargs:
+        after_jump.append('{0} '.format(kwargs['j']))
+        del kwargs['j']
+
+    if 'to-port' in kwargs:
+        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
+        del kwargs['to-port']
+
+    if 'to-ports' in kwargs:
+        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
+        del kwargs['to-ports']
+
+    if 'to-destination' in kwargs:
+        after_jump.append('--to-destination {0} '.
+                format(kwargs['to-destination']))
+        del kwargs['to-destination']
+
+    if 'reject-with' in kwargs:
+        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
+        del kwargs['reject-with']
+
+    for item in after_jump:
+        rule += item
+
+    # Strip trailing spaces off rule
+    rule = rule.strip()
+
+    # Insert the protocol prior to dport or sport
+    rule = rule.replace('dport', '{0} dport'.format(proto))
+    rule = rule.replace('sport', '{0} sport'.format(proto))
+
+    if full in ['True', 'true']:
+        if not table:
+            return 'Error: Table needs to be specified'
+        if not chain:
+            return 'Error: Chain needs to be specified'
+        if not command:
+            return 'Error: Command needs to be specified'
+
+        if command in ['Insert', 'insert', 'INSERT']:
+            if position:
+                return '{0} insert rule {1} {2} {3} position {4} {5}'.\
+                        format(_nftables_cmd(), nft_family, table,
+                                chain, position, rule)
+            else:
+                return '{0} insert rule {1} {2} {3} {4}'.\
+                        format(_nftables_cmd(), nft_family, table,
+                                chain, rule)
+
+        return '{0} {1} rule {2} {3} {4} {5}'.format(_nftables_cmd(),
+            command, nft_family, table, chain, rule)
+
+    return rule
+
+
 def get_saved_rules(conf_file=None, family='ipv4'):
     '''
     Return a data structure of the rules in the conf file
@@ -117,7 +286,8 @@ def get_rules(family='ipv4'):
     '''
     nft_family = _NFTABLES_FAMILIES[family]
     rules = []
-    cmd = '{0} list tables {1}'.format(_nftables_cmd(), nft_family)
+    cmd = '{0} --numeric --numeric --numeric list tables {1}'.\
+        format(_nftables_cmd(), nft_family)
     out = __salt__['cmd.run'](cmd)
     if not out:
         return rules
@@ -125,7 +295,8 @@ def get_rules(family='ipv4'):
     tables = re.split('\n+', out)
     for table in tables:
         table_name = table.split(' ')[1]
-        cmd = '{0} list table {1} {2}'.format(_nftables_cmd(), nft_family, table_name)
+        cmd = '{0} --numeric --numeric --numeric list table {1} {2}'.format(_nftables_cmd(),
+                nft_family, table_name)
         out = __salt__['cmd.run'](cmd)
         rules.append(out)
     return rules
@@ -191,20 +362,24 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     if not check(table, chain, rule, family=family):
-        return 'Error: rule {0} chain {1} in table {2} in family {3} does not exist' . format(rule, chain, table, family)
+        return 'Error: rule {0} chain {1} in table {2} in family {3} does not exist'.\
+                format(rule, chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} --numeric --handle list chain {1} {2} {3}' . format(_nftables_cmd(), nft_family, table, chain)
+    cmd = '{0} --numeric --numeric --numeric --handle list chain {1} {2} {3}'.\
+        format(_nftables_cmd(), nft_family, table, chain)
     out = __salt__['cmd.run'](cmd)
     rules = re.split('\n+', out)
 
-    pat = re.compile(r'{0} # handle (?P<handle>\d+)' . format(rule))
+    pat = re.compile(r'{0} # handle (?P<handle>\d+)'.format(rule))
     for rule in rules:
         match = pat.search(rule)
         if match:
@@ -239,14 +414,18 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} --handle --numeric list chain {1} {2} {3}' . format(_nftables_cmd(), nft_family, table, chain)
-    out = __salt__['cmd.run'](cmd).find('{0} #'.format(rule))
+    cmd = '{0} --handle --numeric --numeric --numeric list chain {1} {2} {3}'.\
+            format(_nftables_cmd(), nft_family, table, chain)
+    search_rule = '{0} #'.format(rule)
+    out = __salt__['cmd.run'](cmd).find(search_rule)
 
     if out != -1:
         out = ''
@@ -332,7 +511,8 @@ def new_table(table, family='ipv4'):
         return 'Error: table needs to be specified'
 
     if check_table(table, family=family):
-        return 'Error: table {0} in family {1} already exists' . format(table, family)
+        return 'Error: table {0} in family {1} already exists'.\
+                format(table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} add table {1} {2}'.format(_nftables_cmd(), nft_family, table)
@@ -386,14 +566,16 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
 
         salt '*' nftables.new_chain filter input
 
-        salt '*' nftables.new_chain filter input table_type=filter hook=input priority=0
+        salt '*' nftables.new_chain filter input \\
+                table_type=filter hook=input priority=0
 
         salt '*' nftables.new_chain filter foo
 
         IPv6:
         salt '*' nftables.new_chain filter input family=ipv6
 
-        salt '*' nftables.new_chain filter input table_type=filter hook=input priority=0 family=ipv6
+        salt '*' nftables.new_chain filter input \\
+                table_type=filter hook=input priority=0 family=ipv6
 
         salt '*' nftables.new_chain filter foo family=ipv6
     '''
@@ -402,22 +584,24 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
         return 'Error: Chain needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} already exists' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} already exists'.\
+                format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} add chain {1} {2} {3}'.format(_nftables_cmd(), nft_family, table, chain)
-    features = ''
+    cmd = '{0} add chain {1} {2} {3}'.\
+            format(_nftables_cmd(), nft_family, table, chain)
     if table_type or hook or priority:
-        if table_type:
-            features += ' type {0}'.format(table_type)
-        if hook:
-            features += ' hook {0}'.format(hook)
-        if priority:
-            features += ' priority {0}'.format(priority)
-        cmd = '{0} \\{{ {1}\\; \\}}'.format(cmd, features)
+        if table_type and hook and str(priority):
+            cmd = r'{0} \{{ type {1} hook {2} priority {3}\; \}}'.\
+                    format(cmd, table_type, hook, priority)
+        else:
+#           # Specifiy one, rqeuire all
+            return 'Error: table_type hook and priority required'.\
+                    format(table, family)
 
     out = __salt__['cmd.run'](cmd)
 
@@ -450,13 +634,16 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} delete chain {1} {2} {3}'.format(_nftables_cmd(), nft_family, table, chain)
+    cmd = '{0} delete chain {1} {2} {3}'.\
+            format(_nftables_cmd(), nft_family, table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -491,16 +678,20 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     if check(table, chain, rule, family=family):
-        return 'Error: rule {0} chain {1} in table {2} in family {3} already exists' . format(rule, chain, table, family)
+        return 'Error: rule {0} chain {1} in table {2} in family {3} already exists'.\
+                format(rule, chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} add rule {1} {2} {3} {4}'.format(_nftables_cmd(), nft_family, table, chain, rule)
+    cmd = '{0} add rule {1} {2} {3} {4}'.\
+            format(_nftables_cmd(), nft_family, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     if len(out) == 0:
         return True
@@ -544,19 +735,24 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     if check(table, chain, rule, family=family):
-        return 'Error: rule {0} chain {1} in table {2} in family {3} already exists' . format(rule, chain, table, family)
+        return 'Error: rule {0} chain {1} in table {2} in family {3} already exists'.\
+                format(rule, chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
     if position:
-        cmd = '{0} insert rule {1} {2} {3} position {4} {5}'.format(_nftables_cmd(), nft_family, table, chain, position, rule)
+        cmd = '{0} insert rule {1} {2} {3} position {4} {5}'.\
+                format(_nftables_cmd(), nft_family, table, chain, position, rule)
     else:
-        cmd = '{0} insert rule {1} {2} {3} {4}'.format(_nftables_cmd(), nft_family, table, chain, rule)
+        cmd = '{0} insert rule {1} {2} {3} {4}'.\
+                format(_nftables_cmd(), nft_family, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
 
     if len(out) == 0:
@@ -596,13 +792,16 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Only specify a position or a rule, not both'
 
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
+        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                format(chain, table, family)
 
     if not check(table, chain, rule, family=family):
-        return 'Error: rule {0} chain {1} in table {2} in family {3} does not exists' . format(chain, table, family)
+        return 'Error: rule {0} chain {1} in table {2} in family {3} does not exist'.\
+                format(rule, chain, table, family)
 
     # nftables rules can only be deleted using the handle
     # if we don't have it, find it.
@@ -610,7 +809,8 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
         position = get_rule_handle(table, chain, rule, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} delete rule {1} {2} {3} handle {4}'.format(_nftables_cmd(), nft_family, table, chain, position)
+    cmd = '{0} delete rule {1} {2} {3} handle {4}'.\
+            format(_nftables_cmd(), nft_family, table, chain, position)
     out = __salt__['cmd.run'](cmd)
 
     if len(out) == 0:
@@ -636,14 +836,20 @@ def flush(table='filter', chain='', family='ipv4'):
         salt '*' nftables.flush filter input family=ipv6
     '''
     if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist' . format(table, family)
+        return 'Error: table {0} in family {1} does not exist'.\
+                format(table, family)
+
+    nft_family = _NFTABLES_FAMILIES[family]
 
     if chain:
         if not check_chain(table, chain, family=family):
-            return 'Error: chain {0} in table {1} in family {1} does not exist' . format(chain, table, family)
-        cmd = '{0} flush chain {1} {2}'.format(_nftables_cmd(), table, chain)
+            return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+                    format(chain, table, nft_family)
+        cmd = '{0} flush chain {1} {2} {3}'.\
+                format(_nftables_cmd(), nft_family, table, chain)
     else:
-        cmd = '{0} flush table {1}'.format(_nftables_cmd(), table)
+        cmd = '{0} flush table {1} {2}'.\
+                format(_nftables_cmd(), nft_family, table)
     out = __salt__['cmd.run'](cmd)
 
     if len(out) == 0:
