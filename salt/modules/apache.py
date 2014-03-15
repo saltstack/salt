@@ -379,7 +379,7 @@ def server_status(profile='default'):
 
 
 def _parse_config(config, slot=None):
-    ret = cStringIO.StringIO('# This file is managed by saltstack.')
+    ret = cStringIO.StringIO()
     if isinstance(config, str):
         if slot:
             print('{0} {1}'.format(slot, config), file=ret, end='')
@@ -430,5 +430,6 @@ def config(name, config, edit=True):
         configs = _parse_config(entry[key], key)
         if edit:
             with open(name, 'w') as configfile:
+                configfile.write('# This file is managed by saltstack.\n')
                 configfile.write(configs)
     return configs
