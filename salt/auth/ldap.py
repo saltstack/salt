@@ -163,7 +163,7 @@ def auth(username, password):
             if not len(result):
                 log.warn('Unable to find user {0}'.format(username))
                 return False
-            elif len(result):
+            elif len(result) > 1:
                 log.warn('Found multiple results for user {0}'.format(username))
                 return False
             connargs['binddn'] = result[0][0]
