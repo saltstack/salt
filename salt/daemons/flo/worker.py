@@ -21,7 +21,8 @@ class WorkerFork(ioflo.base.deeding.Deed):
     '''
     For off the worker procs
     '''
-    Ioinits = {'opts': '.salt.opts'}
+    Ioinits = {'opts': '.salt.opts',
+               'access_keys': '.salt.access_keys'}
 
     def _make_workers(self):
         '''
@@ -40,6 +41,8 @@ class WorkerFork(ioflo.base.deeding.Deed):
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value))]
         preloads.append(('.salt.yid', dict(value=yid)))
+        preloads.append(
+                ('.salt.access_keys', dict(value=self.access_keys.value)))
         ioflo.app.run.start(
                 name='worker{0}'.format(yid),
                 period=float(self.opts.value['ioflo_period']),
@@ -69,6 +72,8 @@ class SetupWorker(ioflo.base.deeding.Deed):
             'opts': '.salt.opts',
             'yid': '.salt.yid',
             'access_keys': '.salt.access_keys',
+            'remote': '.salt.loader.remote',
+            'local': '.salt.loader.local',
             }
 
     def action(self):
@@ -85,8 +90,8 @@ class SetupWorker(ioflo.base.deeding.Deed):
                 prefix=self.opts.value['id'],
                 dirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.addRemoteYard(manor_yard)
-        self.remote = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
-        self.local = salt.daemons.masterapi.LocalFuncs(
+        self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
+        self.local.value = salt.daemons.masterapi.LocalFuncs(
                 self.opts.value,
                 self.access_keys.value)
         init = {}
@@ -103,7 +108,8 @@ class RouterWorker(ioflo.base.deeding.Deed):
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
             'yid': '.salt.yid',
-            'access_keys': '.salt.access_keys',
+            'remote': '.salt.loader.remote',
+            'local': '.salt.loader.local',
             }
 
     def action(self):
@@ -121,10 +127,10 @@ class RouterWorker(ioflo.base.deeding.Deed):
                 elif cmd.startswith('__'):
                     continue
                 ret = {}
-                if hasattr(self.remote, cmd):
-                    ret['return'] = getattr(self.remote, cmd)(msg['load'])
-                elif hasattr(self.local, cmd):
-                    ret['return'] = getattr(self.local, cmd)(msg['load'])
+                if hasattr(self.remote.value, cmd):
+                    ret['return'] = getattr(self.remote.value, cmd)(msg['load'])
+                elif hasattr(self.local.value, cmd):
+                    ret['return'] = getattr(self.local.value, cmd)(msg['load'])
                 if cmd == 'publish' and 'pub' in ret['return']:
                     r_share = 'pub_ret'
                 else:
