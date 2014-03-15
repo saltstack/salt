@@ -4,6 +4,9 @@ The core bahaviuors ued by minion and master
 '''
 # pylint: disable=W0232
 
+# Import python libs
+import multiprocessing
+
 # Import salt libs
 import salt.daemons.masterapi
 from salt.transport.road.raet import stacking
@@ -14,7 +17,52 @@ from salt.transport.road.raet import raeting
 import ioflo.base.deeding
 
 
-class RouterWorker(ioflo.base.deeding.Deed):
+class WorkerFork(ioflo.base.deeding.Deed):
+    '''
+    For off the worker procs
+    '''
+    Ioinits = {'opts': '.salt.opts'}
+
+    def _make_workers(self):
+        '''
+        Spin up a process for each worker thread
+        '''
+        for ind in range(int(self.opts['worker_threads'])):
+            proc = multiprocessing.Process(
+                    target=self._worker, kwargs={'yid': ind + 1}
+                    )
+            proc.start()
+
+    def _worker(self, yid):
+        '''
+        Spin up a worker, do this in s multiprocess
+        '''
+        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        self.preloads.append(('.salt.yid', dict(value=yid)))
+        ioflo.app.run.start(
+                name='worker{0}'.format(yid),
+                period=float(self.opts.value['ioflo_period']),
+                stamp=0.0,
+                real=self.opts.value['ioflo_realtime'],
+                filepath=self.opts.value['worker_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metas=None,
+                preloads=self.preloads,
+                verbose=int(self.opts.value['ioflo_verbose']),
+                )
+
+    def action(self):
+        '''
+        Run with an enter, starts the worker procs
+        '''
+        self._make_workers()
+
+
+class SetupWorker(ioflo.base.deeding.Deed):
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
@@ -22,9 +70,9 @@ class RouterWorker(ioflo.base.deeding.Deed):
             'access_keys': '.salt.access_keys',
             }
 
-    def postinitio(self):
+    def action(self):
         '''
-        Set up the uxd stack
+        Set up the uxd stack and behaviors
         '''
         self.uxd_stack.value = stacking.StackUxd(
                 lanename=self.opts.value['id'],
@@ -47,6 +95,15 @@ class RouterWorker(ioflo.base.deeding.Deed):
                 }
         self.uxd_stack.value.transmit(init, 'yard0')
         self.uxd_stack.value.serviceAll()
+
+class RouterWorker(ioflo.base.deeding.Deed):
+    Ioinits = {
+            'uxd_stack': '.salt.uxd.stack.stack',
+            'opts': '.salt.opts',
+            'yid': '.salt.yid',
+            'access_keys': '.salt.access_keys',
+            }
+
 
     def action(self):
         '''
