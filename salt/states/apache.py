@@ -20,6 +20,7 @@ the above word between angle brackets (<>).
             - dev.website.com
           ErrorLog: logs/website.com-error_log
           CustomLog: logs/website.com-access_log combinded
+          DocumentRoot: /var/www/vhosts/website.com
           Directory:
             this: /var/www/vhosts/website.com
             Order: Deny,Allow
