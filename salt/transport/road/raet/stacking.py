@@ -832,12 +832,12 @@ class StackUxd(object):
                             console.terse("Reaped yard {0}\n".format(yard.name))
                     elif ex.errno == errno.EAGAIN or ex.errno == errno.EWOULDBLOCK:
                         #busy with last message save it for later
-                        self.laters.append((tx, ta))
+                        laters.append((tx, ta))
                     else:
                         console.terse("socket.error = {0}\n".format(ex))
                         raise
             while laters:
-                self.txes.append(self.laters.popleft())
+                self.txes.append(laters.popleft())
 
 
     def serviceTxMsgs(self):
