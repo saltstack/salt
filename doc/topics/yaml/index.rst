@@ -72,7 +72,7 @@ And in Python:
         }
     }
 
-Rules Three: Dashes
+Rule Three: Dashes
 -------------------
 
 To represent lists of items, a single dash followed by a space is used. Multiple
