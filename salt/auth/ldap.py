@@ -160,7 +160,7 @@ def auth(username, password):
                 )
             )
             result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
-            if len(result) < 1:
+            if not len(result):
                 log.warn('Unable to find user {0}'.format(username))
                 return False
             elif len(result) > 1:
