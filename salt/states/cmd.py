@@ -23,8 +23,8 @@ no disk space:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
 
-Only run if the file specified by ``creates`` does not exist, in this case touch
-/tmp/foo if it does not exist.
+Only run if the file specified by ``creates`` does not exist, in this case
+touch /tmp/foo if it does not exist.
 
 .. code-block:: yaml
 
@@ -118,8 +118,9 @@ it can also watch a git state for changes
           - git: my-project
 
 
-Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
---------------------------------------------------------------------------------------------
+Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait
+<salt.states.cmd.wait>`?
+-------------------------------------------------------------------------------
 
 These two states are often confused. The important thing to remember about them
 is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
@@ -147,10 +148,10 @@ executed when the state it is watching changes. Example:
           - file: /usr/local/bin/postinstall.sh
 
 How do I create a environment from a pillar map?
----------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
-The map that comes from a pillar cannot be directly consumed by the env option. To use it
-one must convert it to a list. Example:
+The map that comes from a pillar cannot be directly consumed by the env option.
+To use it one must convert it to a list. Example:
 
 .. code-block:: yaml
 
@@ -575,7 +576,10 @@ def run(name,
            'comment': ''}
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
+        ret['comment'] = (
+            'Desired working directory "{0}" '
+            'is not available'
+        ).format(cwd)
         return ret
 
     if env:
@@ -679,9 +683,9 @@ def script(name,
     Download a script and execute it with specified arguments.
 
     source
-        The location of the script to download. If the file is located on the master
-        in the directory named spam, and is called eggs, the source string is
-        salt://spam/eggs
+        The location of the script to download. If the file is located on the
+        master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs
 
     template
         If this setting is applied then the named templating engine will be
@@ -689,13 +693,16 @@ def script(name,
         are supported
 
     name
-        Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source "salt://...".
+        Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source
+        "salt://...".
 
     onlyif
-        Run the named command only if the command passed to the ``onlyif`` option returns true
+        Run the named command only if the command passed to the ``onlyif``
+        option returns true
 
     unless
-        Run the named command only if the command passed to the ``unless`` option returns false
+        Run the named command only if the command passed to the ``unless``
+        option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -726,8 +733,9 @@ def script(name,
 
     args
         String of command line args to pass to the script.  Only used if no
-        args are specified as part of the `name` argument. To pass a string containing
-        spaces in YAML, you will need to doubly-quote it:  "arg1 'arg two' arg3"
+        args are specified as part of the `name` argument. To pass a string
+        containing spaces in YAML, you will need to doubly-quote it:  "arg1
+        'arg two' arg3"
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -740,7 +748,10 @@ def script(name,
            'result': False}
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
+        ret['comment'] = (
+            'Desired working directory "{0}" '
+            'is not available'
+        ).format(cwd)
         return ret
 
     if isinstance(env, string_types):
@@ -938,7 +949,9 @@ def mod_watch(name, **kwargs):
         else:
             return {'name': name,
                     'changes': {},
-                    'comment': 'cmd.{0[sfun]} needs a named parameter func'.format(kwargs),
+                    'comment': (
+                        'cmd.{0[sfun]} needs a named parameter func'
+                    ).format(kwargs),
                     'result': False}
 
     return {'name': name,
