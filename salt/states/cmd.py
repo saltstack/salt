@@ -279,27 +279,52 @@ def _run_check(cmd_kwargs, onlyif, unless, group, creates):
                     'result': False}
 
     if onlyif is not None:
-        if not isinstance(onlyif, string_types):
-            if not onlyif:
+        if isinstance(onlyif, string_types):
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
                 return {'comment': 'onlyif execution failed',
                         'result': True}
-        elif isinstance(onlyif, string_types):
-            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+        elif isinstance(onlyif, list):
+            if all([
+                __salt__['cmd.retcode'](
+                    entry,
+                    **cmd_kwargs
+                ) != 0 for entry in onlyif
+            ]):
+
+                return {'comment': 'onlyif execution failed',
+                        'result': True}
+        elif not isinstance(onlyif, string_types):
+            if not onlyif:
                 return {'comment': 'onlyif execution failed',
                         'result': True}
 
     if unless is not None:
-        if not isinstance(unless, string_types):
-            if unless:
+        if isinstance(unless, string_types):
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
                 return {'comment': 'unless execution succeeded',
                         'result': True}
-        elif isinstance(unless, string_types):
-            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+        elif isinstance(unless, list):
+            if all([
+                __salt__['cmd.retcode'](
+                    entry,
+                    **cmd_kwargs
+                ) == 0 for entry in unless
+            ]):
+
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
+        elif not isinstance(unless, string_types):
+            if unless:
                 return {'comment': 'unless execution succeeded',
                         'result': True}
 
     if isinstance(creates, string_types) and os.path.exists(creates):
         return {'comment': '{0} exists'.format(creates),
+                'result': True}
+    elif isinstance(creates, list) and all([
+        os.path.exists(path) for path in creates
+    ]):
+        return {'comment': 'All files in creates exist'.format(creates),
                 'result': True}
 
     # No reason to stop, return True
