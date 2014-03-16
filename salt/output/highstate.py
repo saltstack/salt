@@ -36,9 +36,8 @@ import salt.utils
 
 def output(data):
     '''
-    The HighState Outputter is only meant to
-    be used with the state.highstate function, or a function that returns
-    highstate return data.
+    The HighState Outputter is only meant to be used with the state.highstate
+    function, or a function that returns highstate return data.
     '''
     for host, hostdata in data.iteritems():
         return _format_host(host, hostdata)[0]
