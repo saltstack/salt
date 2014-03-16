@@ -6,12 +6,13 @@ Use pycrypto to generate random passwords on the fly.
 
 # Import python libraries
 try:
-    import Crypto.Random
+    import Crypto.Random  # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
 import crypt
 import re
+
 
 def secure_password(length=20):
     '''
