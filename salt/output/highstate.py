@@ -164,12 +164,25 @@ def _format_host(host, data):
             )
 
         # Successful states
+        additionals = ""
+        if None in rcounts:
+            # test=True states
+            additionals += " ({0})".format(
+                colorfmt.format(
+                    colors['YELLOW'],
+                    'unchanged={0}'.format(rcounts.get(None, 0)),
+                    colors
+                )
+            )
         hstrs.append(
             colorfmt.format(
                 colors['GREEN'],
-                _counts(rlabel[True], rcounts.get(True, 0)),
+                _counts(
+                    rlabel[True],
+                    rcounts.get(True, 0) + rcounts.get(None, 0)
+                ),
                 colors
-            )
+            ) + additionals
         )
 
         # Failed states
@@ -181,16 +194,6 @@ def _format_host(host, data):
                 colors
             )
         )
-
-        # test=True states
-        if None in rcounts:
-            hstrs.append(
-                colorfmt.format(
-                    colors['YELLOW'],
-                    _counts(rlabel[None], rcounts.get(None, 0)),
-                    colors
-                )
-            )
 
         totals = '{0}\nTotal: {1:>{2}}'.format('-' * line_max_len,
                                                sum(rcounts.values()),
