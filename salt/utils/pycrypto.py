@@ -5,15 +5,20 @@ Use pycrypto to generate random passwords on the fly.
 '''
 
 # Import python libraries
-import Crypto.Random
+try:
+    import Crypto.Random
+    HAS_RANDOM = True
+except ImportError:
+    HAS_RANDOM = False
 import crypt
 import re
-
 
 def secure_password(length=20):
     '''
     Generate a secure password.
     '''
+    if not HAS_RANDOM:
+        raise ImportError('generating passwords requires >= pycrypto v2.1.0')
     pw = ''
     while len(pw) < length:
         pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
