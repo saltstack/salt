@@ -16,7 +16,7 @@ def secure_password(length=20):
     '''
     pw = ''
     while len(pw) < length:
-        pw += re.sub('\W', '', Crypto.Random.get_random_bytes(1))
+        pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
     return pw
 
 
