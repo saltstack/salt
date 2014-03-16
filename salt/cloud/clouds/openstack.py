@@ -80,9 +80,9 @@ following option may be useful. Using the old syntax:
       ignore_cidr: 192.168.50.0/24
 
 It is possible to upload a small set of files (no more than 5, and nothing too
-large) to the remote server. Generally this should not be needed, as salt itself
-can upload to the server after it is spun up, with nowhere near the same
-restrictions.
+large) to the remote server. Generally this should not be needed, as salt
+itself can upload to the server after it is spun up, with nowhere near the
+same restrictions.
 
 .. code-block:: yaml
 
@@ -205,11 +205,12 @@ def get_conn():
         'ex_tenant_name': config.get_cloud_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
-   }
+    }
 
-    service_type = config.get_cloud_config_value(
-            'service_type', vm_, __opts__, search_global=False
-        )
+    service_type = config.get_cloud_config_value('service_type',
+                                                 vm_,
+                                                 __opts__,
+                                                 search_global=False)
     if service_type:
         authinfo['ex_force_service_type'] = service_type
 
@@ -237,10 +238,12 @@ def get_conn():
     authinfo['ex_force_auth_version'] = '2.0_apikey'
     log.debug('OpenStack authenticating using apikey')
     return driver(
-        config.get_cloud_config_value('user', vm_, __opts__, search_global=False),
-        config.get_cloud_config_value('apikey', vm_, __opts__, search_global=False),
-        **authinfo
-    )
+        config.get_cloud_config_value('user',
+                                      vm_,
+                                      __opts__,
+                                      search_global=False),
+        config.get_cloud_config_value('apikey', vm_, __opts__,
+                                      search_global=False), **authinfo)
 
 
 def preferred_ip(vm_, ips):
@@ -418,36 +421,58 @@ def create(vm_):
     floating = []
 
     if HAS014:
+        # if there are networks defined, obtain IPs from each
         if networks is not None:
             for net in networks:
+                # try specific fixed network
                 if 'fixed' in net:
                     kwargs['networks'] = [
-                        OpenStackNetwork(n, None, None, None) for n in net['fixed']
+                        OpenStackNetwork(n, None, None, None)
+                        for n in net['fixed']
                     ]
+                # try specificly-named floating IP networks to build list
                 elif 'floating' in net:
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
+
+                    # build up the list of floating IPs
+                    # from this floating IP pool
                     for idx in pool.list_floating_ips():
                         if idx.node_id is None:
                             floating.append(idx)
+                    # not floating IPs for this given pool
                     if not floating:
-                        # Note(pabelanger): We have no available floating IPs. For
-                        # now, we raise an exception and exit. A future enhancement
-                        # might be to allow salt-cloud to dynamically allocate new
-                        # address but that might be tricky to manage.
+                        # Note(pabelanger): We have no available floating IPs.
+                        # For now, we raise an exception and exit.
+                        # A future enhancement might be to allow salt-cloud
+                        # to dynamically allocate new address but that might
+                        # be tricky to manage.
                         raise SaltCloudSystemExit(
-                            'Floating pool {0!r} has not more address available, '
+                            'Floating pool {0!r} does not have any more '
+                            'addresses available, '
                             'please create some more or use a different '
                             'pool.'.format(net['floating'])
                         )
+        # otherwise, attempt to obtain list without specifying pool
+        # this is the same as 'nova floating-ip-list'
         else:
-           pool = OpenStack_1_1_FloatingIpPool(
-               '', conn.connection
-           )
-           for idx in pool.list_floating_ips():
-               if idx.node_id is None:
-                   floating.append(idx)
+            pool = OpenStack_1_1_FloatingIpPool(
+                '', conn.connection
+            )
+            for idx in pool.list_floating_ips():
+                if idx.node_id is None:
+                    floating.append(idx)
+            if not floating:
+                # Note(pabelanger): We have no available floating IPs.
+                # For now, we raise an exception and exit.
+                # A future enhancement might be to allow salt-cloud to
+                # dynamically allocate new address but that might be
+                # tricky to manage.
+                raise SaltCloudSystemExit(
+                    'There are no more floating IP addresses'
+                    'available, please create some more'
+                )
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
@@ -484,9 +509,7 @@ def create(vm_):
         'metadata', vm_, __opts__, default=default_profile, search_global=False
     )
     if not isinstance(kwargs['ex_metadata'], dict):
-        raise SaltCloudConfigError(
-                '\'metadata\' should be a dict.'
-        )
+        raise SaltCloudConfigError('\'metadata\' should be a dict.')
 
     try:
         data = conn.create_node(**kwargs)
@@ -676,7 +699,8 @@ def create(vm_):
         'script_args': config.get_cloud_config_value(
             'script_args', vm_, __opts__
         ),
-        'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
+        'script_env': config.get_cloud_config_value('script_env', vm_,
+                                                    __opts__),
         'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
     }
 
@@ -723,7 +747,8 @@ def create(vm_):
         )
 
         # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer',
+                                                      vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
