@@ -515,7 +515,7 @@ def flush(name, family='ipv4', **kwargs):
     if __opts__['test']:
         ret['comment'] = 'iptables rules in {0} table {1} chain {2} family needs to be flushed'.format(
             name,
-            table,
+            kwargs['table'],
             family)
         return ret
     if not __salt__['iptables.flush'](kwargs['table'], kwargs['chain'], family):
