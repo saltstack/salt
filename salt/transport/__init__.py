@@ -82,7 +82,7 @@ class RAETChannel(Channel):
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:
-                    return msg['return']
+                    return msg.get('return', {})
 
 
 class ZeroMQChannel(Channel):
