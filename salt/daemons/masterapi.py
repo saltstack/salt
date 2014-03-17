@@ -73,7 +73,7 @@ def clean_old_jobs(opts):
     '''
     if opts['keep_jobs'] != 0:
         jid_root = os.path.join(opts['cachedir'], 'jobs')
-        cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
+        cur = datetime.datetime.now()
 
         if os.path.exists(jid_root):
             for top in os.listdir(jid_root):
@@ -88,9 +88,19 @@ def clean_old_jobs(opts):
                     if len(jid) < 18:
                         # Invalid jid, scrub the dir
                         shutil.rmtree(f_path)
-                    elif int(cur) - int(jid[:10]) > \
-                            opts['keep_jobs']:
-                        shutil.rmtree(f_path)
+                    else:
+                        # Parse the jid into a proper datetime object.  We only
+                        # parse down to the minute, since keep_jobs is measured
+                        # in hours, so a minute difference is not important
+                        jidtime = datetime.datetime(jid[0:4],
+                                                    jid[4:6],
+                                                    jid[6:8],
+                                                    jid[8:10],
+                                                    jid[10:12])
+                        difference = cur - jidtime
+                        hours_difference = difference.seconds / 3600.0
+                        if hours_difference > opts['keep_jobs']:
+                            shutil.rmtree(f_path)
 
 
 def access_keys(opts):
