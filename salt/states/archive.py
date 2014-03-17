@@ -162,7 +162,7 @@ def extracted(name,
                 files = results['stdout']
             if not files:
                 files = 'no tar output so far'
-    if len(files):
+    if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
         if if_missing != name:

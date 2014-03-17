@@ -194,7 +194,7 @@ def get_fun(fun):
 
         # Skip the minion if we didn't get any rows back. ( IE function that
         # they're looking for has a typo in it or some such ).
-        if not len(_response['rows']):
+        if len(_response['rows']) < 1:
             continue
 
         # Set the respnse ..

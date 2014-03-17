@@ -240,11 +240,11 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
-        if isinstance(data['ips'], list) and len(data['ips']):
+        if isinstance(data['ips'], list) and len(data['ips']) > 0:
             return data
 
     if 'ips' in data:
-        if isinstance(data['ips'], list) and not len(data['ips']):
+        if isinstance(data['ips'], list) and len(data['ips']) <= 0:
             log.info(
                 'New joyent asynchronous machine creation api detected...'
                 '\n\t\t-- please wait for IP addresses to be assigned...'
