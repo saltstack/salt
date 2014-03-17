@@ -137,9 +137,6 @@ def init(name,
         print('Host \'{0}\' was not found'.format(host))
         return False
 
-    #kwkeys = ('cpuset', 'cpushare', 'memory', 'nic', 'profile',
-    #          'nic_opts', 'start', 'seed', 'install', 'config',
-    #          'approve_key', 'clone', 'snapshot')
     kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
     approve_key = kw.get('approve_key', True)
     if approve_key:
