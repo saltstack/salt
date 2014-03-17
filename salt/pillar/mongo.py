@@ -2,13 +2,12 @@
 '''
 Read Pillar data from a mongodb collection
 
+:depends: pymongo (for salt-master)
+
 This module will load a node-specific pillar dictionary from a mongo
 collection. It uses the node's id for lookups and can load either the whole
 document, or just a specific field from that
 document as the pillar dictionary.
-
-Make sure to have PyMongo installed on your master, otherwise this module won't
-load.
 
 Salt Master Mongo Configuration
 ===============================
