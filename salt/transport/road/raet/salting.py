@@ -43,9 +43,6 @@ from ioflo.base import deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-
-from salt.key import RaetKey
-
 from . import raeting, nacling, packeting, keeping, stacking, estating
 
 
@@ -84,6 +81,8 @@ class SaltSafe(object):
         Setup SaltSafe instance
 
         '''
+        from salt.key import RaetKey
+
         if opts is None:
             opts = {}
         self.saltRaetKey = RaetKey(opts)

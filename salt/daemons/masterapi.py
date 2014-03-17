@@ -168,7 +168,11 @@ class RemoteFuncs(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
@@ -759,7 +763,11 @@ class LocalFuncs(object):
         self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         # Make a client
         self.local = salt.client.get_local_client(mopts=self.opts)
         # Make an minion checker object

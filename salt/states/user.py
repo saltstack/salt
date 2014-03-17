@@ -26,7 +26,6 @@ as either absent or present
 
 # Import python libs
 import logging
-import sys
 
 # Import salt libs
 import salt.utils
@@ -383,11 +382,6 @@ def present(name,
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
 
-        # Clear cached groups
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('user.getgrall', None)
-
         post = __salt__['user.info'](name)
         spost = {}
         if 'shadow.info' in __salt__:
@@ -554,11 +548,9 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
-        beforegroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        beforegroups = set(salt.utils.get_group_list(name))
         ret['result'] = __salt__['user.delete'](name, purge, force)
-        aftergroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        aftergroups = set([g for g in beforegroups if __salt__['group.info'](g)])
         if ret['result']:
             ret['changes'] = {}
             for g in beforegroups - aftergroups:

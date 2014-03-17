@@ -409,3 +409,87 @@ def service_absent(name, profile=None, **connection_args):
         ret['changes']['Service'] = 'Deleted'
 
     return ret
+
+
+def endpoint_present(name,
+                     publicurl=None,
+                     internalurl=None,
+                     adminurl=None,
+                     region='RegionOne', profile=None, **connection_args):
+    '''
+    Ensure the specified endpoints exists for service
+
+    name
+        The Service name
+
+    public url
+        The public url of service endpoint
+
+    internal url
+        The internal url of service endpoint
+
+    admin url
+        The admin url of the service endpoint
+
+    region
+        The region of the endpoint
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'endpoint for service "{0}" already exists'.format(name)}
+    endpoint = __salt__['keystone.endpoint_get'](name,
+                                                 profile=profile,
+                                                 **connection_args)
+    cur_endpoint = dict(region=region,
+                        publicurl=publicurl,
+                        adminurl=adminurl,
+                        internalurl=internalurl)
+    if endpoint and 'Error' not in endpoint:
+        endpoint.pop('id')
+        endpoint.pop('service_id')
+        if endpoint == cur_endpoint:
+            return ret
+        else:
+            __salt__['keystone.endpoint_delete'](name,
+                                                 profile=profile,
+                                                 **connection_args)
+            ret['comment'] = 'endpoint for service "{0}" has been updated'.format(name)
+    else:
+        ret['comment'] = 'endpoint for service "{0}" has been added'.format(name)
+    ret['changes'] = __salt__['keystone.endpoint_create'](
+        name,
+        region=region,
+        publicurl=publicurl,
+        adminurl=adminurl,
+        internalurl=internalurl,
+        profile=profile,
+        **connection_args)
+    return ret
+
+
+def endpoint_absent(name, profile=None, **connection_args):
+    '''
+    Ensure that the endpoint for a service doesn't exist in Keystone catalog
+
+    name
+        The name of the service whose endpoints should not exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'endpoint for service "{0}" is already absent'.format(name)}
+
+    # Check if service is present
+    endpoint = __salt__['keystone.endpoint_get'](name,
+                                                 profile=profile,
+                                                 **connection_args)
+    if not endpoint:
+        return ret
+        # Delete service
+    __salt__['keystone.endpoint_delete'](name,
+                                         profile=profile,
+                                         **connection_args)
+    ret['comment'] = 'endpoint for service "{0}" has been deleted'.format(name)
+    ret['changes']['endpoint'] = 'Deleted'
+    return ret

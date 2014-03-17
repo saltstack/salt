@@ -211,10 +211,10 @@ def create(*args):
     cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
     cmd = cmd.format(new_array=arguments['new_array'],
                      opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
-                               if len(arguments['opt_raw']) > 0
+                               if len(arguments['opt_raw'])
                                else ''),
                      opts_val=(' --' + ' --'.join(key + '=' + arguments['opt_val'][key] for key in arguments['opt_val'])
-                               if len(arguments['opt_val']) > 0
+                               if len(arguments['opt_val'])
                                else ''),
                      disks_to_array=' '.join(arguments['disks_to_array']))
 

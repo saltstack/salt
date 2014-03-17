@@ -815,7 +815,7 @@ class Cloud(object):
                             })
 
         # destroying in parallel
-        if self.opts['parallel'] and len(parallel_data) > 0:
+        if self.opts['parallel'] and len(parallel_data):
             # set the pool size based on configuration or default to
             # the number of machines we're destroying
             if 'pool_size' in self.opts:
@@ -1938,7 +1938,7 @@ class Map(Cloud):
         for name in dmap.get('destroy', ()):
             output[name] = self.destroy(name)
 
-        if self.opts['parallel'] and len(parallel_data) > 0:
+        if self.opts['parallel'] and len(parallel_data):
             if 'pool_size' in self.opts:
                 pool_size = self.opts['pool_size']
             else:

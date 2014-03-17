@@ -247,6 +247,9 @@ class Tx(ioflo.base.deeding.Deed):
 class Router(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of uxd connections
+
+    This is the initial static salt router, we want to create a dynamic
+    router that takes a map that defines where packets are send
     '''
     Ioinits = {'opts': '.salt.opts',
                'local_cmd': '.salt.local.local_cmd',
@@ -270,7 +273,9 @@ class Router(ioflo.base.deeding.Deed):
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
-        if d_estate != self.udp_stack.value.estate.name:
+        if d_estate is None:
+            pass
+        elif d_estate != self.udp_stack.value.estate.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
@@ -284,13 +289,15 @@ class Router(ioflo.base.deeding.Deed):
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
             return
-        if d_share == 'local_cmd':
+        elif d_share == 'local_cmd':
             # Refuse local commands over the wire
             log.error('Received local command remotely! Ignoring: {0}'.format(msg))
             return
-        if d_share == 'remote_cmd':
+        elif d_share == 'remote_cmd':
             # Send it to a remote worker
             self.uxd_stack.value.transmit(msg, next(self.workers.value))
+        elif d_share == 'fun':
+            self.fun.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg):
         '''
@@ -325,8 +332,12 @@ class Router(ioflo.base.deeding.Deed):
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
             return
-        if d_share == 'local_cmd':
+        elif d_share == 'local_cmd':
             self.uxd_stack.value.transmit(msg, next(self.workers.value))
+        elif d_share == 'event_req':
+            self.event_req.value.append(msg)
+        elif d_share == 'event_fire':
+            self.event.value.append(msg)
 
     def action(self):
         '''
@@ -352,21 +363,25 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         register an incoming event request with the requesting yard id
         '''
-        ev_yard = yarding.Yard(
-                yid=msg['load']['yid'],
-                prefix='master',
-                dirpath=msg['load']['dirpath'])
-        self.event_yards.value.add(ev_yard.name)
+        self.event_yards.value.add(msg['route']['src'][1])
 
     def _fire_event(self, event):
         '''
         Fire an event to all subscribed yards
         '''
+        rm_ = []
         for y_name in self.event_yards.value:
-            route = {'src': ('router', self.stack.value.yard.name, None),
+            if y_name not in self.uxd_stack.value.yards:
+                rm_.append(y_name)
+                continue
+            route = {'src': ('router', self.uxd_stack.value.yard.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg, y_name)
+            self.uxd_stack.value.serviceAll()
+        for y_name in rm_:
+            self.event_yards.value.remove(y_name)
+
 
     def action(self):
         '''
@@ -400,7 +415,9 @@ class Publisher(ioflo.base.deeding.Deed):
         for minion in self.udp_stack.value.eids:
             eid = self.udp_stack.value.eids.get(minion)
             if eid:
-                route = {'dst': (minion, None, 'fun')}
+                route = {
+                        'dst': (minion, None, 'fun'),
+                        'src': (self.udp_stack.value.estate.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
                 self.udp_stack.value.message(msg, eid)
 
@@ -438,7 +455,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
 
-    def _return_pub(self, ret):
+    def _return_pub(self, msg, ret):
         '''
         Send the return data back via the uxd socket
         '''
@@ -454,8 +471,10 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 )
         ret_stack.addRemoteYard(main_yard)
         route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
-                 'dst': ('master', None, 'return')}
-        msg = {'route': route, 'return': ret}
+                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+        ret['cmd'] = '_return'
+        ret['id'] = self.opts['id']
+        msg = {'route': route, 'load': ret}
         ret_stack.transmit(msg, 'yard0')
         ret_stack.serviceAll()
 
@@ -586,7 +605,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(ret)
+        self._return_pub(exchange, ret)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):

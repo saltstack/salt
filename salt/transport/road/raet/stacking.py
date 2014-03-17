@@ -8,6 +8,8 @@ stacking.py raet protocol stacking classes
 # Import python libs
 import socket
 import os
+import errno
+
 from collections import deque,  Mapping
 try:
     import simplejson as json
@@ -61,6 +63,7 @@ class StackUdp(object):
                  safe=None,
                  auto=None,
                  dirpath=None,
+                 stats=None,
                  ):
         '''
         Setup StackUdp instance
@@ -78,6 +81,8 @@ class StackUdp(object):
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
         self.rxes = rxes if rxes is not None else deque() # udp packets received
         self.txes = txes if txes is not None else deque() # udp packet to transmit
+        self.stats = stats if stats is not None else odict() # udp statistics
+        self.statTimer = aiding.StoreTimer(self.store)
 
         self.road = road or keeping.RoadKeep(dirpath=dirpath,
                                              stackname=self.name)
@@ -139,12 +144,12 @@ class StackUdp(object):
             eid = estate.eid
 
         if eid in self.estates:
-            emsg = "Estate with id '{0}' alreadys exists".format(eid)
+            emsg = "Cannot add id '{0}' estate alreadys exists".format(eid)
             raise raeting.StackError(emsg)
         estate.stack = self
         self.estates[eid] = estate
         if estate.name in self.eids:
-            emsg = "Estate with name '{0}' alreadys exists".format(estate.name)
+            emsg = "Cannot add name '{0}' estate alreadys exists".format(estate.name)
             raise raeting.StackError(emsg)
         self.eids[estate.name] = estate.eid
 
@@ -153,11 +158,11 @@ class StackUdp(object):
         Move estate at key old eid to key new eid but keep same index
         '''
         if new in self.estates:
-            emsg = "Cannot move, '{0}' already exists".format(new)
+            emsg = "Cannot move, '{0}' estate already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.estates:
-            emsg = "Cannot move '{0}' does not exist".format(old)
+            emsg = "Cannot move '{0}' estate does not exist".format(old)
             raise raeting.StackError(emsg)
 
         estate = self.estates[old]
@@ -172,11 +177,11 @@ class StackUdp(object):
         rename estate with old name to new name but keep same index
         '''
         if new in self.eids:
-            emsg = "Cannot rename, '{0}' already exists".format(new)
+            emsg = "Cannot rename, '{0}' estate already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.eids:
-            emsg = "Cannot rename '{0}' does not exist".format(old)
+            emsg = "Cannot rename '{0}' estate does not exist".format(old)
             raise raeting.StackError(emsg)
 
         eid = self.eids[old]
@@ -191,7 +196,7 @@ class StackUdp(object):
         Remove estate at key eid
         '''
         if eid not in self.estates:
-            emsg = "Cannot remove, '{0}' does not exist".format(eid)
+            emsg = "Cannot remove, '{0}' estate does not exist".format(eid)
             raise raeting.StackError(emsg)
 
         estate = self.estates[eid]
@@ -322,6 +327,36 @@ class StackUdp(object):
             else:
                 del self.transactions[index]
 
+    def clearStats(self):
+        '''
+        Set all the stat counters to zero and reset the timer
+        '''
+        for key, value in self.stats.items():
+            self.stats[key] = 0
+        self.statTimer.restart()
+
+    def clearStat(self, key):
+        '''
+        Set the specified state counter to zero
+        '''
+        if key in self.stats:
+            self.stats[key] = 0
+
+    def incStat(self, key, delta=1):
+        '''
+        Increment stat key counter by delta
+        '''
+        if key in self.stats:
+            self.stats[key] += delta
+        else:
+            self.stats[key] = delta
+
+    def updateStat(self, key, value):
+        '''
+        Set stat key to value
+        '''
+        self.stats[key] = value
+
     def serviceUdp(self):
         '''
         Service the UDP receive and transmit queues
@@ -390,7 +425,10 @@ class StackUdp(object):
         '''
         if not isinstance(msg, Mapping):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_transmit_body")
+            return
+            #raise raeting.StackError(emsg)
         self.txMsgs.append((msg, deid))
 
     transmit = txMsg
@@ -422,7 +460,8 @@ class StackUdp(object):
         try:
             packet.parseOuter()
         except raeting.PacketError as ex:
-            print ex
+            console.terse(ex + '\n')
+            self.incStat('parsing_outer_error')
             return None
 
         deid = packet.data['de']
@@ -455,7 +494,9 @@ class StackUdp(object):
             return
 
         if packet.data['cf']: #correspondent to stale transaction so drop
-            print "{0} Stale Transaction, dropping ...".format(self.name)
+            emsg = "{0} Stale Transaction, dropping ...".format(self.name)
+            console.terse(emsg + '\n')
+            self.incStat('stale_correspondent_attempt')
             # Should send abort nack to drop transaction on other side
             return
 
@@ -503,7 +544,8 @@ class StackUdp(object):
             packet.parseInner()
             console.verbose("{0} received packet body\n{1}\n".format(self.name, packet.body.data))
         except raeting.PacketError as ex:
-            print ex
+            console.terse(ex + '\n')
+            self.incStat('parsing_inner_error')
             return None
         return packet
 
@@ -569,6 +611,25 @@ class StackUdp(object):
                                         rxPacket=packet)
         messengent.message()
 
+    def nackStale(self, packet):
+        '''
+        Send nack to stale correspondent packet
+        '''
+        body = odict()
+        txData = packet.data
+        ha = (packet.data['sh'], packet.data['sp'])
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            console.terse(ex + '\n')
+            self.incStat("packing_error")
+            return
+
+        self.txes.append((packet.packed, ha))
 
 class StackUxd(object):
     '''
@@ -594,6 +655,7 @@ class StackUxd(object):
                  lane=None,
                  accept=None,
                  dirpath=None,
+                 stats=None,
                  ):
         '''
         Setup StackUxd instance
@@ -616,6 +678,9 @@ class StackUxd(object):
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
         self.rxes = rxes if rxes is not None else deque() # uxd packets received
         self.txes = txes if txes is not None else deque() # uxd packets to transmit
+        self.stats = stats if stats is not None else odict() # udp statistics
+        self.statTimer = aiding.StoreTimer(self.store)
+
         self.lane = lane # or keeping.LaneKeep()
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
         self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
@@ -624,7 +689,7 @@ class StackUxd(object):
 
         #self.lane.dumpLocalLane(self.yard)
 
-    def fetchRemoteYardByHa(self, ha):
+    def fetchRemoteByHa(self, ha):
         '''
         Search for remote yard with matching ha
         Return yard if found Otherwise return None
@@ -639,25 +704,25 @@ class StackUxd(object):
             name = yard.name
 
         if name in self.yards or name == self.yard.name:
-            emsg = "Estate with name '{0}' alreadys exists".format(name)
+            emsg = "Cannot add '{0}' yard alreadys exists".format(name)
             raise raeting.StackError(emsg)
         yard.stack = self
         self.yards[name] = yard
         if yard.ha in self.names or yard.ha == self.yard.ha:
-            emsg = "Yard with ha '{0}' alreadys exists".format(yard.ha)
+            emsg = "Cannot add ha '{0}' yard alreadys exists".format(yard.ha)
             raise raeting.StackError(emsg)
         self.names[yard.ha] = yard.name
 
-    def moveRemoteYard(self, old, new):
+    def moveRemote(self, old, new):
         '''
         Move yard at key old name to key new name but keep same index
         '''
         if new in self.yards:
-            emsg = "Cannot move, '{0}' already exists".format(new)
+            emsg = "Cannot move, '{0}' yard already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.yards:
-            emsg = "Cannot move '{0}' does not exist".format(old)
+            emsg = "Cannot move '{0}' yard does not exist".format(old)
             raise raeting.StackError(emsg)
 
         yard = self.yards[old]
@@ -667,16 +732,16 @@ class StackUxd(object):
         del self.yards[old]
         self.yards.insert(index, yard.name, yard)
 
-    def rehaRemoteYard(self, old, new):
+    def rehaRemote(self, old, new):
         '''
         change yard with old ha to new ha but keep same index
         '''
         if new in self.names:
-            emsg = "Cannot reha, '{0}' already exists".format(new)
+            emsg = "Cannot reha, '{0}' yard already exists".format(new)
             raise raeting.StackError(emsg)
 
         if old not in self.names:
-            emsg = "Cannot reha '{0}' does not exist".format(old)
+            emsg = "Cannot reha '{0}' yard does not exist".format(old)
             raise raeting.StackError(emsg)
 
         name = self.names[old]
@@ -686,21 +751,51 @@ class StackUxd(object):
         del self.names[old]
         self.yards.insert(index, yard.ha, yard.name)
 
-    def removeRemoteYard(self, name):
+    def removeRemote(self, name):
         '''
         Remove yard at key name
         '''
         if name not in self.yards:
-            emsg = "Cannot remove, '{0}' does not exist".format(name)
+            emsg = "Cannot remove, '{0}' yard does not exist".format(name)
             raise raeting.StackError(emsg)
 
         yard = self.yards[name]
         del self.yards[name]
         del self.names[yard.ha]
 
-    def serviceUxd(self):
+    def clearStats(self):
         '''
-        Service the UXD receive and transmit queues
+        Set all the stat counters to zero and reset the timer
+        '''
+        for key, value in self.stats.items():
+            self.stats[key] = 0
+        self.statTimer.restart()
+
+    def clearStat(self, key):
+        '''
+        Set the specified state counter to zero
+        '''
+        if key in self.stats:
+            self.stats[key] = 0
+
+    def incStat(self, key, delta=1):
+        '''
+        Increment stat key counter by delta
+        '''
+        if key in self.stats:
+            self.stats[key] += delta
+        else:
+            self.stats[key] = delta
+
+    def updateStat(self, key, value):
+        '''
+        Set stat key to value
+        '''
+        self.stats[key] = value
+
+    def serviceUxdRx(self):
+        '''
+        Service the Uxd recieves and fill the .rxes deque
         '''
         if self.server:
             while True:
@@ -710,9 +805,58 @@ class StackUxd(object):
                 # triple = ( packet, source address, destination address)
                 self.rxes.append((rx, ra, self.server.ha))
 
+    def serviceRxes(self):
+        '''
+        Process all messages in .uxdRxes deque
+        '''
+        while self.rxes:
+            self.processUdpRx()
+
+    def serviceTxes(self):
+        '''
+        Service the .txes deque to send Uxd messages
+        '''
+        if self.server:
+            laters = deque()
             while self.txes:
                 tx, ta = self.txes.popleft()  # duple = (packet, destination address)
-                self.server.send(tx, ta)
+                try:
+                    self.server.send(tx, ta)
+                except socket.error as ex:
+                    if ex.errno == errno.ECONNREFUSED:
+                        console.terse("socket.error = {0}\n".format(ex))
+                        self.incStat("stale_transmit_yard")
+                        yard = self.fetchRemoteByHa(ta)
+                        if yard:
+                            self.removeRemote(yard.name)
+                            console.terse("Reaped yard {0}\n".format(yard.name))
+                    elif ex.errno == errno.EAGAIN or ex.errno == errno.EWOULDBLOCK:
+                        #busy with last message save it for later
+                        laters.append((tx, ta))
+                    else:
+                        console.terse("socket.error = {0}\n".format(ex))
+                        raise
+            while laters:
+                self.txes.append(laters.popleft())
+
+
+    def serviceTxMsgs(self):
+        '''
+        Service .txMsgs queue of outgoing messages
+        '''
+        while self.txMsgs:
+            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
+            packed = self.packUxdTx(body)
+            if packed:
+                console.verbose("{0} sending\n{1}\n".format(self.name, body))
+                self.txUxd(packed, name)
+
+    def serviceUxd(self):
+        '''
+        Service the UXD receive and transmit queues
+        '''
+        self.serviceUxdRx()
+        self.serviceTxes()
 
         return None
 
@@ -726,21 +870,10 @@ class StackUxd(object):
            Uxd Socket send
 
         '''
-        if self.server:
-            while True:
-                rx, ra = self.server.receive()  # if no data the duple is ('',None)
-                if not rx:  # no received data so break
-                    break
-                # triple = ( packet, source address, destination address)
-                self.rxes.append((rx, ra, self.server.ha))
-
-            self.serviceUxdRx()
-
-            self.serviceTxMsg()
-
-            while self.txes:
-                tx, ta = self.txes.popleft()  # duple = (packet, destination address)
-                self.server.send(tx, ta)
+        self.serviceUxdRx()
+        self.serviceRxes()
+        self.serviceTxMsgs()
+        self.serviceTxes()
 
         return None
 
@@ -754,11 +887,17 @@ class StackUxd(object):
         if name is None:
             if not self.yards:
                 emsg = "No yard to send to"
-                raise raeting.StackError(emsg)
+                console.terse(emsg + '\n')
+                self.incStat("invalid_destination_yard")
+                return
+                #raise raeting.StackError(emsg)
             name = self.yards.values()[0].name
         if name not in self.yards:
             msg = "Invalid destination yard name '{0}'".format(name)
-            raise raeting.StackError(msg)
+            console.terse(msg + '\n')
+            self.incStat("invalid_destination_yard")
+            return
+            #raise raeting.StackError(msg)
         self.txes.append((packed, self.yards[name].ha))
 
     def txMsg(self, msg, name=None):
@@ -769,7 +908,10 @@ class StackUxd(object):
         '''
         if not isinstance(msg, Mapping):
             emsg = "Invalid msg, not a mapping {0}".format(msg)
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_transmit_body")
+            return
+            #raise raeting.StackError(emsg)
         self.txMsgs.append((msg, name))
 
     transmit = txMsg # alias
@@ -784,7 +926,10 @@ class StackUxd(object):
         packed = ""
         if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
             emsg = "Invalid message pack kind '{0}'".format(kind)
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_transmit_serialization")
+            return ""
+            #raise raeting.StackError(emsg)
 
         if kind == raeting.packKinds.json:
             head = 'RAET\njson\n\n'
@@ -793,26 +938,22 @@ class StackUxd(object):
         elif kind == raeting.packKinds.pack:
             if not msgpack:
                 emsg = "Msgpack not installed."
-                raise raeting.StackError(emsg)
+                console.terse(emsg + '\n')
+                self.incStat("invalid_transmit_serialization")
+                return ""
+                #raise raeting.StackError(emsg)
             head = 'RAET\npack\n\n'
             packed = "".join([head, msgpack.dumps(body)])
 
         if len(packed) > raeting.MAX_MESSAGE_SIZE:
             emsg = "Message length of {0}, exceeds max of {1}".format(
                      len(packed), raeting.MAX_MESSAGE_SIZE)
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_transmit_size")
+            #raise raeting.StackError(emsg)
 
         return packed
 
-    def serviceTxMsg(self):
-        '''
-        Service .txMsgs queue of outgoing messages
-        '''
-        while self.txMsgs:
-            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
-            packed = self.packUxdTx(body)
-            console.verbose("{0} sending\n{1}\n".format(self.name, body))
-            self.txUxd(packed, name)
 
     def fetchParseUxdRx(self):
         '''
@@ -831,14 +972,20 @@ class StackUxd(object):
         if sa not in self.names:
             if not self.accept:
                 emsg = "Unaccepted source ha = {0}. Dropping packet.".format(sa)
-                print emsg
+                console.terse(emsg + '\n')
+                self.incStat('unaccepted_source_yard')
                 return None
 
             name = yarding.Yard.nameFromHa(sa)
             yard = yarding.Yard(stack=self,
                                 name=name,
                                 ha=sa)
-            self.addRemoteYard(yard)
+            try:
+                self.addRemoteYard(yard)
+            except raeting.StackError as ex:
+                console.terse(ex + '\n')
+                self.incStat('invalid_source_yard')
+                return None
 
         return self.parseUxdRx(raw) # deserialize
 
@@ -850,29 +997,52 @@ class StackUxd(object):
 
         if (not packed.startswith('RAET\n') or raeting.HEAD_END not in packed):
             emsg = "Unrecognized packed body head"
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_receive_head")
+            return None
+            #raise raeting.StackError(emsg)
 
         front, sep, back = packed.partition(raeting.HEAD_END)
         code, sep, kind = front.partition('\n')
         if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
                         raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
             emsg = "Unrecognized message pack kind '{0}'".format(kind)
-            raise raeting.StackError(emsg)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_receive_serialization")
+            return None
+            #raise raeting.StackError(emsg)
+
+        if len(back) > raeting.MAX_MESSAGE_SIZE:
+            emsg = "Message length of {0}, exceeds max of {1}".format(
+                     len(back), raeting.MAX_MESSAGE_SIZE)
+            console.terse(emsg + '\n')
+            self.incStat("invalid_receive_size")
+            return None
+            #raise raeting.StackError(emsg)
 
         kind = raeting.PACK_KINDS[kind]
         if kind == raeting.packKinds.json:
             body = json.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
                 emsg = "Message body not a mapping."
-                raise raeting.PacketError(emsg)
+                console.terse(emsg + '\n')
+                self.incStat("invalid_receive_body")
+                return  None
+                #raise raeting.PacketError(emsg)
         elif kind == raeting.packKinds.pack:
             if not msgpack:
                 emsg = "Msgpack not installed."
-                raise raeting.StackError(emsg)
+                console.terse(emsg + '\n')
+                self.incStat("invalid_receive_serialization")
+                return None
+                #raise raeting.StackError(emsg)
             body = msgpack.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
                 emsg = "Message body not a mapping."
-                raise raeting.PacketError(emsg)
+                console.terse(emsg + '\n')
+                self.incStat("invalid_receive_body")
+                return None
+                #raise raeting.PacketError(emsg)
 
         return body
 
@@ -887,14 +1057,6 @@ class StackUxd(object):
         console.verbose("{0} received message data\n{1}\n".format(self.name, body))
 
         self.rxMsgs.append(body)
-
-    def serviceUxdRx(self):
-        '''
-        Process all messages in .uxdRxes deque
-        '''
-        while self.rxes:
-            self.processUdpRx()
-
 
 
 

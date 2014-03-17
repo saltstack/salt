@@ -28,7 +28,6 @@ from salt.log import LOG_LEVELS
 # Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
-    import grp
 except ImportError:
     pass
 
@@ -69,11 +68,14 @@ def _chugid(runas):
     #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
     # ]
 
-    supgroups = [g.gr_gid for g in grp.getgrall()
-                      if uinfo.pw_name in g.gr_mem
-                          and g.gr_gid not in supgroups_seen
-                          and not supgroups_seen.add(g.gr_gid)
-                ]
+    group_list = __salt__['user.list_groups'](runas)
+    supgroups = []
+    for group_name in group_list:
+        gid = __salt__['group.info'](group_name)['gid']
+        if (gid not in supgroups_seen
+           and not supgroups_seen.add(gid)):
+            supgroups.append(gid)
+
     # No logging can happen on this function
     #
     # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
@@ -521,6 +523,7 @@ def run(cmd,
         quiet=False,
         timeout=None,
         reset_system_locale=True,
+        ignore_retcode=False,
         saltenv='base',
         **kwargs):
     '''
@@ -594,7 +597,7 @@ def run(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -620,6 +623,7 @@ def run_stdout(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -669,7 +673,7 @@ def run_stdout(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -700,6 +704,7 @@ def run_stderr(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -749,7 +754,7 @@ def run_stderr(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -780,6 +785,7 @@ def run_all(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -829,7 +835,7 @@ def run_all(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -859,6 +865,7 @@ def retcode(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -908,7 +915,7 @@ def retcode(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(

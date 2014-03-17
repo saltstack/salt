@@ -2150,7 +2150,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
-        if len(self.args) > 0:
+        if len(self.args):
             self.config['fun'] = self.args[0]
         else:
             self.config['fun'] = ''
@@ -2279,7 +2279,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        if len(self.args) > 0:
+        if len(self.args):
             self.config['arg_str'] = ' '.join(self.args[1:])
 
     def setup_config(self):

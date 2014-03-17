@@ -25,12 +25,13 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, **kwargs):
+    def __init__(self, node, sock_dir=None, listen=True, **kwargs):
         '''
         Set up the stack and remote yard
         '''
         self.node = node
         self.sock_dir = sock_dir
+        self.listen = listen
         self.__prep_stack()
 
     def __prep_stack(self):
@@ -42,7 +43,7 @@ class SaltEvent(object):
                 dirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.Yard(
-                prefix='master',
+                prefix=self.node,
                 yid=0,
                 dirpath=self.sock_dir)
         self.stack.addRemoteYard(self.router_yard)
@@ -64,7 +65,7 @@ class SaltEvent(object):
         '''
         Establish the publish connection
         '''
-        if not self.connected:
+        if not self.connected and self.listen:
             try:
                 route = {'dst': (None, self.router_yard.name, 'event_req'),
                          'src': (None, self.stack.yard.name, None)}
