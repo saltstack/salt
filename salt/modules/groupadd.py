@@ -164,7 +164,7 @@ def deluser(name, username):
             return not retcode
         else:
             return True
-    except:
+    except Exception:
         return True
 
 
