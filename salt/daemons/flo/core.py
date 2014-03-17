@@ -369,12 +369,19 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         Fire an event to all subscribed yards
         '''
+        rm_ = []
         for y_name in self.event_yards.value:
+            if y_name not in self.uxd_stack.value.yards:
+                rm_.append(y_name)
+                continue
             route = {'src': ('router', self.uxd_stack.value.yard.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg, y_name)
             self.uxd_stack.value.serviceAll()
+        for y_name in rm_:
+            self.event_yards.value.remove(y_name)
+
 
     def action(self):
         '''
