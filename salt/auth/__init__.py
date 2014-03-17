@@ -101,6 +101,27 @@ class LoadAuth(object):
             time.sleep(0.001)
         return False
 
+    def get_groups(self, load):
+        '''
+        Read in a load and return the groups a user is a member of
+        by asking the appropriate provider
+        '''
+        print('GETTING GROUPS')
+        if 'eauth' not in load:
+            return False
+        fstr = '{0}.groups'.format(load['eauth'])
+        if fstr not in self.auth:
+            return False
+        fcall = salt.utils.format_call(self.auth[fstr], load)
+        print(fcall)
+        try:
+            return self.auth[fstr](*fcall['args'])
+        except IndexError:
+            return ''
+        except Exception as exc:
+            print(exc)
+
+
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
