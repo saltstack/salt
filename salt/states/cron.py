@@ -3,17 +3,30 @@
 Management of cron, the Unix command scheduler
 ==============================================
 
-The cron state module allows for user crontabs to be cleanly managed.
+Cron declarations require a number of parameters. The following are the
+parameters used by Salt to define the various timing values for a cron job:
 
-Cron declarations require a number of parameters. The timing parameters need
-to be declared: minute, hour, daymonth, month, and dayweek. The user whose
-crontab is to be edited also needs to be defined.
+* ``minute``
+* ``hour``
+* ``daymonth``
+* ``month``
+* ``dayweek`` (0 to 6 are Sunday through Saturday, 7 can also be used for
+  Sunday)
 
-By default, the timing arguments are all ``*`` (**Caution**: This means just
-setting ``hour`` to ``5`` and not defining minute will execute the cron entry
-every minute between 5 and 6 am!) and the user is root. When making changes to
-an existing cron job, the name declaration is the unique factor, so if an
-existing cron that looks like this:
+.. warning::
+
+    Any timing arguments not specified take a value of ``*``. This means that
+    setting ``hour`` to ``5``, while not defining the ``minute`` param, will
+    result in Salt adding a job that will execute every minute between 5 and 6
+    A.M.!
+
+    Additionally, the default user for these states is ``root``. Therefore, if
+    the cron job is for another user, it is necessary to specify that user with
+    the ``user`` parameter.
+
+A long time ago (before 2014.2), when making changes to an existing cron job,
+the name declaration is the parameter used to uniquely identify the job,
+so if an existing cron that looks like this:
 
 .. code-block:: yaml
 
@@ -35,7 +48,33 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
-Salt also supports running a cron every ``x minutes`` very similarily to the Unix
+The current behavior is still relying on that mechanism, but you can also
+specify an identifier to identify your crontabs:
+.. versionadded:: 2014.2
+.. code-block:: yaml
+
+    date > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 7
+        - hour: 2
+
+And, some months later, you modify it:
+.. versionadded:: 2014.2
+.. code-block:: yaml
+
+    superscript > /tmp/crontest:
+      cron.present:
+        - identifier: SUPERCRON
+        - user: root
+        - minute: 3
+        - hour: 4
+
+The old **date > /tmp/crontest** will be replaced by
+**superscript > /tmp/crontest**.
+
+Additionally, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
 convention of using ``*/5`` to have a job run every five minutes. In Salt, this
 looks like:
 
@@ -79,7 +118,11 @@ import os
 # Import salt libs
 import salt._compat
 import salt.utils
-from salt.modules.cron import _needs_change
+from salt.modules.cron import (
+    _needs_change,
+    _cron_matched,
+    SALT_CRON_NO_IDENTIFIER
+)
 
 
 def _check_cron(user,
@@ -89,7 +132,8 @@ def _check_cron(user,
                 daymonth=None,
                 month=None,
                 dayweek=None,
-                comment=None):
+                comment=None,
+                identifier=None):
     '''
     Return the changes
     '''
@@ -105,7 +149,7 @@ def _check_cron(user,
         dayweek = str(dayweek).lower()
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
-        if cmd == cron['cmd']:
+        if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
@@ -143,7 +187,7 @@ def _get_cron_info():
     elif __grains__['os'] == 'OpenBSD':
         group = 'crontab'
         crontab_dir = '/var/cron/tabs'
-    elif __grains__['os'] == 'Solaris':
+    elif __grains__['os_family'] == 'Solaris':
         group = 'root'
         crontab_dir = '/var/spool/cron/crontabs'
     elif __grains__['os'] == 'MacOS':
@@ -162,7 +206,8 @@ def present(name,
             daymonth='*',
             month='*',
             dayweek='*',
-            comment=None):
+            comment=None,
+            identifier=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -196,21 +241,28 @@ def present(name,
 
     comment
         User comment to be added on line previous the cron job
+
+    identifier
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
     if __opts__['test']:
         status = _check_cron(user,
-                             name,
-                             minute,
-                             hour,
-                             daymonth,
-                             month,
-                             dayweek,
-                             comment)
+                             cmd=name,
+                             minute=minute,
+                             hour=hour,
+                             daymonth=daymonth,
+                             month=month,
+                             dayweek=dayweek,
+                             comment=comment,
+                             identifier=identifier)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -228,7 +280,8 @@ def present(name,
                                     month=month,
                                     dayweek=dayweek,
                                     cmd=name,
-                                    comment=comment)
+                                    comment=comment,
+                                    identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -250,6 +303,7 @@ def present(name,
 
 def absent(name,
            user='root',
+           identifier=None,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -261,12 +315,18 @@ def absent(name,
     user
         The name of the user whose crontab needs to be modified, defaults to
         the root user
+
+    identifier
+        Custom-defined identifier for tracking the cron line for future crontab
+        edits. This defaults to the state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
+    if not identifier:
+        identifier = SALT_CRON_NO_IDENTIFIER
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -282,7 +342,7 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user, name)
+    data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
@@ -350,7 +410,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = __salt__['config.manage_mode'](600)
+    mode = __salt__['config.manage_mode']('0600')
     owner, group, crontab_dir = _get_cron_info()
 
     cron_path = salt.utils.mkstemp()
@@ -404,7 +464,7 @@ def file(name,
     # If the source is a list then find which file exists
     source, source_hash = __salt__['file.source_list'](source,
                                                        source_hash,
-                                                       env)
+                                                       __env__)
 
     # Gather the source file from the server
     try:
@@ -416,7 +476,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             context,
             defaults,
             **kwargs
@@ -443,7 +503,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             backup
         )
     except Exception as exc:

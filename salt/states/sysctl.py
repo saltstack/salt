@@ -20,7 +20,7 @@ def __virtual__():
     '''
     This state is only available on Minions which support sysctl
     '''
-    return 'sysctl' if 'sysctl.show' in __salt__ else False
+    return 'sysctl.show' in __salt__
 
 
 def present(name, value, config=None):

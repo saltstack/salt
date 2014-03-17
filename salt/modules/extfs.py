@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'extfs'
+    return True
 
 
 def mkfs(device, fs_type, **kwargs):

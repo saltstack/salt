@@ -10,13 +10,6 @@ option.
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
@@ -192,19 +185,23 @@ def file_hash(load, fnd):
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
-                    os.unlink(cache_path)
-                    file_hash(load, fnd)
-                    return ret
+                    try:
+                        os.unlink(cache_path)
+                    except OSError:
+                        pass
+                    return file_hash(load, fnd)
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-        except os.error:  # Can't use Python select() because we need Windows support
+        except (os.error, IOError):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
-            os.unlink(cache_path)
-            file_hash(load, fnd)
-            return ret
+            try:
+                os.unlink(cache_path)
+            except OSError:
+                pass
+            return file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
@@ -213,15 +210,10 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    if HAS_FCNTL:
-        with salt.utils.flopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
-        return ret
-    else:
-        with salt.utils.fopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-        return ret
+    cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
+    with salt.utils.flopen(cache_path, 'w') as fp_:
+        fp_.write(cache_object)
+    return ret
 
 
 def _file_lists(load, form):

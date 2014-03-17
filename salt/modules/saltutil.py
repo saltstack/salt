@@ -14,8 +14,11 @@ import logging
 import fnmatch
 import time
 import sys
+import copy
+import threading
 
 # Import salt libs
+import salt
 import salt.payload
 import salt.state
 import salt.client
@@ -24,6 +27,8 @@ import salt.utils.process
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
+
+__proxyenabled__ = ['*']
 
 # Import third party libs
 try:
@@ -56,12 +61,21 @@ def _sync(form, saltenv=None):
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))
-        os.makedirs(mod_dir)
+        try:
+            os.makedirs(mod_dir)
+        except (IOError, OSError):
+            msg = 'Cannot create cache module directory {0}. Check permissions.'
+            log.error(msg.format(mod_dir))
     for sub_env in saltenv:
         log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
-        cache.extend(__salt__['cp.cache_dir'](source, sub_env))
+        # Grab only the desired files (.py, .pyx, .so)
+        cache.extend(
+            __salt__['cp.cache_dir'](
+                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+            )
+        )
         local_cache_dir = os.path.join(
                 __opts__['cachedir'],
                 'files',
@@ -383,10 +397,10 @@ def running():
 
         salt '*' saltutil.running
     '''
-
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
+    current_thread = threading.currentThread().name
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
@@ -409,8 +423,18 @@ def running():
             # continue
             os.remove(path)
             continue
-        if data.get('pid') == pid:
-            continue
+        if __opts__['multiprocessing']:
+            if data.get('pid') == pid:
+                continue
+        else:
+            if data.get('pid') != pid:
+                os.remove(path)
+                continue
+            if data.get('jid') == current_thread:
+                continue
+            if not data.get('jid') in [x.name for x in threading.enumerate()]:
+                os.remove(path)
+                continue
         ret.append(data)
     return ret
 
@@ -445,6 +469,9 @@ def signal_job(jid, sig):
         if data['jid'] == jid:
             try:
                 os.kill(int(data['pid']), sig)
+                if 'child_pids' in data:
+                    for pid in data['child_pids']:
+                        os.kill(int(pid), sig)
                 return 'Signal {0} sent to job {1} at pid {2}'.format(
                         int(sig),
                         jid,
@@ -603,3 +630,51 @@ def cmd_iter(tgt,
             kwarg,
             **kwargs):
         yield ret
+
+
+# this is the only way I could figure out how to get the REAL file_roots
+# __opt__['file_roots'] is set to  __opt__['pillar_root']
+class _MMinion(object):
+    def __new__(cls, saltenv, reload_env=False):
+        # this is to break out of salt.loaded.int and make this a true singleton
+        # hack until https://github.com/saltstack/salt/pull/10273 is resolved
+        # this is starting to look like PHP
+        global _mminions  # pylint: disable=W0601
+        if '_mminions' not in globals():
+            _mminions = {}
+        if saltenv not in _mminions or reload_env:
+            opts = copy.deepcopy(__opts__)
+            del opts['file_roots']
+            # grains at this point are in the context of the minion
+            global __grains__  # pylint: disable=W0601
+            grains = copy.deepcopy(__grains__)
+            m = salt.minion.MasterMinion(opts)
+
+            # this assignment is so that the rest of fxns called by salt still
+            # have minion context
+            __grains__ = grains
+
+            # this assignment is so that fxns called by mminion have minion
+            # context
+            m.opts['grains'] = grains
+
+            env_roots = m.opts['file_roots'][saltenv]
+            m.opts['module_dirs'] = [fp + '/_modules' for fp in env_roots]
+            m.gen_modules()
+            _mminions[saltenv] = m
+        return _mminions[saltenv]
+
+
+def mmodule(saltenv, fun, *args, **kwargs):
+    '''
+    Loads minion modules from an environment so that they can be used in pillars
+    for that environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.mmodule base test.ping
+    '''
+    mminion = _MMinion(saltenv)
+    return mminion.functions[fun](*args, **kwargs)

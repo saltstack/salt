@@ -3,38 +3,85 @@
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
 
+# Import Salt Libs
 import salt.payload
 import salt.auth
+try:
+    from salt.transport.road.raet import stacking
+    from salt.transport.road.raet import yarding
+    from salt.transport.road.raet import raeting
+except ImportError:
+    # Don't die on missing transport libs since only one transport is required
+    pass
 
 
 class Channel(object):
-
     @staticmethod
     def factory(opts, **kwargs):
-
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
-        if 'transport_type' in opts:
-            ttype = opts['transport_type']
-        elif 'transport_type' in opts.get('pillar', {}).get('master', {}):
-            ttype = opts['pillar']['master']['transport_type']
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
 
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
+        if ttype == 'raet':
+            return RAETChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for ZeroMQ")
+            raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
 
-class ZeroMQChannel(Channel):
+class RAETChannel(Channel):
+    '''
+    Build the communication framework to communicate over the local process
+    uxd socket and send messages forwarded to the master. then wait for the
+    relative return message.
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
 
+    def __prep_stack(self):
+        '''
+        Prepare the stack objects
+        '''
+        self.stack = stacking.StackUxd(
+                name='ex{0}'.format(self.opts['__ex_id']),
+                lanename=self.opts['id'],
+                yid=self.opts['__ex_id'],
+                dirpath=self.opts['sock_dir'])
+        self.stack.Pk = raeting.packKinds.pack
+        self.router_yard = yarding.Yard(
+                yid=0,
+                prefix=self.opts['id'],
+                dirpath=self.opts['sock_dir'])
+        self.stack.addRemoteYard(self.router_yard)
+        src = (self.opts['id'], self.stack.yard.name, None)
+        dst = (self.opts['id'], 'router', None)
+        self.route = {'src': src, 'dst': dst}
+
+    def send(self, load, tries, timeout):
+        '''
+        Send a message load and wait for a relative reply
+        '''
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg=msg)
+        while True:
+            self.stack.serviceAll()
+            if self.stack.rxMsgs:
+                for msg in self.stack.rxMsgs:
+                    return msg['load']
+
+
+class ZeroMQChannel(Channel):
     '''
     Encapsulate sending routines to ZeroMQ.
 
     ZMQ Channels default to 'crypt=aes'
     '''
-
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
@@ -70,12 +117,18 @@ class ZeroMQChannel(Channel):
         minion state execution call
         '''
         def _do_transfer():
-            return self.auth.crypticle.loads(
-                self.sreq.send(self.crypt,
-                               self.auth.crypticle.dumps(load),
-                               tries,
-                               timeout)
-            )
+            data = self.sreq.send(
+                self.crypt,
+                self.auth.crypticle.dumps(load),
+                tries,
+                timeout)
+            # we may not have always data
+            # as for example for saltcall ret submission, this is a blind
+            # communication, we do not subscribe to return events, we just
+            # upload the results to the master
+            if data:
+                data = self.auth.crypticle.loads(data)
+            return data
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:

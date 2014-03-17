@@ -7,12 +7,15 @@ Module for running arbitrary tests
 import os
 import sys
 import time
+import traceback
 import random
 
 # Import Salt libs
 import salt
 import salt.version
 import salt.loader
+
+__proxyenabled__ = ['*']
 
 
 def echo(text):
@@ -39,7 +42,11 @@ def ping():
 
         salt '*' test.ping
     '''
-    return True
+
+    if 'proxyobject' in __opts__:
+        return __opts__['proxyobject'].ping()
+    else:
+        return True
 
 
 def sleep(length):
@@ -414,3 +421,31 @@ def tty(device, echo=None):
                 teletype,
                 ret['retcode'])
         }
+
+
+def exception(message='Test Exception'):
+    '''
+    Raise an exception
+
+    Optionally provide an error message or output the full stack.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.exception 'Oh noes!'
+    '''
+    raise Exception(message)
+
+
+def stack():
+    '''
+    Return the current stack trace
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.stack
+    '''
+    return ''.join(traceback.format_stack())

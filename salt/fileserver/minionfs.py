@@ -9,13 +9,6 @@ The backend for serving files pushed to master by cp.push (file_recv).
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
@@ -52,7 +45,10 @@ def find_file(path, env='base', **kwargs):
         log.debug('minionfs will NOT serve top.sls '
                      'for security reasons: {0}'.format(path))
         return fnd
-    minion, pushed_file = path.split(os.sep, 1)
+    try:
+        minion, pushed_file = path.split(os.sep, 1)
+    except ValueError:
+        return fnd
     full = os.path.join(__opts__['cachedir'], 'minions',
                                      minion, 'files', pushed_file)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
@@ -164,15 +160,10 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    if HAS_FCNTL:
-        with salt.utils.flopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
-        return ret
-    else:
-        with salt.utils.fopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-        return ret
+    cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
+    with salt.utils.flopen(cache_path, 'w') as fp_:
+        fp_.write(cache_object)
+    return ret
 
 
 def file_list(load):

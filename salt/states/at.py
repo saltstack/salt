@@ -48,17 +48,17 @@ def present(name, timespec, tag=None, runas=None, job=None):
     '''
     if job:
         name = job
-    ret = {'name': job,
+    ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'job {0} is add and will run on {1}'.format(job,
+           'comment': 'job {0} is add and will run on {1}'.format(name,
                                                                   timespec)}
 
     binary = salt.utils.which('at')
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'job {0} is add and will run on {1}'.format(job,
+        ret['comment'] = 'job {0} is add and will run on {1}'.format(name,
                                                                      timespec)
         return ret
 
@@ -71,7 +71,7 @@ def present(name, timespec, tag=None, runas=None, job=None):
         cmd = '{0} "### SALT: {4}\n{1}" | {2} {3}'.format(echo_cmd,
             job, binary, timespec, tag)
     else:
-        cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, job, binary, timespec)
+        cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, name, binary, timespec)
 
     if runas:
         luser = __salt__['user.info'](runas)

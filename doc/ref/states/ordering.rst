@@ -1,3 +1,5 @@
+.. _ordering:
+
 ===============
 Ordering States
 ===============
@@ -17,6 +19,8 @@ a finite order, which guarantees that states are always executed in the same
 order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the `requisite` system.
 
+.. _ordering_auto_order:
+
 State Auto Ordering
 ===================
 
@@ -35,6 +39,8 @@ below will also override the order in which states are defined in sls files.
 
 If the classic ordering is preferred (lexicographic), then set
 ``state_auto_order`` to ``False`` in the master configuration file.
+
+.. _ordering_requisites:
 
 Requisite Statements
 ====================
@@ -71,7 +77,8 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
-Require statements can refer to the following requisite types: pkg, file, sls
+Require statements can refer to any state defined in Salt. The basic examples
+are `pkg`, `service` and `file`, but any used state can be referenced.
 
 In addition to state declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
@@ -92,7 +99,7 @@ the discrete states are split or groups into separate sls files:
           - pkg: httpd
           - sls: network
 
-In this example, the httpd sevice running state will not be applied
+In this example, the httpd service running state will not be applied
 (i.e., the httpd service will not be started) unless both the https package is
 installed AND the network state is satisfied.
 
@@ -281,12 +288,13 @@ earlier ``service.running`` example above,  the service can be set to
           - file: /etc/redis.conf
           - pkg: redis
 
+.. _ordering_order:
 
 The Order Option
 ================
 
 Before using the `order` option, remember that the majority of state ordering
-should be done with a :term:`requisite declaration`, and that a requisite
+should be done with a :ref:`requisite-declaration`, and that a requisite
 declaration will override an `order` option, so a state with order option
 should not require or required by other states.
 

@@ -106,14 +106,15 @@ def summary(svc_name=''):
     for line in res:
         if 'daemon is not running' in line:
             return dict(monit='daemon is not running', result=False)
-        elif svc_name not in line or 'The Monit daemon' in line:
+        elif not line or svc_name not in line or 'The Monit daemon' in line:
             continue
         else:
             parts = line.split('\'')
-            resource, name, status = (
-                parts[0].strip(), parts[1], parts[2].strip()
-            )
-            if resource not in ret:
-                ret[resource] = {}
-            ret[resource][name] = status
+            if len(parts) == 3:
+                resource, name, status = (
+                    parts[0].strip(), parts[1], parts[2].strip()
+                )
+                if resource not in ret:
+                    ret[resource] = {}
+                ret[resource][name] = status
     return ret

@@ -46,7 +46,7 @@ def isportopen(host, port):
         salt '*' network.isportopen 127.0.0.1 22
     '''
 
-    if not (1 <= int(port) <= 65535):
+    if not 1 <= int(port) <= 65535:
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -171,7 +171,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.\-]+)(?:@)?([\w.\-]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):

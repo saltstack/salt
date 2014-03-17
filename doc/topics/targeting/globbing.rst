@@ -1,12 +1,8 @@
+.. _targeting-glob:
+
 ==========================
 Matching the ``minion id``
 ==========================
-
-.. glossary::
-
-    minion id
-        A unique identifier for a given minion. By default the minion id is the
-        FQDN of that host but this can be overridden.
 
 Each minion needs a unique identifier. By default when a minion starts for the
 first time it chooses its :abbr:`FQDN (fully qualified domain name)` as that
@@ -69,6 +65,11 @@ Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 
     salt 'web-[x-z]' test.ping
 
+.. note::
+
+    For additional targeting methods please review the
+    :doc:`compound matchers </topics/targeting/compound>` documentation.
+ 
 
 Regular Expressions
 ===================

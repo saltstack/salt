@@ -17,7 +17,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name"
-      file: # maps to State module filename e.g. https://github.com/saltstack/salt/blob/develop/salt/states/file.py
+      file: # maps to State module filename e.g. https://github.com/saltstack/salt/tree/develop/salt/states/file.py
         - managed # maps to the managed function in the file State module
         - user: root # one of many options passed to the manage function
         - group: root

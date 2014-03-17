@@ -4,6 +4,7 @@
 Discover all instances of unittest.TestCase in this directory.
 '''
 # Import python libs
+from __future__ import print_function
 import os
 import resource
 import tempfile
@@ -31,7 +32,7 @@ try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
 except OSError as err:
-    print 'Failed to change directory to salt\'s source: {0}'.format(err)
+    print('Failed to change directory to salt\'s source: {0}'.format(err))
 
 REQUIRED_OPEN_FILES = 3072
 
@@ -213,11 +214,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         try:
             print_header(
-                'Setting up Salt daemons to execute tests',
+                ' * Setting up Salt daemons to execute tests',
                 top=False, width=getattr(self.options, 'output_columns', PNUM)
             )
         except TypeError:
-            print_header('Setting up Salt daemons to execute tests', top=False)
+            print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
         if not any([self.options.client, self.options.module,

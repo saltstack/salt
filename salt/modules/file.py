@@ -29,6 +29,7 @@ import stat
 import sys
 import tempfile
 import time
+import glob
 
 try:
     import grp
@@ -63,7 +64,7 @@ def __virtual__():
     # win_file takes care of windows
     if salt.utils.is_windows():
         return False
-    return 'file'
+    return True
 
 
 def __clean_tmp(sfn):
@@ -138,7 +139,7 @@ def gid_to_group(gid):
 
     try:
         return grp.getgrgid(gid).gr_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
@@ -204,7 +205,7 @@ def uid_to_user(uid):
     '''
     try:
         return pwd.getpwuid(uid).pw_name
-    except KeyError:
+    except (KeyError, NameError) as e:
         return ''
 
 
@@ -400,18 +401,21 @@ def check_hash(path, hash):
     path
         A file path
     hash
-        A string in the form <hash_type>=<hash_value>. For example:
-        ``md5=e138491e9d5b97023cea823fe17bac22``
+        A string in the form <hash_type>:<hash_value>. For example:
+        ``md5:e138491e9d5b97023cea823fe17bac22``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5=<md5sum>
+        salt '*' file.check_hash /etc/fstab md5:<md5sum>
     '''
-    hash_parts = hash.split('=', 1)
+    hash_parts = hash.split(':', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {0!r}'.format(hash))
+        # Support "=" for backward compatibility.
+        hash_parts = hash.split('=', 1)
+        if len(hash_parts) != 2:
+            raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -890,13 +894,16 @@ def replace(path,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             dry_run=False,
             search_only=False,
             show_changes=True,
         ):
     '''
-    Replace occurances of a pattern in a file
+    Replace occurrences of a pattern in a file
 
     .. versionadded:: 0.17.0
 
@@ -919,6 +926,15 @@ def replace(path,
         before processing. Note: multiline searches must specify ``file``
         buffering.
     :type bufsize: int or str
+
+    :param append_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param prepend_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param not_found_content Content to use for append/prepend if not found. If
+        None (default), uses repl. Useful when repl uses references to group in
+        pattern.
+
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -948,6 +964,12 @@ def replace(path,
             .format(path)
         )
 
+    if search_only and (append_if_not_found or prepend_if_not_found):
+        raise SaltInvocationError('Choose between search_only and append/prepend_if_not_found')
+
+    if append_if_not_found and prepend_if_not_found:
+        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+
     flags_num = _get_flags(flags)
     cpattern = re.compile(pattern, flags_num)
     if bufsize == 'file':
@@ -964,11 +986,13 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
-    for line in fileinput.input(path,
-                                inplace=not dry_run,
-                                backup=False if dry_run else backup,
-                                bufsize=bufsize,
-                                mode='rb'):
+    fi_file = fileinput.input(path,
+                    inplace=not dry_run,
+                    backup=False if dry_run else backup,
+                    bufsize=bufsize,
+                    mode='rb')
+    found = False
+    for line in fi_file:
 
         if search_only:
             # Just search; bail as early as a match is found
@@ -977,7 +1001,11 @@ def replace(path,
             if result:
                 return True
         else:
-            result = re.sub(cpattern, repl, line, count)
+            result, nrepl = re.subn(cpattern, repl, line, count)
+
+            # found anything? (even if no change)
+            if nrepl > 0:
+                found = True
 
             # Identity check each potential change until one change is made
             if has_changes is False and not result is line:
@@ -989,6 +1017,28 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+    fi_file.close()
+
+    if not found and (append_if_not_found or prepend_if_not_found):
+        if None == not_found_content:
+            not_found_content = repl
+        if prepend_if_not_found:
+            new_file.insert(not_found_content + '\n')
+        else:
+            # append_if_not_found
+            # Make sure we have a newline at the end of the file
+            if 0 != len(new_file):
+                if not new_file[-1].endswith('\n'):
+                    new_file[-1] += '\n'
+            new_file.append(not_found_content + '\n')
+        has_changes = True
+        if not dry_run:
+            # backup already done in filter part
+            # write new content in the file while avoiding partial reads
+            f = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                f.write(line)
+            f.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1093,9 +1143,10 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
-    for line in fileinput.input(path,
-            inplace=False, backup=False,
-            bufsize=1, mode='rb'):
+    fi_file = fileinput.input(path,
+                inplace=False, backup=False,
+                bufsize=1, mode='rb')
+    for line in fi_file:
 
         result = line
 
@@ -1124,8 +1175,10 @@ def blockreplace(path,
         orig_file.append(line)
         if result is not None:
             new_file.append(result)
-    # end for. If we are here without block managment we maybe have some problems,
+    # end for. If we are here without block management we maybe have some problems,
     # or we need to initialise the marked block
+
+    fi_file.close()
 
     if in_block:
         # unterminated block => bad, always fail
@@ -1141,6 +1194,10 @@ def blockreplace(path,
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
+            # Make sure we have a newline at the end of the file
+            if 0 != len(new_file):
+                if not new_file[-1].endswith('\n'):
+                    new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
             new_file.append(content + '\n')
@@ -1191,7 +1248,7 @@ def search(path,
         bufsize=1,
         ):
     '''
-    Search for occurances of a pattern in a file
+    Search for occurrences of a pattern in a file
 
     .. versionadded:: 0.17.0
 
@@ -1387,7 +1444,7 @@ def append(path, *args):
         try:
             ofile.seek(-1, os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL:
+            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
@@ -1864,6 +1921,24 @@ def file_exists(path):
     return os.path.isfile(path)
 
 
+def path_exists_glob(path):
+    '''
+    Tests to see if path after expansion is a valid path (file or directory).
+    Expansion allows usage of ? * and character ranges []. Tilde expansion
+    is not supported. Returns True/False.
+
+    .. versionadded:: Hellium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.path_exists_glob /etc/pam*/pass*
+
+    '''
+    return True if glob.glob(path) else False
+
+
 def restorecon(path, recursive=False):
     '''
     Reset the SELinux context on a given path
@@ -1892,7 +1967,13 @@ def get_selinux_context(path):
         salt '*' file.get_selinux_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
-    return out.split(' ')[4]
+
+    try:
+        ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
+    except AttributeError:
+        ret = 'No selinux context information is available for {0}'.format(path)
+
+    return ret
 
 
 def set_selinux_context(path,
@@ -2193,7 +2274,7 @@ def check_perms(name, ret, user, group, mode):
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
-    perms['lmode'] = cur['mode']
+    perms['lmode'] = __salt__['config.manage_mode'](cur['mode'])
 
     # Mode changes if needed
     if mode is not None:
@@ -2282,7 +2363,9 @@ def check_managed(
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
     # If the source is a list then find which file exists
-    source, source_hash = source_list(source, source_hash, saltenv)
+    source, source_hash = source_list(source,           # pylint: disable=W0633
+                                      source_hash,
+                                      saltenv)
 
     sfn = ''
     source_sum = None
@@ -2335,6 +2418,11 @@ def check_file_meta(
     .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+
+    .. note::
+
+        Supported hash types include sha512, sha384, sha256, sha224, sha1, and
+        md5.
     '''
     changes = {}
     if not source_sum:
@@ -2627,7 +2715,8 @@ def manage_file(name,
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group,
+                             mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')

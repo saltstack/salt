@@ -2,8 +2,7 @@
 '''
 A module to manage software on Windows
 
-:depends:   - pythoncom
-            - win32com
+:depends:   - win32com
             - win32con
             - win32api
             - pywintypes
@@ -11,7 +10,6 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import pythoncom
     import win32com.client
     import win32api
     import win32con
@@ -205,7 +203,7 @@ def version(*names, **kwargs):
             versions = _get_package_info(name)
             if versions:
                 for val in versions.itervalues():
-                    if 'full_name' in val and len(val.get('full_name', '')) > 0:
+                    if 'full_name' in val and len(val.get('full_name', '')):
                         reverse_dict[val.get('full_name', '')] = name
                         win_names.append(val.get('full_name', ''))
             else:
@@ -213,7 +211,7 @@ def version(*names, **kwargs):
         nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
         if len(nums):
             for num, val in nums.iteritems():
-                if len(val) > 0:
+                if len(val):
                     try:
                         ret[reverse_dict[num]] = val
                     except KeyError:
@@ -237,8 +235,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -704,7 +703,7 @@ def get_repo_data(saltenv='base'):
     if not cached_repo:
         __salt__['pkg.refresh_db']()
     try:
-        with salt.utils.fopen(cached_repo, 'r') as repofile:
+        with salt.utils.fopen(cached_repo, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 #__context__['winrepo.data'] = repodata

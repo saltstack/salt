@@ -268,7 +268,6 @@ Default providers can also be defined in the minion config file:
 .. code-block:: yaml
 
     providers:
-      pkg: yumpkg5
       service: systemd
 
 When default providers are passed in the minion config, then those providers
@@ -333,10 +332,10 @@ with the :doc:`associated </ref/states/all/salt.states.rvm>`
 
 The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
-The :doc:`yum </ref/modules/all/salt.modules.yumpkg5>` modules gained
+The :doc:`yum </ref/modules/all/salt.modules.yumpkg>` module gained
 Scientific Linux support.
 
-The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu,
+The :doc:`pkg </ref/modules/all/salt.modules.aptpkg>` module on Debian, Ubuntu,
 and derivatives force apt to run in a non-interactive mode. This prevents
 issues when package installation waits for confirmation.
 

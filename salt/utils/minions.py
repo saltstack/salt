@@ -44,7 +44,7 @@ def get_minion_data(minion, opts):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                miniondata = serial.load(salt.utils.fopen(datap))
+                miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
                 grains = miniondata.get('grains')
                 pillar = miniondata.get('pillar')
                 return id_, grains, pillar
@@ -53,7 +53,7 @@ def get_minion_data(minion, opts):
             datap = os.path.join(cdir, minion, 'data.p')
             if not os.path.isfile(datap):
                 return minion, None, None
-            miniondata = serial.load(salt.utils.fopen(datap))
+            miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
             grains = miniondata.get('grains')
             pillar = miniondata.get('pillar')
             return minion, grains, pillar
@@ -91,13 +91,17 @@ class CkMinions(object):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.ip_addrs = salt.utils.network.ip_addrs()
+        if self.opts['transport'] == 'zeromq':
+            self.acc = 'minions'
+        else:
+            self.acc = 'accepted'
 
     def _check_glob_minions(self, expr):
         '''
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
         ret = set(glob.glob(expr))
         try:
             os.chdir(cwd)
@@ -112,8 +116,10 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
+        if isinstance(expr, str):
+            expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
+        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
             if fn_ in expr:
                 if fn_ not in ret:
                     ret.append(fn_)
@@ -124,7 +130,7 @@ class CkMinions(object):
         Return the minions found by looking via regular expressions
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
         reg = re.compile(expr)
         ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
         os.chdir(cwd)
@@ -135,7 +141,7 @@ class CkMinions(object):
         Return the minions found by looking via grains
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -148,7 +154,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr):
                     minions.remove(id_)
@@ -159,7 +165,7 @@ class CkMinions(object):
         Return the minions found by looking via grains with PCRE
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -172,7 +178,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr,
                                                 delim=':', regex_match=True):
@@ -184,7 +190,7 @@ class CkMinions(object):
         Return the minions found by looking via pillar
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -197,7 +203,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 pillar = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
                 if not salt.utils.subdict_match(pillar, expr):
                     minions.remove(id_)
@@ -208,7 +214,7 @@ class CkMinions(object):
         Return the minions found by looking via ipcidr
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -221,7 +227,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 num_parts = len(expr.split('/'))
@@ -257,7 +263,7 @@ class CkMinions(object):
                 'module most likely not installed)'
             )
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
@@ -270,7 +276,7 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
 
                 range_ = seco.range.Range(self.opts['range_server'])
@@ -289,7 +295,7 @@ class CkMinions(object):
         Return the minions found by looking via compound matcher
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
@@ -405,9 +411,9 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(
-                    salt.utils.fopen(datap)
+                    salt.utils.fopen(datap, 'rb')
                 ).get('grains')
-                for ipv4 in grains['ipv4']:
+                for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
@@ -419,7 +425,7 @@ class CkMinions(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
 
     def check_minions(self, expr, expr_form='glob'):
         '''

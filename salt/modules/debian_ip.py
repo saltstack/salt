@@ -173,7 +173,7 @@ def _log_default_network(opt, value):
 
 def _raise_error_iface(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_iface(iface, option, expected)
     log.error(msg)
@@ -182,7 +182,7 @@ def _raise_error_iface(iface, option, expected):
 
 def _raise_error_network(option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_network(option, expected)
     log.error(msg)
@@ -191,7 +191,7 @@ def _raise_error_network(option, expected):
 
 def _raise_error_routes(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_routes(iface, option, expected)
     log.error(msg)
@@ -1261,7 +1261,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
-    if settings['test']:
+    if 'test' in settings and settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
     ifcfg = _write_file_ifaces(iface, opts[iface])
@@ -1479,7 +1479,7 @@ def build_network_settings(**settings):
     _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     # Write domainname to /etc/resolv.conf
-    if len(sline) > 0:
+    if len(sline):
         domainname = sline[1]
 
         contents = _parse_resolve()

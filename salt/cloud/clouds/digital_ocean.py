@@ -286,9 +286,20 @@ def create(vm_):
         )
 
     private_networking = config.get_cloud_config_value(
-        'private_networking', vm_, __opts__, search_global=False, default=None
+        'private_networking', vm_, __opts__, search_global=False, default=None,
     )
-    kwargs['private_networking'] = 'true' if private_networking else 'false'
+    if private_networking is not None:
+        if not isinstance(private_networking, bool):
+            raise SaltCloudConfigError("'private_networking' should be a boolean value.")
+        kwargs['private_networking'] = private_networking
+
+    backups_enabled = config.get_cloud_config_value(
+        'backups_enabled', vm_, __opts__, search_global=False, default=None,
+    )
+    if backups_enabled is not None:
+        if not isinstance(backups_enabled, bool):
+            raise SaltCloudConfigError("'backups_enabled' should be a boolean value.")
+        kwargs['backups_enabled'] = backups_enabled
 
     salt.utils.cloud.fire_event(
         'event',
@@ -443,13 +454,14 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
-    ret.update(data)
 
     salt.utils.cloud.fire_event(
         'event',

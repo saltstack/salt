@@ -553,44 +553,39 @@ obtained from your cloud provider.
 profile configuration.
 
 
-IBM SmartCloud Enterprise
--------------------------
+.. _config_lxc:
 
-In addition to a username and password, the IBM SCE module requires an SSH key,
-which is currently configured inside IBM's web interface. A location is also
-required to create instances, but not to query their cloud. This is important,
-because you need to use salt-cloud --list-locations (with the other options
-already set) in order to find the name of the location that you want to use.
+lxc
+---
 
-* Using the old format:
-
-.. code-block:: yaml
-
-  IBMSCE.user: myuser@mycorp.com
-  IBMSCE.password: mypass
-  IBMSCE.ssh_key_name: mykey
-  IBMSCE.ssh_key_file: '/etc/salt/ibm/mykey.pem'
-  IBMSCE.location: Raleigh
-
-
-
-* Using the new configuration format:
+The lxc driver is a new, experimental driver for installing Salt on
+newly provisionned (via saltcloud) lxc containers. It will in turn use saltify to install
+salt an rattach the lxc container as a new lxc minion.
+As soon as we can, we manage baremetal operation over SSH.
+You can also destroy those containers via this driver.
 
 .. code-block:: yaml
 
-    my-ibmsce-config:
-      user: myuser@mycorp.com
-      password: mypass
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/ibm/mykey.pem'
-      location: Raleigh
-      provider: ibmsce
+    devhost10-lxc:
+      target: devhost10
+      provider: lxc
 
+And in the map file:
 
-**NOTE**: With the new providers configuration syntax you would have
-``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile
-configuration.
+.. code-block:: yaml
 
+    devhost10-lxc:
+      provider: devhost10-lxc
+      from_container: ubuntu
+      backing: lvm
+      sudo: True
+      size: 3g
+      ip: 10.0.3.9
+      minion:
+        master: 10.5.0.1
+        master_port: 4506
+      lxc_conf:
+        - lxc.utsname: superlxc
 
 .. _config_saltify:
 

@@ -20,7 +20,7 @@ Example:
 
 # Import python libs
 import logging
-from salt import exceptions, utils
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -29,12 +29,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_policy'
-    try:
-        utils.check_or_die('rabbitmqctl')
-    except exceptions.CommandNotFoundError:
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,

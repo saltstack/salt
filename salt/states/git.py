@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Only load if git is available
     '''
-    return 'git' if __salt__['cmd.has_exec']('git') else False
+    return __salt__['cmd.has_exec']('git')
 
 
 def latest(name,
@@ -170,7 +170,7 @@ def latest(name,
             branch = __salt__['git.current_branch'](target, user=user)
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
-            if len(branch) > 0 and branch == rev:
+            if len(branch) and branch == rev:
                 remote_rev = __salt__['git.ls_remote'](target,
                                                        repository=name,
                                                        branch=branch, user=user,
@@ -213,7 +213,7 @@ def latest(name,
                                           identity=identity)
                 elif rev:
 
-                    cmd = 'git rev-parse {0} ^{{commit}}'.format(rev)
+                    cmd = 'git rev-parse {0}'.format(rev)
                     retcode = __salt__['cmd.retcode'](cmd,
                                                       cwd=target,
                                                       runas=user)

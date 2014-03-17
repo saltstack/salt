@@ -22,6 +22,12 @@ from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 # pylint: enable=E0611
 
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
+
 # Change to salt source's directory prior to running any command
 try:
     SETUP_DIRNAME = os.path.dirname(__file__)
@@ -416,40 +422,54 @@ SETUP_KWARGS = {'name': NAME,
                                 'Topic :: System :: Distributed Computing',
                                 ],
                 'packages': ['salt',
+                             'salt.auth',
                              'salt.cli',
                              'salt.client',
+                             'salt.client.raet',
                              'salt.client.ssh',
                              'salt.client.ssh.wrapper',
-                             'salt.ext',
-                             'salt.auth',
-                             'salt.wheel',
-                             'salt.tops',
-                             'salt.grains',
-                             'salt.modules',
-                             'salt.pillar',
-                             'salt.renderers',
-                             'salt.returners',
-                             'salt.runners',
-                             'salt.states',
-                             'salt.fileserver',
-                             'salt.search',
-                             'salt.transport',
-                             'salt.output',
-                             'salt.utils',
-                             'salt.utils.decorators',
-                             'salt.utils.validate',
-                             'salt.roster',
-                             'salt.log',
-                             'salt.log.handlers',
-                             'salt.templates',
                              'salt.cloud',
                              'salt.cloud.clouds',
+                             'salt.daemons',
+                             'salt.daemons.flo',
+                             'salt.ext',
+                             'salt.fileserver',
+                             'salt.grains',
+                             'salt.log',
+                             'salt.log.handlers',
+                             'salt.modules',
+                             'salt.output',
+                             'salt.pillar',
+                             'salt.proxy',
+                             'salt.renderers',
+                             'salt.returners',
+                             'salt.roster',
+                             'salt.runners',
+                             'salt.search',
+                             'salt.states',
+                             'salt.tops',
+                             'salt.templates',
+                             'salt.transport',
+                             'salt.transport.road',
+                             'salt.transport.road.raet',
+                             'salt.transport.table',
+                             'salt.transport.table.handshake',
+                             'salt.transport.table.public',
+                             'salt.transport.table.secret',
+                             'salt.utils',
+                             'salt.utils.decorators',
+                             'salt.utils.openstack',
+                             'salt.utils.validate',
+                             'salt.wheel',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
                                     'virt/*.jinja'
                                     ],
+                                 'salt.daemons.flo': [
+                                    '*.flo'
+                                    ]
                                 },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-cp.1',
@@ -506,6 +526,14 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
+if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
+    if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
+        # We're freezing, and when freezing ZMQ needs to be installed, so this
+        # works fine
+        if 'zmq.core.*' in FREEZER_INCLUDES:
+            # For PyZMQ >= 0.14, freezing does not need 'zmq.core.*'
+            FREEZER_INCLUDES.remove('zmq.core.*')
+
 if IS_WINDOWS_PLATFORM:
     FREEZER_INCLUDES.extend([
         'win32api',
@@ -529,6 +557,20 @@ elif sys.platform.startswith('linux'):
     try:
         import yum
         FREEZER_INCLUDES.append('yum')
+    except ImportError:
+        pass
+elif sys.platform.startswith('sunos'):
+    # (The sledgehammer approach)
+    # Just try to include everything
+    # (This may be a better way to generate FREEZER_INCLUDES generally)
+    try:
+        from bbfreeze.modulegraph.modulegraph import ModuleGraph
+        mf = ModuleGraph(sys.path[:])
+        for arg in glob.glob("salt/modules/*.py"):
+                mf.run_script(arg)
+        for mod in mf.flatten():
+            if type(mod).__name__ != "Script" and mod.filename:
+                FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))
     except ImportError:
         pass
 
@@ -571,6 +613,7 @@ else:
     SETUP_KWARGS['scripts'] = ['scripts/salt-call',
                                'scripts/salt-cp',
                                'scripts/salt-minion',
+                               'scripts/salt-unity',
                                ]
 
     if IS_WINDOWS_PLATFORM is False:

@@ -60,6 +60,7 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 __grants__ = [
+    'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
     'CREATE',
@@ -152,7 +153,7 @@ def __virtual__():
     Only load this module if the mysql libraries exist
     '''
     if HAS_MYSQLDB:
-        return 'mysql'
+        return True
     return False
 
 
@@ -207,19 +208,22 @@ def _connect(**kwargs):
     '''
     connargs = dict()
 
-    def _connarg(name, key=None):
+    def _connarg(name, key=None, get_opts=True):
         '''
-        Add key to connargs, only if name exists in our kwargs or as
-        mysql.<name> in __opts__ or __pillar__ Evaluate in said order - kwargs,
-        opts then pillar. To avoid collision with other functions, kwargs-based
-        connection arguments are prefixed with 'connection_' (i.e.
-        'connection_host', 'connection_user', etc.).
+        Add key to connargs, only if name exists in our kwargs or,
+        if get_opts is true, as mysql.<name> in __opts__ or __pillar__
+
+        If get_opts is true, evaluate in said order - kwargs, opts
+        then pillar. To avoid collision with other functions,
+        kwargs-based connection arguments are prefixed with 'connection_'
+        (i.e. 'connection_host', 'connection_user', etc.).
         '''
         if key is None:
             key = name
+
         if name in kwargs:
             connargs[key] = kwargs[name]
-        else:
+        elif get_opts:
             prefix = 'connection_'
             if name.startswith(prefix):
                 try:
@@ -230,15 +234,22 @@ def _connect(**kwargs):
             if val is not None:
                 connargs[key] = val
 
-    _connarg('connection_host', 'host')
-    _connarg('connection_user', 'user')
-    _connarg('connection_pass', 'passwd')
-    _connarg('connection_port', 'port')
-    _connarg('connection_db', 'db')
-    _connarg('connection_conv', 'conv')
-    _connarg('connection_unix_socket', 'unix_socket')
-    _connarg('connection_default_file', 'read_default_file')
-    _connarg('connection_default_group', 'read_default_group')
+    # If a default file is explicitly passed to kwargs, don't grab the
+    # opts/pillar settings, as it can override info in the defaults file
+    if 'connection_default_file' in kwargs:
+        get_opts = False
+    else:
+        get_opts = True
+
+    _connarg('connection_host', 'host', get_opts)
+    _connarg('connection_user', 'user', get_opts)
+    _connarg('connection_pass', 'passwd', get_opts)
+    _connarg('connection_port', 'port', get_opts)
+    _connarg('connection_db', 'db', get_opts)
+    _connarg('connection_conv', 'conv', get_opts)
+    _connarg('connection_unix_socket', 'unix_socket', get_opts)
+    _connarg('connection_default_file', 'read_default_file', get_opts)
+    _connarg('connection_default_group', 'read_default_group', get_opts)
     # MySQLdb states that this is required for charset usage
     # but in fact it's more than it's internally activated
     # when charset is used, activating use_unicode here would
@@ -1399,6 +1410,23 @@ def db_optimize(name,
 
 
 # Grants
+def __grant_normalize(grant):
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
+
+    # Grants are paste directly in SQL, must filter it
+    exploded_grants = grant.split(",")
+    for chkgrant in exploded_grants:
+        if not chkgrant.strip().upper() in __grants__:
+            raise Exception('Invalid grant : {0!r}'.format(
+                chkgrant
+            ))
+
+    return grant
+
+
 def __grant_generate(grant,
                     database,
                     user,
@@ -1415,20 +1443,7 @@ def __grant_generate(grant,
     #       SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = re.sub(r'\s*,\s*', ', ', grant).upper()
 
-    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
-    # grant_exists and grant_add ALL work correctly
-    if grant == 'ALL':
-        grant = 'ALL PRIVILEGES'
-    else:
-        # Grants won't be used as query arguments, so we need
-        # some SQL barriers.
-        # White-list security check
-        grants = grant.split(', ')
-        for chkgrant in grants:
-            if not chkgrant.strip() in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(
-                    chkgrant
-                ))
+    grant = __grant_normalize(grant)
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1622,13 +1637,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
-            raise Exception('Invalid grant : {0!r}'.format(
-                chkgrant
-            ))
+    grant = __grant_normalize(grant)
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
@@ -1864,3 +1873,55 @@ def get_slave_status(**connection_args):
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]
+
+
+def showvariables(**connection_args):
+    '''
+    Retrieves the show variables from the minion.
+
+    Returns::
+        show variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showvariables
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv
+
+
+def showglobal(**connection_args):
+    '''
+    Retrieves the show global variables from the minion.
+
+    Returns::
+        show global variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showglobal
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv

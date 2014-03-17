@@ -10,12 +10,20 @@ import sys
 import salt
 import logging
 import tempfile
+import time
 
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmdmod
+
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet
+}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.dirname(salt.__file__)
@@ -125,6 +133,16 @@ def raw_mod(opts, name, functions):
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
+
+
+def proxy(opts, functions, whitelist=None):
+    '''
+    Returns the proxy module for this salt-proxy-minion
+    '''
+    load = _create_loader(opts, 'proxy', 'proxy')
+    pack = {'name': '__proxy__',
+            'value': functions}
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def returners(opts, functions, whitelist=None):
@@ -257,15 +275,17 @@ def ssh_wrapper(opts, functions=None):
     return load.gen_functions(pack)
 
 
-def render(opts, functions):
+def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
     load = _create_loader(
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+            'value': functions}]
+    if states:
+        pack.append({'name': '__states__', 'value': states})
     rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
@@ -280,6 +300,8 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
+    if opts.get('skip_grains', False):
+        return {}
     if 'conf_file' in opts:
         pre_opts = {}
         pre_opts.update(salt.config.load_config(
@@ -303,7 +325,7 @@ def grains(opts):
     else:
         opts['grains'] = {}
 
-    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
+    load = _create_loader(opts, 'grains', 'grain')
     grains_info = load.gen_grains()
     grains_info.update(opts['grains'])
     return grains_info
@@ -425,6 +447,8 @@ class Loader(object):
         self.opts = self.__prep_mod_opts(opts)
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        if self.opts.get('grains_cache', False):
+            self.serial = salt.payload.Serial(self.opts)
 
     def __prep_mod_opts(self, opts):
         '''
@@ -602,7 +626,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
-        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
+        log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -619,14 +643,14 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not an absolute path'.format(
                         mod_dir
                     )
                 )
                 continue
             if not os.path.isdir(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not a directory'.format(
                         mod_dir
                     )
@@ -638,7 +662,7 @@ class Loader(object):
                     # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it is disabled by configuration'.format(
                             fn_
                         )
@@ -655,7 +679,7 @@ class Loader(object):
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it does not end with an expected '
                         'extension'.format(
                             fn_
@@ -728,6 +752,21 @@ class Loader(object):
             modules.append(mod)
         for mod in modules:
             virtual = ''
+
+            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
+            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+            # containing the names of the proxy types that the module supports.
+            if not hasattr(mod, 'render') and 'proxy' in self.opts:
+                if not hasattr(mod, '__proxyenabled__'):
+                    # This is a proxy minion but this module doesn't support proxy
+                    # minions at all
+                    continue
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
+                    # This is a proxy minion, this module supports proxy
+                    # minions, but not this particular minion
+                    log.debug(mod)
+                    continue
+
             if hasattr(mod, '__opts__'):
                 mod.__opts__.update(self.opts)
             else:
@@ -797,12 +836,27 @@ class Loader(object):
                                     )
                                 continue
 
-                            if virtual is not True and module_name != virtual:
-                                # If __virtual__ returned True the module will
-                                # be loaded with the same name, if it returned
-                                # other value than `True`, it should be a new
-                                # name for the module.
-                                # Update the module name with the new name
+                            # At this point, __virtual__ did not return a
+                            # boolean value, let's check for deprecated usage
+                            # or module renames
+                            if virtual is not True and module_name == virtual:
+                                # The module was not renamed, it should
+                                # have returned True instead
+                                #salt.utils.warn_until(
+                                #    'Helium',
+                                #    'The {0!r} module is NOT renaming itself '
+                                #    'and is returning a string. In this case '
+                                #    'the __virtual__() function should simply '
+                                #    'return `True`. This usage will become an '
+                                #    'error in Salt Helium'.format(
+                                #        mod.__name__,
+                                #    )
+                                #)
+                                pass
+
+                            elif virtual is not True and module_name != virtual:
+                                # The module is renaming itself. Updating the
+                                # module name with the new name
                                 log.debug(
                                     'Loaded {0} as virtual {1}'.format(
                                         module_name, virtual
@@ -823,10 +877,31 @@ class Loader(object):
                                             virtual
                                         )
                                     )
-                                module_name = virtual
 
-                            elif virtual and hasattr(mod, '__virtualname__'):
-                                module_name = mod.__virtualname__
+                                # Get the module's virtual name
+                                virtualname = getattr(
+                                    mod, '__virtualname__', virtual
+                                )
+
+                                if virtualname != virtual:
+                                    # The __virtualname__ attribute does not
+                                    # match what's being returned by the
+                                    # __virtual__() function. This should be
+                                    # considered an error.
+                                    log.error(
+                                        'The module {0!r} is showing some bad '
+                                        'usage. It\'s __virtualname__ '
+                                        'attribute is set to {1!r} yet the '
+                                        '__virtual__() function is returning '
+                                        '{2!r}. These values should '
+                                        'match!'.format(
+                                            mod.__name__,
+                                            virtualname,
+                                            virtual
+                                        )
+                                    )
+
+                                module_name = virtualname
 
                 except KeyError:
                     # Key errors come out of the virtual function when passing
@@ -965,6 +1040,28 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
+        if self.opts.get('grains_cache', False):
+            cfn = os.path.join(
+            self.opts['cachedir'],
+            '{0}.cache.p'.format('grains')
+            )
+            if os.path.isfile(cfn):
+                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
+                if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
+                    self.opts.get('refresh_grains_cache', False):
+                    log.debug('Retrieving grains from cache')
+                    try:
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
+                            cached_grains = self.serial.load(fp_)
+                        return cached_grains
+                    except (IOError, OSError):
+                        pass
+                else:
+                    log.debug('Grains cache last modified {0} seconds ago and cache expiration is set to {1}. '
+                         'Grains cache expired. Refreshing.'.format(
+                    grains_cache_age, self.opts.get('grains_cache_expiration', 300)))
+            else:
+                log.debug('Grains cache file does not exist.')
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
@@ -991,4 +1088,21 @@ class Loader(object):
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)
+        # Write cache if enabled
+        if self.opts.get('grains_cache', False):
+            cumask = os.umask(077)
+            try:
+                if salt.utils.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        self.serial.dump(grains_data, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                msg = 'Unable to write to grains cache file {0}'
+                log.error(msg.format(cfn))
+            os.umask(cumask)
         return grains_data

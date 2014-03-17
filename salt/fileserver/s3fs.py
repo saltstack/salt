@@ -99,7 +99,7 @@ def update():
     metadata = _init()
 
     if _s3_sync_on_update:
-        key, keyid = _get_s3_key()
+        key, keyid, service_url = _get_s3_key()
 
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
@@ -312,8 +312,11 @@ def _get_s3_key():
 
     key = __opts__['s3.key'] if 's3.key' in __opts__ else None
     keyid = __opts__['s3.keyid'] if 's3.keyid' in __opts__ else None
+    service_url = __opts__['s3.service_url'] \
+        if 's3.service_url' in __opts__ \
+        else None
 
-    return key, keyid
+    return key, keyid, service_url
 
 
 def _init():
@@ -377,7 +380,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid = _get_s3_key()
+    key, keyid, service_url = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -386,6 +389,7 @@ def _refresh_buckets_cache_file(cache_file):
                 key=key,
                 keyid=keyid,
                 bucket=bucket,
+                service_url=service_url,
                 return_bin=False)
 
     if _is_env_per_bucket():
@@ -517,13 +521,15 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
             return
 
     # ... or get the file from S3
-    key, keyid = _get_s3_key()
+    key, keyid, service_url = _get_s3_key()
     s3.query(
-            key=key,
-            keyid=keyid,
-            bucket=bucket_name,
-            path=urllib.quote(path),
-            local_file=cached_file_path)
+        key=key,
+        keyid=keyid,
+        bucket=bucket_name,
+        service_url=service_url,
+        path=urllib.quote(path),
+        local_file=cached_file_path
+    )
 
 
 def _trim_env_off_path(paths, saltenv, trim_slash=False):

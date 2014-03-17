@@ -5,7 +5,6 @@ import os
 import tempfile
 import json
 import datetime
-import textwrap
 import pprint
 
 # Import Salt Testing libs
@@ -17,18 +16,19 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
-from salt.utils.jinja import SaltCacheLoader, SerializerExtension
-from salt.utils.templates import (
-    JINJA,
-    render_jinja_tmpl,
+from salt.utils.jinja import (
+    SaltCacheLoader,
+    SerializerExtension,
+    ensure_sequence_filter
 )
+from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
 
 # Import 3rd party libs
 import yaml
 from jinja2 import Environment, DictLoader, exceptions
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -510,6 +510,16 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
 
+    def test_load_text_template(self):
+        loader = DictLoader({'foo': 'Foo!'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+
+        rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
+        self.assertEqual(rendered, u"Foo!")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_text "does not exists" as doc %}').render()
+
     def test_catalog(self):
         loader = DictLoader({
             'doc1': '{bar: "my god is blue"}',
@@ -584,6 +594,30 @@ class TestCustomExtensions(TestCase):
                                                             )
                                                         ])
         self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+
+    def test_sequence(self):
+        env = Environment()
+        env.filters['sequence'] = ensure_sequence_filter
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data='foo')
+        self.assertEqual(rendered, '1')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=['foo', 'bar'])
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=('foo', 'bar'))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=set(['foo', 'bar']))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data={'foo': 'bar'})
+        self.assertEqual(rendered, '1')
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

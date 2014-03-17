@@ -53,7 +53,7 @@ GitHub page: |saltrepo|
 
 Wiki: https://github.com/saltstack/salt/wiki
 
-Arch Linux Package: https://aur.archlinux.org/packages.php?ID=47512
+Arch Linux Package: https://aur.archlinux.org/packages/salt-git/
 
 I am very open to contributions, for instance I need packages for more Linux
 distributions as well as BSD packages and testers.

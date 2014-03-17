@@ -129,6 +129,14 @@ def destroy(device):
         for number in details['members']:
             __salt__['cmd.retcode'](zero_cmd.format(number['device']))
 
+    # Remove entry from config file:
+    if __grains__.get('os_family') == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+
     if __salt__['raid.list']().get(device) is None:
         return True
     else:
@@ -203,10 +211,10 @@ def create(*args):
     cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
     cmd = cmd.format(new_array=arguments['new_array'],
                      opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
-                               if len(arguments['opt_raw']) > 0
+                               if len(arguments['opt_raw'])
                                else ''),
                      opts_val=(' --' + ' --'.join(key + '=' + arguments['opt_val'][key] for key in arguments['opt_val'])
-                               if len(arguments['opt_val']) > 0
+                               if len(arguments['opt_val'])
                                else ''),
                      disks_to_array=' '.join(arguments['disks_to_array']))
 
@@ -214,3 +222,42 @@ def create(*args):
         return cmd
     elif test_mode is False:
         return __salt__['cmd.run'](cmd)
+
+
+def save_config():
+    '''
+    Save RAID configuration to config file.
+
+    Same as:
+    mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+
+    Fixes this issue with Ubuntu
+    REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.save_config
+
+    '''
+    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
+    # Issue with mdadm and ubuntu
+    # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+    if __grains__['os'] == 'Ubuntu':
+        buggy_ubuntu_tags = ['name', 'metadata']
+        for bad_tag in buggy_ubuntu_tags:
+            for i, elem in enumerate(scan):
+                if not elem.find(bad_tag):
+                    del scan[i]
+
+    scan = ' '.join(scan)
+    if __grains__.get('os_family') == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    if not __salt__['file.search'](cfg_file, scan):
+        __salt__['file.append'](cfg_file, scan)
+
+    return __salt__['cmd.run']('update-initramfs -u')

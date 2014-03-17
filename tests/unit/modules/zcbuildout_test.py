@@ -155,13 +155,9 @@ class BuildoutTestCase(Base):
 
         self.assertTrue(u'Log summary:\n' in ret1['outlog'])
         self.assertTrue(
-            u'\n'
             u'INFO: ibar\n'
-            u'\n'
             u'WARN: wbar\n'
-            u'\n'
             u'DEBUG: dbar\n'
-            u'\n'
             u'ERROR: ebar\n'
             in ret1['outlog']
         )
@@ -363,7 +359,7 @@ class BuildoutOnlineTestCase(Base):
         b2_dir = os.path.join(self.tdir, 'b', 'b2')
         self.assertTrue(buildout._has_old_distribute(self.py_dis))
         # this is too hard to check as on debian & other where old
-        # packages are present (virtualenv), we cant have
+        # packages are present (virtualenv), we can't have
         # a clean site-packages
         # self.assertFalse(buildout._has_old_distribute(self.py_blank))
         self.assertFalse(buildout._has_old_distribute(self.py_st))
@@ -456,9 +452,49 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+class BuildoutAPITestCase(TestCase):
+
+    def test_merge(self):
+        buildout.LOG.clear()
+        buildout.LOG.info('àé')
+        buildout.LOG.info(u'àé')
+        buildout.LOG.error('àé')
+        buildout.LOG.error(u'àé')
+        ret1 = buildout._set_status({}, out='éà')
+        uret1 = buildout._set_status({}, out=u'éà')
+        buildout.LOG.clear()
+        buildout.LOG.info('ççàé')
+        buildout.LOG.info(u'ççàé')
+        buildout.LOG.error('ççàé')
+        buildout.LOG.error(u'ççàé')
+        ret2 = buildout._set_status({}, out='çéà')
+        uret2 = buildout._set_status({}, out=u'çéà')
+        uretm = buildout._merge_statuses([ret1, uret1, ret2, uret2])
+        for ret in ret1, uret1, ret2, uret2:
+            out = ret['out']
+            if not isinstance(ret['out'], unicode):
+                out = ret['out'].decode('utf-8')
+
+        for out in ['àé', 'ççàé']:
+            self.assertTrue(out in uretm['logs_by_level']['info'])
+            self.assertTrue(out in uretm['outlog_by_level'])
+
+    def test_setup(self):
+        buildout.LOG.clear()
+        buildout.LOG.info('àé')
+        buildout.LOG.info(u'àé')
+        buildout.LOG.error('àé')
+        buildout.LOG.error(u'àé')
+        ret = buildout._set_status({}, out='éà')
+        uret = buildout._set_status({}, out=u'éà')
+        self.assertTrue(ret['outlog'] == uret['outlog'])
+        self.assertTrue('àé' in uret['outlog_by_level'])
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(
+        BuildoutAPITestCase,
         BuildoutTestCase,
         BuildoutOnlineTestCase,
         needs_daemon=False)

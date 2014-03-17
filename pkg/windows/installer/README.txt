@@ -49,7 +49,7 @@ encryption for payload communication. This means that authentication and
 encryption are also built into Salt. Salt takes advantage of communication via
 the most excellent `msgpack`_ library, enabling fast and light network traffic.
 
-.. _`ZeroMQ`: http://www.zeromq.org/
+.. _`ZeroMQ`: http://zeromq.org/
 
 .. _`msgpack`: http://msgpack.org/
 

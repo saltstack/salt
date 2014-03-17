@@ -62,15 +62,28 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         open(os.path.join(config_dir, config_file_name), 'w').write(
             yaml.dump(config, default_flow_style=False)
         )
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=15,
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
+            self.assertIn('doc.runner:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            if os.path.exists('/dev/log') and ret[2] != 2:
+                # If there's a syslog device and the exit code was not 2,
+                # 'No such file or directory', raise the error
+                raise
+            self.assertIn(
+                'Failed to setup the Syslog logging handler',
+                '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):

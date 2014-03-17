@@ -5,14 +5,19 @@ for managing outputters.
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import errno
+import logging
+import traceback
 
 # Import salt libs
 import salt.loader
 import salt.utils
 
+
+log = logging.getLogger(__name__)
 
 STATIC = (
     'yaml_out',
@@ -29,6 +34,7 @@ def display_output(data, out, opts=None):
     try:
         display_data = get_printout(out, opts)(data).rstrip()
     except (KeyError, AttributeError):
+        log.debug(traceback.format_exc())
         opts.pop('output', None)
         display_data = get_printout('nested', opts)(data).rstrip()
 

@@ -5,6 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import operator
 import re
@@ -189,14 +190,14 @@ def safe_accept(target, expr_form='glob'):
             del ret[minion]
 
     if failures:
-        print "safe_accept failed on the following minions:"
+        print('safe_accept failed on the following minions:')
         for minion, message in failures.iteritems():
-            print minion
-            print '-' * len(minion)
-            print message
-            print
+            print(minion)
+            print('-' * len(minion))
+            print(message)
+            print('')
 
-    print "Accepted {0:d} keys".format(len(ret))
+    print('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
@@ -381,7 +382,7 @@ objShell.Exec("{1}{2}")'''
 
     # First off, change to the local temp directory, stop salt-minion (if
     # running), and remove the master's public key.
-    # This is to accomodate for reinstalling Salt over an old or broken build,
+    # This is to accommodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
     batch = 'cd /d %TEMP%\nnet stop salt-minion\ndel c:\\salt\\conf\\pki\\minion\\minion_master.pub\n'

@@ -81,6 +81,7 @@ the following:
 '''
 
 # Import python libs
+from __future__ import print_function
 import hashlib
 import logging
 import os
@@ -175,7 +176,7 @@ def _parse_size(value):
     else:
         style = '='
 
-    if len(scalar) > 0:
+    if len(scalar):
         multiplier = {'b': 2 ** 0,
                       'k': 2 ** 10,
                       'm': 2 ** 20,

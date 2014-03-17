@@ -28,6 +28,18 @@ Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
+.. note::
+
+    The Salt SSH eventually is supposed to support the same set of commands and 
+    functionality as standard ``salt`` command. 
+    
+    At the moment fileserver operations must be wrapped to ensure that the 
+    relevant files are delivered with the ``salt-ssh`` commands. 
+    The state module is an exception, which compiles the state run on the 
+    master, and in the process finds all the references to ``salt://`` paths and 
+    copies those files down in the same tarball as the state run. 
+    However, needed fileserver wrappers are still under development.
+
 Salt SSH Roster
 ===============
 
@@ -100,6 +112,14 @@ Targeting with Salt SSH
 Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
+
+Configuring Salt SSH
+====================
+
+Salt SSH takes its configuration from a master configuration file. Normally, this
+file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+configuration file named ``master``.
 
 Running Salt SSH as non-root user
 =================================

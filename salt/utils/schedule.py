@@ -46,6 +46,7 @@ import logging
 # Import Salt libs
 import salt.utils
 import salt.utils.process
+from salt.utils.odict import OrderedDict
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -153,21 +154,16 @@ class Schedule(object):
         if not kwargs and not args:
             ret['return'] = self.functions[func]()
 
-        if 'returner' in data or self.schedule_returner:
+        data_returner = data.get('returner', None)
+        if data_returner or self.schedule_returner:
             rets = []
-            if isinstance(data['returner'], str):
-                rets.append(data['returner'])
-            elif isinstance(data['returner'], list):
-                for returner in data['returner']:
-                    if returner not in rets:
-                        rets.append(returner)
-            if isinstance(self.schedule_returner, list):
-                for returner in self.schedule_returner:
-                    if returner not in rets:
-                        rets.append(returner)
-            if isinstance(self.schedule_returner, str):
-                if self.schedule_returner not in rets:
-                    rets.append(self.schedule_returner)
+            for returner in [data_returner, self.schedule_returner]:
+                if isinstance(returner, str):
+                    rets.append(returner)
+                elif isinstance(returner, list):
+                    rets.extend(returner)
+            # simple de-duplication with order retained
+            rets = OrderedDict.fromkeys(rets).keys()
             for returner in rets:
                 ret_str = '{0}.returner'.format(returner)
                 if ret_str in self.returners:

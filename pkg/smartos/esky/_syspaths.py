@@ -8,7 +8,7 @@ if getattr(sys, 'frozen', False):
 elif __file__:
     application_path = os.path.dirname(__file__)
 
-ROOT_DIR=application_path.split("salt/bin/appdata")[0] + "salt"
+ROOT_DIR=application_path.split("bin/appdata")[0]
 
 # Copied from syspaths.py
 CONFIG_DIR = os.path.join(ROOT_DIR, 'etc')

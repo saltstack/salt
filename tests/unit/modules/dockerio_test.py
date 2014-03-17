@@ -6,7 +6,6 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call
 
 ensure_in_syspath('../../')
 

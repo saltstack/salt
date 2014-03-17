@@ -140,7 +140,7 @@ def pull(cwd, opts=None, user=None):
 
     .. code-block:: bash
 
-        salt '*' hg.pull /path/to/repo '-u'
+        salt '*' hg.pull /path/to/repo opts=-u
     '''
     _check_hg()
 

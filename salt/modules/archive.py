@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 A module to wrap archive calls
+
+.. versionadded:: 2014.1.0 (Hydrogen)
 '''
 
 # Import salt libs
@@ -22,7 +24,7 @@ def __virtual__():
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
         return False
-    return 'archive'
+    return True
 
 
 @decorators.which('tar')
@@ -173,9 +175,12 @@ def zip_(zipfile, sources, template=None):
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, excludes=None, template=None):
+def unzip(zipfile, dest, excludes=None, template=None, options=None):
     '''
     Uses the unzip command to unpack zip files
+
+    options:
+        Options to pass to the ``unzip`` binary.
 
     CLI Example:
 
@@ -196,7 +201,11 @@ def unzip(zipfile, dest, excludes=None, template=None):
     if isinstance(excludes, salt._compat.string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
-    cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
+    if options:
+        cmd = 'unzip -{0} {1} -d {2}'.format(options, zipfile, dest)
+    else:
+        cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
+
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
     return __salt__['cmd.run'](cmd, template=template).splitlines()

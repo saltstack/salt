@@ -53,7 +53,7 @@ default location.
     master_opts = salt.config.master_config(
         os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
-    minion_opts = salt.config.client_config(
+    minion_opts = salt.config.minion_config(
         os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
 
 Salt's Python interface
@@ -63,8 +63,8 @@ LocalClient
 -----------
 
 .. autoclass:: salt.client.LocalClient
-    :members: cmd, run_job, cmd_async, cmd_subset, cmd_iter, cmd_iter_no_block,
-        get_cli_returns, get_event_iter_returns
+    :members: cmd, run_job, cmd_async, cmd_subset, cmd_batch, cmd_iter,
+        cmd_iter_no_block, get_cli_returns, get_event_iter_returns
 
 Salt Caller
 -----------

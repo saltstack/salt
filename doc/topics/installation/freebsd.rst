@@ -77,5 +77,5 @@ Start the Salt Minion as follows:
 
    service salt_minion start
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
 

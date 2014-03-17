@@ -53,7 +53,7 @@ def active():
     return ret
 
 
-def lookup_jid(jid, ext_source=None):
+def lookup_jid(jid, ext_source=None, output=True):
     '''
     Return the printout from a previously executed job
 
@@ -84,7 +84,8 @@ def lookup_jid(jid, ext_source=None):
 
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
-        salt.output.display_output(
+        if output:
+            salt.output.display_output(
                 {mid: ret[mid]},
                 data.get('out', None),
                 __opts__)
@@ -120,7 +121,7 @@ def list_job(jid):
     return ret
 
 
-def list_jobs():
+def list_jobs(ext_source=None):
     '''
     List all detectable jobs and associated functions
 
@@ -130,6 +131,14 @@ def list_jobs():
 
         salt-run jobs.list_jobs
     '''
+    if __opts__['ext_job_cache'] or ext_source:
+        out = 'nested'
+        returner = ext_source if ext_source else __opts__['ext_job_cache']
+        mminion = salt.minion.MasterMinion(__opts__)
+        ret = mminion.returners['{0}.get_jids'.format(returner)]()
+        salt.output.display_output(ret, out, __opts__)
+        return ret
+
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     for jid, job, t_path, final in _walk_through(job_dir):
@@ -173,10 +182,11 @@ def print_job(job_id):
 
 
 def _format_job_instance(job):
-    return {'Function': job['fun'],
-            'Arguments': list(job['arg']),
-            'Target': job['tgt'],
-            'Target-type': job['tgt_type'],
+    return {'Function': job.get('fun', 'unknown-function'),
+            'Arguments': list(job.get('arg', [])),
+            # unlikely but safeguard from invalid returns
+            'Target': job.get('tgt', 'unknown-target'),
+            'Target-type': job.get('tgt_type', []),
             'User': job.get('user', 'root')}
 
 

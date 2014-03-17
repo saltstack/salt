@@ -7,6 +7,12 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+Please note that the `rackspace` driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will *not* work with OpenStack-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the `openstack` driver
+instead.
+
 The rackspace cloud module interfaces with the Rackspace public cloud service
 and requires that two configuration parameters be set for use, ``user`` and
 ``apikey``.
@@ -430,14 +436,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data.__dict__)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',

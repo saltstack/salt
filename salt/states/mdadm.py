@@ -100,6 +100,8 @@ def present(name, opts=None):
     if changes:
         ret['comment'] = 'Raid {0} created.'.format(name)
         ret['changes'] = changes
+        # Saving config
+        __salt__['raid.save_config']()
     else:
         ret['comment'] = 'Raid {0} failed to be created.'.format(name)
         ret['result'] = False
