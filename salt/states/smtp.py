@@ -25,7 +25,7 @@ def __virtual__():
     return 'smtp' if 'smtp.send_msg' in __salt__ else False
 
 
-def send_msg(name, recipient, subject, sender, use_ssl='True', profile):
+def send_msg(name, recipient, subject, sender, profile, use_ssl='True'):
     '''
     Send a message via SMTP
 
