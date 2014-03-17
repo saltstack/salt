@@ -131,7 +131,7 @@ def present(name,
         ret['comment'] = (
             'The following group attributes are set to be changed:\n')
         for key, val in changes.items():
-                ret['comment'] += '{0}: {1}\n'.format(key, val)
+            ret['comment'] += '{0}: {1}\n'.format(key, val)
 
         if __opts__['test']:
             ret['result'] = None
