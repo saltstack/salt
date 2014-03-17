@@ -26,6 +26,7 @@ as either absent or present
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
@@ -102,7 +103,8 @@ def _changes(name,
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
     if home:
-        if lusr['home'] != home:
+        if lusr['home'] != home or not os.path.isdir(home):
+            __salt__['user.chhome'](name, home, True)
             change['home'] = home
     if shell:
         if lusr['shell'] != shell:
