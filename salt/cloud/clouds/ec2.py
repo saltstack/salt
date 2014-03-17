@@ -32,6 +32,31 @@ To use the EC2 cloud module, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
+      # SSH Gateways can be used with this provider. Gateways can be used
+      # when a salt-master is not on the same private network as the instance
+      # that is being deployed.
+
+      # Defaults to None
+      # Required
+      ssh_gateway: gateway.example.com
+
+      # Defaults to port 22
+      # Optional
+      ssh_gateway_port: 22
+
+      # Defaults to root
+      # Optional
+      ssh_gateway_username: root
+
+      # One authentication method is required. If both
+      # are specified, Private key wins.
+
+      # Private key defaults to None
+      ssh_gateway_private_key: /path/to/key.pem
+
+      # Password defaults to None
+      ssh_gateway_password: ExamplePasswordHere
+
       provider: ec2
 
 '''
@@ -107,6 +132,15 @@ DEFAULT_EC2_API_VERSION = '2013-10-01'
 
 if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
+
+EC2_RETRY_CODES = [
+    'RequestLimitExceeded',
+    'InsufficientInstanceCapacity',
+    'InternalError',
+    'Unavailable',
+    'InsufficientAddressCapacity',
+    'InsufficientReservedInstanceCapacity',
+]
 
 
 # Only load in this module if the EC2 configurations are in place
@@ -202,61 +236,127 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
+def optimize_providers(providers):
+    '''
+    Return an optimized list of providers.
+
+    We want to reduce the duplication of querying
+    the same region.
+
+    If a provider is using the same credentials for the same region
+    the same data will be returned for each provider, thus causing
+    un-wanted duplicate data and API calls to EC2.
+
+    '''
+    tmp_providers = {}
+    optimized_providers = {}
+
+    for name, data in providers.iteritems():
+        if 'location' not in data:
+            data['location'] = DEFAULT_LOCATION
+
+        if data['location'] not in tmp_providers:
+            tmp_providers[data['location']] = {}
+
+        creds = (data['id'], data['key'])
+        if creds not in tmp_providers[data['location']]:
+            tmp_providers[data['location']][creds] = {'name': name,
+                                                      'data': data,
+                                                      }
+
+    for location, tmp_data in tmp_providers.iteritems():
+        for creds, data in tmp_data.iteritems():
+            _id, _key = creds
+            _name = data['name']
+            _data = data['data']
+            if _name not in optimized_providers:
+                optimized_providers[_name] = _data
+
+    return optimized_providers
+
+
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
 
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
-    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    attempts = 5
+    while attempts > 0:
+        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    if not location:
-        location = get_location()
+        if not location:
+            location = get_location()
 
-    if not requesturl:
-        method = 'GET'
+        if not requesturl:
+            method = 'GET'
 
-        endpoint = provider.get(
-            'endpoint',
-            'ec2.{0}.{1}'.format(location, service_url)
-        )
-
-        ec2_api_version = provider.get(
-            'ec2_api_version',
-            DEFAULT_EC2_API_VERSION
-        )
-
-        params['AWSAccessKeyId'] = provider['id']
-        params['SignatureVersion'] = '2'
-        params['SignatureMethod'] = 'HmacSHA256'
-        params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = ec2_api_version
-        keys = sorted(params.keys())
-        values = map(params.get, keys)
-        querystring = urllib.urlencode(list(zip(keys, values)))
-
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
-
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-        sig = binascii.b2a_base64(hashed.digest())
-        params['Signature'] = sig.strip()
-
-        querystring = urllib.urlencode(params)
-        requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
-
-    log.debug('EC2 Request: {0}'.format(requesturl))
-    try:
-        result = urllib2.urlopen(requesturl)
-        log.debug(
-            'EC2 Response Status Code: {0}'.format(
-                result.getcode()
+            endpoint = provider.get(
+                'endpoint',
+                'ec2.{0}.{1}'.format(location, service_url)
             )
-        )
-    except urllib2.URLError as exc:
-        root = ET.fromstring(exc.read())
-        data = _xml_to_dict(root)
+
+            ec2_api_version = provider.get(
+                'ec2_api_version',
+                DEFAULT_EC2_API_VERSION
+            )
+
+            params['AWSAccessKeyId'] = provider['id']
+            params['SignatureVersion'] = '2'
+            params['SignatureMethod'] = 'HmacSHA256'
+            params['Timestamp'] = '{0}'.format(timestamp)
+            params['Version'] = ec2_api_version
+            keys = sorted(params.keys())
+            values = map(params.get, keys)
+            querystring = urllib.urlencode(list(zip(keys, values)))
+
+            uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                            endpoint.encode('utf-8'),
+                                            querystring.encode('utf-8'))
+
+            hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+            sig = binascii.b2a_base64(hashed.digest())
+            params['Signature'] = sig.strip()
+
+            querystring = urllib.urlencode(params)
+            requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
+
+        log.debug('EC2 Request: {0}'.format(requesturl))
+        try:
+            result = urllib2.urlopen(requesturl)
+            log.debug(
+                'EC2 Response Status Code: {0}'.format(
+                    result.getcode()
+                )
+            )
+            break
+        except urllib2.URLError as exc:
+            root = ET.fromstring(exc.read())
+            data = _xml_to_dict(root)
+
+            # check to see if we should retry the query
+            err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
+            if attempts > 0 and err_code and err_code in EC2_RETRY_CODES:
+                attempts -= 1
+                log.error(
+                    'EC2 Response Status Code and Error: [{0} {1}] {2}; '
+                    'Attempts remaining: {3}'.format(
+                        exc.code, exc.msg, data, attempts
+                    )
+                )
+                # Wait a bit before continuing to prevent throttling
+                time.sleep(2)
+                continue
+
+            log.error(
+                'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                    exc.code, exc.msg, data
+                )
+            )
+            if return_url is True:
+                return {'error': data}, requesturl
+            return {'error': data}
+    else:
         log.error(
             'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
                 exc.code, exc.msg, data
@@ -646,6 +746,65 @@ def ssh_interface(vm_):
     )
 
 
+def get_ssh_gateway_config(vm_):
+    '''
+    Return the ssh_gateway configuration.
+    '''
+    ssh_gateway = config.get_cloud_config_value(
+        'ssh_gateway', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check to see if a SSH Gateway will be used.
+    if not isinstance(ssh_gateway, str):
+        return None
+
+    # Create dictionary of configuration items
+
+    # ssh_gateway
+    ssh_gateway_config = {'ssh_gateway': ssh_gateway}
+
+    # ssh_gateway_port
+    ssh_gateway_config['ssh_gateway_port'] = config.get_cloud_config_value(
+        'ssh_gateway_port', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_username
+    ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
+        'ssh_gateway_username', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_private_key
+    ssh_gateway_config['ssh_gateway_key'] = config.get_cloud_config_value(
+        'ssh_gateway_private_key', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_password
+    ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
+        'ssh_gateway_password', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Check if private key exists
+    key_filename = ssh_gateway_config['ssh_gateway_key']
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+    elif key_filename is None and not ssh_gateway_config['ssh_gateway_password']:
+        raise SaltCloudConfigError(
+            'No authentication method. Please define: '
+            ' ssh_gateway_password or ssh_gateway_private_key'
+        )
+
+    return ssh_gateway_config
+
+
 def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
@@ -870,6 +1029,11 @@ def create(vm_=None, call=None):
                 key_filename
             )
         )
+
+    # Get SSH Gateway config early to verify the private_key,
+    # if used, exists or not. We don't want to deploy an instance
+    # and not be able to access it via the gateway.
+    ssh_gateway_config = get_ssh_gateway_config(vm_)
 
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
@@ -1198,7 +1362,9 @@ def create(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = query(params, location=location, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, location=location, return_url=True
+        )
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -1323,8 +1489,8 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address,
-                                        timeout=ssh_connect_timeout):
+    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout,
+                                        gateway=ssh_gateway_config):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
@@ -1332,7 +1498,8 @@ def create(vm_=None, call=None):
                 ssh_timeout=config.get_cloud_config_value(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=key_filename,
-                display_ssh_output=display_ssh_output
+                display_ssh_output=display_ssh_output,
+                gateway=ssh_gateway_config
             ):
                 username = user
                 break
@@ -1418,6 +1585,10 @@ def create(vm_=None, call=None):
                 'win_password', vm_, __opts__, default=''
             )
 
+        # Copy ssh_gateway_config into deploy scripts
+        if ssh_gateway_config:
+            deploy_kwargs['gateway'] = ssh_gateway_config
+
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
         del event_kwargs['minion_pem']
@@ -1425,6 +1596,9 @@ def create(vm_=None, call=None):
         del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
             del event_kwargs['password']
+        if 'gateway' in event_kwargs:
+            if 'ssh_gateway_password' in event_kwargs['gateway']:
+                del event_kwargs['gateway']['ssh_gateway_password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -2143,7 +2317,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data, requesturl = query(params, return_url=True)
+    data = query(params)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -2230,7 +2404,8 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = query(params, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, return_url=True)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -2470,6 +2645,142 @@ def delete_keypair(kwargs=None, call=None):
 
     params = {'Action': 'DeleteKeyPair',
               'KeyName.1': kwargs['keyname']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The create_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'volume_id' not in kwargs:
+        log.error('A volume_id must be specified to create a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = 'pew'
+
+    params = {'Action': 'CreateSnapshot'}
+
+    if 'volume_id' in kwargs:
+        params['VolumeId'] = kwargs['volume_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def delete_snapshot(kwargs=None, call=None):
+    '''
+    Delete a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'snapshot_id' not in kwargs:
+        log.error('A snapshot_id must be specified to delete a snapshot.')
+        return False
+
+    params = {'Action': 'DeleteSnapshot'}
+
+    if 'snapshot_id' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot_id']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def copy_snapshot(kwargs=None, call=None):
+    '''
+    Copy a snapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The copy_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    if 'source_region' not in kwargs:
+        log.error('A source_region must be specified to copy a snapshot.')
+        return False
+
+    if 'source_snapshot_id' not in kwargs:
+        log.error('A source_snapshot_id must be specified to copy a snapshot.')
+        return False
+
+    if 'description' not in kwargs:
+        kwargs['description'] = ''
+
+    params = {'Action': 'CopySnapshot'}
+
+    if 'source_region' in kwargs:
+        params['SourceRegion'] = kwargs['source_region']
+
+    if 'source_snapshot_id' in kwargs:
+        params['SourceSnapshotId'] = kwargs['source_snapshot_id']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def describe_snapshots(kwargs=None, call=None):
+    '''
+    Describe a snapshots
+    Options:   snapshot_id - One or more snapshot IDs.
+                             Multiple IDs must be separated by ",".
+                     owner - Returns the snapshots owned by the specified owner. Multiple owners can be specified.
+                             Valid values: self | amazon | AWS Account ID
+                             Multiple values must be separated by ",".
+             restorable_by - One or more AWS accounts IDs that can create volumes from the snapshot.
+                             Multiple aws account IDs must be separated by ",".
+
+    TODO: Add all of the filters.
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_snapshot function must be called with -f or --function.'
+        )
+        return False
+
+    params = {'Action': 'DescribeSnapshots'}
+
+    if 'snapshot_ids' in kwargs:
+        snapshot_ids = kwargs['snapshot_ids'].split(',')
+        for snapshot_index, snapshot_id in enumerate(snapshot_ids):
+            params['SnapshotId.{0}'.format(snapshot_index)] = snapshot_id
+
+    if 'owner' in kwargs:
+        owners = kwargs['owner'].split(',')
+        for owner_index, owner in enumerate(owners):
+            params['Owner.{0}'.format(owner_index)] = owner
+
+    if 'restorable_by' in kwargs:
+        restorable_bys = kwargs['restorable_by'].split(',')
+        for restorable_by_index, restorable_by in enumerate(restorable_bys):
+            params['RestorableBy.{0}'.format(restorable_by_index)] = restorable_by
+
+    log.debug(params)
 
     data = query(params, return_root=True)
     return data

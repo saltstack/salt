@@ -240,11 +240,11 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
-        if isinstance(data['ips'], list) and len(data['ips']) > 0:
+        if isinstance(data['ips'], list) and len(data['ips']):
             return data
 
     if 'ips' in data:
-        if isinstance(data['ips'], list) and len(data['ips']) <= 0:
+        if isinstance(data['ips'], list) and not len(data['ips']):
             log.info(
                 'New joyent asynchronous machine creation api detected...'
                 '\n\t\t-- please wait for IP addresses to be assigned...'
@@ -381,14 +381,14 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
-
-    ret.update(data)
 
     salt.utils.cloud.fire_event(
         'event',

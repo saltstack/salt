@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Check if we have peer access ?
     '''
-    return 'modjk_worker'
+    return True
 
 
 def _send_command(cmd,
@@ -68,7 +68,7 @@ def _send_command(cmd,
             cmd
         )
         return ret
-    elif len(errors) > 0:
+    elif len(errors):
         ret['msg'] = 'the following minions return False'
         ret['minions'] = errors
         return ret

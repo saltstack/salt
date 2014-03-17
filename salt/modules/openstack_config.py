@@ -23,7 +23,7 @@ except ImportError:
 
 if hasattr(shlex, 'quote'):
     _quote = shlex.quote
-elif hasattr(pipes, 'quote'):
+elif HAS_DEPS and hasattr(pipes, 'quote'):
     _quote = pipes.quote
 else:
     _quote = None
@@ -37,7 +37,7 @@ __func_alias__ = {
 def __virtual__():
     if _quote is None and not HAS_DEPS:
         return False
-    return 'openstack_config'
+    return True
 
 
 def _fallback(*args, **kw):

@@ -45,7 +45,7 @@ def __virtual__():
     '''
     Only load if the composer module is available in __salt__
     '''
-    return 'composer' if 'composer.install' in __salt__ else False
+    return 'composer.install' in __salt__
 
 
 def installed(name,

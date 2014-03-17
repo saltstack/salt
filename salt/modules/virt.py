@@ -575,7 +575,7 @@ def init(name,
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
 
-            except os.error:
+            except (IOError, OSError):
                 return False
             seedable = True
         else:
@@ -871,11 +871,11 @@ def get_disks(vm_):
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
-        if len(sources) > 0:
+        if len(sources):
             source = sources[0]
         else:
             continue
-        if len(targets) > 0:
+        if len(targets):
             target = targets[0]
         else:
             continue

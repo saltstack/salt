@@ -42,7 +42,8 @@ def managed(name,
             index_url=None,
             extra_index_url=None,
             pre_releases=False,
-            no_deps=False):
+            no_deps=False,
+            pip_exists_action=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -57,6 +58,9 @@ def managed(name,
         Prefer wheel archives (requires pip>=1.4)
     no_deps: False
         Pass `--no-deps` to `pip`.
+    pip_exists_action: None
+        Default action of pip when a path already exists: (s)witch, (i)gnore,
+        (w)wipe, (b)ackup
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -202,6 +206,7 @@ def managed(name,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
             pre_releases=pre_releases,
+            exists_action=pip_exists_action,
             no_deps=no_deps,
         )
         ret['result'] &= _ret['retcode'] == 0
