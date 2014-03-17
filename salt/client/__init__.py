@@ -125,7 +125,8 @@ class LocalClient(object):
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
-                self.opts['transport'])
+                self.opts['transport'],
+                listen=not self.opts.get('__worker', False))
 
     def __read_master_key(self):
         '''

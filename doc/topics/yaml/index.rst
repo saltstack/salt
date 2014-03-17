@@ -53,6 +53,8 @@ Alternatively, a value can be associated with a key through indentation.
 
 In Python, the above maps to:
 
+.. code-block:: python
+
     {'my_key': 'my_value'}
 
 Dictionaries can be nested:
@@ -72,7 +74,7 @@ And in Python:
         }
     }
 
-Rules Three: Dashes
+Rule Three: Dashes
 -------------------
 
 To represent lists of items, a single dash followed by a space is used. Multiple

@@ -2,6 +2,10 @@
 
 house worker
 
-framer uxdrouter be active first start
+framer uxdrouter be active first setup
+   frame setup
+      enter
+         do worker setup
+      go start
    frame start
       do worker router

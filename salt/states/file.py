@@ -2695,9 +2695,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             ret, 'Directory not present to touch file {0}'.format(name)
         )
 
-    ret['result'] = __salt__['file.touch'](name, atime, mtime)
-
     extant = os.path.exists(name)
+
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -2705,6 +2705,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
+        ret['changes']['touched'] = name
 
     return ret
 
