@@ -84,9 +84,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         Install salt-minion, if absent. Default: true.
 
     prep_install
-        Prepare the bootstrap script, but don't run it. The files needed for
-        installation (bootstrap.py, config, and keys) will be placed in /tmp
-        on the target path/device. Default: false
+        Prepare the bootstrap script, but don't run it. Default: false
     '''
     stats = __salt__['file.stats'](path, follow_symlinks=True)
     if not stats:
@@ -199,9 +197,17 @@ def _check_resolv(mpt):
 
 
 def _check_install(root):
-    cmd = ('chroot {0} /bin/sh -c if ! type salt-minion; '
-           'then exit 1; fi').format(root)
-    return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
+    sh_ = '/bin/sh'
+    if os.path.isfile(os.path.join(root, 'bin/bash')):
+        sh_ = '/bin/bash'
+
+    cmd = ('if ! type salt-minion; then exit 1; fi').format(root)
+    cmd = 'chroot {0} {1} -c {2!r}'.format(
+        root,
+        sh_,
+        cmd)
+
+    return not __salt__['cmd.retcode'](cmd) #, output_loglevel='quiet')
 
 
 def _chroot_exec(root, cmd):
