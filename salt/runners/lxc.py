@@ -125,7 +125,7 @@ def init(name,
     for host, containers in data.items():
         if name in sum(containers.values(), []):
             print('Container \'{0}\' already exists on host \'{1}\''.format(
-                host))
+                  name, host))
             return False
 
     if host is None:
