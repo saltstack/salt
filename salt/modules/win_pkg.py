@@ -203,7 +203,7 @@ def version(*names, **kwargs):
             versions = _get_package_info(name)
             if versions:
                 for val in versions.itervalues():
-                    if 'full_name' in val and len(val.get('full_name', '')):
+                    if 'full_name' in val and len(val.get('full_name', '')) > 0:
                         reverse_dict[val.get('full_name', '')] = name
                         win_names.append(val.get('full_name', ''))
             else:
@@ -211,7 +211,7 @@ def version(*names, **kwargs):
         nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
         if len(nums):
             for num, val in nums.iteritems():
-                if len(val):
+                if len(val) > 0:
                     try:
                         ret[reverse_dict[num]] = val
                     except KeyError:
