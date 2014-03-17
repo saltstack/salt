@@ -44,6 +44,7 @@ class RAETChannel(Channel):
     '''
     def __init__(self, opts, **kwargs):
         self.opts = opts
+        self.ttype = 'raet'
         self.__prep_stack()
 
     def __prep_stack(self):
@@ -71,7 +72,7 @@ class RAETChannel(Channel):
         '''
         return self.send(load, tries, timeout)
 
-    def send(self, load, tries, timeout):
+    def send(self, load, tries=3, timeout=60):
         '''
         Send a message load and wait for a relative reply
         '''
