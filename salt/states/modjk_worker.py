@@ -68,7 +68,7 @@ def _send_command(cmd,
             cmd
         )
         return ret
-    elif len(errors):
+    elif len(errors) > 0:
         ret['msg'] = 'the following minions return False'
         ret['minions'] = errors
         return ret

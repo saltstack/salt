@@ -871,11 +871,11 @@ def get_disks(vm_):
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
-        if len(sources):
+        if len(sources) > 0:
             source = sources[0]
         else:
             continue
-        if len(targets):
+        if len(targets) > 0:
             target = targets[0]
         else:
             continue
