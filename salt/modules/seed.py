@@ -207,7 +207,7 @@ def _check_install(root):
         sh_,
         cmd)
 
-    return not __salt__['cmd.retcode'](cmd) #, output_loglevel='quiet')
+    return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
 
 
 def _chroot_exec(root, cmd):
