@@ -289,7 +289,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
             'http://internal/url' 'http://adminurl/url' region
     '''
     kstone = auth(profile)
-    keystone_service = service_get(name=service)
+    keystone_service = service_get(name=service, **connection_args)
     if not keystone_service or 'Error' in keystone_service:
         return {'Error': 'Could not find the specified service'}
     kstone.endpoints.create(region=region,
@@ -297,7 +297,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
                             publicurl=publicurl,
                             adminurl=adminurl,
                             internalurl=internalurl)
-    return endpoint_get(service)
+    return endpoint_get(service, **connection_args)
 
 
 def endpoint_delete(service, profile=None, **connection_args):
