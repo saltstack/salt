@@ -5,7 +5,6 @@ Support for the Git SCM
 
 # Import python libs
 import os
-import tempfile
 try:
     import pipes
     HAS_PIPES = True
@@ -25,36 +24,6 @@ def __virtual__():
     return True
 
 
-def _git_ssh_helper(identity):
-    '''
-    Returns the path to a helper script which can be used in the GIT_SSH env
-    var to use a custom private key file.
-    '''
-    opts = {
-        'StrictHostKeyChecking': 'no',
-        'PasswordAuthentication': 'no',
-        'KbdInteractiveAuthentication': 'no',
-        'ChallengeResponseAuthentication': 'no',
-    }
-
-    helper = tempfile.NamedTemporaryFile(delete=False)
-
-    helper.writelines([
-        '#!/bin/sh\n',
-        'exec ssh {opts} -i {identity} $*\n'.format(
-            opts=' '.join('-o%s=%s' % (key, value)
-                          for key, value in opts.items()),
-            identity=identity,
-        )
-    ])
-
-    helper.close()
-
-    os.chmod(helper.name, 0755)
-
-    return helper.name
-
-
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
@@ -66,10 +35,10 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     env = {}
 
     if identity:
-        helper = _git_ssh_helper(identity)
-
         env = {
-            'GIT_SSH': helper
+            'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
+                                    'ssh-id-wrapper'),
+            'GIT_IDENTITY': identity
         }
 
     result = __salt__['cmd.run_all'](cmd,
@@ -77,9 +46,6 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                                      runas=runas,
                                      env=env,
                                      **kwargs)
-
-    if identity:
-        os.unlink(helper)
 
     retcode = result['retcode']
 
