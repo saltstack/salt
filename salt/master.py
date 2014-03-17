@@ -161,8 +161,23 @@ class Master(SMaster):
         pillargitfs = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                br, loc = opts_dict['git'].strip().split()
-                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
+                    )
+                else:
+                    pillargitfs.append(
+                        git_pillar.GitPillar(
+                            br,
+                            loc,
+                            self.opts
+                        )
+                    )
 
         # Clear remote fileserver backend env cache so it gets recreated during
         # the first loop_interval
@@ -1689,13 +1704,12 @@ class ClearFuncs(object):
             return True
 
         # After we've ascertained we're not on windows
-        import grp
         try:
             user = self.opts['user']
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+            groups = salt.utils.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '

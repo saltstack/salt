@@ -10,6 +10,7 @@ import logging
 
 # Import Salt libs
 from salt.transport.road.raet import stacking
+from salt.transport.road.raet import raeting
 from salt.transport.road.raet import yarding
 import salt.config
 import salt.client
@@ -54,6 +55,7 @@ class LocalClient(salt.client.LocalClient):
                 yid=yid,
                 lanename='master',
                 dirpath=self.opts['sock_dir'])
+        stack.Pk = raeting.packKinds.pack
         router_yard = yarding.Yard(
                 prefix='master',
                 yid=0,
@@ -68,5 +70,4 @@ class LocalClient(salt.client.LocalClient):
             time.sleep(0.001)
             stack.serviceAll()
             for msg in stack.rxMsgs:
-                print msg
-                return msg
+                return msg.get('return', {}).get('ret', {})

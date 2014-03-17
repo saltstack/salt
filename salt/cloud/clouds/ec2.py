@@ -2744,9 +2744,17 @@ def copy_snapshot(kwargs=None, call=None):
     return data
 
 
-def describe_snapshot(kwargs=None, call=None):
+def describe_snapshots(kwargs=None, call=None):
     '''
-    Describe a snapshot
+    Describe a snapshots
+    Options:   snapshot_id - One or more snapshot IDs.
+                             Multiple IDs must be separated by ",".
+                     owner - Returns the snapshots owned by the specified owner. Multiple owners can be specified.
+                             Valid values: self | amazon | AWS Account ID
+                             Multiple values must be separated by ",".
+             restorable_by - One or more AWS accounts IDs that can create volumes from the snapshot.
+                             Multiple aws account IDs must be separated by ",".
+
     TODO: Add all of the filters.
     '''
     if call != 'function':
@@ -2755,14 +2763,22 @@ def describe_snapshot(kwargs=None, call=None):
         )
         return False
 
-    if 'snapshot_id' not in kwargs:
-        log.error('A snapshot_id must be specified to describe a snapshot.')
-        return False
-
     params = {'Action': 'DescribeSnapshots'}
 
-    if 'snapshot_id' in kwargs:
-        params['SnapshotId'] = kwargs['snapshot_id']
+    if 'snapshot_ids' in kwargs:
+        snapshot_ids = kwargs['snapshot_ids'].split(',')
+        for snapshot_index, snapshot_id in enumerate(snapshot_ids):
+            params['SnapshotId.{0}'.format(snapshot_index)] = snapshot_id
+
+    if 'owner' in kwargs:
+        owners = kwargs['owner'].split(',')
+        for owner_index, owner in enumerate(owners):
+            params['Owner.{0}'.format(owner_index)] = owner
+
+    if 'restorable_by' in kwargs:
+        restorable_bys = kwargs['restorable_by'].split(',')
+        for restorable_by_index, restorable_by in enumerate(restorable_bys):
+            params['RestorableBy.{0}'.format(restorable_by_index)] = restorable_by
 
     log.debug(params)
 

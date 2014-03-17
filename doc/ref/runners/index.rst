@@ -31,6 +31,9 @@ invoked with the following command:
 
     # salt-run test.foo
 
+To add custom runners, put them in a directory and add it to
+:conf_master:`runner_dirs` in the master configuration file.
+
 Examples
 --------
 

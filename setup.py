@@ -20,6 +20,7 @@ from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
+from distutils.command.install_lib import install_lib
 # pylint: enable=E0611
 
 try:
@@ -380,6 +381,20 @@ class Install(install):
         install.run(self)
 
 
+class InstallLib(install_lib):
+    def run(self):
+        install_lib.run(self)
+
+        # input and outputs match 1-1
+        inp = self.get_inputs()
+        out = self.get_outputs()
+
+        idx = inp.index('build/lib/salt/templates/git/ssh-id-wrapper')
+        filename = out[idx]
+
+        os.chmod(filename, 0755)
+
+
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
@@ -448,6 +463,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.search',
                              'salt.states',
                              'salt.tops',
+                             'salt.templates',
                              'salt.transport',
                              'salt.transport.road',
                              'salt.transport.road.raet',
@@ -464,7 +480,8 @@ SETUP_KWARGS = {'name': NAME,
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
-                                    'virt/*.jinja'
+                                    'virt/*.jinja',
+                                    'git/*'
                                     ],
                                  'salt.daemons.flo': [
                                     '*.flo'
@@ -488,6 +505,7 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
+    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
     #SETUP_KWARGS['packages'].extend(['salt.cloud',
     #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']

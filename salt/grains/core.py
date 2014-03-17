@@ -517,7 +517,7 @@ def _virtual(osdata):
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
-            else:
+            elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
         elif isdir('/proc/sys/xen') or isdir('/sys/bus/xen') or isdir('/proc/xen'):
             if os.path.isfile('/proc/xen/xsd_kva'):
@@ -1194,6 +1194,16 @@ def saltversion():
     #   saltversion
     from salt.version import __version__
     return {'saltversion': __version__}
+
+
+def zmqversion():
+    '''
+    Return the zeromq version
+    '''
+    # Provides:
+    #   zmqversion
+    import zmq
+    return {'zmqversion': zmq.zmq_version()}
 
 
 def saltversioninfo():

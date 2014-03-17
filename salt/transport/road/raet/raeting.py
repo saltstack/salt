@@ -166,22 +166,22 @@ trnsKinds = TrnsKind(**TRNS_KINDS)
 
 PCKT_KINDS = odict([('message', 0), ('ack', 1), ('nack', 2),
                     ('request', 3), ('response', 4),
-                    ('hello', 4), ('cookie', 5), ('initiate', 6),
+                    ('hello', 5), ('cookie', 6), ('initiate', 7),
                     ('unknown', 255)])
 PCKT_KIND_NAMES = odict((v, k) for k, v in PCKT_KINDS.iteritems())  # inverse map
 PcktKind = namedtuple('PcktKind', PCKT_KINDS.keys())
 pcktKinds = PcktKind(**PCKT_KINDS)
 
-HELLO_PACKER = struct.Struct('<64s32s80s24s') #curvecp hello packet body endow trans
+HELLO_PACKER = struct.Struct('<64s32s80s24s') #curvecp allow trans bodies
 COOKIESTUFF_PACKER = struct.Struct('<32sLL24s')
 COOKIE_PACKER = struct.Struct('<80s24s')
 INITIATESTUFF_PACKER = struct.Struct('<32s48s24s128s')
-INITIATE_PACKER = struct.Struct('32s24s248s24s')
+INITIATE_PACKER = struct.Struct('<32s24s248s24s')
 
-ACCEPTANCES = odict([('rejected', 0), ('accepted', 1), ('pending', 2),])
+ACCEPTANCES = odict([('pending', 0), ('accepted', 1), ('rejected', 2),])
 ACCEPTANCE_NAMES = odict((v, k) for k, v in ACCEPTANCES.iteritems())  # inverse map
 Acceptance = namedtuple('Acceptance', ACCEPTANCES.keys())
-acceptance = Acceptance(**ACCEPTANCES)
+acceptances = Acceptance(**ACCEPTANCES)
 
 PACK_KINDS = odict([('json', 0), ('pack', 1)])
 PACK_KIND_NAMES = odict((v, k) for k, v in PACK_KINDS.iteritems())  # inverse map

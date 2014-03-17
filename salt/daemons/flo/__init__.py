@@ -18,10 +18,13 @@ opts['ioflo_verbose']
 '''
 
 # Import modules
-from . import master
-from . import minion
+from . import core
+from . import worker
 
-__all__ = ['master', 'minion']
+__all__ = ['core', 'worker']
+
+# Import salt libs
+import salt.daemons.masterapi
 
 # Import ioflo libs
 import ioflo.app.run
@@ -31,7 +34,6 @@ def explode_opts(opts):
     '''
     Explode the opts into a preloads list
     '''
-    preloads = []
     preloads = [('.salt.opts', dict(value=opts))]
     for key, val in opts.items():
         ukey = key.replace('.', '_')
@@ -48,6 +50,10 @@ class IofloMaster(object):
         Assign self.opts
         '''
         self.opts = opts
+        self.preloads = explode_opts(self.opts)
+        self.access_keys = salt.daemons.masterapi.access_keys(self.opts)
+        self.preloads.append(
+                ('.salt.access_keys', dict(value=self.access_keys)))
 
     def start(self):
         '''
@@ -56,7 +62,6 @@ class IofloMaster(object):
         port = self.opts['raet_port']
         '''
         behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
-        preloads = explode_opts(self.opts)
         ioflo.app.run.start(
                 name='master',
                 period=float(self.opts['ioflo_period']),
@@ -69,7 +74,7 @@ class IofloMaster(object):
                 mode=None,
                 houses=None,
                 metas=None,
-                preloads=preloads,
+                preloads=self.preloads,
                 verbose=int(self.opts['ioflo_verbose']),
                 )
 

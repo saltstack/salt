@@ -68,7 +68,7 @@ lookup_jid
 ----------
 
 When jobs are executed the return data is sent back to the master and cached.
-By default is is cached for 24 hours, but this can be configured via the
+By default it is cached for 24 hours, but this can be configured via the
 ``keep_jobs`` option in the master configuration.
 Using the lookup_jid runner will display the same return data that the initial
 job invocation with the salt command would display.

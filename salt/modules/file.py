@@ -29,7 +29,7 @@ import stat
 import sys
 import tempfile
 import time
-from glob import glob
+import glob
 
 try:
     import grp
@@ -64,7 +64,7 @@ def __virtual__():
     # win_file takes care of windows
     if salt.utils.is_windows():
         return False
-    return 'file'
+    return True
 
 
 def __clean_tmp(sfn):
@@ -401,18 +401,21 @@ def check_hash(path, hash):
     path
         A file path
     hash
-        A string in the form <hash_type>=<hash_value>. For example:
-        ``md5=e138491e9d5b97023cea823fe17bac22``
+        A string in the form <hash_type>:<hash_value>. For example:
+        ``md5:e138491e9d5b97023cea823fe17bac22``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5=<md5sum>
+        salt '*' file.check_hash /etc/fstab md5:<md5sum>
     '''
-    hash_parts = hash.split('=', 1)
+    hash_parts = hash.split(':', 1)
     if len(hash_parts) != 2:
-        raise ValueError('Bad hash format: {0!r}'.format(hash))
+        # Support "=" for backward compatibility.
+        hash_parts = hash.split('=', 1)
+        if len(hash_parts) != 2:
+            raise ValueError('Bad hash format: {0!r}'.format(hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -891,6 +894,9 @@ def replace(path,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             dry_run=False,
             search_only=False,
@@ -920,6 +926,15 @@ def replace(path,
         before processing. Note: multiline searches must specify ``file``
         buffering.
     :type bufsize: int or str
+
+    :param append_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param prepend_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param not_found_content Content to use for append/prepend if not found. If
+        None (default), uses repl. Useful when repl uses references to group in
+        pattern.
+
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -949,6 +964,12 @@ def replace(path,
             .format(path)
         )
 
+    if search_only and (append_if_not_found or prepend_if_not_found):
+        raise SaltInvocationError('Choose between search_only and append/prepend_if_not_found')
+
+    if append_if_not_found and prepend_if_not_found:
+        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+
     flags_num = _get_flags(flags)
     cpattern = re.compile(pattern, flags_num)
     if bufsize == 'file':
@@ -970,6 +991,7 @@ def replace(path,
                     backup=False if dry_run else backup,
                     bufsize=bufsize,
                     mode='rb')
+    found = False
     for line in fi_file:
 
         if search_only:
@@ -979,7 +1001,11 @@ def replace(path,
             if result:
                 return True
         else:
-            result = re.sub(cpattern, repl, line, count)
+            result, nrepl = re.subn(cpattern, repl, line, count)
+
+            # found anything? (even if no change)
+            if nrepl > 0:
+                found = True
 
             # Identity check each potential change until one change is made
             if has_changes is False and not result is line:
@@ -992,6 +1018,27 @@ def replace(path,
             if not dry_run:
                 print(result, end='', file=sys.stdout)
     fi_file.close()
+
+    if not found and (append_if_not_found or prepend_if_not_found):
+        if None == not_found_content:
+            not_found_content = repl
+        if prepend_if_not_found:
+            new_file.insert(not_found_content + '\n')
+        else:
+            # append_if_not_found
+            # Make sure we have a newline at the end of the file
+            if 0 != len(new_file):
+                if not new_file[-1].endswith('\n'):
+                    new_file[-1] += '\n'
+            new_file.append(not_found_content + '\n')
+        has_changes = True
+        if not dry_run:
+            # backup already done in filter part
+            # write new content in the file while avoiding partial reads
+            f = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                f.write(line)
+            f.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1147,6 +1194,10 @@ def blockreplace(path,
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
+            # Make sure we have a newline at the end of the file
+            if 0 != len(new_file):
+                if not new_file[-1].endswith('\n'):
+                    new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
             new_file.append(content + '\n')
@@ -1393,7 +1444,7 @@ def append(path, *args):
         try:
             ofile.seek(-1, os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL:
+            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
@@ -1885,7 +1936,7 @@ def path_exists_glob(path):
         salt '*' file.path_exists_glob /etc/pam*/pass*
 
     '''
-    return True if glob(path) else False
+    return True if glob.glob(path) else False
 
 
 def restorecon(path, recursive=False):

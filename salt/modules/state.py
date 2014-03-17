@@ -249,10 +249,13 @@ def highstate(test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = copy.deepcopy(__opts__)
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
+    if test is None:
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = test
 
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -719,6 +722,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         __context__['retcode'] = 1
         return err
 
+    st_._mod_init(kwargs)
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)

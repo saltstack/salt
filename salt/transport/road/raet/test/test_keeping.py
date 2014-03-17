@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests to try out packeting. Potentially ephemeral
+Tests to try out keeping. Potentially ephemeral
 
 '''
 # pylint: skip-file
@@ -17,6 +17,8 @@ def test():
     Test keeping.
     '''
 
+
+    masterDirpath = os.path.join(os.getcwd(), 'keep', 'master')
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
     masterVerKeyHex = signer.verhex
@@ -24,6 +26,7 @@ def test():
     masterPriKeyHex = privateer.keyhex
     masterPubKeyHex = privateer.pubhex
 
+    m1Dirpath = os.path.join(os.getcwd(), 'keep', 'minion1')
     signer = nacling.Signer()
     m1SignKeyHex = signer.keyhex
     m1VerKeyHex = signer.verhex
@@ -45,20 +48,23 @@ def test():
     m3PriKeyHex = privateer.keyhex
     m3PubKeyHex = privateer.pubhex
 
+    keeping.clearAllRoadSafe(masterDirpath)
+    keeping.clearAllRoadSafe(m1Dirpath)
+
     #master stack
     dirpath = os.path.join(os.getcwd(), 'keep', 'master')
     estate = estating.LocalEstate(  eid=1,
                                     name='master',
                                     sigkey=masterSignKeyHex,
                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, dirpath=dirpath)
+    stack0 = stacking.StackUdp(estate=estate, dirpath=masterDirpath)
 
-    stack0.addRemoteEstate(estating.RemoteEstate(eid=2,
+    stack0.addRemote(estating.RemoteEstate(eid=2,
                                     ha=('127.0.0.1', 7532),
                                     verkey=m1VerKeyHex,
                                     pubkey=m1PubKeyHex,))
 
-    stack0.addRemoteEstate(estating.RemoteEstate(eid=3,
+    stack0.addRemote(estating.RemoteEstate(eid=3,
                                     ha=('127.0.0.1', 7533),
                                     verkey=m2VerKeyHex,
                                     pubkey=m2PubKeyHex,))
@@ -70,15 +76,15 @@ def test():
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=m1SignKeyHex,
                                      prikey=m1PriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate, dirpath=dirpath)
+    stack1 = stacking.StackUdp(estate=estate, dirpath=m1Dirpath)
 
 
-    stack1.addRemoteEstate(estating.RemoteEstate(eid=1,
+    stack1.addRemote(estating.RemoteEstate(eid=1,
                                     ha=('127.0.0.1', 7532),
                                     verkey=masterVerKeyHex,
                                     pubkey=masterPubKeyHex,))
 
-    stack1.addRemoteEstate(estating.RemoteEstate(eid=4,
+    stack1.addRemote(estating.RemoteEstate(eid=4,
                                     ha=('127.0.0.1', 7534),
                                     verkey=m3VerKeyHex,
                                     pubkey=m3PubKeyHex,))
@@ -109,8 +115,8 @@ def test():
     print stack1.safe.loadLocalData()
     print stack1.safe.loadAllRemoteData()
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     #master stack
     dirpath = os.path.join(os.getcwd(), 'keep', 'master')
@@ -118,7 +124,7 @@ def test():
                                     name='master',
                                     sigkey=masterSignKeyHex,
                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, dirpath=dirpath)
+    stack0 = stacking.StackUdp(estate=estate, dirpath=masterDirpath)
 
     #minion stack
     dirpath = os.path.join(os.getcwd(), 'keep', 'minion1')
@@ -127,7 +133,7 @@ def test():
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=m1SignKeyHex,
                                      prikey=m1PriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate, dirpath=dirpath)
+    stack1 = stacking.StackUdp(estate=estate, dirpath=m1Dirpath)
 
 
     estate0 = stack0.loadLocal()

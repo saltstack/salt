@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-A General map/reduce style salt-runner for aggregating the results returned
-by several different minions.
+A general map/reduce style salt runner for aggregating results
+returned by several different minions.
+
 Aggregated results are sorted by the size of the minion pools which returned
 matching results.
 

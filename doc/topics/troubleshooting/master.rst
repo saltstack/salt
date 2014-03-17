@@ -180,7 +180,13 @@ Commands Time Out or Do Not Return Output
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
 sometimes encounter times where your highstate, or other long running commands
-do not return output. This is most commonly due to the timeout being reached.
+do not return output. 
+
+.. note::
+    A number of timing issues were resolved in the 2014.1 release of Salt.
+    Upgrading to at least this version is strongly recommended if timeouts
+    persist.
+
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.

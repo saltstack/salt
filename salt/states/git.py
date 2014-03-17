@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Only load if git is available
     '''
-    return 'git' if __salt__['cmd.has_exec']('git') else False
+    return __salt__['cmd.has_exec']('git')
 
 
 def latest(name,

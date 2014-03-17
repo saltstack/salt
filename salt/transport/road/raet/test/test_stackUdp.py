@@ -35,20 +35,7 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     masterSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     masterPriKeyHex = privateer.keyhex
-
     dirpathMaster = os.path.join(os.getcwd(), 'keep', masterName)
-    road = keeping.RoadKeep(dirpath=dirpathMaster)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMaster)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
-
-    estate = estating.LocalEstate(   eid=1,
-                                     name=masterName,
-                                     sigkey=masterSignKeyHex,
-                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate, main=True,  dirpath=dirpathMaster)
 
     #minion stack
     minionName = "minion1"
@@ -56,14 +43,19 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     minionSignKeyHex = signer.keyhex
     privateer = nacling.Privateer()
     minionPriKeyHex = privateer.keyhex
-
     dirpathMinion = os.path.join(os.getcwd(), 'keep', minionName)
-    road = keeping.RoadKeep(dirpath=dirpathMinion)
-    road.clearLocalData()
-    road.clearAllRemoteData()
-    safe = keeping.SafeKeep(dirpath=dirpathMinion)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
+
+    keeping.clearAllRoadSafe(dirpathMaster)
+    keeping.clearAllRoadSafe(dirpathMinion)
+
+    estate = estating.LocalEstate(   eid=1,
+                                     name=masterName,
+                                     sigkey=masterSignKeyHex,
+                                     prikey=masterPriKeyHex,)
+    stack0 = stacking.StackUdp(estate=estate,
+                               auto=True,
+                               main=True,
+                               dirpath=dirpathMaster)
 
     estate = estating.LocalEstate(   eid=0,
                                      name=minionName,
@@ -80,7 +72,7 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stack1.serviceUdp()
         stack0.serviceUdp()
 
-    stack0.serviceUdpRx()
+    stack0.serviceRxes()
     stack0.process()
 
     timer.restart()
@@ -88,7 +80,7 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
+    stack1.serviceRxes()
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
@@ -114,28 +106,28 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stack1.serviceUdp()
         stack0.serviceUdp()
 
-    stack0.serviceUdpRx()
+    stack0.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
+    stack1.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack0.serviceUdpRx()
+    stack0.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
+    stack1.serviceRxes()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
     print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
@@ -161,14 +153,14 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stack1.serviceUdp()
         stack0.serviceUdp()
 
-    stack0.serviceUdpRx()
+    stack0.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
+    stack1.serviceRxes()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
     print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
@@ -191,14 +183,14 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
+    stack1.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack1.serviceUdp()
         stack0.serviceUdp()
 
-    stack0.serviceUdpRx()
+    stack0.serviceRxes()
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
     print "{0} estates=\n{1}".format(stack0.name, stack0.estates)
@@ -233,24 +225,24 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     stack1.txMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
     stack0.txMsgs.append((odict(house="Papa pia4", queue="gig stuff", stuff=stuff), None))
 
-    stack1.serviceTxMsg()
-    stack0.serviceTxMsg()
+    stack1.serviceTxMsgs()
+    stack0.serviceTxMsgs()
 
     timer.restart()
     while not timer.expired:
         stack1.serviceUdp()
         stack0.serviceUdp()
 
-    stack0.serviceUdpRx()
-    stack1.serviceUdpRx()
+    stack0.serviceRxes()
+    stack1.serviceRxes()
 
     timer.restart()
     while not timer.expired:
         stack0.serviceUdp()
         stack1.serviceUdp()
 
-    stack1.serviceUdpRx()
-    stack0.serviceUdpRx()
+    stack1.serviceRxes()
+    stack0.serviceRxes()
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
@@ -270,15 +262,15 @@ def testStackUdp(bk=raeting.bodyKinds.json):
 
     print "\n********* Message Transactions Both Ways Again **********"
 
-    stack1.txMsg(odict(house="Oh Boy1", queue="Nice"))
-    stack1.txMsg(odict(house="Oh Boy2", queue="Mean"))
-    stack1.txMsg(odict(house="Oh Boy3", queue="Ugly"))
-    stack1.txMsg(odict(house="Oh Boy4", queue="Pretty"))
+    stack1.transmit(odict(house="Oh Boy1", queue="Nice"))
+    stack1.transmit(odict(house="Oh Boy2", queue="Mean"))
+    stack1.transmit(odict(house="Oh Boy3", queue="Ugly"))
+    stack1.transmit(odict(house="Oh Boy4", queue="Pretty"))
 
-    stack0.txMsg(odict(house="Yeah Baby1", queue="Good"))
-    stack0.txMsg(odict(house="Yeah Baby2", queue="Bad"))
-    stack0.txMsg(odict(house="Yeah Baby3", queue="Fast"))
-    stack0.txMsg(odict(house="Yeah Baby4", queue="Slow"))
+    stack0.transmit(odict(house="Yeah Baby1", queue="Good"))
+    stack0.transmit(odict(house="Yeah Baby2", queue="Bad"))
+    stack0.transmit(odict(house="Yeah Baby3", queue="Fast"))
+    stack0.transmit(odict(house="Yeah Baby4", queue="Slow"))
 
     #segmented packets
     stuff = []
@@ -286,8 +278,8 @@ def testStackUdp(bk=raeting.bodyKinds.json):
         stuff.append(str(i).rjust(4, " "))
     stuff = "".join(stuff)
 
-    stack1.txMsg(odict(house="Snake eyes", queue="near stuff", stuff=stuff))
-    stack0.txMsg(odict(house="Craps", queue="far stuff", stuff=stuff))
+    stack1.transmit(odict(house="Snake eyes", queue="near stuff", stuff=stuff))
+    stack0.transmit(odict(house="Craps", queue="far stuff", stuff=stuff))
 
     timer.restart(duration=2)
     while not timer.expired:
@@ -309,8 +301,8 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     for msg in stack1.rxMsgs:
             print msg
 
-    stack0.serverUdp.close()
-    stack1.serverUdp.close()
+    stack0.server.close()
+    stack1.server.close()
 
     stack0.clearLocal()
     stack0.clearAllRemote()

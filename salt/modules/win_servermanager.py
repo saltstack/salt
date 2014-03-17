@@ -93,7 +93,7 @@ def install(feature, recurse=False):
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _srvmgr('"Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list"'.format(feature, sub))
+    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list'.format(feature, sub))
     return _parse_powershell_list(out)
 
 
@@ -114,5 +114,5 @@ def remove(feature):
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    out = _srvmgr('"Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list"'.format(feature))
+    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature))
     return _parse_powershell_list(out)

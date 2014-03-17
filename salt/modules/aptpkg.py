@@ -28,19 +28,19 @@ log = logging.getLogger(__name__)
 try:
     from aptsources import sourceslist
     apt_support = True
-except ImportError as e:
+except ImportError:
     apt_support = False
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
-except ImportError as e:
+except ImportError:
     ppa_format_support = False
 
 try:
     import apt.debfile
     resolve_dep_support = True
-except ImportError as e:
+except ImportError:
     resolve_dep_support = False
 
 # Source format for urllib fallback on PPA handling
@@ -778,10 +778,13 @@ def version_cmp(pkg1, pkg2):
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
-            if __salt__['cmd.retcode'](cmd, output_loglevel='debug') == 0:
+            retcode = __salt__['cmd.retcode'](
+                cmd, output_loglevel='debug', ignore_retcode=True
+            )
+            if retcode == 0:
                 return ret
-    except Exception as e:
-        log.error(e)
+    except Exception as exc:
+        log.error(exc)
     return None
 
 
@@ -1126,11 +1129,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         'Launchpad does not know about {0}/{1}: {2}'.format(
                             owner_name, ppa_name, exc)
                     )
-                except IndexError as e:
+                except IndexError as exc:
                     raise CommandExecutionError(
                         'Launchpad knows about {0}/{1} but did not '
                         'return a fingerprint. Please set keyid '
-                        'manually: {2}'.format(owner_name, ppa_name, e)
+                        'manually: {2}'.format(owner_name, ppa_name, exc)
                     )
 
                 if 'keyserver' not in kwargs:
@@ -1577,7 +1580,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     '''
     missing_deps = []
     for pkg_file in pkgs:
-        deb = apt.debfile.DebPackage(filename=pkg_file)
+        deb = apt.debfile.DebPackage(filename=pkg_file, cache=apt.Cache())
         if deb.check():
             missing_deps.extend(deb.missing_deps)
 

@@ -18,17 +18,6 @@ The data structure needs to be:
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
 #
-# Next there are a number of tasks, first we need some kind of authentication
-# This Client initially will be the master root client, which will run as
-# the root user on the master server.
-#
-# BUT we also want a client to be able to work over the network, so that
-# controllers can exist within disparate applications.
-#
-# The problem is that this is a security nightmare, so I am going to start
-# small, and only start with the ability to execute salt commands locally.
-# This means that the primary client to build is, the LocalClient
-
 # Import python libs
 from __future__ import print_function
 import os
@@ -67,7 +56,7 @@ def condition_kwarg(arg, kwarg):
     '''
     Return a single arg structure for the publisher to safely use
     '''
-    if isinstance(kwarg, dict):
+    if isinstance(kwarg, dict) and kwarg:
         kw_ = {'__kwarg__': True}
         for key, val in kwarg.items():
             kw_[key] = val
@@ -136,7 +125,8 @@ class LocalClient(object):
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
-                self.opts['transport'])
+                self.opts['transport'],
+                listen=not self.opts.get('__worker', False))
 
     def __read_master_key(self):
         '''
@@ -700,6 +690,7 @@ class LocalClient(object):
                                                 pub_data['minions'],
                                                 timeout,
                                                 tgt,
+                                                expr_form,
                                                 **kwargs):
                 yield fn_ret
 

@@ -311,15 +311,6 @@ class MacUserTestCase(TestCase):
                      'fullname': 'AMaViS Daemon', 'uid': 83}
         self.assertEqual(mac_user._format_info(data), ret)
 
-    @patch('pwd.getpwnam', MagicMock(return_value=mock_pwnam))
-    @patch('grp.getgrgid', MagicMock(return_value=mock_getgrgid))
-    @patch('grp.getgrall', MagicMock(return_value=mock_getgrall))
-    def test_list_groups(self):
-        '''
-        Tests the list of groups the user belongs to
-        '''
-        self.assertEqual(mac_user.list_groups('name'), ['_TEST_GROUP'])
-
     @patch('pwd.getpwall', MagicMock(return_value=mock_pwall))
     def test_list_users(self):
         '''

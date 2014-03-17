@@ -221,6 +221,12 @@ def _set_status(m,
 def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
     '''
     Return invalid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.invalid
     '''
     return _set_status(m, status=False, id=id, comment=comment, out=out)
 
@@ -228,6 +234,12 @@ def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
 def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
     '''
     Return valid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.valid
     '''
     return _set_status(m, status=True, id=id, comment=comment, out=out)
 
@@ -1412,11 +1424,15 @@ def build(path=None,
                     valid(status, id=image_id, out=out, comment='Image built')
                 else:
                     invalid(status, id=image_id, out=out)
+            else:
+                raise NotImplementedError(
+                    'Unknown response type for build() {0!r}'.format(ret))
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
-            return status
+    else:
+        invalid(status, comment='`path` or `fileobj` must be given')
     return status
 
 

@@ -143,6 +143,28 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary (in
+    other words, if the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in __ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch'):
+        return name[:-(len(arch) + 1)]
+    return name
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -203,7 +225,8 @@ def latest_version(*names, **kwargs):
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} --pkgnarrow=available {1}'.format(repo_arg, ' '.join(names))
+        '{0} --pkgnarrow=available --plugins {1}'
+        .format(repo_arg, ' '.join(names))
     )
 
     for name in names:
@@ -334,7 +357,7 @@ def list_repo_pkgs(*args, **kwargs):
 
     ret = {}
     for repo in repos:
-        repoquery_cmd = '--all --repoid="{0}"'.format(repo)
+        repoquery_cmd = '--all --repoid="{0}" --plugins'.format(repo)
         for arg in args:
             repoquery_cmd += ' "{0}"'.format(arg)
         all_pkgs = _repoquery_pkginfo(repoquery_cmd)
@@ -360,7 +383,9 @@ def list_upgrades(refresh=True, **kwargs):
         refresh_db()
 
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery_pkginfo('{0} --all --pkgnarrow=updates'.format(repo_arg))
+    updates = _repoquery_pkginfo(
+        '{0} --all --pkgnarrow=updates --plugins'.format(repo_arg)
+    )
     return dict([(x.name, x.version) for x in updates])
 
 
@@ -387,15 +412,16 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
     '''
     repo_arg = _get_repo_options(**kwargs)
-    repoquery_base = '{0} --all --quiet --whatprovides'.format(repo_arg)
+    repoquery_base = \
+        '{0} --all --quiet --whatprovides --plugins'.format(repo_arg)
 
-    if 'avail' in __context__:
-        avail = __context__['avail']
+    if 'pkg._avail' in __context__:
+        avail = __context__['pkg._avail']
     else:
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '{0} --pkgnarrow=all --all'.format(repo_arg),
+            '{0} --pkgnarrow=all --all --plugins'.format(repo_arg),
             query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
@@ -407,13 +433,13 @@ def check_db(*names, **kwargs):
                 avail.append('.'.join((name, arch)))
             else:
                 avail.append(name)
-        __context__['avail'] = avail
+        __context__['pkg._avail'] = avail
 
     ret = {}
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
+            repoquery_cmd = repoquery_base + ' {0}'.format(name)
             provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
             if provides:
                 for pkg in provides:
@@ -717,7 +743,10 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def upgrade(refresh=True):
@@ -742,7 +771,10 @@ def upgrade(refresh=True):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -785,7 +817,10 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if ret:
+        __context__.pop('pkg._avail', None)
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):

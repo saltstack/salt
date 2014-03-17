@@ -233,6 +233,7 @@ import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.yamldumper import OrderedDumper
+from salt.utils.immutabletypes import ImmutableList
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -1597,6 +1598,13 @@ def recurse(name,
         'comment': {}  # { path: [comment, ...] }
     }
 
+    try:
+        source = source.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter must be a string'
+        return ret
+
     if 'mode' in kwargs:
         ret['result'] = False
         ret['comment'] = (
@@ -1916,6 +1924,9 @@ def replace(name,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             show_changes=True):
     '''
@@ -1938,6 +1949,9 @@ def replace(name,
                                        count=count,
                                        flags=flags,
                                        bufsize=bufsize,
+                                       append_if_not_found=append_if_not_found,
+                                       prepend_if_not_found=prepend_if_not_found,
+                                       not_found_content=not_found_content,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes)
@@ -2681,9 +2695,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             ret, 'Directory not present to touch file {0}'.format(name)
         )
 
-    ret['result'] = __salt__['file.touch'](name, atime, mtime)
-
     extant = os.path.exists(name)
+
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -2691,6 +2705,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
+        ret['changes']['touched'] = name
 
     return ret
 
@@ -2927,9 +2942,12 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __low__.get('require_in', [])
-    watch_in = __low__.get('watch_in', [])
-    deps = require_in + watch_in
+    require_in = __low__.get('require_in',
+                             ImmutableList([]))
+    watch_in = __low__.get('watch_in',
+                           ImmutableList([]))
+    deps = []
+    map(deps.append, require_in + watch_in)
     if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(

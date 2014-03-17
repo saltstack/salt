@@ -13,6 +13,9 @@ so:
 The `root=` parameter is optional and used to set the subdirectory from where
 to look for Pillar files (such as ``top.sls``).
 
+.. versionchanged:: Helium
+    The optional ``root`` parameter will be added.
+
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
 :conf_master:`ext_pillar` entry above (``master``), would evaluate to the

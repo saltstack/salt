@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from cStringIO import StringIO
-
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
+import salt.state
 from salt.config import minion_config
-from salt.loader import states
-from salt.minion import SMinion
-from salt.renderers.pyobjects import render as pyobjects_render
+from salt.template import compile_template_str
 from salt.utils.odict import OrderedDict
-from salt.utils.pyobjects import (StateFactory, State, StateRegistry,
+from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
 
-test_registry = StateRegistry()
-File = StateFactory('file', registry=test_registry)
-Service = StateFactory('service', registry=test_registry)
+File = StateFactory('file')
+Service = StateFactory('service')
 
 pydmesg_expected = {
     'file.managed': [
@@ -49,15 +45,37 @@ include('http')
 Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
+map_template = '''#!pyobjects
+class Samba(Map):
+    __merge__ = 'samba:lookup'
+
+    class Debian:
+        server = 'samba'
+        client = 'samba-client'
+        service = 'samba'
+
+    class RougeChapeau:
+        __match__ = 'RedHat'
+        server = 'samba'
+        client = 'samba'
+        service = 'smb'
+
+    class Ubuntu:
+        __grain__ = 'os'
+        service = 'smbd'
+
+with Pkg.installed("samba", names=[Samba.server, Samba.client]):
+    Service.running("samba", name=Samba.service)
+'''
+
 
 class StateTests(TestCase):
     def setUp(self):
-        test_registry.empty()
+        Registry.empty()
 
     def test_serialization(self):
         f = State('/usr/local/bin/pydmesg', 'file', 'managed',
                   require=File('/usr/local/bin'),
-                  registry=test_registry,
                   **pydmesg_kwargs)
 
         self.assertEqual(f(), pydmesg_expected)
@@ -68,7 +86,7 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'],
+            Registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
@@ -77,7 +95,7 @@ class StateTests(TestCase):
             pydmesg = File.managed('/usr/local/bin/pydmesg', **pydmesg_kwargs)
 
             self.assertEqual(
-                test_registry.states['/usr/local/bin/pydmesg'],
+                Registry.states['/usr/local/bin/pydmesg'],
                 pydmesg_expected
             )
 
@@ -85,7 +103,7 @@ class StateTests(TestCase):
                 File.managed('/tmp/something', owner='root')
 
                 self.assertEqual(
-                    test_registry.states['/tmp/something'],
+                    Registry.states['/tmp/something'],
                     {
                         'file.managed': [
                             {'owner': 'root'},
@@ -103,17 +121,17 @@ class StateTests(TestCase):
                      **pydmesg_kwargs)
 
         self.assertEqual(
-            test_registry.states['/usr/local/bin/pydmesg'],
+            Registry.states['/usr/local/bin/pydmesg'],
             pydmesg_expected
         )
 
         self.assertEqual(
-            test_registry.salt_data(),
+            Registry.salt_data(),
             pydmesg_salt_expected
         )
 
         self.assertEqual(
-            test_registry.states,
+            Registry.states,
             OrderedDict()
         )
 
@@ -127,7 +145,7 @@ class StateTests(TestCase):
         Service.running('dup', name='dup-service')
 
         self.assertEqual(
-            test_registry.states,
+            Registry.states,
             OrderedDict([
                 ('dup', OrderedDict([
                     ('file.managed', [
@@ -141,15 +159,19 @@ class StateTests(TestCase):
         )
 
 
-class RendererTests(TestCase):
-    def render(self, template):
+class RendererMixin(object):
+    def render(self, template, opts=None):
         _config = minion_config(None)
         _config['file_client'] = 'local'
-        _minion = SMinion(_config)
-        _states = states(_config, _minion.functions)
+        if opts:
+            _config.update(opts)
+        _state = salt.state.State(_config)
+        return compile_template_str(template,
+                                    _state.rend,
+                                    _state.opts['renderer'])
 
-        return pyobjects_render(StringIO(template), _states=_states)
 
+class RendererTests(TestCase, RendererMixin):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
@@ -162,7 +184,7 @@ class RendererTests(TestCase):
             }),
         ]))
 
-        self.assertEqual(test_registry.states, OrderedDict())
+        self.assertEqual(Registry.states, OrderedDict())
 
     def test_invalid_function(self):
         def _test():
@@ -187,6 +209,34 @@ class RendererTests(TestCase):
                 }),
             ])),
         ]))
+
+
+class MapTests(TestCase, RendererMixin):
+    def test_map(self):
+        def samba_with_grains(grains):
+            return self.render(map_template, {'grains': grains})
+
+        def assert_ret(ret, server, client, service):
+            self.assertEqual(ret, OrderedDict([
+                ('samba', {
+                    'pkg.installed': [
+                        {'names': [server, client]}
+                    ],
+                    'service.running': [
+                        {'name': service},
+                        {'require': [{'pkg': 'samba'}]}
+                    ]
+                })
+            ]))
+
+        ret = samba_with_grains({'os_family': 'Debian', 'os': 'Debian'})
+        assert_ret(ret, 'samba', 'samba-client', 'samba')
+
+        ret = samba_with_grains({'os_family': 'Debian', 'os': 'Ubuntu'})
+        assert_ret(ret, 'samba', 'samba-client', 'smbd')
+
+        ret = samba_with_grains({'os_family': 'RedHat', 'os': 'CentOS'})
+        assert_ret(ret, 'samba', 'samba', 'smb')
 
 
 class SaltObjectTests(TestCase):

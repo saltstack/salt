@@ -25,6 +25,8 @@ raet.udp.stack.destination
 # pylint: skip-file
 # pylint: disable=W0611
 
+import os
+
 # Import Python libs
 from collections import deque
 try:
@@ -57,6 +59,9 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         txmsgs=odict(ipath='txmsgs', ival=deque()),
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),
         local=odict(ipath='local', ival=odict(   name='master',
+                                                 dirpath='raet/test/keep',
+                                                 main=False,
+                                                 auto=True,
                                                  eid=0,
                                                  host='0.0.0.0',
                                                  port=raeting.RAET_PORT,
@@ -69,8 +74,12 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         '''
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        ha = (self.local.data.host, self.local.data.port)
         name = self.local.data.name
+        dirpath = os.path.abspath(os.path.join(self.local.data.dirpath, name))
+        auto = self.local.data.auto
+        main = self.local.data.main
+        ha = (self.local.data.host, self.local.data.port)
+
         eid = self.local.data.eid
         estate = estating.LocalEstate(  eid=eid,
                                         name=name,
@@ -83,6 +92,9 @@ class StackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         self.stack.value = stacking.StackUdp(estate=estate,
                                        store=self.store,
                                        name=name,
+                                       auto=auto,
+                                       main=main,
+                                       dirpath=dirpath,
                                        txMsgs=txMsgs,
                                        rxMsgs=rxMsgs, )
 
@@ -105,7 +117,7 @@ class CloserStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
         Close udp socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUdp):
-            self.stack.value.serverUdp.close()
+            self.stack.value.server.close()
 
 class JoinerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
@@ -227,7 +239,7 @@ class MessengerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
             stack = self.stack.value
             if stack and isinstance(stack, stacking.StackUdp):
                 deid = self.destination.value
-                stack.txMsg(msg=msg, deid=deid)
+                stack.transmit(msg=msg, deid=deid)
 
 
 class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
@@ -300,7 +312,7 @@ class CloserStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         Close uxd socket
         '''
         if self.stack.value and isinstance(self.stack.value, stacking.StackUxd):
-            self.stack.value.serverUxd.close()
+            self.stack.value.server.close()
 
 class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
     '''

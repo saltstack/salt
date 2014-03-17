@@ -35,7 +35,7 @@ def __virtual__():
     Requires newer pycrypto and pyOpenSSL
     '''
     if HAS_DEPS:
-        return 'pki'
+        return True
     return False
 
 
