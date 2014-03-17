@@ -104,7 +104,8 @@ def _changes(name,
         change['groups'] = wanted_groups
     if home:
         if lusr['home'] != home or not os.path.isdir(home):
-            __salt__['user.chhome'](name, home, True)
+            if not __opts__['test']:
+                __salt__['user.chhome'](name, home, True)
             change['home'] = home
     if shell:
         if lusr['shell'] != shell:
