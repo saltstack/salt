@@ -56,7 +56,8 @@ header data =
 
     pf: Pending Ack Flag    (PendFlag) Default 0
         Next segment or ordered packet is pended waiting for ack to this packet
-
+    ml: Message Length (MsgLen)  Default 0
+        Length of message only (unsegmented)
     sn: Segment Number (SgmtNum) Default 0
     sc: Segment Count  (SgmtCnt) Default 1
     sf: Segment Flag  (SgmtFlag) Default 0
@@ -212,7 +213,7 @@ PACKET_DEFAULTS = odict([
                             ('pf', False),
                             ('sn', 0),
                             ('sc', 1),
-                            ('sl', 0),
+                            ('ml', 0),
                             ('sf', False),
                             ('af', False),
                             ('bk', 0),
@@ -225,12 +226,12 @@ PACKET_DEFAULTS = odict([
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                  'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
-                 'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
+                 'dt', 'oi', 'pf', 'sn', 'sc', 'ml', 'sf', 'af',
                  'bk', 'ck', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
-               'dt', 'oi', 'pf', 'sn', 'sc', 'sl', 'sf', 'af',
+               'dt', 'oi', 'pf', 'sn', 'sc', 'ml', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
 PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']

@@ -212,6 +212,10 @@ def test( bk = raeting.bodyKinds.json):
         print segmentage.body.packed == packet0.body.packed
 
 
+    stack0.server.close()
+    stack1.server.close()
+
+
 if __name__ == "__main__":
     test()
     test(bk=raeting.bodyKinds.msgpack)
