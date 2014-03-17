@@ -475,7 +475,7 @@ def endpoint_absent(name, profile=None, **connection_args):
     name
         The name of the service whose endpoints should not exist
     '''
-    ret = {'name': service,
+    ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'endpoint for service "{0}" is already absent'.format(name)}
