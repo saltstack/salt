@@ -32,6 +32,7 @@ can be either present or absent:
 # Import python libs
 import sys
 
+
 def _changes(name,
              gid=None,
              addusers=None,
