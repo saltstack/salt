@@ -958,9 +958,19 @@ def find_file(path, tgt_env='base', **kwargs):
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
     if not os.path.isdir(destdir):
-        os.makedirs(destdir)
+        try:
+            os.makedirs(destdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(destdir)
+            os.makedirs(destdir)
     if not os.path.isdir(hashdir):
-        os.makedirs(hashdir)
+        try:
+            os.makedirs(hashdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(hashdir)
+            os.makedirs(hashdir)
 
     for repo_conf in init():
         repo = repo_conf['repo']
