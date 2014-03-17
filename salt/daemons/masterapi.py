@@ -172,7 +172,7 @@ class RemoteFuncs(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
-                False)
+                listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
