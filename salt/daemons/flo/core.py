@@ -382,7 +382,6 @@ class Eventer(ioflo.base.deeding.Deed):
         for y_name in rm_:
             self.event_yards.value.remove(y_name)
 
-
     def action(self):
         '''
         Register event requests
