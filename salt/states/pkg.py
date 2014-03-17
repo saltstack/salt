@@ -353,6 +353,55 @@ def installed(
     fromrepo
         Specify a repository from which to install
 
+        .. note::
+
+            Distros which use APT (Debian, Ubuntu, etc.) do not have a concept
+            of repositories, in the same way as YUM-based distros do. When a
+            source is added, it is assigned to a given release. Consider the
+            following source configuration::
+
+                deb http://ppa.launchpad.net/saltstack/salt/ubuntu precise main
+
+            The packages provided by this source would be made available via
+            the ``precise`` release, therefore ``fromrepo`` would need to be
+            set to ``precise`` for Salt to install the package from this
+            source.
+
+            Having multiple sources in the same release may result in the
+            default install candidate being newer than what is desired. If this
+            is the case, the desired version must be specified using the
+            ``version`` parameter.
+
+            If the ``pkgs`` parameter is being used to install multiple
+            packages in the same state, then instead of using ``version``,
+            use the method of version specification described in the **Multiple
+            Package Installation Options** section below.
+
+            Running the shell command ``apt-cache policy pkgname`` on a minion
+            can help elucidate the APT configuration and aid in properly
+            configuring states:
+
+            .. code-block:: bash
+
+                root@saltmaster:~# salt ubuntu01 cmd.run 'apt-cache policy ffmpeg'
+                ubuntu01:
+                    ffmpeg:
+                    Installed: (none)
+                    Candidate: 7:0.10.11-1~precise1
+                    Version table:
+                        7:0.10.11-1~precise1 0
+                            500 http://ppa.launchpad.net/jon-severinsson/ffmpeg/ubuntu/ precise/main amd64 Packages
+                        4:0.8.10-0ubuntu0.12.04.1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise-updates/main amd64 Packages
+                            500 http://security.ubuntu.com/ubuntu/ precise-security/main amd64 Packages
+                        4:0.8.1-0ubuntu1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise/main amd64 Packages
+
+            The release is located directly after the source's URL. The actual
+            release name is the part before the slash, so to install version
+            **4:0.8.10-0ubuntu0.12.04.1** either ``precise-updates`` or
+            ``precise-security`` could be used for the ``fromrepo`` value.
+
     skip_verify
         Skip the GPG verification check for the package to be installed
 
