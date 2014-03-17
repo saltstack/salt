@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 HAS_LIBS = False
 try:
     import smtplib
-    from email.mime.text import MIMEText
+    import email.mime.text
     HAS_LIBS = True
 except ImportError:
     pass
@@ -82,7 +82,7 @@ def send_msg(recipient, message, subject='Message from Salt', sender=None, serve
         username = creds.get('smtp.username')
         password = creds.get('smtp.password')
 
-    msg = MIMEText(message)
+    msg = email.mime.text.MIMEText(message)
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
