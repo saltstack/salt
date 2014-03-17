@@ -82,7 +82,8 @@ def clean_old_jobs(opts):
                     f_path = os.path.join(t_path, final)
                     jid_file = os.path.join(f_path, 'jid')
                     if not os.path.isfile(jid_file):
-                        continue
+                        # No jid file means corrupted cache entry, scrub it
+                        shutil.rmtree(f_path)
                     with salt.utils.fopen(jid_file, 'r') as fn_:
                         jid = fn_.read()
                     if len(jid) < 18:
