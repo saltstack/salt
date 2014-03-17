@@ -52,9 +52,9 @@ def show():
     )
     cmd = 'sysctl -ae'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     comps = ['']
-    for line in out:
+    for line in out.splitlines():
         if any([line.startswith('{0}.'.format(root)) for root in roots]):
             comps = line.split('=', 1)
             ret[comps[0]] = comps[1]
