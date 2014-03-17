@@ -1114,7 +1114,7 @@ class State(object):
                     if isinstance(arg, dict):
                         # It is not a function, verify that the arg is a
                         # requisite in statement
-                        if not len(arg):
+                        if len(arg) < 1:
                             # Empty arg dict
                             # How did we get this far?
                             continue
@@ -1171,7 +1171,7 @@ class State(object):
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
                                     continue
-                                if not len(ind):
+                                if len(ind) < 1:
                                     continue
                                 _state = next(iter(ind))
                                 name = ind[_state]
@@ -1378,7 +1378,7 @@ class State(object):
             # smart to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
-            if len(cdata['args']):
+            if len(cdata['args']) > 0:
                 name = cdata['args'][0]
             elif 'name' in cdata['kwargs']:
                 name = cdata['kwargs']['name']
@@ -2251,7 +2251,7 @@ class BaseHighState(object):
 
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
-                            if len(arg):
+                            if len(arg) > 0:
                                 if arg.keys()[0] == 'order':
                                     found = True
                     if not found:

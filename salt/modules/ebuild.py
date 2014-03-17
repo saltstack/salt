@@ -559,7 +559,7 @@ def install(name=None,
                     # We need to delete quotes around use flag list elements
                     verstr = verstr.replace("'", "")
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if len(verstr) and verstr[0] != ':' and verstr[0] != '[':
+                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
                         target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
                     else:

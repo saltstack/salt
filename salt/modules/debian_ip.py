@@ -1479,7 +1479,7 @@ def build_network_settings(**settings):
     _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     # Write domainname to /etc/resolv.conf
-    if len(sline):
+    if len(sline) > 0:
         domainname = sline[1]
 
         contents = _parse_resolve()

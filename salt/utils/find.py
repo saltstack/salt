@@ -176,7 +176,7 @@ def _parse_size(value):
     else:
         style = '='
 
-    if len(scalar):
+    if len(scalar) > 0:
         multiplier = {'b': 2 ** 0,
                       'k': 2 ** 10,
                       'm': 2 ** 20,

@@ -43,7 +43,7 @@ def present(name):
         changes = __salt__['layman.add'](name)
 
         # The overlay failed to add
-        if not len(changes):
+        if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to add'.format(name)
             ret['result'] = False
         # Success
@@ -78,7 +78,7 @@ def absent(name):
         changes = __salt__['layman.delete'](name)
 
         # The overlay failed to delete
-        if not len(changes):
+        if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to delete'.format(name)
             ret['result'] = False
         # Success

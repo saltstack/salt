@@ -117,7 +117,7 @@ def present(name, value=None, contains=None, excludes=None):
         contains_set = _make_set(contains)
         excludes_set = _make_set(excludes)
         old_value_set = _make_set(old_value)
-        if len(contains_set.intersection(excludes_set)):
+        if len(contains_set.intersection(excludes_set)) > 0:
             msg = 'Variable {0} cannot contain and exclude the same value'
             ret['comment'] = msg.format(name)
             ret['result'] = False
@@ -134,9 +134,9 @@ def present(name, value=None, contains=None, excludes=None):
             else:
                 if __opts__['test']:
                     msg = 'Variable {0} is set to'.format(name)
-                    if len(to_append):
+                    if len(to_append) > 0:
                         msg += ' append "{0}"'.format(list(to_append))
-                    if len(to_trim):
+                    if len(to_trim) > 0:
                         msg += ' trim "{0}"'.format(list(to_trim))
                     msg += ' in make.conf'
                     ret['comment'] = msg

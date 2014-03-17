@@ -137,7 +137,7 @@ class Initiator(Transaction):
         '''
         Process time based handling of transaction like timeout or retries
         '''
-        if self.timeout and self.timer.expired:
+        if self.timeout > 0.0 and self.timer.expired:
             self.stack.removeTransaction(self.index, transaction=self)
 
 class Correspondent(Transaction):
@@ -219,7 +219,7 @@ class Joiner(Initiator):
         '''
         Perform time based processing of transaction
         '''
-        if self.timeout and self.timer.expired:
+        if self.timeout > 0.0 and self.timer.expired:
             if self.txPacket and self.txPacket.data['pk'] == raeting.pcktKinds.request:
                 self.remove(self.txPacket.index) #index changes after accept
             else:
@@ -498,7 +498,7 @@ class Joinent(Correspondent):
         Perform time based processing of transaction
 
         '''
-        if self.timeout and self.timer.expired:
+        if self.timeout > 0.0 and self.timer.expired:
             self.nackJoin()
             console.concise("Joinent timed out at {0}\n".format(self.stack.store.stamp))
             return
@@ -668,7 +668,7 @@ class Joinent(Correspondent):
         self.stack.dumpRemote(remote)
         self.reid = remote.eid # auto generated at instance creation above
 
-        if status is None or status == raeting.acceptances.pending:
+        if status == None or status == raeting.acceptances.pending:
             self.ackJoin()
         elif status == raeting.acceptances.accepted:
             duration = min(
@@ -844,7 +844,7 @@ class Allower(Initiator):
         '''
         Perform time based processing of transaction
         '''
-        if self.timeout and self.timer.expired:
+        if self.timeout > 0.0 and self.timer.expired:
             self.remove()
             console.concise("Allower timed out at {0}\n".format(self.stack.store.stamp))
             return
@@ -1123,7 +1123,7 @@ class Allowent(Correspondent):
         Perform time based processing of transaction
 
         '''
-        if self.timeout and self.timer.expired:
+        if self.timeout > 0.0 and self.timer.expired:
             self.nack()
             console.concise("Allowent timed out at {0}\n".format(self.stack.store.stamp))
             return

@@ -460,9 +460,9 @@ def __get_host(node):
     '''
     Return public IP, private IP, or hostname for the libcloud 'node' object
     '''
-    if len(node.public_ips):
+    if len(node.public_ips) > 0:
         return node.public_ips[0]
-    if len(node.private_ips):
+    if len(node.private_ips) > 0:
         return node.private_ips[0]
     return node.name
 
@@ -507,7 +507,7 @@ def _parse_allow(allow):
                 seen_protos[pairs[0]].append(pairs[1])
     for k in seen_protos:
         d = {'IPProtocol': k}
-        if len(seen_protos[k]):
+        if len(seen_protos[k]) > 0:
             d['ports'] = seen_protos[k]
         allow_dict.append(d)
     log.debug("firewall allowed protocols/ports: {0}".format(allow_dict))

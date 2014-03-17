@@ -51,7 +51,7 @@ def add(overlay):
     # If we did not have any overlays before and we successfully added
     # a new one. We need to ensure the make.conf is sourcing layman's
     # make.conf so emerge can see the overlays
-    if len(old_overlays) == 0 and len(new_overlays):
+    if len(old_overlays) == 0 and len(new_overlays) > 0:
         srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
         if not __salt__['file.contains'](makeconf, 'layman'):
