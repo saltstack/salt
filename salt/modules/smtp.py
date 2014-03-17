@@ -39,7 +39,6 @@ Module for Sending Messages via SMTP
 '''
 import logging
 import socket
-import sys
 
 log = logging.getLogger(__name__)
 
