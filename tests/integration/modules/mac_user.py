@@ -34,6 +34,7 @@ def __random_string(size=6):
 # Create user strings for tests
 ADD_USER = __random_string()
 DEL_USER = __random_string()
+CHANGE_USER = __random_string()
 
 
 class MacUserModuleTest(integration.ModuleCase):
@@ -54,7 +55,7 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
-    @destructiveTest
+    # @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_user_add(self, grains=None):
@@ -69,7 +70,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [ADD_USER])
             raise
 
-    @destructiveTest
+    # @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_user_delete(self, grains=None):
@@ -79,6 +80,7 @@ class MacUserModuleTest(integration.ModuleCase):
 
         # Create a user to delete - If unsuccessful, skip the test
         if self.run_function('user.add', [DEL_USER]) is not True:
+            self.run_function('user.delete', [DEL_USER])
             self.skipTest('Failed to create a user to delete')
 
         try:
@@ -88,7 +90,31 @@ class MacUserModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    @destructiveTest
+    # @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_user_changes(self, grains=None):
+        '''
+        Tests mac_user functions that change user properties
+        '''
+        # Create a user to manipulate - if unsuccessful, skip the test
+        if self.run_function('user.add', [CHANGE_USER]) is not True:
+            self.run_function('user.delete', [CHANGE_USER])
+            self.skipTest('Failed to create a user')
+
+        try:
+            user_info = self.run_function('user.info', [CHANGE_USER])
+
+            # Test chudi
+            self.run_function('user.chuid', [CHANGE_USER, 4376])
+            new_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(new_info['uid'], user_info['uid'])
+
+        except AssertionError:
+            self.run_function('user.delete', [CHANGE_USER])
+
+
+    # @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def tearDown(self, grains=None):
@@ -96,12 +122,12 @@ class MacUserModuleTest(integration.ModuleCase):
         Clean up after tests
         '''
 
-        # Delete add_user
+        # Delete ADD_USER
         add_info = self.run_function('user.info', [ADD_USER])
         if add_info:
             self.run_function('user.delete', [ADD_USER])
 
-        # Delete del_user if something failed
+        # Delete DEL_USER if something failed
         del_info = self.run_function('user.info', [DEL_USER])
         if del_info:
             self.run_function('user.delete', [DEL_USER])
