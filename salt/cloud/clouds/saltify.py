@@ -132,6 +132,10 @@ def create(vm_):
             'display_ssh_output', vm_, __opts__, default=True
         )
     }
+    # forward any info about possible ssh gateway to deploy script
+    # as some providers need also a 'gateway' configuration
+    if 'gateway' in vm_:
+        deploy_kwargs.update({'gateway': vm_['gateway']})
 
     # Deploy salt-master files, if necessary
     if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
