@@ -2746,14 +2746,19 @@ def copy_snapshot(kwargs=None, call=None):
 
 def describe_snapshots(kwargs=None, call=None):
     '''
-    Describe a snapshots
-    Options:   snapshot_id - One or more snapshot IDs.
-                             Multiple IDs must be separated by ",".
-                     owner - Returns the snapshots owned by the specified owner. Multiple owners can be specified.
-                             Valid values: self | amazon | AWS Account ID
-                             Multiple values must be separated by ",".
-             restorable_by - One or more AWS accounts IDs that can create volumes from the snapshot.
-                             Multiple aws account IDs must be separated by ",".
+    Describe a snapshot (or snapshots)
+
+    snapshot_id
+        One or more snapshot IDs. Multiple IDs must be separated by ",".
+
+    owner
+        Return the snapshots owned by the specified owner. Valid values
+        include: self, amazon, <AWS Account ID>. Multiple values must be
+        separated by ",".
+
+    restorable_by
+        One or more AWS accounts IDs that can create volumes from the snapshot.
+        Multiple aws account IDs must be separated by ",".
 
     TODO: Add all of the filters.
     '''
