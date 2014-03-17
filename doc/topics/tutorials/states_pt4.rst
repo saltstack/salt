@@ -188,7 +188,7 @@ can be found on Github in the `saltstack-formulas`_ collection of repositories.
 .. _`saltstack-formulas`: https://github.com/saltstack-formulas
 
 If you have any questions, suggestions, or just want to chat with other people
-who are using Salt, we have a very :doc:`active community </topics/community>`
+who are using Salt, we have a very :ref:`active community <salt-community>`
 and we'd love to hear from you.
 
 In addition, by continuing to :doc:`part 5 <states_pt5>`, you can learn about
