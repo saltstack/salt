@@ -55,7 +55,7 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
-    # @destructiveTest
+    @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_user_add(self, grains=None):
@@ -70,7 +70,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [ADD_USER])
             raise
 
-    # @destructiveTest
+    @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_user_delete(self, grains=None):
@@ -90,7 +90,7 @@ class MacUserModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    # @destructiveTest
+    @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_user_changes(self, grains=None):
@@ -103,18 +103,42 @@ class MacUserModuleTest(integration.ModuleCase):
             self.skipTest('Failed to create a user')
 
         try:
-            user_info = self.run_function('user.info', [CHANGE_USER])
-
-            # Test chudi
+            # Test mac_user.chudi
             self.run_function('user.chuid', [CHANGE_USER, 4376])
-            new_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(new_info['uid'], user_info['uid'])
+            uid_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(uid_info['uid'], 4376)
+
+            # Test mac_user.chgid
+            self.run_function('user.chgid', [CHANGE_USER, 4376])
+            gid_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(gid_info['gid'], 4376)
+
+            # Test mac.user.chshell
+            self.run_function('user.chshell', [CHANGE_USER, '/bin/zsh'])
+            shell_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(shell_info['shell'], '/bin/zsh')
+
+            # Test mac_user.chhome
+            self.run_function('user.chhome', [CHANGE_USER, '/Users/foo'])
+            home_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(home_info['home'], '/Users/foo')
+
+            # Test mac_user.chfullname
+            self.run_function('user.chfullname', [CHANGE_USER, 'Foo Bar'])
+            fullname_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(fullname_info['fullname'], 'Foo Bar')
+
+            # Test mac_user.chgroups
+            self.run_function('user.chgroups', [CHANGE_USER, 'wheel'])
+            groups_info = self.run_function('user.info', [CHANGE_USER])
+            self.assertEqual(groups_info['groups'], ['wheel'])
 
         except AssertionError:
             self.run_function('user.delete', [CHANGE_USER])
+            raise
 
 
-    # @destructiveTest
+    @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def tearDown(self, grains=None):
