@@ -16,7 +16,6 @@ Full list of Salt Cloud modules
     ec2
     gce
     gogrid
-    ibmsce
     joyent
     lxc
     libcloud_aws
