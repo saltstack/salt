@@ -92,11 +92,15 @@ def clean_old_jobs(opts):
                         # Parse the jid into a proper datetime object.  We only
                         # parse down to the minute, since keep_jobs is measured
                         # in hours, so a minute difference is not important
-                        jidtime = datetime.datetime(jid[0:4],
-                                                    jid[4:6],
-                                                    jid[6:8],
-                                                    jid[8:10],
-                                                    jid[10:12])
+                        try:
+                            jidtime = datetime.datetime(int(jid[0:4]),
+                                                        int(jid[4:6]),
+                                                        int(jid[6:8]),
+                                                        int(jid[8:10]),
+                                                        int(jid[10:12]))
+                        except ValueError as e:
+                            # Invalid jid, scrub the dir
+                            shutil.rmtree(f_path)
                         difference = cur - jidtime
                         hours_difference = difference.seconds / 3600.0
                         if hours_difference > opts['keep_jobs']:
