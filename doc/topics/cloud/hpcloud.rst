@@ -9,8 +9,9 @@ floating IP added to it in order to connect to it and further below
 you will see an example that adds context to this statement.
 
 To use the `openstack` driver for HP Cloud, set up the cloud 
-provider configuration file as in the example shown below: 
-  ``/etc/salt/cloud.providers.d/hpcloud.conf``:
+provider configuration file as in the example shown below.
+
+``/etc/salt/cloud.providers.d/hpcloud.conf``:
 
 .. code-block:: yaml
 

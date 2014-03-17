@@ -99,7 +99,7 @@
     Introspection
     -------------
 
-    .. todo:: write this part
+    TODO: write this part
 
 '''
 

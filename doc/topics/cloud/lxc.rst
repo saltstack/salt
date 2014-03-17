@@ -5,8 +5,9 @@ The LXC module is designed to install a LXC container  Salt via a salt master on
 controlled and possible remote minion.
 
 In other words, we connect to a minion, then from that minion:
-    - we provision and configure a container for networking access
-    - We use saltify to deploy salt and rattach to master
+
+- we provision and configure a container for networking access
+- We use saltify to deploy salt and rattach to master
 
 Limitation
 ------------
@@ -18,18 +19,18 @@ Operation
 This do not use lxc.init to provide a more generic fashion to tie minions
 to their master (if any and defined) to allow custom association code.
 
-Order of operation
+Order of operation:
 
-    - Spin up the lxc template container using salt.modules.lxc
-      on desired minion (clone or template)
-    - Change lxc config option if any to be changed
-    - Start container
-    - Change base passwords if any
-    - Change base DNS base configuration if neccessary
-    - Wait for lxc container to be up and ready for ssh
-    - Test ssh connection and bailout in error
-    - Via ssh (with the help of saltify, upload deploy script and seeds
-      and reattach minion.
+- Spin up the lxc template container using salt.modules.lxc on desired minion
+  (clone or template)
+- Change lxc config option if any to be changed
+- Start container
+- Change base passwords if any
+- Change base DNS base configuration if neccessary
+- Wait for lxc container to be up and ready for ssh
+- Test ssh connection and bailout in error
+- Via ssh (with the help of saltify, upload deploy script and seeds and
+  reattach minion.
 
 
 Provider configuration
@@ -38,6 +39,7 @@ Here are the options to configure your containers
 
 
 Exemple:
+
 .. code-block:: yaml
 
     # Note: This example is for /etc/salt/cloud.providers or any file in the
@@ -121,4 +123,4 @@ The driver support
 ------------------
 - Container creation
 - Image listing (lxc templates)
-- Running container informations (ips , etc)
+- Running container informations (ips, etc)

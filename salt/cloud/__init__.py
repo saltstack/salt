@@ -315,9 +315,11 @@ class CloudClient(object):
 
         Example:
 
-        client.volume_action(names=['myblock'], action='create',
-            provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
-        )
+        .. code-block:: python
+
+            client.volume_action(names=['myblock'], action='create',
+                provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+            )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
@@ -353,6 +355,8 @@ class CloudClient(object):
         Execute a single action via the cloud plugin backend
 
         Examples:
+
+        .. code-block:: python
 
             client.action(fun='show_instance', names=['myinstance'])
             client.action(fun='show_image', provider='my-ec2-config',

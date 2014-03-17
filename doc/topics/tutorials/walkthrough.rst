@@ -257,15 +257,19 @@ start with looks like this:
 
 The ``*`` is the target, which specifies all minions.
 
-``test.ping`` tells the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
+``test.ping`` tells the minion to run the :py:func:`test.ping
+<salt.modules.test.ping>` function.
 
-In the case of ``test.ping``, ``test`` refers to a :doc:`execution module </ref/modules/>`.
-``ping`` refers to the :py:func:`ping <salt.modules.test.ping>` function contained in the
-aforementioned ``test`` module.
+In the case of ``test.ping``, ``test`` refers to a :doc:`execution module
+</ref/modules/index>`.  ``ping`` refers to the :py:func:`ping
+<salt.modules.test.ping>` function contained in the aforementioned ``test``
+module.
 
 .. note::
-    Execution modules are the workhorses of Salt. They do the work on the system to perform
-    various tasks, such as manipulating files and restarting services.
+
+    Execution modules are the workhorses of Salt. They do the work on the
+    system to perform various tasks, such as manipulating files and restarting
+    services.
 
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
@@ -281,8 +285,9 @@ connected.
     the minion's hostname, but can be explicitly defined in the minion config as
     well by using the :conf_minion:`id` parameter.
 
-Of course, there are hundreds of other modules that can be called just as ``test.ping`` can.
-For example, the following would return disk usage on all targeted minions:
+Of course, there are hundreds of other modules that can be called just as
+``test.ping`` can.  For example, the following would return disk usage on all
+targeted minions:
 
 .. code-block:: bash
 
