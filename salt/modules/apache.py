@@ -378,23 +378,23 @@ def server_status(profile='default'):
     return ret
 
 
-def _parse_config(config, slot=None):
+def _parse_config(conf, slot=None):
     ret = cStringIO.StringIO()
-    if isinstance(config, str):
+    if isinstance(conf, str):
         if slot:
-            print('{0} {1}'.format(slot, config), file=ret, end='')
+            print('{0} {1}'.format(slot, conf), file=ret, end='')
         else:
-            print('{0}'.format(config), file=ret, end='')
-    elif isinstance(config, list):
-        print('{0} {1}'.format(str(slot), ' '.join(config)), file=ret, end='')
-    elif isinstance(config, dict):
+            print('{0}'.format(conf), file=ret, end='')
+    elif isinstance(conf, list):
+        print('{0} {1}'.format(str(slot), ' '.join(conf)), file=ret, end='')
+    elif isinstance(conf, dict):
         print('<{0} {1}>'.format(
             slot,
-            _parse_config(config['this'])),
+            _parse_config(conf['this'])),
             file=ret
         )
-        del config['this']
-        for key, value in config.items():
+        del conf['this']
+        for key, value in conf.items():
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
