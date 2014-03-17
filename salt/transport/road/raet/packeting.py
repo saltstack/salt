@@ -543,7 +543,7 @@ class TxPacket(Packet):
 
             segment = TxPacket( stack=self.stack,
                                 data=self.data)
-            segment.data.update(sn=i, sc=segcount, sl=fullsize, sf=True)
+            segment.data.update(sn=i, sc=segcount, ml=fullsize, sf=True)
             segment.coat.packed = segment.body.packed = haul
             segment.foot.pack()
             segment.head.pack()
@@ -702,10 +702,10 @@ class RxPacket(Packet):
             hauls.append(haul)
         packed = "".join(hauls)
         self.coat.packed = packed
-        sl = self.data['sl']
-        if self.coat.size != sl:
+        ml = self.data['ml']
+        if self.coat.size != ml:
             emsg = ("Full segmented payload length '{0}' does not equal head field"
-                                          " '{1}'".format(self.cost.size, sl))
+                                          " '{1}'".format(self.cost.size, ml))
             raise raeting.PacketError(emsg)
 
 

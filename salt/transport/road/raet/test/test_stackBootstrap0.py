@@ -269,6 +269,19 @@ def test():
             print msg
     print
 
+    print "{0} Stats".format(stack0.name)
+    for key, val in stack0.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+    print "{0} Stats".format(stack1.name)
+    for key, val in stack1.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+    print "{0} Stats".format(stack2.name)
+    for key, val in stack2.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)
     print "{0} estates=\n{1}".format(stack0.name, stack0.estates)

@@ -146,6 +146,15 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
         stack0.serviceAll()
         store.advanceStamp(0.1)
 
+    print "{0} Stats".format(stack0.name)
+    for key, val in stack0.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+    print "{0} Stats".format(stack1.name)
+    for key, val in stack1.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+
     stack0.server.close()
     stack1.server.close()
 

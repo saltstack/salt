@@ -293,6 +293,9 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     print "{0} Received Messages".format(stack0.name)
     for msg in stack0.rxMsgs:
         print msg
+    print "{0} Stats".format(stack0.name)
+    for key, val in stack0.stats.items():
+        print "   {0}={1}".format(key, val)
     print
     print "{0} eid={1}".format(stack1.name, stack1.estate.eid)
     print "{0} estates=\n{1}".format(stack1.name, stack1.estates)
@@ -300,6 +303,11 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     print "{0} Received Messages".format(stack1.name)
     for msg in stack1.rxMsgs:
             print msg
+    print "{0} Stats".format(stack1.name)
+    for key, val in stack1.stats.items():
+        print "   {0}={1}".format(key, val)
+    print
+
 
     stack0.server.close()
     stack1.server.close()

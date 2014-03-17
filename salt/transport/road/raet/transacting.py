@@ -162,6 +162,76 @@ class Correspondent(Transaction):
 
         super(Correspondent, self).__init__(**kwa)
 
+class Staler(Initiator):
+    '''
+    RAET protocol Staler initiator transaction class
+    '''
+    def __init__(self, **kwa):
+        '''
+        Setup Transaction instance
+        '''
+        for key in ['kind', 'reid', 'sid', 'tid', 'rxPacket']:
+            if key not  in kwa:
+                emsg = "Missing required keyword argumens: '{0}'".format(key)
+                raise TypeError(emsg)
+        super(Staler, self).__init__(**kwa)
+
+        self.prep()
+
+
+    def prep(self):
+        '''
+        Prepare .txData for nack to stale
+        '''
+        self.txData.update( sh=self.stack.estate.host,
+                            sp=self.stack.estate.port,
+                            dh=self.rxPacket.data['sh'],
+                            dp=self.rxPacket.data['sp'],
+                            se=self.stack.estate.eid,
+                            de=self.reid,
+                            tk=self.kind,
+                            cf=self.rmt,
+                            bf=self.bcst,
+                            si=self.sid,
+                            ti=self.tid,
+                            ck=raeting.coatKinds.nada,
+                            fk=raeting.footKinds.nada)
+
+    def nack(self):
+        '''
+        Send nack to stale packet from correspondent.
+        This is used when a correspondent packet is received but no matching
+        Initiator transaction is found. So create a dummy initiator and send
+        a nack packet back. Do not add transaction so don't need to remove it.
+        '''
+        ha = (self.rxPacket.data['sh'], self.rxPacket.data['sp'])
+        emsg = "{0} Stale Transaction from {1} dropping ...".format(self.stack.name, ha )
+        console.terse(emsg + '\n')
+        self.stack.incStat('stale_correspondent_attempt')
+
+        if self.reid not in self.stack.estates:
+            emsg = "Unknown correspondent estate id '{0}'".format(self.reid)
+            #raise raeting.TransactionError(emsg)
+            console.terse(emsg + '\n')
+            self.stack.incStat('unknown_correspondent_eid')
+            #return #maybe we should return and not respond at all in this case
+
+        body = odict()
+        packet = packeting.TxPacket(stack=self.stack,
+                                    kind=raeting.pcktKinds.nack,
+                                    embody=body,
+                                    data=self.txData)
+        try:
+            packet.pack()
+        except raeting.PacketError as ex:
+            console.terse(ex + '\n')
+            self.stack.incStat("packing_error")
+            return
+
+        self.stack.txes.append((packet.packed, ha))
+        console.terse("Nack stale correspondent at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat('stale_correspondent_nack')
+
 class Joiner(Initiator):
     '''
     RAET protocol Joiner Initiator class Dual of Joinent
@@ -492,6 +562,8 @@ class Joinent(Correspondent):
         if packet.data['tk'] == raeting.trnsKinds.join:
             if packet.data['pk'] == raeting.pcktKinds.ack: #accepted by joiner
                 self.joined()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: #rejected
+                self.rejected()
 
     def process(self):
         '''
@@ -752,6 +824,9 @@ class Joinent(Correspondent):
         '''
         process ack to accept response
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+
         remote = self.stack.estates[self.reid]
         remote.joined = True # accepted
         remote.nextSid()
@@ -759,6 +834,19 @@ class Joinent(Correspondent):
         self.remove(self.rxPacket.index)
 
         self.stack.incStat("join_correspond_complete")
+
+    def rejected(self):
+        '''
+        Process nack to accept response or stale
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        remote = self.stack.estates[self.reid]
+        # use presence to remove remote
+
+        self.remove(self.rxPacket.index)
+        console.terse("Joinent Rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
     def nackJoin(self):
         '''
@@ -839,6 +927,8 @@ class Allower(Initiator):
                 self.cookie()
             elif packet.data['pk'] == raeting.pcktKinds.ack:
                 self.allow()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
+                self.rejected()
 
     def process(self):
         '''
@@ -1029,6 +1119,17 @@ class Allower(Initiator):
         self.ackFinal()
         #self.remove()
 
+    def rejected(self):
+        '''
+        Process nack packet
+        terminate in response to nack
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove()
+        console.concise("Allower rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
+
     def ackFinal(self):
         '''
         Send ack to ack Initiate to terminate transaction
@@ -1055,9 +1156,9 @@ class Allower(Initiator):
             return
 
         self.transmit(packet)
-        console.concise("Allower Ack Final at {0}\n".format(self.stack.store.stamp))
-
         self.remove()
+        console.concise("Allower Ack Final at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("allow_initiate_complete")
 
 class Allowent(Correspondent):
     '''
@@ -1117,6 +1218,8 @@ class Allowent(Correspondent):
                 self.initiate()
             elif packet.data['pk'] == raeting.pcktKinds.ack:
                 self.final()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
+                self.rejected()
 
     def process(self):
         '''
@@ -1365,6 +1468,19 @@ class Allowent(Correspondent):
         if not self.stack.parseInner(self.rxPacket):
             return
         self.remove()
+        console.concise("Allowent Do Final at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("allow_correspond_complete")
+
+    def rejected(self):
+        '''
+        Process nack packet
+        terminate in response to nack
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove()
+        console.concise("Allowent rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
     def nack(self):
         '''
@@ -1394,6 +1510,7 @@ class Allowent(Correspondent):
         self.transmit(packet)
         self.remove()
         console.concise("Allowent Reject at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
 class Messenger(Initiator):
     '''
@@ -1430,6 +1547,8 @@ class Messenger(Initiator):
         if packet.data['tk'] == raeting.trnsKinds.message:
             if packet.data['pk'] == raeting.pcktKinds.ack:
                 self.done()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
+                self.rejected()
 
     def prep(self):
         '''
@@ -1478,14 +1597,30 @@ class Messenger(Initiator):
             self.segmentage = packet
             for segment in self.segmentage.segments.values():
                 self.transmit(segment)
+
         else:
             self.transmit(packet)
+
+        console.concise("Messenger Do Message at {0}\n".format(self.stack.store.stamp))
 
     def done(self):
         '''
         Complete transaction and remove
         '''
         self.remove()
+        console.concise("Messenger Done at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("message_initiate_complete")
+
+    def rejected(self):
+        '''
+        Process nack packet
+        terminate in response to nack
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove()
+        console.concise("Messenger rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
 
 class Messengent(Correspondent):
     '''
@@ -1531,6 +1666,8 @@ class Messengent(Correspondent):
         if packet.data['tk'] == raeting.trnsKinds.message:
             if packet.data['pk'] == raeting.pcktKinds.message:
                 self.message()
+            elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
+                self.rejected()
 
     def prep(self):
         '''
@@ -1600,4 +1737,16 @@ class Messengent(Correspondent):
             return
         self.transmit(packet)
         self.remove()
+        console.concise("Messengent Do Ack at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("message_correspond_complete")
 
+    def rejected(self):
+        '''
+        Process nack packet
+        terminate in response to nack
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        self.remove()
+        console.concise("Messengent rejected at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat(self.statKey())
