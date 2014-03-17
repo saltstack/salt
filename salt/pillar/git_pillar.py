@@ -75,13 +75,21 @@ def __virtual__():
     Only load if gitpython is available
     '''
     ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
-    if not any(['git' in x for x in ext_pillar_sources]):
+    if not any([__virtualname__ in x for x in ext_pillar_sources]):
+        log.warning("External pillars with duplicate names: %s",
+                    __virtualname__)
         return False
     if not HAS_GIT:
         log.error('Git-based ext_pillar is enabled in configuration but '
                   'could not be loaded, is GitPython installed?')
         return False
-    if not git.__version__ > '0.3.0':
+
+    # Minimum (exclusive) GitPython version
+    MIN_GITPYTHON_VERSION = '0.3.0'
+
+    if not git.__version__ > MIN_GITPYTHON_VERSION:
+        log.error("GitPython version must be greater than '%s': %s",
+                  MIN_GITPYTHON_VERSION, git.__version__)
         return False
     return __virtualname__
 
