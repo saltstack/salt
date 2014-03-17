@@ -239,7 +239,7 @@ class MessengerStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
             stack = self.stack.value
             if stack and isinstance(stack, stacking.StackUdp):
                 deid = self.destination.value
-                stack.txMsg(msg=msg, deid=deid)
+                stack.transmit(msg=msg, deid=deid)
 
 
 class PrinterStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
