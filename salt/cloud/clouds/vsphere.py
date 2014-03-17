@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 vSphere Cloud Module
 ====================
@@ -21,7 +22,7 @@ folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
 
 resourcepool: MOR of the resourcepool to be used for the new vm. If not set, it
-              uses the same resourcepool than the original vm.        
+              uses the same resourcepool than the original vm.
 
 datastore: MOR of the datastore where the virtual machine should be located. If
            not specified, the current datastore is used.
@@ -45,12 +46,10 @@ import pprint
 import logging
 import time
 
-# Import libcloud
-from libcloud.compute.base import NodeAuthPassword
-
 # Import salt libs
 import salt.utils.cloud
 import salt.utils.xmlutil
+from salt.cloud.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config
@@ -58,9 +57,9 @@ import salt.config as config
 # Attempt to import pysphere lib
 HAS_LIBS = False
 try:
-    from pysphere import VIServer, VIProperty, MORTypes
+    from pysphere import VIServer, MORTypes
     HAS_LIBS = True
-except Exception as exc:
+except Exception:  # pylint: disable=W0703
     pass
 
 # Get logging started
@@ -136,7 +135,6 @@ def avail_locations():
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
-    ret = {}
     conn = get_conn()
     return conn.get_resource_pools()
 
@@ -153,7 +151,6 @@ def avail_images():
         obj_type=MORTypes.VirtualMachine,
     )
     for prop in props:
-        mor = prop._obj
         is_template = None
         for item in prop.PropSet:
             if item.Name == 'name':
@@ -190,17 +187,22 @@ def create(vm_):
         {'kwargs': vm_},
     )
 
-    folder = config.get_cloud_config_value('folder', vm_, __opts__, default=None)
-    resourcepool = config.get_cloud_config_value('resourcepool',
-                                           vm_,
-                                           __opts__,
-                                           default=None)
-    datastore = config.get_cloud_config_value('datastore',
-                                        vm_,
-                                        __opts__,
-                                        default=None)
+    folder = config.get_cloud_config_value(
+        'folder', vm_, __opts__, default=None
+    )
+    resourcepool = config.get_cloud_config_value(
+        'resourcepool', vm_, __opts__, default=None
+    )
+    datastore = config.get_cloud_config_value(
+        'datastore', vm_, __opts__, default=None
+    )
     host = config.get_cloud_config_value('host', vm_, __opts__, default=None)
-    template = config.get_cloud_config_value('template', vm_, __opts__, default=False)
+    template = config.get_cloud_config_value(
+        'template',
+        vm_,
+        __opts__,
+        default=False
+    )
 
     clone_kwargs = {
         'name': vm_['name'],
@@ -217,8 +219,8 @@ def create(vm_):
     try:
         template = conn.get_vm_by_name(vm_['image'])
         new_instance = template.clone(**clone_kwargs)
-        data = new_instance.get_properties()
-    except Exception as exc:
+        data = new_instance.get_properties()  # pylint: disable=W0612
+    except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on vSphere\n\n'
             'The following exception was thrown by libcloud when trying to '
@@ -245,7 +247,9 @@ def create(vm_):
     ip_address = salt.utils.cloud.wait_for_fun(wait_for_ip)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    template_user = config.get_cloud_config_value('template_user', vm_, __opts__)
+    template_user = config.get_cloud_config_value(
+        'template_user', vm_, __opts__
+    )
     template_password = config.get_cloud_config_value(
         'template_password', vm_, __opts__
     )
@@ -278,7 +282,9 @@ def create(vm_):
             'script_args': config.get_cloud_config_value(
                 'script_args', vm_, __opts__
             ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
+            'script_env': config.get_cloud_config_value(
+                'script_env', vm_, __opts__
+            ),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
@@ -301,7 +307,9 @@ def create(vm_):
         )
 
         # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value(
+            'win_installer', vm_, __opts__
+        )
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
@@ -375,7 +383,7 @@ def list_nodes_full():
             if prop in properties:
                 ret[properties['name']][prop] = properties[prop]
         count = 0
-        for disk in ret[properties['name']]['disks']:
+        for disk in ret[properties['name']]['disks']:  # pylint: disable=W0612
             del ret[properties['name']]['disks'][count]['device']['_obj']
             count += 1
         for device in ret[properties['name']]['devices']:
@@ -450,7 +458,7 @@ def show_instance(name, call=None):
     return ret
 
 
-def destroy(name, call=None):
+def destroy(name, call=None):  # pylint: disable=W0613
     '''
     Destroy a node.
 
@@ -465,14 +473,13 @@ def destroy(name, call=None):
         {'name': name},
     )
 
-    ret = {}
     conn = get_conn()
     instance = conn.get_vm_by_name(name)
     if instance.get_status() == 'POWERED ON':
         instance.power_off()
     try:
         instance.destroy()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0703
         return exc
 
     salt.utils.cloud.fire_event(
@@ -485,22 +492,22 @@ def destroy(name, call=None):
     return True
 
 
-def list_resourcepools(kwargs=None, call=None):
+def list_resourcepools(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the hosts for this VMware environment
     '''
     if call != 'function':
         log.error(
-            'The list_resourcepools function must be called with -f or --function.'
+            'The list_resourcepools function must '
+            'be called with -f or --function.'
         )
         return False
 
-    ret = {}
     conn = get_conn()
     return conn.get_resource_pools()
 
 
-def list_datastores(kwargs=None, call=None):
+def list_datastores(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the datastores for this VMware environment
     '''
@@ -510,12 +517,11 @@ def list_datastores(kwargs=None, call=None):
         )
         return False
 
-    ret = {}
     conn = get_conn()
     return conn.get_datastores()
 
 
-def list_hosts(kwargs=None, call=None):
+def list_hosts(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the hosts for this VMware environment
     '''
@@ -525,12 +531,11 @@ def list_hosts(kwargs=None, call=None):
         )
         return False
 
-    ret = {}
     conn = get_conn()
     return conn.get_hosts()
 
 
-def list_datacenters(kwargs=None, call=None):
+def list_datacenters(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the datacenters for this VMware environment
     '''
@@ -540,12 +545,11 @@ def list_datacenters(kwargs=None, call=None):
         )
         return False
 
-    ret = {}
     conn = get_conn()
     return conn.get_datacenters()
 
 
-def list_clusters(kwargs=None, call=None):
+def list_clusters(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the clusters for this VMware environment
     '''
@@ -555,12 +559,11 @@ def list_clusters(kwargs=None, call=None):
         )
         return False
 
-    ret = {}
     conn = get_conn()
     return conn.get_clusters()
 
 
-def list_folders(kwargs=None, call=None):
+def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     List the folders for this VMWare environment
     '''
