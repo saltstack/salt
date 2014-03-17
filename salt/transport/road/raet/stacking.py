@@ -378,6 +378,14 @@ class StackUdp(object):
         while self.rxes:
             self.processUdpRx()
 
+    def serviceTxMsgs(self):
+        '''
+        Service .txMsgs queue of outgoing  messages and start message transactions
+        '''
+        while self.txMsgs:
+            body, deid = self.txMsgs.popleft() # duple (body dict, destination eid)
+            self.message(body, deid)
+            console.verbose("{0} sending\n{1}\n".format(self.name, body))
     def serviceTxes(self):
         '''
         Service the .txes deque to send Udp messages
@@ -398,22 +406,32 @@ class StackUdp(object):
             while laters:
                 self.txes.append(laters.popleft())
 
-    def serviceTxMsgs(self):
-        '''
-        Service .txMsgs queue of outgoing  messages and start message transactions
-        '''
-        while self.txMsgs:
-            body, deid = self.txMsgs.popleft() # duple (body dict, destination eid)
-            self.message(body, deid)
-            console.verbose("{0} sending\n{1}\n".format(self.name, body))
-
     def serviceUdp(self):
         '''
         Service the UDP receive and transmit queues
         '''
         self.serviceUdpRx()
         self.serviceTxes()
-        return None
+
+    def serviceRx(self):
+        '''
+        Service:
+           UDP Socket receive
+           rxes queue
+           process
+        '''
+        self.serviceUdpRx()
+        self.serviceRxes()
+        self.process()
+
+    def serviceTx(self):
+        '''
+        Service:
+           txMsgs queue
+           txes queue and UDP Socket send
+        '''
+        self.serviceTxMsgs()
+        self.serviceTxes()
 
     def serviceAll(self):
         '''
@@ -422,9 +440,7 @@ class StackUdp(object):
            rxes queue
            process
            txMsgs queue
-           txes queue
-           UDP Socket send
-
+           txes queue and UDP Socket send
         '''
         self.serviceUdpRx()
         self.serviceRxes()
@@ -432,7 +448,6 @@ class StackUdp(object):
 
         self.serviceTxMsgs()
         self.serviceTxes()
-        return None
 
     def transmit(self, msg, deid=None):
         '''
@@ -824,6 +839,17 @@ class StackUxd(object):
         while self.rxes:
             self.processUxdRx()
 
+    def serviceTxMsgs(self):
+        '''
+        Service .txMsgs queue of outgoing messages
+        '''
+        while self.txMsgs:
+            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
+            packed = self.packUxdTx(body)
+            if packed:
+                console.verbose("{0} sending\n{1}\n".format(self.name, body))
+                self.txUxd(packed, name)
+
     def serviceTxes(self):
         '''
         Service the .txes deque to send Uxd messages
@@ -851,17 +877,6 @@ class StackUxd(object):
             while laters:
                 self.txes.append(laters.popleft())
 
-    def serviceTxMsgs(self):
-        '''
-        Service .txMsgs queue of outgoing messages
-        '''
-        while self.txMsgs:
-            body, name = self.txMsgs.popleft() # duple (body dict, destination name)
-            packed = self.packUxdTx(body)
-            if packed:
-                console.verbose("{0} sending\n{1}\n".format(self.name, body))
-                self.txUxd(packed, name)
-
     def serviceUxd(self):
         '''
         Service the UXD receive and transmit queues
@@ -869,7 +884,23 @@ class StackUxd(object):
         self.serviceUxdRx()
         self.serviceTxes()
 
-        return None
+    def serviceRx(self):
+        '''
+        Service:
+           Uxd Socket receive
+           rxes queue
+        '''
+        self.serviceUxdRx()
+        self.serviceRxes()
+
+    def serviceTx(self):
+        '''
+        Service:
+           txMsgs deque
+           txes deque and send Uxd messages
+        '''
+        self.serviceTxMsgs()
+        self.serviceTxes()
 
     def serviceAll(self):
         '''
@@ -877,16 +908,12 @@ class StackUxd(object):
            Uxd Socket receive
            rxes queue
            txMsgs queue
-           txes queue
-           Uxd Socket send
-
+           txes queue and Uxd Socket send
         '''
         self.serviceUxdRx()
         self.serviceRxes()
         self.serviceTxMsgs()
         self.serviceTxes()
-
-        return None
 
     def txUxd(self, packed, name):
         '''
