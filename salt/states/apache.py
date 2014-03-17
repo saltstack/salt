@@ -68,8 +68,8 @@ def configfile(name, config):
     configs = __salt__['apache.config'](name, config, edit=False)
     current_configs = ''
     if os.path.exists(name):
-        with open(name) as configfile:
-            current_configs = configfile.read()
+        with open(name) as config_file:
+            current_configs = config_file.read()
 
     if configs == current_configs.strip():
         ret['result'] = True
@@ -81,8 +81,8 @@ def configfile(name, config):
         return ret
 
     try:
-        with open(name, 'w') as configfile:
-            print(configs, file=configfile)
+        with open(name, 'w') as config_file:
+            print(configs, file=config_file)
         ret['changes'] = {
             'old': current_configs,
             'new': configs
