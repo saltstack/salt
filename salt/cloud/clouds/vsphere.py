@@ -441,6 +441,7 @@ def list_nodes_select():
 
     return ret
 
+
 def show_instance(name, call=None):
     '''
     Show the details from vSphere concerning a guest
