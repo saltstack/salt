@@ -3,7 +3,7 @@
 Sending Messages via SMTP
 ==========================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: Helium
 
 This state is useful for firing messages during state runs, using the XMPP
 protocol
