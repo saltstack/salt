@@ -6,6 +6,7 @@ Encapsulate the different transports available to Salt.  Currently this is only 
 # Import Salt Libs
 import salt.payload
 import salt.auth
+import salt.utils
 try:
     from salt.transport.road.raet import stacking
     from salt.transport.road.raet import yarding
@@ -43,15 +44,15 @@ class RAETChannel(Channel):
     '''
     def __init__(self, opts, **kwargs):
         self.opts = opts
+        self.__prep_stack()
 
     def __prep_stack(self):
         '''
         Prepare the stack objects
         '''
         self.stack = stacking.StackUxd(
-                name='ex{0}'.format(self.opts['__ex_id']),
                 lanename=self.opts['id'],
-                yid=self.opts['__ex_id'],
+                yid=salt.utils.gen_jid(),
                 dirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.Yard(
@@ -60,20 +61,27 @@ class RAETChannel(Channel):
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemoteYard(self.router_yard)
         src = (self.opts['id'], self.stack.yard.name, None)
-        dst = (self.opts['id'], 'router', None)
+        dst = ('master', None, 'remote_cmd')
         self.route = {'src': src, 'dst': dst}
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        We don't need to do the crypted_transfer_decode_dictentry routine for
+        raet, just wrap send.
+        '''
+        return self.send(load, tries, timeout)
 
     def send(self, load, tries, timeout):
         '''
         Send a message load and wait for a relative reply
         '''
         msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg=msg)
+        self.stack.transmit(msg, 'yard0')
         while True:
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:
-                    return msg['load']
+                    return msg
 
 
 class ZeroMQChannel(Channel):
