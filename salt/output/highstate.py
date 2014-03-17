@@ -36,9 +36,8 @@ import salt.utils
 
 def output(data):
     '''
-    The HighState Outputter is only meant to
-    be used with the state.highstate function, or a function that returns
-    highstate return data.
+    The HighState Outputter is only meant to be used with the state.highstate
+    function, or a function that returns highstate return data.
     '''
     for host, hostdata in data.iteritems():
         return _format_host(host, hostdata)[0]
@@ -50,7 +49,7 @@ def _format_host(host, data):
     rcounts = {}
     hcolor = colors['GREEN']
     hstrs = []
-    changed = False
+    nchanges = 0
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors['RED_BOLD']
@@ -82,7 +81,7 @@ def _format_host(host, data):
             rcounts[ret['result']] += 1
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
-            changed = changed or schanged
+            nchanges += 1 if schanged else 0
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
@@ -165,12 +164,37 @@ def _format_host(host, data):
             )
 
         # Successful states
+        changestats = []
+        if None in rcounts and rcounts.get(None, 0) > 0:
+            # test=True states
+            changestats.append(
+                colorfmt.format(
+                    colors['YELLOW'],
+                    'unchanged={0}'.format(rcounts.get(None, 0)),
+                    colors
+                )
+            )
+        if nchanges > 0:
+            changestats.append(
+                colorfmt.format(
+                    colors['GREEN'],
+                    'changed={0}'.format(nchanges),
+                    colors
+                )
+            )
+        if changestats:
+            changestats = ' ({0})'.format(', '.join(changestats))
+        else:
+            changestats = ''
         hstrs.append(
             colorfmt.format(
                 colors['GREEN'],
-                _counts(rlabel[True], rcounts.get(True, 0)),
+                _counts(
+                    rlabel[True],
+                    rcounts.get(True, 0) + rcounts.get(None, 0)
+                ),
                 colors
-            )
+            ) + changestats
         )
 
         # Failed states
@@ -183,23 +207,13 @@ def _format_host(host, data):
             )
         )
 
-        # test=True states
-        if None in rcounts:
-            hstrs.append(
-                colorfmt.format(
-                    colors['YELLOW'],
-                    _counts(rlabel[None], rcounts.get(None, 0)),
-                    colors
-                )
-            )
-
         totals = '{0}\nTotal: {1:>{2}}'.format('-' * line_max_len,
                                                sum(rcounts.values()),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
     hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
-    return '\n'.join(hstrs), changed
+    return '\n'.join(hstrs), nchanges > 0
 
 
 def _format_changes(changes):
