@@ -456,7 +456,7 @@ def create(vm_):
                         )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
-        else:
+        elif ssh_interface(vm_) != 'private_ips':
             pool = OpenStack_1_1_FloatingIpPool(
                 '', conn.connection
             )
@@ -470,7 +470,7 @@ def create(vm_):
                 # dynamically allocate new address but that might be
                 # tricky to manage.
                 raise SaltCloudSystemExit(
-                    'There are no more floating IP addresses'
+                    'There are no more floating IP addresses '
                     'available, please create some more'
                 )
 
