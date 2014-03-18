@@ -12,7 +12,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt-api
-Version: 0.8.2
+Version: 0.8.3
 Release: 0%{?dist}
 Summary: A web api for to access salt the parallel remote execution system
 
