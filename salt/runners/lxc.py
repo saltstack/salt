@@ -49,12 +49,8 @@ def find_guest(name, quiet=False):
 
         salt-run lxc.find_guest name
     '''
-    data = list_(quiet=True)
-
-    for host, l in data.items():
-        # Check if data is a dict, and not '"virt.full_info" is not available.'
-        if not isinstance(l, dict):
-            continue
+    for data in list_(quiet=True):
+        host, l = data.items()[0]
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
@@ -201,11 +197,9 @@ def list_(host=None, quiet=False):
         if not isinstance(container_info[id_]['ret'], dict):
             continue
         chunk[id_] = container_info[id_]['ret']
-        ret.update(chunk)
         if not quiet:
             salt.output.display_output(chunk, 'lxc_list', __opts__)
-
-    return ret
+        yield chunk
 
 
 def purge(name, delete_key=True, quiet=False):
