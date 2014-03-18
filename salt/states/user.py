@@ -52,6 +52,7 @@ def _changes(name,
              optional_groups=None,
              remove_groups=True,
              home=None,
+             createhome=True,
              password=None,
              enforce_password=True,
              shell=None,
@@ -103,10 +104,11 @@ def _changes(name,
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
     if home:
-        if lusr['home'] != home or not os.path.isdir(home):
-            if not __opts__['test']:
-                __salt__['user.chhome'](name, home, True)
+        if lusr['home'] != home:
             change['home'] = home
+        if createhome and not os.path.isdir(home):
+            change['homeDoesNotExist'] = home
+
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -330,6 +332,7 @@ def present(name,
                        present_optgroups,
                        remove_groups,
                        home,
+                       createhome,
                        password,
                        enforce_password,
                        shell,
@@ -362,6 +365,12 @@ def present(name,
                 continue
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
+                continue
+            if key == 'home' or key == 'homeDoesNotExist':
+                if createhome:
+                    __salt__['user.chhome'](name, val, True)
+                else:
+                    __salt__['user.chhome'](name, val, False)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)
@@ -407,6 +416,7 @@ def present(name,
                            present_optgroups,
                            remove_groups,
                            home,
+                           createhome,
                            password,
                            enforce_password,
                            shell,
