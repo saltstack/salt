@@ -159,7 +159,6 @@ def parse_args_and_kwargs(func, args, data=None):
     invalid_kwargs = []
 
     for arg in args:
-        # support old yamlify syntax
         if isinstance(arg, string_types):
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
