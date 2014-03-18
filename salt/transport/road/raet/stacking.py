@@ -96,7 +96,7 @@ class StackUdp(object):
                                                              main=main,
                                                              ha=ha)
         self.estate.stack = self
-        self.server = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.server = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_PACKET_SIZE)
         self.server.reopen()  # open socket
         self.estate.ha = self.server.ha  # update estate host address after open
         self.dumpLocal() # save local estate data

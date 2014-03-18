@@ -76,7 +76,7 @@ class TxHead(Head):
         data['fl'] = self.packet.foot.size
         data['fg'] = "{:02x}".format(self.packFlags())
 
-        # kit always includes header kind and length fields
+        # kit always includes raet id, packet length, and header kind fields
         kit = odict([('ri', 'RAET'), ('pl', 0), ('hl', 0)])
         for k, v in raeting.PACKET_DEFAULTS.items():  # include if not equal to default
             if ((k in raeting.HEAD_FIELDS) and
@@ -84,7 +84,15 @@ class TxHead(Head):
                 (data[k] != v)):
                 kit[k] = data[k]
 
-        if data['hk'] == raeting.headKinds.json:
+        if data['hk'] == raeting.headKinds.raet:
+            kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
+            kit['hl'] = '00'  # need hex string so fixed length and jsonable
+
+            packed = ''
+            lines = []
+            for k, v in kit.items():
+                lines.append("{0} {1}".format(k, v))
+
             kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
             kit['hl'] = '00'  # need hex string so fixed length and jsonable
             packed = json.dumps(kit, separators=(',', ':'), encoding='ascii',)
@@ -104,6 +112,28 @@ class TxHead(Head):
             #subsitute true length converted to 2 byte hex string
             packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
             self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
+
+        elif data['hk'] == raeting.headKinds.json:
+            kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
+            kit['hl'] = '00'  # need hex string so fixed length and jsonable
+            packed = json.dumps(kit, separators=(',', ':'), encoding='ascii',)
+            packed = '{0}{1}'.format(packed, raeting.JSON_END)
+            hl = len(packed)
+            if hl > raeting.MAX_HEAD_SIZE:
+                emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_SIZE)
+                raise raeting.PacketError(emsg)
+            data['hl'] = hl
+
+            if self.packet.coat.size > raeting.MAX_MESSAGE_SIZE:
+                emsg = "Packed message length of {0}, exceeds max of {1}".format(
+                         self.packet.coat.size, raeting.MAX_MESSAGE_SIZE)
+                raise raeting.PacketError(emsg)
+            pl = hl + self.packet.coat.size + data['fl']
+            data['pl'] = pl
+            #subsitute true length converted to 2 byte hex string
+            packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
+            self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
+
 
 
     def packFlags(self):
