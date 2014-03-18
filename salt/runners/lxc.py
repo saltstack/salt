@@ -49,7 +49,7 @@ def find_guest(name, quiet=False):
 
         salt-run lxc.find_guest name
     '''
-    for data in list_(quiet=True):
+    for data in _list_iter():
         host, l = data.items()[0]
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
@@ -168,16 +168,7 @@ def init(name,
     return ret or None
 
 
-def list_(host=None, quiet=False):
-    '''
-    List defined containers (running, stopped, and frozen) for the named
-    (or all) host(s).
-
-    .. code-block:: bash
-
-        salt-run lxc.list [host=minion_id]
-    '''
-
+def _list_iter(host=None):
     tgt = host or '*'
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
@@ -197,9 +188,25 @@ def list_(host=None, quiet=False):
         if not isinstance(container_info[id_]['ret'], dict):
             continue
         chunk[id_] = container_info[id_]['ret']
+        yield chunk
+
+
+def list_(host=None, quiet=False):
+    '''
+    List defined containers (running, stopped, and frozen) for the named
+    (or all) host(s).
+
+    .. code-block:: bash
+
+        salt-run lxc.list [host=minion_id]
+    '''
+    it = _list_iter(host)
+    ret = {}
+    for chunk in it:
+        ret.update(chunk)
         if not quiet:
             salt.output.display_output(chunk, 'lxc_list', __opts__)
-        yield chunk
+    return ret
 
 
 def purge(name, delete_key=True, quiet=False):
