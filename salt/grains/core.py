@@ -1149,6 +1149,21 @@ def hwaddr_interfaces():
     return {'hwaddr_interfaces': ret}
 
 
+def machine-id():
+    '''
+    Provide the machine-id
+    '''
+    # Provides:
+    #   machine-id
+    locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
+    existing_locations = [loc for loc in locations if os.path.exists(loc)]
+    if not existing_locations:
+        return {}
+    else:
+        with salt.utils.fopen(existing_locations[0]) as machineid:
+            return {'machine-id', machineid.read().strip()}
+
+
 def path():
     '''
     Return the path
