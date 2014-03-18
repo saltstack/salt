@@ -37,6 +37,11 @@ def parse():
             help=('State if this listener will attach to a master or a '
                   'minion daemon, pass "master" or "minion"'))
 
+    parser.add_option('-f',
+            '--func_count',
+            help=('Retun a count of the number of minons which have '
+                 'replied to a job with a given func.'))
+
     options, args = parser.parse_args()
 
     opts = {}
@@ -67,15 +72,26 @@ def listen(sock_dir, node, id=None):
             id=id
             )
     print(event.puburi)
+    jid_counter = 0
+    found_minions = []
     while True:
         ret = event.get_event(full=True)
         if ret is None:
             continue
-        print('Event fired at {0}'.format(time.asctime()))
-        print('*' * 25)
-        print('Tag: {0}'.format(ret['tag']))
-        print('Data:')
-        pprint.pprint(ret['data'])
+        if opts.get('func_count', False):
+            data = ret.get('data', False)
+            if data: 
+                if data.get('id', False) and data.get('id', False) not in found_minions:
+                    jid_counter += 1
+                    found_minions.append(data['id'])
+                    print('Reply received from [{0}]. Total replies now: [{1}].'.format(ret['data']['id'], jid_counter))
+                    continue
+        else:
+            print('Event fired at {0}'.format(time.asctime()))
+            print('*' * 25)
+            print('Tag: {0}'.format(ret['tag']))
+            print('Data:')
+            pprint.pprint(ret['data'])
 
 
 if __name__ == '__main__':
