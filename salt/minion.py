@@ -180,7 +180,10 @@ def parse_args_and_kwargs(func, args, data=None):
             for key, val in arg.iteritems():
                 if key == '__kwarg__':
                     continue
-                kwargs[key] = val
+                if isinstance(val, string_types):
+                    kwargs[key] = yamlify_arg(val)
+                else:
+                    kwargs[key] = val
             continue
         _args.append(yamlify_arg(arg))
     if argspec.keywords and isinstance(data, dict):
