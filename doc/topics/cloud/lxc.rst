@@ -81,6 +81,16 @@ Here are the options to configure your containers
         sysadmin ssh_username (ubuntu) of the container
     sudo
         Do we use sudo
+    ssh_gateway
+        if the minion is not in your 'topmaster' networ, use
+        that gateway to connect to the lxc container.
+        This may be the public ip of the hosting minion
+    ssh_gateway_key
+        When using gateway, additionnal parameters as in saltify
+    ssh_gateway_port
+        When using gateway, additionnal parameters as in saltify
+    ssh_gateway_user
+        When using gateway, additionnal parameters as in saltify
     password
         password for root and sysadmin (ubuntu)
     mac
