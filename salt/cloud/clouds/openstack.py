@@ -25,9 +25,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-openstack-config:
       # The OpenStack identity service url
-      identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
       # The OpenStack compute region
-      compute_region: az-1.region-a.geo-1
+      compute_region: region-b.geo-1
       # The OpenStack compute service name
       compute_name: Compute
       # The OpenStack tenant name (not tenant ID)
@@ -35,7 +35,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The OpenStack user name
       user: myuser
       # The OpenStack keypair name
-      ssh_key_name
+      ssh_key_name: mykey
+      # The ssh key file
+      ssh_key_file: /path/to/keyfile/test.pem
       # The OpenStack network UUIDs
       networks:
           - fixed:
@@ -90,6 +92,15 @@ same restrictions.
       files:
           /path/to/dest.txt:
               /local/path/to/src.txt
+
+Alternatively, one could use the private IP to connect by specifying:
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      ssh_interface: private_ips
+
+
 '''
 
 # The import section is mostly libcloud boilerplate
