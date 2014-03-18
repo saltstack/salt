@@ -81,7 +81,7 @@ def listen(sock_dir, node, id=None):
             continue
         if opts['func_count']:
             data = ret.get('data', False)
-            if data: 
+            if data:
                 if 'id' in data.keys() and data.get('id', False) not in found_minions:
                     if data['fun'] == opts['func_count']:
                         jid_counter += 1
