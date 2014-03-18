@@ -1370,6 +1370,11 @@ def _smartos_zone_data():
     # Provides:
     #   pkgsrcversion
     #   imageversion
+    #   pkgsrcpath
+    #   zonename
+    #   zoneid
+    #   hypervisor_uuid
+    #   datacenter
 
     if 'proxyminion' in __opts__:
         return {}
@@ -1378,6 +1383,7 @@ def _smartos_zone_data():
 
     pkgsrcversion = re.compile('^release:\\s(.+)')
     imageversion = re.compile('Image:\\s(.+)')
+    pkgsrcpath = re.compile('PKG_PATH=(.+)')
     if os.path.isfile('/etc/pkgsrc_version'):
         with salt.utils.fopen('/etc/pkgsrc_version', 'r') as fp_:
             for line in fp_:
@@ -1390,10 +1396,25 @@ def _smartos_zone_data():
                 match = imageversion.match(line)
                 if match:
                     grains['imageversion'] = match.group(1)
+    if os.path.isfile('/opt/local/etc/pkg_install.conf'):
+        with salt.utils.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
+            for line in fp_:
+                match = pkgsrcpath.match(line)
+                if match:
+                    grains['pkgsrcpath'] = match.group(1)
     if 'pkgsrcversion' not in grains:
         grains['pkgsrcversion'] = 'Unknown'
     if 'imageversion' not in grains:
         grains['imageversion'] = 'Unknown'
+    if 'pkgsrcpath' not in grains:
+        grains['pkgsrcpath'] = 'Unknown'
+
+    grains['zonename'] = __salt__['cmd.run']('zonename')
+    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
+    grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
+    if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
+        grains['datacenter'] = "Unknown"
 
     return grains
 

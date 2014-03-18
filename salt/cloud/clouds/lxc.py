@@ -12,6 +12,7 @@ Please read :ref:`core config documentation <config_lxc>`.
 import json
 import os
 import logging
+import copy
 import time
 from pprint import pformat
 
@@ -625,7 +626,19 @@ def create(vm_, call=None):
             vm_['ssh_host'] = ip
             vm_['sudo'] = sudo
             vm_['sudo_password'] = password
-            sret = __salt__['saltify.create'](vm_)
+            svm_ = copy.deepcopy(vm_)
+            if 'gateway' in svm_:
+                del svm_['gateway']
+            if 'ssh_gateway' in vm_:
+                svm_['gateway'] = ssh_gateway_opts = {}
+                for k in ['ssh_gateway_key',
+                          'ssh_gateway',
+                          'ssh_gateway_user',
+                          'ssh_gateway_port']:
+                    val = vm_.get(k, None)
+                    if val:
+                        ssh_gateway_opts[ssh_gateway_opts.get(k, k)] = val
+            sret = __salt__['saltify.create'](svm_)
             changes['400_salt'] = 'This vm is now a salt minion'
             if 'Error' in sret:
                 ret['result'] = False

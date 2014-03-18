@@ -493,11 +493,8 @@ class StackUdp(object):
             trans.receive(packet)
             return
 
-        if packet.data['cf']: #correspondent to stale transaction so drop
-            emsg = "{0} Stale Transaction, dropping ...".format(self.name)
-            console.terse(emsg + '\n')
-            self.incStat('stale_correspondent_attempt')
-            # Should send abort nack to drop transaction on other side
+        if packet.data['cf']: #correspondent to stale transaction
+            self.stale(packet)
             return
 
         self.reply(packet)
@@ -575,6 +572,20 @@ class StackUdp(object):
             self.incStat('parsing_inner_error')
             return None
         return packet
+
+    def stale(self, packet):
+        '''
+        Initiate stale transaction in order to nack a stale correspondent packet
+        '''
+        data = odict(hk=self.Hk, bk=self.Bk)
+        staler = transacting.Staler(stack=self,
+                                    kind=packet.data['tk'],
+                                    reid=packet.data['se'],
+                                    sid=packet.data['si'],
+                                    tid=packet.data['ti'],
+                                    txData=data,
+                                    rxPacket=packet)
+        staler.nack()
 
     def join(self, mha=None):
         '''

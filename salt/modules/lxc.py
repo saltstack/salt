@@ -166,7 +166,8 @@ def init(name,
                 [nic=nic_profile] [profile=lxc_profile] \\
                 [nic_opts=nic_opts] [start=(True|False)] \\
                 [seed=(True|False)] [install=(True|False)] \\
-                [config=minion_config]
+                [config=minion_config] [approve_key=(True|False) \\
+                [clone=original]
 
     name
         Name of the container.
@@ -202,28 +203,48 @@ def init(name,
     config
         Optional config parameters. By default, the id is set to the name of the
         container.
+
+    approve_key
+        Attempt to request key approval from the master. Default: ``True``
+
+    clone
+        Original from which to use a clone operation to create the container. Default: ``None``
     '''
     nicp = _nic_profile(nic)
-    start_ = kwargs.pop('start', False)
-    seed = kwargs.pop('seed', True)
-    install = kwargs.pop('install', True)
-    seed_cmd = kwargs.pop('seed_cmd', None)
-    config = kwargs.pop('config', None)
+    profile = _lxc_profile(profile)
+
+    def select(k, default=None):
+        kw = kwargs.pop(k, None)
+        p = profile.pop(k, default)
+        return kw or p
+
+    start_ = select('start', False)
+    seed = select('seed', True)
+    install = select('install', True)
+    seed_cmd = select('seed_cmd')
+    config = select('config')
+    approve_key = select('approve_key', True)
+    clone = select('clone')
 
     with tempfile.NamedTemporaryFile() as cfile:
         cfile.write(_gen_config(cpuset=cpuset, cpushare=cpushare,
                                 memory=memory, nicp=nicp, nic_opts=nic_opts))
         cfile.flush()
-        ret = create(name, config=cfile.name, profile=profile, **kwargs)
-    if not ret['created']:
+        if clone:
+            ret = __salt__['lxc.clone'](name, clone, config=cfile.name,
+                                        profile=profile, **kwargs)
+        else:
+            ret = __salt__['lxc.create'](name, config=cfile.name,
+                                         profile=profile, **kwargs)
+    if not (ret.get('created', False) or ret.get('cloned', False)):
         return ret
     rootfs = info(name)['rootfs']
     if seed:
-        __salt__['seed.apply'](rootfs, id_=name, config=config,
-                               install=install)
+        ret['seeded'] = __salt__['lxc.bootstrap'](
+            name, config=config, approve_key=approve_key, install=install)
     elif seed_cmd:
-        __salt__[seed_cmd](rootfs, name, config)
-    if start_ and ret['created']:
+        ret['seeded'] = __salt__[seed_cmd](rootfs, name, config)
+    if start_:
         ret['state'] = start(name)['state']
     else:
         ret['state'] = state(name)
@@ -240,7 +261,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
         salt 'minion' lxc.create name [config=config_file] \\
                 [profile=profile] [template=template_name] \\
-                [backing=backing_store] [ vgname=volume_group] \\
+                [backing=backing_store] [vgname=volume_group] \\
                 [size=filesystem_size] [options=template_options]
 
     name
@@ -280,7 +301,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     cmd = 'lxc-create -n {0}'.format(name)
 
-    profile = _lxc_profile(profile)
+    if not isinstance(profile, dict):
+        profile = _lxc_profile(profile)
 
     def select(k, default=None):
         kw = kwargs.pop(k, None)
@@ -343,7 +365,9 @@ def clone(name,
 
     .. code-block:: bash
 
-        salt 'minion' lxc.clone name ARGS
+        salt 'minion' lxc.clone name orig [snapshot=(True|False)] \\
+                [size=filesystem_size] [vgname=volume_group] \\
+                [profile=profile_name]
 
     name
         Name of the container.
@@ -372,16 +396,25 @@ def clone(name,
     '''
 
     if exists(name):
-        return {'created': False, 'error': 'container already exists'}
-    if not exists(orig):
-        return {'created': False,
-                'error': 'original container does not exist'.format(orig)}
+        return {'cloned': False, 'error': 'container already exists'}
+
+    orig_state = state(orig)
+    if orig_state is None:
+        return {'cloned': False,
+                'error':
+                'original container \'{0}\' does not exist'.format(orig)}
+    elif orig_state != 'stopped':
+        return {'cloned': False,
+                'error': 'original container \'{0}\' is running'.format(orig)}
+
     if not snapshot:
         snapshot = ''
     else:
         snapshot = '-s'
     cmd = 'lxc-clone {2} -o {0} -n {1}'.format(orig, name, snapshot)
-    profile = _lxc_profile(profile)
+
+    if not isinstance(profile, dict):
+        profile = _lxc_profile(profile)
 
     def select(k, default=None):
         kw = kwargs.pop(k, None)
@@ -405,7 +438,7 @@ def clone(name,
             cmd = 'lxc-destroy -n {0}'.format(name)
             __salt__['cmd.retcode'](cmd)
         log.warn('lxc-clone failed to create container')
-        return {'created': False, 'error':
+        return {'cloned': False, 'error':
                 'container could not be created: {0}'.format(ret['stderr'])}
 
 
@@ -1037,11 +1070,11 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     if not infos:
         return None
 
-    prior_state = _ensure_running(name)
-
     __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
                            prep_install=True)
+
+    prior_state = _ensure_running(name)
 
     cmd = 'bash -c "if type salt-minion; then exit 0; '
     if install:

@@ -114,6 +114,68 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode(self):
+        '''
+        file.managed, correct file permissions
+        '''
+        desired_mode = 504    # 0770 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode='0770', source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_replace(self):
+        '''
+        file.managed, existing file with replace=True, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_noreplace(self):
+        '''
+        file.managed, existing file with replace=False, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        ret = self.run_state(
+            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the

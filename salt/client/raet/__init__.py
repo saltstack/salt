@@ -44,11 +44,11 @@ class LocalClient(salt.client.LocalClient):
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
-                arg=(),
-                expr_form='glob',
-                ret='',
-                jid='',
-                timeout=5,
+                arg=arg,
+                expr_form=expr_form,
+                ret=ret,
+                jid=jid,
+                timeout=timeout,
                 **kwargs)
         yid = salt.utils.gen_jid()
         stack = stacking.StackUxd(

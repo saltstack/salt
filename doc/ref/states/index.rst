@@ -12,7 +12,7 @@ state of systems from a central manager.
 
     *
 
-State management
+State Management
 ================
 
 State management, also frequently called Software Configuration Management
