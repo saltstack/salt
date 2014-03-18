@@ -80,16 +80,15 @@ def version():
 def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted nftables rule based on kwargs.
+    A `table` and `chain` are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
-    `command` may be specified as either a short option ('I') or a long option
-    (`--insert`). This will return the iptables command, exactly as it would
+    `command` may be specified as either insert, append, or delete.
+    This will return the nftables command, exactly as it would
     be used from the command line.
 
-    If a position is required (as with `-I` or `-D`), it may be specified as
+    If a position is required (as with `insert` or `delete`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
@@ -98,17 +97,17 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     .. code-block:: bash
 
-        salt '*' iptables.build_rule match=state \\
+        salt '*' nftables.build_rule match=state \\
             connstate=RELATED,ESTABLISHED jump=ACCEPT
-        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+        salt '*' nftables.build_rule filter input command=insert position=3 \\
+            full=True match=state state=related,established jump=accept
 
         IPv6:
-        salt '*' iptables.build_rule match=state \\
-            connstate=RELATED,ESTABLISHED jump=ACCEPT \\
+        salt '*' nftables.build_rule match=state \\
+            connstate=related,established jump=accept \\
             family=ipv6
-        salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+        salt '*' nftables.build_rule filter input command=insert position=3 \\
+            full=True match=state state=related,established jump=accept \\
             family=ipv6
 
     '''
@@ -134,7 +133,6 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['of']
 
     if 'proto' in kwargs:
-        #rule += '-p {0} '.format(kwargs['proto'])
         proto = kwargs['proto']
 
     if 'state' in kwargs:
@@ -439,7 +437,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
 def check_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: Helium
 
     Check for the existence of a chain in the table
 
@@ -493,7 +491,7 @@ def check_table(table=None, family='ipv4'):
 
 def new_table(table, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: Helium
 
     Create new custom table.
 
@@ -525,7 +523,7 @@ def new_table(table, family='ipv4'):
 
 def delete_table(table, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: Helium
 
     Create new custom table.
 
@@ -556,7 +554,7 @@ def delete_table(table, family='ipv4'):
 
 def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: Helium
 
     Create new chain to the specified table.
 
@@ -612,7 +610,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
 
 def delete_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: Helium
 
     Delete the chain from the specified table.
 
