@@ -476,13 +476,13 @@ def find_job(jid):
 
 def find_cached_job(jid):
     '''
-    Return the data for a specific job id
+    Return the data for a specific cached job id
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' saltutil.find_job <job id>
+        salt '*' saltutil.find_cached_job <job id>
     '''
     for data in cached():
         if data['jid'] == jid:
