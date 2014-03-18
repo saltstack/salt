@@ -167,6 +167,7 @@ def auth(username, password, **kwargs):
     '''
     return authenticate(username, password, kwargs.get('service', 'login'))
 
+
 def groups(username, *args, **kwargs):
     '''
     Retreive groups for a given user for this auth provider

@@ -578,10 +578,7 @@ class CkMinions(object):
                         groups[group_perm] = matcher
         for item in groups.values():
             auth_list.append(item)
-            return auth_list
-        else:
-            return None
-        
+        return auth_list
 
     def wheel_check(self, auth_list, fun):
         '''

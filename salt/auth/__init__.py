@@ -116,9 +116,8 @@ class LoadAuth(object):
             return self.auth[fstr](*fcall['args'])
         except IndexError:
             return False
-        except Exception as exc:
+        except Exception:
             return None
-
 
     def mk_token(self, load):
         '''
