@@ -33,6 +33,8 @@ def __random_string(size=6):
 
 # Create group name strings for tests
 ADD_GROUP = __random_string()
+DEL_GROUP = __random_string()
+CHANGE_GROUP = __random_string()
 
 
 class MacGroupModuleTest(integration.ModuleCase):
@@ -60,9 +62,6 @@ class MacGroupModuleTest(integration.ModuleCase):
         '''
         Tests the add group function
         '''
-        print "In Add"
-        print "Add Group"
-        print ADD_GROUP
         try:
             self.run_function('group.add', [ADD_GROUP, 3456])
             group_info = self.run_function('group.info', [ADD_GROUP])
@@ -74,14 +73,63 @@ class MacGroupModuleTest(integration.ModuleCase):
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
+    def test_mac_group_delete(self, grains=None):
+        '''
+        Tests the delete group function
+        '''
+        # Create a group to delete - If unsuccessful, skip the test
+        if self.run_function('group.add', [DEL_GROUP, 4567]) is not True:
+            self.run_function('group.delete', [DEL_GROUP])
+            self.skipTest('Failed to create a group to delete')
+
+        try:
+            # Now try to delete the added group
+            ret = self.run_function('group.delete', [DEL_GROUP])
+            self.assertTrue(ret)
+        except CommandExecutionError:
+            raise
+
+    @destructiveTest
+    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_group_chgid(self, grains=None):
+        '''
+        Tests changing the group id
+        '''
+        # Create a group to delete - If unsuccessful, skip the test
+        if self.run_function('group.add', [CHANGE_GROUP, 5678]) is not True:
+            self.run_function('group.delete', [CHANGE_GROUP])
+            self.skipTest('Failed to create a group to manipulate')
+
+        try:
+            self.run_function('group.chgid', [CHANGE_GROUP, 6789])
+            group_info = self.run_function('group.info', [CHANGE_GROUP])
+            self.assertEqual(group_info['gid'], 6789)
+        except AssertionError:
+            self.run_function('group.delete', [CHANGE_GROUP])
+            raise
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def tearDown(self, grains=None):
         '''
         Clean up after tests
         '''
-        # Delete the added group
+        # Delete ADD_GROUP
         add_info = self.run_function('group.info', [ADD_GROUP])
         if add_info:
             self.run_function('group.delete', [ADD_GROUP])
+
+        # Delete DEL_GROUP if something failed
+        del_info = self.run_function('group.info', [DEL_GROUP])
+        if del_info:
+            self.run_function('group.delete', [DEL_GROUP])
+
+        # Delete CHANGE_GROUP
+        change_info = self.run_function('group.info', [CHANGE_GROUP])
+        if change_info:
+            self.run_function('group.delete', [CHANGE_GROUP])
 
 
 if __name__ == '__main__':
