@@ -1409,10 +1409,10 @@ def _smartos_zone_data():
     if 'pkgsrcpath' not in grains:
         grains['pkgsrcpath'] = 'Unknown'
 
-    grains['zonename'] = __commands__['cmd.run']('zonename')
-    grains['zoneid'] = __commands__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
-    grains['hypervisor_uuid'] = __commands__['cmd.run']('mdata-get sdc:server_uuid')
-    grains['datacenter'] = __commands__['cmd.run']('mdata-get sdc:datacenter_name')
+    grains['zonename'] = __salt__['cmd.run']('zonename')
+    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
+    grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
         grains['datacenter'] = "Unknown"
 
