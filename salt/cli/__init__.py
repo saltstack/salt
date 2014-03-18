@@ -24,7 +24,8 @@ from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
-    EauthAuthenticationError
+    EauthAuthenticationError,
+    SaltSystemExit
 )
 
 
@@ -130,6 +131,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 jid = local.cmd_async(**kwargs)
                 print('Executed command with job ID: {0}'.format(jid))
                 return
+            retcodes = []
             try:
                 # local will be None when there was an error
                 if local:
@@ -156,8 +158,20 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         for full_ret in cmd_func(**kwargs):
-                            ret, out = self._format_ret(full_ret)
+                            ret, out, retcode = self._format_ret(full_ret)
+                            retcodes.append(retcode)
                             self._output_ret(ret, out)
+
+                    # NOTE: Return code is set here based on if all minions
+                    # returned 'ok' with a retcode of 0.
+                    # This is the final point before the 'salt' cmd returns,
+                    # which is why we set the retcode here.
+                    if retcodes.count(0) < len(retcodes):
+                        err = 'All Minions did not return a retcode of 0. One or more minions had a problem'
+                        # NOTE: This could probably be made more informative.
+                        # I chose 11 since its not in use.
+                        raise SaltSystemExit(code=11, msg=err)
+
             except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = str(exc)
                 out = ''
@@ -182,11 +196,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         ret = {}
         out = ''
+        retcode = 0
         for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-        return ret, out
+            if 'retcode' in data:
+                retcode = data['retcode']
+        return ret, out, retcode
 
     def _print_docs(self, ret):
         '''

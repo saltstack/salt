@@ -1026,6 +1026,7 @@ class Minion(MinionBase):
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+        log.debug('ret_val = ' + str(ret_val))
         return ret_val
 
     def _state_run(self):
