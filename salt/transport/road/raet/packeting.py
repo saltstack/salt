@@ -96,7 +96,7 @@ class TxHead(Head):
             data['hl'] = hl
 
             if self.packet.coat.size > raeting.MAX_MESSAGE_SIZE:
-                emsg = "Packet length of {0}, exceeds max of {1}".format(
+                emsg = "Packed message length of {0}, exceeds max of {1}".format(
                          self.packet.coat.size, raeting.MAX_MESSAGE_SIZE)
                 raise raeting.PacketError(emsg)
             pl = hl + self.packet.coat.size + data['fl']
@@ -411,7 +411,6 @@ class Packet(object):
                 emsg = "Unrecognizible packet kind."
                 raise raeting.PacketError(emsg)
             self.data.update(pk=kind)
-        self.segments = None
 
     @property
     def size(self):
@@ -419,13 +418,6 @@ class Packet(object):
         Property is the length of the .packed of this Packet
         '''
         return len(self.packed)
-
-    @property
-    def segmented(self):
-        '''
-        Property is True if packet has at least one entry in .segments
-        '''
-        return (True if self.segments else False)
 
     @property
     def segmentive(self):
@@ -466,15 +458,9 @@ class TxPacket(Packet):
         data = self.data
         le = data['se']
         if le == 0:
-            #host = data['sh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             le = (data['sh'], data['sp'])
         re = data['de']
         if re == 0:
-            #host = data['dh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             re = (data['dh'], data['dp'])
         return ((data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
@@ -501,9 +487,10 @@ class TxPacket(Packet):
         remote = self.stack.estates[self.data['de']]
         return (remote.privee.encrypt(msg, remote.publee.key))
 
-    def pack(self):
+    def prepack(self):
         '''
-        Pack the parts of the packet and then the full packet into .packed
+        Pre Pack the parts of the packet .packed but do not sign so can see
+        if needs to be segmented
         '''
         self.body.pack()
         self.coat.pack()
@@ -513,46 +500,18 @@ class TxPacket(Packet):
                                self.coat.packed,
                                self.foot.packed])
 
-        if self.size <= raeting.MAX_PACKET_SIZE:
-            self.sign()
-        else:
-            #print "****Segmentize**** packet size = {0}".format(self.size)
-            self.segmentize()
 
-    def segmentize(self):
+    def pack(self):
         '''
-        Create packeted segments from existing packet
+        Pack the parts of the packet and then the full packet into .packed
         '''
-        self.segments = odict()
-        fullsize = self.coat.size
-        full = self.coat.packed
+        self.prepack()
+        if self.size > raeting.MAX_PACKET_SIZE:
+            emsg = "Packet length of {0}, exceeds max of {1}".format(
+                    self.size, raeting.MAX_PACKET_SIZE)
+            raise raeting.PacketError(emsg)
 
-        extrasize = 0
-        if self.data['hk'] == raeting.headKinds.json:
-            extrasize = 32 # extra header size as a result of segmentation
-
-        hotelsize = self.head.size + extrasize + self.foot.size
-        haulsize = raeting.MAX_PACKET_SIZE - hotelsize
-
-        segcount = (fullsize // haulsize) + (1 if fullsize % haulsize else 0)
-        for i in range(segcount):
-            if i == segcount - 1: #last segment
-                haul = full[i * haulsize:]
-            else:
-                haul = full[i * haulsize: (i+1) * haulsize]
-
-            segment = TxPacket( stack=self.stack,
-                                data=self.data)
-            segment.data.update(sn=i, sc=segcount, ml=fullsize, sf=True)
-            segment.coat.packed = segment.body.packed = haul
-            segment.foot.pack()
-            segment.head.pack()
-            segment.packed = ''.join([  segment.head.packed,
-                                        segment.coat.packed,
-                                        self.foot.packed])
-            segment.sign()
-            self.segments[i] = segment
-
+        self.sign()
 
 class RxPacket(Packet):
     '''
@@ -567,7 +526,6 @@ class RxPacket(Packet):
         self.body = RxBody(packet=self)
         self.coat = RxCoat(packet=self)
         self.foot = RxFoot(packet=self)
-        self.segments = odict() # desegmentize assumes odict()
         self.packed = packed or ''
 
     @property
@@ -638,14 +596,6 @@ class RxPacket(Packet):
 
         self.foot.parse() #foot unpacks itself
 
-    def parseSegment(self, packet):
-        '''
-        If packet is segmentive then adds to .segments at index of segment number
-        Assumes packet parseOuter has already happened
-        '''
-        if packet.segmentive:
-            self.segments[packet.data['sn']] = packet
-
     def unpackInner(self, packed=None):
         '''
         Unpacks the body, and coat parts of .packed
@@ -667,46 +617,155 @@ class RxPacket(Packet):
         Result is .body.data and .data
         Raises PacketError exception If failure
         '''
-        if not self.segmented: #since head and foot are not valid
-            self.unpackInner()
+        self.unpackInner()
         self.coat.parse()
         self.body.parse()
 
-    def desegmentable(self):
-        '''
-        Return True of  .segments is complete
-        '''
-        if not self.segmentive or not self.segmented:
-            return False
 
-        sc = self.data['sc']
-        for i in range(0, sc):
-            if i not in self.segments:
-                return False
-            if not self.segments[i]:
-                return False
-        return True
+class Tray(object):
+    '''
+    Manages messages, segmentation when needed and the associated packets
+    '''
+    def __init__(self, stack=None, data=None, body=None, packed=None,  **kwa):
+        '''
+        Setup instance
+        '''
+        self.stack = stack
+        self.packed = packed or ''
+        self.data = odict(raeting.PACKET_DEFAULTS)
+        if data:
+            self.data.update(data)
+        self.body = body #body data of message
+
+    @property
+    def size(self):
+        '''
+        Property is the length of the .packed
+        '''
+        return len(self.packed)
+
+class TxTray(Tray):
+    '''
+    Manages an outgoing message and ites associated packet(s)
+    '''
+    def __init__(self, **kwa):
+        '''
+        Setup instance
+        '''
+        super(TxTray, self).__init__(**kwa)
+        self.packets = []
+        self.current = 0 #current packet to send
+
+    def pack(self, data=None, body=None):
+        '''
+        Convert message in .body into one or more packets
+        '''
+        if data:
+            self.data.update(data)
+        if body is not None:
+            self.body = body
+
+        self.current = 0
+        self.packets = []
+        packet = TxPacket(stack=self.stack,
+                          kind=raeting.pcktKinds.message,
+                          embody=self.body,
+                          data=self.data)
+
+        packet.prepack()
+        if packet.size <= raeting.MAX_PACKET_SIZE:
+            packet.sign()
+            self.packets.append(packet)
+        else:
+            self.packed = packet.coat.packed
+            self.packetize(headsize=packet.head.size, footsize=packet.foot.size)
+
+    def packetize(self, headsize, footsize):
+        '''
+        Create packeted segments from .packed using headsize footsize
+        '''
+        extrasize = 0
+        if self.data['hk'] == raeting.headKinds.json:
+            extrasize = 32 # extra header size as a result of segmentation
+
+        hotelsize = headsize + extrasize + footsize
+        segsize = raeting.MAX_PACKET_SIZE - hotelsize
+
+        segcount = (self.size // segsize) + (1 if self.size % segsize else 0)
+        for i in range(segcount):
+            if i == segcount - 1: #last segment
+                segment = self.packed[i * segsize:]
+            else:
+                segment = self.packed[i * segsize: (i+1) * segsize]
+
+            packet = TxPacket( stack=self.stack,
+                                data=self.data)
+            packet.data.update(sn=i, sc=segcount, ml=self.size, sf=True)
+            packet.coat.packed = packet.body.packed = segment
+            packet.foot.pack()
+            packet.head.pack()
+            packet.packed = ''.join([  packet.head.packed,
+                                        packet.coat.packed,
+                                        packet.foot.packed])
+            packet.sign()
+            self.packets.append(packet)
+
+
+class RxTray(Tray):
+    '''
+    Manages segmentated messages and the associated packets
+    '''
+    def __init__(self, segments=None, **kwa):
+        '''
+        Setup instance
+        '''
+        super(RxTray, self).__init__(**kwa)
+        self.segments = segments if segments is not None else []
+        self.complete = False
+
+    def parse(self, packet):
+        '''
+        Process a given packet
+        '''
+        sc = packet.data['sc']
+        console.verbose("segment count = {0} tid={1}\n".format(sc, packet.data['ti']))
+
+        if not self.segments: #get data from first packet received
+            self.data.update(packet.data)
+            self.segments = [None] * sc
+
+        hl = packet.data['hl']
+        fl = packet.data['fl']
+        segment = packet.packed[hl:packet.size - fl]
+        sn = packet.data['sn']
+
+        self.segments[sn] = segment
+        if None in self.segments: #don't have all segments yet
+            return None
+        self.body = self.desegmentize()
+        return self.body
+
 
     def desegmentize(self):
         '''
-        Reassemble packet from segments
-        When done ready to call parseInner on self
+        Process message packet assumes already parsed outer so verified signature
+        and processed header data
         '''
-        hauls = []
         sc = self.data['sc']
-        for i in range(0, sc):
-            segment = self.segments[i]
-            hl = segment.data['hl']
-            fl = segment.data['fl']
-            haul = segment.packed[hl:segment.size - fl]
-            hauls.append(haul)
-        packed = "".join(hauls)
-        self.coat.packed = packed
+        self.packed = "".join(self.segments)
         ml = self.data['ml']
-        if self.coat.size != ml:
-            emsg = ("Full segmented payload length '{0}' does not equal head field"
-                                          " '{1}'".format(self.cost.size, ml))
+        if sc > 1 and self.size != ml:
+            emsg = ("Full message payload length '{0}' does not equal head field"
+                                          " '{1}'".format(self.size, ml))
             raise raeting.PacketError(emsg)
 
+        packet = RxPacket(stack = self.stack, data=self.data)
+        packet.coat.packed = self.packed
+
+        packet.coat.parse()
+        packet.body.parse()
+        self.complete = True
+
+        return packet.body.data
 
 

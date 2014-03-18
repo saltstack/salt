@@ -2445,18 +2445,26 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+
             except Exception as exc:
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
+
+            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
+
+            # Auth has succeeded, get groups this user is a member of
+            groups = self.loadauth.get_groups(extra)
+
+            if groups:
+                auth_list = self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name]
-                        if name in self.opts['external_auth'][extra['eauth']]
-                        else self.opts['external_auth'][extra['eauth']]['*'],
+                    auth_list,
                     clear_load['fun'],
                     clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
+                    clear_load.get('tgt_type', 'glob')
+                    )
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':

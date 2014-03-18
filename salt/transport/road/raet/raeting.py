@@ -50,7 +50,6 @@ header data =
     ti: Transaction ID (TID) Default 0
     tk: Transaction Kind (TrnsKind)
 
-
     dt: Datetime Stamp  (Datetime) Default 0
     oi: Order index (OrdrIndx)   Default 0
 
@@ -293,6 +292,17 @@ class PacketError(RaetError):
             raise raeting.PacketError(emsg)
     '''
     pass
+
+class PacketSizeError(PacketError):
+    '''
+       Packet too large error needs to be segmented
+
+       Usage:
+            emsg = "Packet size {0} too large needs to be segmented".format(size)
+            raise raeting.PacketSizeError(emsg)
+    '''
+    pass
+
 
 class KeepError(RaetError):
     '''
