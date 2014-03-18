@@ -86,8 +86,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/%{name}
 %{python_sitelib}/%{namespace}/*
 %{python_sitelib}/%{eggspace}-%{version}-py?.?.egg-info
-%doc %{_mandir}/man1/%{name}.1.*
-%doc %{_mandir}/man7/%{name}.7.*
+%doc %{_mandir}/man1/%{name}.1*
+%doc %{_mandir}/man7/%{name}.7*
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/%{name}
