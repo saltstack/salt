@@ -1523,7 +1523,7 @@ class Messenger(Initiator):
         '''
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
-        self.segmentage = None # special packet to hold segments if any
+        #self.segmentage = None # special packet to hold segments if any
         if self.reid is None:
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         remote = self.stack.estates[self.reid]
@@ -1536,6 +1536,7 @@ class Messenger(Initiator):
         self.sid = remote.sid
         self.tid = remote.nextTid()
         self.prep() # prepare .txData
+        self.tray = packeting.TxTray(stack=self.stack)
         self.add(self.index)
 
     def receive(self, packet):
@@ -1579,26 +1580,14 @@ class Messenger(Initiator):
             self.remove()
             return
 
-        if body is None:
-            body = odict()
-
-        packet = packeting.TxPacket(stack=self.stack,
-                                    kind=raeting.pcktKinds.message,
-                                    embody=body,
-                                    data=self.txData)
         try:
-            packet.pack()
+            self.tray.pack(data=self.txData, body=body)
         except raeting.PacketError as ex:
             console.terse(ex + '\n')
             self.stack.incStat("packing_error")
             self.remove()
             return
-        if packet.segmented:
-            self.segmentage = packet
-            for segment in self.segmentage.segments.values():
-                self.transmit(segment)
-
-        else:
+        for packet in self.tray.packets:
             self.transmit(packet)
 
         console.concise("Messenger Do Message at {0}\n".format(self.stack.store.stamp))
@@ -1636,7 +1625,7 @@ class Messengent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('reid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
-        self.segmentage = None # special packet to hold segments if any
+        #self.segmentage = None # special packet to hold segments if any
         remote = self.stack.estates[self.reid]
         if not remote.allowed:
             emsg = "Must be allowed first"
@@ -1654,6 +1643,7 @@ class Messengent(Correspondent):
         remote.rsid = self.sid #update last received rsid for estate
         remote.rtid = self.tid #update last received rtid for estate
         self.prep() # prepare .txData
+        self.tray = packeting.RxTray(stack=self.stack)
         self.add(self.index)
 
     def receive(self, packet):
@@ -1690,26 +1680,19 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
-        console.verbose("segment count = {0} tid={1}\n".format(
-                 self.rxPacket.data['sc'], self.tid))
-        if self.rxPacket.segmentive:
-            if not self.segmentage:
-                self.segmentage = packeting.RxPacket(stack=self.stack,
-                                                data=self.rxPacket.data)
-            self.segmentage.parseSegment(self.rxPacket)
-            if not self.segmentage.desegmentable():
-                return
-            self.segmentage.desegmentize()
-            if not self.stack.parseInner(self.segmentage):
-                return
-            body = self.segmentage.body.data
-        else:
-            if not self.stack.parseInner(self.rxPacket):
-                return
-            body = self.rxPacket.body.data
+        try:
+            body = self.tray.parse(self.rxPacket)
+        except raeting.PacketError as ex:
+            console.terse(ex + '\n')
+            self.incStat('parsing_inner_error')
+            self.remove()
+            return
 
-        self.stack.rxMsgs.append(body)
-        self.ackMessage()
+        if self.tray.complete:
+            console.verbose("{0} received message body\n{1}\n".format(
+                    self.stack.name, body))
+            self.stack.rxMsgs.append(body)
+            self.ackMessage()
 
     def ackMessage(self):
         '''
