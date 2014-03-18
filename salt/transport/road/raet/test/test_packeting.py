@@ -35,20 +35,25 @@ def test( bk = raeting.bodyKinds.json):
     stuff = "".join(stuff)
     data.update(bk=raeting.bodyKinds.raw)
     packet0 = packeting.TxPacket(embody=stuff, data=data, )
-    packet0.pack()
-    print packet0.packed
-    packet1 = packeting.RxPacket(packed=packet0.packed)
-    packet1.parse()
-    print packet1.data
-    print packet1.body.data
+    try:
+        packet0.pack()
+    except raeting.PacketError as ex:
+        print ex
+        print "Need to use tray"
 
-    rejoin = []
-    if packet0.segmented:
-        for index, segment in  packet0.segments.items():
-            print index, segment.packed
-            rejoin.append(segment.body.packed)
-    rejoin = "".join(rejoin)
-    print stuff == rejoin
+    tray0 = packeting.TxTray(data=data, body=stuff)
+    tray0.pack()
+    print tray0.packed
+    print tray0.packets
+
+    tray1 = packeting.RxTray()
+    for packet in tray0.packets:
+        tray1.parse(packet)
+
+    print tray1.data
+    print tray1.body
+
+    print stuff == tray1.body
 
     #master stack
     masterName = "master"
@@ -106,110 +111,59 @@ def test( bk = raeting.bodyKinds.json):
 
     print  "\n___________Raw Body Test"
     data.update(se=1, de=2, bk=raeting.bodyKinds.raw, fk=raeting.footKinds.nacl)
-    packet0 = packeting.TxPacket(stack=stack0, embody=stuff, data=data, )
-    packet0.pack()
-    print packet0.packed  #not signed if segmented each segment is signed
+    tray0 = packeting.TxTray(stack=stack0, data=data, body=stuff)
+    tray0.pack()
+    print tray0.packed
+    print tray0.packets
 
-    rejoin = []
-    if packet0.segmented:
-        for index, segment in  packet0.segments.items():
-            print index, segment.packed
-            rejoin.append(segment.coat.packed)
+    tray1 = packeting.RxTray(stack=stack1)
+    for packet in tray0.packets:
+        tray1.parse(packet)
 
-    rejoin = "".join(rejoin)
-    print stuff == rejoin
+    print tray1.data
+    print tray1.body
 
-    segmentage = None
-    if packet0.segmented:
-        for segment in packet0.segments.values():
-            packet = packeting.RxPacket(stack=stack1, packed=segment.packed)
-            packet.parseOuter()
-            if packet.segmentive:
-                if not segmentage:
-                    segmentage = packeting.RxPacket(stack=packet.stack,
-                                                    data=packet.data)
-                segmentage.parseSegment(packet)
-            if segmentage.desegmentable():
-                segmentage.desegmentize()
-                break
-    if segmentage:
-        if not stack1.parseInner(segmentage):
-            print "*******BAD SEGMENTAGE********"
-            return
-        print segmentage.body.packed
-        print segmentage.body.data
-        print segmentage.body.packed == packet0.body.packed
-
-    body = odict(stuff=stuff)
-    print body
+    print stuff == tray1.body
 
     print  "\n_____________    Packed Body Test"
-    data.update(se=1, de=2, bk=bk, fk=raeting.footKinds.nacl)
-    packet0 = packeting.TxPacket(stack=stack0, embody=body, data=data, )
-    packet0.pack()
-    print packet0.packed
-
-    segmentage = None
-    if packet0.segmented:
-        for segment in packet0.segments.values():
-            packet = packeting.RxPacket(stack=stack1, packed=segment.packed)
-            packet.parseOuter()
-            if packet.segmentive:
-                if not segmentage:
-                    segmentage = packeting.RxPacket(stack=packet.stack,
-                                                    data=packet.data)
-                segmentage.parseSegment(packet)
-            if segmentage.desegmentable():
-                segmentage.desegmentize()
-                break
-    if segmentage:
-        if not stack1.parseInner(segmentage):
-            print "*******BAD SEGMENTAGE********"
-            return
-        print segmentage.body.packed
-        print segmentage.body.data
-        print segmentage.body.packed == packet0.body.packed
-
     body = odict(stuff=stuff)
     print body
+    data.update(se=1, de=2, bk=bk, fk=raeting.footKinds.nacl)
+    tray0 = packeting.TxTray(stack=stack0, data=data, body=body)
+    tray0.pack()
+    print tray0.packed
+    print tray0.packets
+
+    tray1 = packeting.RxTray(stack=stack1)
+    for packet in tray0.packets:
+        tray1.parse(packet)
+
+    print tray1.data
+    print tray1.body
+
+    print body == tray1.body
+
 
     print "\n___________    Encrypted Coat Test "
+    body = odict(stuff=stuff)
+    print body
     data.update(se=1, de=2,
                 bk=raeting.bodyKinds.json,
                 ck=raeting.coatKinds.nacl,
                 fk=raeting.footKinds.nacl)
-    packet0 = packeting.TxPacket(stack=stack0, embody=body, data=data, )
-    packet0.pack()
-    print "Body"
-    print packet0.body.size,  packet0.body.packed
-    print "Coat"
-    print packet0.coat.size,  packet0.coat.packed
-    print "Head"
-    print packet0.head.size,  packet0.head.packed
-    print "Foot"
-    print packet0.foot.size,  packet0.foot.packed
-    print "Packet"
-    print packet0.size, packet0.packed
+    tray0 = packeting.TxTray(stack=stack0, data=data, body=body)
+    tray0.pack()
+    print tray0.packed
+    print tray0.packets
 
-    segmentage = None
-    if packet0.segmented:
-        for segment in packet0.segments.values():
-            packet = packeting.RxPacket(stack=stack1, packed=segment.packed)
-            packet.parseOuter()
-            if packet.segmentive:
-                if not segmentage:
-                    segmentage = packeting.RxPacket(stack=packet.stack,
-                                                    data=packet.data)
-                segmentage.parseSegment(packet)
-            if segmentage.desegmentable():
-                segmentage.desegmentize()
-                break
-    if segmentage:
-        if not stack1.parseInner(segmentage):
-            print "*******BAD SEGMENTAGE********"
-        print segmentage.body.packed
-        print segmentage.body.data
-        print segmentage.body.packed == packet0.body.packed
+    tray1 = packeting.RxTray(stack=stack1)
+    for packet in tray0.packets:
+        tray1.parse(packet)
+
+    print tray1.data
+    print tray1.body
+
+    print body == tray1.body
 
 
     stack0.server.close()
