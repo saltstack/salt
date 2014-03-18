@@ -25,8 +25,9 @@ directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
 name. 
 
-Reviewing the `MySQL Salt formula <https://github.com/saltstack-formulas/mysql-formula>`_ it is clear to see
-the benefits to the end-user when reviewing a sample of the available states:
+Reviewing the `MySQL Salt formula <https://github.com/saltstack-formulas/mysql-formula>`_
+it is clear to see the benefits to the end-user when reviewing a sample of the
+available states:
 
 .. code-block:: bash
 
@@ -311,8 +312,9 @@ state!). There is also still the concern of the configuration file data living
 in the same state as the service and package.
 
 In the next example steps will be taken to begin addressing these issues.
-Starting with the addition of a map.jinja file (as noted in the :doc:`Formula documentation </topics/development/conventions/formulas>`)
-, and modification of static values:
+Starting with the addition of a map.jinja file (as noted in the
+:doc:`Formula documentation </topics/development/conventions/formulas>`), and
+modification of static values:
 
 /srv/salt/apache/map.jinja:
 
