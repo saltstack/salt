@@ -30,10 +30,8 @@ class Curve(object):
         '''
         Create a hello message
         '''
-        ret = {}
-        ret['C`'] = self.local_prime.keydata['pub']
-        ret['box'] = self.local_prime.encrypt(self.remote, '0')
-        return ret
+        return {'C`': self.local_prime.keydata['pub'],
+                'box': self.local_prime.encrypt(self.remote, '0')}
 
     def verify_hello(self, hello):
         '''

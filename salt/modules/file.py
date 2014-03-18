@@ -1218,11 +1218,9 @@ def blockreplace(path,
                 shutil.copy2(path, '{0}{1}'.format(path, backup))
 
             # backup file attrs
-            perms = {}
-            perms['user'] = get_user(path)
-            perms['group'] = get_group(path)
-            perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
-
+            perms = {'user': get_user(path),
+                     'group': get_group(path),
+                     'mode': __salt__['config.manage_mode'](get_mode(path))}
             # write new content in the file while avoiding partial reads
             f = salt.utils.atomicfile.atomic_open(path, 'wb')
             for line in new_file:
@@ -1582,7 +1580,6 @@ def link(src, link):
         return True
     except (OSError, IOError):
         raise CommandExecutionError('Could not create {0!r}'.format(link))
-    return False
 
 
 def symlink(src, link):
@@ -1603,7 +1600,6 @@ def symlink(src, link):
         return True
     except (OSError, IOError):
         raise CommandExecutionError('Could not create {0!r}'.format(link))
-    return False
 
 
 def rename(src, dst):
@@ -1626,7 +1622,6 @@ def rename(src, dst):
         raise CommandExecutionError(
             'Could not rename {0!r} to {1!r}'.format(src, dst)
         )
-    return False
 
 
 def copy(src, dst):
@@ -1780,11 +1775,11 @@ def statvfs(path):
     try:
         stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
-            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
-            'f_frsize', 'f_namemax'))
+                                                         'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files',
+                                                         'f_flag',
+                                                         'f_frsize', 'f_namemax'))
     except (OSError, IOError):
         raise CommandExecutionError('Could not create {0!r}'.format(link))
-    return False
 
 
 def stats(path, hash_type='md5', follow_symlinks=True):
@@ -2915,7 +2910,6 @@ def is_chrdev(name):
 
        salt '*' file.is_chrdev /dev/chr
     '''
-    stat_structure = None
     try:
         stat_structure = os.stat(name)
     except OSError as exc:
@@ -2986,7 +2980,6 @@ def is_blkdev(name):
 
        salt '*' file.is_blkdev /dev/blk
     '''
-    stat_structure = None
     try:
         stat_structure = os.stat(name)
     except OSError as exc:
@@ -3057,7 +3050,6 @@ def is_fifo(name):
 
        salt '*' file.is_fifo /dev/fifo
     '''
-    stat_structure = None
     try:
         stat_structure = os.stat(name)
     except OSError as exc:
@@ -3129,7 +3121,6 @@ def mknod(name,
       salt '*' file.mknod /dev/blk b 8 999
       salt '*' file.nknod /dev/fifo p
     '''
-    ret = False
     makedirs(name,
              user,
              group)

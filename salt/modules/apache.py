@@ -73,8 +73,7 @@ def fullversion():
         salt '*' apache.fullversion
     '''
     cmd = '{0} -V'.format(_detect_os())
-    ret = {}
-    ret['compiled_with'] = []
+    ret = {'compiled_with': []}
     out = __salt__['cmd.run'](cmd).splitlines()
     # Example
     #  -D APR_HAS_MMAP
@@ -102,9 +101,7 @@ def modules():
         salt '*' apache.modules
     '''
     cmd = '{0} -M'.format(_detect_os())
-    ret = {}
-    ret['static'] = []
-    ret['shared'] = []
+    ret = {'static': [], 'shared': []}
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split()

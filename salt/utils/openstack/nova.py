@@ -248,7 +248,7 @@ class SaltNova(object):
         volume = self.volume_show(name)
         if volume['status'] == 'deleted':
             return volume
-        response = nt_ks.volumes.delete(volume['id'])
+        nt_ks.volumes.delete(volume['id'])
         return self.volume_show(name)
 
     def volume_detach(self,
@@ -324,7 +324,7 @@ class SaltNova(object):
         Suspend a server
         '''
         nt_ks = self.compute_conn
-        response = nt_ks.servers.suspend(instance_id)
+        nt_ks.servers.suspend(instance_id)
         return True
 
     def resume(self, instance_id):
@@ -332,7 +332,7 @@ class SaltNova(object):
         Resume a server
         '''
         nt_ks = self.compute_conn
-        response = nt_ks.servers.resume(instance_id)
+        nt_ks.servers.resume(instance_id)
         return True
 
     def lock(self, instance_id):
@@ -340,7 +340,7 @@ class SaltNova(object):
         Lock an instance
         '''
         nt_ks = self.compute_conn
-        response = nt_ks.servers.lock(instance_id)
+        nt_ks.servers.lock(instance_id)
         return True
 
     def delete(self, instance_id):
@@ -348,7 +348,7 @@ class SaltNova(object):
         Delete a server
         '''
         nt_ks = self.compute_conn
-        response = nt_ks.servers.delete(instance_id)
+        nt_ks.servers.delete(instance_id)
         return True
 
     def flavor_list(self):

@@ -57,7 +57,6 @@ def _rbenv_bin(runas=None):
 
 
 def _rbenv_path(runas=None):
-    path = None
     if runas in (None, 'root'):
         path = __salt__['config.option']('rbenv.root') or '/usr/local/rbenv'
     else:

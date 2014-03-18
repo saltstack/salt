@@ -508,8 +508,7 @@ def file_dict(package):
         salt '*' pkg.file_list nginx
     '''
     errors = []
-    files = {}
-    files[package] = None
+    files = {package: None}
 
     cmd = 'pkg_info -qL {0}'.format(package)
     ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')

@@ -97,9 +97,7 @@ def _write_incron_lines(user, lines):
     Takes a list of lines to be committed to a user's incrontab and writes it
     '''
     if user == 'system':
-        ret = {}
-        ret['retcode'] = _write_file(_INCRON_SYSTEM_TAB, 'salt', ''.join(lines))
-        return ret
+        return {'retcode': _write_file(_INCRON_SYSTEM_TAB, 'salt', ''.join(lines))}
     else:
         path = salt.utils.mkstemp()
         with salt.utils.fopen(path, 'w+') as fp_:
@@ -189,8 +187,6 @@ def list_tab(user):
     ret = {'crons': [],
            'pre': []
            }
-    flag = False
-    comment = None
     tag = '# Line managed by Salt, do not edit'
     for line in data.splitlines():
         if line.endswith(tag):

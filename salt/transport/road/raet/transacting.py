@@ -301,7 +301,7 @@ class Joiner(Initiator):
         '''
         if not self.stack.parseInner(self.rxPacket):
             return
-        data = self.rxPacket.data
+        #data = self.rxPacket.data
         body = self.rxPacket.body.data
 
         leid = body.get('leid')
@@ -668,7 +668,7 @@ class Joinent(Correspondent):
         self.stack.dumpRemote(remote)
         self.reid = remote.eid # auto generated at instance creation above
 
-        if status == None or status == raeting.acceptances.pending:
+        if status is None or status == raeting.acceptances.pending:
             self.ackJoin()
         elif status == raeting.acceptances.accepted:
             duration = min(

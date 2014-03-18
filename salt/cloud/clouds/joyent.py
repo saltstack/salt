@@ -366,7 +366,6 @@ def create(vm_):
             {'kwargs': event_kwargs},
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
@@ -559,7 +558,6 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     if data:
         data = json.dumps(data)
 
-    ret = []
     try:
 
         ret = query2(command=command, data=data, method=method,
@@ -1020,11 +1018,11 @@ def query(action=None, command=None, args=None, method='GET', data=None,
     if type(args) is not dict:
         args = {}
 
-    kwargs = {'data': data}
-    kwargs['headers'] = {
-        'Accept': 'application/json',
-        'X-Api-Version': '~6.5',
-    }
+    kwargs = {'data': data,
+              'headers': {
+                  'Accept': 'application/json',
+                  'X-Api-Version': '~6.5',
+              }}
     if type(headers) is dict:
         for header in headers.keys():
             kwargs['headers'][header] = headers[header]
@@ -1119,7 +1117,6 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     if not isinstance(args, dict):
         args = {}
 
-    request = None
     if args:
         params = urllib.urlencode(args)
         path = '{0}?{1}'.format(path, params)

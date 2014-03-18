@@ -94,7 +94,7 @@ def _set_persistent_module(mod):
         __salt__['file.uncomment'](conf, escape_mod)
     else:
         __salt__['file.append'](conf, mod)
-    return set([mod_name])
+    return {mod_name}
 
 
 def _remove_persistent_module(mod, comment):

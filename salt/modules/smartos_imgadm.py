@@ -54,12 +54,10 @@ def version():
 
         salt '*' imgadm.version
     '''
-    ret = {}
     imgadm = _check_imgadm()
     cmd = '{0} --version'.format(imgadm)
     res = __salt__['cmd.run'](cmd).splitlines()
-    ret = res[0].split()
-    return ret[-1]
+    return res[0].split()[-1]
 
 
 def update_installed():

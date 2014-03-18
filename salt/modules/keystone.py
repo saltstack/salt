@@ -242,7 +242,7 @@ def endpoint_get(service, profile=None, **connection_args):
 
         salt '*' keystone.endpoint_get nova
     '''
-    kstone = auth(profile, **connection_args)
+    auth(profile, **connection_args)
     services = service_list(profile, **connection_args)
     if service not in services:
         return {'Error': 'Could not find the specified service'}

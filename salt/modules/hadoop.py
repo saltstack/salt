@@ -50,7 +50,6 @@ def _hadoop_cmd(module, command, *args):
           hadoop module -command args
        E.g.: hadoop dfs -ls /
     '''
-    out = None
     if module and command:
         if module in __authorized_modules__:
             cmd = 'hadoop %s -%s %s' % (module, command, ' '.join(args))

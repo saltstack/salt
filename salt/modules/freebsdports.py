@@ -294,7 +294,7 @@ def config(name, reset=False, **kwargs):
 
         salt '*' ports.config security/nmap IPV6=off
     '''
-    portpath = _check_portname(name)
+    _check_portname(name)
 
     if reset:
         rmconfig(name)

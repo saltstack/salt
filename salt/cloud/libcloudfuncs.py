@@ -360,7 +360,7 @@ def destroy(name, conn=None, call=None):
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         client = salt.client.LocalClient(__opts__['conf_file'])
-        minions = client.cmd(name, 'mine.flush')
+        client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
     log.info('Destroying VM: {0}'.format(name))
@@ -368,7 +368,7 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+        salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
         salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',

@@ -91,7 +91,7 @@ def _interface_configs():
             subnet, _, netmask = val.strip().split(' ', 2)
             ret[iface]['ip_addrs'][ip]['Subnet'] = subnet.strip()
             ret[iface]['ip_addrs'][ip]['Netmask'] = netmask.lstrip().rstrip(')')
-            ip = ip + 1
+            ip += 1
             continue
         else:
             ret[iface][key.strip()] = val.strip()
@@ -152,7 +152,6 @@ def is_enabled(iface):
     iface_found = False
     for line in __salt__['cmd.run'](cmd).splitlines():
         if 'Connect state:' in line:
-            iface_found = True
             return line.split()[-1] == 'Connected'
     if not iface_found:
         raise CommandExecutionError('Interface {0!r} not found')
@@ -340,7 +339,7 @@ def set_static_dns(iface, *addrs):
                     addrs[0],
                     )
             __salt__['cmd.run'](cmd)
-            addr_index = addr_index + 1
+            addr_index += 1
         else:
             cmd = 'netsh interface ip add dns name="{0}" addr="{1}" index={2}'
             __salt__['cmd.run'](cmd.format(iface, addr, addr_index))

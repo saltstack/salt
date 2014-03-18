@@ -176,8 +176,7 @@ class SREQ(object):
         '''
         Takes two arguments, the encryption type and the base payload
         '''
-        payload = {'enc': enc}
-        payload['load'] = load
+        payload = {'enc': enc, 'load': load}
         pkg = self.serial.dumps(payload)
         self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)

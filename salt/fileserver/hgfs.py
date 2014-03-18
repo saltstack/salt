@@ -283,7 +283,7 @@ def update():
             fp_.write(str(pid))
         curtip = repo.tip()
         try:
-            success = repo.pull()
+            repo.pull()
         except Exception as exc:
             log.error(
                 'Exception {0} caught while updating hgfs remote {1}'
@@ -363,7 +363,7 @@ def find_file(path, tgt_env='base', **kwargs):
     if os.path.isabs(path):
         return fnd
 
-    base_branch = __opts__['hgfs_base']
+    #base_branch = __opts__['hgfs_base']
     hgfs_root = __opts__['hgfs_root']
     hgfs_mountpoint = salt.utils.strip_proto(__opts__['hgfs_mountpoint'])
     if tgt_env == 'base':
@@ -538,9 +538,7 @@ def _file_lists(load, form):
     if cache_match is not None:
         return cache_match
     if refresh_cache:
-        ret = {}
-        ret['files'] = _get_file_list(load)
-        ret['dirs'] = _get_dir_list(load)
+        ret = {'files': _get_file_list(load), 'dirs': _get_dir_list(load)}
         if save_cache:
             salt.fileserver.write_file_list_cache(
                 __opts__, ret, list_cache, w_lock

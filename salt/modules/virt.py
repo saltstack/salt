@@ -536,7 +536,6 @@ def init(name,
 
     nicp = _nic_profile(nic, hypervisor, **kwargs)
 
-    diskp = None
     seedable = False
     if image:  # with disk template image
         # if image was used, assume only one disk, i.e. the
@@ -729,7 +728,6 @@ def vm_state(vm_=None):
         salt '*' virt.vm_state <vm name>
     '''
     def _info(vm_):
-        state = ''
         dom = _get_dom(vm_)
         raw = dom.info()
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
@@ -781,8 +779,7 @@ def get_nics(vm_):
     for node in doc.getElementsByTagName('devices'):
         i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
-            nic = {}
-            nic['type'] = i_node.getAttribute('type')
+            nic = {'type': i_node.getAttribute('type')}
             for v_node in i_node.getElementsByTagName('*'):
                 if v_node.tagName == 'mac':
                     nic['mac'] = v_node.getAttribute('address')
@@ -799,8 +796,7 @@ def get_nics(vm_):
                 # virtualport needs to be handled separately, to pick up the
                 # type attribute of the virtualport itself
                 if v_node.tagName == 'virtualport':
-                    temp = {}
-                    temp['type'] = v_node.getAttribute('type')
+                    temp = {'type': v_node.getAttribute('type')}
                     for key in v_node.attributes.keys():
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp

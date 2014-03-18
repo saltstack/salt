@@ -176,7 +176,6 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    cmd = ''
     if 'Arch' in __grains__['os_family']:
         cmd = ('timedatectl | grep "RTC in local TZ" | '
                'sed -e"s/^[ \t]*//" | cut -d" " -f5')

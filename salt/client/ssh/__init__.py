@@ -549,7 +549,6 @@ class Single(object):
 
         Returns tuple of (stdout, stderr, retcode)
         '''
-        stdout = stderr = retcode = None
         arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):

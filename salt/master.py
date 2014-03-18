@@ -1494,11 +1494,10 @@ class AESFuncs(object):
                     return {}
             else:
                 load['expr_form'] = clear_load['tgt_type']
-        ret = {}
-        ret['jid'] = self.local.cmd_async(**load)
-        ret['minions'] = self.ckminions.check_minions(
-                clear_load['tgt'],
-                load['expr_form'])
+        ret = {'jid': self.local.cmd_async(**load),
+               'minions': self.ckminions.check_minions(
+                   clear_load['tgt'],
+                   load['expr_form'])}
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -1655,12 +1654,11 @@ class AESFuncs(object):
             except RSA.RSAError:
                 return self.crypticle.dumps({})
 
-            pret = {}
-            pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(
-                ret if ret is not False else {}
-            )
-            return pret
+            return {'key': pub.public_encrypt(key, 4),
+                    'pillar': pcrypt.dumps(
+                        ret if ret is not False else {}
+                    )}
+
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
 

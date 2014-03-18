@@ -897,10 +897,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
-        ret = {}
-        ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg))
-        )
+        ret = {'out': self.run_run('{0} {1} {2}'.format(options, fun, ' '.join(arg)))}
         opts = salt.config.master_config(
             self.get_config_file_path('master')
         )

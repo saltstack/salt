@@ -265,9 +265,8 @@ def get_valid_salt_views():
     Returns a dict object of views that should be
     part of the salt design document.
     '''
-    ret = {}
+    ret = {'minions': {}}
 
-    ret['minions'] = {}
     ret['minions']['map'] = "function( doc ){ emit( doc.id, null ); }"
     ret['minions']['reduce'] = \
             "function( keys,values,rereduce ){ return key[0]; }"
@@ -287,9 +286,7 @@ def set_salt_view():
     options = _get_options()
 
     # Create the new object that we will shove in as the design doc.
-    new_doc = {}
-    new_doc['views'] = get_valid_salt_views()
-    new_doc['language'] = "javascript"
+    new_doc = {'views': get_valid_salt_views(), 'language': "javascript"}
 
     # Make the request to update the design doc.
     _response = _request("PUT",

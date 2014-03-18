@@ -481,8 +481,8 @@ def create(vm_):
     # Can open up specific ports in Azure; but not on Windows
 
     try:
-        hosted_service = conn.create_hosted_service(**service_kwargs)
-        vm_deployment = conn.create_virtual_machine_deployment(**vm_kwargs)
+        conn.create_hosted_service(**service_kwargs)
+        conn.create_virtual_machine_deployment(**vm_kwargs)
     except Exception as exc:
         log.error(
             'Error creating {0} on Azure\n\n'
@@ -616,7 +616,6 @@ def create(vm_):
             {'kwargs': event_kwargs},
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
@@ -672,7 +671,7 @@ def destroy(name, conn=None, call=None):
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
     del_vm = conn.delete_deployment(service_name=name, deployment_name=name)
-    del_service = conn.delete_hosted_service
+    conn.delete_hosted_service  # ?
     ret[name] = {
         'request_id': del_vm.request_id,
     }

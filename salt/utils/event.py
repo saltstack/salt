@@ -79,10 +79,7 @@ log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
-SUB_EVENT = set([
-            'state.highstate',
-            'state.sls',
-            ])
+SUB_EVENT = {'state.highstate', 'state.sls'}
 
 TAGEND = '\n\n'  # long tag delimiter
 TAGPARTER = '/'  # name spaced tag delimiter

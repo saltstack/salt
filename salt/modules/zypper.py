@@ -114,7 +114,7 @@ def latest_version(*names, **kwargs):
                 pkginfo[key] = val
 
         # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+        if not {'name', 'version', 'status'} <= set(pkginfo.keys()):
             continue
 
         status = pkginfo['status'].lower()

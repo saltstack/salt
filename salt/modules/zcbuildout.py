@@ -73,7 +73,6 @@ def _salt_callback(func):
     LOG.clear()
 
     def _call_callback(*a, **kw):
-        st = BASE_STATUS.copy()
         directory = kw.get('directory', '.')
         onlyif = kw.get('onlyif', None)
         unless = kw.get('unless', None)
@@ -90,7 +89,6 @@ def _salt_callback(func):
             # if onlyif/unless returns, we are done
             if status is None:
                 status = BASE_STATUS.copy()
-                comment, st = '', True
                 out = func(*a, **kw)
                 # we may have already final statuses not to be touched
                 # merged_statuses flag is there to check that !
@@ -273,7 +271,6 @@ def _Popen(command,
         (set to None to disable check)
 
     '''
-    ret = None
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = ' '.join(command)

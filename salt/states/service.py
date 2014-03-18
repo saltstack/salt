@@ -430,7 +430,6 @@ def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    action = ''
 
     if __salt__['service.status'](name, sig):
         if 'service.reload' in __salt__ and reload:

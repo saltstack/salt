@@ -848,15 +848,14 @@ def list_repos():
     for source in sources.list:
         if source.invalid:
             continue
-        repo = {}
-        repo['file'] = source.file
-        repo['comps'] = getattr(source, 'comps', [])
-        repo['disabled'] = source.disabled
-        repo['dist'] = source.dist
-        repo['type'] = source.type
-        repo['uri'] = source.uri.rstrip('/')
-        repo['line'] = _strip_uri(source.line.strip())
-        repo['architectures'] = getattr(source, 'architectures', [])
+        repo = {'file': source.file,
+                'comps': getattr(source, 'comps', []),
+                'disabled': source.disabled,
+                'dist': source.dist,
+                'type': source.type,
+                'uri': source.uri.rstrip('/'),
+                'line': _strip_uri(source.line.strip()),
+                'architectures': getattr(source, 'architectures', [])}
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -1442,7 +1441,6 @@ def get_selections(pattern=None, state=None):
         salt '*' pkg.get_selections state=hold
         salt '*' pkg.get_selections 'openssh*' state=hold
     '''
-    ret = {}
     cmd = 'dpkg --get-selections'
     if pattern:
         cmd += ' {0!r}'.format(pattern)

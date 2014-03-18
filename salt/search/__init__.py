@@ -34,10 +34,7 @@ def iter_ret(opts, ret):
     else:
         get_jids = ret[get_jids]
     for jid in get_jids():
-        jids = {}
-        jids['load'] = get_load(jid)
-        jids['ret'] = get_jid(jid)
-        jids['jid'] = jid
+        jids = {'load': get_load(jid), 'ret': get_jid(jid), 'jid': jid}
         yield jids
 
 

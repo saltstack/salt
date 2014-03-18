@@ -39,9 +39,7 @@ def status(output=True):
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
 
-    ret = {}
-    ret['up'] = sorted(minions)
-    ret['down'] = sorted(set(keys['minions']) - set(minions))
+    ret = {'up': sorted(minions), 'down': sorted(set(keys['minions']) - set(minions))}
     if output:
         salt.output.display_output(ret, '', __opts__)
     return ret
@@ -73,7 +71,7 @@ def key_regen():
         salt-run manage.key_regen
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
-    minions = client.cmd('*', 'saltutil.regen_keys')
+    client.cmd('*', 'saltutil.regen_keys')
 
     for root, dirs, files in os.walk(__opts__['pki_dir']):
         for fn_ in files:
@@ -330,7 +328,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
         if not source_list:
             return -1
 
-        version = source_list[0][1]
+        #version = source_list[0][1]
         arch = source_list[0][2]
         installer_url = base_url + source_list[0][0]
 

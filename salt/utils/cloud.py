@@ -378,7 +378,6 @@ def bootstrap(vm_, opts):
         {'kwargs': event_kwargs},
     )
 
-    deployed = False
     if win_installer:
         deployed = deploy_windows(**deploy_kwargs)
     else:
@@ -675,9 +674,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     )
                 )
                 return False
-            if connectfail is False:
-                return True
-            return False
+            return not connectfail
         except Exception:
             if trycount >= maxtries:
                 return False
@@ -702,13 +699,11 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                              username=username, password=password,
                              timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
                 host, port, username
             )
         )
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         creds = '-U {0}%{1} //{2}'.format(
             username, password, host)
         # Shell out to smbclient to create C:\salttmp\
@@ -832,7 +827,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
@@ -847,7 +841,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     host, port, username
                 )
             )
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             kwargs = {
                 'hostname': host,
                 'port': port,
@@ -1010,7 +1003,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
 
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
@@ -1445,7 +1437,6 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     try:
         password_retries = 15
-        stdout, stderr = None, None
         try:
             proc = vt.Terminal(
                 cmd,
@@ -1532,13 +1523,13 @@ def is_public_ip(ip):
     Determines whether an IP address falls within one of the private IP ranges
     '''
     addr = ip_to_int(ip)
-    if addr > 167772160 and addr < 184549375:
+    if 167772160 < addr < 184549375:
         # 10.0.0.0/24
         return False
-    elif addr > 3232235520 and addr < 3232301055:
+    elif 3232235520 < addr < 3232301055:
         # 192.168.0.0/16
         return False
-    elif addr > 2886729728 and addr < 2887778303:
+    elif 2886729728 < addr < 2887778303:
         # 172.16.0.0/12
         return False
     return True

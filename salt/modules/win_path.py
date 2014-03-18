@@ -92,7 +92,6 @@ def add(path, index=0):
         # Will add to the end of the path
         salt '*' win_path.add 'c:\\python27' index='-1'
     '''
-    currIndex = -1
     sysPath = get_path()
     path = _normalize_dir(path)
     index = int(index)

@@ -650,11 +650,10 @@ class RemoteFuncs(object):
                     return {}
             else:
                 pub_load['expr_form'] = load['tgt_type']
-        ret = {}
-        ret['jid'] = self.local.cmd_async(**pub_load)
-        ret['minions'] = self.ckminions.check_minions(
-                load['tgt'],
-                pub_load['expr_form'])
+        ret = {'jid': self.local.cmd_async(**pub_load),
+               'minions': self.ckminions.check_minions(
+                   load['tgt'],
+                   pub_load['expr_form'])}
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -1336,7 +1335,7 @@ class LocalFuncs(object):
                     exc_info=True
                 )
         # Set up the payload
-        payload = {'enc': 'aes'}
+        # payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
         # break compatibility with minion/master versions and even tiny
         # additions can have serious implications on the performance of the

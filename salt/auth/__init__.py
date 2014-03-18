@@ -360,8 +360,6 @@ class Resolver(object):
         '''
         Request a token from the master
         '''
-        load = {}
-        load['token'] = token
-        load['cmd'] = 'get_token'
+        load = {'token': token, 'cmd': 'get_token'}
         tdata = self._send_token_request(load)
         return tdata

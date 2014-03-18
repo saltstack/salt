@@ -297,8 +297,8 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
 
         salt '*' ssh.check_key <user> <key> <enc> <comment> <options>
     '''
-    if cache_keys is None:
-        cache_keys = []
+    # if cache_keys is None:
+    #     cache_keys = []
     enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)

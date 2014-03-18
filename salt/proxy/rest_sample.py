@@ -97,7 +97,7 @@ class Proxyconn(object):
             cmd += '/'+kwargs['version']
         else:
             cmd += '/1.0'
-        r = requests.get(cmd)
+        requests.get(cmd)
 
     def package_remove(self, name):
         '''

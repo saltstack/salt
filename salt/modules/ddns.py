@@ -120,7 +120,7 @@ def delete_host(zone, name, nameserver='127.0.0.1', **kwargs):
 
     res = delete(zone, name, nameserver=nameserver, **kwargs)
 
-    fqdn = fqdn + '.'
+    fqdn += '.'
     for ip in ips:
         parts = ip.split('.')[::-1]
         popped = []
@@ -161,7 +161,6 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     is_update = False
     for rrset in answer.answer:
         if rdata in rrset.items:
-            rr = rrset.items
             if ttl == rrset.ttl:
                 if replace and (len(answer.answer) > 1
                         or len(rrset.items) > 1):

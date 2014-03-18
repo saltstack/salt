@@ -245,11 +245,9 @@ def absent(name,
             'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
             '\'runas\' is being ignored in favor of \'user\'.'
         )
-        runas = None
     elif runas is not None:
         # Support old runas usage
         user = runas
-        runas = None
 
     db_args = {
         'maintenance_db': maintenance_db,

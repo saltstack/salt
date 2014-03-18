@@ -177,7 +177,6 @@ def present(name,
         ret['result'] = None
         ret['comment'] = 'Group {0} is set to be {1}d'.format(name, mode)
         return ret
-    cret = None
     update = {}
     if mode == 'update':
         if (

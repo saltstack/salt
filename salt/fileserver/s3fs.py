@@ -99,7 +99,7 @@ def update():
     metadata = _init()
 
     if _s3_sync_on_update:
-        key, keyid, service_url = _get_s3_key()
+        _get_s3_key()  # ?
 
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')

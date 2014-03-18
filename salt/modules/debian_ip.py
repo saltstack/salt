@@ -890,8 +890,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     Filters given options and outputs valid settings for a
     network interface.
     '''
-    adapters = {}
-    adapters[iface] = {}
+    adapters = {iface: {}}
 
     adapters[iface]['type'] = iface_type
 

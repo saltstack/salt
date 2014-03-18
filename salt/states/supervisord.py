@@ -203,14 +203,12 @@ def running(name,
                 process_type is not None and ' {0}'.format(process_type) or '',
                 name
             )
-            result = comment
             ret.update({'comment': comment})
         else:
             comment = 'Not starting already running{0}: {1}'.format(
                 process_type is not None and ' {0}'.format(process_type) or '',
                 name
             )
-            result = comment
             ret.update({'comment': comment})
 
     elif not just_updated:

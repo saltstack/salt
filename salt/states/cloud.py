@@ -367,7 +367,6 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     )
 
     if name in volumes.keys() and volumes[name]['attachments']:
-        volume = volumes[name]
         ret['comment'] = ('Volume {name} is already'
                           'attached: {attachments}').format(**volumes[name])
         ret['result'] = True

@@ -266,7 +266,6 @@ def function(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         ]
-        expr_form = None
     elif expr_form and not tgt_type:
         tgt_type = expr_form
     elif not tgt_type and not expr_form:

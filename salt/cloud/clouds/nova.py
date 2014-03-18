@@ -359,7 +359,7 @@ def destroy(name, conn=None, call=None):
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         salt_client = salt.client.LocalClient(__opts__['conf_file'])
-        minions = salt_client.cmd(name, 'mine.flush')
+        salt_client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(
         name,
@@ -370,7 +370,7 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+        salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
         salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
@@ -475,10 +475,6 @@ def create(vm_):
         kwargs['ex_security_groups'] = [
             g for g in avail_groups if g.name in group_list
         ]
-
-    networks = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False
-    )
 
     floating = []
 
@@ -771,7 +767,6 @@ def create(vm_):
             {'kwargs': event_kwargs},
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:

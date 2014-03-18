@@ -882,7 +882,6 @@ class Minion(MinionBase):
                     function_name, exc
                 )
             except TypeError as exc:
-                trb = traceback.format_exc()
                 aspec = salt.utils.get_function_argspec(
                     minion_instance.functions[data['fun']]
                 )
@@ -984,12 +983,8 @@ class Minion(MinionBase):
         log.info('Returning information for job: {0}'.format(jid))
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
-            load = {'cmd': ret_cmd,
-                    'id': self.opts['id'],
-                    'jid': jid,
-                    'fun': fun,
-                    'load': ret.get('__load__')}
-            load['return'] = {}
+            load = {'cmd': ret_cmd, 'id': self.opts['id'], 'jid': jid, 'fun': fun, 'load': ret.get('__load__'),
+                    'return': {}}
             for key, value in ret.items():
                 if key.startswith('__'):
                     continue
@@ -1900,7 +1895,6 @@ class Matcher(object):
         except Exception:
             log.error('Invalid compound target: {0}'.format(tgt))
             return False
-        return False
 
     def nodegroup_match(self, tgt, nodegroups):
         '''
