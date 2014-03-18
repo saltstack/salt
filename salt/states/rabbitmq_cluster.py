@@ -44,7 +44,6 @@ def join(name, host, user='rabbit', runas=None):
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    result = {}
 
     joined = __salt__['rabbitmq.cluster_status']()
     if '{0}@{1}'.format(user, host) in joined:

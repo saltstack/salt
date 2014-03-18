@@ -56,18 +56,9 @@ def _do(name, gnome_kwargs, preferences):
         value = preferences[pref]
 
         if isinstance(value, bool):
-            ftype = 'boolean'
-
             # need to convert boolean values to strings and make lowercase to
             # pass to gsettings
             value = str(value).lower()
-
-        elif isinstance(value, int):
-            ftype = 'int'
-        elif isinstance(value, str):
-            ftype = 'string'
-        else:
-            ftype = 'string'
 
         gnome_kwargs.update({'key': key, 'value': value})
 

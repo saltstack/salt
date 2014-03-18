@@ -204,7 +204,7 @@ class Client(object):
         # '/' explicitly because the master (that's generating the
         # list of files) only runs on POSIX
         if not path.endswith('/'):
-            path = path + '/'
+            path += '/'
 
         log.info(
             'Caching directory {0!r} for environment {1!r}'.format(
@@ -288,9 +288,6 @@ class Client(object):
                 'not \'env\'. This functionality will be removed in Salt '
                 'Boron.'
             )
-            # Backwards compatibility
-            saltenv = env
-
         return []
 
     def dir_list(self, saltenv='base', prefix='', env=None):
@@ -304,9 +301,6 @@ class Client(object):
                 'not \'env\'. This functionality will be removed in Salt '
                 'Boron.'
             )
-            # Backwards compatibility
-            saltenv = env
-
         return []
 
     def symlink_list(self, saltenv='base', prefix='', env=None):
@@ -320,9 +314,6 @@ class Client(object):
                 'not \'env\'. This functionality will be removed in Salt '
                 'Boron.'
             )
-            # Backwards compatibility
-            saltenv = env
-
         return {}
 
     def is_cached(self, path, saltenv='base', env=None):
@@ -1115,10 +1106,8 @@ class RemoteClient(Client):
                 log.warning(err.format(path))
                 return {}
             else:
-                ret = {}
-                ret['hsum'] = salt.utils.get_hash(
-                    path, form='md5', chunk_size=4096)
-                ret['hash_type'] = 'md5'
+                ret = {'hsum': salt.utils.get_hash(
+                    path, form='md5', chunk_size=4096), 'hash_type': 'md5'}
                 return ret
         load = {'path': path,
                 'saltenv': saltenv,

@@ -104,10 +104,9 @@ def _parse_acl(acl, user, group):
     Parse a single ACL rule
     '''
     comps = acl.split(':')
-    vals = {}
 
     # What type of rule is this?
-    vals['type'] = 'acl'
+    vals = {'type': 'acl'}
     if comps[0] == 'default':
         vals['type'] = 'default'
         comps.pop(0)

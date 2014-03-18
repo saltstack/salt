@@ -1299,7 +1299,6 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
       - If both include_pat and exclude_pat are supplied: return 'True' if
         include_pat matches AND exclude_pat does not match
     '''
-    ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
     if include_pat:
         if re.match('E@', include_pat):
@@ -1508,8 +1507,7 @@ def parse_docstring(docstring):
         }
     '''
     # First try with regex search for :depends:
-    ret = {}
-    ret['full'] = docstring
+    ret = {'full': docstring}
     regex = r'([ \t]*):depends:[ \t]+- (\w+)[^\n]*\n(\1[ \t]+- (\w+)[^\n]*\n)*'
     match = re.search(regex, docstring, re.M)
     if match:

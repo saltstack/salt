@@ -242,9 +242,6 @@ def created(name,
             ret['result'] = False
             ret['comment'] = cret['error']
         else:
-            exists = (
-                cret['created']
-                or 'already exists' in cret.get('comment', ''))
             ret['comment'] += 'Container created\n'
             ret['changes']['status'] = 'Created'
     return ret

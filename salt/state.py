@@ -2638,8 +2638,6 @@ class MasterHighState(HighState):
                 'not \'env\'. This functionality will be removed in Salt '
                 'Boron.'
             )
-            # Backwards compatibility
-            saltenv = env
         # Force the fileclient to be local
         opts = copy.deepcopy(minion_opts)
         opts['file_client'] = 'local'

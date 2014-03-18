@@ -578,8 +578,7 @@ def query(database, query, **connection_args):
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
 
-    ret = {}
-    ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
+    ret = {'query time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))}}
     select_keywords = ["SELECT", "SHOW", "DESC"]
     select_query = False
     for keyword in select_keywords:
@@ -1009,9 +1008,7 @@ def user_exists(user,
     cur = dbc.cursor()
     qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
            'Host = %(host)s')
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
 
     if salt.utils.is_true(passwordless):
         if salt.utils.is_true(unix_socket):
@@ -1054,9 +1051,7 @@ def user_info(user, host='localhost', **connection_args):
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = ('SELECT * FROM mysql.user WHERE User = %(user)s AND '
            'Host = %(host)s')
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
 
     try:
         _execute(cur, qry, args)
@@ -1128,9 +1123,7 @@ def user_create(user,
 
     cur = dbc.cursor()
     qry = 'CREATE USER %(user)s@%(host)s'
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
     if password is not None:
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = password
@@ -1289,11 +1282,9 @@ def user_remove(user,
 
     cur = dbc.cursor()
     qry = 'DROP USER %(user)s@%(host)s'
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
     try:
-        result = _execute(cur, qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1458,9 +1449,7 @@ def __grant_generate(grant,
             table = quote_identifier(table)
     # identifiers cannot be used as values, and same thing for grants
     qry = 'GRANT {0} ON {1}.{2} TO %(user)s@%(host)s'.format(grant, dbc, table)
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Grant Query generated: {0} args {1}'.format(qry, repr(args)))
@@ -1487,9 +1476,7 @@ def user_grants(user,
         return False
     cur = dbc.cursor()
     qry = 'SHOW GRANTS FOR %(user)s@%(host)s'
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
@@ -1657,9 +1644,7 @@ def grant_revoke(grant,
         s_database,
         table
     )
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    args = {'user': user, 'host': host}
 
     try:
         _execute(cur, qry, args)

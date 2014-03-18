@@ -22,25 +22,8 @@ def __virtual__():
     Only work on systems which exclusively use sysvinit
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = set((
-        'RedHat',
-        'CentOS',
-        'Amazon',
-        'Scientific',
-        'CloudLinux',
-        'Fedora',
-        'Gentoo',
-        'Ubuntu',
-        'Debian',
-        'Arch',
-        'Arch ARM',
-        'ALT',
-        'SUSE  Enterprise Server',
-        'OEL',
-        'Linaro',
-        'elementary OS',
-        'McAfee  OS Server'
-    ))
+    disable = {'RedHat', 'CentOS', 'Amazon', 'Scientific', 'CloudLinux', 'Fedora', 'Gentoo', 'Ubuntu', 'Debian', 'Arch',
+               'Arch ARM', 'ALT', 'SUSE  Enterprise Server', 'OEL', 'Linaro', 'elementary OS', 'McAfee  OS Server'}
     if __grains__.get('os', '') in disable:
         return False
     # Disable on all non-Linux OSes as well

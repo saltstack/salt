@@ -148,12 +148,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base'):
             '{0}'.format(template)
         )
 
-    kwargs = {}
-    kwargs['salt'] = __salt__
-    kwargs['pillar'] = __pillar__
-    kwargs['grains'] = __grains__
-    kwargs['opts'] = __opts__
-    kwargs['saltenv'] = saltenv
+    kwargs = {'salt': __salt__, 'pillar': __pillar__, 'grains': __grains__, 'opts': __opts__, 'saltenv': saltenv}
 
     def _render(contents):
         # write out path to temp file

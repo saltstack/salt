@@ -119,7 +119,6 @@ def test():
     stack1.server.close()
 
     #master stack
-    dirpath = os.path.join(os.getcwd(), 'keep', 'master')
     estate = estating.LocalEstate(  eid=1,
                                     name='master',
                                     sigkey=masterSignKeyHex,
@@ -127,7 +126,6 @@ def test():
     stack0 = stacking.StackUdp(estate=estate, dirpath=masterDirpath)
 
     #minion stack
-    dirpath = os.path.join(os.getcwd(), 'keep', 'minion1')
     estate = estating.LocalEstate(   eid=2,
                                      name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),

@@ -74,7 +74,6 @@ def delete(overlay):
 
         salt '*' layman.delete <overlay name>
     '''
-    ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
     __salt__['cmd.retcode'](cmd)

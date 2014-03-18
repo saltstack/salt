@@ -128,7 +128,7 @@ def delete_queue(name, region, opts=None, user=None):
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 
-        rtn = _run_aws(
+        _run_aws(
             'delete-queue',
             region=region,
             opts=opts,

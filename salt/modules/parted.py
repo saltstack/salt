@@ -36,8 +36,7 @@ __func_alias__ = {
 }
 
 
-VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
-                   'cyl', 'chs', 'compact'])
+VALID_UNITS = {'s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%', 'cyl', 'chs', 'compact'}
 
 
 def __virtual__():

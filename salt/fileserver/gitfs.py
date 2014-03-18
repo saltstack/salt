@@ -887,7 +887,6 @@ def _envs_pygit2(repo, base_branch):
     environments.
     '''
     ret = set()
-    remote = repo.remotes[0]
     stale_refs = _stale_refs_pygit2(repo)
     for ref in repo.listall_references():
         ref = re.sub('^refs/', '', ref)
@@ -1153,9 +1152,8 @@ def _file_lists(load, form):
     if cache_match is not None:
         return cache_match
     if refresh_cache:
-        ret = {}
-        ret['files'] = _get_file_list(load)
-        ret['dirs'] = _get_dir_list(load)
+        ret = {'files': _get_file_list(load),
+               'dirs': _get_dir_list(load)}
         if save_cache:
             salt.fileserver.write_file_list_cache(
                 __opts__, ret, list_cache, w_lock

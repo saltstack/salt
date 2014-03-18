@@ -94,5 +94,5 @@ def bootstrap(location, size, fmt):
     __salt__['partition.mkpart'](nbd, 'primary', 'ext4', 1, -1)
     __salt__['partition.probe'](nbd)
     __salt__['partition.mkfs']('{0}p1'.format(nbd), 'ext4')
-    mnt = __salt__['qemu_nbd.mount'](nbd)
+    __salt__['qemu_nbd.mount'](nbd)
     #return __salt__['pkg.bootstrap'](nbd, mnt.keys()[0])

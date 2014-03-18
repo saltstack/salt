@@ -376,9 +376,9 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return salt.utils.cloud.simple_types_filter(
-            mapper.run_profile(fun, names)
-        )
+        # return salt.utils.cloud.simple_types_filter(
+        #     mapper.run_profile(fun, names)
+        # )
 
     # map
     # create

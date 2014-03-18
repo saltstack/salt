@@ -55,7 +55,7 @@ def _pretty_size(size):
     '''
     units = [' G', ' M', ' K', ' B']
     while len(units) and size >= 1000:
-        size = size / 1024.0
+        size /= 1024.0
         units.pop()
     return '{0}{1}'.format(round(size, 1), units[-1])
 
@@ -285,7 +285,6 @@ def glsa_check_list(glsa_list):
     elif glsa_list == 'all' or glsa_list == 'affected':
         cmd += glsa_list
 
-    ret = dict()
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = _glsa_list_process_output(out)
     return ret

@@ -105,7 +105,6 @@ def init(**kwargs):
 
         salt '*' virt.init image_uuid='...' alias='...' [...]
     '''
-    ret = {}
     vmadm = _check_vmadm()
     check_zone_args = (
         'image_uuid', 'alias', 'hostname',

@@ -63,7 +63,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 # pylint: disable=E0102
 
 # Import python libs
-import os
 import copy
 import sys
 import stat
@@ -266,7 +265,6 @@ def optimize_providers(providers):
 
     for location, tmp_data in tmp_providers.iteritems():
         for creds, data in tmp_data.iteritems():
-            _id, _key = creds
             _name = data['name']
             _data = data['data']
             if _name not in optimized_providers:
@@ -762,31 +760,27 @@ def get_ssh_gateway_config(vm_):
     # Create dictionary of configuration items
 
     # ssh_gateway
-    ssh_gateway_config = {'ssh_gateway': ssh_gateway}
-
     # ssh_gateway_port
-    ssh_gateway_config['ssh_gateway_port'] = config.get_cloud_config_value(
-        'ssh_gateway_port', vm_, __opts__, default=None,
-        search_global=False
-    )
-
     # ssh_gateway_username
-    ssh_gateway_config['ssh_gateway_user'] = config.get_cloud_config_value(
-        'ssh_gateway_username', vm_, __opts__, default=None,
-        search_global=False
-    )
-
     # ssh_gateway_private_key
-    ssh_gateway_config['ssh_gateway_key'] = config.get_cloud_config_value(
-        'ssh_gateway_private_key', vm_, __opts__, default=None,
-        search_global=False
-    )
-
     # ssh_gateway_password
-    ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
-        'ssh_gateway_password', vm_, __opts__, default=None,
-        search_global=False
-    )
+    ssh_gateway_config = {'ssh_gateway': ssh_gateway,
+                          'ssh_gateway_port': config.get_cloud_config_value(
+                              'ssh_gateway_port', vm_, __opts__, default=None,
+                              search_global=False
+                          ),
+                          'ssh_gateway_user': config.get_cloud_config_value(
+                              'ssh_gateway_username', vm_, __opts__, default=None,
+                              search_global=False
+                          ),
+                          'ssh_gateway_key': config.get_cloud_config_value(
+                              'ssh_gateway_private_key', vm_, __opts__, default=None,
+                              search_global=False
+                          ),
+                          'ssh_gateway_password': config.get_cloud_config_value(
+                              'ssh_gateway_password', vm_, __opts__, default=None,
+                              search_global=False
+                          )}
 
     # Check if private key exists
     key_filename = ssh_gateway_config['ssh_gateway_key']
@@ -1608,7 +1602,6 @@ def create(vm_=None, call=None):
             {'kwargs': event_kwargs},
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
@@ -2014,7 +2007,7 @@ def reboot(name, call=None):
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
     result = query(params)
-    if result == []:
+    if not result:
         log.info("Complete")
 
     return {'Reboot': 'Complete'}

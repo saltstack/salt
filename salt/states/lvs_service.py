@@ -94,8 +94,6 @@ def present(name,
                 ret['result'] = False
                 return ret
 
-    return ret
-
 
 def absent(name, protocol=None, service_address=None):
     '''

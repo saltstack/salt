@@ -54,8 +54,7 @@ class _GSettings(object):
             return False
 
         cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}'.format(self.SCHEMA, self.KEY)
-        environ = {}
-        environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
+        environ = {'XDG_RUNTIME_DIR': '/run/user/{0}'.format(uid)}
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
 
         if 'stdout' in result:
@@ -76,10 +75,7 @@ class _GSettings(object):
             uid = pwd.getpwnam(user).pw_uid
         except KeyError:
             log.info('User does not exist')
-            result = {}
-            result['retcode'] = 1
-            result['stdout'] = 'User {0} does not exist'.format(user)
-            return result
+            return {'retcode': 1, 'stdout': 'User {0} does not exist'.format(user)}
 
         cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
         environ = {}

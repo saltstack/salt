@@ -90,7 +90,6 @@ class Keep(object):
             except ValueError:
                 return None
             return it
-        return None
 
     def dumpLocalData(self, data):
         '''

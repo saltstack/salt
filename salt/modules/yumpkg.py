@@ -104,7 +104,6 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
-    ret = []
     cmd = 'repoquery --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
@@ -1159,14 +1158,12 @@ def mod_repo(repo, basedir=None, **kwargs):
         raise SaltInvocationError('The repo name cannot be deleted')
 
     # Give the user the ability to change the basedir
-    repos = {}
     if basedir:
         repos = list_repos(basedir)
     else:
         repos = list_repos()
         basedir = '/etc/yum.repos.d'
 
-    repofile = ''
     header = ''
     filerepos = {}
     if repo not in repos:

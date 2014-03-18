@@ -439,7 +439,6 @@ def create(vm_):
             {'kwargs': event_kwargs},
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:

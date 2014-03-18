@@ -706,10 +706,6 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     old = list_pkgs()
     if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
         fullatom = name
-        if slot is not None:
-            targets = ['{0}:{1}'.format(fullatom, slot)]
-        if fromrepo is not None:
-            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]

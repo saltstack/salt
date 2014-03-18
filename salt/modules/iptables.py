@@ -623,7 +623,6 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
     if _conf() and not conf_file and not in_mem:
         conf_file = _conf(family)
 
-    rules = ''
     if conf_file:
         with salt.utils.fopen(conf_file, 'r') as ifile:
             rules = ifile.read()

@@ -380,7 +380,6 @@ def list_users():
     Return a list of users on Windows
     '''
     res = 1
-    users = []
     user_list = []
     try:
         while res:

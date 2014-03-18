@@ -26,7 +26,7 @@ def os_family():
 
 
 def os_data():
-    facts = {}
-    facts['version_info'] = {'major': '12,1', 'type': 'I', 'minor': '20131108_srx_12q1_x46_intgr', 'build': '0-613414'}
-    facts['os_family'] = 'proxy'
+    facts = {
+        'version_info': {'major': '12,1', 'type': 'I', 'minor': '20131108_srx_12q1_x46_intgr', 'build': '0-613414'},
+        'os_family': 'proxy'}
     return facts

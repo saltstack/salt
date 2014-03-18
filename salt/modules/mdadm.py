@@ -70,8 +70,7 @@ def detail(device='/dev/md0'):
 
         salt '*' raid.detail '/dev/md0'
     '''
-    ret = {}
-    ret['members'] = {}
+    ret = {'members': {}}
 
     # Lets make sure the device exists before running mdadm
     if not os.path.exists(device):

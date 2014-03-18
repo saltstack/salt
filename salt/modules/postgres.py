@@ -919,7 +919,6 @@ def available_extensions(user=None,
         salt '*' postgres.available_extensions
 
     '''
-    exts = []
     query = (
         'select * '
         'from pg_available_extensions();'

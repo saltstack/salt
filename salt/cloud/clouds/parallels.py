@@ -283,7 +283,7 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
     try:
-        data = create_node(vm_)
+        create_node(vm_)
     except Exception as exc:
         log.error(
             'Error creating {0} on PARALLELS\n\n'

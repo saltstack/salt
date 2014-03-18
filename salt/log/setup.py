@@ -234,7 +234,6 @@ def setup_temp_logger(log_level='error'):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    handler = None
     for handler in logging.root.handlers:
         if handler in (LOGGING_NULL_HANDLER, LOGGING_STORE_HANDLER):
             continue
@@ -289,7 +288,6 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    handler = None
     for handler in logging.root.handlers:
         if handler is LOGGING_STORE_HANDLER:
             continue

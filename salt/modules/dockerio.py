@@ -903,8 +903,6 @@ def start(container, binds=None, ports=None, port_bindings=None,
     '''
     if not binds:
         binds = {}
-    if not ports:
-        ports = {}
     client = _get_client()
     status = base_status.copy()
     try:

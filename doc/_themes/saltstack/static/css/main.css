@@ -172,12 +172,11 @@ body.about h1, body.services h1, body.contact h1 {
 	margin-top: 50px;
 }
 body.about h6 {
-	margin: 0; 
-	font-family: 'Open Sans Light Italic';
+    font-family: 'Open Sans Light Italic';
 	text-transform: uppercase; 
-	line-height: 80%; 
-	margin-bottom: 10px; 
-	color: #AA2B39; 
+	line-height: 80%;
+    margin: 0 0 10px;
+    color: #AA2B39;
 }
 body.services table { 
 	margin: 0; 

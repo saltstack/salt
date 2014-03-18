@@ -108,8 +108,8 @@ def atq(tag=None):
 
         # Search for any tags
         atc_out = _cmd('at', '-c', job)
-        for line in atc_out.splitlines():
-            tmp = job_kw_regex.match(line)
+        for lline in atc_out.splitlines():
+            tmp = job_kw_regex.match(lline)
             if tmp:
                 job_tag = tmp.groups()[0]
 

@@ -277,9 +277,7 @@ def list_tab(user):
             elif line.find('=') > 0:
                 # Appears to be a ENV setup line
                 comps = line.split('=')
-                dat = {}
-                dat['name'] = comps[0]
-                dat['value'] = ' '.join(comps[1:])
+                dat = {'name': comps[0], 'value': ' '.join(comps[1:])}
                 ret['env'].append(dat)
         else:
             ret['pre'].append(line)

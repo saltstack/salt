@@ -360,7 +360,7 @@ def create(vm_):
         )
 
     try:
-        data = conn.create_node(**kwargs)
+        conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
             'Error creating {0} on AWS\n\n'
@@ -510,7 +510,6 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:

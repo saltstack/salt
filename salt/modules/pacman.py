@@ -321,7 +321,6 @@ def install(name=None,
     if pkg_type == 'file':
         cmd = 'pacman -U --noprogressbar --noconfirm ' \
               '{0}'.format(' '.join(pkg_params))
-        targets = pkg_params
     elif pkg_type == 'repository':
         targets = []
         problems = []

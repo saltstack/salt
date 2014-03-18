@@ -102,13 +102,6 @@ class BufferedReader(object):
 
 
 def _main():
-    def timeit_string(fpath, max_size, chunk_size):
-
-        breader = BufferedReader(fpath, max_size, chunk_size)
-        for chunk in breader:
-            chunk  # pylint: disable=W0104
-        return
-
     def sizeof_fmt(num):
         for unit in ['bytes', 'KB', 'MB', 'GB']:
             if num < 1024.0:

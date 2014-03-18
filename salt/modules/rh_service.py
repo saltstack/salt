@@ -198,7 +198,6 @@ def _sysv_services():
     '''
     Return list of sysv services.
     '''
-    ret = []
     return [name for name in os.listdir('/etc/init.d')
         if _service_is_sysv(name)]
 

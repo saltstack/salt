@@ -830,7 +830,6 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             'removed in Salt Helium. Please use `profiles_config`.'
         )
         profiles_config = vm_config
-        vm_config = None
     if vm_config_path and profiles_config_path:
         # This is a bad API usage
         raise RuntimeError(
@@ -845,7 +844,6 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             'removed in Salt Helium. Please use `profiles_config_path`.'
         )
         profiles_config_path = vm_config_path
-        vm_config_path = None
 
     # Load the cloud configuration
     overrides = salt.config.load_config(
@@ -1464,7 +1462,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     )
                 else:
-                    provider = providers.get(extends)
                     if driver in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(extends, driver)
                     elif '-only-extendable-' in providers.get(extends):

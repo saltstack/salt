@@ -236,9 +236,7 @@ class Auth(object):
         server. This payload consists of the passed in id_ and the ssh
         public key to encrypt the AES key sent back form the master.
         '''
-        payload = {}
-        payload['enc'] = 'clear'
-        payload['load'] = {}
+        payload = {'enc': 'clear', 'load': {}}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
         try:

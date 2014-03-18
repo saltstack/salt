@@ -330,13 +330,12 @@ def sync_all(saltenv=None, refresh=True):
         salt '*' saltutil.sync_all
     '''
     log.debug('Syncing all')
-    ret = {}
-    ret['modules'] = sync_modules(saltenv, False)
-    ret['states'] = sync_states(saltenv, False)
-    ret['grains'] = sync_grains(saltenv, False)
-    ret['renderers'] = sync_renderers(saltenv, False)
-    ret['returners'] = sync_returners(saltenv, False)
-    ret['outputters'] = sync_outputters(saltenv, False)
+    ret = {'modules': sync_modules(saltenv, False),
+           'states': sync_states(saltenv, False),
+           'grains': sync_grains(saltenv, False),
+           'renderers': sync_renderers(saltenv, False),
+           'returners': sync_returners(saltenv, False),
+           'outputters': sync_outputters(saltenv, False)}
     if refresh:
         refresh_modules()
     return ret

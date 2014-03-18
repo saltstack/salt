@@ -198,10 +198,7 @@ def _linux_gpu_data():
                 break
         gpus.append({'vendor': vendor, 'model': gpu['Device']})
 
-    grains = {}
-    grains['num_gpus'] = len(gpus)
-    grains['gpus'] = gpus
-    return grains
+    return {'num_gpus': len(gpus), 'gpus': gpus}
 
 
 def _netbsd_gpu_data():
@@ -229,10 +226,7 @@ def _netbsd_gpu_data():
     except OSError:
         pass
 
-    grains = {}
-    grains['num_gpus'] = len(gpus)
-    grains['gpus'] = gpus
-    return grains
+    return {'num_gpus': len(gpus), 'gpus': gpus}
 
 
 def _osx_gpudata():
@@ -257,9 +251,7 @@ def _osx_gpudata():
     except OSError:
         pass
 
-    grains = {}
-    grains['num_gpus'] = len(gpus)
-    grains['gpus'] = gpus
+    grains = {'num_gpus': len(gpus), 'gpus': gpus}
     return grains
 
 
@@ -338,10 +330,8 @@ def _sunos_cpudata():
     #   num_cpus
     #   cpu_model
     #   cpu_flags
-    grains = {}
-    grains['cpu_flags'] = []
+    grains = {'cpu_flags': [], 'cpuarch': __salt__['cmd.run']('uname -p')}
 
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'

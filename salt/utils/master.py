@@ -179,7 +179,6 @@ class MasterPillarUtil(object):
         # Get the minion grains either from cache or from a direct query
         # on the minion. By default try to use cached grains first, then
         # fall back to querying the minion directly.
-        ret = {}
         cached_grains = kwargs.get('cached_grains', {})
         cret = {}
         lret = {}

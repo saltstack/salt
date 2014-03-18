@@ -306,12 +306,12 @@ class SaltStackVersion(object):
             return cmp(self.noc_info, other.noc_info)
 
         # RC's are always lower versions than non RC's
-        if self.rc > 0 and other.rc <= 0:
+        if self.rc > 0 >= other.rc:
             noc_info = list(self.noc_info)
             noc_info[3] = -1
             return cmp(tuple(noc_info), other.noc_info)
 
-        if self.rc <= 0 and other.rc > 0:
+        if self.rc <= 0 < other.rc:
             other_noc_info = list(other.noc_info)
             other_noc_info[3] = -1
             return cmp(self.noc_info, tuple(other_noc_info))

@@ -57,7 +57,7 @@ def tune(device, **kwargs):
             else:
                 opts += '--{0} {1} '.format(switch, kwargs[key])
     cmd = 'blockdev {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd).splitlines()
     return dump(device, args)
 
 
@@ -99,7 +99,7 @@ def dump(device, args=None):
         count = 0
         for line in lines:
             ret[opts[count]] = line
-            count = count+1
+            count += 1
         if args:
             temp_ret = {}
             for arg in args:

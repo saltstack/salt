@@ -95,10 +95,7 @@ def lsmod():
             continue
         if comps[0] == 'Module':
             continue
-        mdat = {}
-        mdat['module'] = comps[0]
-        mdat['size'] = comps[1]
-        mdat['depcount'] = comps[2]
+        mdat = {'module': comps[0], 'size': comps[1], 'depcount': comps[2]}
         if len(comps) > 3:
             mdat['deps'] = comps[3].split(',')
         else:

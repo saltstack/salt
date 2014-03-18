@@ -132,7 +132,7 @@ def _salt(fun, *args, **kw):
     cache = False
     if fun in __CACHED_FUNS:
         cache = True
-        laps = laps // __CACHED_FUNS[fun]
+        laps //= __CACHED_FUNS[fun]
     try:
         sargs = json.dumps(args)
     except TypeError:
@@ -681,8 +681,6 @@ def get_configured_provider(vm_=None):
     Return the contextual provider of None if no configured
     one can be found.
     '''
-    if vm_ is None:
-        vm_ = {}
     dalias, driver = __active_provider_name__.split(':')
     data = None
     tgt = 'unknown'

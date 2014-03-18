@@ -283,7 +283,6 @@ def envs(ignore_cache=False):
     svnfs_tags = __opts__['svnfs_tags']
     ret = set()
     for repo_conf in init():
-        repo = repo_conf['repo']
         repo_trunk = repo_conf['trunk'] if repo_conf['trunk'] is not None \
             else svnfs_trunk
         repo_branches = repo_conf['branches'] \
