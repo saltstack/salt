@@ -39,6 +39,7 @@ def parse():
 
     parser.add_option('-f',
             '--func_count',
+            default='',
             help=('Retun a count of the number of minons which have '
                  'replied to a job with a given func.'))
 
@@ -78,13 +79,14 @@ def listen(sock_dir, node, id=None):
         ret = event.get_event(full=True)
         if ret is None:
             continue
-        if opts.get('func_count', False):
+        if opts['func_count']:
             data = ret.get('data', False)
             if data: 
-                if data.get('id', False) and data.get('id', False) not in found_minions:
-                    jid_counter += 1
-                    found_minions.append(data['id'])
-                    print('Reply received from [{0}]. Total replies now: [{1}].'.format(ret['data']['id'], jid_counter))
+                if 'id' in data.keys() and data.get('id', False) not in found_minions:
+                    if data['fun'] == opts['func_count']:
+                        jid_counter += 1
+                        found_minions.append(data['id'])
+                        print('Reply received from [{0}]. Total replies now: [{1}].'.format(ret['data']['id'], jid_counter))
                     continue
         else:
             print('Event fired at {0}'.format(time.asctime()))
