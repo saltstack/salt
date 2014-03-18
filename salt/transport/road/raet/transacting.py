@@ -884,7 +884,7 @@ class Allower(Initiator):
     RAET protocol Allower Initiator class Dual of Allowent
     CurveCP handshake
     '''
-    Timeout = 2.0
+    Timeout = 4.0
     RedoTimeoutMin = 0.25 # initial timeout
     RedoTimeoutMax = 1.0 # max timeout
 
@@ -958,7 +958,6 @@ class Allower(Initiator):
                 if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
                     self.transmit(self.txPacket) # redo
                     console.concise("Allower Redo Ack Final at {0}\n".format(self.stack.store.stamp))
-
 
     def prep(self):
         '''
@@ -1165,7 +1164,7 @@ class Allowent(Correspondent):
     RAET protocol Allowent Correspondent class Dual of Allower
     CurveCP handshake
     '''
-    Timeout = 2.0
+    Timeout = 4.0
     RedoTimeoutMin = 0.25 # initial timeout
     RedoTimeoutMax = 1.0 # max timeout
 
@@ -1517,13 +1516,22 @@ class Messenger(Initiator):
     RAET protocol Messenger Initiator class Dual of Messengent
     Generic messages
     '''
-    def __init__(self, **kwa):
+    Timeout = 10.0
+    RedoTimeoutMin = 1.0 # initial timeout
+    RedoTimeoutMax = 3.0 # max timeout
+
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup instance
         '''
         kwa['kind'] = raeting.trnsKinds.message
         super(Messenger, self).__init__(**kwa)
-        #self.segmentage = None # special packet to hold segments if any
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
+
         if self.reid is None:
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         remote = self.stack.estates[self.reid]
@@ -1547,9 +1555,31 @@ class Messenger(Initiator):
 
         if packet.data['tk'] == raeting.trnsKinds.message:
             if packet.data['pk'] == raeting.pcktKinds.ack:
-                self.done()
+                self.again()
             elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
                 self.rejected()
+
+    def process(self):
+        '''
+        Perform time based processing of transaction
+        '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.remove()
+            console.concise("Messenger timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
+        # need keep sending message until completed or timed out
+        if self.redoTimer.expired:
+            duration = min(
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration) * 2.0,
+                         self.redoTimeoutMin)
+            self.redoTimer.restart(duration=duration)
+            if self.txPacket:
+                if self.txPacket.data['pk'] == raeting.pcktKinds.message:
+                    self.transmit(self.txPacket) # redo
+                    console.concise("Messenger Redo Segment {0} at {1}\n".format(
+                        self.tray.current, self.stack.store.stamp))
 
     def prep(self):
         '''
@@ -1580,19 +1610,35 @@ class Messenger(Initiator):
             self.remove()
             return
 
-        try:
-            self.tray.pack(data=self.txData, body=body)
-        except raeting.PacketError as ex:
-            console.terse(ex + '\n')
-            self.stack.incStat("packing_error")
-            self.remove()
+        if not self.tray.packets:
+            try:
+                self.tray.pack(data=self.txData, body=body)
+            except raeting.PacketError as ex:
+                console.terse(ex + '\n')
+                self.stack.incStat("packing_error")
+                self.remove()
+                return
+
+        if self.tray.current >= len(self.tray.packets):
             return
-        for packet in self.tray.packets:
-            self.transmit(packet)
 
-        console.concise("Messenger Do Message at {0}\n".format(self.stack.store.stamp))
+        packet = self.tray.packets[self.tray.current]
+        self.transmit(packet)
+        self.stack.incStat("message_segment_tx")
+        console.concise("Messenger Do Message Segment {0} at {1}\n".format(
+                self.tray.current, self.stack.store.stamp))
+        self.tray.current += 1
 
-    def done(self):
+    def again(self):
+        '''
+        Process ack packet
+        '''
+        if self.tray.current >= len(self.tray.packets):
+            self.complete()
+        else:
+            self.message()
+
+    def complete(self):
         '''
         Complete transaction and remove
         '''
@@ -1616,7 +1662,11 @@ class Messengent(Correspondent):
     RAET protocol Messengent Correspondent class Dual of Messenger
     Generic Messages
     '''
-    def __init__(self, **kwa):
+    Timeout = 10.0
+    RedoTimeoutMin = 1.0 # initial timeout
+    RedoTimeoutMax = 3.0 # max timeout
+
+    def __init__(self, redoTimeoutMin=None, redoTimeoutMax=None, **kwa):
         '''
         Setup instance
         '''
@@ -1625,7 +1675,12 @@ class Messengent(Correspondent):
             emsg = "Missing required keyword argumens: '{0}'".format('reid')
             raise TypeError(emsg)
         super(Messengent, self).__init__(**kwa)
-        #self.segmentage = None # special packet to hold segments if any
+
+        self.redoTimeoutMax = redoTimeoutMax or self.RedoTimeoutMax
+        self.redoTimeoutMin = redoTimeoutMin or self.RedoTimeoutMin
+        self.redoTimer = aiding.StoreTimer(self.stack.store,
+                                           duration=self.redoTimeoutMin)
+
         remote = self.stack.estates[self.reid]
         if not remote.allowed:
             emsg = "Must be allowed first"
@@ -1659,6 +1714,30 @@ class Messengent(Correspondent):
             elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
                 self.rejected()
 
+    def process(self):
+        '''
+        Perform time based processing of transaction
+
+        '''
+        if self.timeout > 0.0 and self.timer.expired:
+            self.nack()
+            console.concise("Messengent timed out at {0}\n".format(self.stack.store.stamp))
+            return
+
+        # need to include current segment in ack or resend
+        #if self.redoTimer.expired:
+            #duration = min(
+                        #max(self.redoTimeoutMin,
+                              #self.redoTimer.duration) * 2.0,
+                        #self.redoTimeoutMax)
+            #self.redoTimer.restart(duration=duration)
+
+            #if self.txPacket:
+                #if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
+                    #self.transmit(self.txPacket) #redo
+                    #console.concise("Messengent Redo Ack at {0}\n".format(self.stack.store.stamp))
+
+
     def prep(self):
         '''
         Prepare .txData
@@ -1684,15 +1763,18 @@ class Messengent(Correspondent):
             body = self.tray.parse(self.rxPacket)
         except raeting.PacketError as ex:
             console.terse(ex + '\n')
-            self.incStat('parsing_inner_error')
+            self.incStat('parsing_message_error')
             self.remove()
             return
+
+        self.ackMessage()
 
         if self.tray.complete:
             console.verbose("{0} received message body\n{1}\n".format(
                     self.stack.name, body))
             self.stack.rxMsgs.append(body)
-            self.ackMessage()
+            self.complete()
+
 
     def ackMessage(self):
         '''
@@ -1719,9 +1801,17 @@ class Messengent(Correspondent):
             self.remove()
             return
         self.transmit(packet)
+        self.stack.incStat("message_segment_rx")
+        console.concise("Messengent Do Ack Segment at {0}\n".format(
+                self.stack.store.stamp))
+
+    def complete(self):
+        '''
+        Complete transaction and remove
+        '''
         self.remove()
-        console.concise("Messengent Do Ack at {0}\n".format(self.stack.store.stamp))
-        self.stack.incStat("message_correspond_complete")
+        console.concise("Messengent Complete at {0}\n".format(self.stack.store.stamp))
+        self.stack.incStat("messagent_correspond_complete")
 
     def rejected(self):
         '''

@@ -665,6 +665,7 @@ class TxTray(Tray):
         if body is not None:
             self.body = body
 
+        self.current = 0
         self.packets = []
         packet = TxPacket(stack=self.stack,
                           kind=raeting.pcktKinds.message,
