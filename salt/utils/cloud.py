@@ -286,8 +286,11 @@ def bootstrap(vm_, opts):
 
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
-    ssh_username = salt.config.get_cloud_config_value('ssh_username', vm_, opts)
+    ssh_username = salt.config.get_cloud_config_value('ssh_username',
+                                                      vm_,
+                                                      opts)
     deploy_script_code = os_script(vm_)
+
     deploy_kwargs = {
         'host': vm_['ssh_host'],
         'username': ssh_username,
@@ -332,6 +335,10 @@ def bootstrap(vm_, opts):
             'display_ssh_output', vm_, opts, default=True
         )
     }
+    # forward any info about possible ssh gateway to deploy script
+    # as some providers need also a 'gateway' configuration
+    if 'gateway' in vm_:
+        deploy_kwargs.update({'gateway': vm_['gateway']})
 
     # Deploy salt-master files, if necessary
     if salt.config.get_cloud_config_value('make_master', vm_, opts) is True:
@@ -555,7 +562,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                     )
                     proc.terminate()
                     return 1
-            proc.sendline(gateway['ssh_gateway_password'])
+            # if we are loggued via key, no need for password
+            if 'ssh_gateway_password' in gateway:
+                proc.sendline(gateway['ssh_gateway_password'])
             sent_password = True
             time.sleep(0.25)
         # Get the exit code of the SSH command.

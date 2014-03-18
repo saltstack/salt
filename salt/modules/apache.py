@@ -420,9 +420,9 @@ def config(name, config, edit=True):
     Config is meant to be an ordered dict of all of the apache configs.
 
     .. code-block:: bash
+
         salt '*' apache.config /etc/httpd/conf.d/ports.conf \
                 config="[{'Listen': '22'}]"
-
     '''
 
     for entry in config:

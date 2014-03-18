@@ -473,6 +473,13 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
         ret['id'] = self.opts['id']
+        try:
+            oput = self.modules.value[ret['fun']].__outputter__
+        except (KeyError, AttributeError, TypeError):
+            pass
+        else:
+            if isinstance(oput, str):
+                ret['out'] = oput
         msg = {'route': route, 'load': ret}
         ret_stack.transmit(msg, 'yard0')
         ret_stack.serviceAll()

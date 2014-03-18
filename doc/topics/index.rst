@@ -96,6 +96,8 @@ the Salt project so that we can all benefit together as Salt grows.
 Please feel free to sprinkle Salt around your systems and let the
 deliciousness come forth.
 
+.. _salt-community:
+
 Salt Community
 ==============
 

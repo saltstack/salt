@@ -5,8 +5,8 @@ Installation
 ============
 .. seealso::
 
-    :doc:`Installing Salt for development </topics/hacking>` and contributing
-    to the project.
+    :doc:`Installing Salt for development </topics/development/hacking>` and
+    contributing to the project.
 
 Quick Install
 -------------
