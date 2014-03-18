@@ -535,8 +535,6 @@ class CkMinions(object):
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
         # compound commands will come in a list so treat everything as a list
-        import pprint
-        pprint.pprint(auth_list)
         if not isinstance(funs, list):
             funs = [funs]
         for fun in funs:
@@ -565,20 +563,22 @@ class CkMinions(object):
                                     return True
         return False
 
-    def gather_groups(self, auth_provider):
+    def gather_groups(self, auth_provider, user_groups, auth_list):
         '''
         Returns the list of groups, if any, for a given authentication provider type
 
         Groups are defined as any dict in which a key has a trailing '%'
         '''
-        print auth_provider
-        keys = filter(lambda(item): item.endswith('%'), auth_provider)
+        group_perm_keys = filter(lambda(item): item.endswith('%'), auth_provider)
         groups = {}
-        if keys:
-            for key in keys:
-                for matcher in auth_provider[key]:
-                    groups[key] = matcher
-            return groups
+        if group_perm_keys:
+            for group_perm in group_perm_keys:
+                for matcher in auth_provider[group_perm]:
+                    if group_perm[:-1] in user_groups:
+                        groups[group_perm] = matcher
+        for item in groups.values():
+            auth_list.append(item)
+            return auth_list
         else:
             return None
         

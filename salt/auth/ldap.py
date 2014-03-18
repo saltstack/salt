@@ -188,3 +188,6 @@ def auth(username, password):
         )
     )
     return True
+
+def groups(username, *args, **kwargs):
+    return None

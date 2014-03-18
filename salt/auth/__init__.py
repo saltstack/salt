@@ -106,20 +106,18 @@ class LoadAuth(object):
         Read in a load and return the groups a user is a member of
         by asking the appropriate provider
         '''
-        print('GETTING GROUPS')
         if 'eauth' not in load:
             return False
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
         fcall = salt.utils.format_call(self.auth[fstr], load)
-        print(fcall)
         try:
             return self.auth[fstr](*fcall['args'])
         except IndexError:
-            return ''
+            return False
         except Exception as exc:
-            print(exc)
+            return None
 
 
     def mk_token(self, load):
