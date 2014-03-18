@@ -23,6 +23,9 @@ from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
+# Import Salt libs
+from salt.utils import get_group_list
+
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
 
@@ -163,3 +166,11 @@ def auth(username, password, **kwargs):
     Authenticate via pam
     '''
     return authenticate(username, password, kwargs.get('service', 'login'))
+
+def groups(username, *args, **kwargs):
+    '''
+    Retreive groups for a given user for this auth provider
+
+    Uses system groups
+    '''
+    return get_group_list(username)
