@@ -2148,7 +2148,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    return sorted(group_names)
+    return sorted(set(group_names))
 
 
 def get_group_dict(user=None, include_default=True):
@@ -2170,4 +2170,4 @@ def get_gid_list(user=None, include_default=True):
     is a member.
     '''
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
-    return gid_list
+    return sorted(set(gid_list))
