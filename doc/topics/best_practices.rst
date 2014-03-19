@@ -25,7 +25,7 @@ directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
 name. 
 
-Reviewing the `MySQL Salt formula <https://github.com/saltstack-formulas/mysql-formula>`_
+Reviewing the :formula:`MySQL Salt Formula <mysql-formula>`
 it is clear to see the benefits to the end-user when reviewing a sample of the
 available states:
 
@@ -52,8 +52,7 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Another example comes from the `vim formula 
-<https://github.com/saltstack-formulas/vim-formula>`_:
+Another example comes from the :formula:`vim-formula`:
 
 .. code-block:: bash
 
@@ -84,7 +83,7 @@ The usage of a clear top-level directory as well as properly named states
 reduces the overall complexity and leads a user to both understand what will
 be included at a glance and where it is located.
 
-In addition :doc:`Formulas </topics/development/conventions/formulas>` should
+In addition :ref:`Formulas <conventions-formula>` should
 be used as often as possible.
 
 .. note::
@@ -96,7 +95,7 @@ be used as often as possible.
 Structuring Pillar Files
 ------------------------
 
-:doc:`Pillars </topics/pillar/index>` are used to store 
+:ref:`Pillars <pillar>` are used to store 
 secure and insecure data pertaining to minions. When designing the structure
 of the ``/srv/pillar`` directory, the pillars contained within 
 should once again be focused on clear and concise data which users can easily
@@ -313,7 +312,7 @@ in the same state as the service and package.
 
 In the next example steps will be taken to begin addressing these issues.
 Starting with the addition of a map.jinja file (as noted in the
-:doc:`Formula documentation </topics/development/conventions/formulas>`), and
+:ref:`Formula documentation <conventions-formula>`), and
 modification of static values:
 
 /srv/salt/apache/map.jinja:
