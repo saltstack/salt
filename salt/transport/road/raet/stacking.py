@@ -42,7 +42,7 @@ class StackUdp(object):
     RAET protocol UDP stack object
     '''
     Count = 0
-    Hk = raeting.headKinds.json # stack default
+    Hk = raeting.headKinds.raet # stack default
     Bk = raeting.bodyKinds.json # stack default
     Fk = raeting.footKinds.nacl # stack default
     Ck = raeting.coatKinds.nacl # stack default
