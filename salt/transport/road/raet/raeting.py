@@ -100,18 +100,20 @@ import struct
 # Import ioflo libs
 from ioflo.base.odicting import odict
 
-UDP_MAX_SAFE_PAYLOAD = 548  # IPV4 MTU 576 - udp headers 28
-# IPV6 MTU is 1280 but headers are bigger
-MAX_PACKET_SIZE = 1024 # assuming IPV6 capable equipment
-MAX_SEGMENT_COUNT = (2 ** 16) - 1
-
 RAET_PORT = 7530
 RAET_TEST_PORT = 7531
 DEFAULT_SRC_HOST = ''
 DEFAULT_DST_HOST = '127.0.0.1'
 
-MAX_MESSAGE_SIZE = min(67107840, MAX_PACKET_SIZE * MAX_SEGMENT_COUNT) # assuming IPV6 capable equipment
+UDP_MAX_DATAGRAM_SIZE = (2 ** 16) - 1 # 65535
+UDP_MAX_SAFE_PAYLOAD = 548  # IPV4 MTU 576 - udp headers 28
+# IPV6 MTU is 1280 but headers are bigger
+UDP_MAX_PACKET_SIZE = min(1024, UDP_MAX_DATAGRAM_SIZE) # assumes IPV6 capable equipment
+UXD_MAX_PACKET_SIZE = (2 ** 16) - 1 # 65535
+MAX_SEGMENT_COUNT = (2 ** 16) - 1 # 65535
+MAX_MESSAGE_SIZE = min(67107840, UDP_MAX_PACKET_SIZE * MAX_SEGMENT_COUNT)
 MAX_HEAD_SIZE = 255
+
 JSON_END = '\r\n\r\n'
 HEAD_END = '\n\n'
 

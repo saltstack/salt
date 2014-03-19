@@ -241,7 +241,7 @@ def test():
 
     # segmented packets
     stuff = []
-    for i in range(300):
+    for i in range(600):
         stuff.append(str(i).rjust(4, " "))
     stuff = "".join(stuff)
 

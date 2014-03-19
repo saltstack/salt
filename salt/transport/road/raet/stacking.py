@@ -96,7 +96,7 @@ class StackUdp(object):
                                                              main=main,
                                                              ha=ha)
         self.estate.stack = self
-        self.server = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.server = aiding.SocketUdpNb(ha=self.estate.ha, bufsize=raeting.UDP_MAX_PACKET_SIZE * 2)
         self.server.reopen()  # open socket
         self.estate.ha = self.server.ha  # update estate host address after open
         self.dumpLocal() # save local estate data
@@ -401,7 +401,7 @@ class StackUdp(object):
                         #busy with last message save it for later
                         laters.append((tx, ta))
                     else:
-                        console.terse("socket.error = {0}\n".format(ex))
+                        #console.verbose("socket.error = {0}\n".format(ex))
                         raise
             while laters:
                 self.txes.append(laters.popleft())
@@ -456,11 +456,10 @@ class StackUdp(object):
         If deid is None then it will default to the first entry in .estates
         '''
         if not isinstance(msg, Mapping):
-            emsg = "Invalid msg, not a mapping {0}".format(msg)
-            console.terse(emsg + '\n')
+            emsg = "Invalid msg, not a mapping {0}\n".format(msg)
+            console.terse(emsg)
             self.incStat("invalid_transmit_body")
             return
-            #raise raeting.StackError(emsg)
         self.txMsgs.append((msg, deid))
 
     txMsg = transmit
@@ -517,14 +516,14 @@ class StackUdp(object):
         try:
             packet.parseOuter()
         except raeting.PacketError as ex:
-            console.terse(ex + '\n')
+            console.terse(str(ex) + '\n')
             self.incStat('parsing_outer_error')
             return None
 
         deid = packet.data['de']
         if deid != 0 and self.estate.eid != 0 and deid != self.estate.eid:
-            emsg = "Invalid destination eid = {0}. Dropping packet.".format(deid)
-            print emsg
+            emsg = "Invalid destination eid = {0}. Dropping packet...\n".format(deid)
+            console.concise( emsg)
             return None
 
         sh, sp = sa
@@ -568,7 +567,7 @@ class StackUdp(object):
             packet.parseInner()
             console.verbose("{0} received packet body\n{1}\n".format(self.name, packet.body.data))
         except raeting.PacketError as ex:
-            console.terse(ex + '\n')
+            console.terse(str(ex) + '\n')
             self.incStat('parsing_inner_error')
             return None
         return packet
@@ -663,7 +662,7 @@ class StackUdp(object):
         try:
             packet.pack()
         except raeting.PacketError as ex:
-            console.terse(ex + '\n')
+            console.terse(str(ex) + '\n')
             self.incStat("packing_error")
             return
 
@@ -721,10 +720,9 @@ class StackUxd(object):
 
         self.lane = lane # or keeping.LaneKeep()
         self.accept = self.Accept if accept is None else accept #accept uxd msg if not in lane
-        self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.MAX_MESSAGE_SIZE)
+        self.server = aiding.SocketUxdNb(ha=self.yard.ha, bufsize=raeting.UXD_MAX_PACKET_SIZE * 2)
         self.server.reopen()  # open socket
         self.yard.ha = self.server.ha  # update estate host address after open
-
         #self.lane.dumpLocalLane(self.yard)
 
     def fetchRemoteByHa(self, ha):
@@ -883,7 +881,7 @@ class StackUxd(object):
                         #busy with last message save it for later
                         laters.append((tx, ta))
                     else:
-                        console.terse("socket.error = {0}\n".format(ex))
+                        #console.verbose("socket.error = {0}\n".format(ex))
                         raise
             while laters:
                 self.txes.append(laters.popleft())
@@ -935,18 +933,16 @@ class StackUxd(object):
         '''
         if name is None:
             if not self.yards:
-                emsg = "No yard to send to"
-                console.terse(emsg + '\n')
+                emsg = "No yard to send to\n"
+                console.terse(emsg)
                 self.incStat("invalid_destination_yard")
                 return
-                #raise raeting.StackError(emsg)
             name = self.yards.values()[0].name
         if name not in self.yards:
             msg = "Invalid destination yard name '{0}'".format(name)
             console.terse(msg + '\n')
             self.incStat("invalid_destination_yard")
             return
-            #raise raeting.StackError(msg)
         self.txes.append((packed, self.yards[name].ha))
 
     def transmit(self, msg, name=None):
@@ -956,11 +952,10 @@ class StackUxd(object):
         If name is None then txUxd will supply default
         '''
         if not isinstance(msg, Mapping):
-            emsg = "Invalid msg, not a mapping {0}".format(msg)
-            console.terse(emsg + '\n')
+            emsg = "Invalid msg, not a mapping {0}\n".format(msg)
+            console.terse(emsg)
             self.incStat("invalid_transmit_body")
             return
-            #raise raeting.StackError(emsg)
         self.txMsgs.append((msg, name))
 
     txMsg = transmit # alias
@@ -974,11 +969,10 @@ class StackUxd(object):
 
         packed = ""
         if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
-            emsg = "Invalid message pack kind '{0}'".format(kind)
-            console.terse(emsg + '\n')
+            emsg = "Invalid message pack kind '{0}'\n".format(kind)
+            console.terse(emsg)
             self.incStat("invalid_transmit_serialization")
             return ""
-            #raise raeting.StackError(emsg)
 
         if kind == raeting.packKinds.json:
             head = 'RAET\njson\n\n'
@@ -986,20 +980,18 @@ class StackUxd(object):
 
         elif kind == raeting.packKinds.pack:
             if not msgpack:
-                emsg = "Msgpack not installed."
-                console.terse(emsg + '\n')
+                emsg = "Msgpack not installed\n"
+                console.terse(emsg)
                 self.incStat("invalid_transmit_serialization")
                 return ""
-                #raise raeting.StackError(emsg)
             head = 'RAET\npack\n\n'
             packed = "".join([head, msgpack.dumps(body)])
 
-        if len(packed) > raeting.MAX_MESSAGE_SIZE:
-            emsg = "Message length of {0}, exceeds max of {1}".format(
-                     len(packed), raeting.MAX_MESSAGE_SIZE)
-            console.terse(emsg + '\n')
+        if len(packed) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
+            emsg = "Message length of {0}, exceeds max of {1}\n".format(
+                     len(packed), raeting.UXD_MAX_PACKET_SIZE)
+            console.terse(emsg)
             self.incStat("invalid_transmit_size")
-            #raise raeting.StackError(emsg)
 
         return packed
 
@@ -1031,8 +1023,8 @@ class StackUxd(object):
 
         if sa not in self.names:
             if not self.accept:
-                emsg = "Unaccepted source ha = {0}. Dropping packet.".format(sa)
-                console.terse(emsg + '\n')
+                emsg = "Unaccepted source ha = {0}. Dropping packet...\n".format(sa)
+                console.terse(emsg)
                 self.incStat('unaccepted_source_yard')
                 return None
 
@@ -1043,7 +1035,7 @@ class StackUxd(object):
             try:
                 self.addRemoteYard(yard)
             except raeting.StackError as ex:
-                console.terse(ex + '\n')
+                console.terse(str(ex) + '\n')
                 self.incStat('invalid_source_yard')
                 return None
 
@@ -1056,53 +1048,47 @@ class StackUxd(object):
         body = None
 
         if (not packed.startswith('RAET\n') or raeting.HEAD_END not in packed):
-            emsg = "Unrecognized packed body head"
-            console.terse(emsg + '\n')
+            emsg = "Unrecognized packed body head\n"
+            console.terse(emsg)
             self.incStat("invalid_receive_head")
             return None
-            #raise raeting.StackError(emsg)
 
         front, sep, back = packed.partition(raeting.HEAD_END)
         code, sep, kind = front.partition('\n')
         if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
                         raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
-            emsg = "Unrecognized message pack kind '{0}'".format(kind)
-            console.terse(emsg + '\n')
+            emsg = "Unrecognized message pack kind '{0}'\n".format(kind)
+            console.terse(emsg)
             self.incStat("invalid_receive_serialization")
             return None
-            #raise raeting.StackError(emsg)
 
-        if len(back) > raeting.MAX_MESSAGE_SIZE:
-            emsg = "Message length of {0}, exceeds max of {1}".format(
-                     len(back), raeting.MAX_MESSAGE_SIZE)
-            console.terse(emsg + '\n')
+        if len(back) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
+            emsg = "Message length of {0}, exceeds max of {1}\n".format(
+                     len(back), raeting.UXD_MAX_PACKET_SIZE)
+            console.terse(emsg)
             self.incStat("invalid_receive_size")
             return None
-            #raise raeting.StackError(emsg)
 
         kind = raeting.PACK_KINDS[kind]
         if kind == raeting.packKinds.json:
             body = json.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping."
-                console.terse(emsg + '\n')
+                emsg = "Message body not a mapping\n"
+                console.terse(emsg)
                 self.incStat("invalid_receive_body")
                 return  None
-                #raise raeting.PacketError(emsg)
         elif kind == raeting.packKinds.pack:
             if not msgpack:
-                emsg = "Msgpack not installed."
-                console.terse(emsg + '\n')
+                emsg = "Msgpack not installed\n"
+                console.terse(emsg)
                 self.incStat("invalid_receive_serialization")
                 return None
-                #raise raeting.StackError(emsg)
             body = msgpack.loads(back, object_pairs_hook=odict)
             if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping."
-                console.terse(emsg + '\n')
+                emsg = "Message body not a mapping\n"
+                console.terse(emsg)
                 self.incStat("invalid_receive_body")
                 return None
-                #raise raeting.PacketError(emsg)
 
         return body
 
