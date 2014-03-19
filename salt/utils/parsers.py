@@ -29,6 +29,7 @@ import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.utils as utils
 import salt.version as version
+import salt.utils.args
 from salt.utils.validate.path import is_writeable
 
 if not utils.is_windows():
@@ -1667,9 +1668,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     self.config['arg'] = self.args[2:]
 
                 # parse the args and kwargs before sending to the publish interface
-                self.config['arg'] = salt.client.condition_kwarg(
-                    *salt.utils.cli.parse_cli(self.config['arg'])
-                )
+                self.config['arg'] = \
+                    salt.utils.args.parse_input(self.config['arg'])
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
