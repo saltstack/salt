@@ -1172,7 +1172,10 @@ class Minion(MinionBase):
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
         self.aes = creds['aes']
-        self.publish_port = creds['publish_port']
+        if self.opts.get('syndic_master_publish_port'):
+            self.publish_port = self.opts.get('syndic_master_publish_port')
+        else:
+            self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
 
     def module_refresh(self):
