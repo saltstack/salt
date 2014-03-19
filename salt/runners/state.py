@@ -10,10 +10,11 @@ import json
 import logging
 
 # Import salt libs
-import salt.overstate
 import salt.output
+import salt.overstate
 import salt.syspaths
 import salt.utils.event
+from salt.exceptions import CommandExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,12 @@ def over(saltenv='base', os_fn=None):
         salt-run state.over base /path/to/myoverstate.sls
     '''
     stage_num = 0
-    overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    try:
+        overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    except IOError as exc:
+        raise CommandExecutionError(
+            '{0}: {1!r}'.format(exc.strerror, exc.filename)
+        )
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
