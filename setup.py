@@ -389,7 +389,10 @@ class InstallLib(install_lib):
         inp = self.get_inputs()
         out = self.get_outputs()
 
-        idx = inp.index('build/lib/salt/templates/git/ssh-id-wrapper')
+        #idx = inp.index('build/lib/salt/templates/git/ssh-id-wrapper')
+        for i, word in enumerate(inp):
+            if word.endswith('salt/templates/git/ssh-id-wrapper'):
+                idx = i
         filename = out[idx]
 
         os.chmod(filename, 0755)
