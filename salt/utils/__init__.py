@@ -1365,7 +1365,7 @@ def check_state_result(running):
         return False
 
     for state in running.keys():
-        if type running[str(state)] is not list
+        if type running[str(state)] is not list:
             if not running[str(state)]['result']:
                 return False
     return True
