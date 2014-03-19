@@ -160,14 +160,7 @@ def parse_args_and_kwargs(func, args, data=None):
     invalid_kwargs = []
 
     for arg in args:
-        # support old yamlify syntax
         if isinstance(arg, string_types):
-            salt.utils.warn_until(
-                'Boron',
-                'This minion received a job where kwargs were passed as '
-                'string\'d args, which has been deprecated. This functionality will '
-                'be removed in Salt Boron.'
-            )
             arg_name, arg_value = salt.utils.parse_kwarg(arg)
             if arg_name:
                 if argspec.keywords or arg_name in argspec.args:
@@ -186,7 +179,10 @@ def parse_args_and_kwargs(func, args, data=None):
             for key, val in arg.iteritems():
                 if key == '__kwarg__':
                     continue
-                kwargs[key] = val
+                if isinstance(val, string_types):
+                    kwargs[key] = yamlify_arg(val)
+                else:
+                    kwargs[key] = val
             continue
         _args.append(yamlify_arg(arg))
     if argspec.keywords and isinstance(data, dict):
