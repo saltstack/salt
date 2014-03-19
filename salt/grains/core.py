@@ -1182,7 +1182,7 @@ def hwaddr_interfaces():
     return {'hwaddr_interfaces': ret}
 
 
-def machine-id():
+def get_machine_id():
     '''
     Provide the machine-id
     '''
@@ -1194,7 +1194,7 @@ def machine-id():
         return {}
     else:
         with salt.utils.fopen(existing_locations[0]) as machineid:
-            return {'machine-id', machineid.read().strip()}
+            return {'machine_id': machineid.read().strip()}
 
 
 def path():
