@@ -5,23 +5,23 @@ Routines to set up a minion
 
 # Import python libs
 from __future__ import print_function
-import logging
-import getpass
-import multiprocessing
-import fnmatch
 import copy
-import os
+import errno
+import fnmatch
+import getpass
 import hashlib
+import logging
+import multiprocessing
+import os
 import re
-import types
+import salt
+import signal
+import sys
 import threading
 import time
 import traceback
-import sys
-import signal
-import errno
+import types
 from random import randint, shuffle
-import salt
 
 # Import third party libs
 try:
@@ -61,9 +61,9 @@ from salt.exceptions import (
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.utils
 import salt.payload
-import salt.utils.cli
+import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.schedule
 
@@ -145,6 +145,19 @@ def get_proc_dir(cachedir):
 
 def parse_args_and_kwargs(func, args, data=None):
     '''
+    Wrap load_args_and_kwargs
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'salt.minion.parse_args_and_kwargs() has been renamed to '
+        'salt.minion.load_args_and_kwargs(). Please change this function call '
+        'before the Boron release of Salt.'
+    )
+    return load_args_and_kwargs(func, args, data=data)
+
+
+def load_args_and_kwargs(func, args, data=None):
+    '''
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
     '''
@@ -155,13 +168,20 @@ def parse_args_and_kwargs(func, args, data=None):
 
     for arg in args:
         if isinstance(arg, string_types):
-            string_arg, string_kwarg = salt.utils.cli.parse_cli([arg])
+            string_arg, string_kwarg = \
+                salt.utils.args.parse_input([arg], condition=False)
             if string_arg:
                 # Don't append the version that was just derived from parse_cli
                 # above, that would result in a 2nd call to
                 # salt.utils.cli.yamlify_arg(), which could mangle the input.
                 _args.append(arg)
             elif string_kwarg:
+                salt.utils.warn_until(
+                    'Boron',
+                    'The list of function args and kwargs should be parsed '
+                    'by salt.utils.args.parse_input() before calling '
+                    'salt.minion.load_args_and_kwargs().'
+                )
                 if argspec.keywords or string_kwarg.keys()[0] in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -794,7 +814,10 @@ class Minion(MinionBase):
         if function_name in minion_instance.functions:
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
+                args, kwargs = load_args_and_kwargs(
+                    func,
+                    salt.utils.args.parse_input(data['arg']),
+                    data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
@@ -901,7 +924,10 @@ class Minion(MinionBase):
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
+                args, kwargs = load_args_and_kwargs(
+                    func,
+                    salt.utils.args.parse_input(data['arg'][ind]),
+                    data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
