@@ -14,9 +14,22 @@ from salt._compat import string_types, integer_types
 KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
 
 
-def parse_cli(args):
+def condition_input(args, kwargs):
     '''
-    Parse out the args and kwargs from a list of CLI args
+    Return a single arg structure for the publisher to safely use
+    '''
+    if isinstance(kwargs, dict) and kwargs:
+        kw_ = {'__kwarg__': True}
+        for key, val in kwargs.iteritems():
+            kw_[key] = val
+        return list(args) + [kw_]
+    return args
+
+
+def parse_input(args, condition=True):
+    '''
+    Parse out the args and kwargs from a list of input values. Optionally,
+    return the args and kwargs without passing them to condition_input().
     '''
     _args = []
     _kwargs = {}
@@ -27,6 +40,8 @@ def parse_cli(args):
                 _kwargs[arg_name] = yamlify_arg(arg_value)
             else:
                 _args.append(yamlify_arg(arg))
+    if condition:
+        return condition_input(_args, _kwargs)
     return _args, _kwargs
 
 
@@ -62,7 +77,6 @@ def yamlify_arg(arg):
                 return arg
             if '\n' not in arg:
                 arg = yaml.safe_load(arg)
-        print('arg = {0}'.format(arg))
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, string_types) and
