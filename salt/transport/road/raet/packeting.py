@@ -536,9 +536,9 @@ class TxPacket(Packet):
         Pack the parts of the packet and then the full packet into .packed
         '''
         self.prepack()
-        if self.size > raeting.MAX_PACKET_SIZE:
+        if self.size > raeting.UDP_MAX_PACKET_SIZE:
             emsg = "Packet length of {0}, exceeds max of {1}".format(
-                    self.size, raeting.MAX_PACKET_SIZE)
+                    self.size, raeting.UDP_MAX_PACKET_SIZE)
             raise raeting.PacketError(emsg)
 
         self.sign()
@@ -703,7 +703,7 @@ class TxTray(Tray):
                           data=self.data)
 
         packet.prepack()
-        if packet.size <= raeting.MAX_PACKET_SIZE:
+        if packet.size <= raeting.UDP_MAX_PACKET_SIZE:
             packet.sign()
             self.packets.append(packet)
         else:
@@ -719,7 +719,7 @@ class TxTray(Tray):
             extrasize = 32 # extra header size as a result of segmentation
 
         hotelsize = headsize + extrasize + footsize
-        segsize = raeting.MAX_PACKET_SIZE - hotelsize
+        segsize = raeting.UDP_MAX_PACKET_SIZE - hotelsize
 
         segcount = (self.size // segsize) + (1 if self.size % segsize else 0)
         for i in range(segcount):
