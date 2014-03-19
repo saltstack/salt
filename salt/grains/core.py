@@ -490,7 +490,8 @@ def _virtual(osdata):
             model = output.lower()
             if 'vmware' in model:
                 grains['virtual'] = 'VMware'
-            # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
+            # 00:04.0 System peripheral: InnoTek Systemberatung GmbH
+            #         VirtualBox Guest Service
             elif 'virtualbox' in model:
                 grains['virtual'] = 'VirtualBox'
             elif 'qemu' in model:
@@ -501,10 +502,10 @@ def _virtual(osdata):
             break
     else:
         log.warn(
-            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to execute '
-            'because they do not exist on the system of the user running '
-            'this instance or the user does not have the necessary permissions '
-            'to execute them. Grains output might not be accurate.'
+            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
+            'execute because they do not exist on the system of the user '
+            'running this instance or the user does not have the necessary '
+            'permissions to execute them. Grains output might not be accurate.'
         )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
@@ -519,7 +520,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
-        elif isdir('/proc/sys/xen') or isdir('/sys/bus/xen') or isdir('/proc/xen'):
+        elif isdir('/proc/sys/xen') or \
+                isdir('/sys/bus/xen') or isdir('/proc/xen'):
             if os.path.isfile('/proc/xen/xsd_kva'):
                 # Tested on CentOS 5.3 / 2.6.18-194.26.1.el5xen
                 # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
@@ -528,7 +530,8 @@ def _virtual(osdata):
                 if grains.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
-                elif os.path.isfile('/proc/xen/capabilities') and os.access('/proc/xen/capabilities', os.R_OK):
+                elif os.path.isfile('/proc/xen/capabilities') and \
+                        os.access('/proc/xen/capabilities', os.R_OK):
                     caps = salt.utils.fopen('/proc/xen/capabilities')
                     if 'control_d' not in caps.read():
                         # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
@@ -550,12 +553,15 @@ def _virtual(osdata):
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
         if os.path.isfile('/proc/cpuinfo'):
-            if 'QEMU Virtual CPU' in salt.utils.fopen('/proc/cpuinfo', 'r').read():
+            if 'QEMU Virtual CPU' in \
+                    salt.utils.fopen('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
         if kenv:
-            product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv))
+            product = __salt__['cmd.run'](
+                '{0} smbios.system.product'.format(kenv)
+            )
             maker = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv))
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
@@ -564,7 +570,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'xen'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
-            jail = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl))
+            jail = __salt__['cmd.run'](
+                '{0} -n security.jail.jailed'.format(sysctl)
+            )
             if jail == '1':
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
@@ -614,7 +622,11 @@ def _ps(osdata):
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
-        grains['ps'] = 'ps -fH -p $(grep -l \"^envID:[[:space:]]*0\\$\" /proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  | awk \'{ $7=\"\"; print }\''
+        grains['ps'] = (
+            'ps -fH -p $(grep -l \"^envID:[[:space:]]*0\\$\" '
+            '/proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  '
+            '| awk \'{ $7=\"\"; print }\''
+        )
     elif osdata['os_family'] == 'Debian':
         grains['ps'] = 'ps -efHww'
     else:
@@ -777,9 +789,11 @@ def os_data():
         }
 
     # Windows Server 2008 64-bit
-    # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
+    # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64',
+    #  'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
-    # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+    # ('Linux', 'MINIONNAME', '2.6.32-38-server',
+    # '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
 
@@ -797,9 +811,13 @@ def os_data():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
             grains['selinux'] = {}
-            grains['selinux']['enabled'] = __salt__['cmd.run']('selinuxenabled; echo $?').strip() == '0'
+            grains['selinux']['enabled'] = __salt__['cmd.run'](
+                'selinuxenabled; echo $?'
+            ).strip() == '0'
             if _linux_bin_exists('getenforce'):
-                grains['selinux']['enforced'] = __salt__['cmd.run']('getenforce').strip()
+                grains['selinux']['enforced'] = __salt__['cmd.run'](
+                    'getenforce'
+                ).strip()
 
         # Add lsb grains on any distro with lsb-release
         try:
@@ -815,20 +833,26 @@ def os_data():
         except ImportError:
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
+                # Matches any possible format:
+                #     DISTRIB_ID="Ubuntu"
+                #     DISTRIB_ID='Mageia'
+                #     DISTRIB_ID=Fedora
+                #     DISTRIB_RELEASE='10.10'
+                #     DISTRIB_CODENAME='squeeze'
+                #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
+                regex = re.compile((
+                    '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
+                    '([\\w\\s\\.-_]+)(?:\'|")?'
+                ))
                 with salt.utils.fopen('/etc/lsb-release') as ifile:
                     for line in ifile:
-                        # Matches any possible format:
-                        #     DISTRIB_ID="Ubuntu"
-                        #     DISTRIB_ID='Mageia'
-                        #     DISTRIB_ID=Fedora
-                        #     DISTRIB_RELEASE='10.10'
-                        #     DISTRIB_CODENAME='squeeze'
-                        #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-                        regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?')
                         match = regex.match(line.rstrip('\n'))
                         if match:
-                            # Adds: lsb_distrib_{id,release,codename,description}
-                            grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+                            # Adds:
+                            #   lsb_distrib_{id,release,codename,description}
+                            grains[
+                                'lsb_{0}'.format(match.groups()[0].lower())
+                            ] = match.groups()[1].rstrip()
             elif os.path.isfile('/etc/os-release'):
                 # Arch ARM Linux
                 with salt.utils.fopen('/etc/os-release') as ifile:
@@ -841,8 +865,11 @@ def os_data():
                         # ANSI_COLOR="0;36"
                         # HOME_URL="http://archlinuxarm.org/"
                         # SUPPORT_URL="https://archlinuxarm.org/forum"
-                        # BUG_REPORT_URL="https://github.com/archlinuxarm/PKGBUILDs/issues"
-                        regex = re.compile('^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?')
+                        # BUG_REPORT_URL=
+                        #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
+                        regex = re.compile(
+                            '^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?'
+                        )
                         match = regex.match(line.rstrip('\n'))
                         if match:
                             name, value = match.groups()
@@ -1009,7 +1036,10 @@ def locale_info():
         return grains
 
     try:
-        (grains['defaultlanguage'], grains['defaultencoding']) = locale.getdefaultlocale()
+        (
+            grains['defaultlanguage'],
+            grains['defaultencoding']
+        ) = locale.getdefaultlocale()
     except Exception:
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
@@ -1137,7 +1167,8 @@ def ip_interfaces():
 
 def hwaddr_interfaces():
     '''
-    Provide a dict of the connected interfaces and their hw addresses (Mac Address)
+    Provide a dict of the connected interfaces and their
+    hw addresses (Mac Address)
     '''
     # Provides:
     #   hwaddr_interfaces
@@ -1253,8 +1284,8 @@ def _dmidecode_data(regex_dict):
         out = __salt__['cmd.run']('smbios')
     else:
         log.info(
-            'The `dmidecode` binary is not available on the system. GPU grains '
-            'will not be available.'
+            'The `dmidecode` binary is not available on the system. GPU '
+            'grains will not be available.'
         )
         return ret
 
@@ -1337,7 +1368,8 @@ def _hw_data(osdata):
             },
         }
         grains.update(_dmidecode_data(sunos_dmi_regex))
-    # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
+    # On FreeBSD /bin/kenv (already in base system)
+    # can be used instead of dmidecode
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
         if kenv:
@@ -1437,7 +1469,8 @@ def _smartos_zone_data():
 def get_server_id():
     '''
     Provides an integer based on the FQDN of a machine.
-    Useful as server-id in MySQL replication or anywhere else you'll need an ID like this.
+    Useful as server-id in MySQL replication or anywhere else you'll need an ID
+    like this.
     '''
     # Provides:
     #   server_id
