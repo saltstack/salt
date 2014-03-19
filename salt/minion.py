@@ -1174,7 +1174,7 @@ class Minion(MinionBase):
         self.aes = creds['aes']
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
-        else :
+        else:
             self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
 
