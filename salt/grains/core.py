@@ -776,7 +776,9 @@ def _linux_bin_exists(binary):
     '''
     Does a binary exist in linux (depends on which)
     '''
-    return __salt__['cmd.run']('which {0} > /dev/null; echo $?'.format(binary)) == '0'
+    return __salt__['cmd.retcode'](
+        'which {0}'.format(binary)
+    ) == 0
 
 
 def os_data():
