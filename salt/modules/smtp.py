@@ -63,7 +63,15 @@ def __virtual__():
     return False
 
 
-def send_msg(recipient, message, subject='Message from Salt', sender=None, server=None, use_ssl='True', username=None, password=None, profile=None):
+def send_msg(recipient,
+        message,
+        subject='Message from Salt',
+        sender=None,
+        server=None,
+        use_ssl='True',
+        username=None,
+        password=None,
+        profile=None):
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 
