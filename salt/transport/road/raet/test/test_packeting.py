@@ -14,11 +14,11 @@ from salt.transport.road.raet import (raeting, nacling, packeting, keeping,
                                       estating, transacting, stacking)
 
 
-def test( bk = raeting.bodyKinds.json):
+def test( hk = raeting.headKinds.json,  bk = raeting.bodyKinds.json):
     '''
     Test packeting.
     '''
-    data = odict(hk=1, bk=bk)
+    data = odict(hk=hk, bk=bk)
     body = odict(msg='Hello Raet World', extra='what is this')
     packet0 = packeting.TxPacket(embody=body, data=data, )
     print packet0.body.data
@@ -173,3 +173,5 @@ def test( bk = raeting.bodyKinds.json):
 if __name__ == "__main__":
     test()
     test(bk=raeting.bodyKinds.msgpack)
+    test(hk=raeting.headKinds.raet)
+    test(hk=raeting.headKinds.raet, bk=raeting.bodyKinds.msgpack)

@@ -21,7 +21,7 @@ class Estate(object):
     '''
     RAET protocol endpoint estate object
     '''
-    Did = 2 # class attribute
+    Eid = 2 # class attribute
 
     def __init__(self, stack=None, eid=None, name="", sid=0, tid=0,
                  host="", port=raeting.RAET_PORT, ha=None, ):
@@ -31,9 +31,9 @@ class Estate(object):
         self.stack = stack  # Stack object that manages this estate
         if eid is None:
             if self.stack:
-                while Estate.Did in self.stack.estates:
-                    Estate.Did += 1
-                eid = Estate.Did
+                while Estate.Eid in self.stack.estates:
+                    Estate.Eid += 1
+                eid = Estate.Eid
             else:
                 eid = 0
         self.eid = eid # estate ID

@@ -238,6 +238,35 @@ HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
 PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']
 PACKET_FLAG_FIELDS = ['', '', 'af', 'sf', '', 'pf', 'bf', 'cf']
 
+FIELD_FORMATS = odict([
+                    ('ri', '.4s'),
+                    ('vn', 'x'),
+                    ('pk', 'x'),
+                    ('pl', '04x'),
+                    ('hk', 'x'),
+                    ('hl', '02x'),
+                    ('se', 'x'),
+                    ('de', 'x'),
+                    ('cf', ''),
+                    ('bf', ''),
+                    ('si', 'x'),
+                    ('ti', 'x'),
+                    ('tk', 'x'),
+                    ('dt', 'f'),
+                    ('oi', 'x'),
+                    ('pf', ''),
+                    ('sn', 'x'),
+                    ('sc', 'x'),
+                    ('ml', 'x'),
+                    ('sf', ''),
+                    ('af', ''),
+                    ('bk', 'x'),
+                    ('ck', 'x'),
+                    ('fk', 'x'),
+                    ('fl', 'x'),
+                    ('fg', '.2s'),
+              ])
+
 
 class RaetError(Exception):
     '''

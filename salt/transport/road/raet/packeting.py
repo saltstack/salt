@@ -85,18 +85,14 @@ class TxHead(Head):
                 kit[k] = data[k]
 
         if data['hk'] == raeting.headKinds.raet:
-            kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
-            kit['hl'] = '00'  # need hex string so fixed length and jsonable
-
             packed = ''
             lines = []
             for k, v in kit.items():
-                lines.append("{0} {1}".format(k, v))
+                lines.append("{key} {val:{fmt}}".format(
+                        key=k, val=v, fmt=raeting.FIELD_FORMATS[k]))
 
-            kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
-            kit['hl'] = '00'  # need hex string so fixed length and jsonable
-            packed = json.dumps(kit, separators=(',', ':'), encoding='ascii',)
-            packed = '{0}{1}'.format(packed, raeting.JSON_END)
+            packed = "\n".join(lines)
+            packed = '{0}{1}'.format(packed, raeting.HEAD_END)
             hl = len(packed)
             if hl > raeting.MAX_HEAD_SIZE:
                 emsg = "Head length of {0}, exceeds max of {1}".format(hl, MAX_HEAD_SIZE)
@@ -109,9 +105,24 @@ class TxHead(Head):
                 raise raeting.PacketError(emsg)
             pl = hl + self.packet.coat.size + data['fl']
             data['pl'] = pl
-            #subsitute true length converted to 2 byte hex string
-            packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
-            self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
+            # Tray checks for packet length greater than UDP_MAX_PACKET_SIZE
+            # and segments appropriately so pl may be truncated below in this case
+            # subsitute true lengths
+            packed = packed.replace('\npl {val:{fmt}}\n'.format(
+                                        val=kit['pl'],
+                                        fmt=raeting.FIELD_FORMATS['pl']),
+                                    '\npl {0}\n'.format("{val:{fmt}}".format(
+                                        val=pl,
+                                        fmt=raeting.FIELD_FORMATS['pl'])[-4:]),
+                                    1)
+            packed = packed.replace('\nhl {val:{fmt}}\n'.format(
+                                        val=kit['hl'],
+                                        fmt=raeting.FIELD_FORMATS['hl']),
+                                    '\nhl {0}\n'.format("{val:{fmt}}".format(
+                                            val=hl,
+                                            fmt=raeting.FIELD_FORMATS['hl'])[-2:]),
+                                    1)
+            self.packed = packed
 
         elif data['hk'] == raeting.headKinds.json:
             kit['pl'] = '0000000'  # need hex string so fixed length and jsonable
@@ -158,7 +169,46 @@ class RxHead(Head):
         self.packed = ''
         data = self.packet.data  # for speed
         packed = self.packet.packed  # for speed
-        if packed.startswith('{"ri":"RAET",') and raeting.JSON_END in packed:  # json header
+
+        if packed.startswith('ri RAET\n') and raeting.HEAD_END in packed: # raet head
+            hk = raeting.headKinds.raet
+            front, sep, back = packed.partition(raeting.HEAD_END)
+            self.packed = "{0}{1}".format(front, sep)
+            kit = odict()
+            lines = front.split('\n')
+            for line in lines:
+                key, val = line.split(' ')
+                if key not in raeting.HEAD_FIELDS:
+                    emsg = "Unknown head field '{0}'".format(key)
+                    raise raeting.PacketError(emsg)
+                if 'x' in raeting.FIELD_FORMATS[key]:
+                    val = int(val, 16)
+                elif 'd' in raeting.FIELD_FORMATS[key]:
+                    val = int(val)
+                elif 'f' in raeting.FIELD_FORMATS[key]:
+                    val = float(val)
+                kit[key] = val
+
+            data.update(kit)
+            if 'fg' in data:
+                self.unpackFlags(data['fg'])
+
+            if data['hk'] != hk:
+                emsg = 'Recognized head kind does not match head field value.'
+                raise raeting.PacketError(emsg)
+
+            if data['hl'] != self.size:
+                emsg = 'Actual head length = {0} not match head field = {1}'.format(
+                        self.size, data['hl'])
+                raise raeting.PacketError(emsg)
+
+            if data['pl'] != self.packet.size:
+                emsg = 'Actual packet length = {0} not match head field = {1}'.format(
+                    self.packet.size, data['pl'])
+                raise raeting.PacketError(emsg)
+
+
+        elif packed.startswith('{"ri":"RAET",') and raeting.JSON_END in packed: # json head
             hk = raeting.headKinds.json
             front, sep, back = packed.partition(raeting.JSON_END)
             self.packed = "{0}{1}".format(front, sep)
@@ -715,8 +765,10 @@ class TxTray(Tray):
         Create packeted segments from .packed using headsize footsize
         '''
         extrasize = 0
-        if self.data['hk'] == raeting.headKinds.json:
-            extrasize = 32 # extra header size as a result of segmentation
+        if self.data['hk'] == raeting.headKinds.raet:
+            extrasize = 27 # extra header size as a result of segmentation
+        elif self.data['hk'] == raeting.headKinds.json:
+            extrasize = 36 # extra header size as a result of segmentation
 
         hotelsize = headsize + extrasize + footsize
         segsize = raeting.UDP_MAX_PACKET_SIZE - hotelsize
