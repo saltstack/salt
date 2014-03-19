@@ -1374,9 +1374,9 @@ class Allowent(Correspondent):
         if fqdn != self.stack.estate.fqdn:
             emsg = "Mismatch of fqdn in initiate stuff\n"
             console.terse(emsg)
-            self.stack.incStat('invalid_initiate')
-            self.remove()
-            return
+            #self.stack.incStat('invalid_initiate')
+            #self.remove()
+            #return
 
         vouch = self.stack.estate.priver.decrypt(vcipher, vnonce, remote.pubber.key)
         if vouch != remote.publee.keyraw or vouch != shortraw:
