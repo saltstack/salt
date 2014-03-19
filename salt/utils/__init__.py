@@ -2104,6 +2104,7 @@ def get_group_list(user=None, include_default=True):
     is a member.
     '''
     group_names = None
+    ugroups = set()
     if not isinstance(user, string_types):
         raise Exception
     if hasattr(os, 'getgrouplist'):
@@ -2111,7 +2112,6 @@ def get_group_list(user=None, include_default=True):
         log.trace('Trying os.getgrouplist for {0!r}'.format(user))
         try:
             group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
-            log.trace('os.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
         except Exception:
             pass
     else:
@@ -2120,7 +2120,6 @@ def get_group_list(user=None, include_default=True):
         try:
             import pysss
             group_names = list(pysss.getgrouplist(user))
-            log.trace('pysss.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
         except Exception:
             pass
     if group_names is None:
@@ -2136,7 +2135,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-        log.trace('Generic group list for user {0!r}: {1!r}'.format(user, group_names))
+    ugroups.update(group_names)
     if include_default is False:
         # Historically, saltstack code for getting group lists did not
         # include the default group. Some things may only want
@@ -2144,11 +2143,12 @@ def get_group_list(user=None, include_default=True):
         # default group.
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
-            group_names.remove(default_group)
+            ugroups.remove(default_group)
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    return sorted(set(group_names))
+    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    return sorted(ugroups)
 
 
 def get_group_dict(user=None, include_default=True):
