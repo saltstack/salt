@@ -192,7 +192,7 @@ class LocalClient(object):
                                 arg=arg,
                                 expr_form=tgt_type,
                                 timeout=timeout,
-                                **kwargs)
+                               )
 
         if not pub_data:
             return pub_data
