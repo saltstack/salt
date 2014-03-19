@@ -201,13 +201,12 @@ class LocalClient(object):
         timeout = self.opts['gather_job_timeout']
 
         arg = [jid]
-        arg = condition_kwarg(arg, kwargs)
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
                                 arg=arg,
                                 expr_form=tgt_type,
                                 timeout=timeout,
-                                **kwargs)
+                               )
 
         if not pub_data:
             return pub_data
