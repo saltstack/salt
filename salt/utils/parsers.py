@@ -14,6 +14,7 @@
 # Import python libs
 from __future__ import print_function
 import os
+import re
 import sys
 import getpass
 import logging
@@ -24,33 +25,14 @@ from functools import partial
 # Import salt libs
 import salt.config as config
 import salt.loader as loader
+import salt.log.setup as log
+import salt.syspaths as syspaths
 import salt.utils as utils
 import salt.version as version
-import salt.syspaths as syspaths
-import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
-from salt._compat import string_types
 
 if not utils.is_windows():
     import salt.cloud.exceptions
-
-
-def parse_args_kwargs(args):
-    '''
-    Parse out the args and kwargs from an args string
-    '''
-    _args = []
-    _kwargs = {}
-    for arg in args:
-        if isinstance(arg, string_types):
-            arg_name, arg_value = salt.utils.parse_kwarg(arg)
-            if arg_name:
-                _kwargs[arg_name] = arg_value
-            else:
-                _args.append(arg)
-
-    return _args, _kwargs
-
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -1685,7 +1667,9 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     self.config['arg'] = self.args[2:]
 
                 # parse the args and kwargs before sending to the publish interface
-                self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
+                self.config['arg'] = salt.client.condition_kwarg(
+                    *salt.utils.cli.parse_cli(self.config['arg'])
+                )
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
