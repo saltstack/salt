@@ -47,7 +47,7 @@ def set_option(file_name, sections=None, summary=True):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.set_option',
                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
 
@@ -107,7 +107,7 @@ def get_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_option',
                [path_to_ini_file, section_name, option])
 
@@ -134,7 +134,7 @@ def remove_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_option',
                [path_to_ini_file, section_name, option])
 
@@ -162,7 +162,7 @@ def get_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_section',
                [path_to_ini_file, section_name])
 
@@ -190,7 +190,7 @@ def remove_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_section',
                [path_to_ini_file, section_name])
 
