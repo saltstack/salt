@@ -145,13 +145,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         full_ret = local.cmd_full_return(**kwargs)
-                        ret, out = self._format_ret(full_ret)
+                        ret, out, retcode = self._format_ret(full_ret)
                         self._output_ret(ret, out)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
                         for full_ret in local.cmd_cli(**kwargs):
-                            ret_, out = self._format_ret(full_ret)
+                            ret_, out, retcode = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
                     else:
