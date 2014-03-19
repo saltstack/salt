@@ -528,7 +528,7 @@ class CkMinions(object):
                 fun,
                 form)
 
-    def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
+    def auth_check(self, auth_list, funs, tgt, tgt_type='glob', groups=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -537,7 +537,6 @@ class CkMinions(object):
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
-
         for fun in funs:
             for ind in auth_list:
                 if isinstance(ind, str):
@@ -563,6 +562,23 @@ class CkMinions(object):
                                 if self.match_check(regex, fun):
                                     return True
         return False
+
+    def gather_groups(self, auth_provider, user_groups, auth_list):
+        '''
+        Returns the list of groups, if any, for a given authentication provider type
+
+        Groups are defined as any dict in which a key has a trailing '%'
+        '''
+        group_perm_keys = filter(lambda(item): item.endswith('%'), auth_provider)
+        groups = {}
+        if group_perm_keys:
+            for group_perm in group_perm_keys:
+                for matcher in auth_provider[group_perm]:
+                    if group_perm[:-1] in user_groups:
+                        groups[group_perm] = matcher
+        for item in groups.values():
+            auth_list.append(item)
+        return auth_list
 
     def wheel_check(self, auth_list, fun):
         '''
