@@ -3,7 +3,8 @@
 Test States
 ==================
 
-Provide test case states that enable easy testing of things to do with state calls, e.g. running, calling, logging, output filtering etc.
+Provide test case states that enable easy testing of things to do with
+ state calls, e.g. running, calling, logging, output filtering etc.
 
 .. code-block:: yaml
 
@@ -62,6 +63,7 @@ def succeed_without_changes(name):
         )
     return ret
 
+
 def fail_without_changes(name):
     '''
     Returns failure.
@@ -85,6 +87,7 @@ def fail_without_changes(name):
         )
 
     return ret
+
 
 def succeed_with_changes(name):
     '''
@@ -119,6 +122,7 @@ def succeed_with_changes(name):
 
     return ret
 
+
 def fail_with_changes(name):
     '''
     Returns failure and changes is not empty.
@@ -152,6 +156,7 @@ def fail_with_changes(name):
 
     return ret
 
+
 def configurable_test_state(name, changes=True, result=True, comment=''):
     '''
     A configurable test state which determines its output based on the inputs.
@@ -177,9 +182,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         'comment': comment
     }
 
-    # If foo == True/False is not the normal python syntax but using
-    # it makes the True/False/Random conditional in this function
-    # much cleaner and makes adding exception handling cleaner as well.
+    # E8712 is disabled because this code is a LOT cleaner if we allow it.
     if changes == "Random":
         if random.choice([True, False]):
             # Following the docs as written here
@@ -190,7 +193,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
                 'new': 'Were pretending really hard that we changed something'
                 }
             }
-    elif changes == True:
+    elif changes == True: # pylint: disable=E8712
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
@@ -200,7 +203,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
             'new': 'Were pretending really hard that we changed something'
             }
         }
-    elif changes == False:
+    elif changes == False: # pylint: disable=E8712
         ret['changes'] = {}
     else:
         err = ('You have specified the state option \'Changes\' with'
@@ -211,9 +214,9 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     if result == 'Random':
         # since result is a boolean, if its random we just set it here,
         ret['result'] = random.choice([True, False])
-    elif result == True:
+    elif result == True: # pylint: disable=E8712
         ret['result'] = True
-    elif result == False:
+    elif result == False: # pylint: disable=E8712
         ret['result'] = False
     else:
         err = ('You have specified the state option \'Result\' with'
