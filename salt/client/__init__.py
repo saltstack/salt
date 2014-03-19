@@ -1221,8 +1221,6 @@ class LocalClient(object):
                     continue
                 if 'return' not in raw:
                     continue
-                if 'retcode' in raw:
-                    continue
 
                 found.add(raw.get('id'))
                 ret = {raw['id']: {'ret': raw['return']}}

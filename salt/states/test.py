@@ -35,6 +35,7 @@ Provide test case states that enable easy testing of things to do with state cal
 # Import Python libs
 import logging
 import random
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -46,10 +47,19 @@ def succeed_without_changes(name):
     name
         A unique string.
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'This is just a test, nothing actually happened'
+    }
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'Yo dawg I heard you like tests,'
+            ' so I put tests in your tests,'
+            ' so you can test while you test.'
+        )
     return ret
 
 def fail_without_changes(name):
@@ -59,10 +69,21 @@ def fail_without_changes(name):
     name:
         A unique string.
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': False,
+        'comment': 'This is just a test, nothing actually happened'
+    }
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'Yo dawg I heard you like tests,'
+            ' so I put tests in your tests,'
+            ' so you can test while you test.'
+        )
+
     return ret
 
 def succeed_with_changes(name):
@@ -72,10 +93,30 @@ def succeed_with_changes(name):
     name:
         A unique string.
     '''
-    ret = {'name': name,
-           'changes': {'Some virtual particles appeared then dissapeared.'},
-           'result': True,
-           'comment': ''}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'This is just a test, nothing actually happened'
+    }
+
+    # Following the docs as written here
+    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    ret['changes'] = {
+        'testing': {
+            'old': 'Nothing has changed yet',
+            'new': 'Were pretending really hard that we changed something'
+        }
+    }
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'Yo dawg I heard you like tests,'
+            ' so I put tests in your tests,'
+            ' so you can test while you test.'
+        )
+
     return ret
 
 def fail_with_changes(name):
@@ -85,50 +126,107 @@ def fail_with_changes(name):
     name:
         A unique string.
     '''
-    ret = {'name': name,
-           'changes': {'Some virtual particles appeared then dissapeared.'},
-           'result': False,
-           'comment': ''}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': False,
+        'comment': 'This is just a test, nothing actually happened'
+    }
+
+    # Following the docs as written here
+    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    ret['changes'] = {
+        'testing': {
+            'old': 'Nothing has changed yet',
+            'new': 'Were pretending really hard that we changed something'
+        }
+    }
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'Yo dawg I heard you like tests,'
+            ' so I put tests in your tests,'
+            ' so you can test while you test.'
+        )
+
     return ret
 
-def configurable_test_state(name, changes, result, comment):
+def configurable_test_state(name, changes=True, result=True, comment=''):
     '''
     A configurable test state which determines its output based on the inputs.
 
     name:
         A unique string.
     changes:
-        Do we return anything in the changes field? Accepts True, False, and 'Random'
+        Do we return anything in the changes field?
+        Accepts True, False, and 'Random'
+        Default is True
     result:
-        Do we return sucessfuly or not? Accepts True, False, and 'Random'
+        Do we return sucessfuly or not?
+        Accepts True, False, and 'Random'
+        Default is True
     comment:
         String to fill the comment field with.
+        Default is ''
     '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': False,
+        'comment': comment
+    }
 
-    outcomes = [True, False]
+    # If foo == True/False is not the normal python syntax but using
+    # it makes the True/False/Random conditional in this function
+    # much cleaner and makes adding exception handling cleaner as well.
+    if changes == "Random":
+        if random.choice([True, False]):
+            # Following the docs as written here
+            # http://docs.saltstack.com/ref/states/writing.html#return-data
+            ret['changes'] = {
+            'testing': {
+                'old': 'Nothing has changed yet',
+                'new': 'Were pretending really hard that we changed something'
+                }
+            }
+    elif changes == True:
+        # If changes is True we place our dummy change dictionary into it.
+        # Following the docs as written here
+        # http://docs.saltstack.com/ref/states/writing.html#return-data
+        ret['changes'] = {
+        'testing': {
+            'old': 'Nothing has changed yet',
+            'new': 'Were pretending really hard that we changed something'
+            }
+        }
+    elif changes == False:
+        ret['changes'] = {}
+    else:
+        err = ('You have specified the state option \'Changes\' with'
+            ' invalid arguments. It must be either '
+            ' \'True\', \'False\', or \'Random\'')
+        raise SaltInvocationError(err)
 
-    #check if they requested anything to be random first to keep things simple
-    if changes == 'Random':
-        changes = random.choice(outcomes)
     if result == 'Random':
-        result = random.choice(outcomes)
-
-    if changes:
-        changes_content = {'Some virtual particles appeared then dissapeared.'}
+        # since result is a boolean, if its random we just set it here,
+        ret['result'] = random.choice([True, False])
+    elif result == True:
+        ret['result'] = True
+    elif result == False:
+        ret['result'] = False
     else:
-        changes_content = {}
+        err = ('You have specified the state option \'Result\' with'
+            ' invalid arguments. It must be either '
+            ' \'True\', \'False\', or \'Random\'')
+        raise SaltInvocationError(err)
 
-    if result:
-        result_bool = True
-    else:
-        result_bool = False
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'Yo dawg I heard you like tests,'
+            ' so I put tests in your tests,'
+            ' so you can test while you test.'
+        )
 
-    # ensure the name and comment are strings
-    name = str(name)
-    comment = str(comment)
-
-    ret = {'name': name,
-           'changes': changes_content,
-           'result': result_bool,
-           'comment': comment}
     return ret
