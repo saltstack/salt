@@ -34,6 +34,7 @@ from salt.utils.validate.path import is_writeable
 if not utils.is_windows():
     import salt.cloud.exceptions
 
+
 def _sorted(mixins_or_funcs):
     return sorted(
         mixins_or_funcs, key=lambda mf: getattr(mf, '_mixin_prio_', 1000)
