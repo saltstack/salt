@@ -340,6 +340,7 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     if not conn:
@@ -376,6 +377,7 @@ def destroy(name, conn=None, call=None):
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
             salt.utils.cloud.remove_sshkey(node.public_ips[0])
@@ -417,6 +419,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -505,6 +508,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image_id'],
                     'size': kwargs['flavor_id']}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -664,6 +668,7 @@ def create(vm_):
     )
 
     deploy_kwargs = {
+         'opts': __opts__,
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
@@ -769,6 +774,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -807,6 +813,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

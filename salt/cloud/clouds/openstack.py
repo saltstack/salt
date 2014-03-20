@@ -352,6 +352,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -473,7 +474,8 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name,
-                    'profile': vm_['profile']}}
+                    'profile': vm_['profile']}},
+        transport=__opts__['transport']
     )
 
     default_profile = {}
@@ -648,6 +650,7 @@ def create(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
     deploy_kwargs = {
+        'opts': __opts__,
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
@@ -749,6 +752,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -787,6 +791,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
