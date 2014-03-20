@@ -40,6 +40,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+from salt._compat import string_types
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -846,7 +847,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if not isinstance(minions, set):
-            if isinstance(minions, basestring):
+            if isinstance(minions, string_types):
                 minions = set([minions])
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))
@@ -1174,7 +1175,7 @@ class LocalClient(object):
         Get the returns for the command line interface via the event system
         '''
         if not isinstance(minions, set):
-            if isinstance(minions, basestring):
+            if isinstance(minions, string_types):
                 minions = set([minions])
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))
