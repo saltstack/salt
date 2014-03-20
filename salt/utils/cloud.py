@@ -702,10 +702,13 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    keep_tmp=False, script_args=None, script_env=None,
                    port_timeout=15, preseed_minion_keys=None,
                    win_installer=None, master=None, tmp_dir='C:\\salttmp',
-                   opts={}, **kwargs):
+                   opts=None, **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
+    if not isinstance(opts, dict):
+        opts = {}
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
@@ -823,11 +826,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
                   parallel=False, sudo_password=None, sudo=False, tty=None,
-                  deploy_command='/tmp/.saltcloud/deploy.sh', opts={},
+                  deploy_command='/tmp/.saltcloud/deploy.sh', opts=None,
                   tmp_dir='/tmp/.saltcloud', **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
+    if not isinstance(opts, dict):
+        opts = {}
+
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
@@ -1193,7 +1199,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 {
                     'name': name,
                     'host': host
-                }
+                },
                 transport=opts.get('transport', 'zeromq')
             )
             return True
