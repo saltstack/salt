@@ -562,6 +562,7 @@ def create_network(kwargs=None, call=None):
             'name': name,
             'cidr': cidr,
         },
+        transport=__opts__['transport']
     )
 
     network = conn.ex_create_network(name, cidr)
@@ -574,6 +575,7 @@ def create_network(kwargs=None, call=None):
             'name': name,
             'cidr': cidr,
         },
+        transport=__opts__['transport']
     )
     return _expand_item(network)
 
@@ -607,6 +609,7 @@ def delete_network(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -629,6 +632,7 @@ def delete_network(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -701,6 +705,7 @@ def create_fwrule(kwargs=None, call=None):
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        transport=__opts__['transport']
     )
 
     fwrule = conn.ex_create_firewall(
@@ -719,6 +724,7 @@ def create_fwrule(kwargs=None, call=None):
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        transport=__opts__['transport']
     )
     return _expand_item(fwrule)
 
@@ -752,6 +758,7 @@ def delete_fwrule(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -774,6 +781,7 @@ def delete_fwrule(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -844,6 +852,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        transport=__opts__['transport']
     )
 
     hc = conn.ex_create_healthcheck(
@@ -866,6 +875,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        transport=__opts__['transport']
     )
     return _expand_item(hc)
 
@@ -899,6 +909,7 @@ def delete_hc(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -921,6 +932,7 @@ def delete_hc(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1003,6 +1015,7 @@ def create_lb(kwargs=None, call=None):
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
         kwargs,
+        transport=__opts__['transport']
     )
 
     lb = lb_conn.create_balancer(
@@ -1016,6 +1029,7 @@ def create_lb(kwargs=None, call=None):
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
         kwargs,
+        transport=__opts__['transport']
     )
     return _expand_balancer(lb)
 
@@ -1049,6 +1063,7 @@ def delete_lb(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -1071,6 +1086,7 @@ def delete_lb(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1132,6 +1148,7 @@ def attach_lb(kwargs=None, call=None):
         'attach load_balancer',
         'salt/cloud/loadbalancer/attaching',
         kwargs,
+        transport=__opts__['transport']
     )
 
     result = lb_conn.balancer_attach_compute_node(lb, node)
@@ -1141,6 +1158,7 @@ def attach_lb(kwargs=None, call=None):
         'attached load_balancer',
         'salt/cloud/loadbalancer/attached',
         kwargs,
+        transport=__opts__['transport']
     )
     return _expand_item(result)
 
@@ -1193,6 +1211,7 @@ def detach_lb(kwargs=None, call=None):
         'detach load_balancer',
         'salt/cloud/loadbalancer/detaching',
         kwargs,
+        transport=__opts__['transport']
     )
 
     result = lb_conn.balancer_detach_member(lb, remove_member)
@@ -1202,6 +1221,7 @@ def detach_lb(kwargs=None, call=None):
         'detached load_balancer',
         'salt/cloud/loadbalancer/detached',
         kwargs,
+        transport=__opts__['transport']
     )
     return result
 
@@ -1235,6 +1255,7 @@ def delete_snapshot(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -1257,6 +1278,7 @@ def delete_snapshot(kwargs=None, call=None):
         {
             'name': name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1293,6 +1315,7 @@ def delete_disk(kwargs=None, call=None):
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -1315,6 +1338,7 @@ def delete_disk(kwargs=None, call=None):
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1372,6 +1396,7 @@ def create_disk(kwargs=None, call=None):
             'image': image,
             'snapshot': snapshot,
         },
+        transport=__opts__['transport']
     )
 
     disk = conn.create_volume(
@@ -1388,6 +1413,7 @@ def create_disk(kwargs=None, call=None):
             'image': image,
             'snapshot': snapshot,
         },
+        transport=__opts__['transport']
     )
     return _expand_disk(disk)
 
@@ -1441,6 +1467,7 @@ def create_snapshot(kwargs=None, call=None):
             'name': name,
             'disk_name': disk_name,
         },
+        transport=__opts__['transport']
     )
 
     snapshot = conn.create_volume_snapshot(disk, name)
@@ -1453,6 +1480,7 @@ def create_snapshot(kwargs=None, call=None):
             'name': name,
             'disk_name': disk_name,
         },
+        transport=__opts__['transport']
     )
     return _expand_item(snapshot)
 
@@ -1537,6 +1565,7 @@ def detach_disk(name=None, kwargs=None, call=None):
             'name': node_name,
             'disk_name': disk_name,
         },
+        transport=__opts__['transport']
     )
 
     result = conn.detach_volume(disk, node)
@@ -1549,6 +1578,7 @@ def detach_disk(name=None, kwargs=None, call=None):
             'name': node_name,
             'disk_name': disk_name,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1606,6 +1636,7 @@ def attach_disk(name=None, kwargs=None, call=None):
             'mode': mode,
             'boot': boot,
         },
+        transport=__opts__['transport']
     )
 
     result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot)
@@ -1620,6 +1651,7 @@ def attach_disk(name=None, kwargs=None, call=None):
             'mode': mode,
             'boot': boot,
         },
+        transport=__opts__['transport']
     )
     return result
 
@@ -1678,6 +1710,7 @@ def destroy(vm_name, call=None):
         'delete instance',
         'salt/cloud/{0}/deleting'.format(vm_name),
         {'name': vm_name},
+        transport=__opts__['transport']
     )
 
     # Use the instance metadata to see if it's salt cloud profile was
@@ -1714,6 +1747,7 @@ def destroy(vm_name, call=None):
         'delete instance',
         'salt/cloud/{0}/deleted'.format(vm_name),
         {'name': vm_name},
+        transport=__opts__['transport']
     )
 
     if delete_boot_pd:
@@ -1726,6 +1760,7 @@ def destroy(vm_name, call=None):
             'delete disk',
             'salt/cloud/disk/deleting',
             {'name': vm_name},
+            transport=__opts__['transport']
         )
         try:
             conn.destroy_volume(conn.ex_get_volume(vm_name))
@@ -1746,6 +1781,7 @@ def destroy(vm_name, call=None):
             'deleted disk',
             'salt/cloud/disk/deleted',
             {'name': vm_name},
+            transport=__opts__['transport']
         )
 
     return inst_deleted
@@ -1791,6 +1827,7 @@ def create(vm_=None, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     try:
@@ -1812,6 +1849,7 @@ def create(vm_=None, call=None):
         deploy_script = script(vm_)
         ssh_user, ssh_key = __get_ssh_credentials(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': __get_host(node_data),
             'username': ssh_user,
             'key_filename': ssh_key,
@@ -1882,6 +1920,7 @@ def create(vm_=None, call=None):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         # pylint: disable=W0142
@@ -1900,6 +1939,7 @@ def create(vm_=None, call=None):
             'executed deploy script',
             'salt/cloud/{0}/deployed'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -1918,6 +1958,7 @@ def create(vm_=None, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return node_dict

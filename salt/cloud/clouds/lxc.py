@@ -338,6 +338,7 @@ def destroy(vm_, call=None):
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(vm_),
             {'name': vm_, 'instance_id': vm_},
+            transport=__opts__['transport']
         )
         gid = 'lxc.{0}.initial_pass'.format(vm_)
         _salt('grains.setval', gid, False)
@@ -353,6 +354,7 @@ def destroy(vm_, call=None):
                 'destroyed instance',
                 'salt/cloud/{0}/destroyed'.format(vm_),
                 {'name': vm_, 'instance_id': vm_},
+                transport=__opts__['transport']
             )
     return ret
 
@@ -416,6 +418,7 @@ def create(vm_, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
     if not dnsservers:
         dnsservers = ['8.8.8.8', '4.4.4.4']
