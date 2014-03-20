@@ -28,7 +28,7 @@ def _do(name, fun):
     if not host:
         return False
 
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     cmd_ret = client.cmd_iter(
             host,
             'lxc.{0}'.format(fun),
@@ -143,7 +143,7 @@ def init(name,
             print('Container key preauthorization failed')
             return False
 
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
 
     print('Creating container \'{0}\' on host \'{1}\''.format(name, host))
 
@@ -171,7 +171,7 @@ def init(name,
 def _list_iter(host=None):
     tgt = host or '*'
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     for container_info in client.cmd_iter(tgt, 'lxc.list'):
         if not container_info:
             continue

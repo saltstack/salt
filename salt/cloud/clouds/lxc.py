@@ -24,8 +24,8 @@ import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import SaltCloudSystemExit
 
-from salt.client import LocalClient
-from salt.runner import RunnerClient
+import salt.client
+import salt.runner
 import salt.syspaths
 
 
@@ -82,13 +82,13 @@ def _master_opts(cfg='master'):
 
 
 def _client():
-    return LocalClient(mopts=_master_opts())
+    return salt.client.get_local_client(mopts=_master_opts())
 
 
 def _runner():
     # opts = _master_opts()
     # opts['output'] = 'quiet'
-    return RunnerClient(_master_opts())
+    return salt.runner.RunnerClient(_master_opts())
 
 
 def _salt(fun, *args, **kw):
