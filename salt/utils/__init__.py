@@ -1368,6 +1368,9 @@ def check_state_result(running):
         if type(running[str(state)]) is not list:
             if not running[str(state)]['result']:
                 return False
+        else:
+            # return false when hosts return a list instead of a dict
+            return False
     return True
 
 
