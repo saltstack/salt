@@ -14,7 +14,7 @@ import traceback
 import datetime
 import pipes
 import logging
-import tempfile
+from tempfile import NamedTemporaryFile
 import os
 import re
 
@@ -30,6 +30,9 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'list_': 'list'
 }
+
+
+DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth'}}
 
 
 def _ip_sort(ip):
@@ -87,63 +90,90 @@ def _lxc_profile(profile):
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
 
-def _nic_profile(nic):
+class LXCConfig(object):
     '''
-    Gather the nic profile from the config or apply the default.
-
-    This is the ``default`` profile, which can be overridden in the
-    configuration:
-
-    .. code-block:: yaml
-
-        lxc.nic:
-          default:
-            eth0:
-              link: br0
-              type: veth
+    LXC configuration data
     '''
-    default = {'eth0': {'link': 'br0', 'type': 'veth'}}
-    return __salt__['config.option']('lxc.nic', {}).get(nic, default)
+    pattern = re.compile('^(\S+)(\s*)(=)(\s*)(.*)')
 
-
-def _gen_config(nicp,
-                cpuset=None,
-                cpushare=None,
-                memory=None,
-                nic_opts=None):
-    '''
-    Generate the config string for an lxc container
-    '''
-    data = []
-
-    if memory:
-        data.append(('lxc.cgroup.memory.limit_in_bytes', memory * 1024 * 1024))
-    if cpuset:
-        data.append(('lxc.cgroup.cpuset.cpus', cpuset))
-    if cpushare:
-        data.append(('lxc.cgroup.cpu.shares', cpushare))
-
-    for dev, args in nicp.items():
-        data.append(('lxc.network.type', args.pop('type', 'veth')))
-        data.append(('lxc.network.name', dev))
-        data.append(('lxc.network.flags', args.pop('flags', 'up')))
-        opts = nic_opts.get(dev) if nic_opts else None
-        if opts:
-            mac = opts.get('mac')
-            ipv4 = opts.get('ipv4')
-            ipv6 = opts.get('ipv6')
+    def __init__(self, **kwargs):
+        self.name = kwargs.pop('name', None)
+        self.data = []
+        if self.name:
+            self.path = '/var/lib/lxc/{0}/config'.format(self.name)
+            if os.path.isfile(self.path):
+                with open(self.path) as f:
+                    for l in f.readlines():
+                        match = self.pattern.findall((l.strip()))
+                        if match:
+                            self.data.append((match[0][0], match[0][-1]))
         else:
-            ipv4, ipv6 = None, None
-            mac = salt.utils.gen_mac()
-        data.append(('lxc.network.hwaddr', mac))
-        if ipv4:
-            data.append(('lxc.network.ipv4', ipv4))
-        if ipv6:
-            data.append(('lxc.network.ipv6', ipv6))
-        for k, v in args.items():
-            data.append(('lxc.network.{0}'.format(k), v))
+            self.path = None
 
-    return '\n'.join(['{0} = {1}'.format(k, v) for k, v in data]) + '\n'
+        def _replace(k, v):
+            if v:
+                self._filter_data(k)
+                self.data.append((k, v))
+
+        memory = kwargs.pop('memory', None)
+        if memory:
+            memory = memory * 1024 * 1024
+        _replace('lxc.cgroup.memory.limit_in_bytes', memory)
+        cpuset = kwargs.pop('cpuset', None)
+        _replace('lxc.cgroup.cpuset.cpus', cpuset)
+        cpushare = kwargs.pop('cpushare', None)
+        _replace('lxc.cgroup.cpu.shares', cpushare)
+
+        nic = kwargs.pop('nic')
+        if nic:
+            self._filter_data('lxc.network')
+            nicp = __salt__['config.option']('lxc.nic', {}).get(
+                        nic, DEFAULT_NIC_PROFILE
+                    )
+            nic_opts = kwargs.pop('nic_opts', None)
+
+            for dev, args in nicp.items():
+                self.data.append(('lxc.network.type',
+                                  args.pop('type', 'veth')))
+                self.data.append(('lxc.network.name', dev))
+                self.data.append(('lxc.network.flags',
+                                  args.pop('flags', 'up')))
+                opts = nic_opts.get(dev) if nic_opts else None
+                if opts:
+                    mac = opts.get('mac')
+                    ipv4 = opts.get('ipv4')
+                    ipv6 = opts.get('ipv6')
+                else:
+                    ipv4, ipv6 = None, None
+                    mac = salt.utils.gen_mac()
+                self.data.append(('lxc.network.hwaddr', mac))
+                if ipv4:
+                    self.data.append(('lxc.network.ipv4', ipv4))
+                if ipv6:
+                    self.data.append(('lxc.network.ipv6', ipv6))
+                for k, v in args.items():
+                    self.data.append(('lxc.network.{0}'.format(k), v))
+
+    def as_string(self):
+        return '\n'.join(
+                ['{0} = {1}'.format(k, v) for k, v in self.data]) + '\n'
+
+    def write(self):
+        if self.path:
+            salt.utils.fopen(self.path, 'w').write(self.as_string())
+
+    def tempfile(self):
+        f = NamedTemporaryFile()
+        f.write(self.as_string())
+        f.flush()
+        return f
+
+    def _filter_data(self, pat):
+        x = []
+        for i in self.data:
+            if not re.match('^' + pat, i[0]):
+                x.append(i)
+        self.data = x
 
 
 def init(name,
@@ -210,7 +240,6 @@ def init(name,
     clone
         Original from which to use a clone operation to create the container. Default: ``None``
     '''
-    nicp = _nic_profile(nic)
     profile = _lxc_profile(profile)
 
     def select(k, default=None):
@@ -222,18 +251,20 @@ def init(name,
     seed = select('seed', True)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
-    config = select('config')
+    salt_config = select('config')
     approve_key = select('approve_key', True)
     clone_from = select('clone')
 
-    with tempfile.NamedTemporaryFile() as cfile:
-        cfile.write(_gen_config(cpuset=cpuset, cpushare=cpushare,
-                                memory=memory, nicp=nicp, nic_opts=nic_opts))
-        cfile.flush()
-        if clone_from:
-            ret = __salt__['lxc.clone'](name, clone_from, config=cfile.name,
-                                        profile=profile, **kwargs)
-        else:
+    if clone_from:
+        ret = __salt__['lxc.clone'](name, clone_from,
+                                    profile=profile, **kwargs)
+        cfg = LXCConfig(name=name, nic=nic, cpuset=cpuset,
+                        cpushare=cpushare, memory=memory)
+        cfg.write()
+    else:
+        cfg = LXCConfig(nic=nic, cpuset=cpuset,
+                        cpushare=cpushare, memory=memory)
+        with cfg.tempfile() as cfile:
             ret = __salt__['lxc.create'](name, config=cfile.name,
                                          profile=profile, **kwargs)
     if not (ret.get('created', False) or ret.get('cloned', False)):
@@ -241,9 +272,9 @@ def init(name,
     rootfs = info(name)['rootfs']
     if seed:
         ret['seeded'] = __salt__['lxc.bootstrap'](
-            name, config=config, approve_key=approve_key, install=install)
+            name, config=salt_config, approve_key=approve_key, install=install)
     elif seed_cmd:
-        ret['seeded'] = __salt__[seed_cmd](rootfs, name, config)
+        ret['seeded'] = __salt__[seed_cmd](rootfs, name, salt_config)
     if start_:
         ret['state'] = start(name)['state']
     else:
