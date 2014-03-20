@@ -758,7 +758,8 @@ def script(name,
             ret['result'] = not bool(cmd_all['retcode'])
         if ret.get('changes', {}).get('cache_error'):
             ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                             '{1!r}'.format(source, env)
+                             '{1!r}'.format(source, kwargs.get('saltenv',
+                                                               'base'))
         else:
             ret['comment'] = 'Command {0!r} run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
