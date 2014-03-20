@@ -1018,6 +1018,7 @@ def create(vm_=None, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     key_filename = config.get_cloud_config_value(
@@ -1248,6 +1249,7 @@ def create(vm_=None, call=None):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': params, 'location': location},
+        transport=__opts__['transport']
     )
 
     try:
@@ -1313,6 +1315,7 @@ def create(vm_=None, call=None):
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
+            transport=__opts__['transport']
         )
 
         try:
@@ -1353,6 +1356,7 @@ def create(vm_=None, call=None):
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
         {'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     log.debug('The new VM instance_id is {0}'.format(instance_id))
@@ -1440,6 +1444,7 @@ def create(vm_=None, call=None):
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
         {'tags': tags},
+        transport=__opts__['transport']
     )
 
     set_tags(
@@ -1464,6 +1469,7 @@ def create(vm_=None, call=None):
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
         {'ip_address': ip_address},
+        transport=__opts__['transport']
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
@@ -1516,6 +1522,7 @@ def create(vm_=None, call=None):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
@@ -1606,6 +1613,7 @@ def create(vm_=None, call=None):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -1641,6 +1649,7 @@ def create(vm_=None, call=None):
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
             {'volumes': volumes},
+            transport=__opts__['transport']
         )
 
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
@@ -1666,6 +1675,7 @@ def create(vm_=None, call=None):
             'provider': vm_['provider'],
             'instance_id': instance_id,
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -1952,6 +1962,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name, 'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     if protected == 'true':
@@ -1997,6 +2008,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name, 'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     return ret
