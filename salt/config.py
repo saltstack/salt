@@ -7,7 +7,6 @@ All salt configuration loading and defaults should be in this module
 import glob
 import os
 import re
-import socket
 import logging
 import urlparse
 from copy import deepcopy
@@ -1724,7 +1723,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     # Check salt.utils.network.get_fqhostname()
     fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from get_gqhostname(): {0}'.format(fqdn))
+        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False

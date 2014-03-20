@@ -157,7 +157,6 @@
 import os
 import zmq
 import json
-import socket
 import logging
 import logging.handlers
 import datetime
