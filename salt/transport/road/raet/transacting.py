@@ -270,6 +270,13 @@ class Joiner(Initiator):
         self.prep()
         self.add(self.index)
 
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Joiner, self).transmit(packet)
+        self.redoTimer.restart()
+
     def receive(self, packet):
         """
         Process received packet belonging to this transaction
@@ -543,6 +550,13 @@ class Joinent(Correspondent):
         self.prep()
         # Since corresponding bootstrap transaction use packet.index not self.index
         self.add(self.rxPacket.index)
+
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Joinent, self).transmit(packet)
+        self.redoTimer.restart()
 
     def receive(self, packet):
         """
@@ -900,6 +914,13 @@ class Allower(Initiator):
         self.prep() # prepare .txData
         self.add(self.index)
 
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Allower, self).transmit(packet)
+        self.redoTimer.restart()
+
     def receive(self, packet):
         """
         Process received packet belonging to this transaction
@@ -1179,6 +1200,13 @@ class Allowent(Correspondent):
         remote.refresh() # refresh short term keys and .allowed
         self.prep() # prepare .txData
         self.add(self.index)
+
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Allowent, self).transmit(packet)
+        self.redoTimer.restart()
 
     def receive(self, packet):
         """
@@ -1508,6 +1536,13 @@ class Messenger(Initiator):
         self.tray = packeting.TxTray(stack=self.stack)
         self.add(self.index)
 
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Messenger, self).transmit(packet)
+        self.redoTimer.restart()
+
     def receive(self, packet):
         """
         Process received packet belonging to this transaction
@@ -1659,6 +1694,13 @@ class Messengent(Correspondent):
         self.tray = packeting.RxTray(stack=self.stack)
         self.add(self.index)
 
+    def transmit(self, packet):
+        '''
+        Augment transmit with restart of redo timer
+        '''
+        super(Messengent, self).transmit(packet)
+        self.redoTimer.restart()
+
     def receive(self, packet):
         """
         Process received packet belonging to this transaction
@@ -1732,7 +1774,6 @@ class Messengent(Correspondent):
                     self.stack.name, body))
             self.stack.rxMsgs.append(body)
             self.complete()
-
 
     def ackMessage(self):
         '''

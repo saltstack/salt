@@ -36,6 +36,7 @@ import salt.modules.cmdmod
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.retcode': salt.modules.cmdmod._retcode_quiet,
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet
 }
 log = logging.getLogger(__name__)
