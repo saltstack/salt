@@ -17,7 +17,6 @@ import multiprocessing
 from itertools import groupby
 
 # Import salt.cloud libs
-import salt.utils.event
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
