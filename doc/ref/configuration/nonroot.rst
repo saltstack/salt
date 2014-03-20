@@ -2,10 +2,20 @@
 Running the Salt Master/Minion as an Unprivileged User
 ======================================================
 
-While the default setup runs the master and minion as the root user, it is
-generally wise to run the master as an unprivileged user.
+While the default setup runs the master and minion as the root user, some
+may consider it an extra measure of security to run the master as a non-root
+user. Keep in mind that doing so does not change the master's capability
+to access minions as the user they are running as. Due to this many feel that
+running the master as a non-root user does not grant any real security advantage
+which is why the master has remained as root by default.
 
-As of Salt 0.9.10 it is possible to run Salt as as a non-root user. This can be
+.. note::
+
+    Some of Salt's operations cannot execute corectly when the master is not
+    running as root, specifically the pam external auth system, as this system
+    needs root access to check authentication.
+
+As of Salt 0.9.10 it is possible to run Salt as a non-root user. This can be
 done by setting the :conf_master:`user` parameter in the master configuration
 file. and restarting the ``salt-master`` service.
 
