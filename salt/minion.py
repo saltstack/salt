@@ -1515,7 +1515,7 @@ class Syndic(Minion):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         # Instantiate the local client
-        self.local = salt.client.LocalClient(self.opts['_minion_conf_file'])
+        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 

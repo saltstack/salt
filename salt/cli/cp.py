@@ -69,7 +69,7 @@ class SaltCP(object):
         Make the salt client call
         '''
         arg = [self._load_files(), self.opts['dest']]
-        local = salt.client.LocalClient(self.opts['conf_file'])
+        local = salt.client.get_local_client(self.opts['conf_file'])
         args = [self.opts['tgt'],
                 'cp.recv',
                 arg,

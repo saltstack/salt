@@ -146,7 +146,7 @@ def _get_pool_results(*args, **kwargs):
     sort = kwargs.get('survey_sort', 'down')
     direction = sort != 'up'
 
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
     ret = {}
     # hash minion return values as a string

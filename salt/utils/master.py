@@ -145,7 +145,7 @@ class MasterPillarUtil(object):
     def _get_live_minion_grains(self, minion_ids):
         # Returns a dict of grains fetched directly from the minions
         log.debug('Getting live grains for minions: "{0}"'.format(minion_ids))
-        client = salt.client.LocalClient(self.opts['conf_file'])
+        client = salt.client.get_local_client(self.opts['conf_file'])
         ret = client.cmd(
                        ','.join(minion_ids),
                         'grains.items',

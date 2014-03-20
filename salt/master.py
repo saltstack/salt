@@ -734,7 +734,7 @@ class AESFuncs(object):
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Create the master minion to access the external job cache
         self.mminion = salt.minion.MasterMinion(
                 self.opts,
@@ -1683,7 +1683,7 @@ class ClearFuncs(object):
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object

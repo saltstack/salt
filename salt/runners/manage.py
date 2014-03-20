@@ -33,7 +33,7 @@ def status(output=True):
 
         salt-run manage.status
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
 
     key = salt.key.Key(__opts__)
@@ -72,7 +72,7 @@ def key_regen():
 
         salt-run manage.key_regen
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'saltutil.regen_keys')
 
     for root, dirs, files in os.walk(__opts__['pki_dir']):
@@ -211,7 +211,7 @@ def versions():
 
         salt-run manage.versions
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
 
     labels = {
