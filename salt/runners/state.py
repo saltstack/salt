@@ -154,8 +154,10 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
 
     Enable debug logging to see ignored events.
     '''
-    sevent = salt.utils.event.SaltEvent('master',
-            sock_dir or __opts__['sock_dir'])
+    sevent = salt.utils.event.get_event(
+            'master',
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'])
 
     while True:
         ret = sevent.get_event(full=True)
