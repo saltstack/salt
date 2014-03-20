@@ -14,9 +14,6 @@
 # Import python libs
 import collections
 
-# Import salt libs
-from salt.utils.lazyproxy import LazyLoadProxy
-
 
 class ImmutableDict(collections.Mapping):
     '''
@@ -33,7 +30,7 @@ class ImmutableDict(collections.Mapping):
         return iter(self.__obj)
 
     def __getitem__(self, key):
-        return ImmutableLazyProxy(self.__obj[key])
+        return freeze(self.__obj[key])
 
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
@@ -60,7 +57,7 @@ class ImmutableList(collections.Sequence):
         return other + self.__obj
 
     def __getitem__(self, key):
-        return ImmutableLazyProxy(self.__obj[key])
+        return freeze(self.__obj[key])
 
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
@@ -87,21 +84,14 @@ class ImmutableSet(collections.Set):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
-class ImmutableLazyProxy(LazyLoadProxy):
+def freeze(obj):
     '''
-    LazyProxy which will return an immutable type when requested
+    Freeze python types by turning them into immutable structures.
     '''
-
-    def __init__(self, obj):
-        def __immutable_selection(obj):
-            if isinstance(obj, dict):
-                return ImmutableDict(obj)
-            if isinstance(obj, list):
-                return ImmutableList(obj)
-            if isinstance(obj, set):
-                return ImmutableSet(obj)
-            return obj
-
-        super(ImmutableLazyProxy, self).__init__(
-            lambda: __immutable_selection(obj)
-        )
+    if isinstance(obj, dict):
+        return ImmutableDict(obj)
+    if isinstance(obj, list):
+        return ImmutableList(obj)
+    if isinstance(obj, set):
+        return ImmutableSet(obj)
+    return obj
