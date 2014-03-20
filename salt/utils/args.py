@@ -5,7 +5,6 @@ Functions used for CLI argument handling
 
 # Import python libs
 import re
-import yaml
 
 # Import salt libs
 from salt._compat import string_types, integer_types
