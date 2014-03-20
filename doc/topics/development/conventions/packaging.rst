@@ -7,6 +7,15 @@ the package can be spit into a number of sub-tools. While packaging Salt as
 a single package containing all components is perfectly acceptable, the split
 packages should follow this convention.
 
+Patching Salt For Distributions
+===============================
+
+The occasion may arise where Salt source and default configurations may need
+to be patched. It is preferable if Salt is only patched to include platform
+specific additions or to fix release time bugs. It is preferable that
+configuration settings and operations remain in the default state, as changes
+here lower's the user experience for users moving across distributions.
+
 Source Files
 ============
 
