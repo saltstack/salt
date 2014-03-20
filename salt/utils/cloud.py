@@ -1196,11 +1196,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
     return False
 
 
-def fire_event(key, msg, tag, args=None, sock_dir=None):
+def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.get_event(
+            'master',
+            sock_dir,
+            transport,
+            listen=False)
     try:
         event.fire_event(msg, tag)
     except ValueError:
