@@ -8,7 +8,7 @@ from yaml.scanner import ScannerError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
-from salt.utils.yamlloader import CustomLoader, load
+from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
 
@@ -25,7 +25,7 @@ def get_yaml_loader(argline):
     Return the ordered dict yaml loader
     '''
     def yaml_loader(*args):
-        return CustomLoader(*args, dictclass=OrderedDict)
+        return SaltYamlSafeLoader(*args, dictclass=OrderedDict)
     return yaml_loader
 
 
