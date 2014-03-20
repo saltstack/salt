@@ -69,6 +69,8 @@ def yamlify_arg(arg):
     if not isinstance(arg, string_types):
         return arg
     try:
+        # Explicit late import to avoid circular import. DO NOT MOVE THIS.
+        import salt.utils.yamlloader as yamlloader
         original_arg = arg
         if '#' in arg:
             # Don't yamlify this argument or the '#' and everything after
@@ -77,7 +79,7 @@ def yamlify_arg(arg):
         if arg == 'None':
             arg = None
         elif '\n' not in arg:
-            arg = yaml.safe_load(arg)
+            arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
