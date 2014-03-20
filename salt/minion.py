@@ -169,7 +169,7 @@ def load_args_and_kwargs(func, args, data=None):
     for arg in args:
         if isinstance(arg, string_types):
             string_arg, string_kwarg = \
-                salt.utils.args.parse_input([arg], condition=False)
+                salt.utils.args.parse_input([arg], condition=False)  # pylint: disable=W0632
             if string_arg:
                 # Don't append the version that was just derived from parse_cli
                 # above, that would result in a 2nd call to
