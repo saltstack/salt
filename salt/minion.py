@@ -194,10 +194,8 @@ def load_args_and_kwargs(func, args, data=None):
                 continue
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
-        elif isinstance(arg, dict) and arg.get('__kwarg__') is True:
+        elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
             for key, val in arg.iteritems():
-                if key == '__kwarg__':
-                    continue
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -816,7 +814,7 @@ class Minion(MinionBase):
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = load_args_and_kwargs(
                     func,
-                    salt.utils.args.parse_input(data['arg']),
+                    data['arg'],
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
@@ -926,7 +924,7 @@ class Minion(MinionBase):
                 func = minion_instance.functions[data['fun'][ind]]
                 args, kwargs = load_args_and_kwargs(
                     func,
-                    salt.utils.args.parse_input(data['arg'][ind]),
+                    data['arg'][ind],
                     data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
