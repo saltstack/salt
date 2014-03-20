@@ -341,6 +341,7 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     if not conn:
@@ -373,6 +374,7 @@ def destroy(name, conn=None, call=None):
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
             salt.utils.cloud.remove_sshkey(node.public_ips[0])
@@ -397,21 +399,13 @@ def reboot(name, conn=None):
     if ret:
         log.info('Rebooted VM: {0}'.format(name))
         # Fire reboot action
-        # Fire destroy action
-        event = salt.utils.event.get_event(
-                'master',
-                __opts__['sock_dir'],
-                __opts__['transport'],
-                listen=False)
-        try:
-            event.fire_event(
-                '{0} has been rebooted'.format(name), 'salt-cloud'
-            )
-        except ValueError:
-            # We're using develop or a 0.17.x version of salt
-            event.fire_event(
-                {name: '{0} has been rebooted'.format(name)}, 'salt-cloud'
-            )
+        salt.utils.cloud.fire_event(
+            'event',
+            '{0} has been rebooted'.format(name), 'salt-cloud'
+            'salt/cloud/{0}/rebooting'.format(name),
+            {'name': name},
+            transport=__opts__['transport']
+        )
         return True
 
     log.error('Failed to reboot VM: {0}'.format(name))

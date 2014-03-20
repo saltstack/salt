@@ -292,6 +292,7 @@ def bootstrap(vm_, opts):
     deploy_script_code = os_script(vm_)
 
     deploy_kwargs = {
+        'opts': opts,
         'host': vm_['ssh_host'],
         'username': ssh_username,
         'script': deploy_script_code,
@@ -383,6 +384,7 @@ def bootstrap(vm_, opts):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': event_kwargs},
+        transport=opts.get('transport', 'zeromq')
     )
 
     deployed = False
@@ -700,7 +702,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    keep_tmp=False, script_args=None, script_env=None,
                    port_timeout=15, preseed_minion_keys=None,
                    win_installer=None, master=None, tmp_dir='C:\\salttmp',
-                   **kwargs):
+                   opts={}, **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
@@ -804,6 +806,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             '{0} has been deployed at {1}'.format(name, host),
             'salt/cloud/{0}/deploy_windows'.format(name),
             {'name': name},
+            transport=opts.get('transport', 'zeromq')
         )
 
         return True
@@ -820,7 +823,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
                   parallel=False, sudo_password=None, sudo=False, tty=None,
-                  deploy_command='/tmp/.saltcloud/deploy.sh',
+                  deploy_command='/tmp/.saltcloud/deploy.sh', opts={},
                   tmp_dir='/tmp/.saltcloud', **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1191,6 +1194,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     'name': name,
                     'host': host
                 }
+                transport=opts.get('transport', 'zeromq')
             )
             return True
     return False

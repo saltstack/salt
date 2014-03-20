@@ -93,6 +93,7 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value('ssh_username', vm_, __opts__)
     deploy_script = script(vm_)
     deploy_kwargs = {
+        'opts': __opts__,
         'host': vm_['ssh_host'],
         'username': ssh_username,
         'script': deploy_script,
@@ -178,6 +179,7 @@ def create(vm_):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': event_kwargs},
+        transport=__opts__['transport']
     )
 
     deployed = False

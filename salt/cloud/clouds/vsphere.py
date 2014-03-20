@@ -175,6 +175,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -185,6 +186,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': vm_},
+        transport=__opts__['transport']
     )
 
     folder = config.get_cloud_config_value(
@@ -262,6 +264,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': template_user,
             'password': template_password,
@@ -326,6 +329,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': deploy_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -359,6 +363,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -472,6 +477,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     conn = get_conn()
@@ -488,6 +494,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     return True
