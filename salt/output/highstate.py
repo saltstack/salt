@@ -207,7 +207,7 @@ def _format_host(host, data):
             )
         )
 
-        totals = '{0}\nTotal: {1:>{2}}'.format('-' * line_max_len,
+        totals = '{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
                                                sum(rcounts.values()),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
