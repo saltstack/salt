@@ -404,7 +404,7 @@ def delete(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['iptables.save'](filename=None, family=family)
                 ret['comment'] = ('Deleted and Saved iptables rule for {0} for {1}'
-                                  '{2}'.format(name, command.strip()), family)
+                                  '{2}'.format(name, command.strip(), family))
         return ret
     else:
         ret['result'] = False
