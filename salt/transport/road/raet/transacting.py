@@ -314,6 +314,8 @@ class Joiner(Initiator):
                     self.txPacket.data['pk'] == raeting.pcktKinds.request):
                 self.transmit(self.txPacket) #redo
                 console.concise("Joiner Redo Join at {0}\n".format(self.stack.store.stamp))
+                self.stack.incStat('redo_join')
+
 
 
     def prep(self):
@@ -593,6 +595,7 @@ class Joinent(Correspondent):
 
                 self.transmit(self.txPacket) #redo
                 console.concise("Joinent Redo Accept at {0}\n".format(self.stack.store.stamp))
+                self.stack.incStat('redo_accept')
             else: #check to see if status has changed to accept
                 remote = self.stack.estates[self.reid]
                 if remote:
@@ -955,14 +958,17 @@ class Allower(Initiator):
                 if self.txPacket.data['pk'] == raeting.pcktKinds.hello:
                     self.transmit(self.txPacket) # redo
                     console.concise("Allower Redo Hello at {0}\n".format(self.stack.store.stamp))
+                    self.stack.incStat('redo_hello')
 
                 if self.txPacket.data['pk'] == raeting.pcktKinds.initiate:
                     self.transmit(self.txPacket) # redo
                     console.concise("Allower Redo Initiate at {0}\n".format(self.stack.store.stamp))
+                    self.stack.incStat('redo_initiate')
 
                 if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
                     self.transmit(self.txPacket) # redo
                     console.concise("Allower Redo Ack Final at {0}\n".format(self.stack.store.stamp))
+                    self.stack.incStat('redo_final')
 
     def prep(self):
         '''
@@ -1246,10 +1252,12 @@ class Allowent(Correspondent):
                 if self.txPacket.data['pk'] == raeting.pcktKinds.cookie:
                     self.transmit(self.txPacket) #redo
                     console.concise("Allowent Redo Cookie at {0}\n".format(self.stack.store.stamp))
+                    self.stack.incStat('redo_cookie')
 
                 if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
                     self.transmit(self.txPacket) #redo
                     console.concise("Allowent Redo Ack at {0}\n".format(self.stack.store.stamp))
+                    self.stack.incStat('redo_allow')
 
     def prep(self):
         '''
@@ -1576,6 +1584,7 @@ class Messenger(Initiator):
                     self.transmit(self.txPacket) # redo
                     console.concise("Messenger Redo Segment {0} at {1}\n".format(
                         self.tray.current, self.stack.store.stamp))
+                    self.stack.incStat('redo_segment')
 
     def prep(self):
         '''
@@ -1736,6 +1745,7 @@ class Messengent(Correspondent):
                 #if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
                     #self.transmit(self.txPacket) #redo
                     #console.concise("Messengent Redo Ack at {0}\n".format(self.stack.store.stamp))
+                    #self.stack.incStat('redo_segment_ack')
 
 
     def prep(self):
