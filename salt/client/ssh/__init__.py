@@ -30,6 +30,7 @@ import salt.loader
 import salt.minion
 import salt.exceptions
 import salt.config
+from salt._compat import string_types
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
@@ -256,7 +257,7 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], basestring):
+        if not isinstance(ret[host], string_types):
             if self.opts.get('ssh_key_deploy'):
                 target = self.targets[host]
                 if 'passwd' in target:
