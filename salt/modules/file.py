@@ -2330,7 +2330,7 @@ def check_perms(name, ret, user, group, mode):
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, basestring):
+    if isinstance(orig_comment, salt._compat.string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
