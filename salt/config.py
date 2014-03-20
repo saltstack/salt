@@ -1682,7 +1682,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Guess the id of the minion.
 
     - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If socket.getfqdn() returns us something other than localhost, use it
+    - If salt.utils.network.get_fqhostname returns us something other than
+      localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
@@ -1720,10 +1721,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check socket.getfqdn()
-    fqdn = socket.getfqdn()
+    # Check salt.utils.network.get_fqhostname()
+    fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        log.info('Found minion id from get_gqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False

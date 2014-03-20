@@ -17,6 +17,9 @@ from . import nacling
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
+# Import salt libs
+import salt.utils.network
+
 class Estate(object):
     '''
     RAET protocol endpoint estate object
@@ -50,7 +53,7 @@ class Estate(object):
             host = '127.0.0.1'
         else:
             host = self.host
-        self.fqdn = socket.getfqdn(host)
+        self.fqdn = salt.utils.network.get_fqhostname()
 
 
     @property
