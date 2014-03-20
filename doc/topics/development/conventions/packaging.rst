@@ -14,7 +14,10 @@ The occasion may arise where Salt source and default configurations may need
 to be patched. It is preferable if Salt is only patched to include platform
 specific additions or to fix release time bugs. It is preferable that
 configuration settings and operations remain in the default state, as changes
-here lower's the user experience for users moving across distributions.
+here lowers the user experience for users moving across distributions.
+
+In the event where a packager finds a need to change the default configuration
+it is advised to add the files to the master.d or minion.d directories.
 
 Source Files
 ============
