@@ -11,6 +11,7 @@ from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import CustomLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(yaml_data, basestring):
+    if not isinstance(yaml_data, string_types):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
         try:
