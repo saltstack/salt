@@ -176,7 +176,11 @@ class SSH(object):
                 opts['interface'],
                 opts['publish_port'],
                 opts['ret_port']):
-            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+            self.event = salt.utils.event.get_event(
+                    'master',
+                    opts['sock_dir'],
+                    opts['transport'],
+                    listen=False)
         else:
             self.event = None
         self.opts = opts

@@ -328,7 +328,11 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                opts['sock_dir'],
+                opts['transport'],
+                listen=False)
 
     def _check_minions_directories(self):
         '''

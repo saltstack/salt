@@ -141,7 +141,11 @@ def update():
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
-        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 

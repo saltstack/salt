@@ -50,7 +50,11 @@ class RunnerClient(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         data = {'fun': 'runner.{0}'.format(fun),
                 'jid': jid,
                 'user': user,

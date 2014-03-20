@@ -398,7 +398,11 @@ def reboot(name, conn=None):
         log.info('Rebooted VM: {0}'.format(name))
         # Fire reboot action
         # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         try:
             event.fire_event(
                 '{0} has been rebooted'.format(name), 'salt-cloud'
