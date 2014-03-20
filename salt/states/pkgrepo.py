@@ -264,7 +264,7 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](**kwargs)
+        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
     except Exception as e:
         # This is another way to pass information back from the mod_repo
         # function.
