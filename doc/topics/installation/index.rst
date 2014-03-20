@@ -11,7 +11,8 @@ Installation
 Quick Install
 -------------
 
-On most distributions, you can set up a **Salt Minion** with the bootstrap script:
+On most distributions, you can set up a **Salt Minion** with the
+`Salt Bootstrap`_.
 
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 
