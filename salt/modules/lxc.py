@@ -1070,11 +1070,11 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     if not infos:
         return None
 
+    prior_state = _ensure_running(name)
+
     __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
                            approve_key=approve_key, install=False,
                            prep_install=True)
-
-    prior_state = _ensure_running(name)
 
     cmd = 'bash -c "if type salt-minion; then exit 0; '
     if install:
