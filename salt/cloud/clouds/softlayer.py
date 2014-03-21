@@ -391,7 +391,7 @@ def create(vm_):
         time.sleep(5)
         return False
 
-    username, passwd = salt.utils.cloud.wait_for_fun(
+    username, passwd = salt.utils.cloud.wait_for_fun(  # pylint: disable=W0633
         get_credentials,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
