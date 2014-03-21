@@ -1068,10 +1068,7 @@ def hostname():
         return grains
 
     grains['localhost'] = socket.gethostname()
-    if '.' in socket.getfqdn():
-        grains['fqdn'] = socket.getfqdn()
-    else:
-        grains['fqdn'] = grains['localhost']
+    grains['fqdn'] = salt.utils.network.get_fqhostname()
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
