@@ -78,7 +78,8 @@ def mounted(name,
         opts = ['defaults']
 
     # remove possible trailing slash
-    name = name.rstrip("/")
+    if not name == '/':
+        name = name.rstrip('/')
 
     # Get the active data
     active = __salt__['mount.active']()
