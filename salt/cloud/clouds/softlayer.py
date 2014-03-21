@@ -325,7 +325,10 @@ def create(vm_):
     private_ssh = config.get_cloud_config_value(
         'private_ssh', vm_, __opts__, default=False
     )
-    if private_ssh:
+    private_wds = config.get_cloud_config_value(
+        'private_windows', vm_, __opts__, default=False
+    )
+    if private_ssh or private_wds:
         ip_type = 'primaryBackendIpAddress'
 
     def wait_for_ip():
@@ -346,11 +349,22 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is not True:
         return show_instance(vm_['name'], call='action')
 
+    SSH_PORT = 22
+    WINDOWS_DS_PORT = 445
+    managing_port = SSH_PORT
+    if config.get_cloud_config_value('windows', vm_, __opts__) or \
+            config.get_cloud_config_value('win_installer', vm_, __opts__):
+        managing_port = WINDOWS_DS_PORT
+
     ssh_connect_timeout = config.get_cloud_config_value(
-        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+        'ssh_connect_timeout', vm_, __opts__, 15 * 60
+    )
+    connect_timeout = config.get_cloud_config_value(
+        'connect_timeout', vm_, __opts__, ssh_connect_timeout
     )
     if not salt.utils.cloud.wait_for_port(ip_address,
-                                         timeout=ssh_connect_timeout):
+                                          port=managing_port,
+                                          timeout=connect_timeout):
         raise SaltCloudSystemExit(
             'Failed to authenticate against remote ssh'
         )
@@ -365,7 +379,7 @@ def create(vm_):
         },
     }
 
-    def get_passwd():
+    def get_credentials():
         '''
         Wait for the password to become available
         '''
@@ -373,20 +387,21 @@ def create(vm_):
         for node in node_info:
             if node['id'] == response['id']:
                 if 'passwords' in node['operatingSystem'] and len(node['operatingSystem']['passwords']) > 0:
-                    return node['operatingSystem']['passwords'][0]['password']
+                    return node['operatingSystem']['passwords'][0]['username'], node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False
 
-    passwd = salt.utils.cloud.wait_for_fun(
-        get_passwd,
+    username, passwd = salt.utils.cloud.wait_for_fun(
+        get_credentials,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+    response['username'] = username
     response['password'] = passwd
     response['public_ip'] = ip_address
 
     ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
+        'ssh_username', vm_, __opts__, default=username
     )
 
     ret = {}
@@ -455,10 +470,10 @@ def create(vm_):
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
             deploy_kwargs['master'] = minion['master']
             deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
+                'win_username', vm_, __opts__, default=username
             )
             deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
+                'win_password', vm_, __opts__, default=passwd
             )
 
         # Store what was used to the deploy the VM
