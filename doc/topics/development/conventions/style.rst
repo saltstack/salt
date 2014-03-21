@@ -239,6 +239,20 @@ instance:
     arguments are longer then 80 characters. Otherwise, the formatting is
     optional and both are acceptable.
 
+
+
+Line Length
+-----------
+
+For function definitions and function calls, Salt adheres to the PEP-8 
+specification of at most 80 characters per line.
+
+Non function definitions or function calls, please adopt a soft limit of 120 
+characters per line. If breaking the line reduces the code readability, don't 
+break it. Still, try to avoid passing that 120 characters limit and remember, 
+**vertical is better...  unless it isn't**
+
+
 Indenting
 =========
 
