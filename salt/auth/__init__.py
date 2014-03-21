@@ -113,7 +113,7 @@ class LoadAuth(object):
             return False
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
-            return self.auth[fstr](*fcall['args'])
+            return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
             return False
         except Exception:
