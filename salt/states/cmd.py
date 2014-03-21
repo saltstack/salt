@@ -143,9 +143,9 @@ one must convert it to a list. Example:
     printenv:
       cmd.run:
         - env:
-            {% for key, value in pillar['keys'].iteritems() %}
-             - '{{ key }}': '{{ value }}'
-            {% endfor %}
+          {% for key, value in pillar['keys'].iteritems() %}
+          - '{{ key }}': '{{ value }}'
+          {% endfor %}
 
 '''
 
@@ -328,8 +328,24 @@ def wait(name,
         The shell to use for execution, defaults to /bin/sh
 
     env
-        Pass in a list or dict of environment variables to be applied to the
-        command upon execution
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
 
     umask
          The umask (in octal) to use when running the command.
@@ -403,8 +419,24 @@ def wait_script(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
 
     umask
          The umask (in octal) to use when running the command.
@@ -427,7 +459,7 @@ def run(name,
         user=None,
         group=None,
         shell=None,
-        env=(),
+        env=None,
         stateful=False,
         umask=None,
         output_loglevel='info',
@@ -464,8 +496,24 @@ def run(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        Pass in a list or dict of environment variables to be applied to the
-        command upon execution
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
 
     stateful
         The command being executed is expected to return data about executing
@@ -523,47 +571,11 @@ def run(name,
         ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
         return ret
 
-    if env:
-        if isinstance(env, basestring):
-            try:
-                env = yaml.safe_load(env)
-            except Exception:
-                _env = {}
-                for var in env.split():
-                    try:
-                        key, val = var.split('=')
-                        _env[key] = val
-                    except ValueError:
-                        ret['comment'] = \
-                            'Invalid environment var: {0!r}'.format(var)
-                        return ret
-                env = _env
-        elif isinstance(env, dict):
-            pass
-
-        elif isinstance(env, list):
-            _env = {}
-            for comp in env:
-                try:
-                    if isinstance(comp, basestring):
-                        _env.update(yaml.safe_load(comp))
-                    if isinstance(comp, dict):
-                        _env.update(comp)
-                    else:
-                        ret['comment'] = \
-                            'Invalid environment var: {0!r}'.format(env)
-                        return ret
-                except Exception:
-                    _env = {}
-                    for var in comp.split():
-                        try:
-                            key, val = var.split('=')
-                            _env[key] = val
-                        except ValueError:
-                            ret['comment'] = \
-                                'Invalid environment var: {0!r}'.format(var)
-                            return ret
-            env = _env
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, (list, dict)):
+        ret['comment'] = 'Invalidly-formatted \'env\' parameter'
+        return ret
 
     if HAS_GRP:
         pgid = os.getegid()
@@ -660,8 +672,24 @@ def script(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        Pass in a list or dict of environment variables to be applied to the
-        command upon execution
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
 
     umask
          The umask (in octal) to use when running the command.
@@ -687,17 +715,11 @@ def script(name,
         ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
         return ret
 
-    if isinstance(env, string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in function
-        # globals injection machinery
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, (list, dict)):
+        ret['comment'] = 'Invalidly-formatted \'env\' parameter'
+        return ret
 
     if HAS_GRP:
         pgid = os.getegid()
