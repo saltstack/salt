@@ -221,7 +221,7 @@ latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
-latex_logo = '_static/saltstack_logo.png'
+latex_logo = '_static/salt-logo.pdf'
 
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
