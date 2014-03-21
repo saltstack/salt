@@ -83,7 +83,7 @@ def mounted(name,
     # Get the active data
     active = __salt__['mount.active']()
     real_name = os.path.realpath(name)
-    if device[0:1] == "/":
+    if device.startswith('/'):
         real_device = os.path.realpath(device)
     else:
         real_device = device
