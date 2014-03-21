@@ -1,3 +1,9 @@
+salt (2014.1.0-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Bret Palsson <bretep@gmail.com>  Thu, 20 Mar 2014 14:00:54 -0700
+
 salt (0.17.0-1) unstable; urgency=low
 
   * New upstream version
