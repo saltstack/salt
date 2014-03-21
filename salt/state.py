@@ -2637,7 +2637,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if env is not None:
+        if isinstance(env, string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '
