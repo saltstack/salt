@@ -16,6 +16,7 @@ from collections import deque
 
 # Import salt libs
 import salt.daemons.masterapi
+import salt.utils.args
 from salt.transport.road.raet import stacking
 from salt.transport.road.raet import estating
 from salt.transport.road.raet import raeting
@@ -537,7 +538,10 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         if function_name in self.modules.value:
             try:
                 func = self.modules.value[data['fun']]
-                args, kwargs = salt.minion.parse_args_and_kwargs(func, data['arg'], data)
+                args, kwargs = salt.minion.load_args_and_kwargs(
+                    func,
+                    salt.utils.args.parse_input(data['arg']),
+                    data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):

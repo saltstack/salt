@@ -18,6 +18,7 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
+import salt.utils.args
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -69,8 +70,10 @@ class Caller(object):
                 'pid': os.getpid(),
                 'jid': ret['jid'],
                 'tgt': 'salt-call'}
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                self.minion.functions[fun], self.opts['arg'], data=sdata)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.minion.functions[fun],
+                salt.utils.args.parse_input(self.opts['arg']),
+                data=sdata)
             try:
                 with salt.utils.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
