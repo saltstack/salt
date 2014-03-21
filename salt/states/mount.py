@@ -62,10 +62,6 @@ def mounted(name,
     config
         Set an alternative location for the fstab, default to /etc/fstab
 
-    remount
-        Set if the file system can be remounted with the remount option,
-        default to True
-
     persist
         Set if the mount should be saved in the fstab, default to True
     '''
