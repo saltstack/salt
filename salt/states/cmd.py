@@ -772,10 +772,10 @@ def script(name,
 
         .. versionadded:: Helium
     '''
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': False}
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
 
     if cwd and not os.path.isdir(cwd):
         ret['comment'] = (
