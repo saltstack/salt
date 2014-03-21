@@ -19,6 +19,9 @@ requisite to a pkg.installed state for the package which provides pecl
           - pkg: php-pear
 '''
 
+# Import salt libs
+from salt._compat import string_types
+
 
 def __virtual__():
     '''
@@ -57,7 +60,7 @@ def installed(name,
         The ``defaults`` option will be available in version 0.17.0.
     '''
     # Check to see if we have a designated version
-    if not isinstance(version, basestring) and version is not None:
+    if not isinstance(version, string_types) and version is not None:
         version = str(version)
 
     ret = {'name': name,
