@@ -285,7 +285,7 @@ def _run(cmd,
 
     if not env:
         env = {}
-    elif isinstance(env, basestring):
+    elif isinstance(env, string_types):
         try:
             env = yaml.safe_load(env)
         except yaml.parser.ParserError as err:

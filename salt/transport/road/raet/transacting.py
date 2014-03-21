@@ -18,6 +18,7 @@ except ImportError:
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
+from salt._compat import string_types
 
 from . import raeting
 from . import nacling
@@ -1026,7 +1027,7 @@ class Allower(Initiator):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of cookie packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_cookie')
@@ -1285,7 +1286,7 @@ class Allowent(Correspondent):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of hello packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_hello')
@@ -1358,7 +1359,7 @@ class Allowent(Correspondent):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of initiate packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_initiate')

@@ -9,6 +9,7 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt._compat import string_types
 
 __proxyenabled__ = ['*']
 
@@ -128,7 +129,7 @@ def ext(external):
 
         salt '*' pillar.ext '{libvirt: _}'
     '''
-    if isinstance(external, basestring):
+    if isinstance(external, string_types):
         external = yaml.safe_load(external)
     pillar = salt.pillar.get_pillar(
         __opts__,

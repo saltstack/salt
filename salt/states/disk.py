@@ -5,6 +5,9 @@ Disk monitoring state
 Monitor the state of disk resources
 '''
 
+# Import salt libs
+from salt._compat import string_types
+
 __monitor__ = [
         'status',
         ]
@@ -28,13 +31,13 @@ def status(name, maximum=None, minimum=None):
         return ret
     if maximum:
         try:
-            if isinstance(maximum, basestring):
+            if isinstance(maximum, string_types):
                 maximum = int(maximum.strip('%'))
         except Exception:
             ret['comment'] += 'Max argument must be an integer '
     if minimum:
         try:
-            if isinstance(minimum, basestring):
+            if isinstance(minimum, string_types):
                 minimum = int(minimum.strip('%'))
         except Exception:
             ret['comment'] += 'Min argument must be an integer '

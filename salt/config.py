@@ -28,6 +28,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+from salt._compat import string_types
 
 import sys
 #can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -923,7 +924,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, basestring):
+    if isinstance(deploy_scripts_search_path, string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing

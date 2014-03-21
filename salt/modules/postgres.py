@@ -35,6 +35,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -640,14 +641,14 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, basestring) and bool(rolepassword)
+            isinstance(rolepassword, string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, basestring) and bool(rolepassword):
+    if isinstance(rolepassword, string_types) and bool(rolepassword):
         escaped_password = '{0!r}'.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
