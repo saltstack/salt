@@ -176,7 +176,7 @@ html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'saltstack_logo.png'
+html_logo = None # specfied in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
@@ -221,7 +221,7 @@ latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
-latex_logo = '_static/saltstack_logo.png'
+latex_logo = '_static/salt-logo.pdf'
 
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
