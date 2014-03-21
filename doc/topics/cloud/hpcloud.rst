@@ -8,10 +8,12 @@ uses is Havana. When an instance is booted, it must have a
 floating IP added to it in order to connect to it and further below 
 you will see an example that adds context to this statement.
 
-To use the `openstack` driver for HP Cloud, set up the cloud 
-provider configuration file as in the example shown below.
+Set up a cloud provider configuration file
+==========================================
 
-``/etc/salt/cloud.providers.d/hpcloud.conf``:
+To use the `openstack` driver for HP Cloud, set up the cloud 
+provider configuration file as in the example shown below: 
+  ``/etc/salt/cloud.providers.d/hpcloud.conf``:
 
 .. code-block:: yaml
 
@@ -72,6 +74,9 @@ It is often named the same as ``user`` albeit with a ``-project1`` appended.
 The ``password`` is of course what you created your account with. The management
 UI also has other information such as being able to select US East or US West.
 
+Set up a cloud profile config file
+==================================
+
 The profile shown below is a know working profile for an Ubuntu instance. The
 profile configuration file is stored in the following location:
 
@@ -98,15 +103,17 @@ Some important things about the example above:
 
     # salt-cloud --list-images hp_ae1
 
-* The parameter ``ignore_cidr`` specifies a range of addresses to ignore when trying to connect to the instance. In this case, it's the range of IP addresses used for an internal IP of the instance. 
+* The parameter ``ignore_cidr`` specifies a range of addresses to ignore when trying to connect to the instance. In this case, it's the range of IP addresses used for an private IP of the instance. 
 
-* The parameter ``networks`` is very important to include. This is what makes it possible for salt-cloud to be able to attach a floating IP to the instance in order to connect to the instance and set up the minion
+* The parameter ``networks`` is very important to include. In previous versions of Salt Cloud, this is what made it possible for salt-cloud to be able to attach a floating IP to the instance in order to connect to the instance and set up the minion. The current version of salt-cloud doesn't require it, though having it is of no harm either. Newer versions of salt-cloud will use this, and without it, will attempt to find a list of floating IP addresses to use regardless. 
 
 * The ``ssh_key_file`` and ``ssh_key_name`` are the keys that will make it possible to connect to the instance to set up the minion
 
 * The ``ssh_username`` parameter, in this case, being that the image used will be ubuntu, will make it possible to not only log in but install the minion 
 
 
+Launch an instance 
+==================
 
 To instantiate a machine based on this profile (example):
 
@@ -119,6 +126,9 @@ After several minutes, this will create an instance named ubuntu_instance_1
 running in HP Cloud in the US East region and will set up the minion and then 
 return information about the instance once completed.
 
+Manage the instance 
+===================
+
 Once the instance has been created with salt-minion installed, connectivity to 
 it can be verified with Salt:
 
@@ -126,8 +136,31 @@ it can be verified with Salt:
 
     # salt ubuntu_instance_1 ping
 
+SSH to the instance
+===================
+
 Additionally, the instance can be acessed via SSH using the floating IP assigned to it
 
 .. code-block:: bash
 
     # ssh ubuntu@<floating ip>
+
+Using a private IP
+==================
+
+Alternatively, in the cloud profile, using the private IP to log into the instance to set up the minion is another option, paerticularly if salt-cloud is running within the cloud on an instance that is on the same network with all the other instances (minions)
+
+The example below is a modified version of the previous example. Note the use of ``ssh_interface``:
+
+.. code-block:: yaml
+
+    hp_ae1_ubuntu:
+        provider: hp_ae1 
+        image: 9302692b-b787-4b52-a3a6-daebb79cb498 
+        size: standard.small
+        ssh_key_file: /root/keys/test.key
+        ssh_key_name: test
+        ssh_username: ubuntu
+        ssh_interface: private_ips
+
+With this setup, salt-cloud will use the private IP address to ssh into the instance and set up the salt-minion
