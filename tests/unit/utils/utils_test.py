@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt import utils
+from salt.utils import args
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
 # Import Python libraries
@@ -280,10 +281,10 @@ class UtilsTestCase(TestCase):
         self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')
 
     def test_parse_kwarg(self):
-        ret = utils.parse_kwarg('foo=bar')
+        ret = args.parse_kwarg('foo=bar')
         self.assertEqual(ret, ('foo', 'bar'))
 
-        ret = utils.parse_kwarg('foobar')
+        ret = args.parse_kwarg('foobar')
         self.assertEqual(ret, (None, None))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -514,3 +515,7 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(UtilsTestCase, needs_daemon=False)
