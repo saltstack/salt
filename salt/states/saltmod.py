@@ -249,7 +249,7 @@ def function(
     arg
         The list of arguments to pass into the function
 
-    kwargs
+    kwarg
         The list of keyword arguments to pass into the function
 
     ret
@@ -258,8 +258,9 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    if not kwarg:
+    if kwarg is None:
         kwarg = {}
+
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
