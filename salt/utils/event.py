@@ -42,7 +42,7 @@ The convention for namespacing is to use dot characters "." as the name space de
 The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
-Namspaced tag
+Namespaced tag
     'salt.runner.manage.status.start'
 
 '''
