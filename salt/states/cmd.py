@@ -574,7 +574,8 @@ def run(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = 'Invalidly-formatted \'env\' parameter'
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
         return ret
 
     if HAS_GRP:
@@ -718,7 +719,8 @@ def script(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = 'Invalidly-formatted \'env\' parameter'
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
         return ret
 
     if HAS_GRP:
