@@ -62,10 +62,6 @@ def mounted(name,
     config
         Set an alternative location for the fstab, default to /etc/fstab
 
-    remount
-        Set if the file system can be remounted with the remount option,
-        default to True
-
     persist
         Set if the mount should be saved in the fstab, default to True
     '''
@@ -82,12 +78,13 @@ def mounted(name,
         opts = ['defaults']
 
     # remove possible trailing slash
-    name = name.rstrip("/")
+    if not name == '/':
+        name = name.rstrip('/')
 
     # Get the active data
     active = __salt__['mount.active']()
     real_name = os.path.realpath(name)
-    if device[0:1] == "/":
+    if device.startswith('/'):
         real_device = os.path.realpath(device)
     else:
         real_device = device
