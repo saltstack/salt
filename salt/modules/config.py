@@ -10,6 +10,7 @@ import urllib2
 
 # Import salt libs
 import salt.utils
+import salt._compat
 import salt.syspaths as syspaths
 
 __proxyenabled__ = ['*']
@@ -79,8 +80,13 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    ret = str(mode).lstrip('0').zfill(4)
+    if not isinstance(mode, salt._compat.string_types):
+        # Make it a string in case it's not
+        mode = str(mode)
+    # Strip any quotes and initial 0, though zero-pad it up to 4
+    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
     if ret[0] != '0':
+        # Always include a leading zero
         return '0{0}'.format(ret)
     return ret
 
