@@ -5,22 +5,23 @@ Execute salt convenience routines
 
 # Import python libs
 from __future__ import print_function
-import multiprocessing
-import datetime
-import time
-import logging
 import collections
+import datetime
+import logging
+import multiprocessing
+import time
 
 # Import salt libs
-import salt.loader
 import salt.exceptions
-import salt.utils
+import salt.loader
 import salt.minion
+import salt.utils
+import salt.utils.args
 import salt.utils.event
-from salt.utils.doc import strip_rst as _strip_rst
-from salt.utils.event import tagify
-from salt.utils.error import raise_error
 from salt.output import display_output
+from salt.utils.doc import strip_rst as _strip_rst
+from salt.utils.error import raise_error
+from salt.utils.event import tagify
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +132,9 @@ class RunnerClient(object):
         if not isinstance(kwarg, dict):
             kwarg = {}
         self._verify_fun(fun)
-        args, kwargs = salt.minion.parse_args_and_kwargs(
+        args, kwargs = salt.minion.load_args_and_kwargs(
                 self.functions[fun],
-                arg,
+                salt.utils.args.parse_input(arg),
                 kwarg)
         return self.functions[fun](*args, **kwargs)
 

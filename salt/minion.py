@@ -5,23 +5,23 @@ Routines to set up a minion
 
 # Import python libs
 from __future__ import print_function
-import logging
-import getpass
-import multiprocessing
-import fnmatch
 import copy
-import os
+import errno
+import fnmatch
+import getpass
 import hashlib
+import logging
+import multiprocessing
+import os
 import re
-import types
+import salt
+import signal
+import sys
 import threading
 import time
 import traceback
-import sys
-import signal
-import errno
+import types
 from random import randint, shuffle
-import salt
 
 # Import third party libs
 try:
@@ -30,7 +30,6 @@ try:
 except ImportError:
     # Running in local, zmq not needed
     HAS_ZMQ = False
-import yaml
 
 HAS_RANGE = False
 try:
@@ -62,10 +61,11 @@ from salt.exceptions import (
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.utils
 import salt.payload
-import salt.utils.schedule
+import salt.utils
+import salt.utils.args
 import salt.utils.event
+import salt.utils.schedule
 
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
@@ -145,97 +145,83 @@ def get_proc_dir(cachedir):
 
 def parse_args_and_kwargs(func, args, data=None):
     '''
-    Detect the args and kwargs that need to be passed to a function call,
-    and yamlify all arguments and key-word argument values if:
-    - they are strings
-    - they do not contain '\n'
-    If yamlify results in a dict, and the original argument or kwarg value
-    did not start with a "{", then keep the original string value.
-    This is to prevent things like 'echo "Hello: world"' to be parsed as
-    dictionaries.
+    Wrap load_args_and_kwargs
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'salt.minion.parse_args_and_kwargs() has been renamed to '
+        'salt.minion.load_args_and_kwargs(). Please change this function call '
+        'before the Boron release of Salt.'
+    )
+    return load_args_and_kwargs(func, args, data=data)
+
+
+def load_args_and_kwargs(func, args, data=None):
+    '''
+    Detect the args and kwargs that need to be passed to a function call, and
+    check them against what was passed.
     '''
     argspec = salt.utils.get_function_argspec(func)
     _args = []
-    kwargs = {}
+    _kwargs = {}
     invalid_kwargs = []
 
     for arg in args:
         if isinstance(arg, string_types):
-            arg_name, arg_value = salt.utils.parse_kwarg(arg)
-            if arg_name:
-                if argspec.keywords or arg_name in argspec.args:
+            string_arg, string_kwarg = \
+                salt.utils.args.parse_input([arg], condition=False)  # pylint: disable=W0632
+            if string_arg:
+                # Don't append the version that was just derived from parse_cli
+                # above, that would result in a 2nd call to
+                # salt.utils.cli.yamlify_arg(), which could mangle the input.
+                _args.append(arg)
+            elif string_kwarg:
+                salt.utils.warn_until(
+                    'Boron',
+                    'The list of function args and kwargs should be parsed '
+                    'by salt.utils.args.parse_input() before calling '
+                    'salt.minion.load_args_and_kwargs().'
+                )
+                if argspec.keywords or string_kwarg.keys()[0] in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
-                    kwargs[arg_name] = yamlify_arg(arg_value)
-                    continue
-
-                # **kwargs not in argspec and parsed argument name not in
-                # list of positional arguments. This keyword argument is
-                # invalid.
-                invalid_kwargs.append(arg)
+                    _kwargs.update(string_kwarg)
+                else:
+                    # **kwargs not in argspec and parsed argument name not in
+                    # list of positional arguments. This keyword argument is
+                    # invalid.
+                    invalid_kwargs.append(arg)
+                continue
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
-        elif isinstance(arg, dict) and arg.get('__kwarg__') is True:
+        elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
             for key, val in arg.iteritems():
-                if key == '__kwarg__':
-                    continue
-                if isinstance(val, string_types):
-                    kwargs[key] = yamlify_arg(val)
+                if argspec.keywords or key in argspec.args:
+                    # Function supports **kwargs or is a positional argument to
+                    # the function.
+                    _kwargs[key] = val
                 else:
-                    kwargs[key] = val
+                    # **kwargs not in argspec and parsed argument name not in
+                    # list of positional arguments. This keyword argument is
+                    # invalid.
+                    invalid_kwargs.append(arg)
             continue
-        _args.append(yamlify_arg(arg))
-    if argspec.keywords and isinstance(data, dict):
-        # this function accepts **kwargs, pack in the publish data
-        for key, val in data.items():
-            kwargs['__pub_{0}'.format(key)] = val
+
+        else:
+            _args.append(arg)
 
     if invalid_kwargs:
         raise SaltInvocationError(
             'The following keyword arguments are not valid: {0}'
             .format(', '.join(invalid_kwargs))
         )
-    return _args, kwargs
 
+    if argspec.keywords and isinstance(data, dict):
+        # this function accepts **kwargs, pack in the publish data
+        for key, val in data.items():
+            _kwargs['__pub_{0}'.format(key)] = val
 
-def yamlify_arg(arg):
-    '''
-    yaml.safe_load the arg unless it has a newline in it.
-    '''
-    if not isinstance(arg, string_types):
-        return arg
-    try:
-        original_arg = str(arg)
-        if isinstance(arg, string_types):
-            if '#' in arg:
-                # Don't yamlify this argument or the '#' and everything after
-                # it will be interpreted as a comment.
-                return arg
-            if '\n' not in arg:
-                arg = yaml.safe_load(arg)
-        if isinstance(arg, dict):
-            # dicts must be wrapped in curly braces
-            if (isinstance(original_arg, string_types) and
-                    not original_arg.startswith('{')):
-                return original_arg
-            else:
-                return arg
-        elif isinstance(arg, (int, list, string_types)):
-            # yaml.safe_load will load '|' as '', don't let it do that.
-            if arg == '' and original_arg in ('|',):
-                return original_arg
-            # yaml.safe_load will treat '#' as a comment, so a value of '#'
-            # will become None. Keep this value from being stomped as well.
-            elif arg is None and original_arg.strip().startswith('#'):
-                return original_arg
-            else:
-                return arg
-        else:
-            # we don't support this type
-            return original_arg
-    except Exception:
-        # In case anything goes wrong...
-        return original_arg
+    return _args, _kwargs
 
 
 class SMinion(object):
@@ -826,7 +812,10 @@ class Minion(MinionBase):
         if function_name in minion_instance.functions:
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
+                args, kwargs = load_args_and_kwargs(
+                    func,
+                    data['arg'],
+                    data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
@@ -933,7 +922,10 @@ class Minion(MinionBase):
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
+                args, kwargs = load_args_and_kwargs(
+                    func,
+                    data['arg'][ind],
+                    data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
