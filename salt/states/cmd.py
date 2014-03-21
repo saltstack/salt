@@ -707,10 +707,10 @@ def script(name,
         String of command line args to pass to the script.  Only used if no
         args are specified as part of the `name` argument.
     '''
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': False}
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
 
     if cwd and not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory "{0}" is not available'.format(cwd)
