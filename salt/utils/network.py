@@ -78,11 +78,12 @@ def get_fqhostname():
 
         salt '*' network.get_fqhostname
     '''
-    if socket.gethostname().find('.') >= 0:
-        return socket.gethostname()
+    h_name = socket.gethostname()
+    if h_name.find('.') >= 0:
+        return h_name
     else:
         family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
-                socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
                 socket.SOL_TCP, socket.AI_CANONNAME)[0]
         return canonname
 
