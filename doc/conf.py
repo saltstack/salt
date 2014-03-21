@@ -176,7 +176,7 @@ html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'saltstack_logo.png'
+html_logo = None # specfied in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
