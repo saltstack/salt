@@ -96,4 +96,4 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
-        return yaml.constructor.SafeConstructor.construct_scalar(self, node)
+        return super(SaltYamlSafeLoader, self).construct_scalar(node)
