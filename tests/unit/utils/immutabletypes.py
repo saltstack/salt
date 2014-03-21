@@ -43,6 +43,9 @@ class ImmutableTypesTestCase(TestCase):
         with self.assertRaises(TypeError):
             frozen[1] = 2
 
+        with self.assertRaises(TypeError):
+            frozen[1:-1] = 5
+
     def test_immutabledict_imutability(self):
         data = {
             1: 1,
