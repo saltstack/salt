@@ -157,7 +157,7 @@ class Privateer(object):
 
     def decrypt(self, cipher, nonce, pubkey, dehex=False):
         '''
-        Return decripted msg contained in cypher using nonce and shared key
+        Return decrypted msg contained in cypher using nonce and shared key
         generated from .key and pubkey.
         If pubkey is hex encoded it is converted first
 
