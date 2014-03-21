@@ -429,7 +429,7 @@ def config(name, config, edit=True):
         key = entry.keys()[0]
         configs = _parse_config(entry[key], key)
         if edit:
-            with open(name, 'w') as configfile:
+            with salt.utils.fopen(name, 'w') as configfile:
                 configfile.write('# This file is managed by saltstack.\n')
                 configfile.write(configs)
     return configs
