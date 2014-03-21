@@ -2377,20 +2377,27 @@ class BaseHighState(object):
         for saltenv, states in matches.items():
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+
+                # if we did not found any sls in the fileserver listing, this
+                # may be because the sls was generated or added later, we can
+                # try to directly execute it, and if it fails, anyway it will
+                # return the former error
                 if not statefiles:
-                    # No matching sls file was found!  Output an error
-                    all_errors.append(
-                        'No matching sls found for {0!r} in env {1!r}'.format(
-                            sls_match, saltenv
-                        )
-                    )
+                    statefiles = [sls_match]
+
                 for sls in statefiles:
                     r_env = '{0}:{1}'.format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
+                    for i, error in enumerate(errors[:]):
+                        if 'is not available on the salt master' in error:
+                            errors[i] = (
+                                'No matching sls found for {0!r} '
+                                'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
