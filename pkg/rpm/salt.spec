@@ -12,28 +12,18 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.3
+%define _salttesting_ver 0.5.4
 
 Name: salt
 Version: %{salt_version}
 Release: %{buildid}%{?dist}
 Summary: A parallel remote execution system
-
 Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     http://saltstack.org/
 Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1: https://pypi.python.org/packages/source/S/%{_salttesting}/%{_salttesting}-%{_salttesting_ver}.tar.gz
-Source2: %{name}-master
-Source3: %{name}-syndic
-Source4: %{name}-minion
-Source5: %{name}-master.service
-Source6: %{name}-syndic.service
-Source7: %{name}-minion.service
-Source8: README.fedora
-
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
 BuildArch: noarch
 
 %ifarch %{ix86} x86_64
@@ -52,6 +42,7 @@ BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
 BuildRequires: python26-zmq
 BuildRequires: python26-PyYAML
+BuildRequires: python26-libcloud
 
 Requires: python26-crypto
 Requires: python26-jinja2
@@ -59,6 +50,7 @@ Requires: python26-m2crypto
 Requires: python26-msgpack
 Requires: python26-PyYAML
 Requires: python26-zmq
+Requires: python26-libcloud
 
 %else
 
@@ -79,6 +71,7 @@ BuildRequires: python-msgpack
 BuildRequires: python-pip
 BuildRequires: python-zmq
 BuildRequires: PyYAML
+BuildRequires: python-libcloud
 
 Requires: python-crypto
 Requires: python-zmq
@@ -86,6 +79,7 @@ Requires: python-jinja2
 Requires: PyYAML
 Requires: m2crypto
 Requires: python-msgpack
+Requires: python-libcloud
 
 %endif
 
@@ -111,23 +105,23 @@ BuildRequires: systemd-units
 %endif
 
 %description
-Salt is a distributed remote execution system used to execute commands and 
-query data. It was developed in order to bring the best solutions found in 
-the world of remote execution together and make them better, faster and more 
-malleable. Salt accomplishes this via its ability to handle larger loads of 
-information, and not just dozens, but hundreds or even thousands of individual 
+Salt is a distributed remote execution system used to execute commands and
+query data. It was developed in order to bring the best solutions found in
+the world of remote execution together and make them better, faster and more
+malleable. Salt accomplishes this via its ability to handle larger loads of
+information, and not just dozens, but hundreds or even thousands of individual
 servers, handle them quickly and through a simple and manageable interface.
 
 %package -n salt-master
-Summary: Management component for salt, a parallel remote execution system 
+Summary: Management component for salt, a parallel remote execution system
 Group:   System Environment/Daemons
 Requires: salt = %{version}-%{release}
 
-%description -n salt-master 
+%description -n salt-master
 The Salt master is the central server to which all minions connect.
 
 %package -n salt-minion
-Summary: Client component for salt, a parallel remote execution system 
+Summary: Client component for salt, a parallel remote execution system
 Group:   System Environment/Daemons
 Requires: salt = %{version}-%{release}
 
@@ -148,21 +142,42 @@ cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p $RPM_BUILD_ROOT%{_initrddir}
-install -p %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
-install -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
-install -p %{SOURCE4} $RPM_BUILD_ROOT%{_initrddir}/
+install -p -m 0644 pkg/rpm/salt-master $RPM_BUILD_ROOT%{_initrddir}/
+install -p -m 0644 pkg/rpm/salt-syndic $RPM_BUILD_ROOT%{_initrddir}/
+install -p -m 0644 pkg/rpm/salt-minion $RPM_BUILD_ROOT%{_initrddir}/
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -p -m 0644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 pkg/rpm/salt-master.service $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 pkg/rpm/salt-syndic.service $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 pkg/rpm/salt-minion.service $RPM_BUILD_ROOT%{_unitdir}/
 %endif
-
-install -p %{SOURCE8} .
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
+
+cat <<@EOF > $RPM_BUILD_ROOT%{_sysconfdir}/default/salt
+# /etc/default/salt
+# This file can theoretically contain a bunch of customization variables
+# for Salt.
+#
+# Path to Python for Salt
+PYTHON=/usr/bin/python2.6
+#
+# Path to Salt master
+SALTMASTER=/usr/bin/salt-master
+#
+# Path to Salt minion
+SALTMINION=/usr/bin/salt-minion
+#
+# Path to Salt syndic
+SALTSYNDIC=/usr/bin/salt-syndic
+#
+# Arguments for Salt Master and Minion
+MASTER_ARGS=""
+MINION_ARGS=""
+#
+@EOF
 
 %if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
@@ -175,11 +190,14 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/AUTHORS
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/COPYING
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/pkg/rpm/README.fedora
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-%{version}-py?.?.egg-info
 %doc %{_mandir}/man7/salt.7.*
-%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
+%config(noreplace) %{_sysconfdir}/default/salt
 
 %files -n salt-minion
 %defattr(-,root,root)
@@ -187,13 +205,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-minion.1.*
 %{_bindir}/salt-minion
 %{_bindir}/salt-call
-
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-minion
 %else
 %{_unitdir}/salt-minion.service
 %endif
-
 %config(noreplace) %{_sysconfdir}/salt/minion
 
 %files -n salt-master
@@ -205,6 +221,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-run.1.*
 %doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
+%doc %{_mandir}/man1/salt-cloud.1.*
 %{_bindir}/salt
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
@@ -212,6 +229,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/salt-run
 %{_bindir}/salt-ssh
 %{_bindir}/salt-syndic
+%{_bindir}/salt-cloud
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-master
 %attr(0755, root, root) %{_initrddir}/salt-syndic
@@ -318,6 +336,13 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Fri Mar 21 2014 Cowyn Li <cowynli@gmail.com> - 2014.1.1-1
+- Update to upstream feature release 2014.1.1
+- Update SaltTesting to bugfix release 0.5.4
+- Add salt-cloud
+- Add /etc/default/salt
+- Adopt initd/systemd scripts in the source package directly
+
 * Thu Dec 19 2013 Erik Johnson <erik@saltstack.com> - 0.17.4-1
 - Update to bugfix release 0.17.4
 
