@@ -738,7 +738,7 @@ def script(name,
                        'template': template,
                        'umask': umask,
                        'timeout': timeout,
-                       '__env__': __env__})
+                       'saltenv': __env__})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
