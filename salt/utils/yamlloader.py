@@ -96,4 +96,4 @@ class CustomLoader(yaml.SafeLoader):
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
-        return yaml.constructor.SafeConstructor.construct_scalar(self, node)
+        return super(CustomLoader, self).construct_scalar(node)
