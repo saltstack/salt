@@ -249,7 +249,7 @@ def function(
     arg
         The list of arguments to pass into the function
 
-    kwargs
+    kwarg
         The list of keyword arguments to pass into the function
 
     ret
