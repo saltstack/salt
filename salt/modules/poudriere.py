@@ -204,6 +204,24 @@ def create_jail(name, arch, version="9.0-RELEASE"):
     return 'Issue creating jail {0}'.format(name)
 
 
+def update_jail(name):
+    '''
+    Run freebsd-update on `name` poudriere jail
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' poudriere.update_jail freebsd:10:x86:64
+    '''
+    if is_jail(name):
+        cmd = 'poudriere jail -u -j {0}'.format(name)
+        ret = __salt__['cmd.run'](cmd)
+        return ret
+    else:
+        return 'Could not find jail {0}'.format(name)
+
+
 def delete_jail(name):
     '''
     Deletes poudriere jail with `name`
@@ -246,6 +264,26 @@ def create_ports_tree():
     '''
     _check_config_exists()
     cmd = 'poudriere ports -c'
+    ret = __salt__['cmd.run'](cmd)
+    return ret
+
+
+def update_ports_tree(ports_tree):
+    '''
+    Updates the ports tree, either the default or the `ports_tree` specified
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' poudriere.update_ports_tree staging
+    '''
+    _check_config_exists()
+
+    if ports_tree:
+        ports_tree = '-p {0}'.format(ports_tree)
+
+    cmd = 'poudriere ports -u {0}'.format(ports_tree)
     ret = __salt__['cmd.run'](cmd)
     return ret
 
