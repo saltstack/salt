@@ -25,7 +25,7 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, listen=True, **kwargs):
+    def __init__(self, node, sock_dir=None, listen=True):
         '''
         Set up the stack and remote yard
         '''
