@@ -208,7 +208,7 @@ def _reinterpreted_state(state):
                 'script JSON output must be a JSON object (e.g., {})!'
             )
         is_json = True
-    except Exception:
+    except ValueError:
         idx = out.rstrip().rfind('\n')
         if idx != -1:
             out = out[idx + 1:]
