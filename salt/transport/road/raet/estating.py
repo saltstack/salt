@@ -45,7 +45,7 @@ class Estate(object):
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
 
-        if ha:  # takes precendence
+        if ha:  # takes precedence
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port

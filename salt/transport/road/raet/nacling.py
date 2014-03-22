@@ -6,7 +6,7 @@ nacling.py raet protocol nacl (crypto) management classes
 # Import python libs
 import time
 
-# Import Cyptographic libs
+# Import Cryptographic libs
 import nacl.public
 import nacl.signing
 import nacl.encoding

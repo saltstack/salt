@@ -25,7 +25,7 @@ or holds the field from a received packet.
 What fields are included in a header is dependent on the header kind.
 
 Header encoding.
-    When the head kind is json = 0,then certain optimizations are
+    When the head kind is json = 0, then certain optimizations are
     used to minimize the header length.
         The header field keys are two bytes long
         If a header field value is the default then the field is not included
