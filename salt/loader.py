@@ -36,6 +36,7 @@ LOADED_BASE_NAME = 'salt.loaded'
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'parallels.avail_sizes',
     'parallels.avail_locations',
+    'proxmox.avail_sizes', 
     'saltify.destroy',
     'saltify.avail_sizes',
     'saltify.avail_images',
