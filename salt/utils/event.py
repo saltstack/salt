@@ -106,6 +106,8 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     Return an event object suitible for the named transport
     '''
     if transport == 'zeromq':
+        if node == 'master':
+            return MasterEvent(sock_dir or opts.get('sock_dir', None))
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
