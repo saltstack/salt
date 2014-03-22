@@ -17,13 +17,10 @@ try:
 except ImportError:
     HAS_HAPROXY = False
 
-
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'haproxy'
+
 
 def __virtual__():
     '''
@@ -48,7 +45,7 @@ def _get_conn(socket='/var/run/haproxy.sock'):
 def list_servers(backend, socket='/var/run/haproxy.sock'):
     '''
     List servers in haproxy backend.
-    
+
     backend
         haproxy backend
 
@@ -70,7 +67,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
 
     name
         Server to enable
-    
+
     backend
         haproxy backend
 
@@ -93,7 +90,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
 
     name
         Server to disable
-    
+
     backend
         haproxy backend
 
