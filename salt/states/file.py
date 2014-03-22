@@ -836,8 +836,9 @@ def symlink(
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent. This will work to
-    reverse any of the functions in the file state module.
+    Make sure that the named file or directory is absent. If it exists, it will
+    be deleted. This will work to reverse any of the functions in the file
+    state module.
 
     name
         The path which should be deleted
