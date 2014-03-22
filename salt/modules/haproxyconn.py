@@ -35,6 +35,9 @@ def __virtual__():
 
 
 def _get_conn(socket='/var/run/haproxy.sock'):
+    '''
+    Get connection to haproxy socket.
+    '''
     assert os.path.exists(socket), '{0} does not exist.'.format(socket)
     issock = os.stat(socket).st_mode
     assert stat.S_ISSOCK(issock), '{0} is not a socket.'.format(socket)
@@ -43,12 +46,41 @@ def _get_conn(socket='/var/run/haproxy.sock'):
 
 
 def list_servers(backend, socket='/var/run/haproxy.sock'):
+    '''
+    List servers in haproxy backend.
+    
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.list_servers mysql
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.listServers(backend=backend)
-    ha_conn.sendCmd(ha_cmd)
+    return ha_conn.sendCmd(ha_cmd)
 
 
 def enable_server(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+    Enable Server in haproxy
+
+    name
+        Server to enable
+    
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.enable_server web1.example.com www
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
@@ -56,6 +88,22 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
 
 
 def disable_server(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+    Disable server in haproxy.
+
+    name
+        Server to disable
+    
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.disable_server db1.example.com mysql
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
@@ -63,26 +111,80 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
 
 
 def get_weight(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+    Get server weight
+
+    name
+        Server name
+
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.get_weight web1.example.com www
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.getWeight(server=name, backend=backend)
-    ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return ha_conn.sendCmd(ha_cmd)
 
 
 def set_weight(name, backend, weight=0, socket='/var/run/haproxy.sock'):
+    '''
+    Set server weight
+
+    name
+        Server name
+
+    backend
+        haproxy backend
+
+    weight
+        Server Weight
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.set_weight web1.example.com www 13
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.getWeight(server=name, backend=backend, weight=weight)
     ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return get_weight(name, backend, socket=socket)
 
 
 def show_frontends(socket='/var/run/haproxy.sock'):
+    '''
+    Show HaProxy frontends
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.show_frontends
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showFrontends()
     return ha_conn.sendCmd(ha_cmd)
 
 
 def show_backends(socket='/var/run/haproxy.sock'):
+    '''
+    Show HaProxy Backends
+
+    socket
+        haproxy stats socket
+
+    .. code-block:: bash
+
+        salt '*' haproxy.show_backends
+    '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
