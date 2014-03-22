@@ -1410,7 +1410,7 @@ class Minion(MinionBase):
         Tear down the minion
         '''
         self._running = False
-        if hasattr(self, 'poller'):
+        if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
                 for socket in self.poller.sockets.keys():
                     if socket.closed is False:
@@ -1660,9 +1660,8 @@ class Syndic(Minion):
         Tear down the syndic minion
         '''
         # We borrowed the local clients poller so give it back before
-        # it's destroyed.
-        # This does not delete the poller just our reference to it.
-        del self.poller
+        # it's destroyed. Reset the local poller reference.
+        self.poller = None
         super(Syndic, self).destroy()
         if hasattr(self, 'local'):
             del self.local
