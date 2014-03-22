@@ -5,16 +5,16 @@ The RAET Transport
 .. note::
 
     The RAET transport is in very early development, it is functional but no
-    promises are yet made as to it's reliability or security.
+    promises are yet made as to its reliability or security.
 
     This document is also not yet complete
 
 .. versionadded:: Helium
 
 The Reliable Asynchronous Event Transport, or RAET, is an alternative transport
-medum developed specifically with Salt in mind. It has been developed to
-allow queueing to happen up on the application layer and comes with socket
-layer encryption. It also abstreacts a great deal of control over the socket
+medium developed specifically with Salt in mind. It has been developed to
+allow queuing to happen up on the application layer and comes with socket
+layer encryption. It also abstracts a great deal of control over the socket
 layer and makes it easy to bubble up errors and exceptions.
 
 RAET also offers very powerful message routing capabilities, allowing for
@@ -31,8 +31,8 @@ Customer and User Request
 
 Why make an alternative transport for Salt? There are many reasons, but the
 primary motivation came from customer requests, many large companies came with
-requests to run Salt over an alternative transport, the reasoning was varried,
-from performance and scaling concerns to licencing concerns. These customers
+requests to run Salt over an alternative transport, the reasoning was varied,
+from performance and scaling concerns to licensing concerns. These customers
 have partnered with SaltStack to make RAET a reality.
 
 Networking Flexibility
@@ -46,7 +46,7 @@ RAET and ZeroMQ
 When using RAET, ZeroMQ is not required. RAET is a complete networking
 replacement. It is noteworthy that RAET is not a ZeroMQ replacement in a
 general sense, the ZeroMQ constructs are not reproduced in RAET, but they are
-instead implimented in such a way that is specific to Salt's needs.
+instead implemented in such a way that is specific to Salt's needs.
 
 RAET is primarily an async communication layer over truly async connections,
 defaulting to UDP. ZeroMQ is over TCP and abstracts async constructs within the
@@ -69,17 +69,17 @@ explanation of differences can be found here:
 Using RAET in Salt
 ==================
 
-Using RAET in Salt is easy, the main difference is that the core dependecies
-change, insead of needing pycrypto, M2Crypto, ZeroMQ and PYZMQ, the packages
+Using RAET in Salt is easy, the main difference is that the core dependencies
+change, instead of needing pycrypto, M2Crypto, ZeroMQ and PYZMQ, the packages
 libsodium, pynacl and ioflo are required. Encryption is handled very cleanly
-by libsodium and pynacl, while the queueing and flo control is handled by
+by libsodium and pynacl, while the queueing and flow control is handled by
 ioflo. Distribution packages are forthcoming, but libsodium can be easily
 installed from source, or many distributions do ship packages for it.
 The pynacl and ioflo packages can be easily installed from pypi, distribution
 packages are in the works.
 
 Once the new deps are installed the latest Salt git code needs to be installed.
-As of this writing RAET is nto available in a stable release of Salt, it must
+As of this writing RAET is not available in a stable release of Salt, it must
 be installed a git clone:
 
 .. code_block:: bash
@@ -90,7 +90,7 @@ be installed a git clone:
 
 .. note::
 
-    This will install Salt directly from git HEAD, there is nto promise that
+    This will install Salt directly from git HEAD, there is no promise that
     git HEAD is in a functional state.
 
 Once installed, modify the configuration files for the minion and master to
