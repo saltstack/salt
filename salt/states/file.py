@@ -836,7 +836,7 @@ def symlink(
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent, this will work to
+    Verify that the named file or directory is absent. This will work to
     reverse any of the functions in the file state module.
 
     name
