@@ -145,6 +145,8 @@ class SaltEvent(object):
         if opts is None:
             opts = {}
         self.opts = opts
+        if sock_dir is None:
+            sock_dir = opts.get('sock_dir', None)
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_events = []
 
