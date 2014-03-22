@@ -558,6 +558,8 @@ Proxmox
 Using Salt with Proxmox requires a user, password and URL. These can be
 obtained from your cloud provider. Both PAM and PVE users can be used.
 
+* Using the new configuration format:
+
 .. code-block:: yaml
     my-proxmox-config:
       provider: proxmox
