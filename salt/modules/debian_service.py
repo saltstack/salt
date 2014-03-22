@@ -17,6 +17,9 @@ __func_alias__ = {
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -222,8 +225,12 @@ def enable(name, **kwargs):
     '''
     cmd = 'update-rc.d {0} enable'.format(name)
     osmajor = __grains__['osrelease'].split('.')[0]
-    if int(osmajor) >= 6:
-        cmd = 'insserv {0} && '.format(name) + cmd
+    try:
+        if int(osmajor) >= 6:
+            cmd = 'insserv {0} && '.format(name) + cmd
+    except ValueError:
+        if osmajor == 'testing/unstable' or osmajor == 'unstable':
+            cmd = 'insserv {0} && '.format(name) + cmd
     return not __salt__['cmd.retcode'](cmd)
 
 
