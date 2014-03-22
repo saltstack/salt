@@ -1546,7 +1546,9 @@ def create(vm_=None, call=None):
                 display_ssh_output=display_ssh_output,
                 gateway=ssh_gateway_config
             ):
-                username = user
+                __opts__['ssh_username'] = user
+                if 'ssh_username' in vm_:
+                    del vm_['ssh_username']
                 break
         else:
             raise SaltCloudSystemExit(
@@ -1558,12 +1560,17 @@ def create(vm_=None, call=None):
         )
 
     ret = {}
+
+    ssh_username = config.get_cloud_config_value(
+        'ssh_username', vm_, __opts__
+    )
+
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
-            'username': username,
+            'username': ssh_username,
             'key_filename': key_filename,
             'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
@@ -1578,7 +1585,7 @@ def create(vm_=None, call=None):
             'script': deploy_script,
             'name': vm_['name'],
             'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(username != 'root')
+                'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
             'sudo_password': config.get_cloud_config_value(
                 'sudo_password', vm_, __opts__, default=None
