@@ -561,14 +561,13 @@ obtained from your cloud provider. Both PAM and PVE users can be used.
 * Using the new configuration format:
 
 .. code-block:: yaml
+
     my-proxmox-config:
       provider: proxmox
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host
   
-.. _config_lxc:
-
 lxc
 ---
 
