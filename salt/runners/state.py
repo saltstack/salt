@@ -7,8 +7,9 @@ Execute overstate functions
 from __future__ import print_function
 
 # Import salt libs
-import salt.overstate
 import salt.output
+import salt.overstate
+from salt.exceptions import CommandExecutionError
 
 
 def over(saltenv='base', os_fn=None):
@@ -25,7 +26,12 @@ def over(saltenv='base', os_fn=None):
         salt-run state.over base /path/to/myoverstate.sls
     '''
     stage_num = 0
-    overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    try:
+        overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    except IOError as exc:
+        raise CommandExecutionError(
+            '{0}: {1!r}'.format(exc.strerror, exc.filename)
+        )
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
