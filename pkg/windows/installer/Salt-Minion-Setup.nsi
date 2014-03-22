@@ -160,7 +160,6 @@ Section -Prerequisites
   Push $VcRedistGuid
   Call MsiQueryProductState
   ${If} $NeedVcRedist == "True"
-    MessageBox MB_OK "PAUSED"
     NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
     Pop $R0
     StrCmp $R0 "success" +2
