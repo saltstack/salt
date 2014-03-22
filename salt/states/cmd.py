@@ -177,10 +177,8 @@ import copy
 import json
 import shlex
 import logging
-import yaml
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt._compat import string_types
 
