@@ -13,19 +13,25 @@ __func_alias__ = {
 }
 
 
+# Other BSD-like derivatives that use ifconfig may work too
+SUPPORTED_BSD_LIKE = ['FreeBSD', 'OpenBSD']
+
+
 def __virtual__():
     '''
     Confirm this module is supported by the OS and the system has
     required tools
     '''
-    supported_os = {
+    supported_os_tool = {
         'Linux': 'brctl',
         'NetBSD': 'brconfig'
     }
     cur_os = __grains__['kernel']
-    for _os in supported_os:
-        if cur_os == _os and salt.utils.which(supported_os[cur_os]):
+    for _os in supported_os_tool:
+        if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
             return True
+    if cur_os in SUPPORTED_BSD_LIKE:
+        return True
     return False
 
 
@@ -123,6 +129,96 @@ def _linux_stp(br, state):
     return __salt__['cmd.run']('{0} stp {1} {2}'.format(brctl, br, state))
 
 
+def _bsd_brshow(br=None):
+    '''
+    Internal, returns bridges and member interfaces (BSD-like: ifconfig)
+    '''
+    ifconfig = _tool_path('ifconfig')
+
+    ifaces = {}
+
+    if br:
+        ifaces[br] = br
+    else:
+        cmd = '{0} -g bridge'.format(ifconfig)
+        for line in __salt__['cmd.run'](cmd).splitlines():
+            ifaces[line] = line
+
+    brs = {}
+
+    for iface in ifaces:
+        cmd = '{0} {1}'.format(ifconfig, iface)
+        for line in __salt__['cmd.run'](cmd).splitlines():
+            brs[iface] = {
+                'interfaces': [],
+                'stp': 'no'
+            }
+            line = line.lstrip()
+            if line.startswith('member:'):
+                brs[iface]['interfaces'].append(line.split(' ')[1])
+                if 'STP' in line:
+                    brs[iface]['stp'] = 'yes'
+
+    if br:
+        return brs[br]
+    return brs
+
+
+def _bsd_bradd(br):
+    '''
+    Internal, creates the bridge
+    '''
+    ifconfig = _tool_path('ifconfig')
+    if not br or not ifconfig:
+        return False
+    if __salt__['cmd.retcode']('{0} {1} create up'.format(ifconfig, br)) != 0:
+        return False
+    return True
+
+
+def _bsd_brdel(br):
+    '''
+    Internal, deletes the bridge
+    '''
+    ifconfig = _tool_path('ifconfig')
+    if not br or not ifconfig:
+        return False
+    return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br))
+
+
+def _bsd_addif(br, iface):
+    '''
+    Internal, adds an interface to a bridge
+    '''
+    ifconfig = _tool_path('ifconfig')
+    if not br or not iface or not ifconfig:
+        return False
+    return __salt__['cmd.run']('{0} {1} addm {2}'.format(ifconfig, br, iface))
+
+
+def _bsd_delif(br, iface):
+    '''
+    Internal, removes an interface from a bridge
+    '''
+    ifconfig = _tool_path('ifconfig')
+    if not br or not iface or not ifconfig:
+        return False
+    return __salt__['cmd.run']('{0} {1} deletem {2}'.
+                                format(ifconfig, br, iface))
+
+
+def _bsd_stp(br, state, iface):
+    '''
+    Internal, sets STP state. On BSD-like, it is required to specify the
+    STP physical interface
+    '''
+    ifconfig = _tool_path('ifconfig')
+    if not br or not iface:
+        return False
+    return __salt__['cmd.run']('{0} {1} {2} {3}'.
+                                format(ifconfig, br, state, iface))
+
+
 def _netbsd_brshow(br=None):
     '''
     Internal, returns bridges and enslaved interfaces (NetBSD - brconfig)
@@ -140,7 +236,7 @@ def _netbsd_brshow(br=None):
     for line in __salt__['cmd.run'](cmd).splitlines():
         if line.startswith('bridge'):
             start_int = False
-            brname = line.split(':')[0]  # on NetBSD, always ^bridge[0-9]:
+            brname = line.split(':')[0]  # on NetBSD, always ^bridge([0-9]+):
             brs[brname] = {
                 'interfaces': [],
                 'stp': 'no'
@@ -220,8 +316,13 @@ def _os_dispatch(func, *args, **kwargs):
     '''
     Internal, dispatches functions by operating system
     '''
-    _os_func = getattr(sys.modules[__name__], '_{0}_{1}'.
-                            format(__grains__['kernel'].lower(), func))
+    if __grains__['kernel'] in SUPPORTED_BSD_LIKE:
+        kernel = 'bsd'
+    else:
+        kernel = __grains__['kernel'].lower()
+
+    _os_func = getattr(sys.modules[__name__], '_{0}_{1}'.format(kernel, func))
+
     if callable(_os_func):
         return _os_func(*args, **kwargs)
 
@@ -373,7 +474,7 @@ def stp(br=None, state='disable', iface=None):
         salt '*' bridge.stp br0 enable
         salt '*' bridge.stp br0 disable
 
-    For the NetBSD operating system, it is required to add the interface on
+    For BSD-like operating systems, it is required to add the interface on
     which to enable the STP.
 
     CLI Example:
@@ -383,10 +484,11 @@ def stp(br=None, state='disable', iface=None):
         salt '*' bridge.stp bridge0 enable fxp0
         salt '*' bridge.stp bridge0 disable fxp0
     '''
-    if __grains__['kernel'] == 'Linux':
+    kernel = __grains__['kernel']
+    if kernel == 'Linux':
         states = {'enable': 'on', 'disable': 'off'}
         return _os_dispatch('stp', br, states[state])
-    elif __grains__['kernel'] == 'NetBSD':
+    elif kernel in SUPPORTED_BSD_LIKE or kernel == 'NetBSD':
         states = {'enable': 'stp', 'disable': '-stp'}
         return _os_dispatch('stp', br, states[state], iface)
 
