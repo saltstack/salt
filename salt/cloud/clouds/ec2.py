@@ -1039,7 +1039,7 @@ def create(vm_=None, call=None):
     usernames = salt.utils.cloud.ssh_usernames(
         vm_,
         __opts__,
-        default_users = ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root')
+        default_users=('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root')
     )
 
     # do we launch a regular vm or a spot instance?
