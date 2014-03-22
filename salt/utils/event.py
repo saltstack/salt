@@ -282,6 +282,7 @@ class SaltEvent(object):
                 wait = timeout_at - time.time()
                 continue
 
+            log.debug("get_event() recieved = " + str(ret))
             if full:
                 return ret
             return ret['data']
@@ -331,6 +332,7 @@ class SaltEvent(object):
         else:  # new style longer than 20 chars
             tagend = TAGEND
 
+        log.debug("Sending event - data = " + str(data))
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         try:
             self.push.send(event)
