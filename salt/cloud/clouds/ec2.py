@@ -707,34 +707,6 @@ def iam_profile(vm_):
     )
 
 
-def ssh_username(vm_):
-    '''
-    Return the ssh_username. Defaults to a built-in list of users for trying.
-    '''
-    usernames = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__
-    )
-
-    if not isinstance(usernames, list):
-        usernames = [usernames]
-
-    # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
-    # Keep a copy of the usernames the user might have provided
-    initial = usernames[:]
-
-    # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
-        if name not in usernames:
-            usernames.append(name)
-    # Add the user provided usernames to the end of the list since enough time
-    # might need to pass before the remote service is available for logins and
-    # the proper username might have passed it's iteration.
-    # This has detected in a CentOS 5.7 EC2 image
-    usernames.extend(initial)
-    return usernames
-
-
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
@@ -1064,7 +1036,11 @@ def create(vm_=None, call=None):
 
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
-    usernames = ssh_username(vm_)
+    usernames = salt.utils.cloud.ssh_usernames(
+        vm_,
+        __opts__,
+        default_users = ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root')
+    )
 
     # do we launch a regular vm or a spot instance?
     # see http://goo.gl/hYZ13f for more information on EC2 API
