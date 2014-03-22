@@ -25,7 +25,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
     EauthAuthenticationError,
-    SaltSystemExit
 )
 
 
@@ -167,10 +166,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     # This is the final point before the 'salt' cmd returns,
                     # which is why we set the retcode here.
                     if retcodes.count(0) < len(retcodes):
-                        err = 'All Minions did not return a retcode of 0. One or more minions had a problem'
-                        # NOTE: This could probably be made more informative.
-                        # I chose 11 since its not in use.
-                        raise SaltSystemExit(code=11, msg=err)
+                        sys.exit(11)
 
             except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = str(exc)
