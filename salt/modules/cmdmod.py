@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import sys
 import traceback
-import yaml
 
 # Import salt libs
 import salt.utils

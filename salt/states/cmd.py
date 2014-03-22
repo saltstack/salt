@@ -177,10 +177,8 @@ import copy
 import json
 import shlex
 import logging
-import yaml
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt._compat import string_types
 
@@ -210,7 +208,7 @@ def _reinterpreted_state(state):
                 'script JSON output must be a JSON object (e.g., {})!'
             )
         is_json = True
-    except Exception:
+    except ValueError:
         idx = out.rstrip().rfind('\n')
         if idx != -1:
             out = out[idx + 1:]
