@@ -1353,9 +1353,12 @@ class State(object):
             # not found we default to 'base'
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
-            elif cdata['kwargs'].get('env', None) is not None:
+            elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
-                # format_call
+                # format_call.
+                # We check for a string type since module functions which
+                # allow setting the OS environ also make use of the "env"
+                # keyword argument, which is not a string
                 inject_globals['__env__'] = cdata['kwargs']['env']
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
@@ -2637,7 +2640,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if env is not None:
+        if isinstance(env, string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '

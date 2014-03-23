@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import sys
 import traceback
-import yaml
 
 # Import salt libs
 import salt.utils
@@ -220,7 +219,7 @@ def _run(cmd,
          runas=None,
          shell=DEFAULT_SHELL,
          python_shell=True,
-         env=(),
+         env=None,
          clean_env=False,
          rstrip=True,
          template=None,
@@ -285,16 +284,13 @@ def _run(cmd,
 
     if not env:
         env = {}
-    elif isinstance(env, string_types):
-        try:
-            env = yaml.safe_load(env)
-        except yaml.parser.ParserError as err:
-            log.error(err)
-            env = {}
-    if not isinstance(env, dict):
-        log.error('Invalid input: {0}, must be a dict or '
-                  'string - yaml represented dict'.format(env))
-        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+
+    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+        log.error('Environment variable {0!r} passed without a value. '
+                  'Setting value to an empty string'.format(bad_env_key))
+        env[bad_env_key] = ''
 
     if runas and salt.utils.is_windows():
         # TODO: Figure out the proper way to do this in windows
@@ -452,7 +448,7 @@ def _run_quiet(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                template=None,
                umask=None,
                timeout=None,
@@ -483,7 +479,7 @@ def _run_all_quiet(cmd,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    python_shell=True,
-                   env=(),
+                   env=None,
                    template=None,
                    umask=None,
                    timeout=None,
@@ -514,7 +510,7 @@ def run(cmd,
         runas=None,
         shell=DEFAULT_SHELL,
         python_shell=True,
-        env=(),
+        env=None,
         clean_env=False,
         template=None,
         rstrip=True,
@@ -614,7 +610,7 @@ def run_stdout(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                clean_env=False,
                template=None,
                rstrip=True,
@@ -695,7 +691,7 @@ def run_stderr(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                clean_env=False,
                template=None,
                rstrip=True,
@@ -776,7 +772,7 @@ def run_all(cmd,
             runas=None,
             shell=DEFAULT_SHELL,
             python_shell=True,
-            env=(),
+            env=None,
             clean_env=False,
             template=None,
             rstrip=True,
@@ -857,7 +853,7 @@ def retcode(cmd,
             runas=None,
             shell=DEFAULT_SHELL,
             python_shell=True,
-            env=(),
+            env=None,
             clean_env=False,
             template=None,
             umask=None,
@@ -932,7 +928,7 @@ def _retcode_quiet(cmd,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    python_shell=True,
-                   env=(),
+                   env=None,
                    clean_env=False,
                    template=None,
                    umask=None,
@@ -972,7 +968,7 @@ def script(source,
            runas=None,
            shell=DEFAULT_SHELL,
            python_shell=True,
-           env=(),
+           env=None,
            template='jinja',
            umask=None,
            output_loglevel='info',
@@ -1076,7 +1072,7 @@ def script_retcode(source,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    python_shell=True,
-                   env=(),
+                   env=None,
                    template='jinja',
                    umask=None,
                    timeout=None,
