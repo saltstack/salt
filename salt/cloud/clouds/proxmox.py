@@ -20,7 +20,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
 :maturity: new
-:depends: json >= 2.0.9      
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
@@ -29,8 +28,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 import copy
 import time
 import pprint
-import urllib
-import urllib2
 import logging
 
 # Import salt libs
@@ -78,17 +75,10 @@ def get_configured_provider():
         ('user',)
     )
 
-#
 try:
     import requests
 except ImportError:
     log.error("Python module 'requests' is required")
-    raise SaltCloudSystemExit
-
-try:
-    import json
-except ImportError:
-    log.error("Python module 'json' is required")
     raise SaltCloudSystemExit
 
 try:
@@ -104,7 +94,7 @@ csrf = None
 
 def __authenticate():
     '''
-    Retrieve CSRF and API tickets for the Proxmox API 
+    Retrieve CSRF and API tickets for the Proxmox API
     '''
     global url, ticket, csrf
     url = config.get_cloud_config_value(
@@ -170,13 +160,10 @@ def query(conn_type, option, post_data=None):
         returned_data = response.json()
         if 'data' not in returned_data:
             raise RuntimeError
-        #log.debug('Received: %s' % returned_data)
         return returned_data['data']
     except:
         print("Error in trying to process JSON")
         print(response)
-
-#
 
 
 def __getVmByName(name, allDetails=False):
@@ -357,7 +344,7 @@ def avail_locations(call=None):
 
     CLI Example::
 
-        salt-cloud --list-locations my-proxmox-config    
+        salt-cloud --list-locations my-proxmox-config
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -382,7 +369,7 @@ def avail_images(call=None, location='local', type='vztpl'):
 
     CLI Example::
 
-        salt-cloud --list-images my-proxmox-config    
+        salt-cloud --list-images my-proxmox-config
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -446,7 +433,7 @@ def list_nodes_full(call=None):
 
     CLI Example::
 
-        salt-cloud -F my-proxmox-config    
+        salt-cloud -F my-proxmox-config
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -462,7 +449,7 @@ def list_nodes_select(call=None):
 
     CLI Example::
 
-        salt-cloud -S my-proxmox-config    
+        salt-cloud -S my-proxmox-config
     '''
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full(), __opts__['query.selection'], call,
@@ -694,7 +681,7 @@ def create(vm_):
 
 def create_node(vm_):
     '''
-    Build and submit the requestdata to create a new node    
+    Build and submit the requestdata to create a new node
     '''
     newnode = {}
 
