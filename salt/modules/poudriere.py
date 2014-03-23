@@ -279,11 +279,10 @@ def update_ports_tree(ports_tree):
         salt '*' poudriere.update_ports_tree staging
     '''
     _check_config_exists()
-
     if ports_tree:
-        ports_tree = '-p {0}'.format(ports_tree)
-
-    cmd = 'poudriere ports -u {0}'.format(ports_tree)
+        cmd = 'poudriere ports -u -p {0}'.format(ports_tree)
+    else:
+        cmd = 'poudriere ports -u'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
