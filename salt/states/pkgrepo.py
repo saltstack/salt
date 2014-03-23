@@ -173,7 +173,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
