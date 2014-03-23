@@ -45,33 +45,6 @@ from salt.cloud.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
-# Only load in this module if the PROXMOX configurations are in place
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    log.error("Python module 'requests' is required")
-    HAS_REQUESTS = False
-
-try:
-    from IPy import IP
-    HAS_IPY = True
-except ImportError:
-    log.error("Python module 'IPy' is required")
-    HAS_IPY = False
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-try:
-    from IPy import IP
-    HAS_IPY = True
-except ImportError:
-    HAS_IPY = False
-
 try:
     import requests
     HAS_REQUESTS = True
