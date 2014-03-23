@@ -212,7 +212,7 @@ def _check_ip_available(ip_addr):
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP "{0}" is available to be defined'.format(ip_addr))
+    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
     return True
 
 
@@ -847,7 +847,6 @@ def destroy(name, call=None):
         )
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
-
 
 
 def set_vm_status(status, name=None, vmid=None):
