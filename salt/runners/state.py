@@ -9,7 +9,7 @@ from __future__ import print_function
 # Import salt libs
 import salt.output
 import salt.overstate
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 
 def over(saltenv='base', os_fn=None):
@@ -29,7 +29,7 @@ def over(saltenv='base', os_fn=None):
     try:
         overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
     except IOError as exc:
-        raise CommandExecutionError(
+        raise SaltInvocationError(
             '{0}: {1!r}'.format(exc.strerror, exc.filename)
         )
     for stage in overstate.stages_iter():
@@ -76,6 +76,10 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
         Runner renamed from ``state.sls`` to ``state.orchestrate``
     '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.sls'](mods, saltenv, test, exclude)
