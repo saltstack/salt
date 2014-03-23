@@ -13,12 +13,11 @@ import stat
 
 # Import salt testing libs
 from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
 
-INTEGRATION_TEST_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))
-)
+ensure_in_syspath('..')
 
-CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+from integration import CODE_DIR
 
 EXEMPT_FILES = ['setup.py',
                 'runtests.py',
@@ -69,3 +68,8 @@ class GitPermTestCase(TestCase):
                     suspect_files.append(fn_)
 
         self.assertEqual(suspect_files, [], 'Found file(s) with incorrect permissions: {0}'.format(suspect_files))
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(GitPermTestCase, needs_daemon=False)
