@@ -137,7 +137,7 @@ Command Line Options
 Here's a summary of the command line options (and how check them against
 ``http://bootstrap.saltstack.org``)::
 
-    $ curl -L http://bootstrap.saltstack.org | sh -s -- -h
+    $ sh bootstrap-salt.sh -h
     
       Usage :  bootstrap-salt.sh [options] <install-type> <install-type-args>
     
