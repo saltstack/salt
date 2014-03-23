@@ -14,7 +14,7 @@ __func_alias__ = {
 
 
 # Other BSD-like derivatives that use ifconfig may work too
-SUPPORTED_BSD_LIKE = ['FreeBSD', 'OpenBSD']
+SUPPORTED_BSD_LIKE = ['FreeBSD', 'NetBSD', 'OpenBSD']
 
 
 def __virtual__():
@@ -23,15 +23,15 @@ def __virtual__():
     required tools
     '''
     supported_os_tool = {
+        'FreeBSD': 'ifconfig',
         'Linux': 'brctl',
-        'NetBSD': 'brconfig'
+        'NetBSD': 'brconfig',
+        'OpenBSD': 'ifconfig'
     }
     cur_os = __grains__['kernel']
     for _os in supported_os_tool:
         if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
             return True
-    if cur_os in SUPPORTED_BSD_LIKE:
-        return True
     return False
 
 
@@ -133,6 +133,9 @@ def _bsd_brshow(br=None):
     '''
     Internal, returns bridges and member interfaces (BSD-like: ifconfig)
     '''
+    if __grains__['kernel'] == 'NetBSD':
+        return _netbsd_brshow(br)
+
     ifconfig = _tool_path('ifconfig')
 
     ifaces = {}
@@ -162,61 +165,6 @@ def _bsd_brshow(br=None):
     if br:
         return brs[br]
     return brs
-
-
-def _bsd_bradd(br):
-    '''
-    Internal, creates the bridge
-    '''
-    ifconfig = _tool_path('ifconfig')
-    if not br or not ifconfig:
-        return False
-    if __salt__['cmd.retcode']('{0} {1} create up'.format(ifconfig, br)) != 0:
-        return False
-    return True
-
-
-def _bsd_brdel(br):
-    '''
-    Internal, deletes the bridge
-    '''
-    ifconfig = _tool_path('ifconfig')
-    if not br or not ifconfig:
-        return False
-    return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br))
-
-
-def _bsd_addif(br, iface):
-    '''
-    Internal, adds an interface to a bridge
-    '''
-    ifconfig = _tool_path('ifconfig')
-    if not br or not iface or not ifconfig:
-        return False
-    return __salt__['cmd.run']('{0} {1} addm {2}'.format(ifconfig, br, iface))
-
-
-def _bsd_delif(br, iface):
-    '''
-    Internal, removes an interface from a bridge
-    '''
-    ifconfig = _tool_path('ifconfig')
-    if not br or not iface or not ifconfig:
-        return False
-    return __salt__['cmd.run']('{0} {1} deletem {2}'.
-                                format(ifconfig, br, iface))
-
-
-def _bsd_stp(br, state, iface):
-    '''
-    Internal, sets STP state. On BSD-like, it is required to specify the
-    STP physical interface
-    '''
-    ifconfig = _tool_path('ifconfig')
-    if not br or not iface:
-        return False
-    return __salt__['cmd.run']('{0} {1} {2} {3}'.
-                                format(ifconfig, br, state, iface))
 
 
 def _netbsd_brshow(br=None):
@@ -259,57 +207,92 @@ def _netbsd_brshow(br=None):
     return brs
 
 
-def _netbsd_bradd(br):
+def _bsd_bradd(br):
     '''
     Internal, creates the bridge
     '''
-    brconfig = _tool_path('brconfig')
+    kernel = __grains__['kernel']
     ifconfig = _tool_path('ifconfig')
-    if not br or not ifconfig:
+
+    if not br:
         return False
-    if __salt__['cmd.retcode']('{0} {1} create'.format(ifconfig, br)) != 0:
+
+    if __salt__['cmd.retcode']('{0} {1} create up'.format(ifconfig, br)) != 0:
         return False
-    if __salt__['cmd.retcode']('{0} {1} up'.format(brconfig, br)) != 0:
-        return False
+
+    # NetBSD is two cmds
+    if kernel == 'NetBSD':
+        brconfig = _tool_path('brconfig')
+        if __salt__['cmd.retcode']('{0} {1} up'.format(brconfig, br)) != 0:
+            return False
+
     return True
 
 
-def _netbsd_brdel(br):
+def _bsd_brdel(br):
     '''
     Internal, deletes the bridge
     '''
     ifconfig = _tool_path('ifconfig')
-    if not br or not ifconfig:
+    if not br:
         return False
     return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br))
 
 
-def _netbsd_addif(br, iface):
+def _bsd_addif(br, iface):
     '''
     Internal, adds an interface to a bridge
     '''
-    brconfig = _tool_path('brconfig')
-    return __salt__['cmd.run']('{0} {1} add {2}'.format(brconfig, br, iface))
+    kernel = __grains__['kernel']
+    if kernel == 'NetBSD':
+        cmd = _tool_path('brconfig')
+        brcmd = 'add'
+    else:
+        cmd = _tool_path('ifconfig')
+        brcmd = 'addem'
+
+    if not br or not iface:
+        return False
+
+    return __salt__['cmd.run']('{0} {1} {2} {3}'.
+                                format(cmd, br, brcmd, iface))
 
 
-def _netbsd_delif(br, iface):
+def _bsd_delif(br, iface):
     '''
     Internal, removes an interface from a bridge
     '''
-    brconfig = _tool_path('brconfig')
-    return __salt__['cmd.run']('{0} {1} delete {2}'.format(brconfig, br, iface))
+    kernel = __grains__['kernel']
+    if kernel == 'NetBSD':
+        cmd = _tool_path('brconfig')
+        brcmd = 'delete'
+    else:
+        cmd = _tool_path('ifconfig')
+        brcmd = 'deletem'
 
-
-def _netbsd_stp(br, state, iface):
-    '''
-    Internal, sets STP state. On NetBSD, it is required to specify the
-    STP physical interface
-    '''
-    brconfig = _tool_path('brconfig')
     if not br or not iface:
         return False
+
     return __salt__['cmd.run']('{0} {1} {2} {3}'.
-                                format(brconfig, br, state, iface))
+                                format(cmd, br, brcmd, iface))
+
+
+def _bsd_stp(br, state, iface):
+    '''
+    Internal, sets STP state. On BSD-like, it is required to specify the
+    STP physical interface
+    '''
+    kernel = __grains__['kernel']
+    if kernel == 'NetBSD':
+        cmd = _tool_path('brconfig')
+    else:
+        cmd = _tool_path('ifconfig')
+
+    if not br or not iface:
+        return False
+
+    return __salt__['cmd.run']('{0} {1} {2} {3}'.
+                                format(cmd, br, state, iface))
 
 
 def _os_dispatch(func, *args, **kwargs):
@@ -488,9 +471,11 @@ def stp(br=None, state='disable', iface=None):
     if kernel == 'Linux':
         states = {'enable': 'on', 'disable': 'off'}
         return _os_dispatch('stp', br, states[state])
-    elif kernel in SUPPORTED_BSD_LIKE or kernel == 'NetBSD':
+    elif kernel in SUPPORTED_BSD_LIKE:
         states = {'enable': 'stp', 'disable': '-stp'}
         return _os_dispatch('stp', br, states[state], iface)
+    else:
+        return False
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
