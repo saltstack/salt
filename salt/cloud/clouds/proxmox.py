@@ -182,15 +182,7 @@ def _getVmByName(name, allDetails=False):
 
 def _getVmById(vmid, allDetails=False):
     '''
-<<<<<<< HEAD
-<<<<<<< HEAD
-    Retrieve a VM based on the id.
-=======
     Retrieve a VM based on the ID.
->>>>>>> Linting and style cleanup in proxmox
-=======
-    Retrieve a VM based on the ID.
->>>>>>> 97b9ecd95749ef61c74f73aaf06766822d3d576c
     '''
     for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
         if str(vm_details['vmid']) == str(vmid):
