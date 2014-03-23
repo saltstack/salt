@@ -19,6 +19,7 @@ import salt.utils
 import salt.state
 import salt.payload
 from salt._compat import string_types
+from salt.exceptions import SaltInvocationError
 
 
 __proxyenabled__ = ['*']
@@ -268,6 +269,10 @@ def highstate(test=None, queue=False, **kwargs):
         opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
 
     st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
     st_.push_active()
@@ -368,6 +373,10 @@ def sls(mods,
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
 
     serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
@@ -466,7 +475,14 @@ def top(topfn, test=None, queue=False, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     try:
@@ -716,7 +732,14 @@ def single(fun, name, test=None, queue=False, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.State(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.State(opts, pillar)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
