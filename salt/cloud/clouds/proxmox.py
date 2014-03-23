@@ -48,12 +48,28 @@ from salt.cloud.exceptions import (
 log = logging.getLogger(__name__)
 
 # Only load in this module if the PROXMOX configurations are in place
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    log.error("Python module 'requests' is required")
+    HAS_REQUESTS = False
+
+try:
+    from IPy import IP
+    HAS_IPY = True
+except ImportError:
+    log.error("Python module 'IPy' is required")
+    HAS_IPY = False
 
 
 def __virtual__():
     '''
     Check for PROXMOX configurations
     '''
+    if not (HAS_IPY and HAS_REQUESTS):
+        return False
+
     if get_configured_provider() is False:
         log.debug(
             'There is no Proxmox cloud provider configuration available. '
@@ -75,17 +91,7 @@ def get_configured_provider():
         ('user',)
     )
 
-try:
-    import requests
-except ImportError:
-    log.error("Python module 'requests' is required")
-    raise SaltCloudSystemExit
 
-try:
-    from IPy import IP
-except ImportError:
-    log.error("Python module 'IPy' is required")
-    raise SaltCloudSystemExit
 
 url = None
 ticket = None
@@ -181,7 +187,7 @@ def __getVmByName(name, allDetails=False):
 
 def __getVmById(vmid, allDetails=False):
     '''
-    Retrieve a VM based on the id. 
+    Retrieve a VM based on the id.
     '''
     for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
         if str(vm_details['vmid']) == str(vmid):
@@ -193,7 +199,7 @@ def __getVmById(vmid, allDetails=False):
 
 def __get_next_vmid():
     '''
-    Proxmox allows to use alternative ids instead of autoincrementing. 
+    Proxmox allows to use alternative ids instead of autoincrementing.
     Because of that its required to query what the first available ID is.
     '''
     return int(query('get', 'cluster/nextid'))
@@ -516,7 +522,7 @@ def create(vm_):
     else:
         raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
 
-    log.debug('Using IP address {0}'.format(ip_address))   
+    log.debug('Using IP address {0}'.format(ip_address))
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
