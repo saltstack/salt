@@ -159,11 +159,11 @@ def query(conn_type, option, post_data=None):
     try:
         returned_data = response.json()
         if 'data' not in returned_data:
-            raise RuntimeError
+            raise SaltCloudExecutionFailure
         return returned_data['data']
     except:
-        print("Error in trying to process JSON")
-        print(response)
+        log.error("Error in trying to process JSON")
+        log.error(response)
 
 
 def __getVmByName(name, allDetails=False):
@@ -486,24 +486,6 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
-    # Determine which IP to use in order of preference:
-    if 'ip_address' in vm_:
-        ip_address = str(vm_['ip_address'])
-    elif 'public_ips' in data:
-        ip_address = str(data['public_ips'][0])  # first IP
-    elif 'private_ips' in data:
-        ip_address = str(data['private_ips'][0])  # first IP
-    else:
-        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
-
-    log.debug('Using IP address {0}'.format(ip_address))
-
-    if not __check_ip_available(ip_address):
-        log.error(
-            'IP %s is already in use. Please retry provisioning with a different IP.' %
-            ip_address)
-        raise SaltCloudExecutionFailure
-
     try:
         data = create_node(vm_)
     except Exception as exc:
@@ -523,6 +505,18 @@ def create(vm_):
     vmid = data['vmid']       # vmid which we have received
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
+
+    # Determine which IP to use in order of preference:
+    if 'ip_address' in vm_:
+        ip_address = str(vm_['ip_address'])
+    elif 'public_ips' in data:
+        ip_address = str(data['public_ips'][0])  # first IP
+    elif 'private_ips' in data:
+        ip_address = str(data['private_ips'][0])  # first IP
+    else:
+        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
+
+    log.debug('Using IP address {0}'.format(ip_address))   
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
@@ -840,7 +834,7 @@ def destroy(name, call=None):
 
     vm = __getVmByName(name)
     if vm is not None:
-        query('delete', 'nodes/%s/%s' % (vm['host'], vm['type'], vm['id']))
+        query('delete', 'nodes/%s/%s/%s' % (vm['host'], vm['type'], vm['id']))
         salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
