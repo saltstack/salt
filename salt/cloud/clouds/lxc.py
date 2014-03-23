@@ -184,9 +184,7 @@ def _salt(fun, *args, **kw):
         }.get(fun, '120'))
         while wait_for_res:
             wait_for_res -= 0.5
-            cret = runner.cmd(
-                'jobs.lookup_jid',
-                [jid, {'__kwarg__': True, 'output': False}])
+            cret = runner.cmd('jobs.lookup_jid', [jid, 'output=false'])
             if target in cret:
                 ret = cret[target]
                 break
