@@ -1,5 +1,4 @@
 
-
 In Salt versions greater than 0.12.0, the scheduling system allows incremental
 executions on minions or the master. The schedule system exposes the execution 
 of any execution function on minions or any runner on the master.
@@ -19,7 +18,7 @@ and could step on each other or otherwise double execute.  The default for
 ``maxrunning`` is 1.
 
 States are executed on the minion, as all states are. You can pass positional
-arguments are provide a yaml dict of named arguments.
+arguments and provide a yaml dict of named arguments.
 
 States
 ======
