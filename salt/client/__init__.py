@@ -1214,7 +1214,7 @@ class LocalClient(object):
                 if 'retcode' in raw:
                     ret[raw['id']]['retcode'] = raw['retcode']
                 log.trace('raw = {0}'.format(raw))
-                log.trace('ret = '.format(ret))
+                log.trace('ret = {0}'.format(ret))
                 log.trace('yeilding \'ret\'')
                 yield ret
                 if len(found.intersection(minions)) >= len(minions):
