@@ -689,12 +689,14 @@ def _parse_network_settings(opts, current):
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    if not 'networking' in opts:
+    if not 'enabled' in opts:
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except Exception:
+        except ValueError:
             _raise_error_network('networking', valid)
+    else:
+        opts['networking'] = opts['enabled']
 
     if opts['networking'] in valid:
         if opts['networking'] in _CONFIG_TRUE:
