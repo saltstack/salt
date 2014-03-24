@@ -12,7 +12,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import MagicMock, mock_open, patch
 
 ensure_in_syspath('../../')
 
@@ -59,6 +59,17 @@ class DarwinSysctlTestCase(TestCase):
         with patch.dict(darwin_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(darwin_sysctl.assign(
                 'net.inet.icmp.icmplim', 50), ret)
+
+    @patch('os.path.isfile', MagicMock(return_value=False))
+    def test_persist_no_conf_success(self):
+        '''
+        Tests successful add of config file when previously not one
+        '''
+        m = mock_open()
+        with patch('salt.utils.fopen', mock_open(read_data=m)) as m_open:
+            darwin_sysctl.persist('net.inet.icmp.icmplim', 50)
+            helper_open = m_open()
+            helper_open.write.assert_called_once_with('#\n# Kernel sysctl configuration\n#\n')
 
 
 if __name__ == '__main__':
