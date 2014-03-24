@@ -103,6 +103,10 @@
 # set to zero, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: 0
 
+# If the master rejects the minion's public key, retry instead exiting. Rejected keys
+# # will be handled the same as waiting on acceptance.
+#rejected_retry: False
+
 # When the master key changes, the minion will try to re-auth itself to receive
 # the new master key. In larger environments this can cause a SYN flood on the
 # master because all minions try to re-auth immediately. To prevent this and
