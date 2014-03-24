@@ -656,6 +656,8 @@ def push_dir(path, glob=None):
     ``/var/cache/salt/master/minions/minion-id/files``).  It also has a glob
     for matching specific files using globbing.
 
+    .. versionadded:: Helium
+
     Since this feature allows a minion to push files up to the master server it
     is disabled by default for security purposes. To enable, set ``file_recv``
     to ``True`` in the master configuration file, and restart the master.
