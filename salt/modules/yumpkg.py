@@ -142,6 +142,7 @@ def _get_repo_options(**kwargs):
             repo_arg += '--enablerepo={0!r} '.format(enablerepo)
     return repo_arg
 
+
 def _get_excludes_option(**kwargs):
     '''
     Returns a string of '--disableexcludes' option to be used in the yum command,
@@ -155,6 +156,7 @@ def _get_excludes_option(**kwargs):
         disable_excludes_arg = ('--disableexcludes={0!r}'.format(disable_excludes))
 
     return disable_excludes_arg
+
 
 def normalize_name(name):
     '''
@@ -187,9 +189,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    A specific repo can be requested using the ``fromrepo`` keyword argument.
+    A specific repo can be requested using the ``fromrepo`` keyword argument,
+    and the ``disableexcludes`` option is also supported.
 
-    The ``disableexcludes`` option is supported as well.
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
 
     CLI Example:
 
@@ -197,6 +201,7 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package name> fromrepo=epel-testing
+        salt '*' pkg.latest_version <package name> disableexcludes=main
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
@@ -390,9 +395,11 @@ def list_upgrades(refresh=True, **kwargs):
     Check whether or not an upgrade is available for all packages
 
     The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
-    supported, as used in pkg states.
+    supported, as used in pkg states, and the ``disableexcludes`` option is
+    also supported.
 
-    The ``disableexcludes`` option is supported as well.
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
 
     CLI Example:
 
@@ -424,9 +431,11 @@ def check_db(*names, **kwargs):
        be present, which will contain a list of possible matches.
 
     The ``fromrepo``, ``enablerepo`` and ``disablerepo`` arguments are
-    supported, as used in pkg states.
+    supported, as used in pkg states, and the ``disableexcludes`` option is
+    also supported.
 
-    The ``disableexcludes`` option is supported as well.
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
 
     CLI Examples:
 
@@ -434,6 +443,7 @@ def check_db(*names, **kwargs):
 
         salt '*' pkg.check_db <package1> <package2> <package3>
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
+        salt '*' pkg.check_db <package1> <package2> <package3> disableexcludes=main
     '''
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
@@ -667,6 +677,8 @@ def install(name=None,
     disableexcludes
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
+
+        .. versionadded:: Helium
 
 
     Multiple Package Installation Options:
@@ -1053,7 +1065,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
 
 def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
-    Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
+    Display a repo from <basedir> (default basedir: ``/etc/yum.repos.d``).
 
     CLI Examples:
 
@@ -1300,7 +1312,7 @@ def file_list(*packages):
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     List the files that belong to a package. Not specifying any packages will
-    return a list of _every_ file on the system's rpm database (not generally
+    return a list of *every* file on the system's rpm database (not generally
     recommended).
 
     CLI Examples:
@@ -1319,7 +1331,7 @@ def file_dict(*packages):
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     List the files that belong to a package, grouped by package. Not
-    specifying any packages will return a list of _every_ file on the system's
+    specifying any packages will return a list of *every* file on the system's
     rpm database (not generally recommended).
 
     CLI Examples:
