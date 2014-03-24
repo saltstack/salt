@@ -13,7 +13,8 @@ Set up a cloud provider configuration file
 
 To use the `openstack` driver for HP Cloud, set up the cloud 
 provider configuration file as in the example shown below: 
-  ``/etc/salt/cloud.providers.d/hpcloud.conf``:
+
+``/etc/salt/cloud.providers.d/hpcloud.conf``:
 
 .. code-block:: yaml
 

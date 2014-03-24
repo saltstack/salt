@@ -108,24 +108,28 @@ Salt also needs to know which Base DN to search for users and groups and
 the DN to bind to:
 
 .. code-block:: yaml
+
     auth.ldap.basedn: dc=saltstack,dc=com
     auth.ldap.binddn: cn=admin,dc=saltstack,dc=com
 
 To bind to a DN, a password is required
 
 .. code-block:: yaml
+
     auth.ldap.bindpw: mypassword
 
 Salt users a filter to find the DN associated with a user. Salt substitutes
 the ``{{ username }}`` value for the username when querying LDAP.
 
 .. code-block:: yaml
+
     auth.ldap.filter: uid={{ username }}
 
 If group support for LDAP is desired, one can specify an OU that contains group
 data. This is pre-pendeed to the basedn to create a search path
 
 .. code-block:: yaml
+
     auth.ldap.groupou: Groups
 
 Once configured, LDAP permissions can be assigned to users and groups.
@@ -147,6 +151,3 @@ To configure an LDAP group, append a ``%`` to the ID:
         test_ldap_group%:
           - '*':
             - test.echo
-
-
-

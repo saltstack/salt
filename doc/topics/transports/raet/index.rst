@@ -82,7 +82,7 @@ Once the new deps are installed the latest Salt git code needs to be installed.
 As of this writing RAET is not available in a stable release of Salt, it must
 be installed a git clone:
 
-.. code_block:: bash
+.. code-block:: bash
 
     git clone https://github.com/saltstack/salt.git
     cd salt
@@ -96,15 +96,19 @@ be installed a git clone:
 Once installed, modify the configuration files for the minion and master to
 set the transport to raet:
 
-/etc/salt/master:
-.. code_block:: yaml
+``/etc/salt/master``:
+
+.. code-block:: yaml
 
     transport: raet
 
-/etc/salt/minion:
-.. code_block:: yaml
+
+``/etc/salt/minion``:
+
+.. code-block:: yaml
 
     transport: raet
+
 
 Now start salt as it would normally be started, the minion will connect to the
 master and share long term keys, which can then in turn be managed via
