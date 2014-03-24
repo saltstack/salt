@@ -257,14 +257,29 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kw
     ])
 
     if snapshot:
-        vgname = '-s ' + vgname + '/' + snapshot
+        _snapshot = '-s ' + vgname + '/' + snapshot
 
     if size:
-        cmd = 'lvcreate -n {0} {1} -L {2} {3} {4}'.format(lvname, vgname, size, extra_arguments, pv)
+        if snapshot:
+            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
+                lvname, _snapshot, size, pv
+            )
+        else:
+            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
+                lvname, vgname, size, pv
+            )
     elif extents:
-        cmd = 'lvcreate -n {0} {1} -l {2} {3} {4}'.format(lvname, vgname, extents, extra_arguments, pv)
+        if snapshot:
+            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
+                lvname, _snapshot, extents, pv
+            )
+        else:
+            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
+                lvname, vgname, extents, pv
+            )
     else:
         return 'Error: Either size or extents must be specified'
+
     out = __salt__['cmd.run'](cmd).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
     lvdata = lvdisplay(lvdev)
