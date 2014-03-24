@@ -8,7 +8,8 @@ import traceback
 
 
 def absent(name):
-    '''Destroy a container
+    '''
+    Destroy a container
 
     name
         id of the container to destroy
@@ -54,7 +55,8 @@ def absent(name):
 
 
 def stopped(name):
-    '''Stop a container
+    '''
+    Stop a container
 
     name
         id of the container to stop
@@ -77,7 +79,8 @@ def stopped(name):
 
 
 def started(name, restart=False):
-    '''Start a container
+    '''
+    Start a container
 
     name
         id of the container to start
@@ -102,7 +105,8 @@ def started(name, restart=False):
 
 
 def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
-    '''Edit LXC configuration options
+    '''
+    Edit LXC configuration options
 
     .. code-block:: bash
 
@@ -131,7 +135,8 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
 
 
 def set_pass(name, password=None, user=None, users=None):
-    '''Set the password of system users inside containers
+    '''
+    Set the password of system users inside containers
 
     name
         id of the container to act on
@@ -181,7 +186,8 @@ def created(name,
             backing=None,
             vgname=None,
             lvname=None):
-    '''Create a container using a template
+    '''
+    Create a container using a template
 
     name
         id of the container to act on
@@ -256,7 +262,8 @@ def cloned(name,
            size=None,
            vgname=None,
            profile=None):
-    '''Clone a container
+    '''
+    Clone a container
 
     name
         id of the container to clone to
