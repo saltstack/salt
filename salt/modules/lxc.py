@@ -94,7 +94,7 @@ class LXCConfig(object):
     '''
     LXC configuration data
     '''
-    pattern = re.compile('^(\S+)(\s*)(=)(\s*)(.*)')
+    pattern = re.compile(r'^(\S+)(\s*)(=)(\s*)(.*)')
 
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name', None)
