@@ -441,7 +441,7 @@ class MinionEvent(SaltEvent):
     Create a master event management object
     '''
     def __init__(self, opts):
-        super(MinionEvent, self).__init__('minion', sock_dir=opts['sock_dir'], opts=opts)
+        super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
 class EventPublisher(Process):
