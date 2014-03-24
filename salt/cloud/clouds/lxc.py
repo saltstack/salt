@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Lxc Module
-==============
-The LXC module is designed to install Salt via a salt master on a
-controlled minion LXC container.
+Install Salt on an LXC Container
+================================
+
+.. versionadded:: Helium
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
