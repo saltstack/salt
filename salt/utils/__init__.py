@@ -10,7 +10,6 @@ import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
-import grp
 import hashlib
 import imp
 import inspect
@@ -18,7 +17,6 @@ import json
 import logging
 import os
 import pprint
-import pwd
 import random
 import re
 import shlex
@@ -73,6 +71,20 @@ try:
 except ImportError:
     # Running as purely local
     pass
+
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    # grp is not available on windows
+    HAS_GRP = False
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
 
 # Import salt libs
 import salt._compat
@@ -1958,6 +1970,10 @@ def get_group_list(user=None, include_default=True):
     Returns a list of all of the system group names of which the user
     is a member.
     '''
+    if not HAS_GRP or not HAS_PWD:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
     group_names = None
     if not isinstance(user, string_types):
         raise Exception
@@ -2012,6 +2028,10 @@ def get_group_dict(user=None, include_default=True):
     as values, of which the user is a member.
     E.g: {'staff': 501, 'sudo': 27}
     '''
+    if not HAS_GRP or not HAS_PWD:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty dict
+        return {}
     group_dict = {}
     group_names = get_group_list(user, include_default=include_default)
     for group in group_names:
@@ -2024,5 +2044,9 @@ def get_gid_list(user=None, include_default=True):
     Returns a list of all of the system group IDs of which the user
     is a member.
     '''
+    if not HAS_GRP or not HAS_PWD:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
     return gid_list
