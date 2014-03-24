@@ -1358,30 +1358,17 @@ def check_state_result(running):
     '''
     if not isinstance(running, dict):
         return False
+
     if not running:
         return False
-    for host in running:
-        if not isinstance(running[host], dict):
+
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
             return False
 
-        if host.find('_|-') >= 3:
-            # This is a single ret, no host associated
-            rets = running[host]
-        else:
-            rets = running[host].values()
-
-        if isinstance(rets, dict) and 'result' in rets:
-            if rets['result'] is False:
-                return False
-            return True
-
-        for ret in rets:
-            if not isinstance(ret, dict):
-                return False
-            if 'result' not in ret:
-                return False
-            if ret['result'] is False:
-                return False
+        if state_result.get('return', False) is False:
+            return False
     return True
 
 

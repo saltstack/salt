@@ -51,6 +51,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'prereq_in',
     'require',
     'require_in',
+    'onfail',
     'fail_hard',
     'reload_modules',
     'saltenv',
@@ -1353,9 +1354,12 @@ class State(object):
             # not found we default to 'base'
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
-            elif cdata['kwargs'].get('env', None) is not None:
+            elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
-                # format_call
+                # format_call.
+                # We check for a string type since module functions which
+                # allow setting the OS environ also make use of the "env"
+                # keyword argument, which is not a string
                 inject_globals['__env__'] = cdata['kwargs']['env']
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
@@ -1461,11 +1465,11 @@ class State(object):
             present = True
         if 'prereq' in low:
             present = True
-        if 'postmortem' in low:
+        if 'onfail' in low:
             present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': [], 'prereq': [], 'postmortem': []}
+        reqs = {'require': [], 'watch': [], 'prereq': [], 'onfail': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
@@ -1501,7 +1505,7 @@ class State(object):
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
-                if r_state == 'postmortem':
+                if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('fail')
                         continue
@@ -1553,7 +1557,7 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get('prerequired'):
             self.active.add(tag)
-        requisites = ['require', 'watch', 'prereq', 'postmortem']
+        requisites = ['require', 'watch', 'prereq', 'onfail']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
             status = self.check_requisite(low, running, chunks, True)
@@ -1592,7 +1596,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] or lost['postmortem'] or lost.get('prerequired'):
+            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     if not lreqs:
@@ -2637,7 +2641,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if env is not None:
+        if isinstance(env, string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '

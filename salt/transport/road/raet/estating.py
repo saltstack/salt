@@ -45,7 +45,7 @@ class Estate(object):
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
 
-        if ha:  # takes precendence
+        if ha:  # takes precedence
             host, port = ha
         self.host = socket.gethostbyname(host)
         self.port = port
@@ -96,7 +96,7 @@ class Estate(object):
 class LocalEstate(Estate):
     '''
     RAET protocol endpoint local estate object
-    Maintains signer for signing and privateer for encrypt/decript
+    Maintains signer for signing and privateer for encrypt/decrypt
     '''
     def __init__(self, main=False, sigkey=None, prikey=None, **kwa):
         '''
@@ -114,7 +114,7 @@ class LocalEstate(Estate):
 class RemoteEstate(Estate):
     '''
     RAET protocol endpoint remote estate object
-    Maintains verifier for verifying signatures and publican for encrypt/decript
+    Maintains verifier for verifying signatures and publican for encrypt/decrypt
     '''
     def __init__(self, verkey=None, pubkey=None, acceptance=None, rsid=0, rtid=0, **kwa):
         '''

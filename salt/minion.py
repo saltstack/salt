@@ -845,6 +845,7 @@ class Minion(MinionBase):
                 )
                 log.debug(msg, exc_info=True)
                 ret['return'] = '{0}: {1}'.format(msg, exc)
+                ret['out'] = 'nested'
             except CommandExecutionError as exc:
                 log.error(
                     'A command in {0!r} had a problem: {1}'.format(
@@ -854,6 +855,7 @@ class Minion(MinionBase):
                     exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
+                ret['out'] = 'nested'
             except SaltInvocationError as exc:
                 log.error(
                     'Problem executing {0!r}: {1}'.format(
@@ -865,6 +867,7 @@ class Minion(MinionBase):
                 ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
                 )
+                ret['out'] = 'nested'
             except TypeError as exc:
                 trb = traceback.format_exc()
                 aspec = salt.utils.get_function_argspec(
@@ -877,12 +880,15 @@ class Minion(MinionBase):
                                                        aspec)
                 log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = msg
+                ret['out'] = 'nested'
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
+                ret['out'] = 'nested'
         else:
             ret['return'] = '{0!r} is not available.'.format(function_name)
+            ret['out'] = 'nested'
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
@@ -986,13 +992,21 @@ class Minion(MinionBase):
                     'id': self.opts['id']}
             for key, value in ret.items():
                 load[key] = value
-        try:
-            oput = self.functions[fun].__outputter__
-        except (KeyError, AttributeError, TypeError):
-            pass
+
+        if 'out' in ret:
+            if isinstance(ret['out'], string_types):
+                load['out'] = ret['out']
+            else:
+                log.error('Invalid outputter {0}. This is likely a bug.'
+                          .format(ret['out']))
         else:
-            if isinstance(oput, string_types):
-                load['out'] = oput
+            try:
+                oput = self.functions[fun].__outputter__
+            except (KeyError, AttributeError, TypeError):
+                pass
+            else:
+                if isinstance(oput, string_types):
+                    load['out'] = oput
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
@@ -1017,6 +1031,7 @@ class Minion(MinionBase):
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+        log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
     def _state_run(self):
@@ -1409,7 +1424,7 @@ class Minion(MinionBase):
         Tear down the minion
         '''
         self._running = False
-        if hasattr(self, 'poller'):
+        if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
                 for socket in self.poller.sockets.keys():
                     if socket.closed is False:
@@ -1659,9 +1674,8 @@ class Syndic(Minion):
         Tear down the syndic minion
         '''
         # We borrowed the local clients poller so give it back before
-        # it's destroyed.
-        # This does not delete the poller just our reference to it.
-        del self.poller
+        # it's destroyed. Reset the local poller reference.
+        self.poller = None
         super(Syndic, self).destroy()
         if hasattr(self, 'local'):
             del self.local

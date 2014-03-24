@@ -42,7 +42,7 @@ The convention for namespacing is to use dot characters "." as the name space de
 The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
-Namspaced tag
+Namespaced tag
     'salt.runner.manage.status.start'
 
 '''
@@ -282,6 +282,7 @@ class SaltEvent(object):
                 wait = timeout_at - time.time()
                 continue
 
+            log.trace('get_event() received = {0}'.format(ret))
             if full:
                 return ret
             return ret['data']
@@ -331,6 +332,7 @@ class SaltEvent(object):
         else:  # new style longer than 20 chars
             tagend = TAGEND
 
+        log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         try:
             self.push.send(event)

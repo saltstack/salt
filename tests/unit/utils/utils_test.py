@@ -224,14 +224,10 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
 
     def test_check_state_result(self):
-        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-        self.assertFalse(utils.check_state_result({'host1': []}),
-                         "Failed to handle an invalid data structure for a host")
+        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result({}), "Failed to handle an empty dictionary.")
         self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
-
-        self.assertTrue(utils.check_state_result({'    _|-': {}}))
 
         test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
         self.assertTrue(utils.check_state_result(test_valid_state))
