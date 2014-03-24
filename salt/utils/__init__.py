@@ -2078,7 +2078,7 @@ def get_group_list(user=None, include_default=True):
     Returns a list of all of the system group names of which the user
     is a member.
     '''
-    if not HAS_GRP or not HAS_PWD:
+    if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
@@ -2136,7 +2136,7 @@ def get_group_dict(user=None, include_default=True):
     as values, of which the user is a member.
     E.g: {'staff': 501, 'sudo': 27}
     '''
-    if not HAS_GRP or not HAS_PWD:
+    if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty dict
         return {}
@@ -2152,7 +2152,7 @@ def get_gid_list(user=None, include_default=True):
     Returns a list of all of the system group IDs of which the user
     is a member.
     '''
-    if not HAS_GRP or not HAS_PWD:
+    if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
