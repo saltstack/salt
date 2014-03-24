@@ -258,6 +258,8 @@ def init(name,
     if clone_from:
         ret = __salt__['lxc.clone'](name, clone_from,
                                     profile=profile, **kwargs)
+        if not ret.get('cloned', False):
+            return ret
         cfg = LXCConfig(name=name, nic=nic, cpuset=cpuset,
                         cpushare=cpushare, memory=memory)
         cfg.write()
@@ -267,8 +269,8 @@ def init(name,
         with cfg.tempfile() as cfile:
             ret = __salt__['lxc.create'](name, config=cfile.name,
                                          profile=profile, **kwargs)
-    if not (ret.get('created', False) or ret.get('cloned', False)):
-        return ret
+        if not ret.get('created', False):
+            return ret
     rootfs = info(name)['rootfs']
     if seed:
         ret['seeded'] = __salt__['lxc.bootstrap'](
