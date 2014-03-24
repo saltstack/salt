@@ -142,19 +142,21 @@ def _get_repo_options(**kwargs):
             repo_arg += '--enablerepo={0!r} '.format(enablerepo)
     return repo_arg
 
+
 def _get_excludes_option(**kwargs):
     '''
     Returns a string of '--disableexcludes' option to be used in the yum command,
     based on the kwargs.
     '''
     disable_excludes_arg = ''
-    disable_excludes     = kwargs.get('disableexcludes', '')
+    disable_excludes = kwargs.get('disableexcludes', '')
 
     if disable_excludes:
         log.info('Disabling excludes for {0!r}'.format(disable_excludes))
         disable_excludes_arg = ('--disableexcludes={0!r}'.format(disable_excludes))
 
     return disable_excludes_arg
+
 
 def normalize_name(name):
     '''
