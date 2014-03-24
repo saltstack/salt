@@ -32,9 +32,11 @@ EXEMPT_FILES = [
     'pkg/arch/PKGBUILD-git',
     'pkg/arch/PKGBUILD-local',
     'pkg/arch/git/PKGBUILD',
+    'pkg/rpm/build.py',
     'pkg/rpm/salt-master',
     'pkg/rpm/salt-minion',
     'pkg/rpm/salt-syndic',
+    'pkg/shar/build_shar.sh'
     'pkg/smartos/esky/install.sh',
     'salt/templates/git/ssh-id-wrapper',
     'scripts/salt',
@@ -50,7 +52,7 @@ EXEMPT_FILES = [
     'setup.py',
     'tests/integration/mockbin/su',
     'tests/runtests.py',
-    'tests/saltsh.py'
+    'tests/saltsh.py',
 ]
 
 IGNORE_PATHS = [
