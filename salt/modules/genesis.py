@@ -8,10 +8,10 @@ Module for managing container and VM images
 # Import python libs
 import pprint
 import logging
-import salt.syspaths
 
 # Import salt libs
 import salt.utils
+import salt.syspaths
 
 
 log = logging.getLogger(__name__)
@@ -259,27 +259,29 @@ def avail_platforms():
     return ret
 
 
-def _tar(name, root, dest):
+def _tar(name, root, dest, path=None):
     '''
     Pack up image in a tar format
     '''
-    path = os.path.join(salt.syspaths.SRV_ROOT_DIR, 'salt-images')
-    tarfile = '{0}/{1}.tar.bz2'.format(path, name)
+    if path is None:
+        path = os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'img')
+    tarfile = '{0}/{1}.tar.xz'.format(path, name)
     out = __salt__['archive.tar'](
-        options='cjf',
+        options='acf',
         tarfile=tarfile,
         sources=root,
     )
 
 
-def _untar(source):
+def _untar(source, path=None):
     '''
     Unpack a tarball to be used as a container
     '''
-    path = os.path.join(salt.syspaths.SRV_ROOT_DIR, 'salt-images')
-    tarfile = '{0}/{1}.tar.bz2'.format(path, source)
+    if path is None:
+        path = os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'img')
+    tarfile = '{0}/{1}.tar.xz'.format(path, source)
     out = __salt__['archive.tar'](
-        options='xjf',
+        options='axf',
         tarfile=tarfile,
         dest=path,
     )
