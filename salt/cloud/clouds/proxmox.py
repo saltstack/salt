@@ -3,6 +3,8 @@
 Proxmox Cloud Module
 ======================
 
+.. versionadded:: Helium
+
 The Proxmox cloud module is used to control access to cloud providers using
 the Proxmox system (KVM / OpenVZ).
 
