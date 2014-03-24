@@ -65,11 +65,12 @@ class DarwinSysctlTestCase(TestCase):
         '''
         Tests successful add of config file when previously not one
         '''
-        m = mock_open()
-        with patch('salt.utils.fopen', mock_open(read_data=m)) as m_open:
+        mock = mock_open()
+        with patch('salt.utils.fopen', mock_open(read_data=mock)) as m_open:
             darwin_sysctl.persist('net.inet.icmp.icmplim', 50)
             helper_open = m_open()
-            helper_open.write.assert_called_once_with('#\n# Kernel sysctl configuration\n#\n')
+            helper_open.write.assert_called_once_with(
+                '#\n# Kernel sysctl configuration\n#\n')
 
 
 if __name__ == '__main__':
