@@ -219,17 +219,13 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     elif result == False:  # pylint: disable=E8712
         ret['result'] = False
     else:
-        err = ('You have specified the state option \'Result\' with'
-            ' invalid arguments. It must be either '
-            ' \'True\', \'False\', or \'Random\'')
-        raise SaltInvocationError(err)
+        raise SaltInvocationError('You have specified the state option \'Result\' with invalid arguments. '
+                                  'It must be either \'True\', \'False\', or \'Random\'')
 
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
+            'Yo dawg I heard you like tests, so I put tests in your tests, so you can test while you test.'
         )
 
     return ret
