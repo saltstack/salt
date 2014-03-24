@@ -1089,7 +1089,7 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
-        log.debug("entered - function get_cli_static_event_returns()")
+        log.trace('entered - function get_cli_static_event_returns()')
         minions = set(minions)
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
@@ -1164,7 +1164,7 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
-        log.debug("func get_cli_event_returns()")
+        log.trace('func get_cli_event_returns()')
         if not isinstance(minions, set):
             if isinstance(minions, string_types):
                 minions = set([minions])
@@ -1196,11 +1196,7 @@ class LocalClient(object):
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
             raw = self.event.get_event(wait, jid)
-            log.debug(
-                "get_cli_event_returns()" +
-                " called self.event.get_event()" +
-                " and recieved : raw = " + str(raw)
-            )
+            log.trace('get_cli_event_returns() called self.event.get_event() and received: raw={0}'.format(raw))
             if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1217,9 +1213,9 @@ class LocalClient(object):
                     ret[raw['id']]['out'] = raw['out']
                 if 'retcode' in raw:
                     ret[raw['id']]['retcode'] = raw['retcode']
-                log.trace("raw = " + str(raw))
-                log.trace("ret = " + str(ret))
-                log.trace("yeilding 'ret'")
+                log.trace('raw = {0}'.format(raw))
+                log.trace('ret = {0}'.format(ret))
+                log.trace('yeilding \'ret\'')
                 yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
@@ -1281,7 +1277,7 @@ class LocalClient(object):
         Gather the return data from the event system, break hard when timeout
         is reached.
         '''
-        log.debug("entered - function get_event_iter_returns()")
+        log.trace('entered - function get_event_iter_returns()')
         if timeout is None:
             timeout = self.opts['timeout']
         jid_dir = salt.utils.jid_dir(jid,

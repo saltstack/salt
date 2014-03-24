@@ -1358,15 +1358,16 @@ def check_state_result(running):
     '''
     if not isinstance(running, dict):
         return False
+
     if not running:
         return False
 
-    for state in running.keys():
-        if type(running[str(state)]) is not list:
-            if not running[str(state)]['result']:
-                return False
-        else:
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
+            return False
+
+        if state_result.get('return', False) is False:
             return False
     return True
 
