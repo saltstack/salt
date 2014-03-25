@@ -40,6 +40,11 @@ Networking Flexibility
 
 forthcoming
 
+Performance
+-----------
+
+forthcoming
+
 RAET and ZeroMQ
 ===============
 
@@ -94,13 +99,16 @@ be installed a git clone:
     git HEAD is in a functional state.
 
 Once installed, modify the configuration files for the minion and master to
-set the transport to raet:
+set the transport to raet (the file_buffer_size and id need to be set to
+adress known bugs in the unreleased code as of this writing):
 
 ``/etc/salt/master``:
 
 .. code-block:: yaml
 
     transport: raet
+    id: master
+    file_buffer_size: 54000
 
 
 ``/etc/salt/minion``:
