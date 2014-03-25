@@ -6,6 +6,7 @@ Module for managing container and VM images
 '''
 
 # Import python libs
+import os.path
 import pprint
 import logging
 
@@ -120,7 +121,7 @@ def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
     TODO: Set up a pre-install overlay, to copy files into /etc/ and so on,
         which are required for the install to work.
     '''
-    __salt__['file.mkdir']('{0}/etc'.format(root), 'root', 'root', '755')
+    _make_nodes(root)
     __salt__['cmd.run']('cp /etc/resolv/conf /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
     __salt__['cmd.run']('cp -r /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
     __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=root, confs=pkg_confs))
@@ -247,29 +248,47 @@ def avail_platforms():
     return ret
 
 
-def _tar(name, root, dest, path=None):
+def tar(name, root, path=None):
     '''
     Pack up image in a tar format
     '''
     if path is None:
         path = os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'img')
-    tarfile = '{0}/{1}.tar.xz'.format(path, name)
+    if not __salt__['file.directory_exists'](path):
+        try:
+            __salt__['file.mkdir'](path)
+        except Exception as exc:
+            return {'Error': pprint.pformat(exc)}
+
+    tarfile = '{0}/{1}.tar.bz2'.format(path, name)
     out = __salt__['archive.tar'](
-        options='acf',
+        options='pjcf',
         tarfile=tarfile,
-        sources=root,
+        sources='.',
+        dest=root,
     )
+    #tar -C /tmp/redhat -zcvf /tmp/redhat.tar.gz dev
 
 
-def _untar(source, path=None):
+def untar(name, dest=None, path=None):
     '''
     Unpack a tarball to be used as a container
     '''
     if path is None:
         path = os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'img')
-    tarfile = '{0}/{1}.tar.xz'.format(path, source)
+
+    if not dest:
+        dest = path
+
+    if not __salt__['file.directory_exists'](dest):
+        try:
+            __salt__['file.mkdir'](dest)
+        except Exception as exc:
+            return {'Error': pprint.pformat(exc)}
+
+    tarfile = '{0}/{1}.tar.bz2'.format(path, name)
     out = __salt__['archive.tar'](
-        options='axf',
+        options='xf',
         tarfile=tarfile,
-        dest=path,
+        dest=dest,
     )
