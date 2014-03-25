@@ -39,3 +39,10 @@ Output Options
 .. option:: --force-color
 
     Force colored output
+
+    .. note::
+        When using colored output the color codes are as follows:
+
+        ``green`` denotes success, ``red`` denotes failure, ``blue`` denotes
+        changes and success and ``yellow`` denotes a expected future change in configuration.
+
