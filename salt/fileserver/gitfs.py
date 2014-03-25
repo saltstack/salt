@@ -224,7 +224,13 @@ def update():
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         try:
-            for fetch in origin.fetch():
+            log.debug("Fetching from {0}".format(origin.url))
+            _f = []
+            try:
+                _f = origin.fetch()
+            except AssertionError:
+                _f = origin.fetch()
+            for fetch in _f:
                 if fetch.old_commit is not None:
                     data['changed'] = True
         except Exception as exc:
