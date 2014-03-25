@@ -248,7 +248,32 @@ def avail_platforms():
     return ret
 
 
-def tar(name, root, path=None):
+def pack(name, root, path=None, pack_format='tar', compress='bzip2'):
+    '''
+    Pack up a directory structure, into a specific format
+
+    CLI Examples:
+
+        salt myminion genesis.pack centos /root/centos
+        salt myminion genesis.pack centos /root/centos pack_format='tar'
+    '''
+    if pack_format == 'tar':
+        _tar(name, root, path, compress)
+
+
+def unpack(name, dest=None, path=None, pack_format='tar', compress='bz2'):
+    '''
+    Unpack an image into a directory structure
+
+    CLI Example:
+
+        salt myminion genesis.unpack centos /root/centos
+    '''
+    if pack_format == 'tar':
+        _untar(name, dest, path, compress)
+
+
+def _tar(name, root, path=None, compress='bzip2'):
     '''
     Pack up image in a tar format
     '''
@@ -260,17 +285,18 @@ def tar(name, root, path=None):
         except Exception as exc:
             return {'Error': pprint.pformat(exc)}
 
-    tarfile = '{0}/{1}.tar.bz2'.format(path, name)
+    compression, ext = _compress(compress)
+
+    tarfile = '{0}/{1}.tar.{2}'.format(path, name, ext)
     out = __salt__['archive.tar'](
-        options='pjcf',
+        options='{0}pcf'.format(compression),
         tarfile=tarfile,
         sources='.',
         dest=root,
     )
-    #tar -C /tmp/redhat -zcvf /tmp/redhat.tar.gz dev
 
 
-def untar(name, dest=None, path=None):
+def _untar(name, dest=None, path=None, compress='bz2'):
     '''
     Unpack a tarball to be used as a container
     '''
@@ -286,9 +312,28 @@ def untar(name, dest=None, path=None):
         except Exception as exc:
             return {'Error': pprint.pformat(exc)}
 
-    tarfile = '{0}/{1}.tar.bz2'.format(path, name)
+    compression, ext = _compress(compress)
+
+    tarfile = '{0}/{1}.tar.{2}'.format(path, name, ext)
     out = __salt__['archive.tar'](
-        options='xf',
+        options='{0}xf'.format(compression),
         tarfile=tarfile,
         dest=dest,
     )
+
+
+def _compress(compress):
+    '''
+    Resolve compression flags
+    '''
+    if compress in ('bz2', 'bzip2', 'j'):
+        compression = 'j'
+        ext = 'bz2'
+    elif compress in ('gz', 'gzip', 'z'):
+        compression = 'z'
+        ext = 'gz'
+    elif compress in ('xz', 'a', 'J'):
+        compression = 'J'
+        ext = 'xz'
+
+    return compression, ext
