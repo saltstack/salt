@@ -2,7 +2,7 @@
 '''
 Module for managing container and VM images
 
-:versionadded: Helium
+.. versionadded:: Helium
 '''
 
 # Import python libs
@@ -117,27 +117,15 @@ def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
         The location of the conf files to copy into the image, to point yum
         to the right repos and configuration.
 
-    TODO: Use yum repo module to create yum configs with repo_url
-
-
-    #!/bin/bash
-    IMG="${1}"
-    dd if=/dev/null of="${IMG}" bs=1k seek=600k
-    sudo mkfs.ext3 -F "${IMG}"
-    sudo mount -o loop "${IMG}" /mnt/
-    sudo mkdir /mnt/etc/
-    sudo cp -r /etc/yum* /mnt/etc/
-    sudo sed -i 's/$releasever/6.3/g' /mnt/etc/yum.repos.d/CentOS-Base.repo
-    sudo yum --installroot=/mnt install -y rpm centos-release
-    sudo sed -i 's/$releasever/6.3/g' /mnt/etc/yum.repos.d/CentOS-Base.repo
-    sudo rpm --root=/mnt -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
-    sudo yum --installroot=/mnt install -y rpm salt salt-minion
+    TODO: Set up a pre-install overlay, to copy files into /etc/ and so on,
+        which are required for the install to work.
     '''
     __salt__['file.mkdir']('{0}/etc'.format(root), 'root', 'root', '755')
-    __salt__['cmd.run']('cp -r /root/yum* {0}/etc'.format(root))
-    __salt__['cmd.run']('yum --installroot={0} -y rpm centos-release'.format(root))
-    #__salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(root))
-    #__salt__['cmd.run']('yum --installroot={0} -y salt salt-minion'.format(root))
+    __salt__['cmd.run']('cp /etc/resolv/conf /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
+    __salt__['cmd.run']('cp -r /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
+    __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=root, confs=pkg_confs))
+    __salt__['cmd.run']('yum install --installroot={0} -y yum centos-release iputils'.format(root))
+    __salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(root))
 
 
 def _bootstrap_deb(
