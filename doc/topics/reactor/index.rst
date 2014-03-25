@@ -254,10 +254,6 @@ The Reactor then fires a ``state.sls`` command targeted to the HAProxy servers
 and passes the ID of the new minion from the event to the state file via inline
 Pillar.
 
-Note, the Pillar data will need to be passed as a string since that is how it
-is passed at the CLI. That string will be parsed as YAML on the minion (same as
-how it works at the CLI).
-
 :file:`/srv/salt/haproxy/react_new_minion.sls`:
 
 .. code-block:: yaml
@@ -268,7 +264,9 @@ how it works at the CLI).
         - tgt: 'haproxy*'
         - arg:
           - haproxy.refresh_pool
-          - 'pillar={new_minion: {{ data['id'] }}}'
+        - kwarg:
+            pillar:
+              new_minion: {{ data['id'] }}
     {% endif %}
 
 The above command is equivalent to the following command at the CLI:
