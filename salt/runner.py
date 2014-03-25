@@ -23,7 +23,7 @@ from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RunnerClient(object):
