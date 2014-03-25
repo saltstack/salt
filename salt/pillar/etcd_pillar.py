@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+.. versionadded:: Helium
+
 Use etcd data as a Pillar source
 
 :depends:  - python-etcd
