@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Helium
-
 Utilities for working with etcd
+
+.. versionadded:: Helium
 
 :depends:  - python-etcd
 
