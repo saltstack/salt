@@ -81,19 +81,16 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
         salt '*' archive.tar foo.tar xf dest=/target/directory
 
     '''
-    if sources is not None and dest is not None:
-        raise SaltInvocationError(
-            'The \'sources\' and \'dest\' arguments are mutually exclusive'
-        )
-
     if isinstance(sources, salt._compat.string_types):
         sources = [s.strip() for s in sources.split(',')]
+
+    if dest:
+        options = 'C {0} -{1}'.format(dest, options)
 
     cmd = 'tar -{0} {1}'.format(options, tarfile)
     if sources:
         cmd += ' {0}'.format(' '.join(sources))
-    elif dest:
-        cmd += ' -C {0}'.format(dest)
+
     return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 
