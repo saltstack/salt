@@ -23,7 +23,7 @@ from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RunnerClient(object):
@@ -159,7 +159,7 @@ class RunnerClient(object):
                         and '__kwarg__' in arglist[-1]:
                     for key, val in kwarg.iteritems():
                         if key in arglist[-1]:
-                            logger.warning(
+                            log.warning(
                                 'Overriding keyword argument {0!r}'.format(key)
                             )
                         arglist[-1][key] = val
