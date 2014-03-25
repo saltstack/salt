@@ -19,9 +19,6 @@ ensure_in_syspath('../../')
 # Globals
 darwin_sysctl.__salt__ = {}
 
-SYSCTL_ALL = 'kern.ostype = Darwin\n' \
-             'kern.osrelease = 13.1.0'
-
 
 class DarwinSysctlTestCase(TestCase):
     '''
