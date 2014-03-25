@@ -76,4 +76,3 @@ class DarwinSysctlTestCase(TestCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(DarwinSysctlTestCase, needs_daemon=False)
-    
