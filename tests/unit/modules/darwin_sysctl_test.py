@@ -3,8 +3,6 @@
     :codeauthor: :email:`Nicole Thomas <nicole@satlstack.com>`
 '''
 
-# Import Python Libs
-
 # Import Salt Libs
 from salt.modules import darwin_sysctl
 from salt.exceptions import CommandExecutionError
