@@ -77,10 +77,10 @@ def dropfile(cachedir, user=None):
             import pwd
             uid = pwd.getpwnam(user).pw_uid
             os.chown(dfnt, uid, -1)
-            shutil.move(dfnt, dfn)
         except (KeyError, ImportError, OSError, IOError):
             pass
 
+    shutil.move(dfnt, dfn)
     os.umask(mask)
 
 
