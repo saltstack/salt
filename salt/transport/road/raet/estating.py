@@ -52,7 +52,6 @@ class Estate(object):
             host = self.host
         self.fqdn = socket.getfqdn(host)
 
-
     @property
     def ha(self):
         '''
@@ -83,7 +82,7 @@ class Estate(object):
 
     def nextTid(self):
         '''
-        Generates next session id number.
+        Generates next transaction id number.
         '''
         self.tid += 1
         if self.tid > 0xffffffffL:

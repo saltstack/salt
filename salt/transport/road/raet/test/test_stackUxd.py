@@ -32,8 +32,10 @@ def testStackUxd(kind=raeting.packKinds.json):
     #yard1 = yarding.Yard(name='serf', yid=1)
     stack1 = stacking.StackUxd()
 
-    stack0.addRemoteYard(stack1.yard)
-    stack1.addRemoteYard(stack0.yard)
+    stack0.addRemoteYard(yarding.RemoteYard(ha=stack1.yard.ha))
+    stack1.addRemoteYard(yarding.RemoteYard(ha=stack0.yard.ha))
+    #stack0.addRemoteYard(stack1.yard)
+    #stack1.addRemoteYard(stack0.yard)
 
     print "{0} yard name={1} ha={2}".format(stack0.name, stack0.yard.name, stack0.yard.ha)
     print "{0} yards=\n{1}".format(stack0.name, stack0.yards)
@@ -81,8 +83,8 @@ def testStackUxd(kind=raeting.packKinds.json):
 
     #big packets
     stuff = []
-    for i in range(300):
-        stuff.append(str(i).rjust(4, " "))
+    for i in range(10000):
+        stuff.append(str(i).rjust(10, " "))
     stuff = "".join(stuff)
 
     stack1.transmit(odict(house="Mama mia1", queue="big stuff", stuff=stuff), None)
@@ -135,7 +137,7 @@ def testStackUxd(kind=raeting.packKinds.json):
 
     print "\n********* Attempt Auto Accept ************"
     #stack0.addRemoteYard(stack1.yard)
-    yard = yarding.Yard( name=stack0.yard.name, prefix='cherry')
+    yard = yarding.RemoteYard(name=stack0.yard.name, prefix='cherry')
     stack1.addRemoteYard(yard)
 
     print "{0} yard name={1} ha={2}".format(stack0.name, stack0.yard.name, stack0.yard.ha)

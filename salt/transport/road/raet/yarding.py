@@ -20,8 +20,6 @@ console = getConsole()
 
 YARD_UXD_DIR = os.path.join('/tmp', 'raet')
 
-
-
 class Yard(object):
     '''
     RAET protocol Yard
@@ -32,6 +30,7 @@ class Yard(object):
                   stack=None,
                   yid=None,
                   name='',
+                  mid=0,
                   ha='',
                   dirpath=None,
                   prefix='lane'):
@@ -45,11 +44,15 @@ class Yard(object):
         elif yid == Yard.Yid:
             Yard.Yid += 1
 
-        #self.yid = yid # yard ID
+        if not name and ha:
+            name = Yard.nameFromHa(ha)
+
         self.name = name or "yard{0}".format(yid)
         if " " in self.name:
             emsg = "Invalid Yard name '{0}'".format(self.name)
             raise raeting.YardError(emsg)
+
+        self.mid = mid #current message id
 
         if dirpath is None:
             dirpath = YARD_UXD_DIR
@@ -65,7 +68,6 @@ class Yard(object):
             raise raeting.YardError(emsg)
 
         self.ha = ha or os.path.join(dirpath, "{0}.{1}.uxd".format(prefix, self.name))
-
 
     @staticmethod
     def nameFromHa(ha):
@@ -89,3 +91,51 @@ class Yard(object):
             raise  raeting.YardError(emsg)
 
         return name
+
+    def nextMid(self):
+        '''
+        Generates next message id number.
+        '''
+        self.mid += 1
+        if self.mid > 0xffffffffL:
+            self.mid = 1  # rollover to 1
+        return self.mid
+
+    def validMid(self, mid):
+        '''
+        Compare new mid to old .mid and return True if new is greater than old
+        modulo N where N is 2^32 = 0x100000000
+        And greater means the difference is less than N/2
+        '''
+        return (((mid - self.mid) % 0x100000000) < (0x100000000 / 2))
+
+class LocalYard(Yard):
+    '''
+    RAET UXD Protocol endpoint local Yard
+    '''
+    def __init__(self, main=False, **kwa):
+        '''
+        Setup Yard instance
+        '''
+        super(LocalYard, self).__init__(**kwa)
+        self.main = True if main else False # main yard on lane
+
+
+class RemoteYard(Yard):
+    '''
+    RAET protocol endpoint remote yard
+    '''
+    def __init__(self, rmid=0, **kwa):
+        '''
+        Setup Yard instance
+        '''
+        super(RemoteYard, self).__init__(**kwa)
+        self.rmid = rmid # last mid received from remote
+
+    def validRmid(self, rmid):
+        '''
+        Compare new rmid to old .rmid and return True if new is greater than old
+        modulo N where N is 2^32 = 0x100000000
+        And greater means the difference is less than N/2
+        '''
+        return (((rmid - self.rmid) % 0x100000000) < (0x100000000 / 2))
