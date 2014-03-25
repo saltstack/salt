@@ -207,7 +207,9 @@ class Master(SMaster):
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
-                    salt.crypt.dropfile(self.opts['cachedir'])
+                    salt.crypt.dropfile(
+                            self.opts['cachedir'],
+                            self.opts['user'])
                     rotate = now
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:

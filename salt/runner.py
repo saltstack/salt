@@ -23,7 +23,7 @@ from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RunnerClient(object):
@@ -101,7 +101,7 @@ class RunnerClient(object):
         docs = dict(docs)
         return _strip_rst(docs)
 
-    def cmd(self, fun, arg, kwarg=None):
+    def cmd(self, fun, arg, kwarg=None, pub_data=None):
         '''
         Execute a runner function
 
@@ -128,14 +128,52 @@ class RunnerClient(object):
                     'User': 'saltdev'
                 },
             }
+
         '''
-        if not isinstance(kwarg, dict):
+        if kwarg is None:
             kwarg = {}
+        if not isinstance(kwarg, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'kwarg must be formatted as a dictionary'
+            )
+
+        if pub_data is None:
+            pub_data = {}
+        if not isinstance(pub_data, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'pub_data must be formatted as a dictionary'
+            )
+
+        arglist = salt.utils.parse_input(arg)
+
+        def _append_kwarg(arglist, kwarg):
+            '''
+            Append the kwarg dict to the arglist
+            '''
+            kwarg['__kwarg__'] = True
+            arglist.append(kwarg)
+
+        if kwarg:
+            try:
+                if isinstance(arglist[-1], dict) \
+                        and '__kwarg__' in arglist[-1]:
+                    for key, val in kwarg.iteritems():
+                        if key in arglist[-1]:
+                            log.warning(
+                                'Overriding keyword argument {0!r}'.format(key)
+                            )
+                        arglist[-1][key] = val
+                else:
+                    # No kwargs yet present in arglist
+                    _append_kwarg(arglist, kwarg)
+            except IndexError:
+                # arglist is empty, just append
+                _append_kwarg(arglist, kwarg)
+
         self._verify_fun(fun)
         args, kwargs = salt.minion.load_args_and_kwargs(
-                self.functions[fun],
-                salt.utils.args.parse_input(arg),
-                kwarg)
+            self.functions[fun], arglist, pub_data
+        )
         return self.functions[fun](*args, **kwargs)
 
     def low(self, fun, low):

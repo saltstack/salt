@@ -2,6 +2,8 @@
 '''
 Utilities for working with etcd
 
+.. versionadded:: Helium
+
 :depends:  - python-etcd
 
 This library sets up a client object for etcd, using the configuration passed
@@ -48,6 +50,8 @@ log = logging.getLogger(__name__)
 
 def get_conn(opts, profile=None):
     '''
+    .. versionadded:: Helium
+
     Return a client object for accessing etcd
     '''
     if profile:
@@ -63,6 +67,8 @@ def get_conn(opts, profile=None):
 
 def tree(client, path):
     '''
+    .. versionadded:: Helium
+
     Recurse through etcd and return all values
     '''
     ret = {}

@@ -136,7 +136,13 @@ def vg_absent(name):
     return ret
 
 
-def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
+def lv_present(name,
+               vgname=None,
+               size=None,
+               extents=None,
+               snapshot=None,
+               pv='',
+               **kwargs):
     '''
     Create a new logical volume
 
@@ -152,6 +158,9 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
     extents
         The number of logical extents to allocate
 
+    snapshot
+        The name of the snapshot
+
     pv
         The physical volume to use
 
@@ -164,7 +173,14 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
            'name': name,
            'result': True}
 
+    _snapshot = None
+
+    if snapshot:
+        _snapshot = name
+        name = snapshot
+
     lvpath = '/dev/{0}/{1}'.format(vgname, name)
+
     if __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
@@ -176,6 +192,7 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
                                            vgname,
                                            size=size,
                                            extents=extents,
+                                           snapshot=_snapshot,
                                            pv=pv,
                                            **kwargs)
 

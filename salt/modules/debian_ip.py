@@ -1292,9 +1292,9 @@ def build_routes(iface, **settings):
         log.error('Could not load template route_eth.jinja')
         return ''
 
-    add_routecfg = template.render(route_type='add', routes=opts['routes'])
+    add_routecfg = template.render(route_type='add', routes=opts['routes'], iface=iface)
 
-    del_routecfg = template.render(route_type='del', routes=opts['routes'])
+    del_routecfg = template.render(route_type='del', routes=opts['routes'], iface=iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp(add_routecfg + del_routecfg)

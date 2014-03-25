@@ -2,6 +2,8 @@
 '''
 Use etcd data as a Pillar source
 
+.. versionadded:: Helium
+
 :depends:  - python-etcd
 
 In order to use an etcd server, a profile must be created in the master

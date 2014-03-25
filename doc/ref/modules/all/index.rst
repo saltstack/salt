@@ -57,6 +57,7 @@ Full list of builtin execution modules
     eix
     environ
     eselect
+    etcd_mod
     event
     extfs
     file

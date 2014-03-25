@@ -4,9 +4,6 @@ estating.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611
-# Import python libs
-import socket
-
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
@@ -47,7 +44,7 @@ class Estate(object):
 
         if ha:  # takes precedence
             host, port = ha
-        self.host = socket.gethostbyname(host)
+        self.host = salt.utils.network.host_to_ip(host)
         self.port = port
         if self.host == '0.0.0.0':
             host = '127.0.0.1'
