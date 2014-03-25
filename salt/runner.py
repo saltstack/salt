@@ -159,7 +159,7 @@ class RunnerClient(object):
                         and '__kwarg__' in arglist[-1]:
                     for key, val in kwarg.iteritems():
                         if key in arglist[-1]:
-                            log.warning(
+                            logger.warning(
                                 'Overriding keyword argument {0!r}'.format(key)
                             )
                         arglist[-1][key] = val
