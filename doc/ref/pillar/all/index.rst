@@ -14,6 +14,7 @@ Full list of builtin pillar modules
     cmd_yaml
     cobbler
     django_orm
+    etcd_pillar
     git_pillar
     hiera
     libvirt
