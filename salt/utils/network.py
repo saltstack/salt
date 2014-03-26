@@ -70,7 +70,7 @@ def host_to_ip(host):
         if family == socket.AF_INET:
             ip, port = sockaddr
         elif family == socket.AF_INET6:
-            ip, port, flow, info, scope, id = sockaddr
+            ip, port, flow_info, scope_id = sockaddr
 
     except Exception:
         ip = None
