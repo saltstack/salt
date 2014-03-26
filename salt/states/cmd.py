@@ -535,7 +535,7 @@ def run(name,
                         _env[key] = val
                     except ValueError:
                         ret['comment'] = \
-                            'Invalid environmental var: "{0}"'.format(var)
+                            'Invalid environment var: {0!r}'.format(var)
                         return ret
                 env = _env
         elif isinstance(env, dict):
@@ -551,7 +551,7 @@ def run(name,
                         _env.update(comp)
                     else:
                         ret['comment'] = \
-                            'Invalid environmental var: "{0}"'.format(env)
+                            'Invalid environment var: {0!r}'.format(env)
                         return ret
                 except Exception:
                     _env = {}
@@ -561,7 +561,7 @@ def run(name,
                             _env[key] = val
                         except ValueError:
                             ret['comment'] = \
-                                'Invalid environmental var: "{0}"'.format(var)
+                                'Invalid environment var: {0!r}'.format(var)
                             return ret
             env = _env
 
@@ -757,7 +757,7 @@ def script(name,
         else:
             ret['result'] = not bool(cmd_all['retcode'])
         if ret.get('changes', {}).get('cache_error'):
-            ret['comment'] = 'Unable to cache script {0} from env ' \
+            ret['comment'] = 'Unable to cache script {0} from saltenv ' \
                              '{1!r}'.format(source, env)
         else:
             ret['comment'] = 'Command {0!r} run'.format(name)
