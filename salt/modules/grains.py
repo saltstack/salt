@@ -162,6 +162,76 @@ def item(*args, **kwargs):
     return ret
 
 
+def setvals(grains, destructive=False):
+    '''
+    Set new grains values in the grains config file
+
+    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.setvals "{'key1': 'vali1', 'key2': 'val2'}"
+    '''
+    new_grains = grains
+    if not isinstance(new_grains, collections.Mapping):
+        raise SaltException('setvals grains must be a dictionary.')
+    grains = {}
+    if os.path.isfile(__opts__['conf_file']):
+        gfn = os.path.join(
+            os.path.dirname(__opts__['conf_file']),
+            'grains'
+        )
+    elif os.path.isdir(__opts__['conf_file']):
+        gfn = os.path.join(
+            __opts__['conf_file'],
+            'grains'
+        )
+    else:
+        gfn = os.path.join(
+            os.path.dirname(__opts__['conf_file']),
+            'grains'
+        )
+
+    if os.path.isfile(gfn):
+        with salt.utils.fopen(gfn, 'rb') as fp_:
+            try:
+                grains = yaml.safe_load(fp_.read())
+            except Exception as e:
+                return 'Unable to read existing grains file: {0}'.format(e)
+        if not isinstance(grains, dict):
+            grains = {}
+    for key, val in new_grains.items():
+        if val is None and destructive is True:
+            if key in grains:
+                del grains[key]
+        else:
+            grains[key] = val
+    # Cast defaultdict to dict; is there a more central place to put this?
+    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
+            yaml.representer.SafeRepresenter.represent_dict)
+    cstr = yaml.safe_dump(grains, default_flow_style=False)
+    try:
+        with salt.utils.fopen(gfn, 'w+') as fp_:
+            fp_.write(cstr)
+    except (IOError, OSError):
+        msg = 'Unable to write to grains file at {0}. Check permissions.'
+        log.error(msg.format(gfn))
+    fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
+    try:
+        with salt.utils.fopen(fn_, 'w+') as fp_:
+            fp_.write('')
+    except (IOError, OSError):
+        msg = 'Unable to write to cache file {0}. Check permissions.'
+        log.error(msg.format(fn_))
+    __grains__[key] = val
+    # Sync the grains
+    __salt__['saltutil.sync_grains']()
+    # Return the grains we just set to confirm everything was OK
+    return new_grains
+
+
 def setval(key, val, destructive=False):
     '''
     Set a grains value in the grains config file
