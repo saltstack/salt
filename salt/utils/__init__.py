@@ -1379,7 +1379,7 @@ def check_state_result(running):
             # return false when hosts return a list instead of a dict
             return False
 
-        if state_result.get('return', False) is False:
+        if state_result.get('result', False) is False:
             return False
     return True
 
