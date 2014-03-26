@@ -16,6 +16,7 @@ import multiprocessing
 import logging
 import pipes
 import json
+import traceback
 import copy
 import re
 
@@ -62,7 +63,7 @@ NSTATES = {
     3: 'pending',
 }
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:')
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -284,14 +285,14 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
-    log.info('Provisioning existing machine {0}'.format(vm_['name']))
-
-    ssh_username = salt.config.get_cloud_config_value('ssh_username',
-                                                      vm_,
-                                                      opts)
     deploy_script_code = os_script(vm_)
 
+    ssh_username = salt.config.get_cloud_config_value(
+        'ssh_username', vm_, __opts__, default='root'
+    ),
+
     deploy_kwargs = {
+        'opts': opts,
         'host': vm_['ssh_host'],
         'username': ssh_username,
         'script': deploy_script_code,
@@ -383,6 +384,7 @@ def bootstrap(vm_, opts):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': event_kwargs},
+        transport=opts.get('transport', 'zeromq')
     )
 
     deployed = False
@@ -404,6 +406,37 @@ def bootstrap(vm_, opts):
             )
         }
     }
+
+
+def ssh_usernames(vm_, opts, default_users=None):
+    '''
+    Return the ssh_usernames. Defaults to a built-in list of users for trying.
+    '''
+    if default_users is None:
+        default_users = ['root']
+
+    usernames = salt.config.get_cloud_config_value(
+        'ssh_username', vm_, opts
+    )
+
+    if not isinstance(usernames, list):
+        usernames = [usernames]
+
+    # get rid of None's or empty names
+    usernames = filter(lambda x: x, usernames)
+    # Keep a copy of the usernames the user might have provided
+    initial = usernames[:]
+
+    # Add common usernames to the list to be tested
+    for name in default_users:
+        if name not in usernames:
+            usernames.append(name)
+    # Add the user provided usernames to the end of the list since enough time
+    # might need to pass before the remote service is available for logins and
+    # the proper username might have passed it's iteration.
+    # This has detected in a CentOS 5.7 EC2 image
+    usernames.extend(initial)
+    return usernames
 
 
 def wait_for_fun(fun, timeout=900, **kwargs):
@@ -535,42 +568,43 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     # Netcat command testing remote port
     command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
     # SSH command
+    pcmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
+        ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
+        ssh_gateway_port, pipes.quote('date')
+    )
     cmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
         ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
+
+    kwargs = {'display_ssh_output': False,
+              'password': gateway.get('ssh_gateway_password', None)}
     trycount = 0
+    usable_gateway = False
+    gateway_retries = 5
     while True:
         trycount += 1
-        proc = vt.Terminal(
-            cmd,
-            shell=True,
-            log_stdout=True,
-            log_stderr=True,
-            stream_stdout=False,
-            stream_stderr=False
-        )
-        sent_password = False
-        while proc.isalive():
-            stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
-                    # second time??? Wrong password?
-                    log.warning(
-                        'Asking for password again. Wrong one provided???'
-                    )
-                    proc.terminate()
-                    return 1
-            # if we are loggued via key, no need for password
-            if 'ssh_gateway_password' in gateway:
-                proc.sendline(gateway['ssh_gateway_password'])
-            sent_password = True
-            time.sleep(0.25)
-        # Get the exit code of the SSH command.
-        # If 0 then the port is open.
-        if proc.status == 0:
-            return True
+        # test gateway usage
+        if not usable_gateway:
+            pstatus = _exec_ssh_cmd(pcmd, **kwargs)
+            if pstatus == 0:
+                usable_gateway = True
+            else:
+                gateway_retries -= 1
+                log.error(
+                    'Gateway usage seems to be broken, '
+                    'password error ? Tries left: {0}'.format(gateway_retries))
+            if not gateway_retries:
+                raise SaltCloudExecutionFailure(
+                    'SSH gateway is reachable but we can not login')
+        # then try to reach out the target
+        if usable_gateway:
+            status = _exec_ssh_cmd(cmd, **kwargs)
+            # Get the exit code of the SSH command.
+            # If 0 then the port is open.
+            if status == 0:
+                return True
         time.sleep(1)
         if time.time() - start > timeout:
             log.error('Port connection timed out: {0}'.format(timeout))
@@ -644,6 +678,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             kwargs = {'hostname': host,
                       'port': port,
                       'username': username,
+                      'password_retries': maxtries,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output}
             if gateway:
@@ -687,23 +722,44 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             if connectfail is False:
                 return True
             return False
+        except SaltCloudPasswordError:
+            raise
         except Exception:
             if trycount >= maxtries:
                 return False
             time.sleep(trysleep)
 
 
-def deploy_windows(host, port=445, timeout=900, username='Administrator',
-                   password=None, name=None, pub_key=None, sock_dir=None,
-                   conf_file=None, start_action=None, parallel=False,
-                   minion_pub=None, minion_pem=None, minion_conf=None,
-                   keep_tmp=False, script_args=None, script_env=None,
-                   port_timeout=15, preseed_minion_keys=None,
-                   win_installer=None, master=None, tmp_dir='C:\\salttmp',
+def deploy_windows(host,
+                   port=445,
+                   timeout=900,
+                   username='Administrator',
+                   password=None,
+                   name=None,
+                   pub_key=None,
+                   sock_dir=None,
+                   conf_file=None,
+                   start_action=None,
+                   parallel=False,
+                   minion_pub=None,
+                   minion_pem=None,
+                   minion_conf=None,
+                   keep_tmp=False,
+                   script_args=None,
+                   script_env=None,
+                   port_timeout=15,
+                   preseed_minion_keys=None,
+                   win_installer=None,
+                   master=None,
+                   tmp_dir='C:\\salttmp',
+                   opts=None,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
+    if not isinstance(opts, dict):
+        opts = {}
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
@@ -804,27 +860,55 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             '{0} has been deployed at {1}'.format(name, host),
             'salt/cloud/{0}/deploy_windows'.format(name),
             {'name': name},
+            transport=opts.get('transport', 'zeromq')
         )
 
         return True
     return False
 
 
-def deploy_script(host, port=22, timeout=900, username='root',
-                  password=None, key_filename=None, script=None,
-                  name=None, pub_key=None, sock_dir=None, provider=None,
-                  conf_file=None, start_action=None, make_master=False,
-                  master_pub=None, master_pem=None, master_conf=None,
-                  minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False, script_args=None, script_env=None,
-                  ssh_timeout=15, make_syndic=False, make_minion=True,
-                  display_ssh_output=True, preseed_minion_keys=None,
-                  parallel=False, sudo_password=None, sudo=False, tty=None,
+def deploy_script(host,
+                  port=22,
+                  timeout=900,
+                  username='root',
+                  password=None,
+                  key_filename=None,
+                  script=None,
+                  name=None,
+                  pub_key=None,
+                  sock_dir=None,
+                  provider=None,
+                  conf_file=None,
+                  start_action=None,
+                  make_master=False,
+                  master_pub=None,
+                  master_pem=None,
+                  master_conf=None,
+                  minion_pub=None,
+                  minion_pem=None,
+                  minion_conf=None,
+                  keep_tmp=False,
+                  script_args=None,
+                  script_env=None,
+                  ssh_timeout=15,
+                  make_syndic=False,
+                  make_minion=True,
+                  display_ssh_output=True,
+                  preseed_minion_keys=None,
+                  parallel=False,
+                  sudo_password=None,
+                  sudo=False,
+                  tty=None,
                   deploy_command='/tmp/.saltcloud/deploy.sh',
-                  tmp_dir='/tmp/.saltcloud', **kwargs):
+                  opts=None,
+                  tmp_dir='/tmp/.saltcloud',
+                  **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
+    if not isinstance(opts, dict):
+        opts = {}
+
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
@@ -1190,17 +1274,22 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 {
                     'name': name,
                     'host': host
-                }
+                },
+                transport=opts.get('transport', 'zeromq')
             )
             return True
     return False
 
 
-def fire_event(key, msg, tag, args=None, sock_dir=None):
+def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.get_event(
+            'master',
+            sock_dir,
+            transport,
+            listen=False)
     try:
         event.fire_event(msg, tag)
     except ValueError:
@@ -1214,6 +1303,45 @@ def fire_event(key, msg, tag, args=None, sock_dir=None):
     # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
     # Assertion failed: get_load () == 0 (poller_base.cpp:32)
     time.sleep(0.025)
+
+
+def _exec_ssh_cmd(cmd,
+                  error_msg='Failed to execute command {0!r}: {1}\n{2}',
+                  **kwargs):
+    password_retries = kwargs.get('password_retries', 3)
+    error_msg = (
+        'A wrong password has been issued while establishing ssh session')
+    try:
+        stdout, stderr = None, None
+        proc = vt.Terminal(
+            cmd,
+            shell=True,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=kwargs.get('display_ssh_output', True),
+            stream_stderr=kwargs.get('display_ssh_output', True))
+        sent_password = 0
+        while proc.isalive():
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
+                if (
+                    kwargs.get('password', None)
+                    and (sent_password < password_retries)
+                ):
+                    sent_password += 1
+                    proc.sendline(kwargs['password'])
+                else:
+                    raise SaltCloudPasswordError(error_msg)
+            # 0.0125 is really too fast on some systems
+            time.sleep(0.5)
+        return proc.exitstatus
+    except vt.TerminalException as err:
+        trace = traceback.format_exc()
+        log.error(error_msg.format(cmd, err, trace))
+    finally:
+        proc.terminate()
+    # Signal an error
+    return 1
 
 
 def scp_file(dest_path, contents, kwargs):
@@ -1276,46 +1404,10 @@ def scp_file(dest_path, contents, kwargs):
         ' '.join(ssh_args), tmppath, kwargs, dest_path
     )
     log.debug('SCP command: {0!r}'.format(cmd))
-
-    try:
-        proc = vt.Terminal(
-            cmd,
-            shell=True,
-            log_stdout=True,
-            log_stderr=True,
-            stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True)
-        )
-        log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
-
-        sent_password = False
-        while proc.isalive():
-            stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
-                    # second time??? Wrong password?
-                    log.warning(
-                        'Asking for password again. Wrong one provided???'
-                    )
-                    proc.terminate()
-                    return 1
-
-                proc.sendline(kwargs['password'])
-                sent_password = True
-
-            time.sleep(0.025)
-
-        return proc.exitstatus
-    except vt.TerminalException as err:
-        log.error(
-            'Failed to upload file {0!r}: {1}\n'.format(
-                dest_path, err
-            ),
-            exc_info=True
-        )
-
-    # Signal an error
-    return 1
+    retcode = _exec_ssh_cmd(cmd,
+                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            **kwargs)
+    return retcode
 
 
 def smb_file(dest_path, contents, kwargs):
@@ -1451,55 +1543,8 @@ def root_cmd(command, tty, sudo, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
-
-    try:
-        password_retries = 15
-        stdout, stderr = None, None
-        try:
-            proc = vt.Terminal(
-                cmd,
-                shell=True,
-                log_stdout=True,
-                log_stderr=True,
-                stream_stdout=kwargs.get('display_ssh_output', True),
-                stream_stderr=kwargs.get('display_ssh_output', True)
-            )
-
-            sent_password = False
-            while proc.isalive():
-                stdout, stderr = proc.recv()
-                if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                    if sent_password:
-                        # second time??? Wrong password?
-                        log.warning(
-                            'Asking for password again. Wrong one provided???'
-                        )
-                        proc.terminate()
-                        raise SaltCloudPasswordError()
-                    proc.sendline(kwargs['password'])
-                    sent_password = True
-
-                # 0.0125 is really too fast on some systems
-                time.sleep(0.5)
-
-            return proc.exitstatus
-        except SaltCloudPasswordError:
-            if sudo and (password_retries > 0):
-                log.warning(
-                    'Asking for password failed, retrying'
-                )
-            else:
-                return 1
-    except vt.TerminalException as err:
-        log.error(
-            'Failed to execute command {0!r}: {1}\n'.format(
-                command, err
-            ),
-            exc_info=True
-        )
-
-    # Signal an error
-    return 1
+    retcode = _exec_ssh_cmd(cmd, **kwargs)
+    return retcode
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):

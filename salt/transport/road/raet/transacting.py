@@ -18,6 +18,7 @@ except ImportError:
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
+from salt._compat import string_types
 
 from . import raeting
 from . import nacling
@@ -68,10 +69,10 @@ class Transaction(object):
         Property is transaction tuple (rf, le, re, si, ti, bf,)
         '''
         le = self.stack.estate.eid
-        if le == 0: #bootstapping onto channel use ha
+        if le == 0: #bootstrapping onto channel use ha
             le = self.stack.estate.ha
         re = self.reid
-        if re == 0: #bootstapping onto channel use ha
+        if re == 0: #bootstrapping onto channel use ha
             re = self.stack.estates[self.reid].ha
         return ((self.rmt, le, re, self.sid, self.tid, self.bcst,))
 
@@ -172,7 +173,7 @@ class Staler(Initiator):
         '''
         for key in ['kind', 'reid', 'sid', 'tid', 'rxPacket']:
             if key not  in kwa:
-                emsg = "Missing required keyword argumens: '{0}'".format(key)
+                emsg = "Missing required keyword arguments: '{0}'".format(key)
                 raise TypeError(emsg)
         super(Staler, self).__init__(**kwa)
 
@@ -1026,7 +1027,7 @@ class Allower(Initiator):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of cookie packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_cookie')
@@ -1285,7 +1286,7 @@ class Allowent(Correspondent):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of hello packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_hello')
@@ -1358,7 +1359,7 @@ class Allowent(Correspondent):
         data = self.rxPacket.data
         body = self.rxPacket.body.data
 
-        if not isinstance(body, basestring):
+        if not isinstance(body, string_types):
             emsg = "Invalid format of initiate packet body\n"
             console.terse(emsg)
             self.stack.incStat('invalid_initiate')

@@ -24,6 +24,7 @@ Full list of Salt Cloud modules
     nova
     openstack
     parallels
+    proxmox
     rackspace
     saltify
     softlayer

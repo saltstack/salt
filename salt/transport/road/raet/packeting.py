@@ -65,7 +65,7 @@ class Head(Part):
 
 class TxHead(Head):
     '''
-    RAET protocl transmit packet header class
+    RAET protocol transmit packet header class
     '''
     def pack(self):
         '''
@@ -107,7 +107,7 @@ class TxHead(Head):
             data['pl'] = pl
             # Tray checks for packet length greater than UDP_MAX_PACKET_SIZE
             # and segments appropriately so pl may be truncated below in this case
-            # subsitute true lengths
+            # substitute true lengths
             packed = packed.replace('\npl {val:{fmt}}\n'.format(
                                         val=kit['pl'],
                                         fmt=raeting.FIELD_FORMATS['pl']),
@@ -141,7 +141,7 @@ class TxHead(Head):
                 raise raeting.PacketError(emsg)
             pl = hl + self.packet.coat.size + data['fl']
             data['pl'] = pl
-            #subsitute true length converted to 2 byte hex string
+            #substitute true length converted to 2 byte hex string
             packed = packed.replace('"pl":"0000000"', '"pl":"{0}"'.format("{0:07x}".format(pl)[-7:]), 1)
             self.packed = packed.replace('"hl":"00"', '"hl":"{0}"'.format("{0:02x}".format(hl)[-2:]), 1)
 
@@ -158,7 +158,7 @@ class TxHead(Head):
 
 class RxHead(Head):
     '''
-    RAET protocl receive packet header class
+    RAET protocol receive packet header class
     '''
     def parse(self):
         '''
@@ -234,9 +234,9 @@ class RxHead(Head):
                 raise raeting.PacketError(emsg)
             data['pl'] = pl
 
-        else:  # notify unrecognizible packet head
+        else:  # notify unrecognizable packet head
             data['hk'] = raeting.headKinds.unknown
-            emsg = "Unrecognizible packet head."
+            emsg = "Unrecognizable packet head."
             raise raeting.PacketError(emsg)
 
     def unpackFlags(self, flags):
@@ -251,7 +251,7 @@ class RxHead(Head):
 class Body(Part):
     '''
     RAET protocol packet body class
-    Manages the messsage  portion of the packet
+    Manages the message portion of the packet
     '''
     def __init__(self, data=None, **kwa):
         '''
@@ -297,7 +297,7 @@ class RxBody(Body):
 
         if bk not in raeting.BODY_KIND_NAMES:
             self.packet.data['bk']= raeting.bodyKinds.unknown
-            emsg = "Unrecognizible packet body."
+            emsg = "Unrecognizable packet body."
             raise raeting.PacketError(emsg)
 
         self.data = odict()
@@ -327,7 +327,7 @@ class RxBody(Body):
 class Coat(Part):
     '''
     RAET protocol packet coat class
-    Supports enapsulated encrypt/decrypt of body portion of packet
+    Supports encapsulated encrypt/decrypt of body portion of packet
     '''
     def __init__(self, **kwa):
         ''' Setup Coat instance'''
@@ -365,7 +365,7 @@ class RxCoat(Coat):
 
         if ck not in raeting.COAT_KIND_NAMES:
             self.packet.data['ck'] = raeting.coatKinds.unknown
-            emsg = "Unrecognizible packet coat."
+            emsg = "Unrecognizable packet coat."
             raise raeting.PacketError(emsg)
 
         if ck == raeting.coatKinds.nacl:
@@ -407,7 +407,7 @@ class TxFoot(Foot):
 
         if fk not in raeting.FOOT_KIND_NAMES:
             self.packet.data['fk'] = raeting.footKinds.unknown
-            emsg = "Unrecognizible packet foot."
+            emsg = "Unrecognizable packet foot."
             raise raeting.PacketError(emsg)
 
         if fk == raeting.footKinds.nacl:
@@ -423,7 +423,7 @@ class TxFoot(Foot):
         fk = self.packet.data['fk']
         if fk not in raeting.FOOT_KIND_NAMES:
             self.packet.data['fk'] = raeting.footKinds.unknown
-            emsg = "Unrecognizible packet foot."
+            emsg = "Unrecognizable packet foot."
             raise raeting.PacketError(emsg)
 
         if fk == raeting.footKinds.nacl:
@@ -446,7 +446,7 @@ class RxFoot(Foot):
 
         if fk not in raeting.FOOT_KIND_NAMES:
             self.packet.data['fk'] = raeting.footKinds.unknown
-            emsg = "Unrecognizible packet foot."
+            emsg = "Unrecognizable packet foot."
             raise raeting.PacketError(emsg)
 
         if self.packet.size < fl:
@@ -488,7 +488,7 @@ class Packet(object):
         if kind:
             if kind not in raeting.PCKT_KIND_NAMES:
                 self.data['pk'] = raeting.pcktKinds.unknown
-                emsg = "Unrecognizible packet kind."
+                emsg = "Unrecognizable packet kind."
                 raise raeting.PacketError(emsg)
             self.data.update(pk=kind)
 

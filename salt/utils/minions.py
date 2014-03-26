@@ -537,30 +537,33 @@ class CkMinions(object):
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
-        for fun in funs:
-            for ind in auth_list:
-                if isinstance(ind, str):
-                    # Allowed for all minions
-                    if self.match_check(ind, fun):
-                        return True
-                elif isinstance(ind, dict):
-                    if len(ind) != 1:
-                        # Invalid argument
-                        continue
-                    valid = ind.keys()[0]
-                    # Check if minions are allowed
-                    if self.validate_tgt(
-                            valid,
-                            tgt,
-                            tgt_type):
-                        # Minions are allowed, verify function in allowed list
-                        if isinstance(ind[valid], str):
-                            if self.match_check(ind[valid], fun):
-                                return True
-                        elif isinstance(ind[valid], list):
-                            for regex in ind[valid]:
-                                if self.match_check(regex, fun):
+        try:
+            for fun in funs:
+                for ind in auth_list:
+                    if isinstance(ind, str):
+                        # Allowed for all minions
+                        if self.match_check(ind, fun):
+                            return True
+                    elif isinstance(ind, dict):
+                        if len(ind) != 1:
+                            # Invalid argument
+                            continue
+                        valid = ind.keys()[0]
+                        # Check if minions are allowed
+                        if self.validate_tgt(
+                                valid,
+                                tgt,
+                                tgt_type):
+                            # Minions are allowed, verify function in allowed list
+                            if isinstance(ind[valid], str):
+                                if self.match_check(ind[valid], fun):
                                     return True
+                            elif isinstance(ind[valid], list):
+                                for regex in ind[valid]:
+                                    if self.match_check(regex, fun):
+                                        return True
+        except TypeError:
+            return False
         return False
 
     def gather_groups(self, auth_provider, user_groups, auth_list):
@@ -576,6 +579,8 @@ class CkMinions(object):
                 for matcher in auth_provider[group_perm]:
                     if group_perm[:-1] in user_groups:
                         groups[group_perm] = matcher
+        else:
+            return None
         for item in groups.values():
             auth_list.append(item)
         return auth_list

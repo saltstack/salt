@@ -3158,12 +3158,6 @@ source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.gogrid.pot
 source_lang = en
 source_name = ref/clouds/all/salt.cloud.clouds.gogrid.rst
 
-[salt.ref--clouds--all--salt_cloud_clouds_ibmsce]
-file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.ibmsce.po
-source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.ibmsce.pot
-source_lang = en
-source_name = ref/clouds/all/salt.cloud.clouds.ibmsce.rst
-
 [salt.ref--clouds--all--salt_cloud_clouds_joyent]
 file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.joyent.po
 source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.joyent.pot

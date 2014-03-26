@@ -10,10 +10,11 @@ import json
 import logging
 
 # Import salt libs
-import salt.overstate
 import salt.output
+import salt.overstate
 import salt.syspaths
 import salt.utils.event
+from salt.exceptions import SaltInvocationError
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,12 @@ def over(saltenv='base', os_fn=None):
         salt-run state.over base /path/to/myoverstate.sls
     '''
     stage_num = 0
-    overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    try:
+        overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
+    except IOError as exc:
+        raise SaltInvocationError(
+            '{0}: {1!r}'.format(exc.strerror, exc.filename)
+        )
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
@@ -77,6 +83,10 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
         Runner renamed from ``state.sls`` to ``state.orchestrate``
     '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.sls'](
@@ -154,8 +164,10 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
 
     Enable debug logging to see ignored events.
     '''
-    sevent = salt.utils.event.SaltEvent('master',
-            sock_dir or __opts__['sock_dir'])
+    sevent = salt.utils.event.get_event(
+            'master',
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'])
 
     while True:
         ret = sevent.get_event(full=True)

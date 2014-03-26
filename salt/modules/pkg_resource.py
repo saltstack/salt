@@ -16,6 +16,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -168,7 +169,7 @@ def pack_sources(sources):
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
     _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-    if isinstance(sources, basestring):
+    if isinstance(sources, string_types):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:

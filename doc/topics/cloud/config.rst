@@ -552,9 +552,22 @@ obtained from your cloud provider.
 ``provider: my-parallels-config`` instead of ``provider: parallels`` on a
 profile configuration.
 
+Proxmox
+---------
 
-.. _config_lxc:
+Using Salt with Proxmox requires a user, password and URL. These can be
+obtained from your cloud provider. Both PAM and PVE users can be used.
 
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-proxmox-config:
+      provider: proxmox
+      user: saltcloud@pve
+      password: xyzzy
+      url: your.proxmox.host
+  
 lxc
 ---
 

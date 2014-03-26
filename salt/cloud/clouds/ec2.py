@@ -407,9 +407,9 @@ def _wait_for_spot_instance(update_callback,
     for a specific maximum amount of time.
 
     :param update_callback: callback function which queries the cloud provider
-                            for spot instance request. It must return None if the
-                            required data, running instance included, is not
-                            available yet.
+                            for spot instance request. It must return None if
+                            the required data, running instance included, is
+                            not available yet.
     :param update_args: Arguments to pass to update_callback
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
@@ -707,34 +707,6 @@ def iam_profile(vm_):
     )
 
 
-def ssh_username(vm_):
-    '''
-    Return the ssh_username. Defaults to a built-in list of users for trying.
-    '''
-    usernames = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__
-    )
-
-    if not isinstance(usernames, list):
-        usernames = [usernames]
-
-    # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
-    # Keep a copy of the usernames the user might have provided
-    initial = usernames[:]
-
-    # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
-        if name not in usernames:
-            usernames.append(name)
-    # Add the user provided usernames to the end of the list since enough time
-    # might need to pass before the remote service is available for logins and
-    # the proper username might have passed it's iteration.
-    # This has detected in a CentOS 5.7 EC2 image
-    usernames.extend(initial)
-    return usernames
-
-
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
@@ -796,7 +768,10 @@ def get_ssh_gateway_config(vm_):
                 key_filename
             )
         )
-    elif key_filename is None and not ssh_gateway_config['ssh_gateway_password']:
+    elif (
+        key_filename is None and
+        not ssh_gateway_config['ssh_gateway_password']
+    ):
         raise SaltCloudConfigError(
             'No authentication method. Please define: '
             ' ssh_gateway_password or ssh_gateway_private_key'
@@ -958,19 +933,42 @@ def _param_from_config(key, data):
     Examples:
     1. List of dictionaries
     >>> data = [
-    ...     {'DeviceIndex': 0, 'SubnetId': 'subid0', 'AssociatePublicIpAddress': True},
-    ...     {'DeviceIndex': 1, 'SubnetId': 'subid1', 'PrivateIpAddress': '192.168.1.128'}
+    ...     {'DeviceIndex': 0, 'SubnetId': 'subid0',
+    ...      'AssociatePublicIpAddress': True},
+    ...     {'DeviceIndex': 1,
+    ...      'SubnetId': 'subid1',
+    ...      'PrivateIpAddress': '192.168.1.128'}
     ... ]
     >>> _param_from_config('NetworkInterface', data)
-    {'NetworkInterface.0.SubnetId': 'subid0', 'NetworkInterface.0.DeviceIndex': 0, 'NetworkInterface.1.SubnetId': 'subid1', 'NetworkInterface.1.PrivateIpAddress': '192.168.1.128', 'NetworkInterface.0.AssociatePublicIpAddress': 'true', 'NetworkInterface.1.DeviceIndex': 1}
+    ... {'NetworkInterface.0.SubnetId': 'subid0',
+    ...  'NetworkInterface.0.DeviceIndex': 0,
+    ...  'NetworkInterface.1.SubnetId': 'subid1',
+    ...  'NetworkInterface.1.PrivateIpAddress': '192.168.1.128',
+    ...  'NetworkInterface.0.AssociatePublicIpAddress': 'true',
+    ...  'NetworkInterface.1.DeviceIndex': 1}
 
     2. List of nested dictionaries
     >>> data = [
-    ...     {'DeviceName': '/dev/sdf', 'Ebs': {'SnapshotId': 'dummy0', 'VolumeSize': 200, 'VolumeType': 'standard'}},
-    ...     {'DeviceName': '/dev/sdg', 'Ebs': {'SnapshotId': 'dummy1', 'VolumeSize': 100, 'VolumeType': 'standard'}}
+    ...     {'DeviceName': '/dev/sdf',
+    ...      'Ebs': {
+    ...      'SnapshotId': 'dummy0',
+    ...      'VolumeSize': 200,
+    ...      'VolumeType': 'standard'}},
+    ...     {'DeviceName': '/dev/sdg',
+    ...      'Ebs': {
+    ...          'SnapshotId': 'dummy1',
+    ...          'VolumeSize': 100,
+    ...          'VolumeType': 'standard'}}
     ... ]
     >>> _param_from_config('BlockDeviceMapping', data)
-    {'BlockDeviceMapping.0.Ebs.VolumeType': 'standard', 'BlockDeviceMapping.1.Ebs.SnapshotId': 'dummy1', 'BlockDeviceMapping.0.Ebs.VolumeSize': 200, 'BlockDeviceMapping.0.Ebs.SnapshotId': 'dummy0', 'BlockDeviceMapping.1.Ebs.VolumeType': 'standard', 'BlockDeviceMapping.1.DeviceName': '/dev/sdg', 'BlockDeviceMapping.1.Ebs.VolumeSize': 100, 'BlockDeviceMapping.0.DeviceName': '/dev/sdf'}
+    ... {'BlockDeviceMapping.0.Ebs.VolumeType': 'standard',
+    ...  'BlockDeviceMapping.1.Ebs.SnapshotId': 'dummy1',
+    ...  'BlockDeviceMapping.0.Ebs.VolumeSize': 200,
+    ...  'BlockDeviceMapping.0.Ebs.SnapshotId': 'dummy0',
+    ...  'BlockDeviceMapping.1.Ebs.VolumeType': 'standard',
+    ...  'BlockDeviceMapping.1.DeviceName': '/dev/sdg',
+    ...  'BlockDeviceMapping.1.Ebs.VolumeSize': 100,
+    ...  'BlockDeviceMapping.0.DeviceName': '/dev/sdf'}
 
     3. Dictionary of dictionaries
     >>> data = { 'Arn': 'dummyarn', 'Name': 'Tester' }
@@ -1018,6 +1016,7 @@ def create(vm_=None, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     key_filename = config.get_cloud_config_value(
@@ -1037,7 +1036,11 @@ def create(vm_=None, call=None):
 
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
-    usernames = ssh_username(vm_)
+    usernames = salt.utils.cloud.ssh_usernames(
+        vm_,
+        __opts__,
+        default_users=('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root')
+    )
 
     # do we launch a regular vm or a spot instance?
     # see http://goo.gl/hYZ13f for more information on EC2 API
@@ -1051,7 +1054,8 @@ def create(vm_=None, call=None):
 
         params = {'Action': 'RequestSpotInstances',
                   'InstanceCount': '1',
-                  'Type': spot_config['type'] if 'type' in spot_config else 'one-time',
+                  'Type': spot_config['type']
+                  if 'type' in spot_config else 'one-time',
                   'SpotPrice': spot_config['spot_price']}
 
         # All of the necessary launch parameters for a VM when using
@@ -1094,9 +1098,13 @@ def create(vm_=None, call=None):
     if ex_iam_profile:
         try:
             if ex_iam_profile.startswith('arn:aws:iam:'):
-                params[spot_prefix + 'IamInstanceProfile.Arn'] = ex_iam_profile
+                params[
+                    spot_prefix + 'IamInstanceProfile.Arn'
+                ] = ex_iam_profile
             else:
-                params[spot_prefix + 'IamInstanceProfile.Name'] = ex_iam_profile
+                params[
+                    spot_prefix + 'IamInstanceProfile.Name'
+                ] = ex_iam_profile
         except AttributeError:
             raise SaltCloudConfigError(
                 '\'iam_profile\' should be a string value.'
@@ -1125,18 +1133,25 @@ def create(vm_=None, call=None):
             params[spot_prefix + 'SecurityGroupId.1'] = ex_securitygroupid
         else:
             for (counter, sg_) in enumerate(ex_securitygroupid):
-                params[spot_prefix + 'SecurityGroupId.{0}'.format(counter)] = sg_
+                params[
+                    spot_prefix + 'SecurityGroupId.{0}'.format(counter)
+                ] = sg_
 
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
-        params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping', ex_blockdevicemappings))
+        params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping',
+                      ex_blockdevicemappings))
 
     network_interfaces = config.get_cloud_config_value(
-        'network_interfaces', vm_, __opts__, search_global=False
+        'network_interfaces',
+        vm_,
+        __opts__,
+        search_global=False
     )
 
     if network_interfaces:
-        params.update(_param_from_config(spot_prefix + 'NetworkInterface', network_interfaces))
+        params.update(_param_from_config(spot_prefix + 'NetworkInterface',
+                                         network_interfaces))
 
     set_ebs_optimized = config.get_cloud_config_value(
         'ebs_optimized', vm_, __opts__, search_global=False
@@ -1204,18 +1219,29 @@ def create(vm_=None, call=None):
 
         if rd_name is not None:
             if ex_blockdevicemappings:
-                dev_list = [dev['DeviceName'] for dev in ex_blockdevicemappings]
+                dev_list = [
+                    dev['DeviceName'] for dev in ex_blockdevicemappings
+                ]
             else:
                 dev_list = []
 
             if rd_name in dev_list:
                 dev_index = dev_list.index(rd_name)
-                termination_key = spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index
-                params[termination_key] = str(set_del_root_vol_on_destroy).lower()
+                termination_key = spot_prefix +\
+                    'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index
+                params[termination_key] =\
+                    str(set_del_root_vol_on_destroy).lower()
             else:
                 dev_index = len(dev_list)
-                params[spot_prefix + 'BlockDeviceMapping.%d.DeviceName' % dev_index] = rd_name
-                params[spot_prefix + 'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index] = str(
+                params[
+                    spot_prefix + 'BlockDeviceMapping.%d.DeviceName'
+                    % dev_index
+                ] = rd_name
+                params[
+                    spot_prefix +
+                    'BlockDeviceMapping.%d.Ebs.DeleteOnTermination'
+                    % dev_index
+                ] = str(
                     set_del_root_vol_on_destroy
                 ).lower()
 
@@ -1229,16 +1255,21 @@ def create(vm_=None, call=None):
                 '\'del_all_vols_on_destroy\' should be a boolean value.'
             )
 
-    tags = config.get_cloud_config_value('tag', vm_, __opts__, {}, search_global=False)
+    tags = config.get_cloud_config_value('tag',
+                                         vm_,
+                                         __opts__,
+                                         {},
+                                         search_global=False)
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
-                '\'tag\' should be a dict.'
+            '\'tag\' should be a dict.'
         )
 
     for value in tags.values():
         if not isinstance(value, str):
             raise SaltCloudConfigError(
-                '\'tag\' values must be strings. Try quoting the values. e.g. "2013-09-19T20:09:46Z".'
+                '\'tag\' values must be strings. Try quoting the values. '
+                'e.g. "2013-09-19T20:09:46Z".'
             )
 
     tags['Name'] = vm_['name']
@@ -1248,6 +1279,7 @@ def create(vm_=None, call=None):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': params, 'location': location},
+        transport=__opts__['transport']
     )
 
     try:
@@ -1283,7 +1315,8 @@ def create(vm_=None, call=None):
 
             if isinstance(data, dict) and 'error' in data:
                 log.warn(
-                    'There was an error in the query. {0}'.format(data['error'])
+                    'There was an error in the query. {0}'
+                    .format(data['error'])
                 )
                 # Trigger a failure in the wait for spot instance method
                 return False
@@ -1313,6 +1346,7 @@ def create(vm_=None, call=None):
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
+            transport=__opts__['transport']
         )
 
         try:
@@ -1324,9 +1358,15 @@ def create(vm_=None, call=None):
                 interval=config.get_cloud_config_value(
                     'wait_for_spot_interval', vm_, __opts__, default=30),
                 interval_multiplier=config.get_cloud_config_value(
-                    'wait_for_spot_interval_multiplier', vm_, __opts__, default=1),
+                    'wait_for_spot_interval_multiplier',
+                    vm_,
+                    __opts__,
+                    default=1),
                 max_failures=config.get_cloud_config_value(
-                    'wait_for_spot_max_failures', vm_, __opts__, default=10),
+                    'wait_for_spot_max_failures',
+                    vm_,
+                    __opts__,
+                    default=10),
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
 
@@ -1353,6 +1393,7 @@ def create(vm_=None, call=None):
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
         {'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     log.debug('The new VM instance_id is {0}'.format(instance_id))
@@ -1440,6 +1481,7 @@ def create(vm_=None, call=None):
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
         {'tags': tags},
+        transport=__opts__['transport']
     )
 
     set_tags(
@@ -1464,6 +1506,7 @@ def create(vm_=None, call=None):
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
         {'ip_address': ip_address},
+        transport=__opts__['transport']
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
@@ -1472,11 +1515,11 @@ def create(vm_=None, call=None):
 
     if config.get_cloud_config_value('win_installer', vm_, __opts__):
         username = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
+            'win_username', vm_, __opts__, default='Administrator'
+        )
         win_passwd = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
+            'win_password', vm_, __opts__, default=''
+        )
         if not salt.utils.cloud.wait_for_port(ip_address,
                                               port=445,
                                               timeout=ssh_connect_timeout):
@@ -1489,8 +1532,10 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )
-    elif salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout,
-                                        gateway=ssh_gateway_config):
+    elif salt.utils.cloud.wait_for_port(ip_address,
+                                        timeout=ssh_connect_timeout,
+                                        gateway=ssh_gateway_config
+                                        ):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
@@ -1501,7 +1546,9 @@ def create(vm_=None, call=None):
                 display_ssh_output=display_ssh_output,
                 gateway=ssh_gateway_config
             ):
-                username = user
+                __opts__['ssh_username'] = user
+                if 'ssh_username' in vm_:
+                    del vm_['ssh_username']
                 break
         else:
             raise SaltCloudSystemExit(
@@ -1513,11 +1560,17 @@ def create(vm_=None, call=None):
         )
 
     ret = {}
+
+    ssh_username = config.get_cloud_config_value(
+        'ssh_username', vm_, __opts__
+    )
+
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
-            'username': username,
+            'username': ssh_username,
             'key_filename': key_filename,
             'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
@@ -1532,7 +1585,7 @@ def create(vm_=None, call=None):
             'script': deploy_script,
             'name': vm_['name'],
             'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(username != 'root')
+                'sudo', vm_, __opts__, default=(ssh_username != 'root')
             ),
             'sudo_password': config.get_cloud_config_value(
                 'sudo_password', vm_, __opts__, default=None
@@ -1606,6 +1659,7 @@ def create(vm_=None, call=None):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -1641,6 +1695,7 @@ def create(vm_=None, call=None):
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
             {'volumes': volumes},
+            transport=__opts__['transport']
         )
 
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
@@ -1666,6 +1721,7 @@ def create(vm_=None, call=None):
             'provider': vm_['provider'],
             'instance_id': instance_id,
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -1719,7 +1775,8 @@ def create_attach_volumes(name, kwargs, call=None):
 
         attach = attach_volume(
             name,
-            {'volume_id': volume_dict['volume_id'], 'device': volume['device']},
+            {'volume_id': volume_dict['volume_id'],
+             'device': volume['device']},
             instance_id=kwargs['instance_id'],
             call='action'
         )
@@ -1952,6 +2009,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name, 'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     if protected == 'true':
@@ -1966,8 +2024,9 @@ def destroy(name, call=None):
     ret = {}
 
     if config.get_cloud_config_value('rename_on_destroy',
-                               get_configured_provider(),
-                               __opts__, search_global=False) is True:
+                                     get_configured_provider(),
+                                     __opts__,
+                                     search_global=False) is True:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
@@ -1997,6 +2056,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name, 'instance_id': instance_id},
+        transport=__opts__['transport']
     )
 
     return ret
@@ -2076,7 +2136,8 @@ def list_nodes_full(location=None, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes_full function must be called with -f or --function.'
+            'The list_nodes_full function must be called with -f '
+            'or --function.'
         )
 
     if not location:
@@ -2656,7 +2717,8 @@ def create_snapshot(kwargs=None, call=None):
     '''
     if call != 'function':
         log.error(
-            'The create_snapshot function must be called with -f or --function.'
+            'The create_snapshot function must be called with -f '
+            'or --function.'
         )
         return False
 
@@ -2687,7 +2749,8 @@ def delete_snapshot(kwargs=None, call=None):
     '''
     if call != 'function':
         log.error(
-            'The delete_snapshot function must be called with -f or --function.'
+            'The delete_snapshot function must be called with -f '
+            'or --function.'
         )
         return False
 
@@ -2764,7 +2827,8 @@ def describe_snapshots(kwargs=None, call=None):
     '''
     if call != 'function':
         log.error(
-            'The describe_snapshot function must be called with -f or --function.'
+            'The describe_snapshot function must be called with -f '
+            'or --function.'
         )
         return False
 
@@ -2783,7 +2847,9 @@ def describe_snapshots(kwargs=None, call=None):
     if 'restorable_by' in kwargs:
         restorable_bys = kwargs['restorable_by'].split(',')
         for restorable_by_index, restorable_by in enumerate(restorable_bys):
-            params['RestorableBy.{0}'.format(restorable_by_index)] = restorable_by
+            params[
+                'RestorableBy.{0}'.format(restorable_by_index)
+            ] = restorable_by
 
     log.debug(params)
 

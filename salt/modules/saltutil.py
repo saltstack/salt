@@ -609,6 +609,29 @@ def revoke_auth():
     return False
 
 
+def _get_ssh_or_api_client(cfgfile, ssh=False):
+    if ssh:
+        client = salt.client.SSHClient(cfgfile)
+    else:
+        client = salt.client.get_local_client(cfgfile)
+    return client
+
+
+def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    ret = {}
+    seen = 0
+    for ret_comp in client.cmd_iter(
+            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+        ret.update(ret_comp)
+        seen += 1
+        # ret can be empty, so we cannot len the whole return dict
+        if expr_form == 'list' and len(tgt) == seen:
+            # do not wait for timeout when explicit list matching
+            # and all results are there
+            break
+    return ret
+
+
 def cmd(tgt,
         fun,
         arg=(),
@@ -627,21 +650,22 @@ def cmd(tgt,
 
         salt '*' saltutil.cmd
     '''
-    if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
-    else:
-        client = salt.client.get_local_client(__opts__['conf_file'])
-    ret = {}
-    for ret_comp in client.cmd_iter(
-            tgt,
-            fun,
-            arg,
-            timeout,
-            expr_form,
-            ret,
-            kwarg,
-            **kwargs):
-        ret.update(ret_comp)
+    cfgfile = __opts__['conf_file']
+    client = _get_ssh_or_api_client(cfgfile, ssh)
+    ret = _exec(
+        client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+    # if return is empty, we may have not used the right conf,
+    # try with the 'minion relative master configuration counter part
+    # if available
+    master_cfgfile = '{0}master'.format(cfgfile[:-6])  # remove 'minion'
+    if (
+        not ret
+        and cfgfile.endswith('{0}{1}'.format(os.path.sep, 'minion'))
+        and os.path.exists(master_cfgfile)
+    ):
+        client = _get_ssh_or_api_client(master_cfgfile, ssh)
+        ret = _exec(
+            client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
     return ret
 
 

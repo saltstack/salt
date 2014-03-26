@@ -250,7 +250,17 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs)
-    if info and not 'Error' in info:
+
+    # get either {Error: ''} or {namestring: {Error: ''}}
+    # which is what we can get from providers returns
+    main_error = info.get('Error', '')
+    name_error = ''
+    if isinstance(info, dict):
+        subinfo = info.get(name, {})
+        if isinstance(subinfo, dict):
+            name_error = subinfo.get('Error', None)
+    error = main_error or name_error
+    if info and not error:
         node_info = info.get(name)
         ret['result'] = True
         default_msg = 'Created instance {0} using profile {1}'.format(
@@ -262,13 +272,13 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         else:
             ret['changes'] = info
             ret['comment'] = default_msg
-    elif 'Error' in info:
+    elif error:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
-                          'using profile {1}: {2}').format(
+                          ' using profile {1}: {2}').format(
             name,
             profile,
-            info['Error'],
+            '{0}\n{1}\n'.format(main_error, name_error).strip(),
         )
     else:
         ret['result'] = False

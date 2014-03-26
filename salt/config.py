@@ -7,7 +7,6 @@ All salt configuration loading and defaults should be in this module
 import glob
 import os
 import re
-import socket
 import logging
 import urlparse
 from copy import deepcopy
@@ -28,6 +27,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+from salt._compat import string_types
 
 import sys
 #can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -109,6 +109,7 @@ VALID_OPTS = {
     'state_events': bool,
     'acceptance_wait_time': float,
     'acceptance_wait_time_max': float,
+    'rejected_retry': bool,
     'loop_interval': float,
     'dns_check': bool,
     'verify_env': bool,
@@ -284,6 +285,7 @@ DEFAULT_MINION_OPTS = {
     'state_events': False,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
+    'rejected_retry': False,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
@@ -923,7 +925,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, basestring):
+    if isinstance(deploy_scripts_search_path, string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -1682,7 +1684,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Guess the id of the minion.
 
     - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If socket.getfqdn() returns us something other than localhost, use it
+    - If salt.utils.network.get_fqhostname returns us something other than
+      localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
@@ -1720,10 +1723,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check socket.getfqdn()
-    fqdn = socket.getfqdn()
+    # Check salt.utils.network.get_fqhostname()
+    fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False

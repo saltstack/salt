@@ -232,6 +232,7 @@ def function(
         expr_form=None,
         ret='',
         arg=None,
+        kwarg=None,
         timeout=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -248,13 +249,19 @@ def function(
     arg
         The list of arguments to pass into the function
 
+    kwarg
+        The list of keyword arguments to pass into the function
+
     ret
         Optionally set a single or a list of returners to use
 
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    cmd_kw = {'arg': arg or [], 'ret': ret, 'timeout': timeout}
+    if kwarg is None:
+        kwarg = {}
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     ret = {'name': name,
            'changes': {},

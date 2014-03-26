@@ -42,7 +42,7 @@ The convention for namespacing is to use dot characters "." as the name space de
 The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
-Namspaced tag
+Namespaced tag
     'salt.runner.manage.status.start'
 
 '''
@@ -101,15 +101,17 @@ TAGS = {
 }
 
 
-def get_event(node, sock_dir=None, transport='zeromq', **kwargs):
+def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     '''
     Return an event object suitible for the named transport
     '''
     if transport == 'zeromq':
-        return SaltEvent(node, sock_dir, **kwargs)
+        if node == 'master':
+            return MasterEvent(sock_dir or opts.get('sock_dir', None))
+        return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node, sock_dir, **kwargs)
+        return salt.utils.raetevent.SaltEvent(node, sock_dir, listen)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -136,21 +138,26 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, **kwargs):
+    def __init__(self, node, sock_dir=None, opts=None):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.cpub = False
         self.cpush = False
-        self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        if opts is None:
+            opts = {}
+        self.opts = opts
+        if sock_dir is None:
+            sock_dir = opts.get('sock_dir', None)
+        self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_events = []
 
-    def __load_uri(self, sock_dir, node, **kwargs):
+    def __load_uri(self, sock_dir, node):
         '''
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
+        id_hash = hashlib.md5(self.opts.get('id', '')).hexdigest()
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -163,12 +170,12 @@ class SaltEvent(object):
                     ))
             salt.utils.check_ipc_path_max_len(pulluri)
         else:
-            if kwargs.get('ipc_mode', '') == 'tcp':
+            if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
-                        kwargs.get('tcp_pub_port', 4510)
+                        self.opts.get('tcp_pub_port', 4510)
                         )
                 pulluri = 'tcp://127.0.0.1:{0}'.format(
-                        kwargs.get('tcp_pull_port', 4511)
+                        self.opts.get('tcp_pull_port', 4511)
                         )
             else:
                 puburi = 'ipc://{0}'.format(os.path.join(
@@ -282,6 +289,7 @@ class SaltEvent(object):
                 wait = timeout_at - time.time()
                 continue
 
+            log.trace('get_event() received = {0}'.format(ret))
             if full:
                 return ret
             return ret['data']
@@ -331,6 +339,7 @@ class SaltEvent(object):
         else:  # new style longer than 20 chars
             tagend = TAGEND
 
+        log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         try:
             self.push.send(event)
@@ -431,8 +440,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, **kwargs):
-        super(MinionEvent, self).__init__('minion', **kwargs)
+    def __init__(self, opts):
+        super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
 class EventPublisher(Process):
@@ -534,7 +543,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
-        if isinstance(self.opts['reactor'], basestring):
+        if isinstance(self.opts['reactor'], string_types):
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())

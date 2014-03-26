@@ -54,6 +54,17 @@ any user on the same system as the master with the ``-a`` option:
 The system will ask the user for the credentials required by the
 authentication system and then publish the command.
 
+To apply permissions to a group of users in an external authentication system,
+append a ``%`` to the ID:
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        admins%:
+          - '*'
+            - 'pkg.*'
+
 Tokens
 ------
 
@@ -75,3 +86,68 @@ Once the token is created, it is sent with all subsequent communications.
 User authentication does not need to be entered again until the token expires.
 
 Token expiration time can be set in the Salt master config file.
+
+
+LDAP 
+----
+
+Salt supports both user and group authentication for LDAP.
+
+LDAP configuration happens in the Salt master configuration file.
+
+Server configuration values:
+
+.. code-block:: yaml
+
+    auth.ldap.server: localhost
+    auth.ldap.port: 389
+    auth.ldap.tls: False
+    auth.ldap.scope: 2
+
+Salt also needs to know which Base DN to search for users and groups and
+the DN to bind to:
+
+.. code-block:: yaml
+
+    auth.ldap.basedn: dc=saltstack,dc=com
+    auth.ldap.binddn: cn=admin,dc=saltstack,dc=com
+
+To bind to a DN, a password is required
+
+.. code-block:: yaml
+
+    auth.ldap.bindpw: mypassword
+
+Salt users a filter to find the DN associated with a user. Salt substitutes
+the ``{{ username }}`` value for the username when querying LDAP.
+
+.. code-block:: yaml
+
+    auth.ldap.filter: uid={{ username }}
+
+If group support for LDAP is desired, one can specify an OU that contains group
+data. This is pre-pendeed to the basedn to create a search path
+
+.. code-block:: yaml
+
+    auth.ldap.groupou: Groups
+
+Once configured, LDAP permissions can be assigned to users and groups.
+
+.. code-block:: yaml
+
+    external_auth:
+      ldap:
+        test_ldap_user:
+          - '*':
+            - test.ping
+
+To configure an LDAP group, append a ``%`` to the ID:
+
+.. code-block:: yaml
+
+    external_auth:
+    ldap:
+        test_ldap_group%:
+          - '*':
+            - test.echo

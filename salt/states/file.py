@@ -233,7 +233,6 @@ import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.yamldumper import OrderedDumper
-from salt.utils.immutabletypes import ImmutableList
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -837,8 +836,9 @@ def symlink(
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent, this will work to
-    reverse any of the functions in the file state module.
+    Make sure that the named file or directory is absent. If it exists, it will
+    be deleted. This will work to reverse any of the functions in the file
+    state module.
 
     name
         The path which should be deleted
@@ -1403,7 +1403,7 @@ def directory(name,
                     # file.user_to_uid returns '' if user does not exist. Above
                     # check for user is not fatal, so we need to be sure user
                     # exists.
-                    if isinstance(uid, basestring):
+                    if isinstance(uid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
@@ -1417,7 +1417,7 @@ def directory(name,
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
-                    if isinstance(gid, basestring):
+                    if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
@@ -1689,7 +1689,7 @@ def recurse(name,
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
-        if isinstance(comment, basestring):
+        if isinstance(comment, string_types):
             comments.append(comment)
         else:
             comments.extend(comment)
@@ -1904,7 +1904,7 @@ def recurse(name,
     # Flatten comments until salt command line client learns
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
-        k, v if isinstance(v, basestring) else '\n'.join(v)
+        k, v if isinstance(v, string_types) else '\n'.join(v)
     ) for (k, v) in ret['comment'].iteritems()).strip()
 
     if not ret['comment']:
@@ -2942,12 +2942,9 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __low__.get('require_in',
-                             ImmutableList([]))
-    watch_in = __low__.get('watch_in',
-                           ImmutableList([]))
-    deps = []
-    map(deps.append, require_in + watch_in)
+    require_in = __low__.get('require_in', [])
+    watch_in = __low__.get('watch_in', [])
+    deps = require_in + watch_in
     if not filter(lambda x: 'file' in x, deps):
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(

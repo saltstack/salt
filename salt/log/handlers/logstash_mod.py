@@ -157,7 +157,6 @@
 import os
 import zmq
 import json
-import socket
 import logging
 import logging.handlers
 import datetime
@@ -166,6 +165,7 @@ import datetime
 from salt._compat import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
+import salt.utils.network
 
 log = logging.getLogger(__name__)
 
@@ -267,7 +267,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
         return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + 'Z'
 
     def format_v0(self, record):
-        host = socket.getfqdn()
+        host = salt.utils.network.get_fqhostname()
         message_dict = {
             '@timestamp': self.formatTime(record),
             '@fields': {
@@ -322,7 +322,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
         message_dict = {
             '@version': 1,
             '@timestamp': self.formatTime(record),
-            'host': socket.getfqdn(),
+            'host': salt.utils.network.get_fqhostname(),
             'levelname': record.levelname,
             'logger': record.name,
             'lineno': record.lineno,

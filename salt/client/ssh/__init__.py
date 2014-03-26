@@ -4,32 +4,35 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import print_function
+import copy
+import getpass
+import json
+import logging
+import multiprocessing
 import os
+import re
+import shutil
 import tarfile
 import tempfile
-import json
-import getpass
-import shutil
-import copy
 import time
-import multiprocessing
-import re
-import logging
 import yaml
 
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
+import salt.config
+import salt.exceptions
+import salt.loader
+import salt.minion
+import salt.roster
+import salt.state
 import salt.utils
+import salt.utils.args
+import salt.utils.event
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.event
-import salt.roster
-import salt.state
-import salt.loader
-import salt.minion
-import salt.exceptions
-import salt.config
+from salt._compat import string_types
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
@@ -176,7 +179,11 @@ class SSH(object):
                 opts['interface'],
                 opts['publish_port'],
                 opts['ret_port']):
-            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+            self.event = salt.utils.event.get_event(
+                    'master',
+                    opts['sock_dir'],
+                    opts['transport'],
+                    listen=False)
         else:
             self.event = None
         self.opts = opts
@@ -252,7 +259,7 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], basestring):
+        if not isinstance(ret[host], string_types):
             if self.opts.get('ssh_key_deploy'):
                 target = self.targets[host]
                 if 'passwd' in target:
@@ -644,8 +651,10 @@ class Single(object):
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
         if self.arg_str.startswith('state.sls'):
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                    self.sls_seed, self.arg)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.sls_seed,
+                salt.utils.args.parse_input(self.arg)
+            )
             self.sls_seed(*args, **kwargs)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(

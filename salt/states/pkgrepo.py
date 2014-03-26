@@ -173,7 +173,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
@@ -267,7 +267,7 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](**kwargs)
+        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.

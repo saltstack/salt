@@ -30,9 +30,8 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
-from salt.utils import context
+from salt.utils import context, immutabletypes
 from salt._compat import string_types
-from salt.utils.immutabletypes import ImmutableLazyProxy
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
@@ -52,6 +51,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'prereq_in',
     'require',
     'require_in',
+    'onfail',
     'fail_hard',
     'reload_modules',
     'saltenv',
@@ -1335,9 +1335,9 @@ class State(object):
             # the current state dictionaries.
             # We pass deep copies here because we don't want any misbehaving
             # state module to change these at runtime.
-            '__low__': ImmutableLazyProxy(low),
-            '__running__': ImmutableLazyProxy(running) if running else {},
-            '__lowstate__': ImmutableLazyProxy(chunks) if chunks else {}
+            '__low__': immutabletypes.freeze(low),
+            '__running__': immutabletypes.freeze(running) if running else {},
+            '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
         if low.get('__prereq__'):
@@ -1354,9 +1354,12 @@ class State(object):
             # not found we default to 'base'
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
-            elif cdata['kwargs'].get('env', None) is not None:
+            elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
-                # format_call
+                # format_call.
+                # We check for a string type since module functions which
+                # allow setting the OS environ also make use of the "env"
+                # keyword argument, which is not a string
                 inject_globals['__env__'] = cdata['kwargs']['env']
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
@@ -1462,11 +1465,11 @@ class State(object):
             present = True
         if 'prereq' in low:
             present = True
-        if 'postmortem' in low:
+        if 'onfail' in low:
             present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': [], 'prereq': [], 'postmortem': []}
+        reqs = {'require': [], 'watch': [], 'prereq': [], 'onfail': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
@@ -1502,7 +1505,7 @@ class State(object):
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
-                if r_state == 'postmortem':
+                if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('fail')
                         continue
@@ -1554,7 +1557,7 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get('prerequired'):
             self.active.add(tag)
-        requisites = ['require', 'watch', 'prereq', 'postmortem']
+        requisites = ['require', 'watch', 'prereq', 'onfail']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
             status = self.check_requisite(low, running, chunks, True)
@@ -1593,7 +1596,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] or lost['postmortem'] or lost.get('prerequired'):
+            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     if not lreqs:
@@ -2377,20 +2380,31 @@ class BaseHighState(object):
         for saltenv, states in matches.items():
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+
+                # if we did not found any sls in the fileserver listing, this
+                # may be because the sls was generated or added later, we can
+                # try to directly execute it, and if it fails, anyway it will
+                # return the former error
                 if not statefiles:
-                    # No matching sls file was found!  Output an error
-                    all_errors.append(
-                        'No matching sls found for {0!r} in env {1!r}'.format(
-                            sls_match, saltenv
-                        )
-                    )
+                    statefiles = [sls_match]
+
                 for sls in statefiles:
                     r_env = '{0}:{1}'.format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
+                    for i, error in enumerate(errors[:]):
+                        if 'is not available on the salt master' in error:
+                            # match SLS foobar in environment
+                            this_sls = 'SLS {0} in environment'.format(
+                                sls_match)
+                            if this_sls in error:
+                                errors[i] = (
+                                    'No matching sls found for {0!r} '
+                                    'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
@@ -2631,7 +2645,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if env is not None:
+        if isinstance(env, string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '

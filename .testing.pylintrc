@@ -132,6 +132,8 @@ bad-functions=apply,input
 
 
 [FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).

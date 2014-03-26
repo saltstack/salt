@@ -29,7 +29,8 @@ __defopts__ = {'auth.ldap.server': 'localhost',
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
-               'auth.ldap.scope': 2
+               'auth.ldap.scope': 2,
+               'auth.ldap.groupou': 'Groups'
                }
 
 
@@ -101,7 +102,7 @@ class _LDAPConnection(object):
             )
 
 
-def auth(username, password):
+def _bind(username, password):
     '''
     Authenticate via an LDAP bind
     '''
@@ -177,7 +178,7 @@ def auth(username, password):
     # Attempt bind with user dn and password
     log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
     try:
-        _LDAPConnection(**connargs).ldap
+        ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
         #log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs['binddn']))
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
@@ -187,8 +188,23 @@ def auth(username, password):
             connargs['binddn']
         )
     )
-    return True
+    return ldap_conn
+
+
+def auth(username, password):
+    if _bind(username, password):
+        log.debug('LDAP authentication successful')
+        return True
+    else:
+        return False
 
 
 def groups(username, *args, **kwargs):
-    return None
+    groups = []
+    bind = _bind(username, kwargs['password'])
+    search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')), ldap.SCOPE_SUBTREE, '(&(memberUid={0})(objectClass=posixGroup))'.format(username), ['memberUid', 'cn'])
+    for dn, entry in search_results:
+        if entry['memberUid'][0] == username:
+            groups.append(entry['cn'][0])
+    log.debug('User {0} is a member of groups: {1}'.format(username, groups))
+    return groups

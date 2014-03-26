@@ -64,10 +64,35 @@ def host_to_ip(host):
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname(host)
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
+
+        if family == socket.AF_INET:
+            ip, port = sockaddr
+        elif family == socket.AF_INET6:
+            ip, port, flow, info, scope, id = sockaddr
+
     except Exception:
         ip = None
     return ip
+
+
+def get_fqhostname():
+    '''
+    Returns the fully qualified hostname
+
+    CLI Example::
+
+        salt '*' network.get_fqhostname
+    '''
+    h_name = socket.gethostname()
+    if h_name.find('.') >= 0:
+        return h_name
+    else:
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+                socket.SOL_TCP, socket.AI_CANONNAME)[0]
+        return canonname
 
 
 def ip_to_host(ip):

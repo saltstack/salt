@@ -248,14 +248,14 @@ def _parse_current_network_settings():
     '''
 
     opts = {}
+    opts['networking'] = 'no'
 
-    #_read_file('/etc/default/networking'):
     if os.path.isfile('/etc/default/networking'):
         contents = open('/etc/default/networking')
 
         for line in contents:
             if line.startswith('#'):
-                pass
+                continue
             elif line.startswith('CONFIGURE_INTERFACES'):
                 sline = line.split('=')
                 if line.endswith('\n'):
@@ -363,6 +363,7 @@ def _parse_interfaces():
                             adapters[iface_name]['data'][context]['bridgeing'][opt] = value
 
                         if sline[0].startswith('dns-nameservers'):
+                            ud = sline.pop(0)
                             if not 'dns' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['dns'] = []
                             adapters[iface_name]['data'][context]['dns'] = sline
@@ -997,12 +998,14 @@ def _parse_network_settings(opts, current):
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    if not 'networking' in opts:
+    if not 'enabled' in opts:
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
         except ValueError:
             _raise_error_network('networking', valid)
+    else:
+        opts['networking'] = opts['enabled']
 
     if opts['networking'] in valid:
         if opts['networking'] in _CONFIG_TRUE:
@@ -1289,9 +1292,9 @@ def build_routes(iface, **settings):
         log.error('Could not load template route_eth.jinja')
         return ''
 
-    add_routecfg = template.render(route_type='add', routes=opts['routes'])
+    add_routecfg = template.render(route_type='add', routes=opts['routes'], iface=iface)
 
-    del_routecfg = template.render(route_type='del', routes=opts['routes'])
+    del_routecfg = template.render(route_type='del', routes=opts['routes'], iface=iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp(add_routecfg + del_routecfg)
@@ -1392,9 +1395,9 @@ def get_network_settings():
     settings = _parse_current_network_settings()
 
     try:
-        template = JINJA.get_template('display-network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template display-network.jinja')
+        log.error('Could not load template network.jinja')
         return ''
 
     network = template.render(settings)
@@ -1458,6 +1461,7 @@ def build_network_settings(**settings):
     current_network_settings = _parse_current_network_settings()
 
     # Build settings
+    log.debug("settings {0}".format(settings))
     opts = _parse_network_settings(settings, current_network_settings)
     try:
         template = JINJA.get_template('network.jinja')
@@ -1504,9 +1508,9 @@ def build_network_settings(**settings):
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
     try:
-        template = JINJA.get_template('display-network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template display-network.jinja')
+        log.error('Could not load template network.jinja')
         return ''
 
     network = template.render(opts)

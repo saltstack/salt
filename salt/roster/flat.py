@@ -11,6 +11,7 @@ import re
 # Import Salt libs
 import salt.loader
 from salt.template import compile_template
+from salt._compat import string_types
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -79,7 +80,7 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
-        if isinstance(self.raw[minion], basestring):
+        if isinstance(self.raw[minion], string_types):
             return {'host': self.raw[minion]}
         if isinstance(self.raw[minion], dict):
             return self.raw[minion]

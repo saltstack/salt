@@ -4,9 +4,6 @@ estating.py raet protocol estate classes
 '''
 # pylint: skip-file
 # pylint: disable=W0611
-# Import python libs
-import socket
-
 # Import ioflo libs
 from ioflo.base.odicting import odict
 from ioflo.base import aiding
@@ -16,6 +13,9 @@ from . import nacling
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
+
+# Import salt libs
+import salt.utils.network
 
 class Estate(object):
     '''
@@ -42,15 +42,15 @@ class Estate(object):
         self.sid = sid # current session ID
         self.tid = tid # current transaction ID
 
-        if ha:  # takes precendence
+        if ha:  # takes precedence
             host, port = ha
-        self.host = socket.gethostbyname(host)
+        self.host = salt.utils.network.host_to_ip(host)
         self.port = port
         if self.host == '0.0.0.0':
             host = '127.0.0.1'
         else:
             host = self.host
-        self.fqdn = socket.getfqdn(host)
+        self.fqdn = salt.utils.network.get_fqhostname()
 
     @property
     def ha(self):
@@ -92,7 +92,7 @@ class Estate(object):
 class LocalEstate(Estate):
     '''
     RAET protocol endpoint local estate object
-    Maintains signer for signing and privateer for encrypt/decript
+    Maintains signer for signing and privateer for encrypt/decrypt
     '''
     def __init__(self, main=False, sigkey=None, prikey=None, **kwa):
         '''
@@ -110,7 +110,7 @@ class LocalEstate(Estate):
 class RemoteEstate(Estate):
     '''
     RAET protocol endpoint remote estate object
-    Maintains verifier for verifying signatures and publican for encrypt/decript
+    Maintains verifier for verifying signatures and publican for encrypt/decrypt
     '''
     def __init__(self, verkey=None, pubkey=None, acceptance=None, rsid=0, rtid=0, **kwa):
         '''

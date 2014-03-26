@@ -199,7 +199,7 @@ class AllowedStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
 
 class IdledStackUdpRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    Updates idle status to true if there are no oustanding transactions in stack
+    Updates idle status to true if there are no outstanding transactions in stack
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
