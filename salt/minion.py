@@ -1173,6 +1173,11 @@ class Minion(MinionBase):
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
+
+            if self.opts.get('check_dns'):
+                log.info('Resolve master dns name.')
+                self.opts.update(resolve_dns(self.opts))
+
             time.sleep(acceptance_wait_time)
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time

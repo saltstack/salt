@@ -13,6 +13,7 @@ import hmac
 import shutil
 import hashlib
 import logging
+import traceback
 
 # Import third party libs
 try:
@@ -261,7 +262,14 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.debug('Decrypting the current master AES key')
+        if self.opts.get('auth_trb', False):
+            log.warning(
+                    'Auth Called: {0}'.format(
+                        ''.join(traceback.format_stack())
+                        )
+                    )
+        else:
+            log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
         if 'sig' in payload:

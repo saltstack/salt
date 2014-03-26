@@ -316,7 +316,7 @@ class CloserStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
 
 class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
     '''
-    AddYardStackUxdRaet closes stack server socket connection
+    AddYardStackUxdRaet
     '''
     Ioinits = odict(
         inode=".raet.uxd.stack.",
@@ -330,7 +330,7 @@ class AddYardStackUxdRaet(deeding.Deed):  # pylint: disable=W0232
         '''
         stack = self.stack.value
         if stack and isinstance(stack, stacking.StackUxd):
-            yard = yarding.Yard(stack=stack, prefix=lane, name=name)
+            yard = yarding.RemoteYard(stack=stack, prefix=lane, name=name)
             stack.addRemoteYard(yard)
             self.yard.value = yard
 

@@ -29,6 +29,7 @@ from ioflo.base import storing
 from . import raeting
 from . import nacling
 from . import packeting
+from . import paging
 from . import estating
 from . import yarding
 from . import keeping
@@ -386,6 +387,7 @@ class StackUdp(object):
             body, deid = self.txMsgs.popleft() # duple (body dict, destination eid)
             self.message(body, deid)
             console.verbose("{0} sending\n{1}\n".format(self.name, body))
+
     def serviceTxes(self):
         '''
         Service the .txes deque to send Udp messages
@@ -705,12 +707,13 @@ class StackUxd(object):
         self.store = store or storing.Store(stamp=0.0)
         self.yards = odict() # remote uxd yards attached to this stack by name
         self.names = odict() # remote uxd yard names  by ha
-        self.yard = yard or yarding.Yard(stack=self,
+        self.yard = yard or yarding.LocalYard(stack=self,
                                          name=yardname,
                                          yid=yid,
                                          ha=ha,
                                          prefix=lanename,
                                          dirpath=dirpath)
+        self.books = odict()
         self.rxMsgs = rxMsgs if rxMsgs is not None else deque() # messages received
         self.txMsgs = txMsgs if txMsgs is not None else deque() # messages to transmit
         self.rxes = rxes if rxes is not None else deque() # uxd packets received
@@ -799,6 +802,25 @@ class StackUxd(object):
         del self.yards[name]
         del self.names[yard.ha]
 
+    def addBook(self, index, book):
+        '''
+        Safely add book at index If not already there
+        '''
+        self.books[index] = book
+        console.verbose( "Added book to {0} at '{1}'\n".format(self.name, index))
+
+    def removeBook(self, index, book=None):
+        '''
+        Safely remove book at index If book identity same
+        If book is None then remove without comparing identity
+        '''
+        if index in self.books:
+            if book:
+                if book is self.books[index]:
+                    del  self.books[index]
+            else:
+                del self.books[index]
+
     def clearStats(self):
         '''
         Set all the stat counters to zero and reset the timer
@@ -854,10 +876,8 @@ class StackUxd(object):
         '''
         while self.txMsgs:
             body, name = self.txMsgs.popleft() # duple (body dict, destination name)
-            packed = self.packUxdTx(body)
-            if packed:
-                console.verbose("{0} sending\n{1}\n".format(self.name, body))
-                self.txUxd(packed, name)
+            self.message(body, name)
+            console.verbose("{0} sending\n{1}\n".format(self.name, body))
 
     def serviceTxes(self):
         '''
@@ -865,8 +885,15 @@ class StackUxd(object):
         '''
         if self.server:
             laters = deque()
+            blocks = []
+
             while self.txes:
                 tx, ta = self.txes.popleft()  # duple = (packet, destination address)
+
+                if ta in blocks: # already blocked on this iteration
+                    laters.append((tx, ta)) # keep sequential
+                    continue
+
                 try:
                     self.server.send(tx, ta)
                 except socket.error as ex:
@@ -880,6 +907,8 @@ class StackUxd(object):
                     elif ex.errno == errno.EAGAIN or ex.errno == errno.EWOULDBLOCK:
                         #busy with last message save it for later
                         laters.append((tx, ta))
+                        blocks.append(ta)
+
                     else:
                         #console.verbose("socket.error = {0}\n".format(ex))
                         raise
@@ -927,8 +956,8 @@ class StackUxd(object):
     def txUxd(self, packed, name):
         '''
         Queue duple of (packed, da) on stack .txes queue
-        Where da is the ip destination address associated with
-        the estate with name
+        Where da is the uxd destination address associated with
+        the yard with name
         If name is None then it will default to the first entry in .yards
         '''
         if name is None:
@@ -960,50 +989,59 @@ class StackUxd(object):
 
     txMsg = transmit # alias
 
-    def packUxdTx(self, body=None, name=None, kind=None):
+    def message(self, body, name):
         '''
-        Pack serialize message body data
+        Sends message body to yard name and manages paging of long messages
         '''
-        if kind is None:
-            kind = self.Pk
-
-        packed = ""
-        if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
-            emsg = "Invalid message pack kind '{0}'\n".format(kind)
-            console.terse(emsg)
-            self.incStat("invalid_transmit_serialization")
-            return ""
-
-        if kind == raeting.packKinds.json:
-            head = 'RAET\njson\n\n'
-            packed = "".join([head, json.dumps(body, separators=(',', ':'))])
-
-        elif kind == raeting.packKinds.pack:
-            if not msgpack:
-                emsg = "Msgpack not installed\n"
+        if name is None:
+            if not self.yards:
+                emsg = "No yard to send to\n"
                 console.terse(emsg)
-                self.incStat("invalid_transmit_serialization")
-                return ""
-            head = 'RAET\npack\n\n'
-            packed = "".join([head, msgpack.dumps(body)])
-
-        if len(packed) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
-            emsg = "Message length of {0}, exceeds max of {1}\n".format(
-                     len(packed), raeting.UXD_MAX_PACKET_SIZE)
+                self.incStat("invalid_destination_yard")
+                return
+            name = self.yards.values()[0].name
+        if name not in self.yards:
+            emsg = "Invalid destination yard name '{0}'\n".format(name)
             console.terse(emsg)
-            self.incStat("invalid_transmit_size")
+            self.incStat("invalid_destination_yard")
+            return
+        remote = self.yards[name]
+        data = odict(syn=self.yard.name, dyn=remote.name, mid=remote.nextMid())
+        book = paging.TxBook(data=data, body=body, kind=self.Pk)
+        try:
+            book.pack()
+        except raeting.PageError as ex:
+            console.terse(str(ex) + '\n')
+            self.incStat("packing_error")
+            return
 
-        return packed
+        print "Pages {0}".format(len(book.pages))
+
+        for page in book.pages:
+            self.txes.append((page.packed, remote.ha))
 
     def processUxdRx(self):
         '''
-        Retrieve next message from stack receive queue if any and parse
+        Retrieve next page from stack receive queue if any and parse
         '''
-        body = self.fetchParseUxdRx()
-        if not body:
+        page = self.fetchParseUxdRx()
+        if not page:
             return
 
-        console.verbose("{0} received message data\n{1}\n".format(self.name, body))
+        console.verbose("{0} received page data\n{1}\n".format(self.name, page.data))
+        console.verbose("{0} received page index = '{1}'\n".format(self.name, page.index))
+
+        if page.paginated:
+            book = self.books.get(page.index)
+            if not book:
+                book = paging.RxBook(stack=self)
+                self.addBook(page.index, book)
+            body = book.parse(page)
+            if body is None: #not done yet
+                return
+            self.removeBook(book.index)
+        else:
+            body = page.data
 
         self.rxMsgs.append(body)
 
@@ -1027,71 +1065,14 @@ class StackUxd(object):
                 console.terse(emsg)
                 self.incStat('unaccepted_source_yard')
                 return None
-
-            name = yarding.Yard.nameFromHa(sa)
-            yard = yarding.Yard(stack=self,
-                                name=name,
-                                ha=sa)
             try:
-                self.addRemoteYard(yard)
+                self.addRemoteYard(yarding.RemoteYard(ha=sa))
             except raeting.StackError as ex:
                 console.terse(str(ex) + '\n')
                 self.incStat('invalid_source_yard')
                 return None
 
-        return self.parseUxdRx(raw) # deserialize
-
-    def parseUxdRx(self, packed):
-        '''
-        Parse (deserialize message)
-        '''
-        body = None
-
-        if (not packed.startswith('RAET\n') or raeting.HEAD_END not in packed):
-            emsg = "Unrecognized packed body head\n"
-            console.terse(emsg)
-            self.incStat("invalid_receive_head")
-            return None
-
-        front, sep, back = packed.partition(raeting.HEAD_END)
-        code, sep, kind = front.partition('\n')
-        if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
-                        raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
-            emsg = "Unrecognized message pack kind '{0}'\n".format(kind)
-            console.terse(emsg)
-            self.incStat("invalid_receive_serialization")
-            return None
-
-        if len(back) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
-            emsg = "Message length of {0}, exceeds max of {1}\n".format(
-                     len(back), raeting.UXD_MAX_PACKET_SIZE)
-            console.terse(emsg)
-            self.incStat("invalid_receive_size")
-            return None
-
-        kind = raeting.PACK_KINDS[kind]
-        if kind == raeting.packKinds.json:
-            body = json.loads(back, object_pairs_hook=odict)
-            if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_body")
-                return  None
-        elif kind == raeting.packKinds.pack:
-            if not msgpack:
-                emsg = "Msgpack not installed\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_serialization")
-                return None
-            body = msgpack.loads(back, object_pairs_hook=odict)
-            if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_body")
-                return None
-
-        return body
-
-
-
+        page = paging.RxPage(packed=raw)
+        page.parse()
+        return page
 

@@ -86,7 +86,7 @@ class SetupWorker(ioflo.base.deeding.Deed):
                 yid=self.yid.value,
                 dirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
-        manor_yard = yarding.Yard(
+        manor_yard = yarding.RemoteYard(
                 yid=0,
                 prefix=self.opts.value['id'],
                 dirpath=self.opts.value['sock_dir'])

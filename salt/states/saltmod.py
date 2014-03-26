@@ -185,7 +185,8 @@ def state(
         if mdata['out'] != 'highstate':
             log.warning("Output from salt state not highstate")
         m_ret = mdata['ret']
-        m_state = salt.utils.check_state_result({minion: m_ret})
+        m_state = salt.utils.check_state_result(m_ret)
+
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)

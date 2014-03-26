@@ -464,7 +464,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 yid=ret['jid'],
                 dirpath=self.opts['sock_dir'])
         ret_stack.Pk = raeting.packKinds.pack
-        main_yard = yarding.Yard(
+        main_yard = yarding.RemoteYard(
                 yid=0,
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir']
@@ -509,7 +509,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
-            ex_yard = yarding.Yard(
+            ex_yard = yarding.RemoteYard(
                     yid=data['jid'],
                     prefix=self.opts['id'],
                     dirpath=self.opts['sock_dir'])

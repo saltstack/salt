@@ -11,7 +11,7 @@ allows for the fully automated run of integration and/or unit tests from a
 single interface. The integration tests are surprisingly easy to write and can
 be written to be either destructive or non-destructive.
 
-Gettign Set Up For Tests
+Getting Set Up For Tests
 ========================
 
 To walk through adding an integration test, start by getting the latest

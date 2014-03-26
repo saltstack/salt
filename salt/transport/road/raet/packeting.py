@@ -616,15 +616,9 @@ class RxPacket(Packet):
         data = self.data
         le = data['de']
         if le == 0:
-            #host = data['dh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             le = (data['dh'], data['dp'])
         re = data['se']
         if re == 0:
-            #host = data['sh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             re = (data['sh'], data['sp'])
         return ((not data['cf'], le, re, data['si'], data['ti'], data['bf']))
 
@@ -700,7 +694,6 @@ class RxPacket(Packet):
         self.unpackInner()
         self.coat.parse()
         self.body.parse()
-
 
 class Tray(object):
     '''
@@ -807,10 +800,18 @@ class RxTray(Tray):
 
     def parse(self, packet):
         '''
-        Process a given packet
+        Process a given packet assumes parseOuter done already
         '''
         sc = packet.data['sc']
         console.verbose("segment count = {0} tid={1}\n".format(sc, packet.data['ti']))
+
+        if sc == 1:
+            self.data.update(packet.data)
+            packet.parseInner()
+            self.body = packet.body.data
+            self.complete = True
+            return self.body
+
 
         if not self.segments: #get data from first packet received
             self.data.update(packet.data)
@@ -826,7 +827,6 @@ class RxTray(Tray):
             return None
         self.body = self.desegmentize()
         return self.body
-
 
     def desegmentize(self):
         '''

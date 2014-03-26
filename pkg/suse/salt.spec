@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        2014.1.0
+Version:        2014.1.1
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -52,6 +52,10 @@ BuildRequires:  python-pip
 BuildRequires:  python-salt-testing
 BuildRequires:  python-unittest2
 BuildRequires:  python-xml
+%if 0%{?suse_version} >= 1210
+BuildRequires:  python-pssh
+%{?systemd_requires}
+%endif
 
 #for docs
 BuildRequires:  python-sphinx
@@ -252,8 +256,8 @@ install -Dpm 0644  pkg/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotat
 ## install SuSEfirewall2 rules
 install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
-%check
-%{__python} setup.py test --runtests-opts=-u
+#%%check
+#%%{__python} setup.py test --runtests-opts=-u
 
 %preun syndic
 %if 0%{?_unitdir:1}
