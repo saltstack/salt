@@ -942,7 +942,15 @@ class Loader(object):
         # dependencies.
         try:
             if hasattr(mod, '__virtual__') and callable(mod.__virtual__):
-                virtual = mod.__virtual__()
+                if self.opts.get('virtual_timer', False):
+                    start = time.time()
+                    virtual = mod.__virtual__()
+                    end = time.time() - start
+                    msg = 'Virtual function took {0} seconds for {1}'.format(
+                            end, module_name)
+                    log.warning(msg)
+                else:
+                    virtual = mod.__virtual__()
                 if not virtual:
                     # if __virtual__() evaluates to False then the module
                     # wasn't meant for this platform or it's not supposed to
