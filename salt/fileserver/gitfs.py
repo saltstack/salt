@@ -149,6 +149,11 @@ def _verify_gitpython(quiet=False):
             'the GitPython version is earlier than {0}. Version {1} '
             'detected.'.format(minver_str, git.__version__)
         )
+    if not salt.utils.which('git'):
+        errors.append(
+            'The git command line utility is required by the Git fileserver '
+            'backend when using the \'gitpython\' provider.'
+        )
     if errors:
         if HAS_PYGIT2 and not quiet:
             errors.append(_RECOMMEND_PYGIT2)
