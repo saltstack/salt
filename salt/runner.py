@@ -144,7 +144,7 @@ class RunnerClient(object):
                 'pub_data must be formatted as a dictionary'
             )
 
-        arglist = salt.utils.parse_input(arg)
+        arglist = salt.utils.args.parse_input(arg)
 
         def _append_kwarg(arglist, kwarg):
             '''
