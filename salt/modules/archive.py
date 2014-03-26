@@ -8,7 +8,6 @@ A module to wrap archive calls
 # Import salt libs
 import salt._compat
 from salt.utils import which as _which, which_bin as _which_bin
-from salt.exceptions import SaltInvocationError
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
