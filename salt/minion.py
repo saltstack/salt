@@ -1174,6 +1174,11 @@ class Minion(MinionBase):
                 break
             log.info('Waiting for minion key to be accepted by the master.')
             time.sleep(acceptance_wait_time)
+            
+            if self.opts.get('check_dns'):
+              log.info('Recheck master dns')
+              self.opts.update(resolve_dns(self.opts))
+              
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
