@@ -104,7 +104,6 @@ def __virtual__():
             truncate = _namespaced_function(truncate, globals())
 
             return __virtualname__
-        log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
 
