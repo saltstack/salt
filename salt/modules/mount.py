@@ -18,6 +18,16 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Only load on POSIX-like systems
+    '''
+    # Disable on Windows, a specific file module exists:
+    if salt.utils.is_windows():
+        return False
+    return 'mount'
+
+
 def _list_mounts():
     ret = {}
     for line in __salt__['cmd.run_stdout']('mount -l').split('\n'):
