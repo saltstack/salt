@@ -49,11 +49,23 @@ def __virtual__():
                   'could not be loaded, is GitPython installed?')
         return False
     gitver = distutils.version.LooseVersion(git.__version__)
-    minver = distutils.version.LooseVersion('0.3.0')
+    minver_str = '0.3.0'
+    minver = distutils.version.LooseVersion(minver_str)
+    errors = []
     if gitver < minver:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'GitPython version is not greater than 0.3.0, '
-                  'version {0} detected'.format(git.__version__))
+        errors.append(
+            'Git fileserver backend is enabled in master config file, but the '
+            'GitPython version is earlier than {0}. Version {1} detected.'
+            .format(minver_str, git.__version__)
+        )
+    if not salt.utils.which('git'):
+        errors.append(
+            'The git command line utility is required by the git fileserver '
+            'backend'
+        )
+    if errors:
+        for error in errors:
+            log.error(error)
         return False
     return __virtualname__
 
@@ -173,6 +185,9 @@ def init():
 
 
 def purge_cache():
+    '''
+    Purge the fileserver cache
+    '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     try:
         remove_dirs = os.listdir(bp_)
