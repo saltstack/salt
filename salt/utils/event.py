@@ -103,7 +103,7 @@ TAGS = {
 
 def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     '''
-    Return an event object suitible for the named transport
+    Return an event object suitable for the named transport
     '''
     if transport == 'zeromq':
         if node == 'master':
