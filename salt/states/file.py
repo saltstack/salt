@@ -1713,7 +1713,7 @@ def recurse(name,
         ret['result'] = False
         ret['comment'] = (
             'The directory {0!r} does not exist on the salt fileserver '
-            'in environment {1!r}'.format(source, __env__)
+            'in saltenv {1!r}'.format(source, __env__)
         )
         return ret
 
