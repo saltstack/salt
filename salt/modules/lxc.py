@@ -14,14 +14,15 @@ import traceback
 import datetime
 import pipes
 import logging
-from tempfile import NamedTemporaryFile
+import tempfile
 import os
+import shutil
 import re
 
 #import salt libs
 import salt.utils
-#import subprocess
 import salt.utils.cloud
+import salt.config
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -163,7 +164,9 @@ class LXCConfig(object):
             salt.utils.fopen(self.path, 'w').write(self.as_string())
 
     def tempfile(self):
-        f = NamedTemporaryFile()
+        # this might look like the function name is shadowing the
+        # module, but it's not since the method belongs to the class
+        f = tempfile.NamedTemporaryFile()
         f.write(self.as_string())
         f.flush()
         return f
@@ -1104,19 +1107,41 @@ def bootstrap(name, config=None, approve_key=True, install=True):
         return None
 
     prior_state = _ensure_running(name)
+    if not prior_state:
+        return prior_state
 
-    __salt__['seed.apply'](infos['rootfs'], id_=name, config=config,
-                           approve_key=approve_key, install=False,
-                           prep_install=True)
+    cmd = 'bash -c "if type salt-minion; then ' \
+          'salt-call --local service.stop salt-minion; exit 0; ' \
+          'else exit 1; fi"'
+    needs_install = bool(__salt__['lxc.run_cmd'](name, cmd, stdout=False))
 
-    cmd = 'bash -c "if type salt-minion; then exit 0; '
-    if install:
-        cmd += 'else sh /tmp/bootstrap.sh -c /tmp; '
+    tmp = tempfile.mkdtemp()
+    cfg_files = __salt__['seed.mkconfig'](config, tmp=tmp, id_=name,
+                                          approve_key=approve_key)
+
+    if needs_install:
+        if install:
+            bs_ = __salt__['config.gather_bootstrap_script']()
+            cp(name, bs_, '/tmp/')
+            cp(name, cfg_files['config'], '/tmp/')
+            cp(name, cfg_files['privkey'], '/tmp/')
+            cp(name, cfg_files['pubkey'], '/tmp/')
+
+            cmd = 'sh /tmp/bootstrap.sh -c /tmp'
+            res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
+        else:
+            res = False
     else:
-        cmd += 'else exit 1; '
-    cmd += 'fi"'
-    res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False,
-                                      no_start=True, preserve_state=False)
+        minion_config = salt.config.minion_config(cfg_files['config'])
+        pki_dir = os.path.join(minion_config['pki_dir'], 'minion')
+        cp(name, cfg_files['config'], '/etc/salt/minion')
+        cp(name, cfg_files['privkey'], pki_dir)
+        cp(name, cfg_files['pubkey'], pki_dir)
+        run_cmd(name, 'salt-call --local service.start salt-minion',
+                stdout=False)
+        res = True
+
+    shutil.rmtree(tmp)
     if prior_state == 'stopped':
         __salt__['lxc.stop'](name)
     elif prior_state == 'frozen':
@@ -1165,7 +1190,6 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
         return prior_state
-
     res = __salt__['cmd.run_all'](
             'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
 
@@ -1183,3 +1207,35 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         return res['stderr']
     else:
         return res['retcode']
+
+
+def cp(name, src, dest, saltenv='base'):
+    '''
+    Copy a file or directory from the host into a container
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cp /tmp/foo /root/
+    '''
+
+    if state(name) != 'running':
+        return {'error': 'container is not running'}
+    if not os.path.exists(src):
+        return {'error': 'src does not exist'}
+    if not os.path.isfile(src):
+        return {'error': 'src must be a regular file'}
+    src_dir, src_name = os.path.split(src)
+
+    dest_dir, dest_name = os.path.split(dest)
+    if run_cmd(name, 'test -d {0}'.format(dest_dir), stdout=False):
+        return {'error': '{0} is not a directory on the container'.format(dest_dir)}
+    if not dest_name:
+        dest_name = src_name
+
+    cmd = 'tar -C {0} -cf - {1} | lxc-attach -n {2} -- tar -C {3} -xf -'.format(
+            src_dir, src_name, name, dest_dir)
+    log.info(cmd)
+    ret = __salt__['cmd.run_all'](cmd)
+    return ret
