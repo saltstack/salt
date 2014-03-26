@@ -267,7 +267,7 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         if self.opts.get('auth_trb', False):
-            log.debug(
+            log.warning(
                     'Auth Called: {0}'.format(
                         ''.join(traceback.format_stack())
                         )
