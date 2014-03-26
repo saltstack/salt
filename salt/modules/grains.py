@@ -245,58 +245,7 @@ def setval(key, val, destructive=False):
         salt '*' grains.setval key val
         salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     '''
-    grains = {}
-    if os.path.isfile(__opts__['conf_file']):
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
-    elif os.path.isdir(__opts__['conf_file']):
-        gfn = os.path.join(
-            __opts__['conf_file'],
-            'grains'
-        )
-    else:
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
-
-    if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
-            try:
-                grains = yaml.safe_load(fp_.read())
-            except Exception as e:
-                return 'Unable to read existing grains file: {0}'.format(e)
-        if not isinstance(grains, dict):
-            grains = {}
-    if val is None and destructive is True:
-        if key in grains:
-            del grains[key]
-    else:
-        grains[key] = val
-    # Cast defaultdict to dict; is there a more central place to put this?
-    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    cstr = yaml.safe_dump(grains, default_flow_style=False)
-    try:
-        with salt.utils.fopen(gfn, 'w+') as fp_:
-            fp_.write(cstr)
-    except (IOError, OSError):
-        msg = 'Unable to write to grains file at {0}. Check permissions.'
-        log.error(msg.format(gfn))
-    fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
-    try:
-        with salt.utils.fopen(fn_, 'w+') as fp_:
-            fp_.write('')
-    except (IOError, OSError):
-        msg = 'Unable to write to cache file {0}. Check permissions.'
-        log.error(msg.format(fn_))
-    __grains__[key] = val
-    # Sync the grains
-    __salt__['saltutil.sync_grains']()
-    # Return the grain we just set to confirm everything was OK
-    return {key: val}
+    return setvals({key: val}, destructive)
 
 
 def append(key, val):
