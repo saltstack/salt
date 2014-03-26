@@ -318,7 +318,12 @@ class ConfigDirMixIn(object):
         self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, 'setup_config'):
-            self.config = self.setup_config()
+            try:
+                self.config = self.setup_config()
+            except (IOError, OSError) as exc:
+                self.error(
+                    'Failed to load configuration: {0}'.format(exc)
+                )
 
     def get_config_file_path(self, configfile=None):
         if configfile is None:
